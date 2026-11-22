@@ -42,6 +42,7 @@ import ts from 'typescript';
 
 import { resolveSiteChannel } from '../../scripts/pages/site-channel.ts';
 import { readSiteBuildManifest } from '../../scripts/pages/site-manifest.ts';
+import { exampleSceneOwnershipChecks } from './example-scene-ownership';
 import { playgroundDiagnostics } from './playground-diagnostics';
 import { assertPlaygroundSuiteResults, type PlaygroundGroup, runPlaygroundGroups, selectPlaygroundGroups } from './playground-suites';
 
@@ -1251,6 +1252,106 @@ const typecheckSnippets = async (snippets: string[]): Promise<void> => {
 };
 
 const exampleLifecycleChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await exampleSceneOwnershipChecks(browser, origin, base, check);
+  await check('video controls: real shortcuts, playback, resize and end', async () => {
+    const session = await openPlayground(browser, origin, base, 'sprites-textures/video-drawable', { width: 1000, height: 700 });
+    const { page, pageErrors } = session;
+
+    try {
+      const source = await readFile(resolve(repoRoot, 'examples/sprites-textures/video-drawable.ts'), 'utf8');
+      await runSource(
+        page,
+        `${source}\n(globalThis as any).__videoApp = app;
+(globalThis as any).__videoErrors = [];
+app.onError.add(error => (globalThis as any).__videoErrors.push(error.message));`,
+      );
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('globalThis.__videoApp?.scenes.currentScene?.video?.duration > 0');
+      const canvas = frame.locator('canvas').first();
+      const nextFrames = () => frame.evaluate('new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))');
+
+      const pressUntil = async (key: string, condition: string, argument?: number): Promise<void> => {
+        // Commands act on press. A slow render or a held key must not turn
+        // Play/Pause into a timing-dependent tap gesture.
+        await page.keyboard.down(key);
+
+        try {
+          await frame.waitForFunction(condition, argument);
+        } finally {
+          await page.keyboard.up(key);
+        }
+
+        await nextFrames();
+      };
+
+      await canvas.click({ position: { x: 100, y: 100 } });
+      await pressUntil('Space', 'globalThis.__videoApp.scenes.currentScene.video.currentTime > 0');
+      await pressUntil('Space', 'globalThis.__videoApp.scenes.currentScene.video.paused');
+
+      for (const [key, expected] of [
+        ['2', 1],
+        ['1', 0],
+        ['2', 1],
+      ] as const) {
+        await pressUntil(
+          key,
+          `index => {
+            const scene = globalThis.__videoApp.scenes.currentScene;
+            return scene.videoIdx === index && !scene.loading && scene.video.duration > 0;
+          }`,
+          expected,
+        );
+      }
+
+      const messagesBeforeUnboundKey = session.console.length;
+      await page.keyboard.press('3');
+      await nextFrames();
+      assert(
+        (await frame.evaluate<number>('globalThis.__videoApp.scenes.currentScene.videoIdx')) === 1,
+        'Unbound key 3 must preserve the clip',
+      );
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+      const shortcutErrors = session.console.slice(messagesBeforeUnboundKey).filter(message => message.type === 'error');
+      assert(shortcutErrors.length === 0, shortcutErrors.map(message => message.text).join('\n'));
+      const inputErrors = await frame.evaluate<string[]>('globalThis.__videoErrors');
+      assert(inputErrors.length === 0, inputErrors.join('\n'));
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole('tab', { name: 'Demo', exact: true }).click();
+      const resized = await canvas.boundingBox();
+      assert(resized !== null && resized.width <= 390 && resized.height > 0, 'Video preview must fit the resized viewport');
+      await frame.evaluate(`(() => {
+        const scene = globalThis.__videoApp.scenes.currentScene;
+        scene.panel.set('loop', false);
+        scene.panel.set('seek', 99);
+      })()`);
+      await canvas.click({ position: { x: 100, y: 100 } });
+      await pressUntil('Space', '!globalThis.__videoApp.scenes.currentScene.video.paused');
+      await frame.waitForFunction('globalThis.__videoApp.scenes.currentScene.video.videoElement.ended', undefined, { timeout: 15_000 });
+      assert(
+        await frame.evaluate<boolean>('globalThis.__videoApp.scenes.currentScene.panel.values.paused'),
+        'End must update the pause control',
+      );
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } catch (error) {
+      const state = await (
+        await previewFrame(page)
+      ).evaluate(`(() => {
+        const app = globalThis.__videoApp;
+        const scene = app?.scenes.currentScene;
+        return { clip: scene?.videoIdx, loading: scene?.loading, media: scene?.mediaState, values: scene?.panel?.values,
+          time: scene?.video?.currentTime, paused: scene?.video?.paused, errors: globalThis.__videoErrors,
+          focus: document.activeElement?.tagName, visibility: document.visibilityState };
+      })()`);
+      console.error('[e2e] Video state:', JSON.stringify(state));
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
   const examples = [
     'input/mouse-and-pointer',
     'input/key-rebinding',
@@ -1828,6 +1929,588 @@ const audioBusChecks = async (browser: Browser, origin: string, base: string): P
 };
 
 const headerChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  const sizingSource = (policy: 'ResponsiveCanvasSizing' | 'FixedResolutionCanvasSizing') => `
+    import { Application, Scene, ${policy} } from '@codexo/exojs';
+    import { startExample } from '@examples/runtime';
+    class SizingScene extends Scene {}
+    const app = new Application({
+      scenes: { SizingScene },
+      canvas: { width: 1280, height: 720, mount: document.body, sizing: new ${policy}(${policy === 'ResponsiveCanvasSizing' ? '{ minAspect: 1 }' : ''}) }
+    });
+    document.body.dataset.sizingInstance = String(Math.random());
+    await startExample(app, () => app.start(SizingScene));`;
+
+  await check('experience: fresh visitors can play, inspect code and choose the next experiment', async () => {
+    const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+    const page = await context.newPage();
+    watchPage(page);
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/`, { waitUntil: 'domcontentloaded' });
+      await page.getByRole('heading', { name: 'Drag and Throw Physics', exact: true }).waitFor();
+      assert((await page.locator('[data-layout]').getAttribute('data-layout')) === 'stacked', 'fresh entry did not retain stacked layout');
+      const paths = await page
+        .locator('#playground-navigation nav a')
+        .evaluateAll(links => links.map(link => new URL((link as HTMLAnchorElement).href).hash.split('/').slice(2).join('/')));
+      assert(
+        paths.join('|') ===
+          'physics/sprite-follows-body|tweens-animation/tween-basics|filters/custom-fragment-shader|showcase/boss-intro-cinematic',
+        `unexpected highlight order: ${paths.join(', ')}`,
+      );
+      await page.getByRole('button', { name: 'View code', exact: true }).click();
+      assert((await page.locator('[data-layout]').getAttribute('data-layout')) === 'split', 'View code did not reveal the workspace');
+      assert(await page.locator('#playground-code').isVisible(), 'source is not visible');
+      await page.getByRole('link', { name: /Next experiment Tweens and Easing/ }).click();
+      await page.getByRole('heading', { name: 'Tweens and Easing', exact: true }).waitFor();
+      await page.goBack();
+      await page.getByRole('heading', { name: 'Drag and Throw Physics', exact: true }).waitFor();
+      await page.locator('#playground-navigation').getByRole('button', { name: 'All examples', exact: true }).click();
+      assert(
+        await page
+          .locator('#playground-navigation')
+          .getByRole('link', { name: /^Lazy Sprite from a Path/ })
+          .isVisible(),
+        'the original recipe is not discoverable',
+      );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await context.close();
+    }
+  });
+
+  await check('experience: fresh touch visitors can start the physics default', async () => {
+    for (const deviceScaleFactor of [1, 2]) {
+      const context = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+        deviceScaleFactor,
+        ...(options.browser === 'chromium' ? { isMobile: true } : {}),
+      });
+      const page = await context.newPage();
+      watchPage(page);
+
+      try {
+        await page.goto(`${origin}${base}/en/playground/`, { waitUntil: 'domcontentloaded' });
+        await page.getByRole('heading', { name: 'Drag and Throw Physics', exact: true }).waitFor();
+        const frame = await previewFrame(page);
+        await frame.waitForFunction(
+          "['active', 'fallback'].includes(window.__EXAMPLE_RENDERER_STATUS__?.phase) && document.querySelector('canvas')?.clientWidth > 0",
+        );
+        await frame.evaluate(
+          'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))))',
+        );
+        assert(await frame.locator('canvas').isVisible(), 'the canvas disappeared after its host resized');
+        assert((await frame.locator('[data-preview-blanked]').count()) === 0, 'default preview was replaced by a capability warning');
+        assert((await page.locator('[class*="unavailable-overlay"]').count()) === 0, 'default is unavailable in a fresh touch session');
+        assert(await page.evaluate(() => navigator.maxTouchPoints > 0), 'the browser was not configured for touch');
+        assert(
+          (await page.getByRole('tab', { name: 'Demo', exact: true }).boundingBox())!.y >= 0,
+          'preview startup scrolled the mobile controls out of view',
+        );
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await context.close();
+      }
+    }
+  });
+
+  await check('experience: mobile tabs and file menu provide complete keyboard navigation', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world', { width: 390, height: 844 });
+
+    try {
+      const demo = page.getByRole('tab', { name: 'Demo', exact: true });
+      const code = page.getByRole('tab', { name: 'Code', exact: true });
+      await demo.focus();
+      await page.keyboard.press('ArrowRight');
+      assert(
+        (await code.getAttribute('aria-selected')) === 'true' && (await code.evaluate(node => node === document.activeElement)),
+        'ArrowRight did not select and focus Code',
+      );
+      await page.keyboard.press('Home');
+      assert((await demo.getAttribute('aria-selected')) === 'true', 'Home did not select Demo');
+      await page.keyboard.press('End');
+      assert((await code.getAttribute('aria-selected')) === 'true', 'End did not select Code');
+      const trigger = page.getByRole('button', { name: 'File options', exact: true });
+      await trigger.click();
+      const menu = page.getByRole('menu', { name: 'File options', exact: true });
+      await waitFor(() => menu.evaluate(node => node.contains(document.activeElement)), Boolean, 'initial file menu focus');
+      await page.keyboard.press('End');
+      assert(
+        await menu.getByRole('menuitem', { name: 'Import main file', exact: true }).evaluate(node => node === document.activeElement),
+        'End did not focus last menu action',
+      );
+      await page.keyboard.press('Home');
+      assert(
+        await menu.getByRole('menuitem', { name: 'Copy', exact: true }).evaluate(node => node === document.activeElement),
+        'Home did not focus first menu action',
+      );
+      await page.keyboard.press('Escape');
+      assert(await trigger.evaluate(node => node === document.activeElement), 'file menu Escape lost focus');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('experience: mobile Run reports completion and preserves the active file and cursor', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world', { width: 390, height: 844 });
+
+    try {
+      await page.getByRole('tab', { name: 'Code', exact: true }).click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      await page.locator('.monaco-editor [role="textbox"]').focus();
+      await page.keyboard.press(endOfDocumentKey);
+      await page.keyboard.type('\ndocument.body.dataset.experienceRun = "updated";');
+      await page.getByText('Changed — Run to update the demo', { exact: true }).waitFor();
+      const snapshot = () =>
+        page.evaluate<string>(
+          'JSON.stringify({uri:window.monaco.editor.getEditors()[0].getModel().uri.toString(),source:window.monaco.editor.getEditors()[0].getValue(),cursor:window.monaco.editor.getEditors()[0].getPosition()})',
+        );
+      const before = await snapshot();
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      await page.locator('[data-run-status="updated"]').waitFor();
+      assert(
+        (await page.getByRole('tab', { name: 'Code', exact: true }).getAttribute('aria-selected')) === 'true',
+        'Run unexpectedly changed the active editor view',
+      );
+      await page.getByRole('button', { name: 'Show demo', exact: true }).click();
+      await (await previewFrame(page)).waitForFunction(() => document.body.dataset.experienceRun === 'updated');
+      await page.getByRole('tab', { name: 'Code', exact: true }).click();
+      assert((await snapshot()) === before, 'view switching changed source, file or cursor');
+
+      const previousUrl = (await previewFrame(page)).url();
+      await page.evaluate(
+        `window.__experiencePostMessage = Worker.prototype.postMessage;
+        Worker.prototype.postMessage = function(message, ...rest) {
+          if (JSON.stringify(message).includes('getEmitOutput')) {
+            // Return the worker protocol's normal rejection. Throwing from
+            // postMessage is swallowed by Monaco before its RPC can settle.
+            queueMicrotask(() => this.dispatchEvent(new MessageEvent('message', { data: {
+              type: 1, vsWorker: message.vsWorker, seq: message.req,
+              err: { $isError: true, name: 'Error', message: 'controlled emit failure' }
+            } })));
+            return;
+          }
+          return window.__experiencePostMessage.call(this, message, ...rest);
+        };`,
+      );
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      await page.locator('[data-run-status="error"]').waitFor();
+      assert((await previewFrame(page)).url() === previousUrl, 'failed emit replaced the last running preview');
+      assert((await snapshot()) === before, 'failed emit changed the editor state');
+      await page.evaluate('Worker.prototype.postMessage = window.__experiencePostMessage');
+      await runSource(page, "throw new Error('EXPERIENCE_RUNTIME');");
+      await page.locator('[data-run-status="error"]').waitFor();
+      assert(
+        (await page.getByRole('button', { name: 'Show demo', exact: true }).count()) === 0,
+        'runtime failure was presented as an updated demo',
+      );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('experience: completion follows module evaluation, imports and top-level await', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+
+    try {
+      await runSource(page, "console.log('COMPLETE_WITHOUT_RENDERER');");
+      await page.locator('[data-run-status="updated"]').waitFor();
+
+      await runSource(
+        page,
+        `import { startExample } from './examples/shared/runtime.js';
+        document.body.dataset.entryUrl = import.meta.url;
+        document.body.dataset.relativeImport = typeof startExample;
+        await new Promise(resolve => { (globalThis as any).finishRun = resolve; });
+        document.body.dataset.afterAwait = 'complete';`,
+      );
+      const awaiting = await previewFrame(page);
+      await awaiting.waitForFunction("typeof globalThis.finishRun === 'function'");
+      assert((await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'running', 'pending await completed early');
+      assert((await awaiting.locator('body').getAttribute('data-entry-url')) === awaiting.url(), 'inline import.meta.url changed');
+      assert((await awaiting.locator('body').getAttribute('data-relative-import')) === 'function', 'relative import failed');
+      await awaiting.evaluate('globalThis.finishRun()');
+      await page.locator('[data-run-status="updated"]').waitFor();
+      assert((await awaiting.locator('body').getAttribute('data-after-await')) === 'complete', 'completion preceded the final statement');
+
+      for (const source of ["await Promise.reject(new Error('EXPERIENCE_AWAIT_REJECTION'));", "import './missing-experience-module.js';"]) {
+        await runSource(page, source);
+        await page.locator('[data-run-status="error"]').waitFor();
+      }
+
+      await runSource(page, 'await new Promise(() => {});');
+      await page.locator('[data-run-status="running"]').waitFor();
+      await page.evaluate('window.__olderPreviewError = document.querySelector(\'iframe[title^="Live demo:"]\').contentWindow.onerror');
+      await runSource(page, "document.body.dataset.newGeneration = 'complete';");
+      await page.locator('[data-run-status="updated"]').waitFor();
+      await page.evaluate("window.__olderPreviewError('older run error', '', 0, 0, new Error('older run error'))");
+      assert(
+        (await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'updated',
+        'an older error changed the current status',
+      );
+      assert(
+        (await (await previewFrame(page)).locator('body').getAttribute('data-new-generation')) === 'complete',
+        'a pending older run blocked the newest completion',
+      );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('experience: renderer recovery preserves the actual Run outcome', async () => {
+    const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+    await context.addInitScript(`(() => {
+      Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, value: undefined });
+      localStorage.setItem('exo-playground-layout', 'split');
+    })()`);
+    const page = await context.newPage();
+    watchPage(page);
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.actual === "webgl2"');
+      await frame.evaluate(`(() => {
+        const gl = document.querySelector('canvas').getContext('webgl2');
+        window.__rendererRecovery = gl.getExtension('WEBGL_lose_context');
+        if (!window.__rendererRecovery) throw new Error('WEBGL_lose_context is unavailable');
+        window.__rendererRecovery.loseContext();
+      })()`);
+      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.phase === "failed"');
+      await frame.evaluate('window.__rendererRecovery.restoreContext()');
+      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.actual === "webgl2"');
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      assert(
+        (await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'idle',
+        'renderer recovery left a false Run failure',
+      );
+
+      await frame.evaluate('window.__rendererRecovery.loseContext()');
+      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.phase === "failed"');
+      await frame.evaluate(`new Promise(resolve => {
+        window.addEventListener('error', event => {
+          if (event.message.includes('RENDERER_RECOVERY_RUNTIME_ERROR')) resolve();
+        }, { once: true });
+        setTimeout(() => { throw new Error('RENDERER_RECOVERY_RUNTIME_ERROR'); }, 0);
+      })`);
+      await frame.evaluate('window.__rendererRecovery.restoreContext()');
+      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.actual === "webgl2"');
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      assert(
+        (await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'error',
+        'renderer recovery cleared a real execution error',
+      );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await context.close();
+    }
+  });
+
+  await check('experience: renderer startup failure remains visible', async () => {
+    const context = await browser.newContext();
+    await context.addInitScript(`(() => {
+      Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, value: undefined });
+      const getContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (kind, ...args) {
+        return kind.includes('webgl') ? null : getContext.call(this, kind, ...args);
+      };
+    })()`);
+    const page = await context.newPage();
+    watchPage(page);
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
+      const frame = await previewFrame(page);
+      await page.locator('[data-run-status="error"]').waitFor();
+      await frame.locator('body[data-preview-blanked]').waitFor();
+      await setOutputOpen(page, true);
+      await waitFor(
+        () => outputEntries(page),
+        entries => entries.some(entry => entry.kind === 'exception' && /webgl/i.test(entry.text)),
+        'reported renderer startup exception',
+      );
+      assert(
+        (await page.getByRole('button', { name: 'Show demo', exact: true }).count()) === 0,
+        'startup failure was presented as updated',
+      );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await context.close();
+    }
+  });
+
+  await check('experience: navigation dialogs contain focus and restore their opener', async () => {
+    for (const width of [900, 390]) {
+      const context = await browser.newContext({ viewport: { width, height: 900 } });
+      const page = await context.newPage();
+      watchPage(page);
+
+      try {
+        await page.goto(`${origin}${base}/en/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
+        const openerName = width === 900 ? 'Show example list' : 'Examples';
+        const opener = page.getByRole('button', { name: openerName, exact: true });
+        await opener.click();
+        const dialog = page.getByRole('dialog', { name: 'Examples', exact: true });
+        await dialog.waitFor();
+        await waitFor(() => dialog.evaluate(node => node.contains(document.activeElement)), Boolean, 'initial dialog focus');
+        await page.keyboard.press('Shift+Tab');
+        assert(await dialog.evaluate(node => node.contains(document.activeElement)), 'reverse Tab escaped the navigation dialog');
+        await page.keyboard.press('Tab');
+        assert(await dialog.evaluate(node => node.contains(document.activeElement)), 'Tab escaped the navigation dialog');
+        assert(
+          await page.locator('[data-app-header]').evaluate(node => Boolean(node.closest('[inert]'))),
+          'the header remains interactive behind the dialog',
+        );
+
+        for (const shortcut of ['Control+k', 'Meta+k']) {
+          await dialog.getByRole('button').first().focus();
+          await page.keyboard.press(shortcut);
+          await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+          assert((await page.locator('dialog[open][aria-label="Search docs"]').count()) === 0, 'global search opened behind Examples');
+          assert(
+            await dialog.getByRole('searchbox', { name: 'Filter examples and tools' }).evaluate(node => node === document.activeElement),
+            'the modal did not retain its search shortcut',
+          );
+          await page.keyboard.press('Tab');
+          assert(await dialog.evaluate(node => node.contains(document.activeElement)), 'search shortcut broke modal Tab ownership');
+        }
+
+        await page.keyboard.press('Escape');
+        await waitFor(() => opener.evaluate(node => node === document.activeElement), Boolean, 'dialog return focus');
+        await page.keyboard.press('Enter');
+        await waitFor(() => dialog.evaluate(node => node.contains(document.activeElement)), Boolean, 'keyboard-open dialog focus');
+        await page.keyboard.press('Escape');
+        assert(await opener.evaluate(node => node === document.activeElement), 'keyboard-open dialog did not restore focus');
+
+        const previousFocus =
+          width === 900
+            ? page.getByRole('button', { name: 'View code', exact: true })
+            : page.getByRole('tab', { name: 'Demo', exact: true });
+        await previousFocus.focus();
+        // A shortcut/programmatic open does not first move focus to the toggle.
+        await opener.evaluate(button => (button as HTMLButtonElement).click());
+        await waitFor(() => dialog.evaluate(node => node.contains(document.activeElement)), Boolean, 'programmatic-open dialog focus');
+        await page.keyboard.press('Escape');
+        assert(await previousFocus.evaluate(node => node === document.activeElement), 'dialog did not restore the actual focused control');
+
+        await page.keyboard.press('Control+k');
+
+        if (width === 390) {
+          await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+          assert((await page.locator('dialog[open][aria-label="Search docs"]').count()) === 0, 'hidden desktop search captured the phone');
+          await page.getByRole('button', { name: 'Open search', exact: true }).click();
+        }
+
+        const globalSearch = page.getByRole('dialog', { name: width === 900 ? 'Search docs' : 'Search', exact: true });
+        await globalSearch.waitFor();
+        assert(
+          await globalSearch.evaluate(node => !node.closest('[inert], [aria-hidden="true"]')),
+          'global search remained inside a hidden background',
+        );
+        await page.keyboard.press('Escape');
+        await globalSearch.waitFor({ state: 'hidden' });
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await context.close();
+      }
+    }
+  });
+
+  await check('experience: responsive previews use phone height and preserve fixed worlds across resizing', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world', { width: 1366, height: 768 });
+
+    try {
+      await page.getByRole('button', { name: 'View code', exact: true }).click();
+      await runSource(page, sizingSource('ResponsiveCanvasSizing'));
+      await page.locator('[data-run-status="updated"]').waitFor();
+      await page.getByRole('button', { name: 'Show demo', exact: true }).click();
+      await waitFor(
+        () => page.locator('iframe[title^="Live demo:"]').evaluate(node => node === document.activeElement),
+        Boolean,
+        'desktop Show demo focus',
+      );
+      const responsive = await previewFrame(page);
+      const instance = await responsive.locator('body').getAttribute('data-sizing-instance');
+      const generation = responsive.url();
+
+      for (const width of [390, 320]) {
+        await page.setViewportSize({ width, height: width === 390 ? 844 : 740 });
+        await responsive.waitForFunction(
+          width => window.innerWidth === width && Math.abs((document.querySelector('canvas')?.clientHeight ?? 0) - 440) <= 1,
+          width,
+        );
+        const box = await page.locator('iframe[title^="Live demo:"]').boundingBox();
+        assert(box !== null && Math.abs(box.height - 440) <= 2, `responsive preview height was ${box?.height}`);
+        assert(responsive.url() === generation, 'resizing restarted the responsive preview');
+        assert((await responsive.locator('body').getAttribute('data-sizing-instance')) === instance, 'resizing replaced the running app');
+      }
+
+      await page.setViewportSize({ width: 1366, height: 768 });
+      await responsive.waitForFunction(() => window.innerWidth === 1280 && window.innerHeight === 720);
+      assert(
+        (await responsive.locator('body').getAttribute('data-sizing-instance')) === instance,
+        'desktop return replaced the running app',
+      );
+      await runSource(page, sizingSource('FixedResolutionCanvasSizing'));
+      await page.locator('[data-run-status="updated"]').waitFor();
+      await page.setViewportSize({ width: 390, height: 844 });
+      const fixed = await previewFrame(page);
+      await fixed.waitForFunction(() => Math.abs(window.innerWidth / window.innerHeight - 16 / 9) < 0.02);
+      const fixedBox = await page.locator('iframe[title^="Live demo:"]').boundingBox();
+      assert(fixedBox !== null && Math.abs(fixedBox.height - 390 * (9 / 16)) <= 2, 'fixed world did not keep its original aspect ratio');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  for (const deviceScaleFactor of [1, 2]) {
+    await check(`experience: phone previews keep CSS sizing after hidden Run at DPR${deviceScaleFactor}`, async () => {
+      const context = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+        isMobile: true,
+        deviceScaleFactor,
+      });
+      const page = await context.newPage();
+      watchPage(page);
+
+      try {
+        await page.goto(`${origin}${base}/en/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
+        await page.getByRole('tab', { name: 'Code', exact: true }).click();
+        await page.waitForFunction('window.monaco?.editor.getEditors()[0]?.getValue().includes("startExample")');
+
+        for (const policy of ['ResponsiveCanvasSizing', 'FixedResolutionCanvasSizing'] as const) {
+          await page.getByRole('tab', { name: 'Code', exact: true }).click();
+          const previousGeneration = (await previewFrame(page)).url();
+          await page.evaluate(`window.monaco.editor.getEditors()[0].getModel().setValue(${JSON.stringify(sizingSource(policy))})`);
+          await page.getByRole('button', { name: 'Run', exact: true }).click();
+          await page.locator('[data-run-status="updated"]').waitFor();
+          const frame = await previewFrame(page);
+          const generation = frame.url();
+          assert(generation !== previousGeneration, 'hidden Run did not execute a new generation');
+          const instance = await frame.locator('body').getAttribute('data-sizing-instance');
+          await page.getByRole('button', { name: 'Show demo', exact: true }).click();
+          await frame.locator('canvas').waitFor({ state: 'visible' });
+          await frame.waitForFunction(responsive => {
+            const canvas = document.querySelector('canvas');
+
+            return (
+              canvas !== null &&
+              window.innerWidth <= 390 &&
+              window.innerWidth >= 388 &&
+              (responsive
+                ? Math.abs(window.innerHeight - 440) <= 1 &&
+                  Math.abs(canvas.height - 440 * window.devicePixelRatio) <= 2 &&
+                  Math.abs(canvas.width - window.innerWidth * window.devicePixelRatio) <= 2
+                : Math.abs(window.innerWidth / window.innerHeight - 16 / 9) < 0.02)
+            );
+          }, policy === 'ResponsiveCanvasSizing');
+          const previewBox = await page.locator('iframe[title^="Live demo:"]').boundingBox();
+          const expectedHeight = policy === 'ResponsiveCanvasSizing' ? 440 : 390 * (9 / 16);
+          assert(
+            previewBox !== null && Math.abs(previewBox.height - expectedHeight) <= 2,
+            `hidden Run lost ${policy} geometry at DPR${deviceScaleFactor}`,
+          );
+          assert(frame.url() === generation, 'showing a hidden Run restarted the preview');
+          assert((await frame.locator('body').getAttribute('data-sizing-instance')) === instance, 'showing a hidden Run replaced the app');
+          assert((await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'updated', 'showing a hidden Run failed');
+        }
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await context.close();
+      }
+    });
+  }
+
+  await check('experience: mobile actions and complete instructions fit the initial viewport', async () => {
+    for (const viewport of [
+      { width: 390, height: 844 },
+      { width: 320, height: 740 },
+    ]) {
+      const context = await browser.newContext({ viewport, hasTouch: true, deviceScaleFactor: 2 });
+      const page = await context.newPage();
+      watchPage(page);
+
+      try {
+        await page.goto(`${origin}${base}/de/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
+        await page.getByRole('button', { name: 'Examples', exact: true }).waitFor();
+
+        for (const action of [
+          page.getByRole('tab', { name: 'Demo', exact: true }),
+          page.getByRole('tab', { name: 'Code', exact: true }),
+          page.getByRole('button', { name: 'Examples', exact: true }),
+        ]) {
+          const bounds = await action.boundingBox();
+          assert(
+            bounds !== null && bounds.y >= 0 && bounds.y + bounds.height <= viewport.height,
+            'primary action is below the initial viewport',
+          );
+        }
+
+        const description = page.locator('[data-header-row="context"] > p');
+        assert(
+          await description.evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight),
+          'instructions are clipped',
+        );
+        assert(
+          !(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)),
+          'the mobile document overflows horizontally',
+        );
+        await page.getByRole('button', { name: 'Examples', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Examples', exact: true });
+        await dialog.waitFor();
+        assert(
+          (await dialog.getByRole('link', { name: 'All examples', exact: true }).getAttribute('href'))?.includes('/de/'),
+          'All examples lost the DE locale',
+        );
+        assert(
+          (await dialog.getByRole('link', { name: /^Asset Browser/ }).getAttribute('href'))?.includes('/de/'),
+          'Asset Browser lost the DE locale',
+        );
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await context.close();
+      }
+    }
+  });
+
   await check('header stays stable and navigation remains compact', async () => {
     for (const width of [1440, 1024, 390, 320]) {
       const { page } = await openPlayground(browser, origin, base, 'filters/bloom-filter', { width, height: 1000 });
@@ -1835,7 +2518,6 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
       try {
         await page.getByRole('button', { name: 'Run', exact: true }).waitFor();
         const header = page.locator('[data-example-header]');
-        const height = (await header.boundingBox())!.height;
         assert(
           await header.locator('[data-header-row="context"] > p').isVisible(),
           'Example instructions must remain visible on narrow screens',
@@ -1847,6 +2529,9 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
         assert((await header.locator('details').getAttribute('open')) === null, 'Escape did not close view options');
 
         if (width >= 1120) {
+          await page.evaluate(() => document.fonts.ready);
+          const initialHeaderHeight = (await header.boundingBox())!.height;
+
           for (const title of ['First Animated Sprite', 'Room Loading and Asset Ownership', 'Bloom Threshold']) {
             await page
               .locator('#playground-navigation')
@@ -1857,7 +2542,16 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
               value => value === title,
               'selected example title',
             );
-            assert((await header.boundingBox())!.height === height, 'example selection changed the header height');
+            assert(
+              await header
+                .locator('[data-header-row="context"] > p')
+                .evaluate(node => node.scrollHeight <= node.clientHeight && node.scrollWidth <= node.clientWidth),
+              'the selected example instruction is clipped',
+            );
+            assert(
+              Math.abs((await header.boundingBox())!.height - initialHeaderHeight) <= 1,
+              'example selection changed the desktop header height',
+            );
           }
 
           await page.getByRole('button', { name: 'Hide example list', exact: true }).click();

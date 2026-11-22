@@ -8,7 +8,6 @@ import {
   Graphics,
   Keyboard,
   type Rectangle,
-  type RenderingContext,
   Scene,
   Spritesheet,
 } from '@codexo/exojs';
@@ -27,6 +26,11 @@ class FrameAnimationScene extends Scene {
       this.loader.load(assets.platformerCharactersImage),
       this.loader.load(assets.platformerCharactersAtlas),
     ]);
+
+    if (this.lifecycleSignal.aborted) {
+      return;
+    }
+
     const sheet = new Spritesheet(texture, data);
 
     this.track({ destroy: () => sheet.clear() });
@@ -70,15 +74,6 @@ class FrameAnimationScene extends Scene {
     this.ground.moveTo(this.app.width / 2 - size * 0.7, baseline).lineTo(this.app.width / 2 + size * 0.7, baseline);
     this.panel.actions.Pause!.label = this.sprite.playing ? 'Pause' : 'Play';
     this.panel.status(`Frame ${this.sprite.currentFrame + 1}/${this.frames.length} | ${this.sprite.playing ? 'Playing' : 'Paused'}`);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
-  }
-
-  override destroy(): void {
-    this.panel?.dispose();
-    super.destroy();
   }
 }
 

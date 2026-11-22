@@ -64,6 +64,18 @@ describe('playground presentation', () => {
     expect(html).toContain('<iframe');
   });
 
+  it('runs an empty valid module while reserving the loading view for absent source', () => {
+    const empty = renderToStaticMarkup(
+      createElement(EditorPreview, { sourceCode: '', exampleMeta: example, selectedVersionId: 'current' }),
+    );
+    const loading = renderToStaticMarkup(
+      createElement(EditorPreview, { sourceCode: null, exampleMeta: example, selectedVersionId: 'current' }),
+    );
+
+    expect(empty).toContain('<iframe');
+    expect(loading).not.toContain('<iframe');
+  });
+
   it('offers an accessible divider and narrow-screen Demo and Code views', () => {
     const html = render();
 

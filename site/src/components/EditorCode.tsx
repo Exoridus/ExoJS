@@ -165,6 +165,9 @@ export const EditorCode = ({
   const [showCompiled, setShowCompiled] = useState(false);
   const [editorValue, setEditorValue] = useState(sourceCode ?? '');
   const [showMenu, setShowMenu] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const menuInitialFocusRef = useRef<'first' | 'last'>('first');
   const [copyStatus, setCopyStatus] = useState('Copy');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [activeFile, setActiveFile] = useState(sourcePath);
@@ -316,6 +319,21 @@ export const EditorCode = ({
       clearTypings();
     };
   }, [onDiagnostic, selectedVersionId, typingsRetry]);
+
+  useEffect(() => {
+    if (!showMenu) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]:not([disabled])') ?? []).filter(
+        item => item.getClientRects().length > 0,
+      );
+      (menuInitialFocusRef.current === 'last' ? items.at(-1) : items[0])?.focus();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [showMenu]);
 
   useEffect(() => {
     const onDocumentClick = (event: MouseEvent): void => {
@@ -874,12 +892,24 @@ export const EditorCode = ({
         Format
       </button>
       <button
+        ref={menuButtonRef}
         className={css(styles, 'more-button')}
         type="button"
         aria-label="File options"
+        aria-haspopup="menu"
         aria-expanded={showMenu}
         data-open={showMenu ? 'true' : undefined}
-        onClick={() => setShowMenu(value => !value)}
+        onClick={() => {
+          menuInitialFocusRef.current = 'first';
+          setShowMenu(value => !value);
+        }}
+        onKeyDown={event => {
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            menuInitialFocusRef.current = event.key === 'ArrowUp' ? 'last' : 'first';
+            setShowMenu(true);
+          }
+        }}
       >
         <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true">
           <circle cx="10" cy="4.5" r="1.5" />
@@ -889,28 +919,63 @@ export const EditorCode = ({
       </button>
       {showMenu && (
         <div
+          ref={menuRef}
           className={css(styles, 'menu-dropdown')}
           role="menu"
+          aria-label="File options"
           onClick={event => {
             if ((event.target as HTMLElement).closest('[role="menuitem"]')) {
               setShowMenu(false);
+              menuButtonRef.current?.focus();
             }
           }}
           onKeyDown={event => {
-            if (event.key === 'Escape') {
+            if (event.key === 'Escape' || event.key === 'Tab') {
               setShowMenu(false);
+              menuButtonRef.current?.focus();
               event.stopPropagation();
+
+              if (event.key === 'Escape') {
+                event.preventDefault();
+              }
+
+              return;
+            }
+
+            if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+              event.preventDefault();
+              const items = Array.from(
+                event.currentTarget.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]:not([disabled])'),
+              ).filter(item => item.getClientRects().length > 0);
+              const current = items.findIndex(item => item === document.activeElement);
+              const offset = event.key === 'ArrowUp' ? -1 : 1;
+              let next = (current + offset + items.length) % items.length;
+
+              if (event.key === 'Home') {
+                next = 0;
+              } else if (event.key === 'End') {
+                next = items.length - 1;
+              }
+
+              items[next]?.focus();
             }
           }}
         >
           <div className={css(styles, 'compact-actions')}>
-            <button className={css(styles, 'menu-item')} role="menuitem" disabled={sourceCode === null} onClick={() => void copyCode()}>
+            <button
+              className={css(styles, 'menu-item')}
+              role="menuitem"
+              tabIndex={-1}
+              disabled={sourceCode === null}
+              onClick={() => void copyCode()}
+            >
               {copyStatus}
             </button>
           </div>
           <button
             className={css(styles, 'menu-item')}
             role="menuitemcheckbox"
+            tabIndex={-1}
             aria-checked={autoRefresh}
             disabled={readOnly}
             onClick={() => setAutoRefresh(value => !value)}
@@ -918,13 +983,14 @@ export const EditorCode = ({
             Auto-run: {autoRefresh ? 'On' : 'Off'}
           </button>
 
-          <button className={css(styles, 'menu-item')} role="menuitem" onClick={exportCode}>
+          <button className={css(styles, 'menu-item')} role="menuitem" tabIndex={-1} onClick={exportCode}>
             Export this file
           </button>
           {compiledPath && (
             <button
               className={css(styles, 'menu-item')}
               role="menuitem"
+              tabIndex={-1}
               disabled={!compiledCode}
               onClick={() => {
                 setShowCompiled(true);
@@ -934,7 +1000,7 @@ export const EditorCode = ({
               Open compiled JavaScript
             </button>
           )}
-          <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={importCode}>
+          <button className={css(styles, 'menu-item')} role="menuitem" tabIndex={-1} disabled={readOnly} onClick={importCode}>
             Import main file
           </button>
         </div>

@@ -3,14 +3,16 @@ import {
   Color,
   createFilterShader,
   FixedResolutionCanvasSizing,
-  type RenderingContext,
   Scene,
+  SceneState,
   type Seconds,
   ShaderFilter,
   Sprite,
+  Text,
   UniformType,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { startExample, unitsPerCssPixel } from '@examples/runtime';
 
 const UV_GRID = assets.uvGrid256;
 
@@ -63,17 +65,19 @@ class CustomFragmentShaderScene extends Scene {
   private time = 0;
   private filter!: ShaderFilter<typeof warpShader.uniforms>;
   private sprite!: Sprite;
+  private hint!: Text;
 
   override init(): void {
     const app = this.app;
-    const { width, height } = app;
-
     this.filter = this.track(ShaderFilter.from(warpShader));
-    this.sprite = new Sprite(this.loader.get(UV_GRID))
-      .setAnchor(0.5)
-      .setScale(4)
-      .setPosition(width / 2, height / 2);
+    this.sprite = new Sprite(this.loader.get(UV_GRID)).setAnchor(0.5);
     this.sprite.filters = [this.filter];
+    this.hint = new Text('Move or drag the pointer to bend the grid', {
+      fontSize: 15,
+      fillColor: new Color(166, 192, 211),
+      align: 'center',
+    }).setAnchor(0.5, 0);
+    this.root.addChild(this.sprite, this.hint);
 
     this.filter.uniforms.uPointer.set(0.5, 0.5);
     app.input.onPointerMove.add(this.onMove);
@@ -81,26 +85,29 @@ class CustomFragmentShaderScene extends Scene {
 
   // The filter's input spans the sprite's world bounds, not the canvas, so
   // the pointer is mapped through the view into that rectangle.
-  private readonly onMove = (pointer: { x: number; y: number }): void => {
-    const world = this.app.rendering.view.screenToWorld(pointer.x, pointer.y);
+  private readonly onMove = (_pointer: unknown, x: number, y: number): void => {
+    if (this.state !== SceneState.Active) {
+      return;
+    }
+
+    const world = this.app.rendering.view.screenToWorld(x, y);
     const bounds = this.sprite.getBounds();
 
     this.filter.uniforms.uPointer.set((world.x - bounds.x) / bounds.width, (world.y - bounds.y) / bounds.height);
   };
 
   override update(delta: Seconds): void {
+    const { width, height } = this.app;
+    const scale = unitsPerCssPixel(this.app, this.app.canvas as HTMLCanvasElement);
+    const size = Math.max(1, Math.min(width - 32 * scale, height - 72 * scale));
+    this.sprite.setScale(size / 256).setPosition(width / 2, height / 2 + 14 * scale);
+    this.hint.setScale(scale).setPosition(width / 2, 14 * scale);
     this.time += delta;
     this.filter.uniforms.uTime.set(this.time);
   }
 
-  override draw(context: RenderingContext): void {
-    context.render(this.sprite);
-  }
-
   override destroy(): void {
     this.app.input.onPointerMove.remove(this.onMove);
-    this.sprite?.destroy();
-    super.destroy();
   }
 }
 
@@ -115,4 +122,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-await app.start(CustomFragmentShaderScene);
+await startExample(app, () => app.start(CustomFragmentShaderScene));
