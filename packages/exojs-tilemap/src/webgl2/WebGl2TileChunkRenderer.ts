@@ -29,7 +29,7 @@ import {
 
 import type { TileQuad } from '../chunkGeometry';
 import type { TileChunkNode } from '../TileChunkNode';
-import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../tileWord';
+import { TILE_DIAGONAL_BIT, TILE_ROW_MASK, TILE_TEXTURE_SLOTS, TILE_TEXTURE_SLOT_SHIFT } from '../tileWord';
 import tileFragmentSource from './shaders/tile-chunk.frag';
 import tileVertexTemplate from './shaders/tile-chunk.vert';
 
@@ -38,11 +38,15 @@ import tileVertexTemplate from './shaders/tile-chunk.vert';
 // unorm8x4 tint, uint32 tile word (transform row + diagonal bit).
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
-const transformTextureUnit = 1;
+const transformTextureUnit = TILE_TEXTURE_SLOTS;
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
 const tileVertexSource = spliceGlslPrologue(
-  fillShaderSource(tileVertexTemplate, { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT }),
+  fillShaderSource(tileVertexTemplate, {
+    tileRowMask: TILE_ROW_MASK,
+    tileDiagonalBit: TILE_DIAGONAL_BIT,
+    tileTextureSlotShift: TILE_TEXTURE_SLOT_SHIFT,
+  }),
   colorShaderSourcesGlsl,
 );
 
@@ -79,12 +83,9 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   private readonly _instanceUint32: Uint32Array;
 
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
-  // Pinned unit index for the single tileset texture sampler (unit 0), reused
-  // by the live flush and retained replay so both stay allocation-free.
-  private readonly _baseTextureUnitScratch: Int32Array = new Int32Array([0]);
-  // Reused single-slot texture list handed to the backend at record time; a
-  // tile chunk batch always binds exactly one tileset texture (slot 0).
-  private readonly _recordTextures: Array<Texture | RenderTexture | null> = [null];
+  private readonly _samplerUnits: Int32Array[] = Array.from({ length: TILE_TEXTURE_SLOTS }, (_, index) => new Int32Array([index]));
+  // Retained replay carries the same ordered texture slots as the live batch.
+  private readonly _recordTextures: Array<Texture | RenderTexture | null> = Array(TILE_TEXTURE_SLOTS).fill(null);
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
@@ -95,11 +96,9 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   // batches is booked once, against the batch its first run lands in.
   private _batchNodeCount = 0;
   private _nodeBooked = false;
-  // Blend mode and tileset texture of the batch currently accumulating, used to
-  // detect a batch break. Neither is a mirror of backend state: `flush()`
-  // establishes both at the draw (see {@link _resetBatchState}).
+  // Four texture slots preserve authored tile order without atlas sorting.
   private _currentBlendMode: BlendModes | null = null;
-  private _currentTexture: Texture | null = null;
+  private readonly _textures: Texture[] = [];
   private _currentView: View | null = null;
   private _currentViewId = -1;
   private _hasWrittenGroup = false;
@@ -146,15 +145,19 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       return;
     }
 
-    const textureChanged = this._currentTexture !== null && texture !== this._currentTexture;
     const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
+    const slotOverflow = this._textures.length === TILE_TEXTURE_SLOTS && !this._textures.includes(texture);
 
-    if (this._quadIndex > 0 && (blendModeChanged || textureChanged || this._quadIndex + quads.length > this._batchSize)) {
+    if (this._quadIndex > 0 && (blendModeChanged || slotOverflow || this._quadIndex + quads.length > this._batchSize)) {
       this.flush();
     }
 
     this._currentBlendMode = blendMode;
-    this._currentTexture = texture;
+    let textureSlot = this._textures.indexOf(texture);
+
+    if (textureSlot < 0) {
+      textureSlot = this._textures.push(texture) - 1;
+    }
 
     const flipY = texture.flipY;
 
@@ -166,19 +169,28 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       const remaining = quads.length - offset;
       const runSize = Math.min(remaining, this._batchSize);
 
-      this._writeRun(quads, offset, runSize, flipY, tintRgba, nodeIndex);
+      this._writeRun(quads, offset, runSize, flipY, tintRgba, nodeIndex, textureSlot);
 
       offset += runSize;
 
       if (offset < quads.length) {
         this.flush();
         this._currentBlendMode = blendMode;
-        this._currentTexture = texture;
+        this._textures.push(texture);
+        textureSlot = 0;
       }
     }
   }
 
-  private _writeRun(quads: readonly TileQuad[], offset: number, count: number, flipY: boolean, tintRgba: number, nodeIndex: number): void {
+  private _writeRun(
+    quads: readonly TileQuad[],
+    offset: number,
+    count: number,
+    flipY: boolean,
+    tintRgba: number,
+    nodeIndex: number,
+    textureSlot: number,
+  ): void {
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
     const baseWord = nodeIndex & TILE_ROW_MASK;
@@ -231,7 +243,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       u32[idx + 4] = uMin | (vMin << 16);
       u32[idx + 5] = uMax | (vMax << 16);
       u32[idx + 6] = tintRgba;
-      u32[idx + 7] = (diagonal ? baseWord | TILE_DIAGONAL_BIT : baseWord) >>> 0;
+      u32[idx + 7] = (baseWord | (diagonal ? TILE_DIAGONAL_BIT : 0) | (textureSlot << TILE_TEXTURE_SLOT_SHIFT)) >>> 0;
 
       this._quadIndex++;
     }
@@ -254,13 +266,13 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
 
     this._stageViewUniforms(backend);
 
-    // Blend state and texture unit 0 are global and shared with every other
-    // renderer - a sprite drawn between two tile layers binds its own texture
-    // to the same unit - so this batch establishes both at its own draw. The
-    // backend collapses a redundant call.
-    if (this._currentTexture !== null) {
-      backend.bindTexture(this._currentTexture, 0);
-      this._shader.getUniform('u_texture').setValue(this._baseTextureUnitScratch);
+    // Other renderers may have reused any unit; establish the live slot table.
+    for (let slot = 0; slot < this._textures.length; slot++) {
+      backend.bindTexture(this._textures[slot]!, slot);
+    }
+
+    for (let slot = 0; slot < TILE_TEXTURE_SLOTS; slot++) {
+      this._shader.getUniform(`u_texture${slot}`).setValue(this._samplerUnits[slot]!);
     }
 
     backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
@@ -274,20 +286,18 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Retained recording: while a capture window is open, hand the
-    // exact packed instance words of this flush to the backend - byte-
-    // identical to what just drew. A batch always binds a single tileset
-    // texture (slot 0); pixel snapping rides on the transform row, so a
-    // snapped node records and replays like any other.
-    if (backend._isRetainedCapturing && this._currentTexture !== null) {
-      this._recordTextures[0] = this._currentTexture;
+    // Record every atlas slot along with exact packed instance words.
+    if (backend._isRetainedCapturing && this._textures.length > 0) {
+      for (let slot = 0; slot < this._textures.length; slot++) {
+        this._recordTextures[slot] = this._textures[slot]!;
+      }
       backend.recordRetainedBatch(
         this,
         this._instanceUint32.subarray(0, this._quadIndex * wordsPerInstance),
         this._quadIndex,
         this._currentBlendMode ?? BlendModes.Normal,
         this._recordTextures,
-        1,
+        this._textures.length,
         null,
         null,
         this._batchNodeCount,
@@ -307,7 +317,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     this._maxNodeIndex = 0;
     this._batchNodeCount = 0;
     this._currentBlendMode = null;
-    this._currentTexture = null;
+    this._textures.length = 0;
   }
 
   /**
@@ -376,10 +386,10 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       // In-bounds: see the scan above. Rebase ONLY the row field; the
       // diagonal-flip bit must survive untouched or tile orientation corrupts.
       const word = words[index]!;
-      const diagonal = word & TILE_DIAGONAL_BIT;
+      const flags = word & ~TILE_ROW_MASK;
       const row = word & TILE_ROW_MASK;
 
-      words[index] = (diagonal | ((row - base) & TILE_ROW_MASK)) >>> 0;
+      words[index] = (flags | ((row - base) & TILE_ROW_MASK)) >>> 0;
     }
   }
 
@@ -440,7 +450,9 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       backend.bindTexture(textures[i]!, i);
     }
 
-    this._shader.getUniform('u_texture').setValue(this._baseTextureUnitScratch);
+    for (let slot = 0; slot < TILE_TEXTURE_SLOTS; slot++) {
+      this._shader.getUniform(`u_texture${slot}`).setValue(this._samplerUnits[slot]!);
+    }
 
     // The group-owned transform store replaces the shared frame buffer on the
     // SAME unit/sampler - zero GLSL changes. The next live flush re-binds the
@@ -490,7 +502,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     this._vao = null;
     this._connection = null;
     this._currentBlendMode = null;
-    this._currentTexture = null;
+    this._textures.length = 0;
     this._currentView = null;
     this._currentViewId = -1;
     this._hasWrittenGroup = false;
