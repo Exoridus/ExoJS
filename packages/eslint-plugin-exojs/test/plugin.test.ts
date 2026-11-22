@@ -1,3 +1,5 @@
+import oxlintEnginePlugin from '../src/oxlint-engine.ts';
+import oxlintPlugin from '../src/oxlint.ts';
 import { Linter } from 'eslint';
 import { describe, expect, it } from 'vitest';
 
@@ -118,5 +120,20 @@ describe('exoEngineRulesConfig', () => {
     const messages = lint(ALLOCATING_HOOK, config);
 
     expect(messages.map(message => message.ruleId)).toEqual(['exojs-engine/no-allocation-in-hot-hook']);
+  });
+});
+
+describe('opt-in Oxlint plugin entries', () => {
+  it('reuses the exact consumer ESLint rule implementations under the expected key', () => {
+    expect(oxlintPlugin.meta.name).toBe('exojs');
+    expect(oxlintPlugin.rules).toBe(exoPlugin.rules);
+    expect(Object.keys(oxlintPlugin.rules)).toEqual(Object.keys(exoPlugin.rules));
+  });
+
+  it('keeps the engine-only rules in their separate namespace', () => {
+    expect(oxlintEnginePlugin.meta.name).toBe('exojs-engine');
+    expect(oxlintEnginePlugin.rules).toBe(exoEnginePlugin.rules);
+    expect(Object.keys(oxlintEnginePlugin.rules)).toEqual(['no-allocation-in-hot-hook']);
+    expect(oxlintPlugin.rules).not.toHaveProperty('no-allocation-in-hot-hook');
   });
 });
