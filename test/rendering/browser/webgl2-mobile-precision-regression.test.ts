@@ -189,6 +189,7 @@ describe('WebGL2 mobile precision — Layer 1: environment reports reduced preci
     probeContext?.getExtension('WEBGL_lose_context')?.loseContext();
     probeContext = null;
   });
+
   test('vertex mediump/lowp are reported as fp16 on the fp16-reporting (required-CI) backend', () => {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl2');

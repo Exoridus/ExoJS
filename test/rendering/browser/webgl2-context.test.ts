@@ -15,6 +15,7 @@ describe('WebGL2 context availability', () => {
 
     contexts.length = 0;
   });
+
   test('canvas.getContext("webgl2") returns a real WebGL2RenderingContext', () => {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl2');
