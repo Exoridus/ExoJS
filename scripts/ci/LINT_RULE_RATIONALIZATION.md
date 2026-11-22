@@ -79,7 +79,7 @@ Consequently Astro template linting remains with `eslint-plugin-astro`, Astro's 
 
 ## Astro accessibility: no new dependencies
 
-A rule-by-rule inventory is recorded in [`astro-template-rule-audit.csv`](astro-template-rule-audit.csv). The existing site policy includes **43 Astro rules**, of which **31** are **generic JSX accessibility rules applied to Astro templates** and **12** concern Astro semantics, deprecations, compilation, or style. Only the single style-only rule `astro/prefer-class-list-directive` is retired in this change, with its authoring preference moved to [`site/AGENTS.md`](../../site/AGENTS.md).
+A rule-by-rule inventory is recorded in [`astro-template-rule-audit.csv`](astro-template-rule-audit.csv). The #1131 site baseline included **43 Astro rules**, of which **31** are **generic JSX accessibility rules applied to Astro templates** and **12** concern Astro semantics, deprecations, compilation, or style. This PR removes one style-only rule, leaving **42** Astro rules (31 accessibility, 11 other), with its authoring preference moved to [`site/AGENTS.md`](../../site/AGENTS.md).
 
 Oxlint already implements many `jsx-a11y` rules natively on JSX/TSX. These rules cannot simply be enabled on raw `.astro` HTML: Oxlint's framework parser only checks `<script>` blocks, not Astro markup. Calling this 31-rule overlap "parity" would leave missing `alt`, `label`, and keyboard semantics unguarded. The existing `eslint-plugin-astro` template parser and `jsx-a11y-x` provider are already installed; no extra community plugin is required.
 
