@@ -2804,6 +2804,19 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._destroyed = true;
+
+    try {
+      this._disposeContextResources();
+    } finally {
+      // Always request a terminal loss, even when resource cleanup failed.
+      // The extension was cached while the context was live.
+      if (this._releaseContextOnDestroy && !this._context.isContextLost()) {
+        this._loseContextExtension?.loseContext();
+      }
+    }
+  }
+
+  private _disposeContextResources(): void {
     this._gpuTimingRequested = false;
     this._gpuTimer?.destroy();
     this._gpuTimer = null;
@@ -2899,12 +2912,6 @@ export class WebGl2Backend implements RenderBackend {
     this._transformTextureCount = -1;
     this._transformTextureHash = 0;
     this._sampleCountsByFormat.clear();
-
-    // Final step: event listeners and GL-owned resources are already gone.
-    // Keep caller-supplied surfaces alive by default so their last frame remains visible.
-    if (this._releaseContextOnDestroy && !this._context.isContextLost()) {
-      this._loseContextExtension?.loseContext();
-    }
   }
 
   private _createContext(
