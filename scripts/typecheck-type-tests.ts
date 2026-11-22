@@ -32,18 +32,16 @@
  * Run `pnpm typecheck:type-tests -- --show-config` to print each profile's
  * resolved compiler options and file set instead of compiling.
  */
-import { resolve } from 'node:path';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
-import ts from 'typescript';
+import { runTypeScriptCompiler } from '@codexo/exojs-config/typescript/compiler';
+
+import { checkNativeProject } from './lib/native-compiler-diagnostics.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const SHOW_CONFIG = process.argv.includes('--show-config');
-
-const FORMAT_HOST: ts.FormatDiagnosticsHost = {
-  getCanonicalFileName: fileName => fileName,
-  getCurrentDirectory: () => REPO_ROOT,
-  getNewLine: () => ts.sys.newLine,
-};
 
 interface Profile {
   /** Lane name, printed per run. */
@@ -105,49 +103,67 @@ const fail = (message: string): never => {
   process.exit(1);
 };
 
-/**
- * Resolves a profile the same way `tsc -p` resolves a file on disk: the config
- * is parsed against the repository root, so its `extends` and every relative
- * path in it mean what they would mean in a root tsconfig.
- */
-const parseProfile = (profile: Profile): ts.ParsedCommandLine => {
-  const parsed = ts.parseJsonConfigFileContent(
-    profile.config,
-    ts.sys,
-    REPO_ROOT,
-    undefined,
-    resolve(REPO_ROOT, `tsconfig.type-tests-${profile.name}.json`),
-  );
+/** Materialize an isolated native compiler profile with repo-absolute paths. */
+const profileConfig = (profile: Profile, directory: string): string => {
+  const config = profile.config as {
+    extends: string;
+    include: string[];
+    compilerOptions?: Record<string, unknown>;
+  };
+  const compilerOptions = { ...config.compilerOptions };
 
-  if (parsed.errors.length > 0) {
-    fail(ts.formatDiagnosticsWithColorAndContext(parsed.errors, FORMAT_HOST));
+  if ('rootDir' in compilerOptions) {
+    compilerOptions.rootDir = REPO_ROOT;
   }
 
-  return parsed;
+  if ('paths' in compilerOptions) {
+    compilerOptions.paths = { '@codexo/exojs': [resolve(REPO_ROOT, 'src/index.ts')] };
+  }
+
+  const path = join(directory, `${profile.name}.json`);
+  writeFileSync(path, JSON.stringify({
+    extends: resolve(REPO_ROOT, config.extends),
+    include: config.include.map(pattern => resolve(REPO_ROOT, pattern)),
+    compilerOptions,
+  }));
+
+  return path;
 };
 
 let failed = false;
+const directory = mkdtempSync(join(tmpdir(), 'exojs-native-profiles-'));
 
-for (const profile of PROFILES) {
-  const parsed = parseProfile(profile);
+try {
+  for (const profile of PROFILES) {
+    const config = profileConfig(profile, directory);
 
-  if (SHOW_CONFIG) {
-    console.log(`\n=== ${profile.name} - ${profile.proves} ===`);
-    console.log(JSON.stringify({ compilerOptions: parsed.options, files: parsed.fileNames }, null, 2));
-    continue;
+    if (SHOW_CONFIG) {
+      const shown = runTypeScriptCompiler(['--showConfig', '-p', config], { cwd: REPO_ROOT, stdio: 'pipe' });
+
+      if (shown.status !== 0) {
+        console.error(shown.output);
+        failed = true;
+        continue;
+      }
+
+      console.log(`\n=== ${profile.name} - ${profile.proves} ===`);
+      console.log(shown.output.trim());
+      continue;
+    }
+
+    const checked = checkNativeProject(config, REPO_ROOT);
+
+    if (checked.status !== 0) {
+      console.error(checked.output);
+      console.error(`typecheck:type-tests [${profile.name}]: ${checked.diagnostics.length} error(s) - ${profile.proves}.`);
+      failed = true;
+      continue;
+    }
+
+    console.log(`typecheck:type-tests [${profile.name}]: clean - ${profile.proves}.`);
   }
-
-  const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options });
-  const diagnostics = ts.getPreEmitDiagnostics(program);
-
-  if (diagnostics.length > 0) {
-    console.error(ts.formatDiagnosticsWithColorAndContext(diagnostics, FORMAT_HOST));
-    console.error(`typecheck:type-tests [${profile.name}]: ${diagnostics.length} error(s) - ${profile.proves}.`);
-    failed = true;
-    continue;
-  }
-
-  console.log(`typecheck:type-tests [${profile.name}]: ${parsed.fileNames.length} file(s) clean - ${profile.proves}.`);
+} finally {
+  rmSync(directory, { recursive: true, force: true });
 }
 
 if (failed) {
