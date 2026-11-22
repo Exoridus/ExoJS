@@ -713,7 +713,14 @@ ${sunQuadWgsl}`,
    * the marcher's own uniforms then have to be pointed at.
    */
   private _writeLights(lights: readonly Light[], occluders: OccluderField): boolean {
-    this._growShadowMap(lights.length);
+    // Each finite line needs four independent emitter positions; ordinary
+    // lights and Radiance's cascading renderer retain their one-row layout.
+    const shadowRowsBudget = lights.reduce(
+      (total, light) => total + (!this._cascading && light instanceof LineLight && lightHalfLength(light) > 0 ? lineShadowSamples.length : 1),
+      0,
+    );
+
+    this._growShadowMap(shadowRowsBudget);
 
     for (const batch of this._lightBatches.values()) {
       batch.clear();
@@ -732,10 +739,11 @@ ${sunQuadWgsl}`,
     this._shadowBytesUploaded = 0;
 
     if (casting && marching) {
-      this._filler!.begin(lights.length);
+      this._filler!.begin(shadowRowsBudget);
     }
 
     let written = 0;
+    let nextShadowRow = 0;
     let firstDirtyRow = Infinity;
     let lastDirtyRow = -1;
 
@@ -752,6 +760,11 @@ ${sunQuadWgsl}`,
 
       const falloff = lightFalloff(light);
       const half = lightHalfLength(light);
+      const finiteLine = !this._cascading && light instanceof LineLight && half > 0;
+      const rowCount = finiteLine ? lineShadowSamples.length : 1;
+      const baseShadowRow = nextShadowRow;
+
+      nextShadowRow += rowCount;
 
       light.getWorldPosition(scratchPosition);
       light.getWorldDirection(scratchDirection);
@@ -762,11 +775,24 @@ ${sunQuadWgsl}`,
       if (!casting) {
         scratchInstance.a_shadow[0] = noShadow;
       } else {
-        scratchInstance.a_shadow[0] = written;
+        scratchInstance.a_shadow[0] = baseShadowRow;
 
-        if (this._writeShadowRow(light, written, radius, segments, segmentCount, geometryRevision, epoch, marching)) {
-          firstDirtyRow = Math.min(firstDirtyRow, written);
-          lastDirtyRow = written;
+        if (finiteLine) {
+          // A ray from one source sample can reach the opposite segment end
+          // plus the falloff; the old centre radius was insufficient.
+          const sampleReach = falloff + half * 2;
+
+          for (let index = 0; index < lineShadowSamples.length; index++) {
+            const row = baseShadowRow + index;
+
+            if (this._writeLineShadowRow(light, index, row, half, sampleReach, segments, segmentCount, geometryRevision, epoch, marching)) {
+              firstDirtyRow = Math.min(firstDirtyRow, row);
+              lastDirtyRow = Math.max(lastDirtyRow, row);
+            }
+          }
+        } else if (this._writeShadowRow(light, baseShadowRow, radius, segments, segmentCount, geometryRevision, epoch, marching)) {
+          firstDirtyRow = Math.min(firstDirtyRow, baseShadowRow);
+          lastDirtyRow = Math.max(lastDirtyRow, baseShadowRow);
         }
       }
 
@@ -799,8 +825,15 @@ ${sunQuadWgsl}`,
 
     if (!casting || marching) {
       this._shadowRows.clear();
+      this._lineShadowRows.clear();
     } else {
       removeStaleShadowRows(this._shadowRows, epoch);
+
+      for (const [line, states] of this._lineShadowRows) {
+        if (states[0]?.epoch !== epoch) {
+          this._lineShadowRows.delete(line);
+        }
+      }
     }
 
     if (lastDirtyRow >= firstDirtyRow) {
@@ -962,6 +995,78 @@ ${sunQuadWgsl}`,
       state.geometryRevision = geometryRevision;
       state.epoch = epoch;
     }
+
+    return true;
+  }
+
+  /**
+   * One stratified emission position on a finite line, independently cached
+   * by row, origin, axis and geometry revision. Only Lightmap invokes this.
+   */
+  private _writeLineShadowRow(
+    light: LineLight,
+    sampleIndex: number,
+    row: number,
+    half: number,
+    radius: number,
+    segments: Float32Array,
+    segmentCount: number,
+    geometryRevision: number,
+    epoch: number,
+    marching: boolean,
+  ): boolean {
+    const distance = half * lineShadowSamples[sampleIndex]!;
+    const x = scratchPosition.x + scratchDirection.x * distance;
+    const y = scratchPosition.y + scratchDirection.y * distance;
+    const axisX = scratchDirection.x;
+    const axisY = scratchDirection.y;
+
+    if (marching) {
+      this._filler!.write(row, x, y, radius, axisX, axisY);
+      this._shadowRowsRebuilt++;
+
+      return false;
+    }
+
+    let states = this._lineShadowRows.get(light);
+
+    if (states === undefined) {
+      states = [];
+      this._lineShadowRows.set(light, states);
+    }
+
+    const state = states[sampleIndex];
+
+    if (
+      state?.row === row &&
+      state.x === x &&
+      state.y === y &&
+      state.axisX === axisX &&
+      state.axisY === axisY &&
+      state.radius === radius &&
+      state.geometryRevision === geometryRevision
+    ) {
+      state.epoch = epoch;
+
+      return false;
+    }
+
+    const bins = this._shadowResolution;
+
+    buildShadowRow(
+      segments,
+      segmentCount,
+      x,
+      y,
+      axisX,
+      axisY,
+      radius,
+      this._shadowMap.buffer.subarray(row * bins * shadowRowStride, (row + 1) * bins * shadowRowStride),
+      bins,
+    );
+    this._shadowRowsRebuilt++;
+
+    states[sampleIndex] = { row, x, y, axisX, axisY, radius, geometryRevision, epoch };
 
     return true;
   }
