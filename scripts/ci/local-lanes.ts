@@ -28,7 +28,7 @@ const SMOKE_LANE: Lane = {
  * runs: a missing or stale build then costs its build time up front instead of
  * failing the dist lane after every other lane has already run.
  */
-export const DIST_PREFLIGHT = 'tsx scripts/check-dist-fresh.ts --rebuild';
+export const DIST_PREFLIGHT = 'node --import tsx scripts/check-dist-fresh.ts --rebuild';
 
 /** The dependency-free supervisor tests the CI `unit` lane runs before its Vitest projects. */
 const NODE_TESTS = 'node --test test/ci/validation.node.ts test/ci/qualify.node.ts';

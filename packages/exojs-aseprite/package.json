@@ -26,7 +26,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsx ../../scripts/build-extension.ts",
+    "build": "node --import tsx ../../scripts/build-extension.ts",
     "build:dev": "tsx ../../scripts/build-extension.ts --dev",
     "typecheck": "exo-tsc --noEmit && exo-tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint \"src/**/*.ts\"",
