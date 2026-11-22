@@ -344,7 +344,36 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         coneTerm = step(input.cone.x, alignment);
     }
 
-    let shadow = shadowTerm(input.local, threshold, input.shadowRow, input.softness, footprint);
+    // Multi-position finite line shadows: the four consecutive atlas rows
+    // are cast from [-.75,-.25,.25,.75] of the emitting half-segment. Only
+    // their own source-to-fragment rays determine the silhouette and softness.
+    var shadow = 1.0;
+
+    if (input.half > 0.0 && input.shadowRow >= 0.0) {
+        let pixelSpan = max(length(dpdx(input.local)), length(dpdy(input.local)));
+        let sourceReach = 1.0 + 2.0 * input.half;
+        let sampleClearance = uniforms.u_shadowClearance * pixelSpan / sourceReach;
+        var sum = 0.0;
+        var weights = 0.0;
+
+        for (var sampleIndex: i32 = 0; sampleIndex < 4; sampleIndex = sampleIndex + 1) {
+            let offset = input.half * ((f32(sampleIndex) - 1.5) * 0.5);
+            let ray = input.local - vec2<f32>(offset, 0.0);
+            let rayDistance = length(ray);
+            let sampleThreshold = (rayDistance / sourceReach - sampleClearance) / (1.0 + uniforms.u_shadowPrecision);
+            let sampleFootprint = pixelSpan / max(rayDistance, 1e-6);
+            let weight = 1.0 / (1.0 + rayDistance * rayDistance);
+
+            sum = sum + weight * shadowTerm(ray, sampleThreshold, input.shadowRow + f32(sampleIndex), input.softness, sampleFootprint);
+            weights = weights + weight;
+        }
+
+        shadow = sum / max(weights, 1e-6);
+    } else {
+        // Same one-row path as before for point/spot and unshadowed lights.
+        shadow = shadowTerm(input.local, threshold, input.shadowRow, input.softness, footprint);
+    }
+
     let surface = surfaceTerm(input.position.xy, input.local, input.surface);
     // The quad spans -1..1 in the light's own frame, which is the cookie's 0..1
     // exactly - so the pattern turns and scales with the light for free, and a
