@@ -1,3 +1,4 @@
+import type { AssetLoadHandle } from '#assets/assetLoadGroup';
 import { _readMeta } from '#assets/assetMeta';
 import { type AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
@@ -296,10 +297,10 @@ describe('Loader._adopt', () => {
     scope.onLoadStart.add(foreground);
 
     try {
-      const background = scope.load([asset], { priority: LoadPriority.Background });
+      const background = scope.load([asset as AssetLoadHandle], { priority: LoadPriority.Background });
       const startsBeforeDemand = foreground.mock.calls.length;
       expect(global.fetch).not.toHaveBeenCalled();
-      const demand = scope.load([asset]);
+      const demand = scope.load([asset as AssetLoadHandle]);
       const finished = Promise.all([background, demand]);
       void finished.catch(() => undefined);
       await vi.waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1), { timeout: 500 });

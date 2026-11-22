@@ -252,7 +252,7 @@ describe('define() with decode', () => {
 
     loader._assetTypes.define(Level, { type: 'level', extensions: ['level'], decode: bytes => new Level(bytes.byteLength) });
 
-    const level = await loader.load('data.level' as never);
+    const level = await loader.load('data.level' as string);
     const typed = await loader.load([Level, 'data.level']);
 
     expect(level).toBeInstanceOf(Level);
