@@ -360,7 +360,12 @@ export const Editor = ({
     setActiveView('demo');
     requestAnimationFrame(() => {
       rootRef.current?.scrollIntoView({ block: 'start' });
-      rootRef.current?.querySelector<HTMLButtonElement>('#demo-view-tab')?.focus({ preventScroll: true });
+
+      if (compact) {
+        rootRef.current?.querySelector<HTMLButtonElement>('#demo-view-tab')?.focus({ preventScroll: true });
+      } else {
+        previewRef.current?.focusPreviewSurface();
+      }
     });
   };
 

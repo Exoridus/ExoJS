@@ -2036,9 +2036,77 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
         await waitFor(() => dialog.evaluate(node => node.contains(document.activeElement)), Boolean, 'keyboard-open dialog focus');
         await page.keyboard.press('Escape');
         assert(await opener.evaluate(node => node === document.activeElement), 'keyboard-open dialog did not restore focus');
+
+        const previousFocus =
+          width === 900
+            ? page.getByRole('button', { name: 'View code', exact: true })
+            : page.getByRole('tab', { name: 'Demo', exact: true });
+        await previousFocus.focus();
+        // A shortcut/programmatic open does not first move focus to the toggle.
+        await opener.evaluate(button => button.click());
+        await waitFor(() => dialog.evaluate(node => node.contains(document.activeElement)), Boolean, 'programmatic-open dialog focus');
+        await page.keyboard.press('Escape');
+        assert(await previousFocus.evaluate(node => node === document.activeElement), 'dialog did not restore the actual focused control');
       } finally {
         await context.close();
       }
+    }
+  });
+
+  await check('experience: responsive previews use phone height and preserve fixed worlds across resizing', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world', { width: 1366, height: 768 });
+    const sourceFor = (policy: 'ResponsiveCanvasSizing' | 'FixedResolutionCanvasSizing') => `
+      import { Application, Scene, ${policy} } from '@codexo/exojs';
+      import { startExample } from '@examples/runtime';
+      class SizingScene extends Scene {}
+      const app = new Application({
+        scenes: { SizingScene },
+        canvas: { width: 1280, height: 720, mount: document.body, sizing: new ${policy}(${policy === 'ResponsiveCanvasSizing' ? '{ minAspect: 1 }' : ''}) }
+      });
+      document.body.dataset.sizingInstance = String(Math.random());
+      await startExample(app, () => app.start(SizingScene));`;
+
+    try {
+      await page.getByRole('button', { name: 'View code', exact: true }).click();
+      await runSource(page, sourceFor('ResponsiveCanvasSizing'));
+      await page.locator('[data-run-status="updated"]').waitFor();
+      await page.getByRole('button', { name: 'Show demo', exact: true }).click();
+      await waitFor(
+        () => page.locator('iframe[title^="Live demo:"]').evaluate(node => node === document.activeElement),
+        Boolean,
+        'desktop Show demo focus',
+      );
+      const responsive = await previewFrame(page);
+      const instance = await responsive.locator('body').getAttribute('data-sizing-instance');
+      const generation = responsive.url();
+
+      for (const width of [390, 320]) {
+        await page.setViewportSize({ width, height: width === 390 ? 844 : 740 });
+        await responsive.waitForFunction(
+          width => window.innerWidth === width && Math.abs((document.querySelector('canvas')?.clientHeight ?? 0) - 440) <= 1,
+          width,
+        );
+        const box = await page.locator('iframe[title^="Live demo:"]').boundingBox();
+        assert(box !== null && Math.abs(box.height - 440) <= 2, `responsive preview height was ${box?.height}`);
+        assert(responsive.url() === generation, 'resizing restarted the responsive preview');
+        assert((await responsive.locator('body').getAttribute('data-sizing-instance')) === instance, 'resizing replaced the running app');
+      }
+
+      await page.setViewportSize({ width: 1366, height: 768 });
+      await responsive.waitForFunction(() => window.innerWidth === 1280 && window.innerHeight === 720);
+      assert(
+        (await responsive.locator('body').getAttribute('data-sizing-instance')) === instance,
+        'desktop return replaced the running app',
+      );
+      await runSource(page, sourceFor('FixedResolutionCanvasSizing'));
+      await page.locator('[data-run-status="updated"]').waitFor();
+      await page.setViewportSize({ width: 390, height: 844 });
+      const fixed = await previewFrame(page);
+      await fixed.waitForFunction(() => Math.abs(window.innerWidth / window.innerHeight - 16 / 9) < 0.02);
+      const fixedBox = await page.locator('iframe[title^="Live demo:"]').boundingBox();
+      assert(fixedBox !== null && Math.abs(fixedBox.height - 390 * (9 / 16)) <= 2, 'fixed world did not keep its original aspect ratio');
+    } finally {
+      await page.context().close();
     }
   });
 
@@ -2111,6 +2179,9 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
         assert((await header.locator('details').getAttribute('open')) === null, 'Escape did not close view options');
 
         if (width >= 1120) {
+          await page.evaluate(() => document.fonts.ready);
+          const initialHeaderHeight = (await header.boundingBox())!.height;
+
           for (const title of ['First Animated Sprite', 'Room Loading and Asset Ownership', 'Bloom Threshold']) {
             await page
               .locator('#playground-navigation')
@@ -2126,6 +2197,10 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
                 .locator('[data-header-row="context"] > p')
                 .evaluate(node => node.scrollHeight <= node.clientHeight && node.scrollWidth <= node.clientWidth),
               'the selected example instruction is clipped',
+            );
+            assert(
+              Math.abs((await header.boundingBox())!.height - initialHeaderHeight) <= 1,
+              'example selection changed the desktop header height',
             );
           }
 

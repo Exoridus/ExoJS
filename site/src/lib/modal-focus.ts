@@ -6,6 +6,7 @@ let previousBodyOverflow = '';
 
 /** Keeps a modal's keyboard and pointer interaction inside its visible surface. */
 export const activateModalFocus = (root: HTMLElement, onClose: () => void, getOpener: () => HTMLElement | null): (() => void) => {
+  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const backgrounds: Array<{ element: HTMLElement; inert: boolean; hidden: string | null }> = [];
 
   for (let branch: HTMLElement | null = root; branch?.parentElement; branch = branch.parentElement) {
@@ -114,7 +115,16 @@ export const activateModalFocus = (root: HTMLElement, onClose: () => void, getOp
       document.body.style.overflow = previousBodyOverflow;
     }
 
-    const opener = getOpener();
+    const opener =
+      previousFocus?.isConnected &&
+      previousFocus !== document.body &&
+      previousFocus !== document.documentElement &&
+      !root.contains(previousFocus) &&
+      !previousFocus.closest('[inert], [hidden]') &&
+      previousFocus.getClientRects().length > 0 &&
+      getComputedStyle(previousFocus).visibility !== 'hidden'
+        ? previousFocus
+        : getOpener();
 
     if (opener?.isConnected && !opener.closest('[inert]')) {
       opener.focus({ preventScroll: true });

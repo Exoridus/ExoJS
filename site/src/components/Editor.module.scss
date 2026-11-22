@@ -344,6 +344,12 @@
 // Split layout (editor left, preview right) — desktop only; below the
 // breakpoint the stacked flow always applies regardless of the toggle.
 @media (width >= 1120px) {
+  .example-context {
+    // Reserve two readable lines so normal example changes do not move the
+    // preview. Longer instructions can still grow without being clipped.
+    min-height: calc(var(--text-sm) * 3);
+  }
+
   .root[data-layout='split'] {
     width: 100%;
 

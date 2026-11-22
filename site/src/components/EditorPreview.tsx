@@ -108,6 +108,8 @@ export const EditorPreview = ({
   const outputRef = useRef<PreviewConsole | undefined>(output);
   const canvasMutationObserverRef = useRef<MutationObserver | null>(null);
   const canvasAttributeObserverRef = useRef<MutationObserver | null>(null);
+  const canvasMeasureRef = useRef<(() => void) | null>(null);
+  const stageSizeRef = useRef({ width: STAGE_WIDTH, height: STAGE_HEIGHT });
   const currentCanvasRef = useRef({ width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 });
 
   // Latest-value refs for the callbacks below - the iframe load handler and
@@ -154,14 +156,15 @@ export const EditorPreview = ({
     }
 
     disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
+    canvasMeasureRef.current = null;
     currentCanvasRef.current = { width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 };
-    // Before the example reports its canvas, the frame already takes the
-    // stage's size scaled to the surface, so the iframe never sits at a
-    // different size or position from the one it settles on: the transform
-    // leaves the iframe's inner viewport alone, so this can be set early.
-    const zoom = measureFillZoom(rootRef.current, STAGE_WIDTH, STAGE_HEIGHT);
-    rootRef.current?.style.setProperty('--canvas-w', `${STAGE_WIDTH}px`);
-    rootRef.current?.style.setProperty('--canvas-h', `${STAGE_HEIGHT}px`);
+    // Give responsive phone scenes a useful portrait host. A fixed-world
+    // sizing policy reports its fitted canvas below and keeps its own aspect.
+    const stage = measureStageSize(rootRef.current);
+    stageSizeRef.current = stage;
+    const zoom = measureFillZoom(rootRef.current, stage.width, stage.height);
+    rootRef.current?.style.setProperty('--canvas-w', `${stage.width}px`);
+    rootRef.current?.style.setProperty('--canvas-h', `${stage.height}px`);
     rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
     onCanvasSize?.({ width: 0, height: 0, zoom: 1 });
 
@@ -177,11 +180,32 @@ export const EditorPreview = ({
   }, [onCanvasSize, sourceCode, executionModules, runId, selectedVersionId, exampleMeta?.path]);
 
   useEffect(() => {
+    let settleFrame = 0;
+
     const recalculateZoom = (): void => {
+      const stage = measureStageSize(rootRef.current);
+
+      if (stage.width !== stageSizeRef.current.width || stage.height !== stageSizeRef.current.height) {
+        stageSizeRef.current = stage;
+        const zoom = measureFillZoom(rootRef.current, stage.width, stage.height);
+        currentCanvasRef.current = { ...currentCanvasRef.current, ...stage, zoom };
+        rootRef.current?.style.setProperty('--canvas-w', `${stage.width}px`);
+        rootRef.current?.style.setProperty('--canvas-h', `${stage.height}px`);
+        rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
+        // Let the iframe's sizing policy observe the new host before adopting
+        // its canvas. Also measure fixed canvases whose attributes stay equal.
+        cancelAnimationFrame(settleFrame);
+        settleFrame = requestAnimationFrame(() => {
+          settleFrame = requestAnimationFrame(() => canvasMeasureRef.current?.());
+        });
+
+        return;
+      }
+
       const { width, height, resolutionWidth, resolutionHeight } = currentCanvasRef.current;
 
       if (!width) {
-        rootRef.current?.style.setProperty('--preview-zoom', String(measureFillZoom(rootRef.current, STAGE_WIDTH, STAGE_HEIGHT)));
+        rootRef.current?.style.setProperty('--preview-zoom', String(measureFillZoom(rootRef.current, stage.width, stage.height)));
 
         return;
       }
@@ -214,10 +238,12 @@ export const EditorPreview = ({
     window.addEventListener('keydown', preventScroll);
 
     return () => {
+      cancelAnimationFrame(settleFrame);
       surfaceObserver.disconnect();
       window.removeEventListener('resize', recalculateZoom);
       window.removeEventListener('keydown', preventScroll);
       disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
+      canvasMeasureRef.current = null;
       outputRef.current?.detach();
     };
   }, [onCanvasSize]);
@@ -231,7 +257,7 @@ export const EditorPreview = ({
       openPreviewInTab(): void {
         const source = sourceRef.current;
 
-        if (!source) {
+        if (source === null) {
           return;
         }
 
@@ -291,6 +317,7 @@ export const EditorPreview = ({
       applyCanvasSize(canvas.clientWidth || canvas.width, canvas.clientHeight || canvas.height, canvas.width, canvas.height);
     };
 
+    canvasMeasureRef.current = measure;
     measure();
     canvasAttributeObserverRef.current = new MutationObserver(measure);
     canvasAttributeObserverRef.current.observe(canvas, {
@@ -335,7 +362,7 @@ export const EditorPreview = ({
     const iframeBody = (iframe.contentDocument ?? iframe.contentWindow?.document)?.body as HTMLBodyElement | null;
     const source = sourceRef.current;
 
-    if (!iframeBody || !source) {
+    if (!iframeBody || source === null) {
       return;
     }
 
@@ -452,7 +479,7 @@ export const EditorPreview = ({
     }
   };
 
-  if (!sourceCode) {
+  if (sourceCode === null) {
     return (
       <div ref={rootRef} className={css(styles, 'root')}>
         <LoadingSpinner centered />
@@ -495,26 +522,39 @@ export const EditorPreview = ({
   );
 };
 
-/** The stage preview.html lays every example out on; the frame takes this size until the canvas reports its own. */
+/** Desktop's starting stage; each canvas can report its own size. */
 const STAGE_WIDTH = 1280;
 const STAGE_HEIGHT = 720;
 
+const measureSurfaceWidth = (root: HTMLElement | null): number => {
+  const width = root?.closest<HTMLElement>('[data-preview-surface]')?.clientWidth ?? 0;
+
+  return width > 0 ? width : window.innerWidth;
+};
+
+const measureStageSize = (root: HTMLElement | null): { width: number; height: number } => {
+  if (!window.matchMedia('(max-width: 760px)').matches) {
+    return { width: STAGE_WIDTH, height: STAGE_HEIGHT };
+  }
+
+  return {
+    width: measureSurfaceWidth(root),
+    height: Math.min(440, Math.floor(window.innerHeight * 0.65)),
+  };
+};
+
 // Scale the canvas to fill the available preview-panel width rather than
 // sitting at native size with empty gutters. The iframe itself is a fixed
-// 1280x720 stage that uniformly transform-scales its content (see
-// public/preview.html), so scaling the outer container up is crop-free and
-// keeps DOM overlays aligned - unlike engine-level `fill`, which would resize
-// the backing store and crop fixed coordinates. We measure the surrounding
-// `.preview-surface` (a layout-driven width, not the shrink-to-fit wrapper)
-// and allow upscaling past 1, capping height at ~72vh so a small native canvas
-// never overflows the viewport.
+// stage reported by the canvas. Uniform transform scaling keeps DOM overlays
+// aligned without changing the example's sizing policy or fixed coordinates.
+// Measure the layout-driven surface, not the shrink-to-fit wrapper, and cap
+// the preview at 65vh so a small native canvas never overflows the viewport.
 const measureFillZoom = (root: HTMLElement | null, width: number, height: number): number => {
   if (!width || !height) {
     return 1;
   }
 
-  const surface = root?.closest<HTMLElement>('[data-preview-surface]');
-  const availableWidth = surface?.clientWidth ?? window.innerWidth;
+  const availableWidth = measureSurfaceWidth(root);
   const widthZoom = availableWidth / width;
   const heightZoom = (window.innerHeight * 0.65) / height;
 
@@ -540,9 +580,9 @@ const buildPreviewUrl = (options: { noCache: number; sourceKey?: string; modules
 };
 
 const focusPreviewSurface = (iframe: HTMLIFrameElement | null): void => {
-  iframe?.focus();
+  iframe?.focus({ preventScroll: true });
   iframe?.contentWindow?.focus();
-  iframe?.contentDocument?.body?.focus();
+  iframe?.contentDocument?.body?.focus({ preventScroll: true });
 };
 
 const installPreviewErrorHandlers = (
