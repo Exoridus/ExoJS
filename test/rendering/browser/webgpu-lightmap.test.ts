@@ -36,6 +36,7 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import type { LightmapBackend } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
 import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
+import { describeLightmapReference } from './_lightmapReferenceSuite';
 import { describeLightmapSilhouettes } from './_lightmapSilhouetteSuite';
 import { getBackendDevice } from './webgpu-test-helpers';
 
@@ -898,3 +899,4 @@ describe('lightmap renderer WebGPU browser', () => {
 });
 
 describeLightmapSilhouettes('webgpu');
+describeLightmapReference('webgpu');

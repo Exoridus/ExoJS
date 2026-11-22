@@ -38,6 +38,7 @@ import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { describeLightmapReference } from './_lightmapReferenceSuite';
 import { describeLightmapSilhouettes } from './_lightmapSilhouetteSuite';
 
 const canvasSize = 128;
@@ -824,19 +825,35 @@ describe('the shadow filter as the fragment moves away from the light', () => {
     }
   };
 
-  test('a wall crossed at a slant darkens smoothly instead of in steps', async () => {
-    const profile = await rayProfile([100, 100, 200, 150], 60, 205);
+  test('a wall crossed at a slant cuts the light off at its face, sharply and without steps', async () => {
+    const from = 60;
+    const profile = await rayProfile([100, 100, 200, 150], from, 205);
     const shown = profile.join(' ');
 
-    // The ray really does leave the light and reach full shadow, so the step
-    // below is measured against a transition that happened.
+    // The ray really does leave the light and reach full shadow, so the
+    // transition below is one that happened.
     expect(Math.max(...profile), `${shown}`).toBeGreaterThan(200);
     expect(Math.min(...profile), `${shown}`).toBeLessThan(4);
 
-    // Comparing against each bin's own distance alone leaves one step per tap:
-    // measured at 26 of 205 counts here, against 7 for a filter that reads a
-    // coverage. The falloff's own slope is a couple of counts per sample.
-    expect(largestStep(profile), `${shown}`).toBeLessThan(0.06);
+    // A bin compared against one distance flips as a whole, and along a wall at
+    // a slant the bins under the kernel flip at different distances: the
+    // profile then climbs down in plateaus. Following the face through each bin
+    // leaves it falling the whole way, within an 8-bit read.
+    for (let index = 1; index < profile.length; index++) {
+      expect(profile[index]!, `${shown}`).toBeLessThanOrEqual(profile[index - 1]! + 2);
+    }
+
+    // The wall crosses the light's row 116 pixels out. The shadow starts there
+    // - its contact is where the penumbra is narrowest - rather than smeared
+    // over the kernel's width either side of it.
+    const edge = 116 - from;
+    const before = profile[edge - 4]!;
+    const crossing = profile.findIndex(value => value < before / 2);
+    const top = profile.findIndex(value => value < before * 0.9);
+    const bottom = profile.findIndex(value => value < before * 0.1);
+
+    expect(Math.abs(crossing - edge), `${shown}`).toBeLessThanOrEqual(1.5);
+    expect(bottom - top, `${shown}`).toBeLessThanOrEqual(6);
   });
 
   test('a wall square-on to the ray keeps its contact edge', async () => {
@@ -1005,3 +1022,4 @@ describe('the cascade merge along a lit edge', () => {
 });
 
 describeLightmapSilhouettes('webgl2');
+describeLightmapReference('webgl2');
