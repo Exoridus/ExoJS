@@ -102,15 +102,18 @@ node() {
     ]);
   });
 
-  it.each(['refs/heads/main', 'refs/heads/next'])('always runs complete local checks when pushing directly to %s', remoteRef => {
-    const { calls } = runHook(base, { mode: 'fast', remoteRef });
+  it.each(['refs/heads/main', 'refs/heads/next'])(
+    'always runs complete local checks when pushing directly to %s',
+    remoteRef => {
+      const { calls } = runHook(base, { mode: 'fast', remoteRef });
 
-    expect(calls).toEqual([
-      ['npm', 'run', 'gates', '--', 'affected-fast', base, head],
-      ['npm', 'run', 'gates', '--', 'affected-rest', base, head],
-      ['npm', 'run', 'lanes', '--', '--run', '--tests-only', '--pre-push', '--base', base],
-    ]);
-  });
+      expect(calls).toEqual([
+        ['npm', 'run', 'gates', '--', 'affected-fast', base, head],
+        ['npm', 'run', 'gates', '--', 'affected-rest', base, head],
+        ['npm', 'run', 'lanes', '--', '--run', '--tests-only', '--pre-push', '--base', base],
+      ]);
+    },
+  );
 
   it('does not turn an unresolved feature-branch base into a full local suite', () => {
     const { calls } = runHook('0'.repeat(40));
