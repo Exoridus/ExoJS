@@ -11,7 +11,7 @@
  * profile could find.
  */
 
-import { type Light, LightmapLighting, PointLight, PolygonOccluder, SpotLight } from '@codexo/exojs/lighting';
+import { type Light, LightmapLighting, LineLight, PointLight, PolygonOccluder, SpotLight } from '@codexo/exojs/lighting';
 import { describe, expect, test } from 'vitest';
 
 import { Color } from '#core/Color';
@@ -249,6 +249,83 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
       // A couple of counts of an 8-bit ratio, and the tail of an antialiased
       // edge into a neighbour it does not cross.
       expect(result.worst, `${result.at}`).toBeLessThan(0.1);
+    });
+  });
+
+  describe('finite LineLight source visibility', () => {
+    test('samples the emitting segment instead of casting all shadows from its centre', async () => {
+      const host = await createContactHost(backend);
+      const lighting = new LightmapLighting(host.app, {
+        ambient: Color.black,
+        lightResolution: 1,
+        shadowResolution: 512,
+      });
+      const sourceX = 80;
+      const sourceY = 128;
+      const wallX = 150;
+      const probeX = 200;
+      const probeY = 144;
+      const wallTop = 135.5;
+      const wallBottom = 137.4;
+
+      lighting.add(new LineLight({ length: 80, radius: 300, softness: 0 })).setPosition(sourceX, sourceY);
+
+      try {
+        const open = await host.render(lighting);
+
+        lighting.occludeFrom(
+          new PolygonOccluder(
+            [
+              { x: wallX, y: wallTop },
+              { x: wallX, y: wallBottom },
+            ],
+            { closed: false },
+          ),
+        );
+
+        const walled = await host.render(lighting);
+
+        if (open === null || walled === null) {
+          return;
+        }
+
+        const pixel = (probeY * contactCanvasSize + probeX) * 4;
+        const baseline = open[pixel]!;
+
+        expect(baseline).toBeGreaterThan(24);
+
+        // An independent geometric reference: four rays from actual segment
+        // points to the probe intersect x=wallX at different heights. The
+        // centre-only shadow casts one all-black silhouette here, whereas
+        // only a subset of the finite emitter is blocked.
+        const samples = [-0.75, -0.25, 0.25, 0.75];
+        let visibleWeight = 0;
+        let totalWeight = 0;
+
+        for (const fraction of samples) {
+          const emitterX = sourceX + fraction * 40;
+          const yAtWall = sourceY + ((probeY - sourceY) * (wallX - emitterX)) / (probeX - emitterX);
+          const distance = Math.hypot(probeX - emitterX, probeY - sourceY) / 300;
+          const weight = 1 / (1 + distance * distance);
+
+          totalWeight += weight;
+
+          if (yAtWall < wallTop || yAtWall > wallBottom) {
+            visibleWeight += weight;
+          }
+        }
+
+        const expected = visibleWeight / totalWeight;
+        const measured = walled[pixel]! / baseline;
+
+        expect(expected).toBeGreaterThan(0.5);
+        expect(expected).toBeLessThan(0.95);
+        expect(measured).toBeGreaterThan(0.35);
+        expect(Math.abs(measured - expected)).toBeLessThan(0.3);
+      } finally {
+        lighting.destroy();
+        host.destroy();
+      }
     });
   });
 
