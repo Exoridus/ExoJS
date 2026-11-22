@@ -109,8 +109,13 @@ const nativeImplementations = async (): Promise<NativeImplementations | null> =>
       // configuration imports its ESM entry; a different layout keeps full ESLint.
       import(pathToFileURL(resolve(toolingRoot, 'packages/exojs-config/node_modules/@vitest/eslint-plugin/dist/index.mjs')).href),
     ]);
+    const parser: unknown = tseslint.parser;
     const plugins: Record<string, unknown> = { '@typescript-eslint': tseslint.plugin, unicorn, vitest };
     const rules: NativeImplementations['rules'] = new Map();
+
+    if (!isRecord(parser)) {
+      return null;
+    }
 
     for (const [namespace, plugin] of Object.entries(plugins)) {
       if (!isRecord(plugin) || !isRecord(plugin.rules)) {
@@ -125,7 +130,7 @@ const nativeImplementations = async (): Promise<NativeImplementations | null> =>
     }
 
     return {
-      parser: { instance: tseslint.parser, parse: tseslint.parser.parse, parseForESLint: tseslint.parser.parseForESLint },
+      parser: { instance: parser, parse: parser.parse, parseForESLint: parser.parseForESLint },
       rules,
     };
   } catch {

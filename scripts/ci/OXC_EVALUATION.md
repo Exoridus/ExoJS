@@ -216,8 +216,8 @@ The implemented standard command also passed as
 configuration generation, native inventory verification, 2,738 admitted native
 files, and both complete root ESLint file passes. This includes React and the
 new tooling files, so its scope differs from the earlier paired subset.
-No stale-input fallback occurred. The real child-process regression cases
-cover changed/new files, Unicode and spaces, custom rules,
+No stale-input fallback occurred. The 27 real child-process regression cases
+pass, covering changed/new files, Unicode and spaces, custom rules,
 named-project imported promises, directive hygiene, ignores, nested/custom
 parser contexts, version/option drift, CLI forwarding and inputs that change
 after native lint. Native-only directives, copied parser metadata, replacement
