@@ -1,0 +1,28 @@
+name: Temporary TS7 AST formatter
+on:
+  push:
+    branches: [chore/ts71-oxlint-final-migration]
+    paths: [.github/workflows/ts71-ast-format.yml]
+permissions:
+  contents: read
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: |
+          pnpm exec oxfmt --write scripts/check-inline-source.ts scripts/check-source-hygiene.ts
+          echo '__FORMAT_INLINE_BEGIN__'
+          cat scripts/check-inline-source.ts
+          echo '__FORMAT_INLINE_END__'
+          echo '__FORMAT_HYGIENE_BEGIN__'
+          cat scripts/check-source-hygiene.ts
+          echo '__FORMAT_HYGIENE_END__'
