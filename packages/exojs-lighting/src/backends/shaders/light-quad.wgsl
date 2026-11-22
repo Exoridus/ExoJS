@@ -317,7 +317,10 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     // see `light-quad.frag`.
     let threshold = (radial - clearance) / (1.0 + uniforms.u_shadowPrecision);
     // The fragment's own angular size; see `light-quad.frag`. Also taken while control flow is uniform.
-    let footprint = max(length(dpdx(input.local)), length(dpdy(input.local))) / max(length(input.local), 1e-6);
+    // WGSL derivatives must execute in uniform control flow, before the
+    // line-source branch. The same pixelSpan is reused by all source rays.
+    let pixelSpan = max(length(dpdx(input.local)), length(dpdy(input.local)));
+    let footprint = pixelSpan / max(length(input.local), 1e-6);
 
     // Distance to the segment, not to the centre: folding `x` onto the segment
     // first is what turns the disc into a capsule, and a zero half-length
@@ -350,7 +353,6 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     var shadow = 1.0;
 
     if (input.half > 0.0 && input.shadowRow >= 0.0) {
-        let pixelSpan = max(length(dpdx(input.local)), length(dpdy(input.local)));
         let sourceReach = 1.0 + 2.0 * input.half;
         let sampleClearance = uniforms.u_shadowClearance * pixelSpan / sourceReach;
         var sum = 0.0;
