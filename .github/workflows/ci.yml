@@ -127,6 +127,7 @@ jobs:
           CHANGED_FILES_FILE: ${{ runner.temp }}/changed-files
           REF_NAME: ${{ github.ref_name }}
           FULL_QUALIFICATION: ${{ inputs.full_qualification || contains(github.event.pull_request.labels.*.name, 'ci:full') }}
+          AFFECTED_SHADOW: ${{ contains(github.event.pull_request.labels.*.name, 'ci:affected-shadow') || contains(github.event.pull_request.labels.*.name, 'ci:affected-probe') }}
         run: node scripts/ci/lanes.ts >> "$GITHUB_OUTPUT"
 
   gates:
@@ -195,17 +196,26 @@ jobs:
           pactl set-default-sink exojs_ci
           pactl info
 
-      # Shadow only: discovery records candidate subsets while the unchanged
-      # commands below still execute every required test. Each row's reporter
-      # compares the plan with the actual full inventory and failures.
-      - name: Calculate affected tests in shadow mode
-        if: github.event_name == 'pull_request' && matrix.affectedProjects[0] != null && needs.plan.outputs.fullQualification != 'true'
+      # Ordinary PRs select only their actual changed range. Shadow/probe labels
+      # retain native full execution and audit additional scenarios. A failed
+      # discovery leaves native execution active and still fails this job.
+      - name: Calculate affected tests
+        if: ${{ matrix.affectedMode != '' }}
         env:
+          AFFECTED_MODE: ${{ matrix.affectedMode }}
           AFFECTED_BASE: ${{ github.event.pull_request.base.sha }}
           AFFECTED_PROJECTS: ${{ join(matrix.affectedProjects, ',') }}
           AFFECTED_OUTPUT: .workspace/affected-tests/${{ matrix.id }}.json
         shell: bash
         run: |
+          printf '%s\n' 'EXOJS_AFFECTED_PLAN=' 'EXOJS_AFFECTED_MODE=' >> "$GITHUB_ENV"
+          mkdir -p "$(dirname "$AFFECTED_OUTPUT")"
+          selection=()
+          case "$AFFECTED_MODE" in
+            enforce) ;;
+            shadow) selection+=(--scenarios) ;;
+            *) printf '%s\n' '::error::Unknown affected-test mode.' >&2; exit 1 ;;
+          esac
           if ! git fetch --no-tags --depth=1 origin "$AFFECTED_BASE"; then
             printf '%s\n' '::warning::Dependency selection could not fetch its base; the selector will retain full validation.'
           fi
@@ -214,8 +224,9 @@ jobs:
           for project in "${projects[@]}"; do
             args+=("--project=$project")
           done
-          node scripts/ci/affected-plan.ts --base "$AFFECTED_BASE" --committed --scenarios --output "$AFFECTED_OUTPUT" -- "${args[@]}"
+          node scripts/ci/affected-plan.ts --base "$AFFECTED_BASE" --committed "${selection[@]}" --output "$AFFECTED_OUTPUT" -- "${args[@]}" 2>&1 | tee "${AFFECTED_OUTPUT%.json}.log"
           printf 'EXOJS_AFFECTED_PLAN=%s\n' "$AFFECTED_OUTPUT" >> "$GITHUB_ENV"
+          printf 'EXOJS_AFFECTED_MODE=%s\n' "$AFFECTED_MODE" >> "$GITHUB_ENV"
 
       # A browser lane runs several qualification rows (`pnpm qualify`), each
       # with its own JUnit report, deadline and log; the summary of which rows
@@ -228,14 +239,15 @@ jobs:
           EXOJS_GUIDE_MOTION: ${{ matrix.id == 'webgl' && needs.plan.outputs.guideMotion == 'true' && '1' || '0' }}
           EXOJS_VISUAL_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      # Optional measurement after the required full run. Its plan is accepted
-      # only when the exact scenario has complete successful shadow evidence.
+      # Optional probes require complete successful shadow evidence for the
+      # exact scenario. Unit measures the subset; Media checks receipt delivery
+      # through a real browser instance without repeating the Core GPU suite.
       # Probe JUnit stays outside test-results so it cannot duplicate the budget.
       - name: Measure an audited affected subset
         if: >-
           success() && github.event_name == 'pull_request' &&
           contains(github.event.pull_request.labels.*.name, 'ci:affected-probe') &&
-          needs.plan.outputs.fullQualification != 'true' &&
+          matrix.affectedMode == 'shadow' &&
           (matrix.id == 'unit' || matrix.id == 'webgpu')
         env:
           AFFECTED_LANE: ${{ matrix.id }}
@@ -249,11 +261,11 @@ jobs:
           if [ "$AFFECTED_LANE" = unit ]; then
             time EXOJS_REQUIRE_NAGA=1 node scripts/run-tests.ts --project='exojs*' --project=rendering-perf --reporter=minimal --reporter=junit --outputFile.junit=.workspace/affected-tests/probe-unit.junit.xml
           else
-            time EXOJS_WEBGPU_CI_HEADED=1 xvfb-run -a pnpm qualify --row 'Diagnostic / AnimatedSprite WebGPU' --preflight chromium-webgpu --requires webgpu-device --timeout 15 -- node scripts/ci/affected-run.ts --project=browser-webgpu --reporter=minimal --reporter=junit --outputFile.junit=.workspace/affected-tests/probe-webgpu.junit.xml
+            time EXOJS_WEBGPU_CI_HEADED=1 xvfb-run -a pnpm qualify --row 'Diagnostic / AnimatedSprite WebGPU Media' --preflight chromium-webgpu --requires webgpu-device,media-frame --timeout 6 -- node scripts/ci/affected-run.ts --project=browser-webgpu-media --reporter=minimal --reporter=junit --outputFile.junit=.workspace/affected-tests/probe-webgpu-media.junit.xml
           fi
 
       - name: Keep dependency-selection evidence
-        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.affectedProjects[0] != null && needs.plan.outputs.fullQualification != 'true' }}
+        if: ${{ !cancelled() && matrix.affectedMode != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: affected-tests-${{ matrix.id }}

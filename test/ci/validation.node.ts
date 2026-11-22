@@ -893,11 +893,12 @@ void test('the shared lane budget is finite and preserves the longer bench timeo
   assert.equal(laneTimeoutMinutes(LANES.find(lane => lane.id === 'bench')!), 30);
 });
 
-void test('local WebGPU bounds file concurrency without narrowing the CI test inventory', async () => {
+void test('local WebGPU bounds file concurrency while CI delegates selection to its exact project adapter', async () => {
   const { LANES } = await import('../../scripts/ci/lanes.ts');
   const lane = LANES.find(item => item.id === 'webgpu')!;
   assert.match(lane.run, /--no-file-parallelism/);
-  assert.match(lane.ciRun!, /test:browser:webgpu --reporter=minimal/);
+  assert.match(lane.ciRun!, /node scripts\/ci\/affected-run\.ts --project=browser-webgpu --reporter=minimal/);
+  assert.match(lane.ciRun!, /node scripts\/ci\/affected-run\.ts --project=browser-webgpu-media --reporter=minimal/);
   assert.doesNotMatch(lane.run + lane.ciRun, /--retry|--exclude|--bail|\|\| true/);
 });
 
