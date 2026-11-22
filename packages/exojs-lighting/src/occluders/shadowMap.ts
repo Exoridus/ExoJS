@@ -8,8 +8,8 @@ const maxDirectionTables = 4;
 const directionTables = new Map<number, Float64Array>();
 
 /**
- * Unit directions at every bin's start and centre, two per bin, over the
- * unwrapped bins `-bins - 1 .. 2 * bins + 1` a segment can reach from the seam.
+ * Unit directions at every bin's start, over the unwrapped bins
+ * `-bins - 1 .. 2 * bins + 2` a segment can reach from the seam.
  */
 const shadowDirections = (bins: number): Float64Array => {
   const existing = directionTables.get(bins);
@@ -20,17 +20,15 @@ const shadowDirections = (bins: number): Float64Array => {
 
   // Keep the unwrapped bins around the seam. Folding their angles into one
   // turn before sin/cos can change floating-point endpoint decisions.
-  const directions = new Float64Array((3 * bins + 4) * 4);
+  const directions = new Float64Array((3 * bins + 4) * 2);
   const binsPerRadian = bins / TAU;
 
   for (let bin = -bins - 1; bin <= 2 * bins + 2; bin++) {
-    for (let half = 0; half < 2; half++) {
-      const angle = -Math.PI + (bin + half * 0.5) / binsPerRadian;
-      const offset = ((bin + bins + 1) * 2 + half) * 2;
+    const angle = -Math.PI + bin / binsPerRadian;
+    const offset = (bin + bins + 1) * 2;
 
-      directions[offset] = Math.cos(angle);
-      directions[offset + 1] = Math.sin(angle);
-    }
+    directions[offset] = Math.cos(angle);
+    directions[offset + 1] = Math.sin(angle);
   }
 
   if (directionTables.size >= maxDirectionTables) {
@@ -185,48 +183,90 @@ export const buildShadowRow = (
 
     directions ??= shadowDirections(bins);
 
-    const first = Math.atan2(y1, x1);
-    const span = wrapSigned(Math.atan2(y2, x2) - first);
-    const start = span >= 0 ? first : first + span;
-    const width = Math.abs(span);
-    const firstBin = Math.floor((start + Math.PI) * binsPerRadian);
-    const lastBin = Math.floor((start + width + Math.PI) * binsPerRadian);
-    const edgeX = x2 - x1;
-    const edgeY = y2 - y1;
-
-    for (let bin = firstBin; bin <= lastBin; bin++) {
-      // Unwrapped, like `start`, so a segment across the seam needs no special case.
-      const binStart = -Math.PI + bin / binsPerRadian;
-      let low = (start - binStart) * binsPerRadian;
-      let high = (start + width - binStart) * binsPerRadian;
-
-      low = low <= coverageEpsilon ? 0 : low;
-      high = high >= 1 - coverageEpsilon ? 1 : high;
-
-      if (high <= low) {
-        continue;
-      }
-
-      const lowDistance = distanceAt(x1, y1, edgeX, edgeY, directions, bins, bin, binStart, binsPerRadian, low) / radius;
-      const highDistance = distanceAt(x1, y1, edgeX, edgeY, directions, bins, bin, binStart, binsPerRadian, high) / radius;
-
-      if (Math.min(lowDistance, highDistance) >= 1) {
-        continue;
-      }
-
-      coverBin(row, ((bin % bins) + bins) % bins, low, high, Math.min(1, lowDistance), Math.min(1, highDistance));
-    }
+    castSegment(row, bins, binsPerRadian, directions, radius, x1, y1, x2, y2);
   }
 
   encodeSpans(row, bins);
 };
 
-/**
- * Distance from the light to the segment along the ray `fraction` of the way
- * through unwrapped bin `bin`; the bin's start, centre and end come from the
- * table.
- */
-const distanceAt = (
+/** Record segment `(x1, y1)..(x2, y2)`, already in light space, in every bin it crosses. */
+const castSegment = (
+  row: Float32Array,
+  bins: number,
+  binsPerRadian: number,
+  directions: Float64Array,
+  radius: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): void => {
+  const first = Math.atan2(y1, x1);
+  const span = wrapSigned(Math.atan2(y2, x2) - first);
+  const start = span >= 0 ? first : first + span;
+  const width = Math.abs(span);
+  const firstBin = Math.floor((start + Math.PI) * binsPerRadian);
+  const lastBin = Math.floor((start + width + Math.PI) * binsPerRadian);
+  const edgeX = x2 - x1;
+  const edgeY = y2 - y1;
+  // Inside a bin a part ends at one of the segment's own ends, whose
+  // distance needs no ray.
+  const startVertex = Math.sqrt(span >= 0 ? x1 * x1 + y1 * y1 : x2 * x2 + y2 * y2) / radius;
+  const endVertex = Math.sqrt(span >= 0 ? x2 * x2 + y2 * y2 : x1 * x1 + y1 * y1) / radius;
+
+  // A bin's end is the next one's start, so the distance there is carried
+  // over instead of measured twice.
+  let carried = -1;
+
+  for (let bin = firstBin; bin <= lastBin; bin++) {
+    // Unwrapped, like `start`, so a segment across the seam needs no special case.
+    const binStart = -Math.PI + bin / binsPerRadian;
+    let low = (start - binStart) * binsPerRadian;
+    let high = (start + width - binStart) * binsPerRadian;
+
+    low = low <= coverageEpsilon ? 0 : low;
+    high = high >= 1 - coverageEpsilon ? 1 : high;
+
+    if (high <= low) {
+      carried = -1;
+      continue;
+    }
+
+    let lowDistance = startVertex;
+    let highDistance = endVertex;
+
+    if (low === 0) {
+      lowDistance = carried >= 0 ? carried : edgeDistance(x1, y1, edgeX, edgeY, directions, bins, bin) / radius;
+    }
+
+    if (high === 1) {
+      highDistance = edgeDistance(x1, y1, edgeX, edgeY, directions, bins, bin + 1) / radius;
+    }
+
+    carried = high === 1 ? highDistance : -1;
+
+    if (Math.min(lowDistance, highDistance) >= 1) {
+      continue;
+    }
+
+    const slot = ((bin % bins) + bins) % bins;
+
+    // Most bins a segment crosses it covers whole; kept out of `coverBin`
+    // so that the common case stays small enough to inline.
+    if (low === 0 && high === 1) {
+      const texel = slot * shadowRowStride;
+
+      row[texel + 2] = Math.min(row[texel + 2]!, lowDistance);
+      row[texel + 3] = Math.min(row[texel + 3]!, highDistance);
+      continue;
+    }
+
+    coverBin(row, slot, low, high, Math.min(1, lowDistance), Math.min(1, highDistance));
+  }
+};
+
+/** Distance from the light to the segment along the start of unwrapped bin `bin`. */
+const edgeDistance = (
   x1: number,
   y1: number,
   edgeX: number,
@@ -234,19 +274,10 @@ const distanceAt = (
   directions: Float64Array,
   bins: number,
   bin: number,
-  binStart: number,
-  binsPerRadian: number,
-  fraction: number,
 ): number => {
-  if (fraction === 0 || fraction === 0.5 || fraction === 1) {
-    const direction = ((bin + bins + 1) * 2 + fraction * 2) * 2;
+  const direction = (bin + bins + 1) * 2;
 
-    return distanceAlong(x1, y1, edgeX, edgeY, directions[direction]!, directions[direction + 1]!);
-  }
-
-  const angle = binStart + fraction / binsPerRadian;
-
-  return distanceAlong(x1, y1, edgeX, edgeY, Math.cos(angle), Math.sin(angle));
+  return distanceAlong(x1, y1, edgeX, edgeY, directions[direction]!, directions[direction + 1]!);
 };
 
 /** Record an occluder over the part `low..high` of bin `slot`, at `lowDistance` and `highDistance` at its two ends. */
@@ -480,9 +511,18 @@ const distanceAlong = (x1: number, y1: number, edgeX: number, edgeY: number, dir
     return -1;
   }
 
-  const along = Math.min(1, Math.max(0, (x1 * dirY - y1 * dirX) / denominator));
+  const along = (x1 * dirY - y1 * dirX) / denominator;
 
-  return Math.hypot(x1 + edgeX * along, y1 + edgeY * along);
+  // Inside the segment the ray parameter is the distance itself, the ray being
+  // a unit vector; only an end that rounding put just outside needs a root.
+  if (along >= 0 && along <= 1) {
+    return (x1 * edgeY - y1 * edgeX) / denominator;
+  }
+
+  const x = along < 0 ? x1 : x1 + edgeX;
+  const y = along < 0 ? y1 : y1 + edgeY;
+
+  return Math.sqrt(x * x + y * y);
 };
 
 /** An angle difference folded into `(-pi, pi]`, so a span is always the short way round. */

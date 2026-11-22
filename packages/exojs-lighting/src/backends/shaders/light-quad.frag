@@ -92,25 +92,33 @@ vec2 beyond(float d0, float d1, float x0, float x1, float threshold, float from,
 }
 
 /**
- * One bin's part in the kernel: `x` the share the light reaches through, `y`
- * the bin's whole share, and `z` the blocked share weighted by the distance of
- * what blocks it, for the penumbra's width.
+ * One bin's part in the kernel: `x` the share the light reaches through and `y`
+ * the bin's whole share.
  *
  * Over its span a partial blocker is followed between its two ends, and light
  * gets through only where it also passes what covers the rest of the bin. A
  * bin with no partial blocker may hold a corner, where the rest bends.
  */
-vec3 binTerm(int bin, vec4 texel, int bins, int row, float threshold, float center, float radius) {
+vec2 binTerm(int bin, vec4 texel, int bins, int row, float threshold, float center, float radius) {
     float low = float(bin) - 0.5;
     float high = low + 1.0;
     float mass = tentMass(vec2(low, high), center, radius);
 
     if (mass <= 0.0) {
-        return vec3(0.0);
+        return vec2(0.0);
+    }
+
+    // Wholly in front of the face, or wholly behind it: most bins under a
+    // kernel, which need no span of their own.
+    if (texel.g == 0.0 && min(texel.b, texel.a) > threshold) {
+        return vec2(mass);
+    }
+
+    if (texel.g == 0.0 && max(texel.b, texel.a) <= threshold) {
+        return vec2(0.0, mass);
     }
 
     float open;
-    float depth;
 
     if (texel.g > 0.0) {
         vec4 extra = binAt(bin, 1, bins, row);
@@ -122,20 +130,17 @@ vec3 binTerm(int bin, vec4 texel, int bins, int row, float threshold, float cent
         open = tentMass(beyond(texel.b, texel.a, low, high, threshold, low, span.x), center, radius) +
             tentMass(beyond(texel.b, texel.a, low, high, threshold, span.y, high), center, radius) +
             tentMass(vec2(max(rest.x, own.x), min(rest.y, own.y)), center, radius);
-        depth = min(0.5 * (texel.b + texel.a), 0.5 * (texel.r + extra.r));
     } else if (texel.g < 0.0) {
         vec4 extra = binAt(bin, 1, bins, row);
         float corner = low + extra.g;
 
         open = tentMass(beyond(texel.b, extra.b, low, corner, threshold, low, corner), center, radius) +
             tentMass(beyond(extra.b, texel.a, corner, high, threshold, corner, high), center, radius);
-        depth = (texel.b + 2.0 * extra.b + texel.a) * 0.25;
     } else {
         open = tentMass(beyond(texel.b, texel.a, low, high, threshold, low, high), center, radius);
-        depth = 0.5 * (texel.b + texel.a);
     }
 
-    return vec3(open, mass, (mass - open) * depth);
+    return vec2(open, mass);
 }
 
 /**
@@ -177,21 +182,48 @@ float shadowTerm(float threshold, float footprint) {
     // Bin `i` spans `i - 0.5 .. i + 0.5` here, so these are the bins the tent touches.
     int base = int(floor(center + 0.5));
     int reach = int(ceil(widest + 0.5));
-    vec4 texels[2 * MAX_HALF + 3];
+    // The blocker search sets only the kernel's width, so an estimate does:
+    // how much of the widest kernel is blocked and how far away, continuous in
+    // the fragment's angle and distance. It also says exactly when nothing or
+    // everything under the kernel blocks, where a narrower kernel over the same
+    // bins cannot answer differently and no second pass is owed - most of a
+    // light's area.
     float blockedShare = 0.0;
     float blockedDistance = 0.0;
+    bool open = true;
+    bool closed = true;
 
     for (int offset = -MAX_HALF - 1; offset <= MAX_HALF + 1; offset++) {
         if (offset < -reach || offset > reach) {
             continue;
         }
 
-        vec4 texel = binAt(base + offset, 0, bins, row);
-        vec3 term = binTerm(base + offset, texel, bins, row, threshold, center, widest);
+        int bin = base + offset;
+        vec4 texel = binAt(bin, 0, bins, row);
+        float near = min(texel.b, texel.a);
+        float far = max(texel.b, texel.a);
+        float weight = max(0.0, 1.0 - abs(float(bin) - center) / (widest + 0.5));
+        float blocked = clamp((threshold - near) / max(far - near, 1e-4), 0.0, 1.0);
+        float depth = 0.5 * (near + far);
 
-        texels[offset + MAX_HALF + 1] = texel;
-        blockedShare += term.y - term.x;
-        blockedDistance += term.z;
+        if (texel.g > 0.0 && texel.r < threshold) {
+            blocked = max(blocked, 0.5);
+            depth = min(depth, texel.r);
+        }
+
+        // A partial blocker or a corner needs the bin's second texel to be sure of.
+        open = open && texel.g == 0.0 && near > threshold;
+        closed = closed && texel.g == 0.0 && far < threshold;
+        blockedShare += weight * blocked;
+        blockedDistance += weight * blocked * depth;
+    }
+
+    if (open) {
+        return 1.0;
+    }
+
+    if (closed) {
+        return 0.0;
     }
 
     float spread = blockedShare > 0.0 && threshold > 0.0 ? clamp(1.0 - blockedDistance / (blockedShare * threshold), 0.0, 1.0) : 1.0;
@@ -205,7 +237,10 @@ float shadowTerm(float threshold, float footprint) {
             continue;
         }
 
-        vec3 term = binTerm(base + offset, texels[offset + MAX_HALF + 1], bins, row, threshold, center, radius);
+        // Fetched again rather than kept from the first pass: an array indexed
+        // by the loop spills out of registers, which costs far more than a
+        // texel the cache still holds.
+        vec2 term = binTerm(base + offset, binAt(base + offset, 0, bins, row), bins, row, threshold, center, radius);
 
         lit += term.x;
         total += term.y;
