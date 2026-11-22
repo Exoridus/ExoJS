@@ -55,7 +55,7 @@ const createBackend = async (options: { suppliedCanvas?: boolean; releaseContext
       canvas: { width: canvasSize, height: canvasSize, ...(options.suppliedCanvas ? { element: canvas } : {}) },
       rendering: {
         debug: false,
-        ...(options.releaseContext !== undefined ? { releaseWebGl2ContextOnDestroy: options.releaseContext } : {}),
+        ...(options.releaseContext !== undefined ? { releaseContext: options.releaseContext } : {}),
         webglAttributes: {
           antialias: false,
           preserveDrawingBuffer: true,

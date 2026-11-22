@@ -102,11 +102,11 @@
           "description": "WebGL2-only debug wrapper. Ignored by WebGPU."
         },
         {
-          "name": "releaseWebGl2ContextOnDestroy",
-          "signature": "releaseWebGl2ContextOnDestroy?: boolean",
+          "name": "releaseContext",
+          "signature": "releaseContext?: boolean",
           "signatureTokens": [
             {
-              "text": "releaseWebGl2ContextOnDestroy",
+              "text": "releaseContext",
               "kind": "name"
             },
             {

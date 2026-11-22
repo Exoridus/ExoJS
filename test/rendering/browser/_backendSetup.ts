@@ -35,7 +35,8 @@ export const makeTestApp = (canvas: RenderSurface, size: number, pixelRatio?: nu
   ({
     canvas,
     options: {
-      canvas: { width: size, height: size, ...(pixelRatio !== undefined && { pixelRatio }) },
+      // The test fixture supplies the canvas; its context remains caller-owned.
+      canvas: { element: canvas, width: size, height: size, ...(pixelRatio !== undefined && { pixelRatio }) },
       clearColor: Color.black,
       rendering: {
         debug: false,

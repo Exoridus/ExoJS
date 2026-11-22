@@ -143,7 +143,7 @@ export interface RenderingApplicationOptions {
    * its owner. Enable for a provided canvas only if its pixels and context
    * are no longer needed. Ignored by WebGPU.
    */
-  releaseWebGl2ContextOnDestroy?: boolean;
+  releaseContext?: boolean;
   /**
    * The application's output transform - exposure and the HDR-to-SDR mapping
    * applied once, at the end of every frame. See {@link OutputTransformOptions}.
@@ -315,7 +315,7 @@ export const defaultLoaderFetchOptions: RequestInit = {
 const defaultRenderingSettings: Omit<Required<RenderingApplicationOptions>, 'color'> = {
   alphaMode: 'opaque',
   debug: false,
-  releaseWebGl2ContextOnDestroy: false,
+  releaseContext: false,
   spriteRendererBatchSize: 4096, // ~ 262kb
   webglAttributes: {
     antialias: false,
@@ -341,7 +341,7 @@ export type ResolvedRenderingOptions = Omit<Required<RenderingApplicationOptions
 export const resolveRenderingOptions = (renderingOptions: RenderingApplicationOptions): ResolvedRenderingOptions => ({
   alphaMode: renderingOptions.alphaMode ?? defaultRenderingSettings.alphaMode,
   debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
-  releaseWebGl2ContextOnDestroy: renderingOptions.releaseWebGl2ContextOnDestroy ?? defaultRenderingSettings.releaseWebGl2ContextOnDestroy,
+  releaseContext: renderingOptions.releaseContext ?? defaultRenderingSettings.releaseContext,
   webglAttributes: { ...defaultRenderingSettings.webglAttributes, ...renderingOptions.webglAttributes },
   spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
   color: resolveOutputTransformOptions(renderingOptions.color),

@@ -578,7 +578,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           ...renderingOptions,
           // The resolved canvas.element is always present; the original
           // ownership decision is the only reliable default for terminal GL release.
-          releaseWebGl2ContextOnDestroy: renderingOptions.releaseWebGl2ContextOnDestroy ?? this._ownsCanvas,
+          releaseContext: renderingOptions.releaseContext ?? this._ownsCanvas,
         }),
         input: {
           gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
