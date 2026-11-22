@@ -13,11 +13,10 @@ flat in float v_softness;
 flat in vec4 v_surface;
 flat in float v_half;
 
-// One row per shadowed light, one texel per angular bin, distances as a
-// fraction of the light's radius: `r` an occluder covering only the part of the
-// bin from `g` to `b`, and `a` the nearest occluder over the rest of it (see
-// `buildShadowRow`). A row index below zero means this light sees no occluder
-// at all.
+// One row per shadowed light, two texels per angular bin: where the occluders
+// in it are, as fractions of the light's radius, and which part of the bin each
+// covers (see `buildShadowRow`). A row index below zero means this light sees
+// no occluder at all.
 uniform highp sampler2D u_shadow;
 // The normal prepass, in screen space at this target's own size. Alpha is
 // coverage: zero means nothing described a surface there.
@@ -31,91 +30,112 @@ out vec4 fragColor;
 const float PI = 3.14159265359;
 /**
  * Widest kernel, as a half-width in bins, and therefore also the fetch budget:
- * one tap per bin the kernel touches, and a bin either side of those for the
- * slope the outermost taps read - at most `2 * MAX_HALF + 5` fetches.
+ * one fetch per bin the kernel touches, at most `2 * MAX_HALF + 3`, and two
+ * more for each bin a silhouette or a corner falls in.
  *
- * It bounds the penumbra in BINS, so a larger `shadowResolution` buys a
- * sharper hard edge rather than a wider softest penumbra. Sampling every bin
- * under the kernel is what keeps the filter continuous, and a budget that did
- * not bound the width would have to skip bins to stay within itself.
+ * It bounds the penumbra in BINS, so a larger `shadowResolution` buys a wider
+ * kernel only up to here. Sampling every bin under the kernel is what keeps the
+ * filter continuous, and a budget that did not bound the width would have to
+ * skip bins to stay within itself.
  */
 const int MAX_HALF = 10;
 /** Fraction of a full turn the widest penumbra spans, before the bin bound above. */
 const float MAX_PENUMBRA = 0.03;
-/**
- * Clearance that keeps an occluder's lit face out of its own shadow, in
- * fragments along the ray. The fragment samples at its centre, so half of one
- * reaches the face from any fragment the face crosses; the rest settles a face
- * lying exactly on a fragment boundary, a tile edge, towards lit. Measured in
- * fragments rather than in world units or radii, the gap it can open behind a
- * contact stays under one fragment at any light reach and camera zoom.
- */
-const float SHADOW_CLEARANCE = 0.75;
-/**
- * Kernel half-width, in bins, at zero softness. A bin holds one distance for
- * the whole of its covered part, so a kernel narrower than this would show
- * the step between neighbouring bins' distances along a wall seen at a slant.
- */
-const float MIN_RADIUS = 1.5;
-/**
- * Narrowest blocker slope, in the row's own units, that a bin is allowed to
- * resolve. Below it a bin flips at its stored distance, which is what a wall
- * square-on to the ray should do.
- */
-const float MIN_SLOPE = 1e-4;
+/** Steps a partial span's ends are stored in; see `buildShadowRow`. */
+const float SPAN_STEPS = 4095.0;
 
-/** The texel bin `bin` holds. The row is polar, so the index wraps. */
-vec4 binAt(int bin, int bins, int row) {
+/**
+ * Texel `part` (0 or 1) of bin `bin`; see `buildShadowRow` for what each holds.
+ * The row is polar, so the index wraps.
+ */
+vec4 binAt(int bin, int part, int bins, int row) {
     int slot = bin - bins * int(floor(float(bin) / float(bins)));
 
-    return texelFetch(u_shadow, ivec2(slot, row), 0);
+    return texelFetch(u_shadow, ivec2(slot * 2 + part, row), 0);
 }
 
 /**
  * The share of the kernel - a unit-area tent of half-width `radius` around
- * `center` - that falls between `low` and `high`, all in bins.
+ * `center` - that falls in `span`, all in bins; nothing where the span is empty.
  */
-float tentMass(float low, float high, float center, float radius) {
-    vec2 u = clamp((vec2(low, high) - center) / radius, -1.0, 1.0);
+float tentMass(vec2 span, float center, float radius) {
+    if (span.y <= span.x) {
+        return 0.0;
+    }
+
+    vec2 u = clamp((span - center) / radius, -1.0, 1.0);
     vec2 area = u - u * abs(u) * 0.5;
 
     return area.y - area.x;
 }
 
 /**
- * How much of one bin's own angular width the light reaches past `threshold`,
- * the fragment's distance less the clearance its own lit face is owed.
+ * Where within `from .. to` a face lies beyond `threshold` - the fragment's
+ * distance less the clearance its own lit face is owed - when it runs straight
+ * through `(x0, d0)` and `(x1, d1)`, positions in bins and distances in radii.
  *
- * A bin holds a single blocker distance, so comparing against that alone makes
- * the whole bin flip at once and a kernel of such comparisons has no more
- * levels than it has taps. Along a wall that is not square-on to the ray the
- * taps flip at DIFFERENT distances, and the levels then show up as a fan of
- * arcs across the penumbra. The blocker's distance varies within the bin, and
- * the one-sided differences to the neighbouring bins measure how steeply.
- *
- * Two conditions before that reading is trusted. The differences have to run
- * the same way, or the bin holds an isolated blocker rather than a surface;
- * and of two that do, the SMALLER is taken, because across a silhouette one
- * side jumps by the whole distance to whatever lies behind. Failing either,
- * the bin flips at its stored distance, which is what a blocker that the row
- * cannot resolve any further should do.
- *
- * The transition stays centred on the bin's OWN stored distance either way -
- * blending two stored distances and comparing once would instead put the edge
- * at a depth neither bin holds, which is a different thing and the wrong one.
+ * Following the face rather than comparing against one distance per bin is
+ * what keeps it straight where the light meets it at a slant, and keeps the
+ * part beyond the threshold one span whose share of the kernel is exact.
  */
-float coverageAt(float here, float previous, float next, float threshold) {
-    float rising = here - previous;
-    float falling = next - here;
-    // A slope only means something where the blocker distance runs the SAME
-    // way on both sides. A bin whose neighbours BOTH lie further away holds an
-    // isolated blocker seen end-on rather than a surface seen at a slant, and
-    // reading its two one-sided jumps as a slope would spread it over the whole
-    // distance to whatever stands behind it - darkening what stands in FRONT of
-    // it, the one place a blocker cannot reach.
-    float slope = rising * falling <= 0.0 ? 0.0 : min(abs(rising), abs(falling));
+vec2 beyond(float d0, float d1, float x0, float x1, float threshold, float from, float to) {
+    float slope = (d1 - d0) / (x1 - x0);
 
-    return clamp(0.5 + (here - threshold) / max(slope, MIN_SLOPE), 0.0, 1.0);
+    if (abs(slope) < 1e-9) {
+        return d0 > threshold ? vec2(from, to) : vec2(from, from);
+    }
+
+    // Where the face's distance meets the threshold, in bins.
+    float crossing = x0 + (threshold - d0) / slope;
+
+    return slope > 0.0 ? vec2(max(from, crossing), to) : vec2(from, min(to, crossing));
+}
+
+/**
+ * One bin's part in the kernel: `x` the share the light reaches through, `y`
+ * the bin's whole share, and `z` the blocked share weighted by the distance of
+ * what blocks it, for the penumbra's width.
+ *
+ * Over its span a partial blocker is followed between its two ends, and light
+ * gets through only where it also passes what covers the rest of the bin. A
+ * bin with no partial blocker may hold a corner, where the rest bends.
+ */
+vec3 binTerm(int bin, vec4 texel, int bins, int row, float threshold, float center, float radius) {
+    float low = float(bin) - 0.5;
+    float high = low + 1.0;
+    float mass = tentMass(vec2(low, high), center, radius);
+
+    if (mass <= 0.0) {
+        return vec3(0.0);
+    }
+
+    float open;
+    float depth;
+
+    if (texel.g > 0.0) {
+        vec4 extra = binAt(bin, 1, bins, row);
+        float steps = floor(texel.g / 4096.0);
+        vec2 span = low + vec2(steps, texel.g - steps * 4096.0) / SPAN_STEPS;
+        vec2 rest = beyond(texel.b, texel.a, low, high, threshold, span.x, span.y);
+        vec2 own = beyond(texel.r, extra.r, span.x, span.y, threshold, span.x, span.y);
+
+        open = tentMass(beyond(texel.b, texel.a, low, high, threshold, low, span.x), center, radius) +
+            tentMass(beyond(texel.b, texel.a, low, high, threshold, span.y, high), center, radius) +
+            tentMass(vec2(max(rest.x, own.x), min(rest.y, own.y)), center, radius);
+        depth = min(0.5 * (texel.b + texel.a), 0.5 * (texel.r + extra.r));
+    } else if (texel.g < 0.0) {
+        vec4 extra = binAt(bin, 1, bins, row);
+        float corner = low + extra.g;
+
+        open = tentMass(beyond(texel.b, extra.b, low, corner, threshold, low, corner), center, radius) +
+            tentMass(beyond(extra.b, texel.a, corner, high, threshold, corner, high), center, radius);
+        depth = (texel.b + 2.0 * extra.b + texel.a) * 0.25;
+    } else {
+        open = tentMass(beyond(texel.b, texel.a, low, high, threshold, low, high), center, radius);
+        depth = 0.5 * (texel.b + texel.a);
+    }
+
+    return vec3(open, mass, (mass - open) * depth);
 }
 
 /**
@@ -126,70 +146,69 @@ float coverageAt(float here, float previous, float next, float threshold) {
  *
  * The filter is a normalized tent over the bins the penumbra spans. Its taps
  * sit on the BINS, not on the fragment's own angle, and each one is weighted
- * by the share of the tent that falls on that bin: the weights then slide
+ * by the share of the tent that falls on it: the weights then slide
  * continuously as the fragment moves, and a bin that enters or leaves the
- * window carries no weight at the moment it does. Placing the taps at fixed
- * offsets from the angle instead - and rounding each to a bin - makes every
- * weight constant and moves the whole window at once, which puts a step the
- * size of the centre tap back into the edge. Each tap then reads a COVERAGE
- * rather than a yes or no, which is what leaves the term continuous in the
- * fragment's distance as well as in its angle.
+ * window carries no weight at the moment it does. Within a bin, the parts a
+ * silhouette covers and beyond a face are weighted by the share of the tent
+ * over those parts alone, which keeps every edge where the geometry puts it,
+ * moving smoothly with the occluder rather than a bin at a time.
  *
- * Within a bin, the part a silhouette covers is weighted by the share of the
- * tent over that part alone. That is what keeps the edge where the geometry
- * puts it rather than at the nearest bin centre, and moving smoothly with the
- * occluder rather than a bin at a time.
- *
- * It is an ANGULAR filter, not an area source: it widens the edge a point
- * source casts, and it does not make the shadow behave like one cast by a
- * disc of that size.
+ * The tent's width is a penumbra's. A source of some size casts an edge that is
+ * sharp where the shadow leaves its occluder and widens with the distance
+ * behind it; a fixed angular width instead blurs the contact itself, spilling
+ * light around the occluder's corners and into its own footprint. So the width
+ * scales by `1 - blocker / fragment`, with the blocker's distance averaged over
+ * what the widest kernel blocks: zero at the contact, the full width
+ * `softness` asks for far behind - the edge of a disc source whose radius is
+ * that width seen from the blocker. `footprint`, the fragment's angular size in
+ * radians, sets the narrowest: half of it either side antialiases a hard edge
+ * without lighting the fragment behind it.
  */
-float shadowTerm(float threshold) {
+float shadowTerm(float threshold, float footprint) {
     if (v_shadowRow < 0.0) {
         return 1.0;
     }
 
-    int bins = textureSize(u_shadow, 0).x;
+    int bins = textureSize(u_shadow, 0).x / 2;
     int row = int(v_shadowRow);
-    float radius = min(MIN_RADIUS + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA, float(MAX_HALF));
+    float narrowest = clamp(0.5 * footprint * float(bins) / (2.0 * PI), 0.02, float(MAX_HALF));
+    float widest = clamp(narrowest + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA, narrowest, float(MAX_HALF));
     float center = (atan(v_local.y, v_local.x) + PI) / (2.0 * PI) * float(bins) - 0.5;
     // Bin `i` spans `i - 0.5 .. i + 0.5` here, so these are the bins the tent touches.
     int base = int(floor(center + 0.5));
-    int reach = int(ceil(radius + 0.5));
-    float lit = 0.0;
-    float total = 0.0;
-    // Rolling, so the bin either side of a tap costs no extra fetch: every bin
-    // under the kernel is read once and serves as its own tap and as both its
-    // neighbours' slope.
-    float previous = binAt(base - reach - 1, bins, row).a;
-    vec4 here = binAt(base - reach, bins, row);
+    int reach = int(ceil(widest + 0.5));
+    vec4 texels[2 * MAX_HALF + 3];
+    float blockedShare = 0.0;
+    float blockedDistance = 0.0;
 
     for (int offset = -MAX_HALF - 1; offset <= MAX_HALF + 1; offset++) {
         if (offset < -reach || offset > reach) {
             continue;
         }
 
-        int bin = base + offset;
-        vec4 next = binAt(bin + 1, bins, row);
-        float low = float(bin) - 0.5;
-        float mass = tentMass(low, low + 1.0, center, radius);
+        vec4 texel = binAt(base + offset, 0, bins, row);
+        vec3 term = binTerm(base + offset, texel, bins, row, threshold, center, widest);
 
-        if (mass > 0.0) {
-            // A partial blocker has no neighbour to read a slope from: across
-            // its own silhouette the distance jumps to whatever lies behind.
-            float covered = 0.0;
+        texels[offset + MAX_HALF + 1] = texel;
+        blockedShare += term.y - term.x;
+        blockedDistance += term.z;
+    }
 
-            if (here.b > here.g) {
-                covered = tentMass(low + here.g, low + here.b, center, radius);
-                lit += covered * coverageAt(here.r, here.r, here.r, threshold);
-            }
+    float spread = blockedShare > 0.0 && threshold > 0.0 ? clamp(1.0 - blockedDistance / (blockedShare * threshold), 0.0, 1.0) : 1.0;
+    float radius = narrowest + (widest - narrowest) * spread;
+    int inner = int(ceil(radius + 0.5));
+    float lit = 0.0;
+    float total = 0.0;
 
-            lit += (mass - covered) * coverageAt(here.a, previous, next.a, threshold);
-            total += mass;
+    for (int offset = -MAX_HALF - 1; offset <= MAX_HALF + 1; offset++) {
+        if (offset < -inner || offset > inner) {
+            continue;
         }
 
-        previous = here.a;
-        here = next;
+        vec3 term = binTerm(base + offset, texels[offset + MAX_HALF + 1], bins, row, threshold, center, radius);
+
+        lit += term.x;
+        total += term.y;
     }
 
     return total > 0.0 ? lit / total : 1.0;
@@ -245,13 +264,16 @@ void main() {
     float radial = length(v_local) / (v_half + 1.0);
     // How far the radial distance runs across this fragment: the light target's
     // own footprint in the row's units, whatever the light's reach, the camera's
-    // zoom and turn, or the target's resolution.
-    float clearance = SHADOW_CLEARANCE * fwidth(radial);
+    // zoom and turn, or the target's resolution. The clearance an occluder's lit
+    // face is owed is measured in it; see `lightQuadUniforms`.
+    float clearance = uniforms.u_shadowClearance * fwidth(radial);
     // A stored distance can have rounded towards the light by its format's
     // relative precision, which a far blocker in a half-float row turns into a
     // step of its own. Dividing that out of the fragment's side, once, is the
     // comparison against every stored distance widened by it.
     float threshold = (radial - clearance) / (1.0 + uniforms.u_shadowPrecision);
+    // The fragment's own angular size, the narrowest a shadow edge can be drawn without aliasing.
+    float footprint = max(length(dFdx(v_local)), length(dFdy(v_local))) / max(length(v_local), 1e-6);
 
-    fragColor = vec4(v_tint.rgb * cookie * (falloff * falloff * coneTerm * v_intensity * shadowTerm(threshold) * surfaceTerm()), 1.0);
+    fragColor = vec4(v_tint.rgb * cookie * (falloff * falloff * coneTerm * v_intensity * shadowTerm(threshold, footprint) * surfaceTerm()), 1.0);
 }

@@ -7,7 +7,6 @@ import type { LightingHost } from '../src/LightingHost';
 import { LightmapLighting } from '../src/LightmapLighting';
 import { PointLight } from '../src/lights/PointLight';
 import { SunLight } from '../src/lights/SunLight';
-import { shadowRowStride } from '../src/occluders/shadowMap';
 
 interface ShadowMaps {
   readonly _shadowMap: DataTexture<TextureFormat.Rgba32F>;
@@ -40,9 +39,9 @@ const fakeApp = (): LightingHost => {
   } as unknown as LightingHost;
 };
 
-/** One light's whole polar row: `shadowRowStride` floats per bin. */
+/** One light's whole polar row: four floats per texel. */
 const polarRow = (map: DataTexture<TextureFormat.Rgba32F>, row: number): Float32Array =>
-  map.buffer.subarray(row * map.width * shadowRowStride, (row + 1) * map.width * shadowRowStride);
+  map.buffer.subarray(row * map.width * 4, (row + 1) * map.width * 4);
 
 const mapsOf = (lighting: Lighting): ShadowMaps => lighting.backend as FrameLightingBackend as unknown as ShadowMaps;
 
@@ -127,7 +126,7 @@ describe('lightmap shadow row cache', () => {
       expect(commit).not.toHaveBeenCalled();
       expect(commitRect).toHaveBeenCalledExactlyOnceWith(0, 0, shadowMap.width, 1);
       expect(mapsOf(lighting).shadowRowsRebuilt).toBe(1);
-      expect(mapsOf(lighting).shadowBytesUploaded).toBe(shadowMap.width * shadowRowStride * Float32Array.BYTES_PER_ELEMENT);
+      expect(mapsOf(lighting).shadowBytesUploaded).toBe(shadowMap.width * 4 * Float32Array.BYTES_PER_ELEMENT);
     }
 
     lighting.destroy();

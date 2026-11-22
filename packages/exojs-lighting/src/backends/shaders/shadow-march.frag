@@ -18,9 +18,19 @@ const float PI = 3.14159265359;
 const int MAX_STEPS = 2048;
 
 void main() {
-    // The destination is `bins` wide with one row per light, so the fragment's
-    // own place in it IS the (bin, light) pair `buildShadowRow` indexes by.
-    int bin = int(floor(vUv.x * uniforms.uBins));
+    // The destination has two texels per bin and one row per light, so the
+    // fragment's own place in it IS the (bin, light) pair `buildShadowRow`
+    // indexes by. The march knows whole bins only, so the second texel - read
+    // only for a silhouette or a corner - stays empty.
+    float texel = floor(vUv.x * uniforms.uBins * 2.0);
+    int bin = int(floor(texel * 0.5));
+
+    if (texel > float(bin) * 2.0 + 0.5) {
+        fragColor = vec4(1.0, 0.0, 0.0, 0.0);
+
+        return;
+    }
+
     int row = int(floor(vUv.y * uniforms.uRows));
 
     vec4 light = texelFetch(uLights, ivec2(row, 0), 0);
@@ -30,7 +40,7 @@ void main() {
     // A row past the last active light, and a light with no reach at all: both
     // read as "nothing blocks" rather than as a shadow over everything.
     if (reach <= 0.0) {
-        fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        fragColor = vec4(1.0, 0.0, 1.0, 1.0);
 
         return;
     }
@@ -73,5 +83,5 @@ void main() {
 
     // The light shader's texel layout (see `buildShadowRow`): the march only
     // knows whole bins, so the distance covers all of it and no part is partial.
-    fragColor = vec4(walked / reach, 0.0, 0.0, walked / reach);
+    fragColor = vec4(walked / reach, 0.0, walked / reach, walked / reach);
 }

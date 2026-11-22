@@ -12,9 +12,14 @@ const MAX_STEPS: i32 = 2048;
 
 @fragment
 fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
-    // The destination is `bins` wide with one row per light, so the fragment's
-    // own place in it IS the (bin, light) pair `buildShadowRow` indexes by.
-    let bin = i32(floor(vUv.x * uniforms.uBins));
+    // Two texels per bin, one row per light; see `shadow-march.frag`.
+    let texel = floor(vUv.x * uniforms.uBins * 2.0);
+    let bin = i32(floor(texel * 0.5));
+
+    if (texel > f32(bin) * 2.0 + 0.5) {
+        return vec4<f32>(1.0, 0.0, 0.0, 0.0);
+    }
+
     let row = i32(floor(vUv.y * uniforms.uRows));
 
     let light = textureLoad(uLights, vec2<i32>(row, 0), 0);
@@ -24,7 +29,7 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     // A row past the last active light, and a light with no reach at all: both
     // read as "nothing blocks" rather than as a shadow over everything.
     if (reach <= 0.0) {
-        return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+        return vec4<f32>(1.0, 0.0, 1.0, 1.0);
     }
 
     // Bin centres, where the CPU builder measures a bin an occluder covers
@@ -67,5 +72,5 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
 
     // The light shader's texel layout (see `buildShadowRow`): the march only
     // knows whole bins, so the distance covers all of it and no part is partial.
-    return vec4<f32>(walked / reach, 0.0, 0.0, walked / reach);
+    return vec4<f32>(walked / reach, 0.0, walked / reach, walked / reach);
 }

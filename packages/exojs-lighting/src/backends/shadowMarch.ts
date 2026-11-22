@@ -11,6 +11,7 @@ import {
   type View,
 } from '@codexo/exojs';
 
+import { shadowRowTexels } from '../occluders/shadowMap';
 import glslFragment from './shaders/shadow-march.frag';
 import wgslFragment from './shaders/shadow-march.wgsl';
 
@@ -79,7 +80,7 @@ export class ShadowMarchFiller {
     // Half-float rather than the CPU filler's `RGBA32F`: a normalized distance
     // needs the range and not the mantissa, and `Rgba16F` is the only float
     // format both backends render into without a device feature.
-    this._atlas = new RenderTexture(bins, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });
+    this._atlas = new RenderTexture(bins * shadowRowTexels, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });
     this._lights = new DataTexture({ width: 1, height: lightRows, format: TextureFormat.Rgba32F });
     this._filter = createFilter(this._lights);
     this.pass = new CallbackRenderPass((pass: PassContext) => this._march(pass), { label: 'lighting:shadow-march', enabled: false });
@@ -107,7 +108,7 @@ export class ShadowMarchFiller {
       this._filter = createFilter(this._lights);
     }
 
-    this._atlas.setSize(this._bins, Math.max(1, this._lights.width));
+    this._atlas.setSize(this._bins * shadowRowTexels, Math.max(1, this._lights.width));
     this._lights.buffer.fill(0);
   }
 

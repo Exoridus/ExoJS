@@ -13,11 +13,18 @@ import { PointLight } from '../src/lights/PointLight';
 interface LightBatches {
   readonly _lightBatches: Map<
     unknown,
-    { readonly material: { readonly uniforms: { readonly u_shadowPrecision: { readonly value: number } } } }
+    {
+      readonly material: {
+        readonly uniforms: {
+          readonly u_shadowPrecision: { readonly value: number };
+          readonly u_shadowClearance: { readonly value: number };
+        };
+      };
+    }
   >;
 }
 
-const fakeApp = (): LightingHost => {
+const fakeApp = (frameSize = 64): LightingHost => {
   const view = {
     center: { x: 32, y: 32 },
     width: 64,
@@ -30,7 +37,7 @@ const fakeApp = (): LightingHost => {
 
   return {
     framePasses: new RenderPipeline(),
-    frameTexture: new RenderTexture(64, 64),
+    frameTexture: new RenderTexture(frameSize, frameSize),
     onResize: new Signal(),
     rendering: {
       supportsColorFormat: (format: TextureFormat): boolean => format === TextureFormat.Rgba8 || format === TextureFormat.Rgba16F,
@@ -43,8 +50,16 @@ const fakeApp = (): LightingHost => {
 
 describe('lightmap shadow clearance', () => {
   test.each([
-    ['light-quad.frag', pointGlsl, 'fwidth(radial)'],
-    ['light-quad.wgsl', pointWgsl, 'fwidth(radial)'],
+    ['light-quad.frag', pointGlsl],
+    ['light-quad.wgsl', pointWgsl],
+  ])('%s clears a share of a fragment of the depth it compares, set by the renderer', (_file, source) => {
+    // A constant in the row's own units scales with the light's reach, not
+    // with what a fragment resolves.
+    expect(source).not.toMatch(/SHADOW_BIAS|SHADOW_CLEARANCE/);
+    expect(source).toContain('uniforms.u_shadowClearance * fwidth(radial)');
+  });
+
+  test.each([
     ['sun-quad.frag', sunGlsl, 'fwidth(v_sun.y)'],
     ['sun-quad.wgsl', sunWgsl, 'fwidth(input.sun.y)'],
   ])('%s clears three quarters of a fragment of the depth it compares', (_file, source, footprint) => {
@@ -53,6 +68,31 @@ describe('lightmap shadow clearance', () => {
     expect(source).not.toMatch(/SHADOW_BIAS/);
     expect(source).toMatch(/SHADOW_CLEARANCE(: f32)? = 0\.75;/);
     expect(source).toContain(`SHADOW_CLEARANCE * ${footprint}`);
+  });
+
+  test('the clearance spares the occluder its own lit fragment unless the composite filters a coarse light texel across the face', () => {
+    const clearance = (lightResolution: number): number[] => {
+      const lighting = new LightmapLighting(fakeApp(), { ambient: Color.black, lightResolution });
+      const backend = lighting.backend as FrameLightingBackend;
+
+      lighting.add(new PointLight({ radius: 48 })).setPosition(32, 32);
+      lighting.update();
+
+      const values = [...(backend as unknown as LightBatches)._lightBatches.values()].map(
+        batch => batch.material.uniforms.u_shadowClearance.value,
+      );
+
+      lighting.destroy();
+
+      return values;
+    };
+
+    // One light texel per frame pixel: a quarter keeps the fragment in front of
+    // a face lit and the first one behind it dark.
+    expect(clearance(1)).toEqual([0.25]);
+    // Two frame pixels per texel: the texel behind the face stays lit, or the
+    // filtered composite darkens the floor in front of it.
+    expect(clearance(0.5)).toEqual([0.75]);
   });
 
   test('only the polar rows, which may be half floats, widen by their stored precision', () => {
