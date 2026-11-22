@@ -2,9 +2,10 @@ import {
   Application,
   Color,
   FixedResolutionCanvasSizing,
+  type InteractionEvent,
   Keyboard,
+  type Pointer,
   Rectangle,
-  type RenderingContext,
   Scene,
   type Seconds,
   Sprite,
@@ -37,7 +38,7 @@ class EmitterBasicsScene extends Scene {
   private panel!: ReturnType<typeof demoPanel<typeof controls>>;
   private playing = true;
   private elapsed = 0;
-  private dragging = false;
+  private dragPointer: number | null = null;
   private emitterX = 0.5;
   private emitterY = 0.85;
   private scale = 1;
@@ -82,9 +83,15 @@ class EmitterBasicsScene extends Scene {
     });
     this.setSpawn();
     this.inputs.onTrigger(Keyboard.Space, () => this.togglePlaying());
-    this.app.input.onPointerDown.add(this.onDown);
+    // Hit-tested scene input respects the UI layer, including open control menus.
+    this.root.interactive = true;
+    this.root.onPointerDown.add(this.onDown);
     this.app.input.onPointerMove.add(this.onMove);
     this.app.input.onPointerUp.add(this.onUp);
+    this.app.input.onPointerCancel.add(this.onUp);
+    window.addEventListener('pointerup', this.onWindowEnd);
+    window.addEventListener('blur', this.onBlur);
+    this.onSuspend.add(this.onBlur);
   }
 
   private setSpawn(): void {
@@ -98,18 +105,32 @@ class EmitterBasicsScene extends Scene {
     this.system.addSpawnModule(this.spawn);
   }
 
-  private readonly onDown = (p: { x: number; y: number }): void => {
-    this.dragging = true;
-    this.onMove(p);
+  private readonly onDown = (event: InteractionEvent): void => {
+    if (event.button !== 0 || this.dragPointer !== null) {
+      return;
+    }
+
+    this.dragPointer = event.pointer.id;
+    this.onMove(event.pointer, event.x, event.y);
   };
-  private readonly onMove = (p: { x: number; y: number }): void => {
-    if (this.dragging) {
-      this.emitterX = Math.max(0.1, Math.min(0.9, p.x / this.scale / this.width));
-      this.emitterY = Math.max(0.2, Math.min(0.9, p.y / this.scale / this.height));
+  private readonly onMove = (pointer: Pointer, x: number, y: number): void => {
+    if (pointer.id === this.dragPointer) {
+      this.emitterX = Math.max(0.1, Math.min(0.9, x / this.scale / this.width));
+      this.emitterY = Math.max(0.2, Math.min(0.9, y / this.scale / this.height));
     }
   };
-  private readonly onUp = (): void => {
-    this.dragging = false;
+  private readonly onUp = (pointer: Pointer): void => {
+    if (pointer.id === this.dragPointer) {
+      this.onBlur();
+    }
+  };
+  private readonly onWindowEnd = (event: PointerEvent): void => {
+    if (event.pointerId === this.dragPointer) {
+      this.onBlur();
+    }
+  };
+  private readonly onBlur = (): void => {
+    this.dragPointer = null;
   };
 
   override update(delta: Seconds): void {
@@ -136,11 +157,6 @@ class EmitterBasicsScene extends Scene {
     );
   }
 
-  override draw(context: RenderingContext): void {
-    context.render(this.log);
-    context.render(this.system);
-  }
-
   private togglePlaying(): void {
     this.playing = !this.playing;
 
@@ -153,11 +169,12 @@ class EmitterBasicsScene extends Scene {
   }
 
   override destroy(): void {
-    this.app.input.onPointerDown.remove(this.onDown);
+    this.onBlur();
     this.app.input.onPointerMove.remove(this.onMove);
     this.app.input.onPointerUp.remove(this.onUp);
-    this.panel.dispose();
-    super.destroy();
+    this.app.input.onPointerCancel.remove(this.onUp);
+    window.removeEventListener('pointerup', this.onWindowEnd);
+    window.removeEventListener('blur', this.onBlur);
   }
 }
 

@@ -3,8 +3,9 @@ import {
   Color,
   Container,
   FixedResolutionCanvasSizing,
+  type InteractionEvent,
   Keyboard,
-  type RenderingContext,
+  type Pointer,
   ScaleModes,
   Scene,
   type Seconds,
@@ -66,7 +67,7 @@ class ShadowCastersScene extends Scene {
   private panel!: ReturnType<typeof demoPanel<typeof controls>>;
   private elapsed = 0;
   private playing = true;
-  private dragging = false;
+  private dragPointer: number | null = null;
   private lightX = 0.25;
   private lightY = 0.55;
   private scale = 1;
@@ -108,23 +109,43 @@ class ShadowCastersScene extends Scene {
     this.inputs.onTrigger(Keyboard.Space, () => {
       this.playing = !this.playing;
     });
-    this.app.input.onPointerDown.add(this.onDown);
+    // Hit-tested scene input respects the UI layer, including open control menus.
+    this.root.interactive = true;
+    this.root.onPointerDown.add(this.onDown);
     this.app.input.onPointerMove.add(this.onMove);
     this.app.input.onPointerUp.add(this.onUp);
+    this.app.input.onPointerCancel.add(this.onUp);
+    window.addEventListener('pointerup', this.onWindowEnd);
+    window.addEventListener('blur', this.onBlur);
+    this.onSuspend.add(this.onBlur);
   }
 
-  private readonly onDown = (p: { x: number; y: number }): void => {
-    this.dragging = true;
-    this.onMove(p);
+  private readonly onDown = (event: InteractionEvent): void => {
+    if (event.button !== 0 || this.dragPointer !== null) {
+      return;
+    }
+
+    this.dragPointer = event.pointer.id;
+    this.onMove(event.pointer, event.x, event.y);
   };
-  private readonly onMove = (p: { x: number; y: number }): void => {
-    if (this.dragging) {
-      this.lightX = Math.max(0, Math.min(1, p.x / this.scale / this.width));
-      this.lightY = Math.max(0, Math.min(1, p.y / this.scale / this.height));
+  private readonly onMove = (pointer: Pointer, x: number, y: number): void => {
+    if (pointer.id === this.dragPointer) {
+      this.lightX = Math.max(0, Math.min(1, x / this.scale / this.width));
+      this.lightY = Math.max(0, Math.min(1, y / this.scale / this.height));
     }
   };
-  private readonly onUp = (): void => {
-    this.dragging = false;
+  private readonly onUp = (pointer: Pointer): void => {
+    if (pointer.id === this.dragPointer) {
+      this.onBlur();
+    }
+  };
+  private readonly onWindowEnd = (event: PointerEvent): void => {
+    if (event.pointerId === this.dragPointer) {
+      this.onBlur();
+    }
+  };
+  private readonly onBlur = (): void => {
+    this.dragPointer = null;
   };
 
   override update(delta: Seconds): void {
@@ -165,16 +186,13 @@ class ShadowCastersScene extends Scene {
     );
   }
 
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
-  }
-
   override destroy(): void {
-    this.app.input.onPointerDown.remove(this.onDown);
+    this.onBlur();
     this.app.input.onPointerMove.remove(this.onMove);
     this.app.input.onPointerUp.remove(this.onUp);
-    this.panel.dispose();
-    super.destroy();
+    this.app.input.onPointerCancel.remove(this.onUp);
+    window.removeEventListener('pointerup', this.onWindowEnd);
+    window.removeEventListener('blur', this.onBlur);
   }
 }
 
