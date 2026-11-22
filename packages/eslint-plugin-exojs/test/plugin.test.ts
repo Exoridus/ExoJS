@@ -1,9 +1,9 @@
-import oxlintEnginePlugin from '../src/oxlint-engine.ts';
-import oxlintPlugin from '../src/oxlint.ts';
 import { Linter } from 'eslint';
 import { describe, expect, it } from 'vitest';
 
 import { exoEnginePlugin, exoEngineRulesConfig, exoPlugin, exoRulesConfig } from '../src/index.ts';
+import oxlintEnginePlugin from '../src/oxlint-engine.ts';
+import oxlintPlugin from '../src/oxlint.ts';
 
 const lint = (code: string, config: object[], filename = 'file.ts'): Linter.LintMessage[] =>
   new Linter().verify(code, config as Linter.Config[], filename);
