@@ -79,7 +79,12 @@ export const compareMedians = (exojsMs: number, competitorMs: number): Verdict =
  * can only be asked of the rung. This is the unit an aggregation compares.
  */
 export type VerdictRung =
-  'not-comparable' | 'level' | 'exojs-leads' | 'exojs-leads-clearly' | 'competitor-leads' | 'competitor-leads-clearly';
+  | 'not-comparable'
+  | 'level'
+  | 'exojs-leads'
+  | 'exojs-leads-clearly'
+  | 'competitor-leads'
+  | 'competitor-leads-clearly';
 
 /** The rung `verdict` sits on. */
 export const verdictRung = (verdict: Verdict): VerdictRung => {

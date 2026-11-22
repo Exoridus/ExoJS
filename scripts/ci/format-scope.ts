@@ -6,25 +6,30 @@ import { existsSync } from 'node:fs';
  *
  * `pnpm format:check` and CI keep checking the whole repository. The pre-push
  * hook can check only what the range touched, because the base is already
- * formatted and Prettier formats each file independently of the others - unless
+ * formatted and Oxfmt formats each file independently of the others - unless
  * the change alters how files are formatted or which files are considered, in
  * which case every file is affected.
  */
 
 /** Files whose content decides how, or whether, any file is formatted. */
 export const FORMAT_CONFIG_FILES: ReadonlySet<string> = new Set([
-  // Declare a `prettier` key or pin the Prettier and plugin versions.
+  // Pin formatter/compiler versions or configure the generated-file formatter.
   'package.json',
   'site/package.json',
   'pnpm-lock.yaml',
   'pnpm-workspace.yaml',
+  'lint-staged.config.ts',
+  'scripts/ci/format-scope.ts',
+  'scripts/ci/gates.ts',
 ]);
 
 /** Nested ignore and editor-config files apply to their subtree, so they count at any depth. */
 const isFormatConfig = (file: string): boolean =>
   FORMAT_CONFIG_FILES.has(file) ||
   file.startsWith('packages/exojs-config/') ||
-  /(^|\/)(\.editorconfig|\.gitignore|\.prettierignore|\.prettierrc[^/]*|prettier\.config\.[cm]?[jt]s)$/.test(file);
+  /(^|\/)(\.editorconfig|\.gitignore|\.prettierignore|\.prettierrc[^/]*|\.oxfmtrc\.(?:json|jsonc)|(?:prettier|oxfmt)\.config\.[cm]?[jt]s)$/.test(
+    file,
+  );
 
 export type FormatScope = { mode: 'full' } | { mode: 'skip' } | { mode: 'files'; files: string[] };
 

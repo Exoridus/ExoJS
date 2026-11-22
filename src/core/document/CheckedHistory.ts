@@ -58,7 +58,8 @@ type CheckChain<
  * versions above 128 to avoid TypeScript's recursion limit.
  */
 export type CheckedHistory<Document, Version extends number, Min extends number, Chain extends readonly AnyMigration[]> = number extends
-  Version | Min
+  | Version
+  | Min
   ? { readonly migrations?: Chain }
   : IsPositiveInteger<Version> extends false
     ? { readonly version: VersionRegisterError<`version must be a positive integer, found ${Version}`> }

@@ -5,7 +5,7 @@
 // themselves come from `@codexo/exojs-config`, shared with `packages/exojs-react`.
 // Each tool has one job: `astro check` type-checks components, this config lints
 // their frontmatter, template and accessibility, Stylelint (`stylelint.config.ts`)
-// owns their `<style>` blocks and the stylesheets, and Prettier owns layout.
+// owns their `<style>` blocks and the stylesheets, and Oxfmt owns layout.
 //
 // ESLint resolves the config nearest to the file being linted, so this file
 // governs `site/` whether the run starts here or at the repository root. The

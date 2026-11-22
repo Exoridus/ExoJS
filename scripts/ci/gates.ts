@@ -91,13 +91,13 @@ if (outputOptions.mode !== 'silent') {
   );
 }
 
-/** `format:check` restricted to the files of the pushed range; same Prettier, config and ignore files as the full gate. */
+/** `format:check` restricted to the files of the pushed range; same Oxfmt, config and ignore files as the full gate. */
 const runSelectiveFormat = async (files: readonly string[]): Promise<number> => {
   for (const chunk of chunkFiles(files)) {
     const result = await runCommand({
       label: 'gates-format:check(changed)',
       command: 'pnpm',
-      args: ['exec', 'prettier', '--check', '--ignore-unknown', '--no-error-on-unmatched-pattern', '--', ...chunk],
+      args: ['exec', 'oxfmt', '--check', '--no-error-on-unmatched-pattern', '--', ...chunk],
       output: outputOptions.mode,
     });
 
@@ -113,7 +113,7 @@ const main = async (): Promise<void> => {
   for (const script of scripts) {
     if (script === 'format:check' && (formatFiles || formatSkipped)) {
       if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
-        console.log(`\n=== prettier --check on ${formatFiles?.length ?? 0} changed file(s) ===\n`);
+        console.log(`\n=== oxfmt --check on ${formatFiles?.length ?? 0} changed file(s) ===\n`);
       }
 
       const status = formatFiles ? await runSelectiveFormat(formatFiles) : 0;

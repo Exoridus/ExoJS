@@ -4,7 +4,20 @@ import type { ArchetypeId, Backend } from '../rendering/EngineAdapter';
 import type { LoadUnit } from '../suite/catalog';
 
 export type CompetitiveGroup =
-  'B01' | 'B02' | 'B03' | 'B04' | 'B05' | 'B06' | 'B07' | 'B08' | 'B09' | 'B10' | 'B11' | 'B12' | 'B13' | 'B14';
+  | 'B01'
+  | 'B02'
+  | 'B03'
+  | 'B04'
+  | 'B05'
+  | 'B06'
+  | 'B07'
+  | 'B08'
+  | 'B09'
+  | 'B10'
+  | 'B11'
+  | 'B12'
+  | 'B13'
+  | 'B14';
 export type CompetitiveEngine = 'exojs' | 'pixi' | 'phaser';
 
 /** One existing rendering workload selected for the competitive suite. */

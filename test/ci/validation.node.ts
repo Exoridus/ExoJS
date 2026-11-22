@@ -1406,7 +1406,7 @@ void test('format gate file names with spaces and shell specials reach the child
     'src/ leading.ts',
     'C:\\path with spaces\\file.ts',
   ];
-  const args = ['exec', 'prettier', '--check', '--ignore-unknown', '--no-error-on-unmatched-pattern', '--', ...files];
+  const args = ['exec', 'oxfmt', '--check', '--no-error-on-unmatched-pattern', '--', ...files];
 
   assert.deepEqual(await runArguments(args, { pnpmAlias: true }), args);
   assert.deepEqual(await runArguments(args), args);

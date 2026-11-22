@@ -15,7 +15,13 @@ export interface MeterCandidate {
 }
 
 export type MeterEstimateReason =
-  'acquiring' | 'insufficientEvidence' | 'lowContrast' | 'ambiguousCycle' | 'ambiguousPhase' | 'available' | 'expired';
+  | 'acquiring'
+  | 'insufficientEvidence'
+  | 'lowContrast'
+  | 'ambiguousCycle'
+  | 'ambiguousPhase'
+  | 'available'
+  | 'expired';
 
 export interface MeterEstimate {
   readonly selected: MeterModel | null;

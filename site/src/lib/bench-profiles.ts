@@ -947,7 +947,15 @@ const listOf = (items: readonly string[]): string =>
  * and no conclusion. `absent` is an arm that produced no comparable cell at all.
  */
 export type CellOutcome =
-  'clear-lead' | 'lead' | 'level' | 'loss' | 'clear-loss' | 'unstable' | 'timer-limited' | 'timer-unknown' | 'absent';
+  | 'clear-lead'
+  | 'lead'
+  | 'level'
+  | 'loss'
+  | 'clear-loss'
+  | 'unstable'
+  | 'timer-limited'
+  | 'timer-unknown'
+  | 'absent';
 
 /** Outcomes in reading order: the widest lead first, the widest loss last, then the three that carry no verdict. */
 export const OUTCOME_ORDER: readonly CellOutcome[] = [

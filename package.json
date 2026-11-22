@@ -157,8 +157,8 @@
     "lint:overrides:audit": "tsx scripts/audit-eslint-overrides.ts",
     "lint:js-files": "tsx scripts/check-javascript-files.ts",
     "lint:shaders": "tsx scripts/check-shader-sources.ts",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
     "test": "tsx scripts/run-tests.ts --project=\"exojs*\" --project=rendering-perf",
     "test:core": "vitest run --project=exojs",
     "test:watch": "vitest --project=exojs",
@@ -302,6 +302,7 @@
     }
   ],
   "devDependencies": {
+    "@astrojs/compiler-rs": "0.5.0",
     "@codecov/rollup-plugin": "^2.0.1",
     "@codexo/eslint-plugin-exojs": "workspace:*",
     "@codexo/exojs-build": "workspace:*",
@@ -331,6 +332,7 @@
     "jiti": "^2.7.0",
     "jsdom": "^29.1.1",
     "lint-staged": "^17.5.1",
+    "oxfmt": "0.79.0",
     "playwright": "^1.63.0",
     "prettier": "3.9.9",
     "rimraf": "^6.1.3",

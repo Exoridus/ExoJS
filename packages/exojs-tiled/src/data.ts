@@ -145,7 +145,16 @@ export interface TiledWangSetData {
  * {@link import('./objectAlignment').resolveTiledObjectAlignment}.
  */
 export type TiledObjectAlignment =
-  'unspecified' | 'topleft' | 'top' | 'topright' | 'left' | 'center' | 'right' | 'bottomleft' | 'bottom' | 'bottomright';
+  | 'unspecified'
+  | 'topleft'
+  | 'top'
+  | 'topright'
+  | 'left'
+  | 'center'
+  | 'right'
+  | 'bottomleft'
+  | 'bottom'
+  | 'bottomright';
 
 /**
  * A Tiled tileset, as the root of a standalone `.tsj` file or (minus

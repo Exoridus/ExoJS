@@ -1029,7 +1029,8 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       this._deathModules.length > 0,
     );
     const renderer = this._backend?.rendererRegistry.resolve(this) as unknown as
-      { _trackSimulation?: (state: ParticleGlState) => void } | undefined;
+      | { _trackSimulation?: (state: ParticleGlState) => void }
+      | undefined;
     renderer?._trackSimulation?.(this._glState);
     this._gpuMode = true;
 
