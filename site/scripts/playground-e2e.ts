@@ -2621,6 +2621,159 @@ const reliabilityChecks = async (browser: Browser, origin: string, base: string)
     }
   });
 
+  await check('reliability: delayed version work preserves invalid history', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let requested = false;
+    await page.route('**/examples/examples.json*', async route => {
+      requested = true;
+      await pending;
+      await route.continue();
+    });
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/#/unknown-version/getting-started/hello-world`);
+      await page.getByRole('button', { name: 'Open current Playground', exact: true }).click();
+      await waitFor(
+        async () => requested,
+        value => value,
+        'delayed current catalog',
+      );
+      await page.goBack();
+      await page.getByText('The requested version "unknown-version" is not recognized.', { exact: false }).waitFor();
+      const response = page.waitForResponse(url => url.url().includes('/examples/examples.json'));
+      release();
+      await (await response).finished();
+      await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      assert(page.url().includes('unknown-version'), 'Late catalog must not rewrite an invalid history entry');
+      assert((await page.locator('iframe').count()) === 0, 'Invalid version remains an error after the old catalog arrives');
+      assert(
+        (await page.getByRole('button', { name: 'Open starting example', exact: true }).count()) === 0,
+        'Invalid versions only offer usable current recovery',
+      );
+      await page.goForward();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('/current/')");
+      assert(page.url().includes('current'), 'Forward can recover into the now-loaded current catalog');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      release();
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: delayed version work cannot expose retired types', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let registryRequested = false;
+    let declarationsServed = 0;
+    const declarationCount = (JSON.parse(readFileSync(join(distDir, 'vendor/exojs/esm-typings.json'), 'utf8')) as string[]).length;
+    const pendingRequests = new Set<string>();
+    page.on('request', request => {
+      if (request.url().includes('/vendor/exojs/0.19.0/')) {
+        pendingRequests.add(request.url());
+      }
+    });
+    page.on('requestfinished', request => pendingRequests.delete(request.url()));
+    page.on('requestfailed', request => pendingRequests.delete(request.url()));
+    await page.route('**/raw.githubusercontent.com/**/v0.19.0/examples/**', route => {
+      const path = new URL(route.request().url()).pathname.split('/examples/')[1];
+
+      return route.fulfill({
+        contentType: path.endsWith('.json') ? 'application/json' : 'text/plain',
+        body: readFileSync(join(distDir, 'examples', path), 'utf8'),
+      });
+    });
+    await page.route('**/vendor/exojs/0.19.0/**', async route => {
+      const path = new URL(route.request().url()).pathname.split('/vendor/exojs/0.19.0/')[1];
+
+      if (path === 'monaco-registry.json') {
+        registryRequested = true;
+        await pending;
+      }
+
+      let body = readFileSync(join(distDir, 'vendor/exojs', path), 'utf8');
+
+      if (path === 'monaco-registry.json') {
+        const registry = JSON.parse(body) as { packageJson: string };
+        const packageJson = JSON.parse(registry.packageJson) as { version: string };
+        packageJson.version = '0.19.0';
+        registry.packageJson = JSON.stringify(packageJson);
+        body = JSON.stringify(registry);
+      }
+
+      await route.fulfill({ contentType: path.endsWith('.json') ? 'application/json' : 'text/plain', body });
+
+      if (path.endsWith('.d.ts')) {
+        declarationsServed++;
+      }
+    });
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/#/current/getting-started/hello-world`);
+      await page.waitForFunction(
+        "window.monaco?.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json']",
+      );
+      const currentVersion = await page.evaluate<string>(
+        "JSON.parse(window.monaco.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json'].content).version",
+      );
+      await page.evaluate(
+        "history.pushState(null, '', '#/0.19.0/getting-started/hello-world'); window.dispatchEvent(new PopStateEvent('popstate'));",
+      );
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('/0.19.0/')");
+      await waitFor(
+        async () => registryRequested,
+        value => value,
+        'delayed historical type registry',
+      );
+      const libraries = await page.evaluate<number[]>(
+        "['typescriptDefaults','javascriptDefaults'].map(name => Object.keys(window.monaco.languages.typescript[name].getExtraLibs()).length)",
+      );
+      assert(
+        libraries.every(count => count === 0),
+        `Previous version declarations must be unavailable while loading, got ${libraries.join('/')}`,
+      );
+      await page.goBack();
+      await page.waitForFunction(
+        "window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('/current/') && !!window.monaco.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json']",
+      );
+      release();
+      await waitFor(
+        async () => declarationsServed,
+        count => count === declarationCount,
+        'retired declaration downloads',
+      );
+      await waitFor(
+        async () => pendingRequests.size,
+        count => count === 0,
+        'retired type responses',
+      );
+      await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      const activeVersion = await page.evaluate<string>(
+        "JSON.parse(window.monaco.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json'].content).version",
+      );
+      assert(activeVersion === currentVersion, 'A retired historical request cannot replace current declarations');
+      assert(page.url().includes('current'), 'A late typing response leaves the current route unchanged');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      release();
+      await page.context().close();
+    }
+  });
+
   await check('reliability: unknown paths stay explicit and historical source failures recover to current', async () => {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     watchPage(page);

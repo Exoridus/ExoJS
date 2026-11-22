@@ -324,7 +324,7 @@ export const Editor = ({
             Retry examples catalog
           </button>
         )}
-        {selectionError && (
+        {selectionError && selectedVersionId && (
           <button type="button" onClick={onSelectStartingExample}>
             Open starting example
           </button>

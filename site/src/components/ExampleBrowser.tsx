@@ -125,13 +125,14 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
 
   const resolveActiveExample = useCallback((options: { canonicaliseUrl: boolean }): void => {
     const selected = selectedVersionRef.current;
+    const requestedState = readUrlState();
 
-    if (!selected || !hasExamplesFor(selected.id)) {
+    if (!selected || (requestedState.version && requestedState.version !== selected.id) || !hasExamplesFor(selected.id)) {
       return;
     }
 
     const versionId = selected.id;
-    const requestedPath = readUrlState().example;
+    const requestedPath = requestedState.example;
     const requested = requestedPath ? getExampleByPath(versionId, requestedPath) : null;
 
     if (requestedPath && !requested) {
@@ -187,6 +188,12 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     const requestedVersion = readUrlState().version;
 
     if (requestedVersion && !getVersionById(requestedVersion)) {
+      selectedVersionRef.current = null;
+      activeExampleRef.current = null;
+      setSelectedVersion(null);
+      setExamples(new Map());
+      setLoaded(false);
+      setLoadError(null);
       setSelectionError(`The requested version "${requestedVersion}" is not recognized. Open the current Playground to continue.`);
       setActiveExample(null);
 
@@ -280,6 +287,12 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       const next = getVersionById(versionId);
 
       if (versionId && !next) {
+        selectedVersionRef.current = null;
+        activeExampleRef.current = null;
+        setSelectedVersion(null);
+        setExamples(new Map());
+        setLoaded(false);
+        setLoadError(null);
         setSelectionError(`The requested version "${versionId}" is not recognized. Open the current Playground to continue.`);
         setActiveExample(null);
 

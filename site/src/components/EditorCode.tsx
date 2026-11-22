@@ -288,6 +288,7 @@ export const EditorCode = ({
 
     let cancelled = false;
     typingsAppliedVersionRef.current = null;
+    clearTypings();
     // Loading state belongs to this external declaration request, including retries.
     /* eslint-disable @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect */
     setTypingsLoading(true);
@@ -312,6 +313,7 @@ export const EditorCode = ({
 
     return () => {
       cancelled = true;
+      clearTypings();
     };
   }, [onDiagnostic, selectedVersionId, typingsRetry]);
 

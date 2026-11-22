@@ -121,3 +121,22 @@ it('renders an empty loaded program as a ready preview rather than a spinner', (
   const html = renderToStaticMarkup(createElement(EditorPreview, { sourceCode: '', exampleMeta: example, selectedVersionId: 'current' }));
   expect(html).toContain('<iframe');
 });
+
+it('only offers current recovery when the requested version is invalid', () => {
+  const html = renderToStaticMarkup(
+    createElement(Editor, {
+      activeExample: null,
+      catalogLoadError: null,
+      selectionError: 'The requested version is not recognized.',
+      selectedVersionId: '',
+      showSidebarToggle: false,
+      sidebarOpen: true,
+      sidebarToggleRef: createRef(),
+      onToggleSidebar() {},
+      onSelectStartingExample() {},
+      onRecoverCurrent() {},
+    }),
+  );
+  expect(html).toContain('Open current Playground');
+  expect(html).not.toContain('Open starting example');
+});
