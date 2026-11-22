@@ -171,6 +171,45 @@
   border-radius: inherit;
 }
 
+.preview-component {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.preview-component > [role='alert'] {
+  padding: var(--s-4);
+  background: var(--bg-panel);
+  color: var(--fg);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  p {
+    margin: 0 0 var(--s-3);
+  }
+
+  p:first-child {
+    font-weight: 600;
+  }
+
+  button {
+    min-height: 44px;
+    margin: var(--s-1) var(--s-2) var(--s-1) 0;
+    padding: var(--s-2) var(--s-3);
+    border: 1px solid var(--accent-line);
+    border-radius: var(--r-2);
+    background: var(--accent-soft);
+    color: var(--fg);
+    font: inherit;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent-line);
+      outline-offset: 2px;
+    }
+  }
+}
+
 .toolbar-slot {
   flex: 0 0 auto;
 }

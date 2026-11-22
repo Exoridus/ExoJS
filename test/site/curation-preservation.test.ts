@@ -30,6 +30,7 @@ describe('runnable curriculum preservation', () => {
     }
 
     expect(getPlaygroundDefault(entries)).toBe(highlights[0]);
+    expect(highlights[0]!.capabilities).toEqual(['pointer']);
     expect(getNextPlaygroundHighlight(entries, highlights[0]!.path)).toBe(highlights[1]);
     expect(getNextPlaygroundHighlight(entries, highlights[3]!.path)).toBe(highlights[0]);
     expect(getNextPlaygroundHighlight(entries, 'getting-started/hello-world.js')).toBe(highlights[0]);

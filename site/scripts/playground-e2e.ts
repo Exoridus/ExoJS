@@ -1860,8 +1860,51 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
           .isVisible(),
         'the original recipe is not discoverable',
       );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await context.close();
+    }
+  });
+
+  await check('experience: fresh touch visitors can start the physics default', async () => {
+    for (const deviceScaleFactor of [1, 2]) {
+      const context = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+        deviceScaleFactor,
+        ...(options.browser === 'chromium' ? { isMobile: true } : {}),
+      });
+      const page = await context.newPage();
+      watchPage(page);
+
+      try {
+        await page.goto(`${origin}${base}/en/playground/`, { waitUntil: 'domcontentloaded' });
+        await page.getByRole('heading', { name: 'Drag and Throw Physics', exact: true }).waitFor();
+        const frame = await previewFrame(page);
+        await frame.waitForFunction(
+          "['active', 'fallback'].includes(window.__EXAMPLE_RENDERER_STATUS__?.phase) && document.querySelector('canvas')?.clientWidth > 0",
+        );
+        await frame.evaluate(
+          'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))))',
+        );
+        assert(await frame.locator('canvas').isVisible(), 'the canvas disappeared after its host resized');
+        assert((await frame.locator('[data-preview-blanked]').count()) === 0, 'default preview was replaced by a capability warning');
+        assert((await page.locator('[class*="unavailable-overlay"]').count()) === 0, 'default is unavailable in a fresh touch session');
+        assert(await page.evaluate(() => navigator.maxTouchPoints > 0), 'the browser was not configured for touch');
+        assert(
+          (await page.getByRole('tab', { name: 'Demo', exact: true }).boundingBox())!.y >= 0,
+          'preview startup scrolled the mobile controls out of view',
+        );
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await context.close();
+      }
     }
   });
 
@@ -1897,6 +1940,10 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
       );
       await page.keyboard.press('Escape');
       assert(await trigger.evaluate(node => node === document.activeElement), 'file menu Escape lost focus');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -1955,6 +2002,10 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
         (await page.getByRole('button', { name: 'Show demo', exact: true }).count()) === 0,
         'runtime failure was presented as an updated demo',
       );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -2003,6 +2054,10 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
         (await (await previewFrame(page)).locator('body').getAttribute('data-new-generation')) === 'complete',
         'a pending older run blocked the newest completion',
       );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -2043,10 +2098,14 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
             : page.getByRole('tab', { name: 'Demo', exact: true });
         await previousFocus.focus();
         // A shortcut/programmatic open does not first move focus to the toggle.
-        await opener.evaluate(button => button.click());
+        await opener.evaluate(button => (button as HTMLButtonElement).click());
         await waitFor(() => dialog.evaluate(node => node.contains(document.activeElement)), Boolean, 'programmatic-open dialog focus');
         await page.keyboard.press('Escape');
         assert(await previousFocus.evaluate(node => node === document.activeElement), 'dialog did not restore the actual focused control');
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
       } finally {
         await context.close();
       }
@@ -2105,6 +2164,10 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
       await fixed.waitForFunction(() => Math.abs(window.innerWidth / window.innerHeight - 16 / 9) < 0.02);
       const fixedBox = await page.locator('iframe[title^="Live demo:"]').boundingBox();
       assert(fixedBox !== null && Math.abs(fixedBox.height - 390 * (9 / 16)) <= 2, 'fixed world did not keep its original aspect ratio');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -2155,6 +2218,10 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
           (await dialog.getByRole('link', { name: /^Asset Browser/ }).getAttribute('href'))?.includes('/de/'),
           'Asset Browser lost the DE locale',
         );
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
       } finally {
         await context.close();
       }

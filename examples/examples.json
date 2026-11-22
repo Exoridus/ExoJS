@@ -1218,7 +1218,7 @@
       "description": "Grab a dynamic body at the pointer with MouseJoint, drag and release to throw; world.attach keeps the sprite on its rotating, colliding body. Press C for colliders.",
       "backend": "core",
       "tags": ["physics", "binding", "pointer", "joints"],
-      "capabilities": ["pointer", "keyboard"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {

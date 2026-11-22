@@ -109,6 +109,7 @@ export const EditorPreview = ({
   const canvasMutationObserverRef = useRef<MutationObserver | null>(null);
   const canvasAttributeObserverRef = useRef<MutationObserver | null>(null);
   const canvasMeasureRef = useRef<(() => void) | null>(null);
+  const canvasMeasureFrameRef = useRef(0);
   const stageSizeRef = useRef({ width: STAGE_WIDTH, height: STAGE_HEIGHT });
   const currentCanvasRef = useRef({ width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 });
 
@@ -156,6 +157,7 @@ export const EditorPreview = ({
     }
 
     disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
+    cancelAnimationFrame(canvasMeasureFrameRef.current);
     canvasMeasureRef.current = null;
     currentCanvasRef.current = { width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 };
     // Give responsive phone scenes a useful portrait host. A fixed-world
@@ -181,6 +183,7 @@ export const EditorPreview = ({
 
   useEffect(() => {
     let settleFrame = 0;
+    let resizeFrame = 0;
 
     const recalculateZoom = (): void => {
       const stage = measureStageSize(rootRef.current);
@@ -216,6 +219,11 @@ export const EditorPreview = ({
       onCanvasSize?.({ width: resolutionWidth, height: resolutionHeight, zoom });
     };
 
+    const scheduleZoom = (): void => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(recalculateZoom);
+    };
+
     const preventScroll = (event: KeyboardEvent): void => {
       if (document.activeElement !== iframeRef.current) {
         return;
@@ -228,19 +236,21 @@ export const EditorPreview = ({
 
     // Responsive layout can settle after window.resize has measured an intermediate width.
     const surface = rootRef.current?.closest<HTMLElement>('[data-preview-surface]');
-    const surfaceObserver = new ResizeObserver(recalculateZoom);
+    const surfaceObserver = new ResizeObserver(scheduleZoom);
 
     if (surface) {
       surfaceObserver.observe(surface);
     }
 
-    window.addEventListener('resize', recalculateZoom);
+    window.addEventListener('resize', scheduleZoom);
     window.addEventListener('keydown', preventScroll);
 
     return () => {
       cancelAnimationFrame(settleFrame);
+      cancelAnimationFrame(resizeFrame);
+      cancelAnimationFrame(canvasMeasureFrameRef.current);
       surfaceObserver.disconnect();
-      window.removeEventListener('resize', recalculateZoom);
+      window.removeEventListener('resize', scheduleZoom);
       window.removeEventListener('keydown', preventScroll);
       disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
       canvasMeasureRef.current = null;
@@ -314,12 +324,25 @@ export const EditorPreview = ({
     // device pixel ratio would feed back into an example that sizes its canvas
     // to that window, doubling it on every resize.
     const measure = (): void => {
+      if (!canvas.isConnected || canvas.ownerDocument !== iframeRef.current?.contentDocument) {
+        return;
+      }
+
       applyCanvasSize(canvas.clientWidth || canvas.width, canvas.clientHeight || canvas.height, canvas.width, canvas.height);
     };
 
-    canvasMeasureRef.current = measure;
-    measure();
-    canvasAttributeObserverRef.current = new MutationObserver(measure);
+    // A sizing policy writes canvas styles from its host ResizeObserver.
+    // Changing that host synchronously from a canvas mutation feeds back into
+    // the same observer delivery and browsers report a resize loop. Adopt the
+    // settled canvas on the next frame, and never measure a detached surface.
+    const scheduleMeasure = (): void => {
+      cancelAnimationFrame(canvasMeasureFrameRef.current);
+      canvasMeasureFrameRef.current = requestAnimationFrame(measure);
+    };
+
+    canvasMeasureRef.current = scheduleMeasure;
+    scheduleMeasure();
+    canvasAttributeObserverRef.current = new MutationObserver(scheduleMeasure);
     canvasAttributeObserverRef.current.observe(canvas, {
       attributes: true,
       attributeFilter: ['width', 'height', 'style'],
