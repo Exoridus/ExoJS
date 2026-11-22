@@ -150,6 +150,58 @@ const validatePlan: (value: unknown, root: string) => asserts value is AffectedP
   }
 };
 
+/** Read a plan without discarding the selector's extra explanation metadata. */
+export const readAffectedPlan = (path: string, root: string): AffectedPlanDocument => {
+  let contents: string;
+
+  try {
+    contents = readFileSync(resolve(root, path), 'utf8');
+  } catch (cause) {
+    throw new Error(`[affected] Cannot read plan: ${path}`, { cause });
+  }
+
+  let document: unknown;
+
+  try {
+    document = JSON.parse(contents);
+  } catch (cause) {
+    throw new Error('[affected] Invalid plan: expected JSON', { cause });
+  }
+
+  validatePlan(document, root);
+
+  return document;
+};
+
+/** Selected execution requires clean inputs as well as the plan's committed identity. */
+export const assertAffectedPlanCheckout = (plan: AffectedPlanDocument, root: string, clean = false): void => {
+  const git = (...args: string[]): string =>
+    execFileSync('git', args, {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 30_000,
+      maxBuffer: 16 * 1024 * 1024,
+    });
+  let identity: string[];
+
+  try {
+    identity = git('rev-parse', 'HEAD', 'HEAD^{tree}').trim().split(/\r?\n/);
+  } catch (cause) {
+    throw new Error('[affected] Cannot verify the current checkout', { cause });
+  }
+
+  for (const [index, field] of (['head', 'tree'] as const).entries()) {
+    if (plan[field] !== identity[index]) {
+      throw new Error(`[affected] Plan ${field} does not match the current checkout`);
+    }
+  }
+
+  if (clean && git('status', '--porcelain=v1', '-z', '--untracked-files=all') !== '') {
+    throw new Error('[affected] Selected execution requires a clean checkout, including tracked and untracked inputs');
+  }
+};
+
 /**
  * Audits proposed affected-test selections while Vitest still runs every file.
  * Setting EXOJS_AFFECTED_PLAN opts in; invalid or stale plans fail the run.
@@ -175,27 +227,14 @@ export default class AffectedReporter implements Reporter {
     }
 
     this._root = vitest.config.root;
-
-    let contents: string;
-
-    try {
-      contents = readFileSync(resolve(this._root, path), 'utf8');
-    } catch (cause) {
-      throw new Error(`[affected] Cannot read plan: ${path}`, { cause });
-    }
-
-    let document: unknown;
-
-    try {
-      document = JSON.parse(contents);
-    } catch (cause) {
-      throw new Error('[affected] Invalid plan: expected JSON', { cause });
-    }
-
-    validatePlan(document, this._root);
-    this._plan = document;
+    this._plan = readAffectedPlan(path, this._root);
     this._assertCheckout();
     this._resultsDirectory = resolve(this._root, process.env.EXOJS_AFFECTED_RESULTS_DIR ?? '.workspace/affected-tests/results');
+
+    // The reporter retains its plan for the complete lifecycle. Workers and
+    // nested test-runner fixtures must not inherit this invocation's plan.
+    delete process.env.EXOJS_AFFECTED_MODE;
+    delete process.env.EXOJS_AFFECTED_PLAN;
   }
 
   public onTestRunStart(specifications: readonly TestSpecification[]): void {
@@ -363,24 +402,6 @@ export default class AffectedReporter implements Reporter {
       return;
     }
 
-    let identity: string[];
-
-    try {
-      identity = execFileSync('git', ['rev-parse', 'HEAD', 'HEAD^{tree}'], {
-        cwd: this._root,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-      })
-        .trim()
-        .split(/\r?\n/);
-    } catch (cause) {
-      throw new Error('[affected] Cannot verify the current checkout', { cause });
-    }
-
-    for (const [index, field] of (['head', 'tree'] as const).entries()) {
-      if (this._plan[field] !== identity[index]) {
-        throw new Error(`[affected] Plan ${field} does not match the current checkout`);
-      }
-    }
+    assertAffectedPlanCheckout(this._plan, this._root);
   }
 }
