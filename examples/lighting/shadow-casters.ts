@@ -2,10 +2,11 @@ import {
   Application,
   Color,
   Container,
-  FixedResolutionCanvasSizing,
   type InteractionEvent,
   Keyboard,
   type Pointer,
+  RepeatingSprite,
+  ResponsiveCanvasSizing,
   ScaleModes,
   Scene,
   type Seconds,
@@ -31,15 +32,15 @@ const canvasTexture = (width: number, height: number, paint: (context: CanvasRen
 };
 
 const floorCanvas = canvasTexture(64, 64, context => {
-  context.fillStyle = '#b3aea5';
+  context.fillStyle = '#777b82';
   context.fillRect(0, 0, 64, 64);
-  context.fillStyle = '#a19c94';
+  context.fillStyle = '#6b7078';
   context.fillRect(0, 0, 32, 32);
   context.fillRect(32, 32, 32, 32);
 });
 
 const wallCanvas = canvasTexture(8, 8, context => {
-  context.fillStyle = '#cfc9be';
+  context.fillStyle = '#ece3d2';
   context.fillRect(0, 0, 8, 8);
 });
 
@@ -47,13 +48,13 @@ const wallCanvas = canvasTexture(8, 8, context => {
 const pillarSize = 96;
 const pillarCanvas = canvasTexture(pillarSize, pillarSize, context => {
   const arm = pillarSize / 3;
-  context.fillStyle = '#d8cbb0';
+  context.fillStyle = '#ead3a4';
   context.fillRect(arm, 0, arm, pillarSize);
   context.fillRect(0, arm, pillarSize, arm);
 });
 
 const controls = {
-  radius: slider('Radius', { min: 80, max: 360, step: 10, value: 230 }),
+  radius: slider('Radius', { min: 80, max: 360, step: 10, value: 310 }),
   softness: slider('Softness', { min: 0, max: 1, step: 0.05, value: 0.35 }),
   occluders: toggle('Show occluders'),
   type: choice('Light', ['Point', 'Spot']),
@@ -68,19 +69,19 @@ class ShadowCastersScene extends Scene {
   private elapsed = 0;
   private playing = true;
   private dragPointer: number | null = null;
-  private lightX = 0.25;
-  private lightY = 0.55;
+  private lightX = 0.47;
+  private lightY = 0.58;
   private scale = 1;
   private width = 1280;
   private height = 600;
   private walls: Sprite[] = [];
 
   override init(): void {
-    const floor = new Sprite(this.track(new Texture(floorCanvas, { scaleMode: ScaleModes.Linear })));
+    const floor = new RepeatingSprite(this.track(new Texture(floorCanvas, { scaleMode: ScaleModes.Linear })));
     this.world.addChild(floor);
     const wallTexture = this.track(new Texture(wallCanvas));
     const pillarTexture = this.track(new Texture(pillarCanvas));
-    this.lighting = new LightmapLighting(this.app, { ambient: new Color(45, 47, 55), lightResolution: 1 });
+    this.lighting = new LightmapLighting(this.app, { ambient: new Color(82, 87, 100), lightResolution: 1 });
     this.systems.add(this.lighting);
 
     for (let i = 0; i < 3; i++) {
@@ -149,6 +150,8 @@ class ShadowCastersScene extends Scene {
   };
 
   override update(delta: Seconds): void {
+    // This layout uses top-left coordinates even as the host changes aspect.
+    this.app.rendering.view.setCenter(this.app.width / 2, this.app.height / 2);
     const v = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
     this.scale = v.scale;
     this.width = v.width;
@@ -182,7 +185,7 @@ class ShadowCastersScene extends Scene {
     this.beam.rotation = 0;
     this.lighting.debug = this.panel.values.occluders ? 'occluders' : null;
     this.panel.status(
-      `${this.panel.values.type} light | ${this.playing ? 'wall rotating' : 'paused'} | rectangle and alpha-cross cast real shadows`,
+      `Drag the scene | ${this.panel.values.type} light | ${this.playing ? 'wall rotating' : 'paused'} | rectangle and alpha-cross cast real shadows`,
     );
   }
 
@@ -198,7 +201,7 @@ class ShadowCastersScene extends Scene {
 
 const app = new Application({
   scenes: { ShadowCastersScene },
-  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new ResponsiveCanvasSizing({ minAspect: 1 }) },
   clearColor: new Color(6, 7, 12),
 });
 await startExample(app, () => app.start(ShadowCastersScene));

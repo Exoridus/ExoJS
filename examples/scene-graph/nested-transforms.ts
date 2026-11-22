@@ -1,15 +1,4 @@
-import {
-  Application,
-  Color,
-  Container,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  Keyboard,
-  type RenderingContext,
-  Scene,
-  type Seconds,
-  Text,
-} from '@codexo/exojs';
+import { Application, Color, Container, Graphics, Keyboard, ResponsiveCanvasSizing, Scene, type Seconds, Text } from '@codexo/exojs';
 import { demoPanel, startExample } from '@examples/runtime';
 
 class NestedTransformsScene extends Scene {
@@ -27,7 +16,7 @@ class NestedTransformsScene extends Scene {
   ];
   private panel!: ReturnType<typeof demoPanel<Record<string, never>>>;
   private playing = true;
-  private elapsed = 0;
+  private readonly dataBackground = new Graphics();
 
   override init(): void {
     const sun = new Graphics();
@@ -49,7 +38,7 @@ class NestedTransformsScene extends Scene {
     this.moon.drawCircle(0, 0, 7);
     this.planetOrbit.addChild(path, sun, this.planet, this.moonOrbit);
     this.moonOrbit.addChild(moonPath, this.moon);
-    this.root.addChild(this.planetOrbit, ...this.localLabels, ...this.worldLabels);
+    this.root.addChild(this.planetOrbit, this.dataBackground, ...this.localLabels, ...this.worldLabels);
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
@@ -70,47 +59,41 @@ class NestedTransformsScene extends Scene {
   }
 
   override update(delta: Seconds): void {
+    // This layout uses top-left coordinates even as the host changes aspect.
+    this.app.rendering.view.setCenter(this.app.width / 2, this.app.height / 2);
     const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
     this.root.setScale(scale);
-    const orbitScale = Math.min(1, (contentHeight - 32) / 296);
-    this.planetOrbit.setPosition(width / 2, contentHeight / 2).setScale(orbitScale);
+    const dataHeight = 70;
+    const diagramHeight = Math.max(20, contentHeight - dataHeight);
+    const orbitScale = Math.max(0.05, Math.min(1.8, (diagramHeight - 20) / 310, (width - 32) / 310));
+    this.planetOrbit.setPosition(width / 2, diagramHeight / 2).setScale(orbitScale);
+    this.dataBackground.clear();
+    this.dataBackground.fillColor = new Color(28, 39, 50);
+    this.dataBackground.drawRoundedRectangle(8, diagramHeight, width - 16, dataHeight - 4, 8);
     (this.planetOrbit.children[0] as Graphics).lineWidth = 2 / orbitScale;
     (this.moonOrbit.children[0] as Graphics).lineWidth = 2 / orbitScale;
 
     if (this.playing) {
-      this.elapsed += delta;
       this.planetOrbit.rotate(delta * 25);
       this.moonOrbit.rotate(delta * 100);
     }
 
     for (const [index, node] of [this.planet, this.moon].entries()) {
       const world = node.getWorldTransform();
-      const x = world.x / scale;
-      const y = world.y / scale;
-      const labelX = Math.min(width - 174, Math.max(8, x + 15));
-      const labelY = Math.min(contentHeight - 36, Math.max(4, y + (index === 0 ? -42 : 18)));
+      const labelX = 18 + index * (width / 2);
       this.localLabels[index].text = `${index === 0 ? 'Planet' : 'Moon'} local (${node.x}, ${node.y})`;
-      this.localLabels[index].setPosition(labelX, labelY);
-      this.worldLabels[index].text = `world (${world.x.toFixed(0)}, ${world.y.toFixed(0)})`;
-      this.worldLabels[index].setPosition(labelX, labelY + 17);
+      this.localLabels[index].setPosition(labelX, diagramHeight + 10);
+      this.worldLabels[index].text = `World (${world.x.toFixed(0)}, ${world.y.toFixed(0)})`;
+      this.worldLabels[index].setPosition(labelX, diagramHeight + 33);
     }
 
     this.panel.status(`${this.playing ? 'Running' : 'Paused'} | amber: local offset | cyan: world position`);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
-  }
-
-  override destroy(): void {
-    this.panel.dispose();
-    super.destroy();
   }
 }
 
 const app = new Application({
   scenes: { NestedTransformsScene },
-  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new ResponsiveCanvasSizing({ minAspect: 1 }) },
   clearColor: new Color(20, 27, 34),
 });
 await startExample(app, () => app.start(NestedTransformsScene));

@@ -1,17 +1,20 @@
 import {
   Application,
+  BlendModes,
   Color,
-  FixedResolutionCanvasSizing,
   type InteractionEvent,
   Keyboard,
   type Pointer,
   Rectangle,
+  ResponsiveCanvasSizing,
   Scene,
-  type Seconds,
   Sprite,
   type Texture,
+  Time,
+  Vector,
 } from '@codexo/exojs';
 import {
+  AlphaFadeOverLifetime,
   ColorGradient,
   ColorOverLifetime,
   ConeDirection,
@@ -26,21 +29,21 @@ import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { demoPanel, slider, startExample } from '@examples/runtime';
 
 const controls = {
-  rate: slider('Rate / s', { min: 0, max: 250, step: 10, value: 100 }),
-  lifetime: slider('Lifetime / s', { min: 0.2, max: 2.5, step: 0.1, value: 1.2 }),
-  speed: slider('Speed / px/s', { min: 10, max: 180, step: 10, value: 80 }),
+  rate: slider('Rate / s', { min: 0, max: 250, step: 10, value: 140 }),
+  lifetime: slider('Lifetime / s', { min: 0.2, max: 2.5, step: 0.1, value: 1.4 }),
+  speed: slider('Speed / px/s', { min: 10, max: 180, step: 10, value: 120 }),
 };
 class EmitterBasicsScene extends Scene {
   private system!: ParticleSystem;
+  private sparks!: ParticleSystem;
   private particleTexture!: Texture;
   private log!: Sprite;
   private spawn!: RateSpawn;
   private panel!: ReturnType<typeof demoPanel<typeof controls>>;
   private playing = true;
-  private elapsed = 0;
   private dragPointer: number | null = null;
   private emitterX = 0.5;
-  private emitterY = 0.85;
+  private emitterY = 0.76;
   private scale = 1;
   private width = 1280;
   private height = 600;
@@ -51,14 +54,28 @@ class EmitterBasicsScene extends Scene {
 
   override init(): void {
     this.system = new ParticleSystem(this.particleTexture, { capacity: 2000, simulation: 'cpu' });
+    this.system.blendMode = BlendModes.Additive;
     this.log = new Sprite(this.loader.get(assets.platformerTilesImage)).setTextureFrame(new Rectangle(585, 0, 64, 64)).setAnchor(0.5);
-    this.root.addChild(this.log, this.system);
+    this.sparks = new ParticleSystem(this.loader.get(assets.particleSpark), { capacity: 100, simulation: 'cpu' });
+    this.sparks.blendMode = BlendModes.Additive;
+    this.sparks.addSpawnModule(
+      new RateSpawn({
+        rate: new Constant(18),
+        lifetime: new Constant(1.2),
+        velocity: new ConeDirection(-Math.PI / 2, Math.PI / 5, 100, 210),
+        scale: new Constant(new Vector(0.013, 0.025)),
+        tint: new Constant(new Color(255, 196, 102)),
+      }),
+    );
+    this.sparks.addUpdateModule(new AlphaFadeOverLifetime());
+    this.root.addChild(this.log, this.system, this.sparks);
     this.systems.add(this.system);
+    this.systems.add(this.sparks);
     this.system.addUpdateModule(
       new ScaleOverLifetime(
         new Curve([
-          { t: 0, v: 0.015 },
-          { t: 0.2, v: 0.04 },
+          { t: 0, v: 0.06 },
+          { t: 0.2, v: 0.13 },
           { t: 1, v: 0 },
         ]),
       ),
@@ -82,6 +99,13 @@ class EmitterBasicsScene extends Scene {
       },
     });
     this.setSpawn();
+
+    // A short warm-up makes the initial flame show the lifetime gradient.
+    for (let frame = 0; frame < 72; frame++) {
+      this.system.update(Time.seconds(1 / 60));
+      this.sparks.update(Time.seconds(1 / 60));
+    }
+
     this.inputs.onTrigger(Keyboard.Space, () => this.togglePlaying());
     // Hit-tested scene input respects the UI layer, including open control menus.
     this.root.interactive = true;
@@ -133,14 +157,20 @@ class EmitterBasicsScene extends Scene {
     this.dragPointer = null;
   };
 
-  override update(delta: Seconds): void {
+  override update(): void {
+    // This layout uses top-left coordinates even as the host changes aspect.
+    this.app.rendering.view.setCenter(this.app.width / 2, this.app.height / 2);
     const v = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
     this.scale = v.scale;
     this.width = v.width;
     this.height = v.contentHeight;
     this.root.setScale(v.scale);
-    this.system.setPosition(v.width * this.emitterX, v.contentHeight * this.emitterY - 10);
-    this.log.setPosition(v.width * this.emitterX, v.contentHeight * this.emitterY + 12).setScale(0.75, 0.45);
+    const effectScale = Math.max(0.25, Math.min(1.5, v.contentHeight / 300));
+    const x = v.width * this.emitterX;
+    const y = v.contentHeight * this.emitterY;
+    this.system.setPosition(x, y - 10 * effectScale).setScale(effectScale);
+    this.sparks.setPosition(x, y - 10 * effectScale).setScale(effectScale);
+    this.log.setPosition(x, y + 10 * effectScale).setScale(1.45 * effectScale, 0.7 * effectScale);
     const values = this.panel.values;
     (this.spawn.config.rate as Constant<number>).value = values.rate;
     (this.spawn.config.lifetime as Constant<number>).value = values.lifetime;
@@ -148,12 +178,8 @@ class EmitterBasicsScene extends Scene {
     velocity.minSpeed = values.speed * 0.7;
     velocity.maxSpeed = values.speed;
 
-    if (this.playing) {
-      this.elapsed += delta;
-    }
-
     this.panel.status(
-      `${this.playing ? 'Running' : 'Paused'} | ${this.system.aliveCount} active | rate x lifetime ~ ${(values.rate * values.lifetime).toFixed(0)} steady-state particles`,
+      `${this.playing ? 'Running' : 'Paused'} | ${this.system.aliveCount} flame particles + sparks | rate x lifetime ~ ${(values.rate * values.lifetime).toFixed(0)} steady-state particles`,
     );
   }
 
@@ -163,8 +189,10 @@ class EmitterBasicsScene extends Scene {
     // Leaving the scene's system registry freezes emission and live particles alike.
     if (this.playing) {
       this.systems.add(this.system);
+      this.systems.add(this.sparks);
     } else {
       this.systems.remove(this.system);
+      this.systems.remove(this.sparks);
     }
   }
 
@@ -180,7 +208,7 @@ class EmitterBasicsScene extends Scene {
 
 const app = new Application({
   scenes: { EmitterBasicsScene },
-  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new ResponsiveCanvasSizing({ minAspect: 1 }) },
   clearColor: new Color(20, 27, 34),
   extensions: [particlesExtension],
 });
