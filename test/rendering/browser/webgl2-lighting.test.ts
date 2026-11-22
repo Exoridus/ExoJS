@@ -155,6 +155,7 @@ describe('lighting WebGL2 browser', () => {
     root.addChild(surface);
 
     const line = lighting.add(new LineLight({ length: 40, radius: 8, height: 16, intensity: 1 })).setPosition(32, 32);
+
     const render = (): void => {
       lighting.update();
       backend.clear(Color.black);
