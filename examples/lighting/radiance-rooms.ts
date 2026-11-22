@@ -4,7 +4,6 @@ import {
   Container,
   FixedResolutionCanvasSizing,
   Keyboard,
-  type RenderingContext,
   RepeatingSprite,
   ScaleModes,
   Scene,
@@ -62,35 +61,39 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };
 
-const floorTexture = canvasTexture(64, context => {
-  context.fillStyle = '#3b3a36';
-  context.fillRect(0, 0, 64, 64);
-  context.fillStyle = '#343330';
-  context.fillRect(0, 0, 32, 32);
-  context.fillRect(32, 32, 32, 32);
-});
+const createFloorTexture = (): Texture =>
+  canvasTexture(64, context => {
+    context.fillStyle = '#3b3a36';
+    context.fillRect(0, 0, 64, 64);
+    context.fillStyle = '#343330';
+    context.fillRect(0, 0, 32, 32);
+    context.fillRect(32, 32, 32, 32);
+  });
 
-const stoneTexture = canvasTexture(8, context => {
-  context.fillStyle = '#726a5e';
-  context.fillRect(0, 0, 8, 8);
-});
+const createStoneTexture = (): Texture =>
+  canvasTexture(8, context => {
+    context.fillStyle = '#726a5e';
+    context.fillRect(0, 0, 8, 8);
+  });
 
 // Saturated and bright on purpose: what a surface gives back is its own colour
 // times what fell on it, so a dark or grey panel returns either nothing worth
 // seeing or the lamp's own light again.
-const panelTexture = canvasTexture(8, context => {
-  context.fillStyle = '#ff3b2f';
-  context.fillRect(0, 0, 8, 8);
-});
+const createPanelTexture = (): Texture =>
+  canvasTexture(8, context => {
+    context.fillStyle = '#ff3b2f';
+    context.fillRect(0, 0, 8, 8);
+  });
 
 // A mid neutral, where the rest of the floor is dark stone. The bounce is
 // multiplied by whatever colour the receiver already has, so a dark floor
 // shows a correct bounce as nothing at all - and a near-white one shows it as
 // a wash the direct light saturates anyway.
-const apronTexture = canvasTexture(8, context => {
-  context.fillStyle = '#8d8a82';
-  context.fillRect(0, 0, 8, 8);
-});
+const createApronTexture = (): Texture =>
+  canvasTexture(8, context => {
+    context.fillStyle = '#8d8a82';
+    context.fillRect(0, 0, 8, 8);
+  });
 
 interface Wall {
   readonly x: number;
@@ -174,6 +177,11 @@ class RadianceRoomsScene extends Scene {
     const { width, height } = this.app;
 
     this.world = new Container();
+    this.root.addChild(this.world);
+    const floorTexture = this.track(createFloorTexture());
+    const stoneTexture = this.track(createStoneTexture());
+    const panelTexture = this.track(createPanelTexture());
+    const apronTexture = this.track(createApronTexture());
 
     // Repeated, not stretched: a 64px tile scaled to the whole canvas turns its
     // own checker into two quadrant-sized blocks whose edges read as a defect
@@ -211,6 +219,7 @@ class RadianceRoomsScene extends Scene {
     // them out again on `destroy()`. Importing the class is also what links it,
     // so a project that only ever builds one leaves the other out of its bundle.
     // Space pauses the lamp, so both renderers can be compared at one instant.
+    this.build(this.cascading, this.bounce);
     const panel = demoPanel({
       scene: this,
       corner: 'top-right',
@@ -246,10 +255,6 @@ class RadianceRoomsScene extends Scene {
     // Moving the lamp is the clearest way to see that nothing about the far
     // room is baked: the wedge through the doorway sweeps with it.
     this.moveLamp();
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.world);
   }
 
   private moveLamp(): void {

@@ -42,6 +42,7 @@ import ts from 'typescript';
 
 import { resolveSiteChannel } from '../../scripts/pages/site-channel.ts';
 import { readSiteBuildManifest } from '../../scripts/pages/site-manifest.ts';
+import { exampleSceneOwnershipChecks } from './example-scene-ownership';
 import { playgroundDiagnostics } from './playground-diagnostics';
 import { assertPlaygroundSuiteResults, type PlaygroundGroup, runPlaygroundGroups, selectPlaygroundGroups } from './playground-suites';
 
@@ -1251,6 +1252,7 @@ const typecheckSnippets = async (snippets: string[]): Promise<void> => {
 };
 
 const exampleLifecycleChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await exampleSceneOwnershipChecks(browser, origin, base, check);
   await check('video controls: real shortcuts, playback, resize and end', async () => {
     const session = await openPlayground(browser, origin, base, 'sprites-textures/video-drawable', { width: 1000, height: 700 });
     const { page, pageErrors } = session;
