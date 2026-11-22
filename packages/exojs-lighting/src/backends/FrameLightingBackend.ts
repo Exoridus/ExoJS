@@ -25,6 +25,7 @@ import {
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { LightingHost } from '../LightingHost';
 import type { Light } from '../lights/Light';
+import { LineLight } from '../lights/LineLight';
 import { lightFalloff, lightHalfLength, lightHeight, lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
 import { SunLight } from '../lights/SunLight';
@@ -94,6 +95,9 @@ const halfFloatRounding = 2 ** -11;
 const noCone = -1;
 /** Shadow row a light without occluders in reach carries: the shader reads it as "nothing blocks". */
 const noShadow = -1;
+// Four stratified positions along an extended line emitter. Both shaders use
+// identical offsets; this path is Lightmap-only, never Radiance's transport.
+const lineShadowSamples = [-0.75, -0.25, 0.25, 0.75] as const;
 /** Width of a debug occluder line, in world pixels. */
 const debugLineWidth = 2;
 
@@ -309,6 +313,7 @@ export abstract class FrameLightingBackend implements LightingBackend {
   private readonly _filler: ShadowMarchFiller | null;
   private _fillerRequest: ShadowFillerOption = 'auto';
   private readonly _shadowRows = new Map<Light, ShadowRowState>();
+  private readonly _lineShadowRows = new Map<LineLight, ShadowRowState[]>();
   private readonly _sunShadowRows = new Map<Light, SunShadowRowState>();
   private readonly _shadowGeometry = new ShadowGeometryRevision();
   private _shadowEpoch = 0;
@@ -646,6 +651,7 @@ ${sunQuadWgsl}`,
 
     this._fillerRequest = filler;
     this._shadowRows.clear();
+    this._lineShadowRows.clear();
     this._syncMask();
 
     for (const batch of this._lightBatches.values()) {
@@ -1168,6 +1174,7 @@ ${sunQuadWgsl}`,
     this._normalBatches.clear();
     this._inactiveNormalBatches.clear();
     this._shadowRows.clear();
+    this._lineShadowRows.clear();
     this._sunShadowRows.clear();
     this._shadowGeometry.clear();
     this._shadowMap.destroy();
@@ -1569,6 +1576,7 @@ ${sunQuadWgsl}`,
     this._shadowMap.destroy();
     this._sunShadowMap.destroy();
     this._shadowRows.clear();
+    this._lineShadowRows.clear();
     this._sunShadowRows.clear();
     this._shadowMap = new DataTexture({ width: this._shadowResolution * shadowRowTexels, height: rows, format: TextureFormat.Rgba32F });
     this._sunShadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.R32F });
