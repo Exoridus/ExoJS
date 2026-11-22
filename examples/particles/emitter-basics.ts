@@ -2,6 +2,7 @@ import {
   Application,
   BlendModes,
   Color,
+  Graphics,
   type InteractionEvent,
   Keyboard,
   type Pointer,
@@ -42,6 +43,7 @@ class EmitterBasicsScene extends Scene {
   private panel!: ReturnType<typeof demoPanel<typeof controls>>;
   private playing = true;
   private dragPointer: number | null = null;
+  private readonly backdrop = new Graphics();
   private emitterX = 0.5;
   private emitterY = 0.76;
   private scale = 1;
@@ -68,7 +70,9 @@ class EmitterBasicsScene extends Scene {
       }),
     );
     this.sparks.addUpdateModule(new AlphaFadeOverLifetime());
-    this.root.addChild(this.log, this.system, this.sparks);
+    this.backdrop.fillColor = new Color(20, 27, 34);
+    this.backdrop.drawRectangle(0, 0, 1, 1);
+    this.root.addChild(this.backdrop, this.log, this.system, this.sparks);
     this.systems.add(this.system);
     this.systems.add(this.sparks);
     this.system.addUpdateModule(
@@ -165,6 +169,7 @@ class EmitterBasicsScene extends Scene {
     this.width = v.width;
     this.height = v.contentHeight;
     this.root.setScale(v.scale);
+    this.backdrop.setScale(v.width, v.contentHeight);
     const effectScale = Math.max(0.25, Math.min(1.5, v.contentHeight / 300));
     const x = v.width * this.emitterX;
     const y = v.contentHeight * this.emitterY;
