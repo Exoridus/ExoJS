@@ -1828,6 +1828,17 @@ const audioBusChecks = async (browser: Browser, origin: string, base: string): P
 };
 
 const headerChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  const sizingSource = (policy: 'ResponsiveCanvasSizing' | 'FixedResolutionCanvasSizing') => `
+    import { Application, Scene, ${policy} } from '@codexo/exojs';
+    import { startExample } from '@examples/runtime';
+    class SizingScene extends Scene {}
+    const app = new Application({
+      scenes: { SizingScene },
+      canvas: { width: 1280, height: 720, mount: document.body, sizing: new ${policy}(${policy === 'ResponsiveCanvasSizing' ? '{ minAspect: 1 }' : ''}) }
+    });
+    document.body.dataset.sizingInstance = String(Math.random());
+    await startExample(app, () => app.start(SizingScene));`;
+
   await check('experience: fresh visitors can play, inspect code and choose the next experiment', async () => {
     const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
     const page = await context.newPage();
@@ -2085,6 +2096,20 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
           await page.locator('[data-app-header]').evaluate(node => Boolean(node.closest('[inert]'))),
           'the header remains interactive behind the dialog',
         );
+
+        for (const shortcut of ['Control+k', 'Meta+k']) {
+          await dialog.getByRole('button').first().focus();
+          await page.keyboard.press(shortcut);
+          await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+          assert((await page.locator('dialog[open][aria-label="Search docs"]').count()) === 0, 'global search opened behind Examples');
+          assert(
+            await dialog.getByRole('searchbox', { name: 'Filter examples and tools' }).evaluate(node => node === document.activeElement),
+            'the modal did not retain its search shortcut',
+          );
+          await page.keyboard.press('Tab');
+          assert(await dialog.evaluate(node => node.contains(document.activeElement)), 'search shortcut broke modal Tab ownership');
+        }
+
         await page.keyboard.press('Escape');
         await waitFor(() => opener.evaluate(node => node === document.activeElement), Boolean, 'dialog return focus');
         await page.keyboard.press('Enter');
@@ -2102,6 +2127,23 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
         await waitFor(() => dialog.evaluate(node => node.contains(document.activeElement)), Boolean, 'programmatic-open dialog focus');
         await page.keyboard.press('Escape');
         assert(await previousFocus.evaluate(node => node === document.activeElement), 'dialog did not restore the actual focused control');
+
+        await page.keyboard.press('Control+k');
+
+        if (width === 390) {
+          await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+          assert((await page.locator('dialog[open][aria-label="Search docs"]').count()) === 0, 'hidden desktop search captured the phone');
+          await page.getByRole('button', { name: 'Open search', exact: true }).click();
+        }
+
+        const globalSearch = page.getByRole('dialog', { name: width === 900 ? 'Search docs' : 'Search', exact: true });
+        await globalSearch.waitFor();
+        assert(
+          await globalSearch.evaluate(node => !node.closest('[inert], [aria-hidden="true"]')),
+          'global search remained inside a hidden background',
+        );
+        await page.keyboard.press('Escape');
+        await globalSearch.waitFor({ state: 'hidden' });
       } catch (error) {
         await reportFailure(page, error);
 
@@ -2114,20 +2156,10 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
 
   await check('experience: responsive previews use phone height and preserve fixed worlds across resizing', async () => {
     const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world', { width: 1366, height: 768 });
-    const sourceFor = (policy: 'ResponsiveCanvasSizing' | 'FixedResolutionCanvasSizing') => `
-      import { Application, Scene, ${policy} } from '@codexo/exojs';
-      import { startExample } from '@examples/runtime';
-      class SizingScene extends Scene {}
-      const app = new Application({
-        scenes: { SizingScene },
-        canvas: { width: 1280, height: 720, mount: document.body, sizing: new ${policy}(${policy === 'ResponsiveCanvasSizing' ? '{ minAspect: 1 }' : ''}) }
-      });
-      document.body.dataset.sizingInstance = String(Math.random());
-      await startExample(app, () => app.start(SizingScene));`;
 
     try {
       await page.getByRole('button', { name: 'View code', exact: true }).click();
-      await runSource(page, sourceFor('ResponsiveCanvasSizing'));
+      await runSource(page, sizingSource('ResponsiveCanvasSizing'));
       await page.locator('[data-run-status="updated"]').waitFor();
       await page.getByRole('button', { name: 'Show demo', exact: true }).click();
       await waitFor(
@@ -2157,7 +2189,7 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
         (await responsive.locator('body').getAttribute('data-sizing-instance')) === instance,
         'desktop return replaced the running app',
       );
-      await runSource(page, sourceFor('FixedResolutionCanvasSizing'));
+      await runSource(page, sizingSource('FixedResolutionCanvasSizing'));
       await page.locator('[data-run-status="updated"]').waitFor();
       await page.setViewportSize({ width: 390, height: 844 });
       const fixed = await previewFrame(page);
@@ -2172,6 +2204,68 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
       await page.context().close();
     }
   });
+
+  for (const deviceScaleFactor of [1, 2]) {
+    await check(`experience: phone previews keep CSS sizing after hidden Run at DPR${deviceScaleFactor}`, async () => {
+      const context = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+        isMobile: true,
+        deviceScaleFactor,
+      });
+      const page = await context.newPage();
+      watchPage(page);
+
+      try {
+        await page.goto(`${origin}${base}/en/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
+        await page.getByRole('tab', { name: 'Code', exact: true }).click();
+        await page.waitForFunction('window.monaco?.editor.getEditors()[0]?.getValue().includes("startExample")');
+
+        for (const policy of ['ResponsiveCanvasSizing', 'FixedResolutionCanvasSizing'] as const) {
+          await page.getByRole('tab', { name: 'Code', exact: true }).click();
+          const previousGeneration = (await previewFrame(page)).url();
+          await page.evaluate(`window.monaco.editor.getEditors()[0].getModel().setValue(${JSON.stringify(sizingSource(policy))})`);
+          await page.getByRole('button', { name: 'Run', exact: true }).click();
+          await page.locator('[data-run-status="updated"]').waitFor();
+          const frame = await previewFrame(page);
+          const generation = frame.url();
+          assert(generation !== previousGeneration, 'hidden Run did not execute a new generation');
+          const instance = await frame.locator('body').getAttribute('data-sizing-instance');
+          await page.getByRole('button', { name: 'Show demo', exact: true }).click();
+          await frame.locator('canvas').waitFor({ state: 'visible' });
+          await frame.waitForFunction(responsive => {
+            const canvas = document.querySelector('canvas');
+
+            return (
+              canvas !== null &&
+              window.innerWidth <= 390 &&
+              window.innerWidth >= 388 &&
+              (responsive
+                ? Math.abs(window.innerHeight - 440) <= 1 &&
+                  Math.abs(canvas.height - 440 * window.devicePixelRatio) <= 2 &&
+                  Math.abs(canvas.width - window.innerWidth * window.devicePixelRatio) <= 2
+                : Math.abs(window.innerWidth / window.innerHeight - 16 / 9) < 0.02)
+            );
+          }, policy === 'ResponsiveCanvasSizing');
+          const previewBox = await page.locator('iframe[title^="Live demo:"]').boundingBox();
+          const expectedHeight = policy === 'ResponsiveCanvasSizing' ? 440 : 390 * (9 / 16);
+          assert(
+            previewBox !== null && Math.abs(previewBox.height - expectedHeight) <= 2,
+            `hidden Run lost ${policy} geometry at DPR${deviceScaleFactor}`,
+          );
+          assert(frame.url() === generation, 'showing a hidden Run restarted the preview');
+          assert((await frame.locator('body').getAttribute('data-sizing-instance')) === instance, 'showing a hidden Run replaced the app');
+          assert((await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'updated', 'showing a hidden Run failed');
+        }
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await context.close();
+      }
+    });
+  }
 
   await check('experience: mobile actions and complete instructions fit the initial viewport', async () => {
     for (const viewport of [

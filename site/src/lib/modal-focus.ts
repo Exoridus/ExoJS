@@ -58,6 +58,16 @@ export const activateModalFocus = (root: HTMLElement, onClose: () => void, getOp
       return;
     }
 
+    // Global docs search lives in the inert page header. Keep its shortcut
+    // with the current modal instead of opening a second dialog behind it.
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      event.stopPropagation();
+      focusFirst();
+
+      return;
+    }
+
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();

@@ -184,19 +184,29 @@ export const EditorPreview = ({
   useEffect(() => {
     let settleFrame = 0;
     let resizeFrame = 0;
+    let wasVisible = false;
 
     const recalculateZoom = (): void => {
+      if (!rootRef.current?.getClientRects().length) {
+        wasVisible = false;
+
+        return;
+      }
+
+      const becameVisible = !wasVisible;
+      wasVisible = true;
       const stage = measureStageSize(rootRef.current);
 
-      if (stage.width !== stageSizeRef.current.width || stage.height !== stageSizeRef.current.height) {
+      if (becameVisible || stage.width !== stageSizeRef.current.width || stage.height !== stageSizeRef.current.height) {
         stageSizeRef.current = stage;
         const zoom = measureFillZoom(rootRef.current, stage.width, stage.height);
         currentCanvasRef.current = { ...currentCanvasRef.current, ...stage, zoom };
         rootRef.current?.style.setProperty('--canvas-w', `${stage.width}px`);
         rootRef.current?.style.setProperty('--canvas-h', `${stage.height}px`);
         rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
-        // Let the iframe's sizing policy observe the new host before adopting
-        // its canvas. Also measure fixed canvases whose attributes stay equal.
+        // A Run can finish while the Demo tab is hidden. Restore its intended
+        // host on reveal, then let the sizing policy settle before adopting
+        // the canvas, including fixed canvases whose attributes stay equal.
         cancelAnimationFrame(settleFrame);
         settleFrame = requestAnimationFrame(() => {
           settleFrame = requestAnimationFrame(() => canvasMeasureRef.current?.());
@@ -324,11 +334,13 @@ export const EditorPreview = ({
     // device pixel ratio would feed back into an example that sizes its canvas
     // to that window, doubling it on every resize.
     const measure = (): void => {
-      if (!canvas.isConnected || canvas.ownerDocument !== iframeRef.current?.contentDocument) {
+      if (!rootRef.current?.getClientRects().length || !canvas.isConnected || canvas.ownerDocument !== iframeRef.current?.contentDocument) {
         return;
       }
 
-      applyCanvasSize(canvas.clientWidth || canvas.width, canvas.clientHeight || canvas.height, canvas.width, canvas.height);
+      // A hidden Demo tab has no CSS box. Its backing store can still carry
+      // the initial resolution and DPR; it must never become the host size.
+      applyCanvasSize(canvas.clientWidth, canvas.clientHeight, canvas.width, canvas.height);
     };
 
     // A sizing policy writes canvas styles from its host ResizeObserver.
