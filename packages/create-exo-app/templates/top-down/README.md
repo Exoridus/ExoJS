@@ -11,7 +11,7 @@ A map that drives the game: the walls and the door you see are the walls and the
 
 Both extend `TopDownScene`, which reads everything from the map it is given:
 
-- **Walls.** A tile of the `Walls` layer whose tileset definition has a collision shape is solid. `TileColliderStreamer` (from `@codexo/exojs-tilemap-physics`) turns those shapes into static physics bodies; `TileNavigationSpace` (from `@codexo/exojs-pathfinding`) routes around the same cells. In Tiled, a tile's collision is drawn in the tileset's _Tile Collision Editor_.
+- **Walls.** A tile of the `Walls` layer whose tileset definition has a collision shape is solid. `TileColliderStreamer` (from `@codexo/exojs/tilemap-physics`) turns those shapes into static physics bodies; `TileNavigationSpace` (from `@codexo/exojs/pathfinding`) routes around the same cells. In Tiled, a tile's collision is drawn in the tileset's _Tile Collision Editor_.
 - **Doors.** A `Walls` tile with a `door` property is a door. Opening it removes the tile, closing it puts it back; both the colliders and the routes follow the edit. A door does not close on any physics body that reaches into the doorway.
 - **Spawn.** The `spawn` point of the `Markers` object layer.
 
@@ -34,6 +34,10 @@ The door key is read from the action's `tick` view inside `fixedUpdate`, so one 
 - **both** — edit `LEVEL` in `src/level.ts` and redraw `town-square.tmj` to match, or drop `ProceduralMapScene`.
 
 The `Walls` and door tiles are placeholders from the atlas. Pick tiles that suit your game, and give the solid ones a collision shape.
+
+## Smaller recipes
+
+The [sprite movement recipe](https://exoridus.github.io/ExoJS/en/guide/physics/physics-basics/#a-sprite-with-collision-aware-movement) isolates the existing body/motor components without map loading. The [enemy sensor recipe](https://exoridus.github.io/ExoJS/en/guide/recipes/gameplay-collision/#enemies-and-physics-sensors) adds named filter bits, a single event dispatcher, and component-owned despawn.
 
 ## Art
 

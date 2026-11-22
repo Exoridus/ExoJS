@@ -39,9 +39,15 @@ class HalfHeightCanvasSizing extends CanvasSizing {
 
 class LayoutScene extends Scene {
   // #region guide:relayout-on-resize
+  private readonly onResize = (): void => this.layout();
+
   override init(): void {
     this.layout();
-    this.app.onResize.add(() => this.layout());
+    this.app.onResize.add(this.onResize);
+  }
+
+  override destroy(): void {
+    this.app.onResize.remove(this.onResize);
   }
   // #endregion guide:relayout-on-resize
 

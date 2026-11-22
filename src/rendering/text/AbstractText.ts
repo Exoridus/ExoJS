@@ -37,6 +37,7 @@ export abstract class AbstractText extends Drawable {
   private _lastLayout: TextLayoutResult | null = null;
   /** Heaviest change awaiting a layout pass, or `null` when settled. */
   private _pendingHint: StyleChangeHint | null = 'font';
+  /** Each node observes a shared style independently of every other reader. */
   private _styleRevision = 0;
 
   /** Called after new metrics and quads have been published, so an owning widget can read them. @internal */
@@ -68,7 +69,6 @@ export abstract class AbstractText extends Drawable {
     validateLayoutOptions(layout);
     this._text = text;
     this._style = style;
-    this._styleRevision = 0;
     this._style.onChange.add(this._onStyleChange);
     // Copied, not aliased: the caller keeps its own options object and may
     // well go on mutating it, which must not silently re-flow this node.
@@ -362,9 +362,8 @@ export abstract class AbstractText extends Drawable {
     const own = this._pendingHint;
     const style = this._style._hintSince(this._styleRevision);
 
-    this._styleRevision = this._style._changeRevision;
+    this._styleRevision = this._style._revision;
     this._style.consumeDirty();
-
     this._pendingHint = null;
 
     if (own === null) {

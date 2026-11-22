@@ -1,15 +1,17 @@
-# @codexo/exojs-tilemap-physics
+# @codexo/exojs/tilemap-physics
 
 Static physics colliders from ExoJS tilemap collision geometry.
 
-> A peer-dependency library on top of `@codexo/exojs`, `@codexo/exojs-tilemap` and `@codexo/exojs-physics` — construct its API directly. Importing it registers nothing.
+> An optional Core subpath connecting `@codexo/exojs/tilemap` and `@codexo/exojs/physics`. Construct its API directly; importing it registers nothing.
 
-`@codexo/exojs-tilemap` never imports physics and `@codexo/exojs-physics` never imports tilemap; this package is the seam between them, so both stay usable on their own.
+`@codexo/exojs/tilemap` never imports physics and `@codexo/exojs/physics` never imports tilemap; this package is the seam between them, so both stay usable on their own.
+
+The former `@codexo/exojs-tilemap-physics` package name remains a 0.20 compatibility shim that forwards to this subpath. Prefer the subpath for new code.
 
 ## Installation
 
 ```sh
-npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-physics @codexo/exojs-tilemap-physics
+npm install --save-exact @codexo/exojs
 ```
 
 ## Tile layers
@@ -122,7 +124,7 @@ In `outline` mode the resolved material also decides what may share a boundary: 
 
 ## Core compatibility
 
-This package follows the Core lockstep release line. Its Core, tilemap, and physics peer dependencies require the matching minor release.
+The bridge, tilemap and physics modules ship in the same Core release. Their private workspace implementation packages are not separate application dependencies.
 
 ## License
 

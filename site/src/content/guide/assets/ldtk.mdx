@@ -9,9 +9,9 @@ import Callout from '../../../components/Callout.astro';
 
 [LDtk](https://ldtk.io/) is a modern, open-source level editor. The official `@codexo/exojs-ldtk` extension adds an `ldtkMap` asset type that loads an LDtk project (`.ldtk`) through the normal [`Loader`](/ExoJS/en/api/loader/) pipeline — fetching the JSON, loading every referenced tileset image, and converting **each LDtk level** into a runtime [`TileMap`](/ExoJS/en/api/tile-map/) you can drop straight into the scene graph.
 
-> **Note:** `LdtkMap` ships as an official ExoJS extension package, separate from the core. It is built on `@codexo/exojs-tilemap`, and both that package and `@codexo/exojs` are peer dependencies — install all three explicitly, on the same version:
+> **Note:** `LdtkMap` ships as an official ExoJS extension package, separate from the core. It is built on `@codexo/exojs/tilemap`, which ships inside Core. Install Core and the separate adapter on compatible release lines:
 > ```sh
-> npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-ldtk
+> npm install @codexo/exojs @codexo/exojs-ldtk
 > ```
 
 Because each LDtk level becomes a generic `TileMap`, you render LDtk worlds with the same tilemap node used everywhere else in the engine — there is no LDtk-specific renderer.
@@ -102,7 +102,7 @@ level.properties.ldtkWorldIid; // string | undefined — set only for multi-worl
 
 ## Rendering a level
 
-Wrap a level's `TileMap` in a `TileMapNode` and add it to the scene. `TileMapNode` is the generic tilemap node from `@codexo/exojs-tilemap` (the package LDtk builds on):
+Wrap a level's `TileMap` in a `TileMapNode` and add it to the scene. `TileMapNode` is the generic tilemap node from `@codexo/exojs/tilemap` (the package LDtk builds on):
 
 ```ts
 import { TileMapNode } from '@codexo/exojs/tilemap';
@@ -123,7 +123,7 @@ for (const level of world.levels) {
 
 ## Entity field values
 
-Every custom field an entity carries in the LDtk editor ends up as a property on that entity's `TileMapObject` (found on the entity layer's `ObjectLayer`). Scalar field types — Int, Float, Bool, String, Multilines, Color, FilePath, Enum — convert directly to their JS scalar. Three structured field types — **Point**, **EntityRef**, and **Tile** — convert into the tagged `TilePropertyValue` variants from `@codexo/exojs-tilemap`, discriminated by a `kind` string:
+Every custom field an entity carries in the LDtk editor ends up as a property on that entity's `TileMapObject` (found on the entity layer's `ObjectLayer`). Scalar field types — Int, Float, Bool, String, Multilines, Color, FilePath, Enum — convert directly to their JS scalar. Three structured field types — **Point**, **EntityRef**, and **Tile** — convert into the tagged `TilePropertyValue` variants from `@codexo/exojs/tilemap`, discriminated by a `kind` string:
 
 ```ts
 import { TilePropertyKind } from '@codexo/exojs/tilemap';

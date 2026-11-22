@@ -297,7 +297,7 @@ export class ScrollContainer extends Widget {
       return super.contains(x, y);
     }
 
-    return this.getBounds().contains(x, y) && super.contains(x, y);
+    return this._getWorldBounds().contains(x, y) && super.contains(x, y);
   }
 
   /** @internal - subscribe to the app's wheel signal when entering the scene tree. */

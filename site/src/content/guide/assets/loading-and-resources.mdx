@@ -13,11 +13,28 @@ Loading answers two questions: **when is a value usable, and who keeps it alive?
 
 ## The short path: construct from a path
 
-For textures, sprites and sounds the common case needs no loader call. A path-backed object is idle until a scene uses it, loads on first use, fills in place, and is released with the scene that owns it:
+A `Sprite` constructed from a path needs no explicit loader call when it joins a scene tree. Its texture stays idle before attachment, loads under the scene's claim after attachment, and fills in place when ready:
 
 <SourceSnippet source="examples/guides/model-b-plus/lazy-sprite.ts" region="lazy-sprite" language="ts" title="A lazy sprite" />
 
-When something must be ready first, preload it with `app.load(...)`, which takes one handle, several, an array or an object and returns a `LoadingQueue` with progress and cancellation. [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/) shows the before and after, ownership rules and custom asset types. The rest of this page covers the loader and scope APIs underneath, which stay available for streamed media, shared lifetimes, per-asset options and caching.
+This program expects `public/assets/hero.png`; it mounts its canvas and makes it reachable with Tab. Click or tab to the canvas before using keyboard controls in later recipes.
+
+A `Texture(path)` or `Sound(path)` alone names a resource; construction does not fetch it. In particular, `audio.play(sound)` does not load a sound. Await `this.assets.load({ hero, sound })` for scene-owned prerequisites or `app.load({ hero, sound })` for application-owned ones. Both return an awaitable `LoadingQueue` with progress and cancellation. [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/) shows the before and after, ownership rules and custom asset types. The rest of this page covers the loader and scope APIs underneath, which stay available for streamed media, shared lifetimes, per-asset options and caching.
+
+## Operation, owner, and readiness
+
+| Operation | Owner and loading | When it is usable |
+| --- | --- | --- |
+| `new Sprite(path)` attached to `scene.root` or `scene.ui` | The node's scene claim starts loading and follows attachment; detach or texture replacement releases that claim. | Empty until its texture is ready; await the texture's `loaded` promise when dimensions matter. |
+| `new Texture(path)` / `new Sound(path)` | An idle handle until explicitly acquired, or used by a consumer with its own acquisition contract. | Construction is not readiness. |
+| `await scene.assets.load({ hero, sound })` | Scene-owned claims, released by permanent scene teardown. | The returned values are ready; a failed or cancelled queue rejects. |
+| `await app.load({ hero, sound })` | Application-owned claims, independent of scene changes. | Ready after the queue resolves; release at the application boundary. |
+| `scope.get(...)` / `scope.load(...)` | Claims belong to that loader scope; `get` starts loading too. | `get` returns a placeholder/ref; `load` is awaitable. |
+| `context.render(node)` / `scene.track(node)` | Rendering submits work; tracking arranges destruction. Neither creates asset claims for a detached render root. | Acquire required textures explicitly before rendering. |
+| `scene.audio.play(sound)` | Owns the returned voice, not a sound asset claim. | Preload the sound and wait for audio unlock; unavailable playback may return an ended voice. |
+| Filter, lighting, mesh, or particle texture input | Each consumer has its own borrowed/owned resource contract. | Do not infer Sprite-style acquisition from a field named `texture`. |
+
+An acquired path handle binds to its first loader. Reuse the source path or passive descriptor in a second application to create a fresh handle there; do not share a bound handle across applications. See [Serialization and prefabs](/ExoJS/en/guide/runtime/serialization-and-prefabs/#asset-readiness-by-serializer) for the corresponding per-serializer rules.
 
 ## Scope the owner explicitly
 
@@ -80,6 +97,15 @@ export const tryPortrait = async (scope: LoaderScope, path: string): Promise<Tex
 ```
 
 Catching an error should lead to an intentional fallback or a retry UI, not an unexplained blank object. If the asset is essential, let the failure reach the startup or navigation boundary instead of activating a scene that cannot function.
+
+| Outcome | Observable contract | Caller action |
+| --- | --- | --- |
+| Invalid arguments, unknown type, or foreign-loader handle | A synchronous contract error can be thrown before a queue is returned. | Correct the request or materialize a fresh handle for this loader. |
+| Fetch, cache, or decode failure | The load rejects; placeholders expose their error and the loader reports `onError`. | Report the failed resource, retry, or choose a fallback. |
+| Pending queue cancellation | `queue.cancel()` rejects with `AbortError`, withdraws only this operation's stake, and does not report a loader failure. | Stop the loading UI; keep unrelated owners and already-settled scope claims. |
+| Sound not ready or audio locked | A `play` call may return an already-ended voice; it does not enqueue a sound load. | Await the asset separately and use an unlock-aware playback path. |
+
+Do not label every rejected load as cancelled. Cancellation only aborts the underlying request when no other owner still needs it. Cancelling an already-settled queue does not release the scope's successful claim. [The preload example](/ExoJS/en/playground/?example=application-scenes/explicit-preload) separates cancellation from load failure.
 
 `onLoadComplete` means the batch has **settled**, including failures; it is not proof that every asset succeeded. A loading screen can display progress while the awaited queue remains responsible for success or failure. Keep subscriptions owned and remove them when the loading UI ends.
 

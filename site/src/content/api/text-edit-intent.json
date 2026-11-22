@@ -1,6 +1,6 @@
 {
   "title": "TextEditIntent",
-  "description": "One edit the host wants applied to the text model. `insert` carries the text to place over the current selection (an IME commit, a typed character, a paste); `deleteContent` removes the selection, or the range a granularity step spans next to the caret; `historyUndo`/`historyRedo` ask for the widget's own undo ring, not the host's.",
+  "description": "One edit the host wants applied to the text model. `insert` carries the text to place over the current selection (an IME commit, a typed character, a paste); `deleteContent` removes the selection, or the range a granularity step spans next to the caret; `historyUndo`/`historyRedo` ask for the widget's own undo ring, not the host's. An optional `range` supplies the host's authoritative UTF-16 target offsets, including replacements whose target differs from the model's selection. Without it, edits use the model's current selection.",
   "symbol": "TextEditIntent",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One edit the host wants applied to the text model. `insert` carries the text to place over the current selection (an IME commit, a typed character, a paste); `deleteContent` removes the selection, or the range a granularity step spans next to the caret; `historyUndo`/`historyRedo` ask for the widget's own undo ring, not the host's."
+        "One edit the host wants applied to the text model. `insert` carries the text to place over the current selection (an IME commit, a typed character, a paste); `deleteContent` removes the selection, or the range a granularity step spans next to the caret; `historyUndo`/`historyRedo` ask for the widget's own undo ring, not the host's. An optional `range` supplies the host's authoritative UTF-16 target offsets, including replacements whose target differs from the model's selection. Without it, edits use the model's current selection."
       ],
       "importLine": "import { TextEditIntent } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "TextEditIntent",
-          "signature": "{ direction: \"backward\" | \"forward\"; granularity: \"character\" | \"line\" | \"word\"; kind: \"deleteContent\" } | { kind: \"historyRedo\" } | { kind: \"historyUndo\" } | { kind: \"insert\"; source?: \"input\" | \"paste\"; text: string }",
+          "signature": "{ direction: \"backward\" | \"forward\"; granularity: \"character\" | \"line\" | \"word\"; kind: \"deleteContent\"; range?: { end: number; start: number } } | { kind: \"historyRedo\" } | { kind: \"historyUndo\" } | { kind: \"insert\"; range?: { end: number; start: number }; source?: \"input\" | \"paste\"; text: string }",
           "signatureTokens": [
             {
               "text": "{ ",
@@ -105,6 +105,58 @@
               "kind": "keyword"
             },
             {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "range",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "end",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
               "text": " }",
               "kind": "punctuation"
             },
@@ -175,6 +227,58 @@
             {
               "text": "\"insert\"",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "range",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "end",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": "; ",

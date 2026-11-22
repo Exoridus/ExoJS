@@ -324,6 +324,88 @@ describe('AnimatedSprite', () => {
     ).toThrow(/frameOffsets/);
   });
 
+  test.each(['anchor', 'origin'])('authored source size preserves the %s and scale across differently trimmed clips', pivot => {
+    const sprite = new AnimatedSprite(null, {
+      idle: {
+        frames: [new Rectangle(0, 0, 12, 10)],
+        frameOffsets: [{ x: 58, y: 86 }],
+        sourceSize: { width: 128, height: 128 },
+      },
+      walk: {
+        frames: [new Rectangle(12, 0, 20, 12), new Rectangle(32, 0, 12, 10)],
+        fps: 10,
+        frameOffsets: [
+          { x: 54, y: 84 },
+          { x: 58, y: 86 },
+        ],
+        sourceSize: { width: 128, height: 128 },
+      },
+    });
+
+    sprite.setPosition(100, 200).setScale(2);
+
+    if (pivot === 'anchor') {
+      sprite.setAnchor(0.5, 0.75);
+    } else {
+      sprite.setOrigin(64, 96);
+    }
+
+    sprite.play('idle');
+
+    expect(sprite.origin.x).toBe(64);
+    expect(sprite.origin.y).toBe(96);
+    expect(Array.from(sprite.vertices)).toEqual([88, 180, 112, 180, 112, 200, 88, 200]);
+
+    sprite.play('walk');
+
+    expect(sprite.scale.x).toBe(2);
+    expect(sprite.scale.y).toBe(2);
+    expect(sprite.origin.x).toBe(64);
+    expect(sprite.origin.y).toBe(96);
+    expect(Array.from(sprite.vertices)).toEqual([80, 176, 120, 176, 120, 200, 80, 200]);
+
+    sprite.update(0.1);
+
+    expect(sprite.currentFrame).toBe(1);
+    expect(Array.from(sprite.vertices)).toEqual([88, 180, 112, 180, 112, 200, 88, 200]);
+    expect(sprite.x).toBe(100);
+    expect(sprite.y).toBe(200);
+    sprite.destroy();
+  });
+
+  test('copies authored source dimensions on input and when exporting clip definitions', () => {
+    const sourceSize = { width: 128, height: 128 };
+    const sprite = new AnimatedSprite(null, { idle: { frames: [new Rectangle(0, 0, 12, 10)], sourceSize } });
+
+    sourceSize.width = 256;
+    sprite.setAnchor(0.5).play('idle');
+
+    expect(sprite.origin.x).toBe(64);
+
+    const exported = sprite._getClipDefinitions();
+
+    expect(exported.idle!.sourceSize).toEqual({ width: 128, height: 128 });
+    (exported.idle!.sourceSize as { width: number }).width = 512;
+    sprite.setAnchor(0.25);
+
+    expect(sprite.origin.x).toBe(32);
+    sprite.destroy();
+  });
+
+  test.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('rejects invalid source dimensions %s before replacing a clip', value => {
+    const sprite = new AnimatedSprite(null, {
+      idle: { frames: [new Rectangle(0, 0, 12, 10)], sourceSize: { width: 128, height: 128 } },
+    });
+
+    expect(() => sprite.addClip('idle', { frames: createFrames(), sourceSize: { width: value, height: 128 } })).toThrow(/sourceSize/);
+    expect(() => sprite.addClip('idle', { frames: createFrames(), sourceSize: { width: 128, height: value } })).toThrow(/sourceSize/);
+
+    sprite.setAnchor(0.5).play('idle');
+    expect(sprite.origin.x).toBe(64);
+    expect(sprite.origin.y).toBe(64);
+    sprite.destroy();
+  });
+
   describe('repeat', () => {
     test('repeat: 3 stops after exactly 3 full cycles and dispatches onComplete on the 3rd', () => {
       const frames = createFrames();

@@ -1,6 +1,6 @@
 {
   "title": "TextStyle",
-  "description": "Describes how a Text node renders its string. Every setter marks the style dirty with a StyleChangeHint so that the owning node can batch-rebuild efficiently on the next frame: - `'tint'` - only updates `Mesh.tint`, no atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild Call consumeDirty at the start of each frame to get the accumulated hint and clear the flag. Outline and shadow lengths are logical pixels in the local space of the node drawing the style, so they scale with node and camera transforms and not with the canvas pixel ratio. While a style is attached to text nodes, a change no attached node can draw throws TextEffectError and leaves the style unchanged.",
+  "description": "Describes how Text and BitmapText render their strings. Assign the same instance to multiple nodes' `style` properties to share it; each node observes changes independently and rebuilds on its next read. Every setter marks the style dirty with a StyleChangeHint so that nodes can batch-rebuild efficiently: - `'tint'` - render state only, no layout or atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild consumeDirty reads and clears the public dirty cycle without acknowledging changes on behalf of any node. Outline and shadow lengths are logical pixels in the local space of the node drawing the style, so they scale with node and camera transforms and not with the canvas pixel ratio. While a style is attached to text nodes, a change no attached node can draw throws TextEffectError and leaves the style unchanged.",
   "symbol": "TextStyle",
   "kind": "class",
   "subsystem": "rendering",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Describes how a Text node renders its string.",
-        "Every setter marks the style dirty with a StyleChangeHint so that the owning node can batch-rebuild efficiently on the next frame: - `'tint'` - only updates `Mesh.tint`, no atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild",
-        "Call consumeDirty at the start of each frame to get the accumulated hint and clear the flag.",
+        "Describes how Text and BitmapText render their strings. Assign the same instance to multiple nodes' `style` properties to share it; each node observes changes independently and rebuilds on its next read.",
+        "Every setter marks the style dirty with a StyleChangeHint so that nodes can batch-rebuild efficiently: - `'tint'` - render state only, no layout or atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild",
+        "consumeDirty reads and clears the public dirty cycle without acknowledging changes on behalf of any node.",
         "Outline and shadow lengths are logical pixels in the local space of the node drawing the style, so they scale with node and camera transforms and not with the canvas pixel ratio. While a style is attached to text nodes, a change no attached node can draw throws TextEffectError and leaves the style unchanged."
       ],
       "importLine": "import { TextStyle } from '@codexo/exojs'",

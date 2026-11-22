@@ -101,10 +101,9 @@ export interface DeserializeOptions {
  * for, not the file one device happened to select - along with the options
  * that identify the resource and any presentation options its type saves.
  * The receiving loader chooses its own source variant. Preload assets whose
- * node serializers use {@link DeserializeContext.resolveAsset}; version 3
- * Sprite texture references can instead load when attached to a scene.
+ * node serializers use {@link DeserializeContext.resolveAsset}. A Sprite with
+ * a typed texture reference loads when attached to a scene.
  *
- * Version 3 writes the registered type ID beside the logical source. Older
- * documents may contain a bare source string or an untagged options object.
+ * A typed reference carries the registered type ID beside its logical source.
  */
 export type SerializedAssetRef = AssetReference | string | Omit<AssetReference, '$type'>;

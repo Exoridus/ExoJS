@@ -7,6 +7,7 @@ import type { MockInstance } from 'vitest';
  * `Application.onError` listener is part of the same contract - the error
  * pipeline is user code too.
  */
+import { Loader } from '#assets/Loader';
 import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
 import { SceneScope } from '#core/scene/SceneScope';
@@ -76,10 +77,16 @@ class Resource implements Destroyable {
   }
 }
 
+const stubApps: Application[] = [];
+
 /** Minimal Application stand-in covering every touchpoint SceneScope activation/teardown reaches. */
-const createAppStub = (): Application =>
-  ({
-    loader: { _releaseScope: vi.fn() },
+const createAppStub = (): Application => {
+  const loader = new Loader();
+
+  vi.spyOn(loader, '_releaseScope');
+
+  const app = {
+    loader,
     interaction: {
       attachRoot: vi.fn(),
       detachRoot: vi.fn(),
@@ -87,7 +94,12 @@ const createAppStub = (): Application =>
       detachUIRoot: vi.fn(),
     },
     onError: new Signal<[Error]>(),
-  }) as unknown as Application;
+  } as unknown as Application;
+
+  stubApps.push(app);
+
+  return app;
+};
 
 /** Flatten the `AggregateError`s a development-build `DestroyScope` raises into their messages. */
 const messagesOf = (errors: readonly unknown[]): string[] =>
@@ -181,20 +193,24 @@ describe('scene teardown with a throwing tracked resource', () => {
     scene.track(new Resource('tracked', [], true));
     scene.root.addChild(child);
     scene.onResume.add(() => {});
-    scene._attach(createAppStub(), {} as SceneScope);
-
-    let thrown: unknown = null;
+    const scope = new SceneScope(createAppStub(), scene);
 
     try {
-      scene._teardownInternals();
-    } catch (error) {
-      thrown = error;
-    }
+      let thrown: unknown = null;
 
-    expect(thrown).toBeInstanceOf(AggregateError);
-    expect(messagesOf([thrown])).toEqual(['tracked failed', 'node failed']);
-    expect(scene.onResume.count).toBe(0);
-    expect(() => scene.loader).toThrow(/unavailable/);
+      try {
+        scene._teardownInternals();
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(AggregateError);
+      expect(messagesOf([thrown])).toEqual(['tracked failed', 'node failed']);
+      expect(scene.onResume.count).toBe(0);
+      expect(() => scene.loader).toThrow(/unavailable/);
+    } finally {
+      scope.destroyFailedActivation();
+    }
   });
 
   test('repeated teardown on either path destroys nothing twice', async () => {
@@ -277,6 +293,11 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  for (const app of stubApps.splice(0)) {
+    app.loader.destroy();
+    app.onError.destroy();
+  }
+
   rafSpy.mockRestore();
 });
 

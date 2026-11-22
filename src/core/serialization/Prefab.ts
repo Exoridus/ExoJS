@@ -50,8 +50,7 @@ export class Prefab {
    *
    * Like {@link Scene.deserialize} this is an untrusted boundary, so the
    * parameter is `unknown`: the document's `version` frame and root node are
-   * validated here. Throws when the document is not an object, carries a version
-   * newer than this build supports, or has no valid root.
+   * validated here. Requires the current prefab format and a valid root node.
    */
   public static fromJSON(document: unknown): Prefab {
     const validated = migratePrefab(document);

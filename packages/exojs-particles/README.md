@@ -1,14 +1,14 @@
-# @codexo/exojs-particles
+# @codexo/exojs/particles
 
 Particle emitters, modular simulation, and instanced rendering for ExoJS. Use the package for bounded visual effects rather than treating every particle as an independent gameplay object.
 
 ## Install and activate
 
 ```sh
-npm install --save-exact @codexo/exojs @codexo/exojs-particles
+npm install --save-exact @codexo/exojs
 ```
 
-Core is a peer dependency. Add `particlesExtension` to the application that renders the systems; importing the package has no global registration side effect.
+This module ships inside Core. Add `particlesExtension` to the application that renders the systems; importing the package has no global registration side effect.
 
 ## Minimal working example
 

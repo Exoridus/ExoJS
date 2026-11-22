@@ -23,6 +23,7 @@ import type {
   PlatformSubscription,
   PlatformWheelEvent,
 } from '#platform/PlatformAdapter';
+import type { RenderNode } from '#rendering/RenderNode';
 
 import type { ContextMenuRequest } from './ContextMenuRequest';
 import { Gamepad } from './Gamepad';
@@ -45,6 +46,17 @@ const gamepadSlots = 4;
  */
 export interface ActionScopeHost {
   _updateScopes(sample: ActionSample): void;
+}
+
+/** One focused text transport's synchronous editing command handler. @internal */
+export interface TextEditKeyCapture {
+  readonly owner: RenderNode;
+  mode(channel: number): 'edit' | 'native' | null;
+  handle(channel: number, shift: boolean, control: boolean, shortcut: boolean): void;
+}
+
+interface QueuedKeyEvent extends KeyChannelEvent {
+  textEditCapture?: TextEditKeyCapture;
 }
 
 // Approximate pixel-equivalents for `WheelEvent.deltaMode` units other than
@@ -228,8 +240,11 @@ export class InputSystem {
   private readonly wheelOffset = new Vector();
   private readonly flags = new Flags<InputSystemFlag>();
   /** Keyboard transitions since the last flush, in true chronological order (see updateEvents). */
-  private readonly keyEvents: KeyChannelEvent[] = [];
+  private readonly keyEvents: QueuedKeyEvent[] = [];
   private _dispatchShift: boolean | null = null;
+  private _dispatchTextEditCapture: TextEditKeyCapture | undefined;
+  /** Installed only while a built-in text transport holds widget focus. @internal */
+  public _textEditKeyCapture: TextEditKeyCapture | null = null;
   private readonly gamepadDefinitions: GamepadDefinition[];
   private readonly slotStrategy: GamepadSlotStrategy;
 
@@ -627,6 +642,11 @@ export class InputSystem {
     return this._dispatchShift;
   }
 
+  /** This exact key already applied an editing command before its native default. @internal */
+  public get _keyEventTextEditTarget(): RenderNode | null {
+    return this._dispatchTextEditCapture?.owner ?? null;
+  }
+
   /**
    * The live per-frame sample, for a host that needs to re-seed its maps
    * outside the normal update pass (a scene resume). @internal
@@ -952,6 +972,8 @@ export class InputSystem {
     this.actionMapCaptures.clear();
     this.gamepadsByBrowserIndex.clear();
     this.keyEvents.length = 0;
+    this._textEditKeyCapture = null;
+    this._dispatchTextEditCapture = undefined;
     this.frameBatches.length = 0;
     this.journal.length = 0;
     this.listenerErrors.length = 0;
@@ -1244,6 +1266,8 @@ export class InputSystem {
     }
 
     if (event.repeat) {
+      this._captureTextEditKey(event, channel);
+
       return;
     }
 
@@ -1257,8 +1281,46 @@ export class InputSystem {
     const last = Math.max(channel, modifier?.aggregate ?? channel);
     this._recordChannelChanges(first, last - first + 1);
 
-    this.keyEvents.push({ channel, pressed: true, shiftDown: this.channels[Keyboard.Shift] !== 0 });
+    const queued: QueuedKeyEvent = { channel, pressed: true, shiftDown: this.channels[Keyboard.Shift] !== 0 };
+
+    this.keyEvents.push(queued);
     this.flags.addMask(InputSystemFlag.KeyChange);
+    this._captureTextEditKey(event, channel, queued);
+  }
+
+  private _captureTextEditKey(event: PlatformKeyboardEvent, channel: number, queued?: QueuedKeyEvent): void {
+    const capture = this._textEditKeyCapture;
+
+    if (capture === null) {
+      return;
+    }
+
+    const control = this.channels[Keyboard.Control] !== 0;
+    const meta = this.channels[Keyboard.Meta] !== 0;
+
+    try {
+      const mode = capture.mode(channel);
+
+      if (mode === null || this._textEditKeyCapture !== capture) {
+        return;
+      }
+
+      // Claim before calling user-observable model changes. A throwing change
+      // listener or a focus transfer must not replay this command next frame.
+      if (queued !== undefined) {
+        queued.textEditCapture = capture;
+      }
+
+      // IME and commands with native-only semantics keep their browser default.
+      if (mode === 'native') {
+        return;
+      }
+
+      event.preventDefault();
+      capture.handle(channel, this.channels[Keyboard.Shift] !== 0, control, control || meta);
+    } catch (error) {
+      this.reportListenerError(error);
+    }
   }
 
   /**
@@ -1795,6 +1857,7 @@ export class InputSystem {
       // Shift held when Tab's handler runs and misread it as Shift+Tab.
       for (const event of this.keyEvents) {
         this._dispatchShift = event.shiftDown;
+        this._dispatchTextEditCapture = event.textEditCapture;
 
         try {
           if (event.pressed) {
@@ -1804,6 +1867,7 @@ export class InputSystem {
           }
         } finally {
           this._dispatchShift = null;
+          this._dispatchTextEditCapture = undefined;
         }
       }
 

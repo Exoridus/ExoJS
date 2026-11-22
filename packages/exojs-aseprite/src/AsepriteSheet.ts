@@ -231,10 +231,11 @@ export class AsepriteSheet {
    * key at or before that frame, with the slice's colour and user data.
    * `null` when the sheet has no such slice or the slice starts later.
    *
-   * Rectangles and points are in pixels of the untrimmed sprite canvas - the
-   * space a sprite from {@link createAnimatedSprite} lays its frames out in,
-   * before its origin is subtracted - so they line up with trimmed frames too.
-   * The pivot and nine-slice centre stay relative to the bounds, as authored.
+   * Rectangles and points retain the export's untrimmed source-canvas pixels.
+   * For clips carrying `sourceSize`, divide by the texture asset's resolution
+   * to compare them with logical local bounds. Metadata-free clips retain
+   * legacy trim-offset units; this method always returns authored source
+   * pixels. The pivot and nine-slice centre stay relative to the bounds.
    *
    * @example
    * ```ts
@@ -290,12 +291,25 @@ export class AsepriteSheet {
    * non-positive), so uneven hold-frames survive into playback instead of
    * being flattened to a uniform fps. `frameOffsets` carries each frame's
    * `spriteSourceSize` `{x,y}` - its trimmed content's offset within the
-   * untrimmed canvas - whenever any frame in the tag is trimmed, so frames
-   * trimmed by different amounts stay anchored instead of jittering; it's
-   * omitted entirely for tags with no trimmed frames.
+   * untrimmed canvas - whenever any frame in the tag is trimmed; it's omitted
+   * for tags with no trimmed frames. `sourceSize` preserves the original canvas
+   * for every tag, including transparent padding, so anchors and scale remain
+   * stable across tags. When `sourceSize` is present, both are converted to
+   * logical pixels using the loaded texture's asset resolution. Older input
+   * without it retains the legacy raw offsets and inferred-canvas fallback.
    */
   public static parse(data: AsepriteData, texture: Texture): AsepriteSheet {
     const frameArray = normaliseFrames(data);
+    // Use public dimensions: package declarations intentionally strip internal
+    // texture fields. The asset factory awaits the image before parsing; an
+    // empty texture supplied directly retains the legacy unit-density fallback.
+    let resolution = 1;
+
+    if (texture.width > 0) {
+      resolution = texture.width / texture.logicalWidth;
+    } else if (texture.height > 0) {
+      resolution = texture.height / texture.logicalHeight;
+    }
 
     // Build SpritesheetData: frame names are zero-based index strings.
     const spritesheetFrames: Record<string, { frame: { x: number; y: number; w: number; h: number } }> = {};
@@ -342,16 +356,35 @@ export class AsepriteSheet {
         Time.seconds(frameData.duration > 0 ? frameData.duration / 1000 : 1 / fps),
       );
 
+      let sourceSize: { width: number; height: number } | undefined = { width: 0, height: 0 };
+
+      for (const { frameData } of taggedFrames) {
+        // Earlier accepted exports can omit this field. Keep their inferred
+        // canvas rather than manufacturing authoritative dimensions.
+        const size = (frameData as Partial<AsepriteFrameData>).sourceSize;
+
+        if (size === undefined) {
+          sourceSize = undefined;
+          break;
+        }
+
+        sourceSize.width = Math.max(sourceSize.width, size.w / resolution);
+        sourceSize.height = Math.max(sourceSize.height, size.h / resolution);
+      }
+
       // Per-frame trim offset (Aseprite "spriteSourceSize"), so frames trimmed
       // by different amounts stay anchored to the same point in the untrimmed
       // canvas instead of jittering frame to frame. Omitted entirely when no
       // frame in the tag is trimmed, to avoid noise on untrimmed sheets.
       const anyTrimmed = taggedFrames.some(({ frameData }) => frameData.trimmed);
+      // The metadata-free legacy path historically kept raw trim offsets.
+      // Preserve those units with its existing inferred-canvas behavior.
+      const offsetResolution = sourceSize === undefined ? 1 : resolution;
       const frameOffsets = anyTrimmed
         ? taggedFrames.map(({ frameData }) => {
             const { x, y } = frameData.spriteSourceSize;
 
-            return { x, y };
+            return { x: x / offsetResolution, y: y / offsetResolution };
           })
         : undefined;
 
@@ -361,6 +394,7 @@ export class AsepriteSheet {
         repeat,
         frameDurations,
         ...(frameOffsets ? { frameOffsets } : {}),
+        ...(sourceSize ? { sourceSize } : {}),
       });
       clipFrameIndices.set(
         tag.name,

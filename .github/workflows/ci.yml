@@ -61,6 +61,7 @@ jobs:
       smokeSample: ${{ steps.plan.outputs.smokeSample }}
       skipBudget: ${{ steps.plan.outputs.skipBudget }}
       coverage: ${{ steps.plan.outputs.coverage }}
+      guideMotion: ${{ steps.changed.outputs.guide_motion }}
     steps:
       - uses: actions/checkout@v6
 
@@ -75,6 +76,17 @@ jobs:
           filters: |
             all:
               - '**'
+            guide_motion:
+              - 'examples/guides/animation/sprite-animation.ts'
+              - 'examples/guides/character-movement/animated-character.ts'
+              - 'examples/guides/camera-follow-and-parallax/parallax.ts'
+              - 'examples/guides/model-b-plus/scene-navigation.ts'
+              - 'test/rendering/browser/webgl2-guide-workflows.test.ts'
+              - 'test/rendering/browser/guideMotionCommands.ts'
+              - 'test/ci/guide-motion-commands.test.ts'
+              - 'vitest.config.ts'
+              - 'scripts/ci/lanes.ts'
+              - '.github/workflows/ci.yml'
 
       - if: github.event_name == 'pull_request'
         run: |
@@ -168,10 +180,23 @@ jobs:
           apt: ${{ matrix.apt }}
           naga: ${{ matrix.naga }}
 
+      - name: Provide a native audio output for Firefox
+        if: ${{ matrix.id == 'firefox' }}
+        run: |
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=exojs_ci
+          pactl set-default-sink exojs_ci
+          pactl info
+
       # A browser lane runs several qualification rows (`pnpm qualify`), each
       # with its own JUnit report, deadline and log; the summary of which rows
       # passed, were unsupported on this host or failed is on the job page.
       - run: ${{ matrix.run }}
+        env:
+          # Record only the four explicitly bracketed guide interactions when
+          # their sources or capture setup changed; never the entire suite.
+          EXOJS_GUIDE_MOTION: ${{ matrix.id == 'webgl' && needs.plan.outputs.guideMotion == 'true' && '1' || '0' }}
+          EXOJS_VISUAL_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Keep the JUnit reports for the skip budget
         if: ${{ matrix.junit && !cancelled() }}
@@ -196,6 +221,16 @@ jobs:
             test-results/qualification/
             .vitest/attachments/
           retention-days: 3
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+      - name: Keep focused visual review evidence
+        if: ${{ !cancelled() && (matrix.id == 'webgl' || matrix.id == 'webgpu' || matrix.id == 'firefox') }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-review-${{ matrix.id }}
+          path: .workspace/visual-review/current/
+          retention-days: 7
           include-hidden-files: true
           if-no-files-found: ignore
 

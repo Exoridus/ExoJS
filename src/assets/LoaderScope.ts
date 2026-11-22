@@ -179,6 +179,17 @@ export class LoaderScope implements Destroyable {
     return this._loader._getClaimed(this, input, options);
   }
 
+  /** Validate a prospective claim without changing the handle or its owner. @internal */
+  public _assertLeafOwner(leaf: object): void {
+    this._assertLive('get');
+    this._loader._assertLeafOwner(leaf);
+  }
+
+  /** @internal */
+  public get _ownershipRevision(): number {
+    return this._loader._ownershipRevision;
+  }
+
   /**
    * Claims assets for this scope and returns an awaitable loading queue.
    *

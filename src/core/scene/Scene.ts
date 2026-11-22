@@ -128,8 +128,8 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /**
    * Aborted the moment this scene's permanent teardown begins - before
    * {@link Scene.unload} is called, and also on the paths where `unload()`
-   * never runs at all (a failed activation, a preload cancelled before it was
-   * ever consumed). {@link Application.destroy} aborts it for every scene the
+   * never runs at all (preparation failed or was cancelled before reaching
+   * `Ready`). {@link Application.destroy} aborts it for every scene the
    * application owns as soon as it is called, even for a scene whose own
    * teardown has to wait behind another scene's; a retained scene a
    * `restore()` in flight is handing back follows once that navigation
@@ -431,9 +431,8 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * application's {@link Loader} when their serializer uses
    * {@link DeserializeContext.resolveAsset}. Serializers using
    * {@link DeserializeContext.resolve} reserve deferred handles under the
-   * scene's asset scope without fetching. Older documents retain their
-   * current document version through all node reads.
-   * Documents newer than the running engine throw. Returns `this`.
+   * scene's asset scope without fetching.
+   * Requires the current scene format. Returns `this`.
    *
    * @throws If the document holds a `Video` whose source the default policy
    *   (same-origin only) refuses and {@link DeserializeOptions.allowVideoSource}
@@ -579,12 +578,13 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   }
 
   /**
-   * Optional asynchronous teardown hook for a scene that completed
-   * activation successfully and is ending permanently. Use the loader to
-   * release assets that are scene-private and not shared with a scene that
-   * remains active. Not called for a scene that never completed activation
-   * (see the definition spec's failed-activation cleanup). Override in
-   * subclass.
+   * Optional asynchronous teardown hook for a scene that completed preparation
+   * and is ending permanently. A preloaded scene that reached `Ready` also runs
+   * this hook when discarded, even without activation. Use it for additional
+   * asynchronous cleanup. The scene scope releases its asset claims automatically
+   * after teardown, including when this hook throws; assets with other owners
+   * remain resident. Preparation that fails or is cancelled before `Ready` skips
+   * this hook but still runs {@link destroy}. Override in subclass.
    */
   public unload(): Promise<void> | void {
     // override in subclass

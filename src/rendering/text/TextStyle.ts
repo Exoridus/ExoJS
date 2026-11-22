@@ -264,16 +264,18 @@ const assertFinite = (name: string, value: number): number => {
 };
 
 /**
- * Describes how a {@link Text} node renders its string.
+ * Describes how {@link Text} and {@link BitmapText} render their strings.
+ * Assign the same instance to multiple nodes' `style` properties to share it;
+ * each node observes changes independently and rebuilds on its next read.
  *
  * Every setter marks the style dirty with a {@link StyleChangeHint} so that
- * the owning node can batch-rebuild efficiently on the next frame:
- * - `'tint'`  - only updates `Mesh.tint`, no atlas work
+ * nodes can batch-rebuild efficiently:
+ * - `'tint'`  - render state only, no layout or atlas work
  * - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs
  * - `'font'`  - atlas lookup + full mesh rebuild
  *
- * Call {@link consumeDirty} at the start of each frame to get the accumulated
- * hint and clear the flag.
+ * {@link consumeDirty} reads and clears the public dirty cycle without
+ * acknowledging changes on behalf of any node.
  *
  * Outline and shadow lengths are logical pixels in the local space of the node
  * drawing the style, so they scale with node and camera transforms and not
@@ -282,11 +284,11 @@ const assertFinite = (name: string, value: number): number => {
  * the style unchanged.
  */
 export class TextStyle {
-  private _revision = 1;
-  private _fontRevision = 1;
-  private _layoutRevision = 0;
   private _dirty = false;
   private _pendingHint: StyleChangeHint = 'tint';
+  private _changeRevision = 1;
+  private _fontRevision = 1;
+  private _layoutRevision = 0;
 
   /** Fires once per dirty cycle when any property changes. */
   public readonly onChange = new Signal();
@@ -426,13 +428,13 @@ export class TextStyle {
   }
 
   /** @internal */
-  public get _changeRevision(): number {
-    return this._revision;
+  public get _revision(): number {
+    return this._changeRevision;
   }
 
   /** @internal */
   public _hintSince(revision: number): StyleChangeHint | null {
-    if (revision === this._revision) {
+    if (revision === this._changeRevision) {
       return null;
     }
 
@@ -444,7 +446,7 @@ export class TextStyle {
   }
 
   private _markDirty(hint: StyleChangeHint): void {
-    const revision = ++this._revision;
+    const revision = ++this._changeRevision;
 
     if (hint === 'font') {
       this._fontRevision = revision;

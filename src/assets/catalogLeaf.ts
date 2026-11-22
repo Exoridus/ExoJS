@@ -49,6 +49,11 @@ export const createLeaf = (leaf: AssetLeaf<unknown> | undefined, kind: string, s
 // the leaf and valued by a token rather than the loader, so a module-level
 // catalog never keeps a destroyed loader alive.
 const leafOwners = new WeakMap<object, object>();
+const ownerBindings = new WeakMap<object, number>();
+let bindingRevision = 0;
+
+/** First bindings by other loaders, excluding this owner's own acquisitions. @internal */
+export const _foreignBindingRevision = (owner: object): number => bindingRevision - (ownerBindings.get(owner) ?? 0);
 
 /**
  * Bind catalog leaves to one loader, or throw before binding any of them.
@@ -62,21 +67,30 @@ const leafOwners = new WeakMap<object, object>();
  */
 export const _bindLeaves = (leaves: Iterable<object>, owner: object): void => {
   for (const leaf of leaves) {
-    const bound = leafOwners.get(leaf);
-
-    if (bound !== undefined && bound !== owner) {
-      const meta = _readMeta(leaf);
-      const name = meta === undefined ? 'An asset catalog leaf' : `Asset catalog leaf "${meta.src}" (${meta.kind})`;
-
-      throw new Error(
-        `${name} already belongs to another loader. A catalog leaf is bound to the first application loader that claims it, ` +
-          'even after that loader is destroyed. Create the catalog per application - for example from a function each ' +
-          'application calls - instead of sharing one module-level Assets.from() instance between applications.',
-      );
-    }
+    _assertLeafOwner(leaf, owner);
   }
 
   for (const leaf of leaves) {
-    leafOwners.set(leaf, owner);
+    if (!leafOwners.has(leaf)) {
+      leafOwners.set(leaf, owner);
+      ownerBindings.set(owner, (ownerBindings.get(owner) ?? 0) + 1);
+      bindingRevision++;
+    }
+  }
+};
+
+/** Validate ownership without binding or acquiring a leaf. @internal */
+export const _assertLeafOwner = (leaf: object, owner: object): void => {
+  const bound = leafOwners.get(leaf);
+
+  if (bound !== undefined && bound !== owner) {
+    const meta = _readMeta(leaf);
+    const name = meta === undefined ? 'An asset catalog leaf' : `Asset catalog leaf "${meta.src}" (${meta.kind})`;
+
+    throw new Error(
+      `${name} already belongs to another loader. A catalog leaf is bound to the first application loader that claims it, ` +
+        'even after that loader is destroyed. Create the catalog per application - for example from a function each ' +
+        'application calls - instead of sharing one module-level Assets.from() instance between applications.',
+    );
   }
 };

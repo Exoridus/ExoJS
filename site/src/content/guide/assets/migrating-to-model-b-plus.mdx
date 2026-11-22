@@ -8,7 +8,7 @@ import TryIt from '../../../components/TryIt.astro';
 
 # Migrating to path-based assets
 
-The common case is now one line: construct a `Sprite`, `Texture` or `Sound` from a path and add it to a scene. The runtime loads it when the scene needs it, shares it with every other user of the same file, and releases it with the scene that used it. Nothing here removes the loader, loader scopes, catalogs or descriptors. They remain the right tool for the cases listed [at the end of this page](#when-to-keep-the-loader-apis), and existing code keeps working unchanged.
+For a visible sprite the common case is one line: construct `new Sprite(path)` and add it to a scene tree. That attachment claims its texture, starts loading, and releases the claim when detached or when the scene ends. `Texture(path)` and `Sound(path)` are also available, but constructing a handle does not load it and playing a sound does not acquire its payload. Nothing here removes the loader, loader scopes, catalogs or descriptors. They remain the right tool for the cases listed [at the end of this page](#when-to-keep-the-loader-apis), and existing code keeps working unchanged.
 
 ## A lazy sprite
 
@@ -22,13 +22,17 @@ The sprite only loads once a scene owns it. A sprite that is never added to a sc
 
 <SourceSnippet source="examples/guides/model-b-plus/lazy-sprite.ts" region="lazy-sprite" language="ts" title="The whole application" />
 
+Place `hero.png` in `public/assets/`. The canvas is mounted explicitly and is reachable with Tab. Click or tab to it before using keyboard controls; mounting and keyboard focus are separate from loading.
+
 ## Preload what you need
 
-Layout or gameplay that needs real dimensions or a decoded value should wait for it. `this.assets.load()` inside a scene and `app.load()` on the application accept one handle, several handles, an array or an object and resolve to the same shape holding the loaded values. The scene form gives the scene ownership; the application form keeps the assets resident until the application is destroyed:
+Layout or gameplay that needs real dimensions or a decoded value should wait for it. `this.assets.load(input, options?)` accepts one handle or one group (array, tuple, or named object). `app.load()` additionally accepts several handles as separate arguments. Use `load({ hero, theme })` at either boundary for the same group shape; `scene.assets.load(hero, theme)` is not a variadic equivalent because its second argument is reserved for options. The scene form gives the scene ownership; the application form keeps the assets resident until the application is destroyed:
 
 <SourceSnippet source="examples/guides/model-b-plus/preload.ts" region="preload" language="ts" title="Preload in the scene's load hook" />
 
-Both return a `LoadingQueue`: await it, read `progress`, subscribe to `onProgress`, or call `cancel()`.
+The `load` hook only prepares assets and can run during `scenes.preload` without activation. This example waits for an active Space press to start the scene-owned music, after audio unlock; click or tab to the canvas first. `SceneAvailability.Active` pauses the voice with gameplay, and permanent scene teardown stops it.
+
+Both return a `LoadingQueue`: await it, read `progress`, subscribe to `onProgress`, or call `cancel()`. A rejection may be a load error or `AbortError`; see [the failure contracts](/ExoJS/en/guide/assets/loading-and-resources/#handle-failures-at-the-calling-boundary).
 
 <SourceSnippet source="examples/guides/model-b-plus/preload.ts" region="progress" language="ts" title="Progress" />
 
@@ -38,13 +42,13 @@ Both return a `LoadingQueue`: await it, read `progress`, subscribe to `onProgres
 
 ## Ownership
 
-An asset lives as long as something that uses it does.
+An asset stays resident while an owner holds a claim. Keeping a JavaScript reference or assigning a borrowed texture does not extend that lifetime.
 
 - A path sprite added to a scene belongs to that scene's loader scope and is released when the scene ends.
 - Assets loaded through `this.assets.load()` belong to that scene, those loaded through `app.load()` to the application, which keeps them resident until it is destroyed.
 - Two owners of one file share one decoded resource. Releasing one owner never evicts the file while another still holds it. Each `Texture` keeps its own sampler options, so a nearest-filtered and a linear-filtered `Texture` of the same file do not interfere.
 
-Replacing a sprite releases its old claim immediately:
+For a replacement node, attach the new node before destroying the old one so a failed attachment leaves the old owner intact. For a texture change on the same Sprite, `setTexture` also acquires before releasing its prior claim:
 
 <SourceSnippet source="examples/guides/model-b-plus/migration.ts" region="after-ownership" language="ts" title="Swap a sprite" />
 
@@ -70,13 +74,21 @@ Saved scenes and prefabs write typed references. A texture reference is `{ "$typ
 
 <SourceSnippet source="examples/guides/model-b-plus/transition.ts" region="loading-transition" language="ts" title="A custom progress overlay" />
 
+## A complete preload and scene-switch workflow
+
+This program uses shipped demo media. Install `@codexo/exojs-demo-assets` alongside Core. Preload prepares the level's texture and sound; Enter uses `LoadingSceneTransition` and reuses the prepared scene. The incoming scene starts its sound only after activation and audio unlock, owns the voice, and removes its external unlock callback on teardown. Loading/navigation failures remain visible at the initiating boundary.
+
+<SourceSnippet source="examples/guides/model-b-plus/scene-navigation.ts" region="scene-navigation" language="ts" title="Prepare, activate, unlock, play, and clean up" />
+
+A preload may run `load` and `init` without activation, so neither is a reason to start application-owned audio. For a cancellable user-controlled asset batch, use `LoadingQueue.cancel()` and distinguish `AbortError` from fetch/decode failures as in [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/#handle-failures-at-the-calling-boundary). To discard a director-managed preload, use `app.scenes.unload(LevelScene, { instance: 'preloaded' })`; its pending preparation observes the scene lifecycle signal before teardown.
+
 ## Variants
 
 A path may name its candidates: `'hero@{1,2,3}x.{webp,png}'` expands to concrete files, and the runtime picks one by display resolution and by the formats the browser supports. The logical source stays the pattern you wrote, so saved scenes remain portable. See [Device variants](/ExoJS/en/guide/assets/device-variants/).
 
 ## When to keep the loader APIs
 
-Prefer the path form for textures, sprites and sounds. Keep the loader, scopes and descriptors for:
+Prefer the path form for scene-attached sprites and for handles you explicitly preload. Keep the loader, scopes and descriptors for:
 
 - **Streamed or non-handle assets.** Music, video, fonts, bitmap fonts and JSON data have no synchronous placeholder: `await this.loader.load(...)`.
 - **Several owners with different lifetimes.** A streamed level or dialog with its own `createScope()` that you destroy explicitly.

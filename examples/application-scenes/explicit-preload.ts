@@ -49,12 +49,20 @@ class PreloadScene extends Scene {
 
     this.queue = queue;
     queue.onProgress.add(({ loaded, total }) => {
+      if (this.lifecycleSignal.aborted) {
+        return;
+      }
+
       this.fraction = total === 0 ? 0 : loaded / total;
       this.label.text = `Loaded ${loaded} of ${total}`;
     });
 
     try {
       const textures = await queue;
+
+      if (this.lifecycleSignal.aborted) {
+        return;
+      }
 
       textures.forEach((texture, index) => {
         // The texture is ready, so its real size is known before the first frame.
@@ -65,9 +73,19 @@ class PreloadScene extends Scene {
       });
       this.label.text = `Ready: ${textures.map(texture => `${texture.width}px`).join(', ')}`;
       this.panel.status('All six are resident. Preloading again reuses them without a second request.', 'success');
-    } catch {
-      this.label.text = 'Cancelled';
-      this.panel.status('Cancelled: nothing stays claimed for the aborted queue.', 'warning');
+    } catch (error) {
+      if (this.lifecycleSignal.aborted) {
+        return;
+      }
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        this.label.text = 'Cancelled';
+        this.panel.status('Cancelled: this pending load withdrew its claims; other owners keep theirs.', 'warning');
+      } else {
+        this.label.text = 'Loading failed. Try again.';
+        this.panel.status('A fetch or decode failed. See the Output panel for the error, then retry.', 'warning');
+        console.error('Sprite preload failed', error);
+      }
     } finally {
       this.queue = null;
     }

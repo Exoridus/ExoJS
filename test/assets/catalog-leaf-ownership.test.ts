@@ -112,6 +112,46 @@ describe('a catalog leaf belongs to one loader', () => {
     expect(loader.inspect().map(row => row.owners.map(owner => owner.name))).toEqual([['hud'], ['hud']]);
   });
 
+  test('ownership revisions observe foreign first bindings without invalidating on own acquisitions', async () => {
+    const loaderA = createCoreLoader();
+    const loaderB = createCoreLoader();
+    const scopeA = loaderA.createScope();
+    const siblingA = loaderA.createScope();
+    const scopeB = loaderB.createScope();
+    const catalogA = Assets.from({ first: 'a.json', second: 'b.json' });
+    const catalogB = Assets.from({ first: 'c.json', second: 'd.json' });
+    const beforeA = scopeA._ownershipRevision;
+    const beforeB = scopeB._ownershipRevision;
+
+    try {
+      expect(beforeA).toBeTypeOf('number');
+      expect(beforeB).toBeTypeOf('number');
+      await scopeA.load(catalogA);
+
+      expect(scopeA._ownershipRevision).toBe(beforeA);
+      expect(siblingA._ownershipRevision).toBe(beforeA);
+      expect(scopeB._ownershipRevision).toBe(beforeB + 2);
+      await siblingA.load(catalogA);
+
+      expect(scopeB._ownershipRevision).toBe(beforeB + 2);
+      await scopeB.load(catalogB);
+
+      expect(scopeA._ownershipRevision).toBe(beforeA + 2);
+      expect(siblingA._ownershipRevision).toBe(beforeA + 2);
+      expect(scopeB._ownershipRevision).toBe(beforeB + 2);
+      expect(() => scopeA.load(catalogB)).toThrow(foreignLoader);
+      expect(scopeA._ownershipRevision).toBe(beforeA + 2);
+      expect(scopeB._ownershipRevision).toBe(beforeB + 2);
+      loaderB.destroy();
+
+      expect(scopeA._ownershipRevision).toBe(beforeA + 2);
+      expect(() => scopeA.load(catalogB)).toThrow(foreignLoader);
+    } finally {
+      loaderA.destroy();
+      loaderB.destroy();
+    }
+  });
+
   test('the binding outlives the loader: a destroyed loader does not hand its leaves to the next one', async () => {
     const catalog = Assets.from({ data: 'level.json', hero: 'hero.png' });
     const loaderA = createCoreLoader();

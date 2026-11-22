@@ -44,7 +44,7 @@ export interface SerializeContext {
  * so a serializer only constructs the node and sets its type-specific fields.
  */
 export interface DeserializeContext {
-  /** Validated document version. Remains the source version until an explicit value migration runs. */
+  /** Format version of the validated scene or prefab document. */
   readonly version: number;
   /** The loader used to resolve asset references, or `null` if none is available. */
   readonly loader: Loader | null;
@@ -58,8 +58,7 @@ export interface DeserializeContext {
    * Resolve a serialized asset reference back to a loaded resource of `type`,
    * or `null` if the reference is missing, malformed, or names an asset that
    * was not pre-loaded (a one-time warning is emitted in the not-loaded case).
-   * Accepts a typed reference, an older source/options record, or a version 1
-   * document's bare source string.
+   * The reference may be typed, an untagged source/options record, or a source string.
    */
   resolveAsset<T>(reference: unknown, type: AssetConstructor<T>): T | null;
   /**

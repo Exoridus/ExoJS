@@ -1,7 +1,10 @@
 import type { PointLike, SceneNode } from '@codexo/exojs';
 
 /**
- * A node's current WORLD translation: where a body placed for it starts.
+ * A node's current WORLD position pivot: where a body placed for it starts.
+ * The matrix translation maps local (0, 0), so transform the node's origin
+ * to undo its anchor/pixel-origin compensation before binding writes the
+ * body position back onto the node.
  * Duck-typed the same way `AudioListener` reads a follow target - real
  * {@link SceneNode}s expose `getWorldTransform()`, test doubles that omit it
  * fall back to `(0, 0)`.
@@ -11,8 +14,10 @@ export const nodeWorldPosition = (node: SceneNode): Readonly<PointLike> => {
 
   if (typeof asNode.getWorldTransform === 'function') {
     const world = asNode.getWorldTransform();
+    const originX = asNode.origin?.x ?? 0;
+    const originY = asNode.origin?.y ?? 0;
 
-    return { x: world.x, y: world.y };
+    return { x: world.a * originX + world.b * originY + world.x, y: world.c * originX + world.d * originY + world.y };
   }
 
   return { x: 0, y: 0 };

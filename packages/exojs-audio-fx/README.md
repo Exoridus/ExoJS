@@ -1,14 +1,16 @@
-# @codexo/exojs-audio-fx
+# @codexo/exojs/audio-fx
 
 Audio effects, spectrum analysis, worklet-backed processing, and beat detection for ExoJS. Core already provides audio assets, voices, buses, and basic routing. Add this package when a project needs analysis or the additional effect processors.
+
+The former `@codexo/exojs-audio-fx` package name remains a 0.20 compatibility shim that forwards to this subpath. Prefer the subpath for new code.
 
 ## Install
 
 ```sh
-npm install --save-exact @codexo/exojs @codexo/exojs-audio-fx
+npm install --save-exact @codexo/exojs
 ```
 
-Core is a peer dependency. Construct the required objects directly; there is no application extension descriptor to install for ordinary audio analysis.
+This module ships inside Core. Construct the required objects directly; there is no application extension descriptor to install for ordinary audio analysis.
 
 ## Inspect a live music bus
 

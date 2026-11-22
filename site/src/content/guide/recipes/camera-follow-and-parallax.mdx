@@ -13,10 +13,10 @@ Parallax means layers at different depths move at different rates relative to th
 
 ## Camera follow
 
-A `View` controls what portion of the world is visible. To make the camera follow a player, update `view.setCenter(player.x, player.y)` each frame in `update` before `draw`:
+A `View` controls what portion of the world is visible. Use `view.follow(node)` for immediate tracking of a SceneNode's transformed local origin, including its full parent chain. A node's anchor can make that origin different from its position pivot; an origin-free parent Container is useful when that parent is the intended target. For explicit axis constraints or smoothing, compute that same world point in `update` before `draw`:
 
 <Callout type="hint" title="Lerp the camera centre for a smooth follow">
-Snapping `view.setCenter` onto the player every frame feels rigid. Ease it instead — `cur += (target - cur) * k * dt` — so the camera trails slightly and catches up smoothly, no tween needed.
+Snapping `view.setCenter` onto the player every frame feels rigid. Use `weight = 1 - Math.exp(-response * delta)` and `cur += (target - cur) * weight`. This exponential response remains bounded for long frames; the response is measured per second.
 </Callout>
 
 <SourceSnippet
@@ -35,7 +35,7 @@ For smooth following, lerp the camera center instead of snapping:
   title="examples/guides/camera-follow-and-parallax/camera.ts"
 />
 
-The multiplier controls how quickly the camera catches up. Higher values = snappier. This is a simple exponential ease — no tween needed.
+A larger response catches up faster. `View.follow(target, { lerp })` instead uses a fraction per rendered frame; the same `lerp` value feels different at 60 and 144 Hz. Choose the explicit exponential update when the intended response is time-based.
 
 ## Pointer-driven parallax
 
@@ -48,7 +48,7 @@ For menu screens, background effects, or mouse-driven depth, offset layers propo
   title="examples/guides/camera-follow-and-parallax/parallax.ts"
 />
 
-The speed multiplier per layer creates the illusion of depth. A background layer with `speed = 0.15` moves slowly — it feels far away. A foreground layer with `speed = 0.6` moves quickly — it feels close. The pointer offset from center (`(400 - x)`) gives direction: moving the mouse right shifts layers left, as if the "camera" moved right.
+The speed multiplier per layer creates the illusion of depth. A background layer with `speed = 0.15` moves slowly — it feels far away. A foreground layer with `speed = 0.6` moves quickly — it feels close. The pointer offset from the logical canvas center gives direction: moving the mouse right shifts layers left, as if the "camera" moved right.
 
 <Callout type="pitfall" title="Parallax layers need margin past the viewport">
 A layer that only fills the viewport shows its edge the moment parallax shifts it. Extend each layer beyond the view by at least its maximum parallax offset so the seam never scrolls into frame.
@@ -65,7 +65,15 @@ For side-scrolling games, offset background layers relative to the camera positi
   title="examples/guides/camera-follow-and-parallax/parallax.ts"
 />
 
-The layer position is set relative to the camera center *before* rendering. Since the camera view is already active, the layer position offsets add to the camera transform, producing the parallax effect. The foreground layer at 1:1 has no parallax — it moves exactly with the camera.
+Define `factor` as the fraction of camera travel visible on screen. With a shared unrotated, fixed-zoom View, set each layer to `base + (1 - factor) * travel`, where `travel = camera.center.x - initialCenterX`. The View subtracts the camera travel, leaving a screen displacement of `-factor * travel`. Factor 1 leaves an object fixed in the world; factor 0 cancels scrolling so it remains fixed on screen. Use `scene.ui` for a real screen-space HUD.
+
+## Complete scrolling scene and picking
+
+This program draws its own clouds, hills, player, and ground, mounts the canvas, moves with A/D, and shows manual canvas-to-world picking. The detached background roots contain Graphics and are tracked for destruction. If you replace them with path sprites, preload their textures explicitly: `track` and a render call do not acquire assets. Application resize and pointer subscriptions are removed when the scene ends.
+
+<SourceSnippet source="examples/guides/camera-follow-and-parallax/parallax.ts" region="parallax-scene" language="ts" title="Camera follow, parallax, and world picking in one application" />
+
+Picking uses the same View and logical canvas size as rendering. Passing a View to `context.render` does not reconfigure automatic world-pointer routing; a custom interactive world also needs its interaction View configured. This recipe does manual picking only. For zoom, rotation, shake, or split views, convert through the actual rendered View and viewport instead of extending this horizontal parallax formula by guesswork.
 
 ## Wide layers
 

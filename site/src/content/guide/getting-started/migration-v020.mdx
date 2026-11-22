@@ -9,7 +9,7 @@ ExoJS v0.20 folds the seven runtime packages into Core subpaths, consolidates th
 
 ## Runtime imports move to Core subpaths
 
-The seven runtime packages are no longer installed or published on their own. Import the same symbols from a Core subpath:
+The seven runtime implementations now ship inside `@codexo/exojs`. Their private workspace packages are not installed by applications. The old public names remain forwarding compatibility shims for the 0.20 line; import the same symbols from a Core subpath in new code:
 
 | Before (0.19.x)                    | After (v0.20)                   |
 | ---------------------------------- | ------------------------------- |
@@ -19,12 +19,12 @@ The seven runtime packages are no longer installed or published on their own. Im
 | `@codexo/exojs-physics`            | `@codexo/exojs/physics`         |
 | `@codexo/exojs-tilemap-physics`    | `@codexo/exojs/tilemap-physics` |
 | `@codexo/exojs-lighting`           | `@codexo/exojs/lighting`        |
-| `@codexo/exojs/pathfinding`        | `@codexo/exojs/pathfinding`     |
+| `@codexo/exojs-pathfinding`        | `@codexo/exojs/pathfinding`     |
 | `@codexo/exojs-physics/debug`      | `@codexo/exojs/debug`           |
 
-`@codexo/exojs/debug` is the one debug entry. It exports the existing debug layers plus `PhysicsDebugDraw` and `PhysicsDebugDrawOptions`; the former `@codexo/exojs-physics/debug` entry now forwards to it through the legacy shim. The adapters `@codexo/exojs-tiled`, `@codexo/exojs-ldtk`, `@codexo/exojs-aseprite` and `@codexo/exojs-react` stay separate packages, now consuming the Core tilemap subpath and declaring a `0.20.x` Core peer.
+`@codexo/exojs/debug` is the one debug entry. It exports the existing debug layers plus `PhysicsDebugDraw` and `PhysicsDebugDrawOptions`; the former `@codexo/exojs-physics/debug` entry now forwards to it through the legacy shim. The adapters `@codexo/exojs-tiled`, `@codexo/exojs-ldtk`, `@codexo/exojs-aseprite` and `@codexo/exojs-react` stay separate packages and declare a compatible Core peer; map adapters consume the Core tilemap subpath.
 
-Remove the seven retired package names from your `package.json` dependencies and install the matching `@codexo/exojs` version. Then move the import specifiers. An AST-based codemod in the repository does exactly this without touching prose, URLs or strings:
+Move the import specifiers, then remove the seven shim package names from your `package.json` dependencies and install the matching `@codexo/exojs` version. Keep separately published adapters and their compatible Core peers. The repository codemod changes source imports only; you make the dependency and lockfile changes with your package manager:
 
 ```sh
 npx tsx scripts/codemods/migrate-v020-imports.ts src/
