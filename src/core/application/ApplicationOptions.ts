@@ -315,6 +315,7 @@ export const defaultLoaderFetchOptions: RequestInit = {
 const defaultRenderingSettings: Omit<Required<RenderingApplicationOptions>, 'color'> = {
   alphaMode: 'opaque',
   debug: false,
+  releaseWebGl2ContextOnDestroy: false,
   spriteRendererBatchSize: 4096, // ~ 262kb
   webglAttributes: {
     antialias: false,
@@ -340,6 +341,7 @@ export type ResolvedRenderingOptions = Omit<Required<RenderingApplicationOptions
 export const resolveRenderingOptions = (renderingOptions: RenderingApplicationOptions): ResolvedRenderingOptions => ({
   alphaMode: renderingOptions.alphaMode ?? defaultRenderingSettings.alphaMode,
   debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
+  releaseWebGl2ContextOnDestroy: renderingOptions.releaseWebGl2ContextOnDestroy ?? defaultRenderingSettings.releaseWebGl2ContextOnDestroy,
   webglAttributes: { ...defaultRenderingSettings.webglAttributes, ...renderingOptions.webglAttributes },
   spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
   color: resolveOutputTransformOptions(renderingOptions.color),
