@@ -46,6 +46,19 @@ const partialAt = (row: Float32Array, bin: number): [number, number, number, num
   return packed > 0 ? [row[texel]!, low / shadowSpanSteps, (packed - low * 4096) / shadowSpanSteps, row[texel + 4]!] : null;
 };
 
+/** The second partial blocker in `bin`, as `partialAt` gives the first; or `null`. */
+const secondAt = (row: Float32Array, bin: number): [number, number, number, number] | null => {
+  const texel = bin * shadowRowStride;
+  const packed = row[texel + 5]!;
+  const low = Math.floor(packed / 4096);
+
+  return packed >= 1 ? [row[texel + 6]!, low / shadowSpanSteps, (packed - low * 4096) / shadowSpanSteps, row[texel + 7]!] : null;
+};
+
+/** Both partial blockers in `bin`, nearest first. */
+const bothAt = (row: Float32Array, bin: number): Array<[number, number, number, number] | null> =>
+  [partialAt(row, bin), secondAt(row, bin)].sort((a, b) => (a?.[0] ?? 2) - (b?.[0] ?? 2));
+
 const isOpen = (row: Float32Array): boolean =>
   Array.from({ length: bins }, (_, bin) => bin).every(bin => fullAt(row, bin) === 1 && partialAt(row, bin) === null);
 
@@ -169,14 +182,16 @@ describe('buildShadowRow', () => {
 
     expect(endsAt(row, bins / 2)).toEqual([expect.closeTo(0.3, 2), expect.closeTo(0.3, 2)]);
   });
-  test('two parts with a gap between them keep the nearer one and count the farther over the rest', () => {
+  test('two parts with a gap between them each keep a span of their own', () => {
     const near = segments(20, -20, 20, 20 * Math.tan(insideFirstBin(0.3)));
     const far = segments(90, 90 * Math.tan(insideFirstBin(0.7)), 90, 60);
     const row = rowFor(new Float32Array([...far, ...near]), 2);
-    const partial = partialAt(row, bins / 2);
 
-    expect(partial).toEqual([expect.closeTo(0.2, 2), 0, expect.closeTo(0.3, 3), expect.closeTo(0.2, 2)]);
-    expect(fullAt(row, bins / 2)).toBeCloseTo(0.9, 2);
+    expect(bothAt(row, bins / 2)).toEqual([
+      [expect.closeTo(0.2, 2), 0, expect.closeTo(0.3, 3), expect.closeTo(0.2, 2)],
+      [expect.closeTo(0.9, 2), expect.closeTo(0.7, 3), 1, expect.closeTo(0.9, 2)],
+    ]);
+    expect(endsAt(row, bins / 2)).toEqual([1, 1]);
   });
 
   test('a wall across the seam behind the light covers its end bins only in part', () => {
@@ -247,11 +262,13 @@ describe('buildShadowRow', () => {
     const near = segments(30, -10, 30, 30 * Math.tan(insideFirstBin(0.6)));
     const far = segments(80, 80 * Math.tan(insideFirstBin(0.2)), 80, 60);
     const row = rowFor(new Float32Array([...near, ...far]), 2);
-    const partial = partialAt(row, bins / 2);
 
-    expect(partial).toEqual([expect.closeTo(0.3, 2), 0, expect.closeTo(0.6, 3), expect.closeTo(0.3, 2)]);
-    // The far one only shadows what lies beyond it, over the whole bin.
-    expect(endsAt(row, bins / 2)).toEqual([expect.closeTo(0.8, 2), expect.closeTo(0.8, 2)]);
+    // Each keeps its own part; light crosses the bin only past both.
+    expect(bothAt(row, bins / 2)).toEqual([
+      [expect.closeTo(0.3, 2), 0, expect.closeTo(0.6, 3), expect.closeTo(0.3, 2)],
+      [expect.closeTo(0.8, 2), expect.closeTo(0.2, 3), 1, expect.closeTo(0.8, 2)],
+    ]);
+    expect(endsAt(row, bins / 2)).toEqual([1, 1]);
   });
 
   test("a corner inside a part that stops short of the bin's end is kept", () => {

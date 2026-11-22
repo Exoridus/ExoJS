@@ -94,6 +94,24 @@ vec2 beyond(float d0, float d1, float x0, float x1, float threshold, float from,
 }
 
 /**
+ * Where within `x0 .. x1` a face through `(x0, d0)` and `(x1, d1)` stands
+ * in front of `threshold`: what `beyond` leaves of the span.
+ */
+vec2 within(float d0, float d1, float x0, float x1, float threshold) {
+    vec2 open = beyond(d0, d1, x0, x1, threshold, x0, x1);
+
+    if (open.y <= open.x) {
+        return vec2(x0, x1);
+    }
+
+    return open.x > x0 ? vec2(x0, open.x) : vec2(open.y, x1);
+}
+
+vec2 overlap(vec2 a, vec2 b) {
+    return vec2(max(a.x, b.x), min(a.y, b.y));
+}
+
+/**
  * One bin's part in the kernel: `x` the share the light reaches through and `y`
  * the bin's whole share.
  *
@@ -121,14 +139,29 @@ vec2 binTerm(int bin, float low, vec4 texel, int bins, int row, float threshold,
 
     float open;
 
-    if (texel.g > 0.0) {
-        vec4 extra = binAt(bin, 1, bins, row);
+    // The second texel, read only where the first says there is something in it.
+    vec4 extra = texel.g != 0.0 ? binAt(bin, 1, bins, row) : vec4(0.0);
+
+    if (texel.g > 0.0 && extra.g >= 1.0) {
+        // Two partial blockers: light reaches through where the rest of the
+        // bin lets it and neither blocker's part stands in front of it.
+        float steps = floor(texel.g / 4096.0);
+        float stepsSecond = floor(extra.g / 4096.0);
+        vec2 span = low + vec2(steps, texel.g - steps * 4096.0) / SPAN_STEPS;
+        vec2 spanSecond = low + vec2(stepsSecond, extra.g - stepsSecond * 4096.0) / SPAN_STEPS;
+        vec2 rest = beyond(texel.b, texel.a, low, high, threshold, low, high);
+        vec2 first = overlap(rest, within(texel.r, extra.r, span.x, span.y, threshold));
+        vec2 second = overlap(rest, within(extra.b, extra.a, spanSecond.x, spanSecond.y, threshold));
+
+        open = tentMass(rest, center, radius) - tentMass(first, center, radius) - tentMass(second, center, radius) +
+            tentMass(overlap(first, second), center, radius);
+    } else if (texel.g > 0.0) {
         float steps = floor(texel.g / 4096.0);
         vec2 span = low + vec2(steps, texel.g - steps * 4096.0) / SPAN_STEPS;
         // Where the part bends - two faces meeting inside it - it is followed
         // to the corner and on from there; otherwise straight from end to end.
-        float corner = extra.g > 0.0 ? low + extra.g : span.y;
-        float cornerDistance = extra.g > 0.0 ? extra.b : extra.r;
+        float corner = extra.g > 0.0 && extra.g < 1.0 ? low + extra.g : span.y;
+        float cornerDistance = extra.g > 0.0 && extra.g < 1.0 ? extra.b : extra.r;
         vec2 rest = beyond(texel.b, texel.a, low, high, threshold, span.x, corner);
         vec2 own = beyond(texel.r, cornerDistance, span.x, corner, threshold, span.x, corner);
         vec2 restBeyond = beyond(texel.b, texel.a, low, high, threshold, corner, span.y);
@@ -139,7 +172,6 @@ vec2 binTerm(int bin, float low, vec4 texel, int bins, int row, float threshold,
             tentMass(vec2(max(rest.x, own.x), min(rest.y, own.y)), center, radius) +
             tentMass(vec2(max(restBeyond.x, ownBeyond.x), min(restBeyond.y, ownBeyond.y)), center, radius);
     } else if (texel.g < 0.0) {
-        vec4 extra = binAt(bin, 1, bins, row);
         float corner = low + extra.g;
 
         open = tentMass(beyond(texel.b, extra.b, low, corner, threshold, low, corner), center, radius) +

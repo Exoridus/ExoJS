@@ -92,6 +92,21 @@ fn beyond(d0: f32, d1: f32, x0: f32, x1: f32, threshold: f32, lower: f32, upper:
     return vec2<f32>(lower, min(upper, crossing));
 }
 
+/** Where within `x0 .. x1` a face stands in front of `threshold`. See `light-quad.frag`. */
+fn within(d0: f32, d1: f32, x0: f32, x1: f32, threshold: f32) -> vec2<f32> {
+    let open = beyond(d0, d1, x0, x1, threshold, x0, x1);
+
+    if (open.y <= open.x) {
+        return vec2<f32>(x0, x1);
+    }
+
+    return select(vec2<f32>(open.y, x1), vec2<f32>(x0, open.x), open.x > x0);
+}
+
+fn overlap(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(max(a.x, b.x), min(a.y, b.y));
+}
+
 /** One bin's part in the kernel: the share the light reaches through, and its whole share. See `light-quad.frag`. */
 fn binTerm(bin: i32, low: f32, texel: vec4<f32>, bins: i32, row: i32, threshold: f32, center: f32, radius: f32) -> vec2<f32> {
     let high = low + 1.0;
@@ -112,14 +127,31 @@ fn binTerm(bin: i32, low: f32, texel: vec4<f32>, bins: i32, row: i32, threshold:
 
     var open: f32;
 
-    if (texel.g > 0.0) {
-        let extra = binAt(bin, 1, bins, row);
+    var extra = vec4<f32>(0.0);
+
+    if (texel.g != 0.0) {
+        extra = binAt(bin, 1, bins, row);
+    }
+
+    if (texel.g > 0.0 && extra.g >= 1.0) {
+        // Two partial blockers; see `light-quad.frag`.
+        let steps = floor(texel.g / 4096.0);
+        let stepsSecond = floor(extra.g / 4096.0);
+        let span = low + vec2<f32>(steps, texel.g - steps * 4096.0) / SPAN_STEPS;
+        let spanSecond = low + vec2<f32>(stepsSecond, extra.g - stepsSecond * 4096.0) / SPAN_STEPS;
+        let rest = beyond(texel.b, texel.a, low, high, threshold, low, high);
+        let first = overlap(rest, within(texel.r, extra.r, span.x, span.y, threshold));
+        let second = overlap(rest, within(extra.b, extra.a, spanSecond.x, spanSecond.y, threshold));
+
+        open = tentMass(rest, center, radius) - tentMass(first, center, radius) - tentMass(second, center, radius) +
+            tentMass(overlap(first, second), center, radius);
+    } else if (texel.g > 0.0) {
         let steps = floor(texel.g / 4096.0);
         let span = low + vec2<f32>(steps, texel.g - steps * 4096.0) / SPAN_STEPS;
         // Followed to a corner where two faces meet inside the part, and on
         // from there; see `light-quad.frag`.
-        let corner = select(span.y, low + extra.g, extra.g > 0.0);
-        let cornerDistance = select(extra.r, extra.b, extra.g > 0.0);
+        let corner = select(span.y, low + extra.g, extra.g > 0.0 && extra.g < 1.0);
+        let cornerDistance = select(extra.r, extra.b, extra.g > 0.0 && extra.g < 1.0);
         let rest = beyond(texel.b, texel.a, low, high, threshold, span.x, corner);
         let own = beyond(texel.r, cornerDistance, span.x, corner, threshold, span.x, corner);
         let restBeyond = beyond(texel.b, texel.a, low, high, threshold, corner, span.y);
@@ -130,7 +162,6 @@ fn binTerm(bin: i32, low: f32, texel: vec4<f32>, bins: i32, row: i32, threshold:
             tentMass(vec2<f32>(max(rest.x, own.x), min(rest.y, own.y)), center, radius) +
             tentMass(vec2<f32>(max(restBeyond.x, ownBeyond.x), min(restBeyond.y, ownBeyond.y)), center, radius);
     } else if (texel.g < 0.0) {
-        let extra = binAt(bin, 1, bins, row);
         let corner = low + extra.g;
 
         open = tentMass(beyond(texel.b, extra.b, low, corner, threshold, low, corner), center, radius) +

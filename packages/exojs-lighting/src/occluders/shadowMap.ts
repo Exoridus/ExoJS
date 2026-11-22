@@ -65,10 +65,10 @@ export const shadowSpanSteps = 4095;
 /** Edges of a bin closer than this, as a fraction of the bin, count as covering it. */
 const coverageEpsilon = 1e-6;
 
-/** Floats per bin of {@link spans}. */
-const spanStride = 4;
+/** Floats per bin of {@link spans}: two partial spans. */
+const spanStride = 8;
 
-/** Per bin, while a row is built: a partial span's ends and its distances there. */
+/** Per bin, while a row is built: up to two partial spans, each its ends and its distances there. */
 let spans = new Float64Array(0);
 
 /** Parts of a bin remembered per bin, for finding the corner of the surface the light reaches. */
@@ -103,7 +103,9 @@ let partCounts = new Uint8Array(0);
  *   where none does but the rest of the bin has a corner,
  * - `[2]`, `[3]` the nearest occluder over the rest of the bin, at the bin's
  *   start and at its end,
- * - `[5]`, `[6]` that corner: where in the bin, and its distance.
+ * - `[5]` either a corner - where in the bin, below `1` - with its distance
+ *   in `[6]`, or a second partial blocker's part, packed like `[1]`, with
+ *   its distances at both ends in `[6]` and `[7]`.
  *
  * A silhouette rarely falls on a bin boundary. Storing a single distance per
  * bin moves it to the nearest bin centre, which leaves the edge up to half a
@@ -157,6 +159,8 @@ export const buildShadowRow = (
     row[texel + 4] = unoccluded;
     spans[bin * spanStride] = 0;
     spans[bin * spanStride + 1] = 0;
+    spans[bin * spanStride + 4] = 0;
+    spans[bin * spanStride + 5] = 0;
   }
 
   if (radius <= 0 || bins <= 0) {
@@ -314,43 +318,60 @@ const coverBin = (row: Float32Array, slot: number, low: number, high: number, lo
     return;
   }
 
-  const spanLow = spans[scratch]!;
-  const spanHigh = spans[scratch + 1]!;
+  const second = scratch + 4;
+
+  if (placeInSpan(scratch, low, high, lowDistance, highDistance) || placeInSpan(second, low, high, lowDistance, highDistance)) {
+    return;
+  }
+
+  // A third part that meets neither span: one more span would also cover the
+  // gap between parts, or follow a line from one to another that runs behind
+  // the nearer. The farther of it and the second span joins the rest of the
+  // bin instead, which can only shadow more.
+  const near = Math.min(lowDistance, highDistance);
+  const kept = Math.min(spans[second + 2]!, spans[second + 3]!);
+  const farther = Math.max(near, kept);
+
+  if (near < kept) {
+    setSpan(second, low, high, lowDistance, highDistance);
+  }
+
+  row[texel + 2] = Math.min(row[texel + 2]!, farther);
+  row[texel + 3] = Math.min(row[texel + 3]!, farther);
+};
+
+/**
+ * Put a part into the span at `at` where it belongs there - the span is
+ * empty, the part continues it from a shared corner, or the two are a
+ * solid's near and far faces sharing its silhouette - and report whether it
+ * did. Two occluders whose parts overlap without meeting each keep a span of
+ * their own: one straight span between them would run behind the nearer.
+ */
+const placeInSpan = (at: number, low: number, high: number, lowDistance: number, highDistance: number): boolean => {
+  const spanLow = spans[at]!;
+  const spanHigh = spans[at + 1]!;
 
   if (spanHigh <= spanLow) {
-    setSpan(scratch, low, high, lowDistance, highDistance);
+    setSpan(at, low, high, lowDistance, highDistance);
 
-    return;
+    return true;
   }
 
   // The stored ends are rounded, so two faces meeting at a corner may not
   // compare as touching exactly.
   if (Math.abs(low - spanHigh) <= coverageEpsilon || Math.abs(high - spanLow) <= coverageEpsilon) {
-    joinAtCorner(scratch, low, high, lowDistance, highDistance);
+    joinAtCorner(at, low, high, lowDistance, highDistance);
 
-    return;
+    return true;
   }
 
-  if (low < spanHigh && high > spanLow && sharesEnd(scratch, low, high, lowDistance, highDistance)) {
-    overlapSpan(scratch, low, high, lowDistance, highDistance);
+  if (low < spanHigh && high > spanLow && sharesEnd(at, low, high, lowDistance, highDistance)) {
+    overlapSpan(at, low, high, lowDistance, highDistance);
 
-    return;
+    return true;
   }
 
-  // Apart, or two occluders whose parts overlap without meeting: one span
-  // would also cover the gap between them, or follow a line from one to the
-  // other that runs behind the nearer. The farther part joins the rest of the
-  // bin instead, which can only shadow more.
-  const near = Math.min(lowDistance, highDistance);
-  const kept = Math.min(spans[scratch + 2]!, spans[scratch + 3]!);
-  const farther = Math.max(near, kept);
-
-  if (near < kept) {
-    setSpan(scratch, low, high, lowDistance, highDistance);
-  }
-
-  row[texel + 2] = Math.min(row[texel + 2]!, farther);
-  row[texel + 3] = Math.min(row[texel + 3]!, farther);
+  return false;
 };
 
 /** Two faces meeting at a corner: the span grows over both. */
@@ -396,48 +417,67 @@ const setSpan = (scratch: number, low: number, high: number, lowDistance: number
   spans[scratch + 3] = highDistance;
 };
 
-/** Write each bin's span or corner into its texels, folding spans that grew over the whole bin into the rest of it. */
+/**
+ * Write each bin's spans or corner into its texels, folding spans that grew
+ * over the whole bin into the rest of it.
+ */
 const encodeSpans = (row: Float32Array, bins: number): void => {
   for (let bin = 0; bin < bins; bin++) {
     const texel = bin * shadowRowStride;
     const scratch = bin * spanStride;
-    const low = spans[scratch]!;
-    const high = spans[scratch + 1]!;
+    const priorStart = row[texel + 2]!;
+    const priorEnd = row[texel + 3]!;
+    const foldedFirst = foldSpan(row, texel, scratch);
+    const folded = foldSpan(row, texel, scratch + 4) || foldedFirst;
+    let first = scratch;
+    let second = scratch + 4;
 
-    if (high <= low) {
-      continue;
+    if (spans[first + 1]! <= spans[first]!) {
+      first = second;
+      second = -1;
+    } else if (spans[second + 1]! <= spans[second]!) {
+      second = -1;
     }
 
-    if (low === 0 && high === 1) {
-      // Faces that joined up across the whole bin describe a covered bin,
-      // bent where they meet.
-      const start = row[texel + 2]!;
-      const end = row[texel + 3]!;
+    if (spans[first + 1]! > spans[first]!) {
+      row[texel] = spans[first + 2]!;
+      row[texel + 1] = packSpan(spans[first]!, spans[first + 1]!);
+      row[texel + 4] = spans[first + 3]!;
 
-      row[texel + 2] = Math.min(start, spans[scratch + 2]!);
-      row[texel + 3] = Math.min(end, spans[scratch + 3]!);
-
-      if (findCorner(bin, start, end, 0, row[texel + 2]!, 1, row[texel + 3]!)) {
-        row[texel + 1] = -1;
+      if (second >= 0) {
+        row[texel + 5] = packSpan(spans[second]!, spans[second + 1]!);
+        row[texel + 6] = spans[second + 2]!;
+        row[texel + 7] = spans[second + 3]!;
+      } else if (findCorner(bin, priorStart, priorEnd, spans[first]!, row[texel], spans[first + 1]!, row[texel + 4]!)) {
+        // Two faces meeting inside a part that stops short of the bin's far
+        // end - the end of a wall seen nearly edge-on - bend there too.
         row[texel + 5] = cornerFraction;
         row[texel + 6] = cornerDistance;
       }
-
-      continue;
-    }
-
-    row[texel] = spans[scratch + 2]!;
-    row[texel + 1] = Math.floor(low * shadowSpanSteps) * 4096 + Math.ceil(high * shadowSpanSteps);
-    row[texel + 4] = spans[scratch + 3]!;
-
-    // Two faces meeting inside a part that stops short of the bin's far end -
-    // the end of a wall seen nearly edge-on - bend there too.
-    if (findCorner(bin, row[texel + 2]!, row[texel + 3]!, low, row[texel], high, row[texel + 4]!)) {
+    } else if (folded && findCorner(bin, priorStart, priorEnd, 0, row[texel + 2]!, 1, row[texel + 3]!)) {
+      // Faces that joined up across the whole bin bend where they meet.
+      row[texel + 1] = -1;
       row[texel + 5] = cornerFraction;
       row[texel + 6] = cornerDistance;
     }
   }
 };
+
+/** Fold the span at `at` into the rest of the bin where it covers all of it, and report whether it did. */
+const foldSpan = (row: Float32Array, texel: number, at: number): boolean => {
+  if (spans[at]! !== 0 || spans[at + 1]! !== 1) {
+    return false;
+  }
+
+  row[texel + 2] = Math.min(row[texel + 2]!, spans[at + 2]!);
+  row[texel + 3] = Math.min(row[texel + 3]!, spans[at + 3]!);
+  spans[at + 1] = 0;
+
+  return true;
+};
+
+/** A span's ends as one channel, `low * 4096 + high` in steps of {@link shadowSpanSteps}; never `0`. */
+const packSpan = (low: number, high: number): number => Math.floor(low * shadowSpanSteps) * 4096 + Math.ceil(high * shadowSpanSteps);
 
 let cornerFraction = 0;
 let cornerDistance = 0;
