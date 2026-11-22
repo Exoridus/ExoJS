@@ -18,12 +18,29 @@ import type { FontVariantKey, GlyphInfo, GlyphKey, GlyphProvider, SolidTexel, Te
 export type AtlasMode = 'sdf' | 'color';
 
 /**
- * SDF buffer radius in logical pixels - the maximum distance outside a glyph
- * that the SDF field encodes. Determines the maximum usable outline/shadow
- * reach. Exported so applications can import this constant when computing
- * shader uniforms.
+ * Default distance-field reach in logical pixels: how far outside each glyph
+ * the runtime SDF tile and its field extend. Outline widths and shadow
+ * offset-plus-blur may use this minus one logical pixel of antialiasing
+ * reserve (see `Text` `sdfRadius`).
+ *
+ * Kept small on purpose: the 8-bit field spans twice the reach, so every
+ * extra pixel of reach coarsens the edge of every glyph, which shows on
+ * magnified text where a sampler filters at 8-bit output precision.
  */
-export const SDF_RADIUS = 8;
+export const SDF_RADIUS = 4;
+
+/**
+ * Raster parameters for a distance field that ends exactly `sdfRadius` logical
+ * pixels outside the glyph: the tile padding covers that reach, and the field
+ * spans twice it so its zero lands on the padding's outer edge. Not rounded:
+ * the shader derives the field scale from the logical radius alone, so the
+ * normalisation has to match it exactly at any ratio.
+ * @internal
+ */
+export const sdfRasterSpan = (sdfRadius: number, pixelRatio: number): { buffer: number; radius: number } => ({
+  buffer: Math.max(1, Math.ceil(sdfRadius * pixelRatio)),
+  radius: 2 * sdfRadius * pixelRatio,
+});
 
 const glyphPadding = 2;
 
@@ -45,15 +62,18 @@ const solidBlockSize = 4;
  * @internal
  */
 export const claimSolidTexel = (allocate: (w: number, h: number) => { page: AtlasPage; slot: { x: number; y: number } }): SolidTexel => {
-  const { page, slot } = allocate(solidBlockSize, solidBlockSize);
+  const {
+    page,
+    slot: { x, y },
+  } = allocate(solidBlockSize, solidBlockSize);
 
-  page.fillSolid(slot.x, slot.y, solidBlockSize, solidBlockSize);
+  page.fillSolid(x, y, solidBlockSize, solidBlockSize);
   page.uploadDirtyRegion();
 
   return {
     page: page.index,
-    u: (slot.x + solidBlockSize / 2) / page.width,
-    v: (slot.y + solidBlockSize / 2) / page.height,
+    u: (x + solidBlockSize / 2) / page.width,
+    v: (y + solidBlockSize / 2) / page.height,
   };
 };
 
@@ -76,6 +96,10 @@ class ShelfPacker {
   }
 
   public insert(width: number, height: number): { x: number; y: number } | null {
+    if (width > this._width) {
+      return null;
+    }
+
     for (const shelf of this._shelves) {
       if (shelf.height >= height && shelf.cursorX + width <= this._width) {
         const x = shelf.cursorX;
@@ -356,7 +380,7 @@ export class GlyphAtlas implements GlyphProvider {
   private readonly _mode: AtlasMode;
   private readonly _sdfRadius: number;
   private readonly _pixelRatio: number;
-  private readonly _rasterSdfRadius: number;
+  private readonly _rasterSpan: { buffer: number; radius: number };
   private readonly _metrics: GlyphMetrics;
 
   /**
@@ -406,7 +430,7 @@ export class GlyphAtlas implements GlyphProvider {
     // The SDF buffer has to grow with the raster grid, or the encoded distance
     // field would reach `sdfRadius / pixelRatio` LOGICAL pixels past the glyph
     // and an outline or shadow would silently shorten as the ratio rises.
-    this._rasterSdfRadius = Math.max(1, Math.round(sdfRadius * pixelRatio));
+    this._rasterSpan = sdfRasterSpan(sdfRadius, pixelRatio);
     // A variant measured elsewhere hands its metrics in so every atlas of the
     // same typeface answers with the same advances; a standalone atlas measures
     // for itself.
@@ -433,9 +457,9 @@ export class GlyphAtlas implements GlyphProvider {
   }
 
   /**
-   * SDF buffer radius in LOGICAL pixels - the outline/shadow reach this atlas
-   * can encode. Independent of {@link pixelRatio}: the raster buffer grows with
-   * the ratio so the logical reach stays put.
+   * Distance-field reach in LOGICAL pixels: tile padding and field both end this
+   * far outside each glyph. Independent of {@link pixelRatio}: the raster buffer
+   * grows with the ratio so the logical reach stays put.
    */
   public get sdfRadius(): number {
     return this._sdfRadius;
@@ -527,9 +551,10 @@ export class GlyphAtlas implements GlyphProvider {
         fontWeight: this._font.fontWeight ?? 'normal',
         fontStyle: this._font.fontStyle ?? 'normal',
         fontVariant: this._font.fontVariant ?? 'normal',
-        buffer: this._rasterSdfRadius,
-        radius: this._rasterSdfRadius,
+        buffer: this._rasterSpan.buffer,
+        radius: this._rasterSpan.radius,
         cutoff: 0.5,
+        maxTileSize: this._pageSize,
       });
       this._sdfInstances.set(rasterFontSize, instance);
     }
@@ -539,7 +564,7 @@ export class GlyphAtlas implements GlyphProvider {
 
   private _rasterizeSdf(char: string, size: number, key: GlyphKey): GlyphInfo {
     const ratio = this._pixelRatio;
-    const result = this._getSdf(this._rasterFontSize(size)).draw(char);
+    const result = this._getSdf(this._rasterFontSize(size)).draw(char, ratio);
 
     const { page, slot } = this._allocateSlot(result.width, result.height, char, size);
     page.writeSdf(result.data, slot.x, slot.y, result.width, result.height);
@@ -551,6 +576,15 @@ export class GlyphAtlas implements GlyphProvider {
       // Slot origin and UVs stay in ATLAS TEXELS - they address the raster grid.
       // Everything else is divided back into logical pixels, which is the space
       // the quad, the cursor and the node's bounds live in.
+      fill:
+        result.fill === null
+          ? null
+          : {
+              x: result.fill.x / ratio,
+              y: result.fill.y / ratio,
+              width: result.fill.width / ratio,
+              height: result.fill.height / ratio,
+            },
       width: result.width / ratio,
       height: result.height / ratio,
       // Not `result.glyphAdvance`: the advance is a logical typographic number
@@ -565,8 +599,8 @@ export class GlyphAtlas implements GlyphProvider {
       uvBottom: (slot.y + result.height) / ps,
       // Shift the quad left/up by the SDF buffer so the glyph content aligns
       // with the logical cursor position (bearing = −buffer on both axes).
-      xBearing: -result.glyphLeft / ratio,
-      yBearing: -result.glyphTop / ratio,
+      xBearing: result.xBearing / ratio,
+      yBearing: result.yBearing / ratio,
     };
 
     this._cache.set(key, info);

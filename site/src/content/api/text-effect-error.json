@@ -1,0 +1,309 @@
+{
+  "title": "TextEffectError",
+  "description": "Raised when a text node cannot draw a requested outline or shadow. Thrown synchronously by the operation that would create the unsupported combination - constructing the node, assigning or mutating its style, swapping its font or font scale, or reading a serialized document - and that operation leaves every object unchanged. The renderer never throws it. Callers branch on reason: `'insufficient-effect-capacity'` is fixed by a smaller effect or a node built with more capacity (`Text` `sdfRadius`), the other reasons by a font that carries usable distance-field metadata. AbstractText.checkEffects answers the same question without throwing.",
+  "symbol": "TextEffectError",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Raised when a text node cannot draw a requested outline or shadow.",
+        "Thrown synchronously by the operation that would create the unsupported combination - constructing the node, assigning or mutating its style, swapping its font or font scale, or reading a serialized document - and that operation leaves every object unchanged. The renderer never throws it.",
+        "Callers branch on reason: `'insufficient-effect-capacity'` is fixed by a smaller effect or a node built with more capacity (`Text` `sdfRadius`), the other reasons by a font that carries usable distance-field metadata. AbstractText.checkEffects answers the same question without throwing."
+      ],
+      "importLine": "import { TextEffectError } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(issue: TextEffectIssue, context?: string): TextEffectError",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "issue",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectIssue",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectError",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "issue",
+              "type": "TextEffectIssue",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "returnType": "TextEffectError",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "available",
+          "signature": "available: number",
+          "signatureTokens": [
+            {
+              "text": "available",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Logical pixels the node can supply. 0 when it has no usable distance field."
+        },
+        {
+          "name": "cause",
+          "signature": "cause?: unknown",
+          "signatureTokens": [
+            {
+              "text": "cause",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "effect",
+          "signature": "effect: TextEffect",
+          "signatureTokens": [
+            {
+              "text": "effect",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffect",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "message",
+          "signature": "message: string",
+          "signatureTokens": [
+            {
+              "text": "message",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "reason",
+          "signature": "reason: TextEffectFailureReason",
+          "signatureTokens": [
+            {
+              "text": "reason",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectFailureReason",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "required",
+          "signature": "required: number",
+          "signatureTokens": [
+            {
+              "text": "required",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Logical pixels the request needs in the node's local space, including the antialiasing reserve. 0 unless the reason is 'insufficient-effect-capacity'."
+        },
+        {
+          "name": "stack",
+          "signature": "stack?: string",
+          "signatureTokens": [
+            {
+              "text": "stack",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/TextEffectError.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextEffectError.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/TextEffectError.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextEffectError.ts"
+}

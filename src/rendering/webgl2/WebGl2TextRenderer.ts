@@ -50,17 +50,18 @@ const nodeFloats = textNodeDataFloats;
 
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
-// Per-vertex layout (20 bytes), mirrors WebGpuTextRenderer's vertex buffer exactly:
+// Per-vertex layout (28 bytes), mirrors WebGpuTextRenderer's vertex buffer exactly:
 //   a_position : vec2  f32  (offset  0,  8 bytes)  ← LOCAL space
 //   a_texcoord : vec2  f32  (offset  8,  8 bytes)
 //   a_packedNodeSlot: uint u32 (offset 16, 4 bytes) ← 23-bit node row + decoration flag + 8-bit atlas slot
+//   a_oppositeTexcoord: vec2 f32 (offset 20, 8 bytes)
 //
 // The vertex shader reads the world transform live from the per-node data texture via
 // texelFetch (same texture the fragment stage already reads style from), keyed by
 // a_nodeIndex - no CPU-side transform baking. Gradient UV is likewise computed in the
 // vertex shader from the local a_position and the bounds texel, not uploaded per vertex.
-const vertexStrideBytes = 20;
-const vertexStrideWords = vertexStrideBytes / 4; // 5 floats per vertex
+const vertexStrideBytes = 28;
+const vertexStrideWords = vertexStrideBytes / 4;
 const initialVertexCapacity = 256;
 const initialIndexCapacity = 384;
 const initialNodeCapacity = 32;
@@ -175,8 +176,8 @@ export class WebGl2TextRenderer
    */
   public readonly supportsRetainedBatches = true;
 
-  private readonly _sdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textSdfFragSource));
-  private readonly _msdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textMsdfFragSource));
+  private readonly _sdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textSdfFragSource, true));
+  private readonly _msdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textMsdfFragSource, true));
   private readonly _colorShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textColorFragSource));
 
   private readonly _nodeDataUnitScratch = new Int32Array([textAtlasTextureSlots]);
@@ -283,6 +284,7 @@ export class WebGl2TextRenderer
         .addIndex(indexBuffer, IndexElementTypes.UnsignedInt)
         .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
         .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
+        .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_oppositeTexcoord'), gl.FLOAT, false, vertexStrideBytes, 20)
         .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_packedNodeSlot'), gl.UNSIGNED_INT, false, vertexStrideBytes, 16, true);
 
       vao.connect(this._createVaoRuntime(gl, vaoHandle));
@@ -329,7 +331,8 @@ export class WebGl2TextRenderer
     // Before the layout pass, not after: this is what a node with no explicit
     // `pixelRatio` inherits, and the pass it drives is the one that resolves
     // which atlas the node rasterizes into.
-    node._setSurfacePixelRatio(this.getBackend().surfacePixelRatio);
+    const backend = this.getBackend();
+    node._setSurfacePixelRatio(backend.surfacePixelRatio, backend.maxTextureSize);
     node.syncDirty();
     const { pageQuads, textPages: pages } = node;
 
@@ -569,6 +572,9 @@ export class WebGl2TextRenderer
           this._float32View[w + 1] = vertices[vp + 1]!;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
+          const opposite = (v ^ 2) * 2;
+          this._float32View[w + 5] = uvs[opposite]!;
+          this._float32View[w + 6] = uvs[opposite + 1]!;
           // Four vertices per quad, so the flag is read once per quad.
           this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot, decorations[v >> 2] === 1);
         }
@@ -780,6 +786,10 @@ export class WebGl2TextRenderer
       .addAttribute(buffer, shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, base + 0)
       .addAttribute(buffer, shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, base + 8)
       .addAttribute(buffer, shader.getAttribute('a_packedNodeSlot'), gl.UNSIGNED_INT, false, vertexStrideBytes, base + 16, true);
+
+    if (data.shaderType !== 'color') {
+      vao.addAttribute(buffer, shader.getAttribute('a_oppositeTexcoord'), gl.FLOAT, false, vertexStrideBytes, base + 20);
+    }
 
     const state = this._getTextReplayState(payload.bundle);
 

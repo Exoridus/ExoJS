@@ -40,20 +40,11 @@ import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import { type WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
 import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 
-// ── Node data layout (identical to WebGl2TextRenderer) ───────────────────────
+// ── Node data layout ────────────────────────────────────────────────────────
 //
-// Storage buffer: array<vec4<f32>> - 10 entries per node.
-//
-// [ni*10+0]: (a,  c,  0,  tx)   transform col 0+2
-// [ni*10+1]: (b,  d,  0,  ty)   transform col 1+2
-// [ni*10+2]: (r,  g,  b,  a )   fillColor
-// [ni*10+3]: (r,  g,  b,  a )   outlineColor
-// [ni*10+4]: (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
-// [ni*10+5]: (r,  g,  b,  a )   shadowColor
-// [ni*10+6]: (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
-// [ni*10+7]: (r,  g,  b,  a )   gradientTop
-// [ni*10+8]: (r,  g,  b,  a )   gradientBottom
-// [ni*10+9]: (minX, minY, w, h) text block bounds
+// Storage buffer: array<vec4<f32>>, `textNodeDataTexels` entries per node,
+// byte-identical to WebGl2TextRenderer's data texture rows. The layout is
+// documented once, at `packTextNodeData` in `#rendering/text/nodeDataPacker`.
 
 const nodeFloats = textNodeDataFloats;
 
@@ -65,7 +56,7 @@ const nodeFloats = textNodeDataFloats;
 const rowsPerPatchBlock = 16;
 
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + packed node/atlas u32
-const vertexStrideBytes = 20;
+const vertexStrideBytes = 28;
 const vertexStrideWords = vertexStrideBytes / 4;
 // Word offset of the per-vertex node index within one vertex.
 const nodeIndexWord = 4;
@@ -507,6 +498,9 @@ export class WebGpuTextRenderer
           this._float32View[w + 1] = vertices[vp + 1]!;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
+          const opposite = (v ^ 2) * 2;
+          this._float32View[w + 5] = uvs[opposite]!;
+          this._float32View[w + 6] = uvs[opposite + 1]!;
           // Four vertices per quad, so the flag is read once per quad.
           this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot, decorations[v >> 2] === 1);
         }
@@ -868,7 +862,8 @@ export class WebGpuTextRenderer
     // Before the layout pass, not after: this is what a node with no explicit
     // `pixelRatio` inherits, and the pass it drives is the one that resolves
     // which atlas the node rasterizes into.
-    node._setSurfacePixelRatio(this.getBackend().surfacePixelRatio);
+    const backend = this.getBackend();
+    node._setSurfacePixelRatio(backend.surfacePixelRatio, backend.maxTextureSize);
     node.syncDirty();
     const { pageQuads, textPages: pages } = node;
 
@@ -1182,6 +1177,7 @@ export class WebGpuTextRenderer
               { shaderLocation: 0, offset: 0, format: 'float32x2' },
               { shaderLocation: 1, offset: 8, format: 'float32x2' },
               { shaderLocation: 2, offset: 16, format: 'uint32' },
+              { shaderLocation: 3, offset: 20, format: 'float32x2' },
             ],
           },
         ],

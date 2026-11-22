@@ -179,7 +179,7 @@ class TextLayoutScene extends Scene {
 
     this.title.text = heading;
     this.title.style.fontSize = 32 * k;
-    this.title.style.outlineWidth = heading === 'Outline' ? 0.12 : 0;
+    this.title.style.outlineWidth = heading === 'Outline' ? 1 : 0;
     this.title.style.outlineColor = new Color(35, 100, 60);
     this.title.style.shadowAlpha = heading === 'Shadow' ? 0.5 : 0;
     this.title.style.shadowOffsetX = 3 * k;

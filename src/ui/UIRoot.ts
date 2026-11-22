@@ -2,7 +2,7 @@ import { Signal } from '#core/Signal';
 import type { Container } from '#rendering/Container';
 import type { RenderingContext } from '#rendering/RenderingContext';
 
-import type { UITheme } from './theme';
+import { assertSkinSetTextEffects, type UITheme } from './theme';
 import { ThemedContainer } from './ThemedContainer';
 
 /**
@@ -103,15 +103,23 @@ export class UIRoot extends ThemedContainer {
 
   public override set theme(value: UITheme) {
     if (this._theme !== value) {
+      for (const set of Object.values(value)) {
+        assertSkinSetTextEffects(set);
+      }
+
+      const apply: Array<() => void> = [];
+      this._prepareChildThemes(value, apply);
       this._theme = value;
-      this._cascadeTheme();
+
+      for (const commit of apply) {
+        commit();
+      }
     }
   }
 
-  /** @internal - a UI layer's theme is assigned, never inherited, so there is nothing to re-resolve here. */
+  /** @internal */
   public override _refreshTheme(): void {
-    // A UIRoot owns its theme outright; the cascade stops descending only into
-    // its children, which it pushes itself when the theme is assigned.
+    // A UI layer owns its theme independently of its ancestors.
   }
 
   /**

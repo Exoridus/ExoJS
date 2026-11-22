@@ -36,8 +36,20 @@ const dimensionCases = Array.from({ length: textAtlasTextureSlots }, (_, slot) =
     : `        default: { return textureDimensions(spriteTexture${slot}, 0); }`,
 ).join('\n');
 
-/** WGSL atlas slot table plus per-slot dimensions used for shadow UV conversion. @internal */
+const baseLevelCases = Array.from({ length: textAtlasTextureSlots }, (_, slot) => {
+  const label = slot < textAtlasTextureSlots - 1 ? `case ${slot}u` : 'default';
+
+  return `        ${label}: { return textureSampleLevel(spriteTexture${slot}, spriteSampler${slot}, uv, 0.0); }`;
+}).join('\n');
+
+/** WGSL atlas dispatch for colour, distance fields and per-slot dimensions. @internal */
 export const textAtlasTextureSlotWgsl = `${buildSpriteTextureSlotWgsl(textAtlasTextureSlots)}
+
+fn sampleAtlasBaseLevel(slot: u32, uv: vec2<f32>) -> vec4<f32> {
+    switch slot {
+${baseLevelCases}
+    }
+}
 
 fn atlasTextureDimensions(slot: u32) -> vec2<u32> {
     switch slot {
@@ -64,6 +76,10 @@ ${dimensionCases}
 export const textAtlasPrologueGlsl = `${colorShaderSourcesGlsl}
 ${buildSpriteMaterialSlotGlsl(textAtlasTextureSlots, 'highp')}`;
 
+// Mip generation can blend unrelated glyphs before a field sample reaches the shader.
+const fieldAtlasPrologueGlsl = `${colorShaderSourcesGlsl}
+${buildSpriteMaterialSlotGlsl(textAtlasTextureSlots, 'highp', true)}`;
+
 /** Inject the Text slot table into a shipped Text fragment shader. @internal */
-export const composeTextAtlasFragmentGlsl = (fragment: string): string =>
-  composeSpriteMaterialFragmentGlsl(fragment, textAtlasPrologueGlsl);
+export const composeTextAtlasFragmentGlsl = (fragment: string, distanceField = false): string =>
+  composeSpriteMaterialFragmentGlsl(fragment, distanceField ? fieldAtlasPrologueGlsl : textAtlasPrologueGlsl);

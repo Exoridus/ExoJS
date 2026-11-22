@@ -1,6 +1,6 @@
 ---
 title: 'Migrating to path-based assets'
-description: 'Replace descriptor-and-loader boilerplate with path-backed Texture, Sprite and Sound, app.load, assetTypes and scene format 3, and keep the loader APIs where they still fit.'
+description: 'Replace descriptor-and-loader boilerplate with path-backed Texture, Sprite and Sound, app.load, assetTypes and scene format 4, and keep the loader APIs where they still fit.'
 ---
 
 import SourceSnippet from '../../../components/SourceSnippet.astro';
@@ -64,9 +64,9 @@ Register a type per application, either at construction or later with `app.asset
 
 A type id belongs to one class, and a class has one active definition. Defining the same class and id again before its first request replaces the factory. Give each application its own factory instance. A versioned, migrating document type adds a `parser`, `version` and `migrations`; see [Authoring extensions](/ExoJS/en/guide/debugging/authoring-extensions/).
 
-## Scenes and prefabs: format 3
+## Scenes and prefabs: format 4
 
-Saved scenes and prefabs write typed references and still read older files. A texture reference is `{ "$type": "texture", "source": "hero.png", "options": { ... } }` and keeps persistable options such as the sampler. Format 2 documents (a plain string or `{ source, options }`) keep loading. See [Serialization and prefabs](/ExoJS/en/guide/runtime/serialization-and-prefabs/).
+Saved scenes and prefabs write typed references. A texture reference is `{ "$type": "texture", "source": "hero.png", "options": { ... } }` and keeps persistable options such as the sampler. Re-export earlier documents with text effects expressed in logical pixels. See [Serialization and prefabs](/ExoJS/en/guide/runtime/serialization-and-prefabs/).
 
 ## Loading transitions
 

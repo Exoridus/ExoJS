@@ -14,7 +14,7 @@ Use it for level/scene layouts, reusable prefabs, the structural half of save ga
 
 ## Serializing a scene
 
-[`Scene.serialize()`](/ExoJS/en/api/scene/) returns a JSON-able descriptor; [`Scene.deserialize()`](/ExoJS/en/api/scene/) rebuilds the scene's `root` (and `ui` layer, if present) from one. Saved references name resources rather than embedding their bytes. Readiness is a per-serializer contract: a format-3 Sprite can attach and load lazily, while BitmapText and several other rendering types require resident assets. Use the [matrix below](#asset-readiness-by-serializer) before choosing when to restore.
+[`Scene.serialize()`](/ExoJS/en/api/scene/) returns a JSON-able descriptor; [`Scene.deserialize()`](/ExoJS/en/api/scene/) rebuilds the scene's `root` (and `ui` layer, if present) from one. Saved references name resources rather than embedding their bytes. Readiness is a per-serializer contract: a Sprite with a typed texture reference can attach and load lazily, while BitmapText and several other rendering types require resident assets. Use the [matrix below](#asset-readiness-by-serializer) before choosing when to restore.
 
 ```ts
 import { Scene } from '@codexo/exojs';
@@ -58,7 +58,7 @@ for (let i = 0; i < 10; i++) {
 }
 ```
 
-`prefab.toJSON()` and `Prefab.fromJSON(document)` round-trip a prefab through disk or the network. `toJSON()` writes a versioned document — `{ version, root }`, the same frame a serialized scene carries — and `fromJSON()` validates it, so a prefab written today can still be read by a later build.
+`prefab.toJSON()` and `Prefab.fromJSON(document)` round-trip a prefab through disk or the network. `toJSON()` writes a versioned document — `{ version, root }`, the same frame a serialized scene carries — and `fromJSON()` validates it against the current format.
 
 ## Persisting saves
 
@@ -83,21 +83,20 @@ Choose the backend by capability: [`WebStorageStore`](/ExoJS/en/api/web-storage-
 
 | Document or node | Resolution and failure behavior | What the caller owns |
 | --- | --- | --- |
-| Format-3 `Sprite` with a typed texture reference | Constructs a path-backed handle without fetching. Attaching the Sprite to a scene starts acquisition; it draws empty until ready. | The attached node's scene claim. A detached prefab instance does not load merely because it was instantiated. |
-| Legacy/v2 Sprite references, including plain keys | Uses the resident `resolveAsset` path; a missing resource resolves to `null` and can warn. | Preload through the intended scene/app scope before restoration. |
+| `Sprite` with a typed texture reference | Constructs a path-backed handle without fetching. Attaching the Sprite to a scene starts acquisition; it draws empty until ready. | The attached node's scene claim. A detached prefab instance does not load merely because it was instantiated. |
+| `Sprite` with an untagged texture reference (including plain keys) | Uses the resident `resolveAsset` path; a missing resource resolves to `null` and can warn. | Preload through the intended scene/app scope before restoration. |
 | `BitmapText` | Requires a resident `BmFont`; restoration throws when it is missing. | Preload the font; its loader-owned dependency scope owns atlas pages. |
-| `Mesh`, `NineSliceSprite`, `RepeatingSprite`, `AnimatedSprite` | Use resident `resolveAsset`; a missing texture can warn and resolve to `null`. They do not inherit the format-3 Sprite loading path. | Preload the needed texture and keep its owner alive. |
+| `Mesh`, `NineSliceSprite`, `RepeatingSprite`, `AnimatedSprite` | Use resident `resolveAsset`; a missing texture can warn and resolve to `null`. They do not inherit this Sprite loading path. | Preload the needed texture and keep its owner alive. |
 | Custom serializer using `ctx.resolve` | Creates/reuses a deferred reference without fetching. Scene deserialization reserves it in the scene scope; direct prefab construction has no implicit scene context. | Pass the intended loader/registry, then explicitly acquire or attach through a consumer with an acquisition contract. |
 | `Text` | Restores style/layout data such as the font family, not browser FontFace registration or an atlas snapshot. | Deploy and load the font before reliable custom-font layout. |
 
-A `Scene.deserialize` call supplies both `app.serializers` and the scene's asset scope. `prefab.instantiate(app.loader, app.serializers)` supplies those two explicit arguments but does not attach the returned node or silently give it the scene's scope. Custom deferred references from a direct `Prefab.instantiate(app.loader, ...)` call are reserved in a child of the application loader scope, so destroying only the returned node does not release those application reservations. `Scene.deserialize` reserves them under the scene scope instead. A format-3 Sprite constructs its own idle texture handle and acquires it when attached to `scene.root`/`scene.ui`. An asset kept resident by a different scene may disappear when that owner ends, so a successful resident lookup is not a substitute for your own claim.
+A `Scene.deserialize` call supplies both `app.serializers` and the scene's asset scope. `prefab.instantiate(app.loader, app.serializers)` supplies those two explicit arguments but does not attach the returned node or silently give it the scene's scope. Custom deferred references from a direct `Prefab.instantiate(app.loader, ...)` call are reserved in a child of the application loader scope, so destroying only the returned node does not release those application reservations. `Scene.deserialize` reserves them under the scene scope instead. A Sprite with a typed texture reference constructs its own idle texture handle and acquires it when attached to `scene.root`/`scene.ui`. An asset kept resident by a different scene may disappear when that owner ends, so a successful resident lookup is not a substitute for your own claim.
 
-These differences also apply to prefabs created from JSON. Reading a legacy document preserves its source version; calling `toJSON()` does not silently upgrade its asset semantics. Await required assets and handle restoration errors at the save/navigation boundary.
+These differences also apply to prefabs created from JSON. Await required assets and handle restoration errors at the save/navigation boundary.
 
+## Format 4 and typed asset references
 
-## Format 3 and typed asset references
-
-Scenes and prefabs now write `version: 3`. A texture is stored as a typed reference, `{ "$type": "texture", "source": "hero.png", "options": { ... } }`, which also keeps persistable settings such as the sampler. Nodes in one document can point at each other with local `$id` and `$ref` links. Documents written by earlier versions (a plain string or `{ source, options }`) still read with their original serializer semantics. Deferred resolution depends on the individual serializer and on whether restoration is scene-bound or a direct prefab call.
+Scenes and prefabs write `version: 4`. A texture is stored as a typed reference, `{ "$type": "texture", "source": "hero.png", "options": { ... } }`, which also keeps persistable settings such as the sampler. Nodes in one document can point at each other with local `$id` and `$ref` links. Re-export earlier documents with text effects expressed in logical pixels. Deferred resolution depends on the individual serializer and on whether restoration is scene-bound or a direct prefab call.
 
 Asset types you register with `assetTypes` or `app.assets.define()` are saved under their `type` string, so choose one that you can keep stable. See [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/).
 

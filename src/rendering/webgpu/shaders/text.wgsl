@@ -17,6 +17,7 @@ struct VertexInput {
     @location(0) position  : vec2<f32>,
     @location(1) texcoord  : vec2<f32>,
     @location(2) packedNodeSlot : u32,
+    @location(3) oppositeTexcoord : vec2<f32>,
 };
 
 struct VertexOutput {
@@ -27,6 +28,7 @@ struct VertexOutput {
     @location(3) @interpolate(flat) textureSlot : u32,
     @location(4) @interpolate(flat) pxAxes : vec4<f32>,
     @location(5) @interpolate(flat) decoration : u32,
+    @location(6) @interpolate(flat) tileUv : vec4<f32>,
 };
 
 @vertex
@@ -91,6 +93,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     var out: VertexOutput;
     out.clipPos  = clipPos;
     out.texcoord = input.texcoord;
+    out.tileUv = vec4<f32>(min(input.texcoord, input.oppositeTexcoord), max(input.texcoord, input.oppositeTexcoord));
     out.gradUV   = gradUV;
     out.nodeIdx  = ni;
     out.textureSlot = input.packedNodeSlot >> {{atlasSlotShift}}u;
@@ -148,10 +151,28 @@ fn evalTextGradient(base: u32, stopCount: u32, t: f32) -> vec4<f32> {
     return prevColor;
 }
 
-// ── SDF (R8 atlas) ────────────────────────────────────────────────────────────
+// ── Distance fields (R8 SDF and RGB MSDF atlases) ─────────────────────────────
 
-@fragment
-fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
+fn median3(r: f32, g: f32, b: f32) -> f32 {
+    return max(min(r, g), min(max(r, g), b));
+}
+
+// The signed distance a texel encodes: the red channel of the runtime SDF, the
+// median of three channels for an MSDF atlas.
+fn sampleField(slot: u32, uv: vec2<f32>, msdf: bool, tileUv: vec4<f32>, pageSize: vec2<f32>) -> f32 {
+    let halfTexel = min(0.5 / pageSize, (tileUv.zw - tileUv.xy) * 0.5);
+    let texel = sampleAtlasBaseLevel(slot, clamp(uv, tileUv.xy + halfTexel, tileUv.zw - halfTexel));
+
+    if (msdf) {
+        return median3(texel.r, texel.g, texel.b);
+    }
+
+    return texel.r;
+}
+
+// Mirrors main() in text-sdf.frag / text-msdf.frag line for line; see there
+// for why each edge is computed the way it is.
+fn shadeDistanceField(in: VertexOutput, msdf: bool) -> vec4<f32> {
     let ni   = in.nodeIdx;
     let base = ni * {{nodeDataTexels}}u;
 
@@ -162,38 +183,35 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
     let tShadow2  = nodes[base + 6u];
     let tGradAxis = nodes[base + 7u];
 
-    let outlineMin   = tParams.x;
+    let outlineField = tParams.x;
     let shadowAlpha  = tParams.y;
-    let blur         = tParams.z;
+    let blurField    = tParams.z;
     let gradStops    = u32(tParams.w + 0.5);
     let pageSize     = vec2<f32>(atlasTextureDimensions(in.textureSlot));
     let shadowOffset = tShadow2.xy / pageSize;
+    let fieldScale   = tShadow2.w;
+    let zero         = tGradAxis.w;
 
-    let uvDx = dpdx(in.texcoord);
-    let uvDy = dpdy(in.texcoord);
-    let sd   = sampleTexture(in.textureSlot, in.texcoord, uvDx, uvDy).r;
+    let sd   = sampleField(in.textureSlot, in.texcoord, msdf, in.tileUv, pageSize);
 
-    // Mirrors text-sdf.frag: the edge fades over one DEVICE pixel rather than
-    // over a constant in field units, so atlas density, surface ratio, node
-    // scale and camera zoom all arrive at the same on-screen edge. The field
-    // moves by 1/sdfRadius per local unit, so the width follows from the
-    // transform; the derivative is the fallback for an atlas whose field scale
-    // is unknown. The density is taken along the edge's own normal, recovered
-    // from the field by a forward difference, so a non-uniform scale sizes
-    // horizontal and vertical edges independently.
-    let radius = tShadow2.w;
+    // The edge fades over one DEVICE pixel: the field moves by `fieldScale` per
+    // local unit, so the width follows from the transform; the derivative is the
+    // fallback for an atlas whose field scale is unknown. The density is taken
+    // along the edge's own normal, recovered from the field by a forward
+    // difference, so a non-uniform scale sizes horizontal and vertical edges
+    // independently.
     let axisX = in.pxAxes.xy;
     let axisY = in.pxAxes.zw;
     let densityX = length(axisX);
     let densityY = length(axisY);
     var aa = max(fwidth(sd) * 0.5, 0.0001);
-    if (radius > 0.0 && densityX > 0.0) {
+    if (fieldScale > 0.0 && densityX > 0.0) {
         var density = densityX;
 
         if (abs(densityY - densityX) > 0.001 * max(densityX, densityY)) {
             let texel = 1.0 / pageSize;
-            let sdU = sampleTexture(in.textureSlot, in.texcoord + vec2<f32>(texel.x, 0.0), uvDx, uvDy).r;
-            let sdV = sampleTexture(in.textureSlot, in.texcoord + vec2<f32>(0.0, texel.y), uvDx, uvDy).r;
+            let sdU = sampleField(in.textureSlot, in.texcoord + vec2<f32>(texel.x, 0.0), msdf, in.tileUv, pageSize);
+            let sdV = sampleField(in.textureSlot, in.texcoord + vec2<f32>(0.0, texel.y), msdf, in.tileUv, pageSize);
             let grad = vec2<f32>(sdU - sd, sdV - sd);
             let gradLength = length(grad);
 
@@ -204,20 +222,23 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
             }
         }
 
-        aa = max(0.5 / (radius * density), 0.0001);
+        aa = max(0.5 * fieldScale / density, 0.0001);
     }
-    let fill = smoothstep(0.5 - aa, 0.5 + aa, sd);
+    let fill = smoothstep(zero - aa, zero + aa, sd);
 
-    let shadowSd = sampleTexture(in.textureSlot, in.texcoord - shadowOffset, uvDx, uvDy).r;
+    let shadowUv = in.texcoord - shadowOffset;
+    var shadowSd = 0.0;
+    if (shadowAlpha > 0.0 && all(shadowUv >= in.tileUv.xy) && all(shadowUv <= in.tileUv.zw)) {
+        shadowSd = sampleField(in.textureSlot, shadowUv, msdf, in.tileUv, pageSize);
+    }
 
+    let outlineEdge = zero - outlineField;
     let outline = select(0.0,
-        smoothstep(outlineMin - aa, outlineMin + aa, sd) * (1.0 - fill),
-        outlineMin < 0.5);
+        smoothstep(max(outlineEdge - aa, 0.0), outlineEdge + aa, sd) * (1.0 - fill),
+        outlineField > 0.0);
 
-    // shadowBlur is an authored look and stays in field units, so it covers the
-    // same logical distance at every raster density. It only ever widens.
-    let shadowSoft = max(aa, blur);
-    let shadow = smoothstep(0.5 - shadowSoft, 0.5 + shadowSoft, shadowSd)
+    let shadowSoft = max(aa, blurField);
+    let shadow = smoothstep(max(zero - shadowSoft, 0.0), min(zero + shadowSoft, 1.0), shadowSd)
                  * shadowAlpha * (1.0 - fill) * (1.0 - outline);
 
     var fillColor : vec4<f32>;
@@ -239,70 +260,14 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
     return fillColor * fill + tOutline * outline + tShadow * shadow;
 }
 
-// ── MSDF (RGB atlas) ──────────────────────────────────────────────────────────
-
-fn median3(r: f32, g: f32, b: f32) -> f32 {
-    return max(min(r, g), min(max(r, g), b));
+@fragment
+fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
+    return shadeDistanceField(in, false);
 }
 
 @fragment
 fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
-    let ni   = in.nodeIdx;
-    let base = ni * {{nodeDataTexels}}u;
-
-    let tFill     = decodeAuthoredColor(nodes[base + 2u]);
-    let tOutline  = decodeAuthoredColor(nodes[base + 3u]);
-    let tParams   = nodes[base + 4u];
-    let tShadow   = decodeAuthoredColor(nodes[base + 5u]);
-    let tShadow2  = nodes[base + 6u];
-    let tGradAxis = nodes[base + 7u];
-
-    let outlineMin   = tParams.x;
-    let shadowAlpha  = tParams.y;
-    let blur         = tParams.z;
-    let gradStops    = u32(tParams.w + 0.5);
-    let pageSize     = vec2<f32>(atlasTextureDimensions(in.textureSlot));
-    let shadowOffset = tShadow2.xy / pageSize;
-
-    let uvDx = dpdx(in.texcoord);
-    let uvDy = dpdy(in.texcoord);
-    let msd  = sampleTexture(in.textureSlot, in.texcoord, uvDx, uvDy).rgb;
-    let sd   = median3(msd.r, msd.g, msd.b);
-
-    // See the SDF stage. An MSDF atlas is built offline and carries no distance
-    // range in its font data, so its field scale is unknown and the width has to
-    // come from the hardware derivative.
-    let aa   = max(fwidth(sd) * 0.5, 0.0001);
-    let fill = smoothstep(0.5 - aa, 0.5 + aa, sd);
-    let shadowSoft = max(aa, blur);
-
-    let shadowMsd = sampleTexture(in.textureSlot, in.texcoord - shadowOffset, uvDx, uvDy).rgb;
-    let shadowSd  = median3(shadowMsd.r, shadowMsd.g, shadowMsd.b);
-
-    let outline = select(0.0,
-        smoothstep(outlineMin - aa, outlineMin + aa, sd) * (1.0 - fill),
-        outlineMin < 0.5);
-
-    let shadow = smoothstep(0.5 - shadowSoft, 0.5 + shadowSoft, shadowSd)
-                 * shadowAlpha * (1.0 - fill) * (1.0 - outline);
-
-    var fillColor : vec4<f32>;
-    if (gradStops > 0u) {
-        // gradUV runs 0..1 across the ink box; the packed axis and bias turn
-        // that into the ramp position for whatever angle the style asked for.
-        fillColor = evalTextGradient(base, gradStops, dot(in.gradUV, tGradAxis.xy) + tGradAxis.z);
-    } else {
-        fillColor = tFill;
-    }
-
-    // A rule samples solid ink, so it is coloured exactly like a glyph interior
-    // by default - which is what gives an underline the gradient for free. An
-    // explicit decoration colour overrides it here.
-    if (in.decoration == 1u && tShadow2.z > 0.5) {
-        fillColor = decodeAuthoredColor(nodes[base + 8u]);
-    }
-
-    return fillColor * fill + tOutline * outline + tShadow * shadow;
+    return shadeDistanceField(in, true);
 }
 
 // ── Color (RGBA atlas) ────────────────────────────────────────────────────────

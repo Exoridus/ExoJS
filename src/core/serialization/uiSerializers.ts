@@ -62,7 +62,9 @@ const labelSerializer: NodeSerializer<Label> = {
     return out;
   },
   read(data) {
-    const label = new Label(typeof data.text === 'string' ? data.text : '', deserializeStyleOptions(data.style));
+    const style = deserializeStyleOptions(data.style);
+
+    const label = new Label(typeof data.text === 'string' ? data.text : '', style);
 
     if (data.enabled === false) {
       label.enabled = false;

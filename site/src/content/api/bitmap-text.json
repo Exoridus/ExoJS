@@ -1,16 +1,16 @@
 {
   "title": "BitmapText",
-  "description": "Text node that renders from an offline-generated BMFont atlas (text or BMFont JSON plus page textures), or manually supplied BmFontData. Native msdf-atlas-gen JSON needs conversion to BMFont metrics first. The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. The explicit `msdf` option selects distance rendering; imported distance metadata is retained on `font.fontData`, without changing effect units or adding effect support to color glyphs. ## Usage ```ts const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label); label.text = 'Score: 42'; // cheap - marks the geometry stale label.style.align = 'center'; // cheap - same pending pass ``` Mutating any number of properties in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
+  "description": "Text node that renders from an offline-generated BMFont atlas (text or BMFont JSON plus page textures), or manually supplied BmFontData. Native msdf-atlas-gen JSON needs conversion to BMFont metrics first. The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. The explicit `msdf` option selects distance rendering; the font's declared distance metadata then sizes outline and shadow lengths, which are logical pixels of the node's local space exactly as for Text. Colour glyphs draw fill and tint only. ## Usage ```ts const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label); label.text = 'Score: 42'; // cheap - marks the geometry stale label.style.align = 'center'; // cheap - same pending pass ``` Mutating any number of properties in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
   "symbol": "BitmapText",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 108,
+  "memberCount": 113,
   "counts": {
     "constructors": 1,
-    "methods": 47,
-    "properties": 46,
+    "methods": 51,
+    "properties": 47,
     "events": 14
   },
   "sections": [
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Text node that renders from an offline-generated BMFont atlas (text or BMFont JSON plus page textures), or manually supplied BmFontData. Native msdf-atlas-gen JSON needs conversion to BMFont metrics first.",
-        "The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. The explicit `msdf` option selects distance rendering; imported distance metadata is retained on `font.fontData`, without changing effect units or adding effect support to color glyphs.",
+        "The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. The explicit `msdf` option selects distance rendering; the font's declared distance metadata then sizes outline and shadow lengths, which are logical pixels of the node's local space exactly as for Text. Colour glyphs draw fill and tint only.",
         "## Usage",
         "```ts const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label);",
         "label.text = 'Score: 42'; // cheap - marks the geometry stale label.style.align = 'center'; // cheap - same pending pass ```",
@@ -132,6 +132,103 @@
       "title": "Methods",
       "members": [
         {
+          "name": "_assertEffects",
+          "signature": "_assertEffects(capability: TextEffectCapability, style: TextStyle): void",
+          "signatureTokens": [
+            {
+              "text": "_assertEffects",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "capability",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectCapability",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "style",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "capability",
+              "type": "TextEffectCapability",
+              "optional": false
+            },
+            {
+              "name": "style",
+              "type": "TextStyle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Throws when capability cannot draw the effects of style; changes nothing."
+        },
+        {
+          "name": "_attachEffectHost",
+          "signature": "_attachEffectHost(): void",
+          "signatureTokens": [
+            {
+              "text": "_attachEffectHost",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Validate the constructor's style and start constraining it. Subclasses call this once their glyph source is known, at the end of construction."
+        },
+        {
           "name": "_consumePendingHint",
           "signature": "_consumePendingHint(): StyleChangeHint | null",
           "signatureTokens": [
@@ -166,7 +263,36 @@
           ],
           "params": [],
           "returnType": "StyleChangeHint | null",
-          "description": "Settle this node's own changes and its observed style revision. Clearing the style's public dirty cycle rearms onChange; it must not erase a layout or font change that another node sharing the style has yet to read."
+          "description": "Rearm the style's change signal without acknowledging any other node's revision."
+        },
+        {
+          "name": "_effectCeiling",
+          "signature": "_effectCeiling(): TextEffectCapability",
+          "signatureTokens": [
+            {
+              "text": "_effectCeiling",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectCapability",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "TextEffectCapability",
+          "description": "The most this node can ever draw: what the capability checks measure against. A node whose capability can still grow reports where it stops."
         },
         {
           "name": "_markDirty",
@@ -470,6 +596,69 @@
           "params": [],
           "returnType": "this",
           "description": "Release keyboard focus from this node if it currently holds it."
+        },
+        {
+          "name": "checkEffects",
+          "signature": "checkEffects(style: TextStyle | TextStyleOptions): TextEffectIssue | null",
+          "signatureTokens": [
+            {
+              "text": "checkEffects",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "style",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyleOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectIssue",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "style",
+              "type": "TextStyle | TextStyleOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TextEffectIssue | null",
+          "description": "The first outline or shadow in style this node cannot draw, or null. Answers what assigning the style would throw as a TextEffectError, without throwing. Defaults to the attached style."
         },
         {
           "name": "clearFilters",
@@ -1731,7 +1920,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Replace the font and mark the geometry stale."
+          "description": "Replace the font and mark the geometry stale. Throws TextEffectError and keeps the current font when the new one cannot draw the current style's effects."
         },
         {
           "name": "setLocalBounds",
@@ -2950,7 +3139,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scale factor applied to all glyph metrics from the font descriptor."
+          "description": "Scale factor applied to all glyph metrics from the font descriptor. Effect lengths stay in local logical pixels, so the distance-field capacity scales with it; a scale whose capacity cannot hold the current style's effects throws TextEffectError and changes nothing."
         },
         {
           "name": "interactive",
@@ -3047,6 +3236,27 @@
           "params": [],
           "returnType": null,
           "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
+        },
+        {
+          "name": "maxEffectExtent",
+          "signature": "maxEffectExtent: number",
+          "signatureTokens": [
+            {
+              "text": "maxEffectExtent",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Largest outline width, or shadow offset plus blur, this node can draw, in logical pixels of its local space. 0 when its glyphs have no usable distance field."
         },
         {
           "name": "msdf",

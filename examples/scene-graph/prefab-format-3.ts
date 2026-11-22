@@ -4,17 +4,17 @@ import { startExample } from '@examples/runtime';
 
 const source = assets.spaceShipBlue.source;
 
-// An older document: the texture is a plain `{ source, options }` object.
-const legacyDocument = {
-  version: 2,
-  root: { type: 'Sprite', x: 0, y: 0, anchorX: 0.5, anchorY: 0.5, texture: { source, options: {} } },
+// A saved document with a typed texture reference.
+const savedDocument = {
+  version: 4,
+  root: { type: 'Sprite', x: 0, y: 0, anchorX: 0.5, anchorY: 0.5, texture: { $type: 'texture', source } },
 };
 
 class PrefabScene extends Scene {
   private readonly status = this.track(new Text('', { fillColor: Color.white, fontSize: 22 }));
 
   override async load(): Promise<void> {
-    // A version 2 texture reference is resolved from what the loader already holds.
+    // Preload the texture so either sprite can draw immediately.
     await this.assets.load(new Texture(source));
   }
 
@@ -24,16 +24,16 @@ class PrefabScene extends Scene {
     const template = new Sprite(source).setAnchor(0.5);
     const current = Prefab.from(template, this.app.loader).toJSON();
 
-    // Documents written by earlier versions still read, and both forms instantiate the same way.
+    // Both the captured and saved document instantiate the same way.
     const fromCurrent = Prefab.fromJSON(current).instantiate(this.app.loader) as Sprite;
-    const fromLegacy = Prefab.fromJSON(legacyDocument).instantiate(this.app.loader) as Sprite;
+    const fromSaved = Prefab.fromJSON(savedDocument).instantiate(this.app.loader) as Sprite;
     // #endregion guide:prefab-format-3
 
     fromCurrent.setPosition(this.app.width * 0.3, 580);
-    fromLegacy.setPosition(this.app.width * 0.7, 580);
+    fromSaved.setPosition(this.app.width * 0.7, 580);
     this.status.setPosition(60, 40);
-    this.status.text = `Saved document, version ${current.version}:\n${JSON.stringify(current.root, null, 1)}\n\nLeft: instantiated from it.   Right: from a version 2 document.`;
-    this.root.addChild(fromCurrent, fromLegacy, this.status);
+    this.status.text = `Saved document, version ${current.version}:\n${JSON.stringify(current.root, null, 1)}\n\nLeft: instantiated from it.   Right: from a saved format 4 document.`;
+    this.root.addChild(fromCurrent, fromSaved, this.status);
   }
 }
 

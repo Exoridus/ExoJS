@@ -502,11 +502,13 @@ describe('style lengths stated in logical pixels', () => {
   // it rather than measured.
   test('a shadow reaches the same distance whatever the text raster density', async () => {
     const shadowOffsetX = 6;
+    // A 6px offset needs more reach than the default distance field.
+    const sdfRadius = 8;
 
     const measure = async (pixelRatio: number): Promise<number> => {
       const backend = await createWebGl2TestBackend(size, 1);
 
-      const plain = new Text('H', { fontSize: 48, pixelRatio, fillColor: new Color(255, 255, 255) });
+      const plain = new Text('H', { fontSize: 48, pixelRatio, sdfRadius, fillColor: new Color(255, 255, 255) });
 
       plain.position.set(30, 20);
       renderWebGl2Once(backend, plain, Color.black);
@@ -521,6 +523,7 @@ describe('style lengths stated in logical pixels', () => {
       const shadowed = new Text('H', {
         fontSize: 48,
         pixelRatio,
+        sdfRadius,
         fillColor: new Color(0, 0, 0),
         shadowColor: new Color(255, 255, 255),
         shadowAlpha: 1,

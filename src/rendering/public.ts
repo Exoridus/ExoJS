@@ -142,6 +142,8 @@ export type { LayoutOptions } from '#rendering/text/LayoutOptions';
 export type { LineShaper, ShapingMode } from '#rendering/text/shaping';
 export type { TextOptions } from '#rendering/text/Text';
 export { Text } from '#rendering/text/Text';
+export { TextEffectError } from '#rendering/text/TextEffectError';
+export type { TextEffect, TextEffectFailureReason, TextEffectIssue } from '#rendering/text/textEffects';
 export type {
   FontFamily,
   FontRegistry,
