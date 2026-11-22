@@ -7,7 +7,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs/lighting';
+import { ForwardLighting, LineLight, LitMaterial, NormalMap, PointLight } from '@codexo/exojs/lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -144,6 +144,68 @@ describe('lighting WebGPU browser', () => {
       expect(Math.abs(mirroredNear[0] - near[0])).toBeLessThanOrEqual(2);
     } finally {
       cleanup();
+    }
+  });
+
+  test('a forward line lights along its rotated capsule, not the midpoint disc', async ctx => {
+    const backend = await createBackend();
+    const device = getBackendDevice(backend);
+    const albedo = createAlbedo();
+    const normalMap = createFlatNormalMap();
+    const lighting = new ForwardLighting({ maxLights: 1, ambient: Color.black });
+    const material = new LitMaterial({ lighting, normals: new NormalMap(normalMap) });
+    const root = new Container();
+    const surface = new Sprite(albedo);
+
+    surface.material = material;
+    surface.setPosition(0, 0).setScale(canvasSize, canvasSize);
+    root.addChild(surface);
+
+    const line = lighting.add(new LineLight({ length: 40, radius: 8, height: 16, intensity: 1 })).setPosition(32, 32);
+    const render = async (): Promise<void> => {
+      lighting.update();
+      backend.clear(Color.black);
+      root.render(backend);
+      backend.flush();
+      await device.queue.onSubmittedWorkDone();
+    };
+    const cleanup = (): void => {
+      root.destroy();
+      material.destroy();
+      lighting.destroy();
+      normalMap.destroy();
+      albedo.destroy();
+      backend.destroy();
+    };
+
+    device.pushErrorScope('validation');
+
+    try {
+      await render();
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expect(readPixel(50, 32)[0]).toBeGreaterThan(170);
+      expect(readPixel(32, 45)[0]).toBeLessThan(10);
+
+      line.rotation = 90;
+      await render();
+      expect(readPixel(32, 50)[0]).toBeGreaterThan(170);
+      expect(readPixel(50, 32)[0]).toBeLessThan(10);
+      expect(await device.popErrorScope()).toBeNull();
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
+        cleanup();
+        // eslint-disable-next-line vitest/no-disabled-tests -- intentional runtime guard: the software WebGPU adapter can drop the device mid-test
+        ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+        return;
+      }
+
+      throw error;
+    } finally {
+      if (!albedo.destroyed) {
+        cleanup();
+      }
     }
   });
 
