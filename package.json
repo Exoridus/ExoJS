@@ -240,7 +240,8 @@
     "release:bootstrap": "tsx ./scripts/release/run.ts bootstrap",
     "release:registry-plan": "tsx ./scripts/release/run.ts registry-plan",
     "release:notes": "tsx ./scripts/generate-release-notes.ts",
-    "release:changelog": "tsx ./scripts/release/generate-changelog.ts"
+    "release:changelog": "tsx ./scripts/release/generate-changelog.ts",
+    "lint:react:shadow": "oxlint --config scripts/ci/oxlint-react-shadow.json --format=json packages/exojs-react/src packages/exojs-react/examples site/src/components"
   },
   "license": "MIT",
   "publishConfig": {

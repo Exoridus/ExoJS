@@ -141,11 +141,11 @@ exojs/no-deprecated-api,retain: unavailable natively,1050,false,oxlint-js-plugin
 exojs/no-self-enabled-check,retain: unavailable natively,1050,false,oxlint-js-plugin-probe,Project-specific engine correctness; keep all rules; run actual CLI parity and mutation fixtures
 exojs/no-unregistered-system,retain: unavailable natively,1050,false,oxlint-js-plugin-probe,Project-specific engine correctness; keep all rules; run actual CLI parity and mutation fixtures
 exojs/require-super-destroy,retain: unavailable natively,1050,false,oxlint-js-plugin-probe,Project-specific engine correctness; keep all rules; run actual CLI parity and mutation fixtures
-no-dupe-args,retain: unavailable natively,3353,false,compiler-or-style-redundancy-review,Potentially caught by parser/strict module or style-only; prove with real failing fixture and relevant TS project
-no-octal,retain: unavailable natively,3353,false,compiler-or-style-redundancy-review,Potentially caught by parser/strict module or style-only; prove with real failing fixture and relevant TS project
+no-dupe-args,retain: unavailable natively,3353,false,retired-after-redundancy-review,Strict ECMAScript module syntax rejects duplicate parameter bindings; negative Node ESM parsing fixture guards this.
+no-octal,retain: unavailable natively,3353,false,retired-after-redundancy-review,Legacy octal literals are SyntaxErrors in strict ECMAScript modules; negative Node ESM parsing fixture guards this.
 no-restricted-syntax,retain: unavailable natively,1056,false,retain-custom-restriction,Repository-specific forbidden patterns; retain unless every selector has a measured replacement
 no-undef,retain: nursery implementation,87,false,native-divergence-review,"Unavailable, nursery or divergent native implementation; require same-failure comparison before migration"
-no-undef-init,retain: unavailable natively,1056,false,compiler-or-style-redundancy-review,Potentially caught by parser/strict module or style-only; prove with real failing fixture and relevant TS project
+no-undef-init,retain: unavailable natively,1056,false,retired-after-redundancy-review,Purely stylistic let/var initialized to undefined adds no safety beyond TypeScript and existing unused-value checks.
 no-unreachable-loop,retain: nursery implementation,1056,false,native-divergence-review,"Unavailable, nursery or divergent native implementation; require same-failure comparison before migration"
 no-unsafe-optional-chaining,retain: observed diagnostic mismatch,3353,false,native-divergence-review,"Unavailable, nursery or divergent native implementation; require same-failure comparison before migration"
 no-useless-assignment,retain: nursery implementation,3353,false,native-divergence-review,"Unavailable, nursery or divergent native implementation; require same-failure comparison before migration"
