@@ -165,6 +165,21 @@ export default [
     assertCleaned();
   });
 
+  it.each([
+    ['next-line', '// oxlint-disable-next-line no-debugger\ndebugger;\n'],
+    ['same-line', 'debugger; // oxlint-disable-line no-debugger\n'],
+    ['block', '/* oxlint-disable no-debugger */\ndebugger;\n/* oxlint-enable no-debugger */\n'],
+  ])('keeps native-only %s suppressions from disabling ESLint rules', (_kind, source) => {
+    write('src/entry.ts', source);
+
+    const result = run();
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('=== lint: engine');
+    expect(result.stdout).toContain('no-debugger');
+    assertCleaned();
+  });
+
   it('keeps named-project imported promise checks on ESLint', () => {
     configure(
       `{ files: ['examples/**/*.ts'], languageOptions: { parserOptions: { project: './tsconfig.examples.json', projectService: false } }, rules: { '@typescript-eslint/no-floating-promises': 'error' } },`,

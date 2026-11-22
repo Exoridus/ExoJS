@@ -147,9 +147,9 @@ export const nativeRulesForConfig = (config: Linter.Config, source: string, expe
     parser.meta.version !== expected.parser.version ||
     language?.sourceType !== 'module' ||
     !isRecord(parserOptions) ||
-    // A raw text match is deliberately conservative: a string containing an
-    // ESLint directive also keeps full ESLint instead of risking suppression drift.
-    /\/[*/][\s*]*(?:eslint(?:\s|-)|globals?\s|exported\s)/u.test(source) ||
+    // Native-only directives must not suppress a rule that ESLint would report.
+    // A raw text match also keeps directive-like strings on full ESLint.
+    /\/[*/][\s*]*(?:(?:eslint|oxlint)(?:\s|-)|globals?\s|exported\s)/u.test(source) ||
     Object.keys(parserOptions).some(key => !['tsconfigRootDir', 'projectService', 'project', 'program'].includes(key)) ||
     (parserOptions.project !== undefined && parserOptions.project !== null && parserOptions.project !== false) ||
     (parserOptions.program !== undefined && parserOptions.program !== null) ||
