@@ -3,16 +3,10 @@
 #
 # Branch pushes:  `scripts/ci/push-scope.ts` handles empty and published-data
 #                 ranges. Other pushes run path-aware static gates and local
-#                 test lanes against the pushed range. CI retains its complete
-#                 affected matrix. An unknown range takes the full local path.
-#
-#                 The point of running suites here rather than leaving them to
-#                 CI: a push that fails remote costs a round trip and blocks an
-#                 auto-merge, and every lane below is one a developer could have
-#                 run locally in less time than that round trip takes. What it
-#                 does NOT run is a lane the change cannot affect - a src-only
-#                 change never waits for the audio or tilemap-worker browser
-#                 lanes.
+#                 units and allocation/physics checks against the pushed range.
+#                 Resolved source scopes explicitly defer browser, benchmark
+#                 and smoke lanes to mandatory CI for the pushed commit.
+#                 Unknown, global or unresolved scopes keep broad local lanes.
 # Tag pushes:     `scripts/ci/trust.ts` - the release workflow's own admission
 #                 check: the tagged commit carries the package.json version,
 #                 sits on origin/main and has a green `verdict`. Nothing is
@@ -84,7 +78,8 @@ if [ "$is_branch_push" = "1" ]; then
             echo "[pre-push] fast static validation"
             npm run gates -- affected-fast "$lane_base" "$push_head_sha" || exit 1
 
-            # Dist consumers need the current build before their gates run.
+            # Static and retained unit consumers still need current dist even
+            # when browser, benchmark and smoke lanes defer to mandatory CI.
             needs_dist=$(node scripts/ci/local-policy.ts --needs-dist "$lane_base" "$push_head_sha") || exit 1
             if [ "$needs_dist" = "true" ]; then
                 echo "[pre-push] checking dist against the sources"
@@ -96,10 +91,10 @@ if [ "$is_branch_push" = "1" ]; then
 
             if [ -n "$lane_base" ]; then
                 echo "[pre-push] running the test lanes this push requires"
-                npm run lanes -- --run --tests-only --base "$lane_base" || exit 1
+                npm run lanes -- --run --tests-only --pre-push --base "$lane_base" || exit 1
             else
                 echo "[pre-push] no base commit to scope lanes against - running every lane"
-                npm run lanes -- --run --tests-only --all || exit 1
+                npm run lanes -- --run --tests-only --pre-push --all || exit 1
             fi
             ;;
     esac

@@ -47,7 +47,9 @@ git config fetch.prune true
 
 ## Reviewed CI-first batch pushes
 
-The regular pre-push hook and complete applicable local validation remain the default. For a batch that has been explicitly authorized by the orchestrator and already passed targeted prevalidation, a single CI-first push may omit the local pre-push re-run. This is not permission to skip tests: verify the remote branch and PR head SHA, wait for the complete required GitHub CI and successful `verdict` for that exact head, and require independent review and merge authorization. See [Reviewed CI-first batch pushes](scripts/ci/VALIDATION.md#reviewed-ci-first-batch-pushes) for the complete contract. Never disable Husky globally.
+The regular pre-push hook runs affected static gates, dependency-selected units and applicable allocation/physics checks. For a resolved source scope, its explicit `--pre-push` mode reports browser, benchmark and smoke lanes deferred to mandatory CI for the pushed commit. Unknown, global, deleted or unresolved inputs retain the broad local contract. A fresh dist remains required when retained gates or units consume it. Manual `pnpm lanes --run` keeps its existing browser and smoke behavior; inspect the hook's selection with `pnpm lanes --pre-push --tests-only --base origin/next`. See [Dependency-aware test selection](scripts/ci/AFFECTED_TESTS.md) for the scope and fallback rules.
+
+For a batch that has been explicitly authorized by the orchestrator and already passed targeted prevalidation, a single CI-first push may omit the local pre-push re-run. This is not permission to skip tests: verify the remote branch and PR head SHA, wait for the complete required GitHub CI and successful `verdict` for that exact head, and require independent review and merge authorization. See [Reviewed CI-first batch pushes](scripts/ci/VALIDATION.md#reviewed-ci-first-batch-pushes) for the complete contract. Never disable Husky globally.
 
 ## Shader tooling
 

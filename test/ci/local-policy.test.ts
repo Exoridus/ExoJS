@@ -16,6 +16,68 @@ const lanesFor = (file: string) => {
 };
 
 describe('local validation policy', () => {
+  it.each(['src/rendering/sprite/Sprite.ts', 'src/rendering/sprite/AnimatedSprite.ts'])(
+    'defers browser, benchmark and smoke lanes only in pre-push mode for %s',
+    file => {
+      const effective = effectiveLanes(selectAreas([file]));
+      const options = { ...parseLocalLaneOptions(['--tests-only', '--base', 'HEAD']), prePush: true };
+      const selected = selectLocalLanes(effective, options, [file]);
+
+      expect(selected.map(lane => lane.id)).toEqual(['unit']);
+      expect(selected[0]!.run).toContain('affected-plan.ts --run');
+      expect(selected[0]!.run).toContain('pnpm test:alloc');
+      expect(selected[0]!.run).not.toContain('--full');
+      expect(needsDist(selected)).toBe(true);
+      expect(selectLocalPolicy([file]).gates).toContain('docs:api:check');
+    },
+  );
+
+  it('keeps the full manual lane selection when pre-push mode is absent', () => {
+    const file = 'src/rendering/sprite/AnimatedSprite.ts';
+    const selected = selectLocalLanes(effectiveLanes(selectAreas([file])), parseLocalLaneOptions(['--tests-only', '--base', 'HEAD']), [
+      file,
+    ]);
+
+    expect(selected.map(lane => lane.id)).toEqual(['unit', 'webgl', 'webgpu', 'bench', 'smoke']);
+  });
+
+  it.each(['vitest.config.ts', 'unexpected/new.kind', 'src/rendering/DefinitelyDeleted.ts', 'packages/exojs-build/src/shaderPlugin.ts'])(
+    'retains broad pre-push validation for uncertain input %s',
+    file => {
+      const options = { ...parseLocalLaneOptions(['--tests-only', '--base', 'HEAD']), prePush: true };
+      const selected = selectLocalLanes(effectiveLanes(selectAreas([file])), options, [file]);
+
+      expect(selected.map(lane => lane.id)).toEqual(expect.arrayContaining(['unit', 'webgl', 'webgpu', 'smoke']));
+      expect(selected.find(lane => lane.id === 'unit')!.run).toContain('--full');
+    },
+  );
+
+  it.each([['--all'], ['--base', 'missing-pre-push-base']].map(flags => ({ flags })))(
+    'does not defer lanes for an explicit full or unresolved range $flags',
+    ({ flags }) => {
+      const file = 'src/rendering/sprite/Sprite.ts';
+      const options = { ...parseLocalLaneOptions(['--tests-only', ...flags]), prePush: true };
+      const selected = selectLocalLanes(effectiveLanes(selectAreas([file])), options, [file]);
+
+      expect(selected.map(lane => lane.id)).toEqual(expect.arrayContaining(['unit', 'webgl', 'webgpu', 'bench', 'smoke']));
+      expect(selected.find(lane => lane.id === 'unit')!.run).toContain('--full');
+    },
+  );
+
+  it('retains physics qualification in pre-push mode', () => {
+    const file = 'packages/exojs-physics/src/PhysicsWorld.ts';
+    const options = { ...parseLocalLaneOptions(['--tests-only', '--base', 'HEAD']), prePush: true };
+    const selected = selectLocalLanes(effectiveLanes(selectAreas([file])), options, [file]);
+
+    expect(selected.find(lane => lane.id === 'unit')!.run).toContain('pnpm test:physics-perf');
+  });
+
+  it('accepts the explicit pre-push mode while keeping diagnostics separate', () => {
+    expect(() => parseLocalLaneOptions(['--pre-push', '--tests-only', '--base', 'HEAD'])).not.toThrow();
+    expect(() => parseLocalLaneOptions(['--pre-push', '--only=unit'])).toThrow(/cannot combine/);
+    expect(() => parseLocalLaneOptions(['--pre-push', '--quick'])).toThrow(/cannot combine/);
+  });
+
   it('uses one graph selection for the normal workspace unit inventory', () => {
     const lanes = lanesFor('src/math/Vector.ts');
     const command = lanes.find(lane => lane.id === 'unit')!.run;

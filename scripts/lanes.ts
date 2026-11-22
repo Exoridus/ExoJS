@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { laneTimeoutMinutes } from './ci/lanes.ts';
-import { DIST_PREFLIGHT, needsDist, parseLocalLaneOptions, selectLocalLanes } from './ci/local-lanes.ts';
+import { DIST_PREFLIGHT, needsDist, parseLocalLaneOptions, planLocalLanes } from './ci/local-lanes.ts';
 import { effectiveLanes, type LaneAreas, selectAreas } from './ci/select-lanes.ts';
 import { atLeastOutputMode, readOutputOptions } from './lib/output.ts';
 import { runCommand, type RunCommandResult } from './lib/run-command.ts';
@@ -61,7 +61,7 @@ const main = async (): Promise<void> => {
   const options = parseLocalLaneOptions(outputOptions.argv);
   const files = options.all || options.only ? [] : changedFiles(options.base);
   const areas = options.all || options.only ? ALL_AREAS : selectAreas(files);
-  const selected = selectLocalLanes(effectiveLanes(areas), options, files);
+  const { selected, deferred } = planLocalLanes(effectiveLanes(areas), options, files);
   const distPreflight = needsDist(selected);
   const diagnostic = options.only !== undefined || options.quick;
   const scope = options.only
@@ -69,6 +69,10 @@ const main = async (): Promise<void> => {
     : options.all
       ? 'every local lane'
       : `${files.length} changed file(s) since ${options.base}`;
+
+  for (const lane of deferred) {
+    process.stdout.write(`lanes: deferred ${lane.id} to mandatory CI. ${lane.reason}\n`);
+  }
 
   if (!options.run || outputOptions.mode !== 'silent') {
     process.stdout.write(`lanes: ${scope}\n`);
@@ -186,7 +190,7 @@ const main = async (): Promise<void> => {
       const summary = resolve(logDirectory, `lanes-${started}-${process.pid}-${randomUUID()}.json`);
       writeFileSync(
         summary,
-        `${JSON.stringify({ completed, diagnostic, scope, base: options.base, selected: selected.map(lane => lane.id), durationMs: Date.now() - started, results }, null, 2)}\n`,
+        `${JSON.stringify({ completed, diagnostic, prePush: options.prePush, scope, base: options.base, selected: selected.map(lane => lane.id), deferred, durationMs: Date.now() - started, results }, null, 2)}\n`,
       );
 
       if (outputOptions.mode !== 'silent' || status !== 0) {
@@ -210,7 +214,11 @@ const main = async (): Promise<void> => {
 
   if (completed && outputOptions.mode !== 'silent') {
     process.stdout.write(
-      diagnostic ? 'lanes: diagnostic subset passed; full validation is still required.\n' : 'lanes: all selected lanes passed.\n',
+      diagnostic
+        ? 'lanes: diagnostic subset passed; full validation is still required.\n'
+        : deferred.length
+          ? 'lanes: pre-push checks passed; deferred lanes still require CI for this commit.\n'
+          : 'lanes: all selected lanes passed.\n',
     );
   }
 };

@@ -6,6 +6,7 @@ import type { EffectiveLanes } from './select-lanes.ts';
 export interface LocalLaneOptions {
   run: boolean;
   quick: boolean;
+  prePush: boolean;
   testsOnly: boolean;
   all: boolean;
   base: string;
@@ -39,7 +40,7 @@ const available = (): Lane[] => [...LANES.filter(eligible), SITE_LANE, SMOKE_LAN
 
 /** Strict argument handling prevents a typo from silently running or certifying a different scope. */
 export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions => {
-  const options: LocalLaneOptions = { run: false, quick: false, testsOnly: false, all: false, base: 'origin/HEAD' };
+  const options: LocalLaneOptions = { run: false, quick: false, prePush: false, testsOnly: false, all: false, base: 'origin/HEAD' };
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
@@ -48,6 +49,8 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
       options.run = true;
     } else if (arg === '--quick') {
       options.quick = true;
+    } else if (arg === '--pre-push') {
+      options.prePush = true;
     } else if (arg === '--tests-only') {
       options.testsOnly = true;
     } else if (arg === '--all') {
@@ -75,7 +78,7 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
         options.only = [...new Set(names)];
       }
     } else {
-      throw new Error(`Unknown option '${arg}'. Use --run, --base <ref>, --only <id[,id]>, --quick, --tests-only or --all.`);
+      throw new Error(`Unknown option '${arg}'. Use --run, --base <ref>, --only <id[,id]>, --quick, --pre-push, --tests-only or --all.`);
     }
   }
 
@@ -83,12 +86,22 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
     throw new Error('--only cannot combine with --quick, --tests-only or --all.');
   }
 
+  if (options.prePush && (options.only || options.quick)) {
+    throw new Error('--pre-push cannot combine with --only or --quick.');
+  }
+
   return options;
 };
 
-export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOptions, files: readonly string[] = []): Lane[] => {
+export interface LocalLanePlan {
+  selected: Lane[];
+  deferred: Array<{ id: string; reason: string }>;
+}
+
+/** Pre-push deferral is explicit; uncertain or full scopes keep their original local obligations. */
+export const planLocalLanes = (effective: EffectiveLanes, options: LocalLaneOptions, files: readonly string[] = []): LocalLanePlan => {
   if (options.only) {
-    return options.only.map(id => available().find(lane => lane.id === id)!);
+    return { selected: options.only.map(id => available().find(lane => lane.id === id)!), deferred: [] };
   }
 
   const policy = selectLocalPolicy(options.all ? [] : files);
@@ -123,7 +136,7 @@ export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOp
     .filter(Boolean)
     .join(' && ');
 
-  return [
+  const selected = [
     ...selectLanes(selectedEffective, false).filter(eligible),
     ...(selectedEffective.siteBuild ? [SITE_LANE] : []),
     ...(selectedEffective.exampleSmoke ? [SMOKE_LANE] : []),
@@ -161,4 +174,26 @@ export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOp
     })
     .filter(lane => !(options.quick && lane.local === 'browser'))
     .filter(lane => !(options.testsOnly && lane.local === 'gate'));
+
+  if (!options.prePush || options.all || base.full || full) {
+    return { selected, deferred: [] };
+  }
+
+  const deferred = selected.filter(lane => lane.local === 'browser' || lane.id === 'bench');
+
+  return {
+    selected: selected
+      .filter(lane => !deferred.includes(lane))
+      // Retained unit files can read built output too. Keep the existing
+      // freshness requirement even when the browser and smoke lanes defer.
+      .map(lane => (lane.id === 'unit' && policy.needsDist ? { ...lane, dist: true } : lane)),
+    deferred: deferred.map(lane => ({
+      id: lane.id,
+      reason: 'Resolved source scope; mandatory CI validates this lane for the pushed commit.',
+    })),
+  };
 };
+
+/** Selected commands for callers that do not need the deferral report. */
+export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOptions, files: readonly string[] = []): Lane[] =>
+  planLocalLanes(effective, options, files).selected;

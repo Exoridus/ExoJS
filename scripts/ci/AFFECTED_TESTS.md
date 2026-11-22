@@ -21,6 +21,20 @@ node scripts/ci/affected-plan.ts --base origin/next --run -- --project="exojs*" 
 
 This direct command is a diagnostic runner. Use the supervised `pnpm lanes` workflow for shared resource ownership, deadlines and completion validation. Do not run concurrent rendering or performance lanes on one machine. `--full --run` requests every test in the chosen projects; coverage also forces full execution. Project options follow `--`, keeping Vitest flags distinct from selector flags.
 
+## Pre-push scope
+
+The hook runs affected static gates and calls `pnpm lanes --run --tests-only --pre-push` for its verified range. On an existing source scope eligible for graph selection, this keeps dependency-selected units and applicable allocation/physics checks locally, then defers browser, structural benchmark and smoke lanes to mandatory CI for the pushed commit. Each deferred lane and its reason are printed, including in silent mode, and recorded in the lane summary. A successful local result does not certify the deferred lanes.
+
+Inspect that decision without running commands:
+
+```sh
+pnpm lanes --pre-push --tests-only --base origin/next
+```
+
+Global configuration, unknown or deleted inputs, an unresolved base, and `--all` retain the existing broad local lanes. Content and tooling scopes retain their existing focused policy. Without `--pre-push`, manual lane runs keep their browser, benchmark and smoke commands. `--quick` and `--only` remain separate diagnostic modes and cannot combine with `--pre-push`.
+
+The hook still verifies dist content stamps before gates that consume built output. Retained unit tests can also inspect dist, including production-stripping tests, so deferring browser lanes does not automatically remove a required build. API documentation is generated from source entry points, but site checks consume built package types. There is no reuse of an earlier test result or unchecked build artifact. Required CI, final full qualification, review and merge authorization remain unchanged.
+
 ## Range and dependency safety
 
 Local discovery resolves the merge base afresh and includes committed, staged, unstaged and untracked paths. Git paths are NUL-delimited; both sides of a rename are reported as deletion and addition. The checkout identity, range and changed-file contents are checked again after discovery; an edit or branch switch during discovery aborts the command. CI's `--committed` mode compares its actual checkout with the exact event base and rejects a dirty range by retaining the full inventory.
