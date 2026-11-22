@@ -3,6 +3,7 @@ import { graphemes, graphemeStarts, isTrivialText, textRuns, wordSegments } from
 import type { LineShaper } from './shaping';
 import { resolveShaping } from './shaping';
 import type {
+  GlyphFillBounds,
   GlyphInfo,
   GlyphPlacement,
   GlyphProvider,
@@ -328,8 +329,22 @@ export const layoutText = (
   let inkMaxX = -Infinity;
   let inkMaxY = -Infinity;
 
-  const place = (placement: GlyphPlacement): void => {
+  let fillMinX = Infinity;
+  let fillMinY = Infinity;
+  let fillMaxX = -Infinity;
+  let fillMaxY = -Infinity;
+
+  const place = (placement: GlyphPlacement, fill?: GlyphFillBounds | null): void => {
     result.push(placement);
+
+    if (fill !== null && (fill?.width ?? placement.width) > 0 && (fill?.height ?? placement.height) > 0) {
+      const x = placement.x + (fill?.x ?? 0);
+      const y = placement.y + (fill?.y ?? 0);
+      fillMinX = Math.min(fillMinX, x);
+      fillMinY = Math.min(fillMinY, y);
+      fillMaxX = Math.max(fillMaxX, x + (fill?.width ?? placement.width));
+      fillMaxY = Math.max(fillMaxY, y + (fill?.height ?? placement.height));
+    }
 
     if (placement.x < inkMinX) {
       inkMinX = placement.x;
@@ -373,21 +388,24 @@ export const layoutText = (
           prevWasSpace = true;
         }
 
-        place({
-          x: entry.x + offsetX + wordIdx * extraPerGap + (entry.info.xBearing ?? 0),
-          y: entry.y + (entry.info.yBearing ?? 0),
-          width: entry.info.width,
-          height: entry.info.height,
-          penX: entry.x + offsetX + wordIdx * extraPerGap,
-          penAdvance: entry.advance + glyphSpacing,
-          sourceStart: entry.sourceStart,
-          sourceEnd: entry.sourceEnd,
-          page: entry.info.page,
-          uvLeft: entry.info.uvLeft,
-          uvTop: entry.info.uvTop,
-          uvRight: entry.info.uvRight,
-          uvBottom: entry.info.uvBottom,
-        });
+        place(
+          {
+            x: entry.x + offsetX + wordIdx * extraPerGap + (entry.info.xBearing ?? 0),
+            y: entry.y + (entry.info.yBearing ?? 0),
+            width: entry.info.width,
+            height: entry.info.height,
+            penX: entry.x + offsetX + wordIdx * extraPerGap,
+            penAdvance: entry.advance + glyphSpacing,
+            sourceStart: entry.sourceStart,
+            sourceEnd: entry.sourceEnd,
+            page: entry.info.page,
+            uvLeft: entry.info.uvLeft,
+            uvTop: entry.info.uvTop,
+            uvRight: entry.info.uvRight,
+            uvBottom: entry.info.uvBottom,
+          },
+          entry.info.fill,
+        );
       }
 
       // Justify stretches the line to fill maxLineWidth exactly - each of the
@@ -407,21 +425,24 @@ export const layoutText = (
     }
 
     for (const { info, advance, x, y, sourceStart, sourceEnd } of line.placements) {
-      place({
-        x: x + offsetX + (info.xBearing ?? 0),
-        y: y + (info.yBearing ?? 0),
-        width: info.width,
-        height: info.height,
-        penX: x + offsetX,
-        penAdvance: advance + glyphSpacing,
-        sourceStart,
-        sourceEnd,
-        page: info.page,
-        uvLeft: info.uvLeft,
-        uvTop: info.uvTop,
-        uvRight: info.uvRight,
-        uvBottom: info.uvBottom,
-      });
+      place(
+        {
+          x: x + offsetX + (info.xBearing ?? 0),
+          y: y + (info.yBearing ?? 0),
+          width: info.width,
+          height: info.height,
+          penX: x + offsetX,
+          penAdvance: advance + glyphSpacing,
+          sourceStart,
+          sourceEnd,
+          page: info.page,
+          uvLeft: info.uvLeft,
+          uvTop: info.uvTop,
+          uvRight: info.uvRight,
+          uvBottom: info.uvBottom,
+        },
+        info.fill,
+      );
     }
 
     lines.push({
@@ -481,6 +502,7 @@ export const layoutText = (
     lines,
     advance: { width: maxLineWidth, height: allLines.length * computedLineHeight },
     ink: { x: inkMinX, y: inkMinY, width: inkMaxX - inkMinX, height: inkMaxY - inkMinY },
+    ...(fillMinX !== Infinity && { fill: { x: fillMinX, y: fillMinY, width: fillMaxX - fillMinX, height: fillMaxY - fillMinY } }),
   };
 };
 

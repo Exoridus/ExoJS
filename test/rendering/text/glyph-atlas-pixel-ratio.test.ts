@@ -16,7 +16,7 @@
  * the browser lane (`webgl2-text-pixel-ratio.test.ts`).
  */
 
-import { GlyphAtlas } from '#rendering/text/GlyphAtlas';
+import { GlyphAtlas, SDF_RADIUS } from '#rendering/text/GlyphAtlas';
 import { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 
 // ---------------------------------------------------------------------------
@@ -105,7 +105,7 @@ describe('GlyphAtlasPool identity', () => {
 
     expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' }).pixelRatio).toBe(1);
     expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' })).toBe(
-      pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 1),
+      pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', SDF_RADIUS, 1),
     );
   });
 

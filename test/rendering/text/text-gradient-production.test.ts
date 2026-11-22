@@ -8,6 +8,8 @@ import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 import * as canvasTextState from '#rendering/text/canvasTextState';
 import { Text } from '#rendering/text/Text';
+import { TextEffectError } from '#rendering/text/TextEffectError';
+import { sdfEffectCapability } from '#rendering/text/textEffects';
 import type { TextStyle as Style } from '#rendering/text/TextStyle';
 
 const loadProduction = <T>(file: string, dependencies: Record<string, unknown>): T => {
@@ -38,6 +40,7 @@ test('production rejects a ninth gradient stop before a packed neighbor can chan
     '#core/Signal': { Signal },
     '#core/dev': dev,
     './canvasTextState': canvasTextState,
+    './TextEffectError': { TextEffectError },
   });
   const packer = loadProduction<typeof import('#rendering/text/nodeDataPacker')>('rendering/text/nodeDataPacker.ts', {
     '#rendering/text/Text': { Text },
@@ -52,6 +55,7 @@ test('production rejects a ninth gradient stop before a packed neighbor can chan
     rasterPixelRatio: 1,
     getGlobalTransform: () => ({ toArray: () => [1, 0, 0, 0, 1, 0, 0, 0, 1] }),
     getLocalBounds: () => ({ x: 0, y: 0, width: 10, height: 10 }),
+    _textEffectCapability: () => sdfEffectCapability(8),
   };
   expect(() => {
     style.gradient = { stops };

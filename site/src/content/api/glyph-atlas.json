@@ -590,7 +590,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "SDF buffer radius in LOGICAL pixels - the outline/shadow reach this atlas can encode. Independent of pixelRatio: the raster buffer grows with the ratio so the logical reach stays put."
+          "description": "Distance-field reach in LOGICAL pixels: tile padding and field both end this far outside each glyph. Independent of pixelRatio: the raster buffer grows with the ratio so the logical reach stays put."
         }
       ],
       "paragraphs": [],

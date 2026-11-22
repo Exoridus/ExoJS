@@ -5,16 +5,16 @@
  * Euclidean Distance Transform (Felzenszwalb & Huttenlocher, 2012) to
  * produce a single-channel R8 SDF buffer.
  *
- * Output encoding: 128/255 ≈ 0.502 is the glyph edge. Values above 0.5
- * are inside the glyph, values below 0.5 are outside. The range encoded
- * by the SDF extends `radius` pixels beyond the geometric edge.
+ * Output encoding: 127.5/255 = 0.5 is the glyph edge. Values above 0.5
+ * are inside the glyph, values below 0.5 are outside. With `cutoff = 0.5`
+ * the field saturates `radius / 2` pixels on either side of the edge.
  *
  * Compatible with `cutoff = 0.5` in the shader's `smoothstep(0.5 − soft, 0.5 + soft, sd)`.
  */
 
 import type { CanvasTextState } from './canvasTextState';
 import { applyCanvasTextState, cssFontString } from './canvasTextState';
-import type { FontStyle, FontVariant } from './types';
+import type { FontStyle, FontVariant, GlyphFillBounds } from './types';
 
 const inf = 1e20;
 
@@ -35,9 +35,12 @@ export interface GlyphSdfOptions {
    * Defaults to 8.
    */
   buffer?: number;
+  /** Largest tile dimension the destination atlas can store. @internal */
+  maxTileSize?: number;
   /**
-   * EDT search radius. Values above `radius` pixels from the edge are
-   * clamped. Must be ≥ `buffer` for full-range SDF coverage.
+   * Distance span, in pixels, the 0..1 output range is normalised over:
+   * the value moves by `1 / radius` per pixel and saturates `radius × cutoff`
+   * pixels inside and `radius × (1 − cutoff)` pixels outside the edge.
    * Defaults to `buffer`.
    */
   radius?: number;
@@ -64,6 +67,11 @@ export interface GlyphSdfOptions {
 
 /** Result of {@link GlyphSdf.draw}. */
 export interface GlyphSdfResult {
+  /** Visible fill relative to the raster tile, in texels. @internal */
+  fill: GlyphFillBounds | null;
+  /** Tile offsets relative to the pen and line top, in texels. @internal */
+  xBearing: number;
+  yBearing: number;
   /** R8 SDF values: 0 = far outside, 255 = deep inside, ~128 = edge. */
   data: Uint8ClampedArray;
   /** Tile width in pixels (= glyphWidth + 2 × buffer). */
@@ -98,6 +106,7 @@ type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 export class GlyphSdf {
   private readonly _buffer: number;
   private readonly _radius: number;
+  private readonly _maxTileSize: number;
   private readonly _cutoff: number;
   private readonly _fontSize: number;
   private readonly _textState: CanvasTextState;
@@ -127,6 +136,8 @@ export class GlyphSdf {
   public constructor(options: GlyphSdfOptions) {
     this._buffer = options.buffer ?? 8;
     this._radius = options.radius ?? this._buffer;
+    // EDT site indices are stored in an Int16Array.
+    this._maxTileSize = Math.min(options.maxTileSize ?? 32768, 32768);
     this._cutoff = options.cutoff ?? 0.5;
     this._fontSize = options.fontSize;
 
@@ -187,7 +198,7 @@ export class GlyphSdf {
    * fresh `Uint8ClampedArray`; the caller may hold a reference to it safely
    * across subsequent `draw()` calls.
    */
-  public draw(char: string): GlyphSdfResult {
+  public draw(char: string, pixelRatio = 1): GlyphSdfResult {
     this._ensureFontMetrics();
 
     const ctx = this._ctx;
@@ -213,9 +224,16 @@ export class GlyphSdf {
     // buf + _fontAscent from the tile top. If per-glyph actualBoundingBoxAscent
     // were used here instead, different glyphs would have their baselines at
     // different positions in world space (the visual baseline-jump bug).
-    const glyphHeight = this._fontAscent + this._fontDescent;
+    const glyphAscent = Math.max(this._fontAscent, Math.ceil(m.actualBoundingBoxAscent || 0));
+    const glyphHeight = glyphAscent + Math.max(this._fontDescent, Math.ceil(m.actualBoundingBoxDescent || 0));
     const tileW = glyphWidth + 2 * buf;
     const tileH = glyphHeight + 2 * buf;
+
+    if (tileW > this._maxTileSize || tileH > this._maxTileSize) {
+      throw new RangeError(
+        `GlyphSdf: ${tileW}x${tileH}px tile at pixelRatio ${pixelRatio} exceeds the ${this._maxTileSize}px atlas page. Reduce the font size, pixel ratio or effect reach.`,
+      );
+    }
 
     // ── Resize canvas if the tile dimensions changed ───────────────────────
     if (this._canvasW !== tileW || this._canvasH !== tileH) {
@@ -230,24 +248,25 @@ export class GlyphSdf {
     applyCanvasTextState(ctx, this._textState);
     ctx.fillStyle = '#ffffff';
     // Baseline at buf + _fontAscent - consistent across all glyphs.
-    ctx.fillText(char, buf + bbLeft, buf + this._fontAscent);
+    ctx.fillText(char, buf + bbLeft, buf + glyphAscent);
 
     const rgba = ctx.getImageData(0, 0, tileW, tileH).data;
     const n = tileW * tileH;
 
     // ── Grow working arrays lazily ────────────────────────────────────────
     if (n > this._gridOuter.length) {
-      const maxDim = Math.max(tileW, tileH);
       this._gridOuter = new Float64Array(n);
       this._gridInner = new Float64Array(n);
+      this._out = new Uint8ClampedArray(n);
+    }
+
+    const maxDim = Math.max(tileW, tileH);
+
+    if (maxDim > this._f.length) {
       this._f = new Float64Array(maxDim);
       this._d = new Float64Array(maxDim);
       this._z = new Float64Array(maxDim + 1);
       this._v = new Int16Array(maxDim);
-    }
-
-    if (n > this._out.length) {
-      this._out = new Uint8ClampedArray(n);
     }
 
     // ── Initialise EDT grids from the alpha channel ───────────────────────
@@ -300,6 +319,17 @@ export class GlyphSdf {
       glyphTop: buf, // glyph content starts buf px from tile top
       glyphLeft: buf, // glyph content starts buf px from tile left
       glyphAdvance: advance,
+      xBearing: -buf,
+      yBearing: this._fontAscent - glyphAscent - buf,
+      fill:
+        m.actualBoundingBoxLeft + m.actualBoundingBoxRight > 0 && m.actualBoundingBoxAscent + m.actualBoundingBoxDescent > 0
+          ? {
+              x: buf + bbLeft - m.actualBoundingBoxLeft,
+              y: buf + glyphAscent - m.actualBoundingBoxAscent,
+              width: m.actualBoundingBoxLeft + m.actualBoundingBoxRight,
+              height: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent,
+            }
+          : null,
     };
   }
 }

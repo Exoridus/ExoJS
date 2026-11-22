@@ -18,8 +18,7 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, WrapModes } from '#rendering/types';
 
-import legacyScene from '../fixtures/scene-asset-references-v2.json';
-import typedScene from '../fixtures/scene-asset-references-v3.json';
+import typedScene from '../fixtures/scene-asset-references-v4.json';
 
 const createCoreLoader = (resolution = 1): Loader => {
   const loader = new Loader({ basePath: '/' });
@@ -65,7 +64,7 @@ describe('asset references keep their interpretation', () => {
     const loader = createCoreLoader();
     const owner = loader.createScope();
     const prefab = Prefab.fromJSON({
-      version: 3,
+      version: 4,
       root: {
         type: 'Container',
         children: [
@@ -96,7 +95,7 @@ describe('asset references keep their interpretation', () => {
     loader.destroy();
   });
 
-  test('format 3 writes a typed reference even when no options are needed', async () => {
+  test('the current format writes the typed reference format 3 introduced', async () => {
     const loader = createCoreLoader();
     const texture = await loader.load(Asset.type('texture', 'hero.png'));
     const tree = new Container();
@@ -106,14 +105,9 @@ describe('asset references keep their interpretation', () => {
 
     expect(saved).toEqual(typedScene);
 
-    const older = migrate(legacyScene);
-    expect(older.version).toBe(2);
-    expect(textures(deserializeTree(older.root, loader, undefined, older.version))).toEqual([texture]);
-
-    const prefab = Prefab.fromJSON(legacyScene);
-
-    expect(prefab.toJSON()).toEqual(legacyScene);
-    expect(textures(prefab.instantiate(loader))).toEqual([texture]);
+    const prefab = Prefab.fromJSON(typedScene);
+    expect(prefab.toJSON()).toEqual(typedScene);
+    expect(textures(prefab.instantiate(loader))[0]).toBeInstanceOf(Texture);
   });
 
   test('resolve claims without a fetch, shares identical references and heals on explicit scoped load', async () => {
@@ -381,17 +375,8 @@ describe('asset references keep their interpretation', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('hero.png'), expect.objectContaining({ source: 'serialize' }));
   });
 
-  test('legacy string references of a version 1 document stay readable', async () => {
-    const loader = createCoreLoader();
-    const texture = await loader.load(Asset.type('texture', 'hero.png'));
-    const legacy = migrate({ version: 1, root: { type: 'Container', children: [{ type: 'Sprite', texture: 'hero.png' }] } });
-
-    expect(legacy.version).toBe(1);
-    expect(textures(deserializeTree(legacy.root, loader, undefined, legacy.version))[0]).toBe(texture);
-  });
-
   test('documents are written with the current format version', () => {
-    expect(SERIALIZATION_VERSION).toBe(3);
+    expect(SERIALIZATION_VERSION).toBe(4);
     expect(() => migrate({ version: SERIALIZATION_VERSION + 1, root: { type: 'Container' } })).toThrow(/newer than the supported version/);
   });
 

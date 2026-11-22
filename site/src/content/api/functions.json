@@ -4052,7 +4052,7 @@
         },
         {
           "name": "SERIALIZATION_VERSION",
-          "signature": "SERIALIZATION_VERSION: 3",
+          "signature": "SERIALIZATION_VERSION: 4",
           "signatureTokens": [
             {
               "text": "SERIALIZATION_VERSION",
@@ -4063,13 +4063,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "3",
+              "text": "4",
               "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Current scene-serialization format version. Written into every SerializedScene and checked on deserialize so saved data can outlive the code that produced it (see the migration chain in migrate)."
+          "description": "Current scene-serialization format version. Written into every SerializedScene and SerializedPrefab. Both readers require this version."
         },
         {
           "name": "soundType",

@@ -120,7 +120,7 @@ Members a running iteration did not start with are not visited, and members remo
 
 ## Saving scenes with components
 
-Format 3 supports registered component **data**. Register the exact component class with `app.serializers.components.register`, providing a stable type id, a parser, a constructor callback returning a fresh detached instance, and a serializer for the fields to persist. Optional versions and migrations evolve those fields without serializing executable code.
+Format 4 supports registered component **data**. Register the exact component class with `app.serializers.components.register`, providing a stable type id, a parser, a constructor callback returning a fresh detached instance, and a serializer for the fields to persist. Optional versions and migrations evolve those fields without serializing executable code.
 
 <SourceSnippet source="examples/guides/serialization-and-prefabs/registered-component.ts" region="component-data" language="ts" title="The component and its persisted data" />
 

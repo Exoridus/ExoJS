@@ -411,14 +411,17 @@ const bitmapTextSerializer: NodeSerializer<BitmapText> = {
     }
 
     const layout = readLayoutOptions(data.layout);
+    const msdf = data.msdf === true;
+    const scale = num(data.scale);
+    const style = deserializeStyleOptions(data.style);
 
     return new BitmapText(
       typeof data.text === 'string' ? data.text : '',
       font,
       compact({
-        ...deserializeStyleOptions(data.style),
-        msdf: data.msdf === true,
-        scale: num(data.scale),
+        ...style,
+        msdf,
+        scale,
         layout,
       }),
     );

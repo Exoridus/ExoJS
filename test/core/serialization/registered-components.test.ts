@@ -65,7 +65,7 @@ const registerPeer = (registry: SerializationRegistry, created: Peer[]): void =>
 };
 
 const oldPeerGraph = (lastRef = 1, lastPower = 4): unknown => ({
-  version: 3,
+  version: 4,
   root: {
     type: 'Container',
     children: [
@@ -181,7 +181,7 @@ describe('registered component documents', () => {
     const created: Peer[] = [];
     registerPeer(registry, created);
     const invalid = Prefab.fromJSON({
-      version: 3,
+      version: 4,
       root: { type: 'Container', components: [{ $type: 'peer', $version: 2, power: 'invalid' }] },
     });
 

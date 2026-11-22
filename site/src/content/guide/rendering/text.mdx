@@ -118,7 +118,7 @@ Both `distanceRange` and `zeroDistanceValue` accept `null` when unknown; an expl
 
 Declared distance pages use numeric texture decoding, including the independent alpha distance channel of MTSDF. They are loaded without color conversion or premultiplication; an environment without numeric image decoding reports an error. Ordinary bitmap and color fonts keep the color decoder and its image-element fallback. Fonts sharing a page URL retain separate numeric and color interpretations, and pages remain owned by their font's asset dependency scope.
 
-Read the preserved encoding from `font.fontData.distanceField`. `padding` follows top/right/bottom/left order, `spacing` is separate, `atlasWidth`/`atlasHeight` retain declared dimensions, and each glyph retains its sampled rectangle and optional channel mask. Missing values remain absent. These describe authored data, not a guaranteed effect budget or an inferred larger packing cell. `BitmapText.fontScale` scales glyph metrics; it does not rewrite atlas-texel metadata. The construction-time `msdf` switch remains explicit, and these metadata do not change `TextStyle` units, select a new scalar SDF/MTSDF shader, or make the current shaders consume an asymmetric zero value.
+Read the preserved encoding from `font.fontData.distanceField`. `padding` follows top/right/bottom/left order, `spacing` is separate, `atlasWidth`/`atlasHeight` retain declared dimensions, and each glyph retains its sampled rectangle and optional channel mask. Missing values remain absent; nothing is inferred from atlas or font size. `BitmapText.fontScale` scales glyph metrics; it does not rewrite atlas-texel metadata. The construction-time `msdf` switch remains explicit. With `msdf: true`, the declared range, zero value and padding decide how far outlines and shadows can reach, as described under [Outlines and shadows](#outlines-and-shadows); the shader always reads the RGB median.
 
 ### Import support is not shader support
 
@@ -145,17 +145,17 @@ The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-o
 | `fontVariant` | `'normal' \| 'small-caps'` | `'normal'` | Caps variant. Small caps come from the family's own glyphs where it has them, otherwise from the browser's synthesis |
 | `fontSize` | `number` | `20` | Font size in pixels |
 | `fillColor` | `Color` | `Color.white` | Glyph fill colour |
-| `outlineColor` | `Color` | `Color.black` | SDF outline colour |
-| `outlineWidth` | `number` | `0` | Outline width in SDF units (`0`–`0.5`); `0` disables the outline |
+| `outlineColor` | `Color` | `Color.black` | Outline colour |
+| `outlineWidth` | `number` | `0` | Outline extent outside the glyph edge in logical pixels; `0` disables the outline |
 | `align` | [`TextAlignment`](/ExoJS/en/api/text-alignment/) — `'left' \| 'center' \| 'right' \| 'justify'` | `'left'` | Horizontal alignment |
 | `textTransform` | `'none' \| 'uppercase' \| 'lowercase' \| 'capitalize'` | `'none'` | Case mapping applied before layout; the node's `text` is untouched |
 | `lineHeight` | `number` | `1.2` | Line-height multiplier on `fontSize` |
 | `leading` | `number` | `0` | Extra pixel gap between lines |
 | `shadowColor` | `Color` | `Color.black` | Drop-shadow colour |
-| `shadowOffsetX` | `number` | `0` | Horizontal shadow offset in pixels |
-| `shadowOffsetY` | `number` | `0` | Vertical shadow offset in pixels |
+| `shadowOffsetX` | `number` | `0` | Horizontal shadow offset in logical pixels |
+| `shadowOffsetY` | `number` | `0` | Vertical shadow offset in logical pixels |
 | `shadowAlpha` | `number` | `0` | Shadow opacity (`0`–`1`); `0` disables the shadow |
-| `shadowBlur` | `number` | `0` | Shadow blur softness (`0`–`1`) |
+| `shadowBlur` | `number` | `0` | Half-width of the shadow's soft edge in logical pixels |
 | `underline` | `boolean` | `false` | Draw a rule under each line |
 | `strikethrough` | `boolean` | `false` | Draw a rule through each line |
 | `decorationColor` | `Color \| null` | `null` | Rule colour; `null` follows the fill, gradient included |
@@ -182,6 +182,59 @@ const banner = new Text('Level Up', {
 ```
 
 Stop offsets are clamped to `0`–`1` and sorted on the way in, and the colours are cloned, so the object you pass is never aliased. Reading `style.gradient` back gives the normalized form. The ramp is evaluated in the fragment shader from the node's own packed style, so changing it costs no atlas work — it is a `'tint'` change like `fillColor`.
+
+### Outlines and shadows
+
+`outlineWidth`, `shadowOffsetX`, `shadowOffsetY` and `shadowBlur` are **logical pixels in the node's local space**: an outline of 2 is two pixels wide around every glyph, the same at every canvas pixel ratio and every font size, and it grows with the node's scale and the camera's zoom exactly like the glyphs do. `shadowBlur` is the half-width of the shadow's soft edge: the shadow fades from full strength `shadowBlur` pixels inside its offset outline to nothing `shadowBlur` pixels outside it. That is a smooth ramp, not a CSS Gaussian.
+
+An effect is requested by `outlineWidth > 0` or `shadowAlpha > 0`; offsets and blur of an invisible shadow are free. A requested effect has to fit the glyph's distance field:
+
+| Glyphs | Outline and shadow | Reach |
+|--------|--------------------|-------|
+| `Text` (runtime SDF) | Supported | Chosen automatically; an explicit `sdfRadius` fixes it |
+| `Text` with `colorGlyphs: true` | Not supported (`'no-distance-field'`) | Fill and tint only; RGBA content is kept |
+| `BitmapText` without `msdf` | Not supported (`'no-distance-field'`) | Fill and tint only; RGBA content is kept |
+| `BitmapText` with `msdf` and declared range, zero value and padding | Supported | `min(zeroDistanceValue × distanceRange, padding) × fontScale` |
+| `BitmapText` with `msdf` but missing metadata | Not supported (`'unknown-range'`) | Fill only |
+| `BitmapText` with `msdf` and unusable metadata | Not supported (`'invalid-range'`) | Fill only |
+
+One logical pixel of the reach is kept for the antialiased edge, so `outlineWidth` — and, for a shadow, the larger of `|shadowOffsetX|` and `|shadowOffsetY|` plus `shadowBlur` — may use the reach minus one.
+
+Runtime SDF text starts with 4 pixels of reach and grows to 8, 16, 32, 63.75 or 127.5 when effects need more. For example, `outlineWidth: 4` selects an 8-pixel field. Growth switches to a new atlas tier. A smaller effect reuses the current tier, and text using the same typeface, tier and raster density shares rasterized glyphs. `Label` and `Button` use the same sizing.
+
+The two largest automatic tiers use half-pixel and whole-pixel steps in the R8 distance field. Integer effect lengths then shift the threshold by a whole number of steps. An explicit larger radius trades away that precision. Each glyph tile gains `2 × ceil(sdfRadius × rasterPixelRatio)` texels along both dimensions, so more reach reduces the number of tiles that fit in a 1024 × 1024 page (1 MiB for the R8 pixels per page). Very large fonts, densities and effects can exceed the space available for a single glyph tile.
+
+Pass `sdfRadius` to fix the reach instead. It then also becomes a hard limit that never grows - useful to pin atlas memory. A larger reach costs atlas space for the wider tile padding, and because the 8-bit field spreads over twice the reach, it coarsens glyph edges under strong magnification, which is why the reach is not simply set to the maximum.
+
+```ts
+import { Color, Text, TextEffectError } from '@codexo/exojs';
+
+const title = new Text('Game Over', { fontSize: 64, outlineColor: Color.black, outlineWidth: 4 });
+
+title.style.shadowAlpha = 0.6;
+title.style.shadowOffsetX = 6; // fits: the node moves to the 8px tier
+
+const issue = title.checkEffects({ shadowAlpha: 0.6, shadowOffsetX: 200 });
+
+if (issue !== null) {
+    console.warn(issue.reason, issue.required, issue.available); // 'insufficient-effect-capacity', 201, 127.5
+}
+
+try {
+    title.style.shadowOffsetX = 200;
+} catch (error) {
+    if (!(error instanceof TextEffectError)) {
+        throw error;
+    }
+    // The style still holds 6: a rejected change is never partially applied.
+}
+```
+
+Every operation that could produce an undrawable combination validates it synchronously and leaves everything unchanged when it fails: the constructor, assigning `text.style`, mutating a style in place — including a style shared by several nodes, which has to fit all of them — `TextStyle.copy()`, `BitmapText.setFont()`, `BitmapText.fontScale`, `Label.setTextStyle()` and `Button.setTextStyle()`, UI theme and skin text styles (when `createUITheme` or `setTheme` applies them, not when a widget first lays out) and deserialization. The effect setter rejects values that exceed the field budget.
+
+Widths are exact in the antialiasing guarantee domain: once an effect covers at least two device pixels on screen, the measured width matches the request to within a fraction of a raster pixel. Narrower than that, the half-pixel fades of the effect edge and the glyph edge merge and a one-device-pixel outline reads somewhat thinner. Under strong minification the outer fade narrows instead of tinting the tile around each glyph.
+
+Scene and prefab format 4 stores effect lengths in logical pixels. Re-export documents from versions 0 through 3 with the desired pixel lengths before loading them.
 
 ### Underline and strikethrough
 

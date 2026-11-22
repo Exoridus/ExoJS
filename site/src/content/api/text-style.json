@@ -1,6 +1,6 @@
 {
   "title": "TextStyle",
-  "description": "Describes how Text and BitmapText render their strings. Assign the same instance to multiple nodes' `style` properties to share it; each node observes changes independently and rebuilds on its next read. Every setter marks the style dirty with a StyleChangeHint so that nodes can batch-rebuild efficiently: - `'tint'` - render state only, no layout or atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild consumeDirty reads and clears the public dirty cycle without acknowledging changes on behalf of any node.",
+  "description": "Describes how Text and BitmapText render their strings. Assign the same instance to multiple nodes' `style` properties to share it; each node observes changes independently and rebuilds on its next read. Every setter marks the style dirty with a StyleChangeHint so that nodes can batch-rebuild efficiently: - `'tint'` - render state only, no layout or atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild consumeDirty reads and clears the public dirty cycle without acknowledging changes on behalf of any node. Outline and shadow lengths are logical pixels in the local space of the node drawing the style, so they scale with node and camera transforms and not with the canvas pixel ratio. While a style is attached to text nodes, a change no attached node can draw throws TextEffectError and leaves the style unchanged.",
   "symbol": "TextStyle",
   "kind": "class",
   "subsystem": "rendering",
@@ -21,7 +21,8 @@
       "paragraphs": [
         "Describes how Text and BitmapText render their strings. Assign the same instance to multiple nodes' `style` properties to share it; each node observes changes independently and rebuilds on its next read.",
         "Every setter marks the style dirty with a StyleChangeHint so that nodes can batch-rebuild efficiently: - `'tint'` - render state only, no layout or atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild",
-        "consumeDirty reads and clears the public dirty cycle without acknowledging changes on behalf of any node."
+        "consumeDirty reads and clears the public dirty cycle without acknowledging changes on behalf of any node.",
+        "Outline and shadow lengths are logical pixels in the local space of the node drawing the style, so they scale with node and camera transforms and not with the canvas pixel ratio. While a style is attached to text nodes, a change no attached node can draw throws TextEffectError and leaves the style unchanged."
       ],
       "importLine": "import { TextStyle } from '@codexo/exojs'",
       "sourceLink": null
@@ -150,7 +151,7 @@
           ],
           "params": [],
           "returnType": "StyleChangeHint | null",
-          "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Text nodes track their own revisions, so consuming this hint cannot hide a change from another node sharing the style."
+          "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Each attached text node observes changes independently of this dirty cycle."
         },
         {
           "name": "copy",
@@ -197,7 +198,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Copy all properties from style into this instance and return this."
+          "description": "Copy all properties from style into this instance and return this. Throws TextEffectError without copying anything when a node this style is attached to cannot draw the incoming effects."
         }
       ],
       "paragraphs": [],
@@ -361,7 +362,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "CSS font-family this style resolves glyphs through. Assigning a FontFace stores only its family: nothing here registers the face with document.fonts, so pass a loaded face as TextStyleOptions.font when constructing the node to have Text register and await it. The family alone still selects an already registered face."
+          "description": "CSS font-family this style resolves glyphs through. Assign a FontFace to let attached Text nodes register and load it. A family name selects a face already available to the browser."
         },
         {
           "name": "fontKey",
@@ -579,7 +580,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Outline width in SDF units (0..0.5). 0 disables the outline."
+          "description": "Outline extent outside the glyph edge in local logical pixels. 0 disables the outline."
         },
         {
           "name": "shadowAlpha",
@@ -621,7 +622,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Half-width of the shadow's soft edge in local logical pixels."
         },
         {
           "name": "shadowColor",
@@ -663,7 +664,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Horizontal shadow offset in local logical pixels."
         },
         {
           "name": "shadowOffsetY",
@@ -684,7 +685,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Vertical shadow offset in local logical pixels."
         },
         {
           "name": "strikethrough",

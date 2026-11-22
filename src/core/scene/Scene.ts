@@ -431,9 +431,8 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * application's {@link Loader} when their serializer uses
    * {@link DeserializeContext.resolveAsset}. Serializers using
    * {@link DeserializeContext.resolve} reserve deferred handles under the
-   * scene's asset scope without fetching. Older documents retain their
-   * source version through all node reads.
-   * Documents newer than the running engine throw. Returns `this`.
+   * scene's asset scope without fetching.
+   * Requires the current scene format. Returns `this`.
    *
    * @throws If the document holds a `Video` whose source the default policy
    *   (same-origin only) refuses and {@link DeserializeOptions.allowVideoSource}
@@ -447,9 +446,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
     // Links must resolve to the actual UI root even before it joins the scene.
     const pending = this._pendingUI;
     const candidate =
-      this._ui === null && pending === null && migrated.version >= 3 && migrated.ui !== undefined && Object.hasOwn(migrated.ui, '$id')
-        ? this._createUI()
-        : null;
+      this._ui === null && pending === null && migrated.ui !== undefined && Object.hasOwn(migrated.ui, '$id') ? this._createUI() : null;
     const ui = this._ui ?? pending ?? candidate ?? (() => this.ui);
     this._pendingUI = pending ?? candidate;
 

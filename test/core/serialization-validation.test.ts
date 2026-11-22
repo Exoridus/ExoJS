@@ -209,11 +209,13 @@ describe('serialization validation — top-level frame (migrate)', () => {
 
   it('rejects a version that is not a non-negative integer, for scenes and prefabs', () => {
     for (const version of [Number.NaN, -1, 1.5, '2', null]) {
-      expect(() => migrate({ version, root: { type: 'Container' } })).toThrow(/not a non-negative integer/);
-      expect(() => migratePrefab({ version, root: { type: 'Container' } })).toThrow(/not a non-negative integer/);
+      expect(() => migrate({ version, root: { type: 'Container' } })).toThrow(/must be a non-negative integer/);
+      expect(() => migratePrefab({ version, root: { type: 'Container' } })).toThrow(/must be a non-negative integer/);
     }
 
-    expect(migrate({ root: { type: 'Container' } }).version).toBe(0);
+    const unversioned = { root: { type: 'Container' } };
+    expect(() => migrate(unversioned)).toThrow(/requires version 4/);
+    expect(() => migratePrefab(unversioned)).toThrow(/requires version 4/);
   });
 
   it('accepts a well-formed document and drops an invalid ui layer', () => {

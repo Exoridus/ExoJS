@@ -281,7 +281,7 @@
             }
           ],
           "returnType": "T | null",
-          "description": "Resolve a serialized asset reference back to a loaded resource of type, or null if the reference is missing, malformed, or names an asset that was not pre-loaded (a one-time warning is emitted in the not-loaded case). Accepts a typed reference, an older source/options record, or a version 1 document's bare source string."
+          "description": "Resolve a serialized asset reference back to a loaded resource of type, or null if the reference is missing, malformed, or names an asset that was not pre-loaded (a one-time warning is emitted in the not-loaded case). The reference may be typed, an untagged source/options record, or a source string."
         }
       ],
       "paragraphs": [],
@@ -490,7 +490,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Validated document version. Remains the source version until an explicit value migration runs."
+          "description": "Format version of the validated scene or prefab document."
         }
       ],
       "paragraphs": [],

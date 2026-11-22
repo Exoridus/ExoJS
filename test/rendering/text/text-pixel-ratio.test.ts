@@ -18,7 +18,7 @@
  */
 
 import { Signal } from '#core/Signal';
-import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
+import { type GlyphAtlas, SDF_RADIUS } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { Text } from '#rendering/text/Text';
@@ -248,7 +248,7 @@ describe('Text atlas acquisition', () => {
     expect(getAtlas).toHaveBeenCalledWith(
       { family: 'Arial', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' },
       'color',
-      8,
+      SDF_RADIUS,
       3,
     );
   });
@@ -284,6 +284,7 @@ test('production build rejects an invalid pixelRatio instead of treating it as i
     './shaping': await import('#rendering/text/shaping'),
     './textLayout': await import('#rendering/text/textLayout'),
     './TextStyle': await import('#rendering/text/TextStyle'),
+    './textEffects': await import('#rendering/text/textEffects'),
   };
   runInNewContext(code, { exports, require: (id: string) => modules[id], RangeError, Number });
 

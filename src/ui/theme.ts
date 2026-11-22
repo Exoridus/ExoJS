@@ -1,7 +1,10 @@
 import { Color } from '#core/Color';
 import type { AnimatedSpriteClipDefinition } from '#rendering/sprite/AnimatedSprite';
 import type { NineSliceInsets, NineSliceModes } from '#rendering/sprite/nineSlice';
-import type { TextStyleOptions } from '#rendering/text/TextStyle';
+import type { Text } from '#rendering/text/Text';
+import { TextEffectError } from '#rendering/text/TextEffectError';
+import { autoTextEffectCapability, checkTextEffectValues } from '#rendering/text/textEffects';
+import { TextStyle, type TextStyleOptions } from '#rendering/text/TextStyle';
 import type { Texture } from '#rendering/texture/Texture';
 import type { TextureRegion } from '#rendering/texture/TextureRegion';
 
@@ -392,11 +395,55 @@ export const themeSkinSet = (theme: UITheme, role: UIThemeRole): UISkinSet => th
 /** The skin a state paints with, falling back to `normal` where undefined. */
 export const resolveUISkin = (set: UISkinSet, state: UIWidgetState): UISkin => set[state] ?? set.normal;
 
-const mergeSkin = (base: UISkin, patch: UISkinPatch): UISkin => ({
-  background: patch.background ?? base.background,
-  text: patch.text ?? base.text,
-  insets: patch.insets ?? base.insets,
-});
+/**
+ * Reject a skin text style whose outline or shadow no label could draw, at the
+ * moment the skin is applied rather than when a widget first lays out with it.
+ * @internal
+ */
+const assertSkinTextEffects = (options: TextStyleOptions): TextStyle => {
+  const text = new TextStyle(options);
+  const issue = checkTextEffectValues(
+    autoTextEffectCapability,
+    text.outlineWidth,
+    text.shadowAlpha,
+    text.shadowOffsetX,
+    text.shadowOffsetY,
+    text.shadowBlur,
+  );
+
+  if (issue !== null) {
+    throw new TextEffectError(issue, 'UI skin text style');
+  }
+
+  return text;
+};
+
+/** @internal */
+export const assertSkinSetTextEffects = (set: UISkinSet, override?: TextStyleOptions | null, node?: Text | null): void => {
+  const seen = new Set<TextStyleOptions>();
+
+  for (const { text } of Object.values(set)) {
+    if (seen.has(text)) {
+      continue;
+    }
+
+    seen.add(text);
+    const style = assertSkinTextEffects(override == null ? text : { ...text, ...override });
+    node?._assertStyleFits(style);
+  }
+};
+
+const mergeSkin = (base: UISkin, patch: UISkinPatch): UISkin => {
+  if (patch.text !== undefined) {
+    assertSkinTextEffects(patch.text);
+  }
+
+  return {
+    background: patch.background ?? base.background,
+    text: patch.text ?? base.text,
+    insets: patch.insets ?? base.insets,
+  };
+};
 
 const mergeSkinSet = (base: UISkinSet, patch: UISkinSetPatch): UISkinSet => {
   const merged: { normal: UISkin } & Partial<Record<Exclude<UIWidgetState, 'normal'>, UISkin>> = { ...base };

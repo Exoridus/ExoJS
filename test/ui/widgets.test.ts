@@ -13,6 +13,7 @@ import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { Text } from '#rendering/text/Text';
+import { TextEffectError } from '#rendering/text/TextEffectError';
 import type { GlyphInfo } from '#rendering/text/types';
 import type { Texture } from '#rendering/texture/Texture';
 import { Button } from '#ui/Button';
@@ -131,6 +132,42 @@ describe('text style overrides', () => {
       }).toThrow(TypeError);
       expect(widget.textStyleOverrides?.fontSize).toBe(20);
     }
+  });
+});
+
+describe('text effect overrides', () => {
+  it('rejects an override the label cannot draw and keeps the previous one', () => {
+    const label = new Label('abc').setTextStyle({ outlineWidth: 2 });
+    const button = new Button({ label: 'ok' }).setTextStyle({ outlineWidth: 2 });
+
+    for (const widget of [label, button]) {
+      expect(() => widget.setTextStyle({ outlineWidth: 127 })).toThrow(TextEffectError);
+      expect(widget.textStyleOverrides?.outlineWidth).toBe(2);
+    }
+
+    // The rejected override never reaches a later layout pass.
+    expect(() => label.textNode.syncDirty()).not.toThrow();
+  });
+
+  it('a widget draws ordinary pixel effects without configuring a reach', () => {
+    const label = new Label('abc').setTextStyle({ outlineWidth: 4, shadowAlpha: 0.5, shadowOffsetX: 6, shadowOffsetY: 6 });
+
+    expect(label.textStyleOverrides?.outlineWidth).toBe(4);
+    expect(label.textNode.maxEffectExtent).toBe(126.5);
+  });
+
+  it('rejects a skin text style no label could draw when the theme is applied, and keeps the previous theme', () => {
+    const text = { outlineWidth: 127 };
+
+    expect(() => createUITheme({ label: { normal: { text } } })).toThrow(TextEffectError);
+
+    const panel = new Panel();
+    const before = panel.theme;
+
+    expect(() => panel.setTheme({ label: { normal: { text } } })).toThrow(TextEffectError);
+    expect(panel.themeOverrides).toBeNull();
+    expect(panel.theme).toBe(before);
+    expect(() => panel.setTheme({ label: { normal: { text: { outlineWidth: 6 } } } })).not.toThrow();
   });
 });
 
@@ -564,17 +601,91 @@ const themeWith = (color: Color): UITheme =>
   createUITheme({ panel: { normal: { background: { kind: 'fill', color, borderColor: Color.black, borderWidth: 0, cornerRadius: 2 } } } });
 
 describe('widget skins', () => {
-  test('centers button text by its advance box rather than padded glyph ink', () => {
+  test('rejects a theme before a child override can combine into an undrawable effect', () => {
+    const root = new UIRoot();
+    const panel = new Panel();
+    const sibling = new Button({ label: 'First' });
+    const child = new Button({ label: 'Second' }).setTextStyle({ shadowOffsetX: 130 });
+    root.addChild(panel);
+    panel.addChild(sibling, child);
+    const previous = panel.theme;
+    const patch = { button: { normal: { text: { fontSize: 30, shadowAlpha: 1 } } } };
+
+    expect(() => panel.setTheme(patch)).toThrow(TextEffectError);
+    expect(panel.themeOverrides).toBeNull();
+    expect(panel.theme).toBe(previous);
+    expect(sibling.theme).toBe(previous);
+    expect(child.theme).toBe(previous);
+    expect(sibling.fontSize).toBe(16);
+
+    expect(() => {
+      root.theme = createUITheme(patch);
+    }).toThrow(TextEffectError);
+    expect(root.theme).toBe(previous);
+  });
+  test('re-centers both buttons after one reader settles a shared style change', () => {
+    const first = new Button({ width: 200, height: 48, label: 'Start' });
+    const second = new Button({ width: 120, height: 64, label: 'Play' });
+    second.labelNode.style = first.labelNode.style;
+
+    first.labelNode.style.fontSize = 30;
+    first.labelNode.syncDirty();
+    second.labelNode.syncDirty();
+
+    for (const button of [first, second]) {
+      const label = button.labelNode;
+      expect(label.textBounds.height).toBeCloseTo(36);
+      const ink = label.getLocalBounds();
+      expect(label.x + ink.x + ink.width / 2).toBeCloseTo(button.uiWidth / 2);
+      expect(label.y + ink.y + ink.height / 2).toBeCloseTo(button.uiHeight / 2);
+    }
+  });
+
+  test('repositions the button label for every state, including inset-only changes', () => {
+    const button = new Button({ width: 200, height: 48, label: 'Start' });
+    const event = { button: 0 } as InteractionEvent;
+
+    button.setTheme({
+      button: {
+        hover: { insets: { left: 12, right: 4, top: 14, bottom: 4 } },
+        pressed: { text: { fontSize: 30, fontWeight: 'bold' } },
+        focused: { text: { fontSize: 24, fontStyle: 'italic' } },
+        disabled: { text: { fontSize: 18, lineHeight: 2 } },
+      },
+    });
+
+    const assertCenter = (state: string, x: number, y: number): void => {
+      expect(button.state).toBe(state);
+      const label = button.labelNode;
+      const fill = label._fillBounds;
+      expect(label.x + fill.x + fill.width / 2).toBeCloseTo(x);
+      expect(label.y + fill.y + fill.height / 2).toBeCloseTo(y);
+    };
+
+    assertCenter('normal', 100, 24);
+    button.onPointerOver.dispatch(event);
+    assertCenter('hover', 104, 29);
+    button.onPointerDown.dispatch(event);
+    assertCenter('pressed', 100, 24);
+    button.onPointerUp.dispatch(event);
+    button.onPointerOut.dispatch(event);
+    button.onFocus.dispatch(button);
+    assertCenter('focused', 100, 24);
+    button.enabled = false;
+    assertCenter('disabled', 100, 24);
+  });
+
+  test('centers button fill in the widget and honors explicit asymmetric insets', () => {
     const button = new Button({ width: 200, height: 44, label: 'Start' });
     const label = button.labelNode;
 
-    expect(label.x + label.textBounds.width / 2).toBeCloseTo(100);
-    expect(label.y + label.textBounds.height / 2).toBeCloseTo(22);
+    expect(label.x + label._fillBounds.x + label._fillBounds.width / 2).toBeCloseTo(100);
+    expect(label.y + label._fillBounds.y + label._fillBounds.height / 2).toBeCloseTo(22);
 
     button.setTheme({ button: { normal: { insets: { left: 18, right: 6, top: 10, bottom: 2 } } } });
 
-    expect(label.x + label.textBounds.width / 2).toBeCloseTo(106);
-    expect(label.y + label.textBounds.height / 2).toBeCloseTo(26);
+    expect(label.x + label._fillBounds.x + label._fillBounds.width / 2).toBeCloseTo(106);
+    expect(label.y + label._fillBounds.y + label._fillBounds.height / 2).toBeCloseTo(26);
   });
 
   test('sizes labels and aligns checkable text without including glyph padding', () => {
@@ -586,12 +697,16 @@ describe('widget skins', () => {
 
     expect(label.uiWidth).toBe(label.textNode.textBounds.width);
     expect(label.uiHeight).toBe(label.textNode.textBounds.height);
-    expect(toggle.labelNode!.y + toggle.labelNode!.textBounds.height / 2).toBeCloseTo(toggle.uiHeight / 2);
+    expect(toggle.labelNode!.y + toggle.labelNode!._fillBounds.y + toggle.labelNode!._fillBounds.height / 2).toBeCloseTo(
+      toggle.uiHeight / 2,
+    );
 
     toggle.setTheme({ toggleTrack: { focused: { text: { fontSize: 30 } } } });
     toggle.onFocus.dispatch(toggle);
 
-    expect(toggle.labelNode!.y + toggle.labelNode!.textBounds.height / 2).toBeCloseTo(toggle.uiHeight / 2);
+    expect(toggle.labelNode!.y + toggle.labelNode!._fillBounds.y + toggle.labelNode!._fillBounds.height / 2).toBeCloseTo(
+      toggle.uiHeight / 2,
+    );
   });
 
   test('dropdown text adopts inherited normal, focused and row styles', () => {
@@ -610,7 +725,7 @@ describe('widget skins', () => {
 
     expect(label.style.fontSize).toBe(18);
     expect(label.style.fillColor.r).toBe(10);
-    expect(label.y + label.textBounds.height / 2).toBeCloseTo(20);
+    expect(label.y + label._fillBounds.y + label._fillBounds.height / 2).toBeCloseTo(20);
 
     const row = dropdown.listNode.children.find(
       (child): child is Container => child instanceof Container && child.children.some(node => node instanceof Text),
@@ -624,7 +739,7 @@ describe('widget skins', () => {
 
     expect(label.style.fontSize).toBe(20);
     expect(label.style.fillColor.r).toBe(30);
-    expect(label.y + label.textBounds.height / 2).toBeCloseTo(20);
+    expect(label.y + label._fillBounds.y + label._fillBounds.height / 2).toBeCloseTo(20);
   });
 
   test('a panel paints the theme it inherits and follows a later theme change', () => {
@@ -832,7 +947,7 @@ describe('Checkbox', () => {
     expect(checkbox.uiWidth).toBeGreaterThan(widthBefore);
     expect(paint).toHaveBeenCalledOnce();
     expect(place).toHaveBeenCalledOnce();
-    expect(labelNode.y).toBe((checkbox.uiHeight - labelNode.textBounds.height) / 2);
+    expect(labelNode.y + labelNode._fillBounds.y + labelNode._fillBounds.height / 2).toBeCloseTo(checkbox.uiHeight / 2);
   });
 
   test('is interactive and focusable and starts unchecked', () => {

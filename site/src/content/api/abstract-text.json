@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 101,
+  "memberCount": 106,
   "counts": {
     "constructors": 1,
-    "methods": 45,
-    "properties": 41,
+    "methods": 49,
+    "properties": 42,
     "events": 14
   },
   "sections": [
@@ -129,6 +129,103 @@
       "title": "Methods",
       "members": [
         {
+          "name": "_assertEffects",
+          "signature": "_assertEffects(capability: TextEffectCapability, style: TextStyle): void",
+          "signatureTokens": [
+            {
+              "text": "_assertEffects",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "capability",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectCapability",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "style",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "capability",
+              "type": "TextEffectCapability",
+              "optional": false
+            },
+            {
+              "name": "style",
+              "type": "TextStyle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Throws when capability cannot draw the effects of style; changes nothing."
+        },
+        {
+          "name": "_attachEffectHost",
+          "signature": "_attachEffectHost(): void",
+          "signatureTokens": [
+            {
+              "text": "_attachEffectHost",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Validate the constructor's style and start constraining it. Subclasses call this once their glyph source is known, at the end of construction."
+        },
+        {
           "name": "_consumePendingHint",
           "signature": "_consumePendingHint(): StyleChangeHint | null",
           "signatureTokens": [
@@ -163,7 +260,36 @@
           ],
           "params": [],
           "returnType": "StyleChangeHint | null",
-          "description": "Settle this node's own changes and its observed style revision. Clearing the style's public dirty cycle rearms onChange; it must not erase a layout or font change that another node sharing the style has yet to read."
+          "description": "Rearm the style's change signal without acknowledging any other node's revision."
+        },
+        {
+          "name": "_effectCeiling",
+          "signature": "_effectCeiling(): TextEffectCapability",
+          "signatureTokens": [
+            {
+              "text": "_effectCeiling",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectCapability",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "TextEffectCapability",
+          "description": "The most this node can ever draw: what the capability checks measure against. A node whose capability can still grow reports where it stops."
         },
         {
           "name": "_markDirty",
@@ -485,6 +611,69 @@
           "params": [],
           "returnType": "this",
           "description": "Release keyboard focus from this node if it currently holds it."
+        },
+        {
+          "name": "checkEffects",
+          "signature": "checkEffects(style: TextStyle | TextStyleOptions): TextEffectIssue | null",
+          "signatureTokens": [
+            {
+              "text": "checkEffects",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "style",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyleOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectIssue",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "style",
+              "type": "TextStyle | TextStyleOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TextEffectIssue | null",
+          "description": "The first outline or shadow in style this node cannot draw, or null. Answers what assigning the style would throw as a TextEffectError, without throwing. Defaults to the attached style."
         },
         {
           "name": "clearFilters",
@@ -2884,6 +3073,27 @@
           "params": [],
           "returnType": null,
           "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
+        },
+        {
+          "name": "maxEffectExtent",
+          "signature": "maxEffectExtent: number",
+          "signatureTokens": [
+            {
+              "text": "maxEffectExtent",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Largest outline width, or shadow offset plus blur, this node can draw, in logical pixels of its local space. 0 when its glyphs have no usable distance field."
         },
         {
           "name": "origin",

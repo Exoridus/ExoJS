@@ -6,7 +6,7 @@ import { Text } from '#rendering/text/Text';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import type { UIThemeRole, UIWidgetState } from './theme';
-import { resolveUISkin, themeSkinSet } from './theme';
+import { assertSkinSetTextEffects, resolveUISkin, themeSkinSet, type UITheme } from './theme';
 import { Widget } from './Widget';
 
 /** Options shared by the two-state controls ({@link Checkbox}, {@link Toggle}). */
@@ -41,6 +41,7 @@ export abstract class CheckableWidget extends Widget {
   private _appliedText: TextStyleOptions | null = null;
   private _pointerInside = false;
   private _explicitSize = false;
+  private _layingOutLabel = false;
 
   protected constructor(options: CheckableOptions, textRole: UIThemeRole) {
     super();
@@ -54,6 +55,13 @@ export abstract class CheckableWidget extends Widget {
     } else {
       this._appliedText = resolveUISkin(themeSkinSet(this.theme, textRole), 'normal').text;
       this._labelNode = new Text(options.label, { ...this._appliedText, ...this._textStyle });
+
+      this._labelNode._onLayout = () => {
+        if (!this._layingOutLabel) {
+          this._syncLabel();
+        }
+      };
+
       this.addChild(this._labelNode);
     }
 
@@ -102,7 +110,7 @@ export abstract class CheckableWidget extends Widget {
   public set label(value: string) {
     if (this._labelNode !== null && this._labelNode.text !== value) {
       this._labelNode.text = value;
-      this._invalidateLayout();
+      this._labelNode.syncDirty();
     }
   }
 
@@ -128,8 +136,26 @@ export abstract class CheckableWidget extends Widget {
   /** Paint the control itself at `(0, 0)`, sized by {@link _controlSize}. */
   protected abstract _paintControl(): void;
 
+  protected override _validateTheme(theme: UITheme): void {
+    assertSkinSetTextEffects(themeSkinSet(theme, this._textRole()), this._textStyle, this._labelNode);
+  }
+
   protected override _relayout(): void {
     this._applyTextStyle();
+    this._layingOutLabel = true;
+
+    try {
+      this._labelNode?.syncDirty();
+    } finally {
+      this._layingOutLabel = false;
+    }
+
+    if (!this._syncLabel()) {
+      super._relayout();
+    }
+  }
+
+  private _syncLabel(): boolean {
     const control = this._controlSize();
     const labelBounds = this._labelNode?.textBounds ?? null;
 
@@ -144,15 +170,16 @@ export abstract class CheckableWidget extends Widget {
         // new size, so continuing here would place and paint everything twice.
         super.setSize(width, height);
 
-        return;
+        return true;
       }
     }
 
     if (this._labelNode !== null && labelBounds !== null) {
-      this._labelNode.setPosition(control.width + this._labelGap, (this._uiHeight - labelBounds.height) / 2);
+      const fill = this._labelNode._fillBounds;
+      this._labelNode.setPosition(control.width + this._labelGap - fill.x, (this._uiHeight - fill.height) / 2 - fill.y);
     }
 
-    super._relayout();
+    return false;
   }
 
   protected override _repaint(): void {

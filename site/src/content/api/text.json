@@ -1,16 +1,16 @@
 {
   "title": "Text",
-  "description": "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader. Style mutations are applied automatically before the next draw - nothing has to be ticked by hand. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand. ```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label); label.style.fillColor = new Color(255, 0, 0); // cheap - no atlas work label.style.outlineWidth = 0.08; // cheap - only shader uniforms // changes are picked up automatically on the next render pass ``` **FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs - no async waiting needed. ```ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ``` Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`. Glyphs are rasterized at the Application's `pixelRatio`, so text is crisp on a HiDPI surface without any opt-in. TextOptions.pixelRatio decouples one node's glyph raster from the surface without changing its layout by so much as a line break.",
+  "description": "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader. Style mutations are applied automatically before the next draw - nothing has to be ticked by hand. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand. ```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label); label.style.fillColor = new Color(255, 0, 0); // cheap - no atlas work label.style.outlineWidth = 2; // cheap - 2 logical px, only shader data // changes are picked up automatically on the next render pass ``` **FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs - no async waiting needed. ```ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ``` Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`. Glyphs are rasterized at the Application's `pixelRatio`, so text is crisp on a HiDPI surface without any opt-in. TextOptions.pixelRatio decouples one node's glyph raster from the surface without changing its layout by so much as a line break.",
   "symbol": "Text",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 109,
+  "memberCount": 114,
   "counts": {
     "constructors": 1,
-    "methods": 46,
-    "properties": 48,
+    "methods": 50,
+    "properties": 49,
     "events": 14
   },
   "sections": [
@@ -22,7 +22,7 @@
         "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader.",
         "Style mutations are applied automatically before the next draw - nothing has to be ticked by hand. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
         "```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label);",
-        "label.style.fillColor = new Color(255, 0, 0); // cheap - no atlas work label.style.outlineWidth = 0.08; // cheap - only shader uniforms // changes are picked up automatically on the next render pass ```",
+        "label.style.fillColor = new Color(255, 0, 0); // cheap - no atlas work label.style.outlineWidth = 2; // cheap - 2 logical px, only shader data // changes are picked up automatically on the next render pass ```",
         "**FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs - no async waiting needed.",
         "```ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ```",
         "Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`.",
@@ -113,6 +113,103 @@
       "title": "Methods",
       "members": [
         {
+          "name": "_assertEffects",
+          "signature": "_assertEffects(capability: TextEffectCapability, style: TextStyle): void",
+          "signatureTokens": [
+            {
+              "text": "_assertEffects",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "capability",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectCapability",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "style",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "capability",
+              "type": "TextEffectCapability",
+              "optional": false
+            },
+            {
+              "name": "style",
+              "type": "TextStyle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Throws when capability cannot draw the effects of style; changes nothing."
+        },
+        {
+          "name": "_attachEffectHost",
+          "signature": "_attachEffectHost(): void",
+          "signatureTokens": [
+            {
+              "text": "_attachEffectHost",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Validate the constructor's style and start constraining it. Subclasses call this once their glyph source is known, at the end of construction."
+        },
+        {
           "name": "_consumePendingHint",
           "signature": "_consumePendingHint(): StyleChangeHint | null",
           "signatureTokens": [
@@ -147,7 +244,36 @@
           ],
           "params": [],
           "returnType": "StyleChangeHint | null",
-          "description": "Settle this node's own changes and its observed style revision. Clearing the style's public dirty cycle rearms onChange; it must not erase a layout or font change that another node sharing the style has yet to read."
+          "description": "Rearm the style's change signal without acknowledging any other node's revision."
+        },
+        {
+          "name": "_effectCeiling",
+          "signature": "_effectCeiling(): TextEffectCapability",
+          "signatureTokens": [
+            {
+              "text": "_effectCeiling",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectCapability",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "TextEffectCapability",
+          "description": "The most this node can ever draw: what the capability checks measure against. A node whose capability can still grow reports where it stops."
         },
         {
           "name": "_markDirty",
@@ -469,6 +595,69 @@
           "params": [],
           "returnType": "this",
           "description": "Release keyboard focus from this node if it currently holds it."
+        },
+        {
+          "name": "checkEffects",
+          "signature": "checkEffects(style: TextStyle | TextStyleOptions): TextEffectIssue | null",
+          "signatureTokens": [
+            {
+              "text": "checkEffects",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "style",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyle",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyleOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectIssue",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "style",
+              "type": "TextStyle | TextStyleOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TextEffectIssue | null",
+          "description": "The first outline or shadow in style this node cannot draw, or null. Answers what assigning the style would throw as a TextEffectError, without throwing. Defaults to the attached style."
         },
         {
           "name": "clearFilters",
@@ -3009,6 +3198,27 @@
           "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
         },
         {
+          "name": "maxEffectExtent",
+          "signature": "maxEffectExtent: number",
+          "signatureTokens": [
+            {
+              "text": "maxEffectExtent",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Largest outline width, or shadow offset plus blur, this node can draw, in logical pixels of its local space. 0 when its glyphs have no usable distance field."
+        },
+        {
           "name": "origin",
           "signature": "origin: ObservableVector",
           "signatureTokens": [
@@ -3265,7 +3475,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "SDF buffer radius (pixels) used when rasterizing glyphs for this node. Determines the maximum usable outline/shadow reach. Nodes with different radii use separate atlas instances."
+          "description": "Distance-field reach in logical pixels this node's glyphs are currently rasterized with; see TextOptions.sdfRadius. Grows on its own while no explicit radius was given. Nodes with different radii use separate atlas instances."
         },
         {
           "name": "shapingMode",
