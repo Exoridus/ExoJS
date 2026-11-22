@@ -103,7 +103,10 @@ export function languageBaselineConfig({ tsconfigRootDir }) {
         'getter-return': 'error',
         'no-class-assign': 'error',
         'no-const-assign': 'error',
-        'no-dupe-args': 'error',
+        // ECMAScript modules reject duplicate parameters and octal literals at parse time.
+        // Keep the lint layer for semantics the parser cannot enforce.
+        'no-dupe-args': 'off',
+        'no-octal': 'off',
         'no-dupe-keys': 'error',
         'no-func-assign': 'error',
         'no-import-assign': 'error',

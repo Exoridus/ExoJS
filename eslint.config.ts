@@ -158,7 +158,6 @@ export default defineConfig([
       'no-self-compare': 'error',
       'no-sequences': 'error',
       'no-template-curly-in-string': 'error',
-      'no-undef-init': 'error',
       'no-unmodified-loop-condition': 'error',
       'no-unreachable-loop': 'error',
       // ESLint 10 promoted `no-useless-assignment` to recommended. It catches

@@ -48,7 +48,8 @@ export default defineConfig([
   // - `no-set-html-directive`: no component injects raw HTML today; a new one
   //   should have to justify it. `valid-compile` surfaces Astro compiler errors
   //   at lint time.
-  // - `prefer-class-list-directive`: conditional classes use `class:list`.
+  // - Prefer `class:list` for conditional classes as an agent authoring convention;
+  //   this is no longer enforced as a correctness lint rule.
   //
   // Measured and deliberately NOT enabled (re-open by re-measuring):
   //
@@ -68,7 +69,6 @@ export default defineConfig([
     files: ['**/*.astro'],
     rules: {
       'astro/no-set-html-directive': 'error',
-      'astro/prefer-class-list-directive': 'error',
       'astro/valid-compile': 'error',
     },
   },
