@@ -93,6 +93,19 @@ describe('affected tests from the Vite graph', () => {
     expect(selection.tests.map(entry => entry.file)).toEqual(['test/raw.test.ts']);
   });
 
+  it('preserves module-owned watch attribution across scenarios in one context', async () => {
+    write('src/message.txt', 'hello\n');
+    test('test/raw.test.ts', "import value from '../src/message.txt?raw';", 'void value');
+    const initialized = await initialize();
+
+    await selectAffectedTests(initialized, ['src/leaf.ts']);
+    const selection = await selectAffectedTests(initialized, ['src/message.txt']);
+
+    expect(selection.mode).toBe('related');
+    expect(selection.fallbackReasons).toEqual([]);
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/raw.test.ts']);
+  });
+
   it('traverses a query worker through its resolved source and child imports', async () => {
     write('src/worker-leaf.ts', 'export const value = 1;\n');
     write('src/task.ts', "import { value } from './worker-leaf.ts';\nself.onmessage = () => self.postMessage(value);\n");

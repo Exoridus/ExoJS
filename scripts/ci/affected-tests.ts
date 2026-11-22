@@ -4,7 +4,7 @@ import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
-import type { EnvironmentModuleNode } from 'vite';
+import type { DevEnvironment, EnvironmentModuleNode } from 'vite';
 import type { TestProject, TestSpecification, Vitest } from 'vitest/node';
 
 export interface AffectedTestReason {
@@ -31,6 +31,7 @@ const GLOBAL =
   /(?:^|\/)(?:package\.json|[^/]*lock[^/]*\.(?:json|ya?ml)|tsconfig[^/]*\.json|[^/]*\.config\.[^/]+)$|^(?:scripts|\.github)\/|^packages\/exojs-(?:build|config)\/|^packages\/exojs-cli\/src\/commands\/assetsPack\.ts$|(?:^|\/)(?:dist|generated)\//;
 const SOURCE_TREE = /^(?:src|test|examples)\/|^packages\/[^/]+\/(?:src|test)\/|^site\/src\//;
 const VITEST_ROOT = realpathSync(fileURLToPath(new URL('../', import.meta.resolve('vitest'))));
+const STARTUP_WATCH_FILES = new WeakMap<DevEnvironment, Promise<readonly string[]>>();
 
 const portable = (file: string): string => file.split(sep).join('/');
 const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error));
@@ -288,11 +289,17 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
 
     for (const project of projects.keys()) {
       for (const environment of Object.values(project.vite.environments)) {
-        await environment.pluginContainer.buildStart();
+        let startup = STARTUP_WATCH_FILES.get(environment);
+
+        if (!startup) {
+          startup = environment.pluginContainer.buildStart().then(() => [...environment.pluginContainer.watchFiles]);
+          STARTUP_WATCH_FILES.set(environment, startup);
+        }
 
         // Startup readers have no importing module to carry their watch edges.
         // Vite normally runs shared startup hooks in the client environment.
-        for (const watched of environment.pluginContainer.watchFiles) {
+        // Reusing a context must not reclassify earlier module-owned inputs.
+        for (const watched of await startup) {
           const change = changed.get(realpathSync(resolve(project.config.root, watched)));
 
           if (change) {
