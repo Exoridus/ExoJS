@@ -35,11 +35,7 @@ import { readdir } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import {
-  isStringLiteralLikeNode,
-  isTemplateExpression,
-  withNativeSourceFile,
-} from '@codexo/exojs-config/typescript/ast';
+import { isStringLiteralLikeNode, isTemplateExpression, withNativeSourceFile } from '@codexo/exojs-config/typescript/ast';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const SELF_PATH = fileURLToPath(import.meta.url);

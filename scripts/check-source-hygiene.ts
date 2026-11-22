@@ -389,25 +389,25 @@ const scanFile = (repoPath: string, absolutePath: string, ranges: readonly LineR
       if (!isInScope(sourceFile, comment, ranges)) {
         continue;
       }
-  
+
       const text = source.slice(comment.pos, comment.end);
       const matches: Match[] = [];
-  
+
       for (const rule of RULES) {
         for (const pattern of rule.patterns) {
           for (const match of text.matchAll(pattern)) {
             if (rule.allow?.(match[0], text)) {
               continue;
             }
-  
+
             matches.push({ rule: rule.name, start: match.index, end: match.index + match[0].length, text: match[0] });
           }
         }
       }
-  
+
       for (const match of dedupe(matches)) {
         const { line } = sourceFile.getLineAndCharacterOfPosition(comment.pos + match.start);
-  
+
         violations.push({
           file: repoPath,
           line: line + 1,
@@ -417,7 +417,7 @@ const scanFile = (repoPath: string, absolutePath: string, ranges: readonly LineR
         });
       }
     }
-  
+
     return violations;
   });
 };
@@ -452,41 +452,41 @@ const fixFile = (absolutePath: string, ranges: readonly LineRange[] | null): num
 
   return withNativeSourceFile(absolutePath, source, sourceFile => {
     const comments = collectComments(sourceFile, source).sort((a, b) => a.pos - b.pos);
-  
+
     let result = '';
     let cursor = 0;
     let fixed = 0;
-  
+
     for (const comment of comments) {
       if (!isInScope(sourceFile, comment, ranges)) {
         continue;
       }
-  
+
       const text = source.slice(comment.pos, comment.end);
-  
+
       let replaced = text;
       let hits = 0;
-  
+
       for (const [pattern, ascii] of SAFE_PUNCTUATION) {
         hits += replaced.match(pattern)?.length ?? 0;
         replaced = replaced.replaceAll(pattern, ascii);
       }
-  
+
       if (hits === 0) {
         continue;
       }
-  
+
       result += source.slice(cursor, comment.pos) + replaced;
       cursor = comment.end;
       fixed += hits;
     }
-  
+
     if (fixed === 0) {
       return 0;
     }
-  
+
     writeFileSync(absolutePath, result + source.slice(cursor), 'utf8');
-  
+
     return fixed;
   });
 };
