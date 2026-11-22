@@ -22,6 +22,7 @@
  *   ... --only camera-basic        # smoke a single example (path substring)
  *   ... --sample                   # one example per category plus the colour canaries (the PR-stage subset)
  *   ... --canary                   # only the colour canaries (see `COLOR_CANARY_PATHS`)
+ *   ... --shard 1/3                # one disjoint catalog slice on an independent runner
  *   ... --renderer webgl2          # withhold the WebGPU adapter (see `forceWebGl2`)
  *   ... --concurrency 4            # parallel pages (default: half the cores, at most 4)
  *   ... --browser firefox          # run under Firefox headed (cross-browser)
@@ -60,6 +61,7 @@ import { parseArgs } from 'node:util';
 import { type Browser, type BrowserContext, chromium, firefox, type Frame, type Page } from 'playwright';
 
 import { readSiteBuildManifest } from '../../scripts/pages/site-manifest.ts';
+import { selectSmokeShard } from './smoke-shard.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, '..'); // site/
@@ -1074,6 +1076,7 @@ const main = async (): Promise<void> => {
       only: { type: 'string' },
       sample: { type: 'boolean' }, // one example per category plus the colour canaries
       canary: { type: 'boolean' }, // only the colour canaries
+      shard: { type: 'string' }, // one-based index/count, after diagnostic/sample selection
       renderer: { type: 'string' }, // 'auto' (default) | 'webgl2' (see `forceWebGl2`)
       concurrency: { type: 'string' },
       'timeout-ms': { type: 'string' },
@@ -1130,6 +1133,13 @@ const main = async (): Promise<void> => {
     const sampled = values.canary ? new Set<string>() : new Set(sampleByCategory(entries).map(entry => entry.path));
 
     entries = entries.filter(entry => canaries.has(entry.path) || sampled.has(entry.path));
+  }
+
+  const selectedCount = entries.length;
+  entries = selectSmokeShard(entries, values.shard);
+
+  if (values.shard) {
+    console.log(`[smoke] Shard ${values.shard}: ${entries.length}/${selectedCount} selected catalog entries`);
   }
 
   // Half the cores, at most four: every page runs a main thread and a renderer
