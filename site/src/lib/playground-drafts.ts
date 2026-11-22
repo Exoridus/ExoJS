@@ -1,5 +1,5 @@
 import { isEditableSharedFile } from './preview-modules';
-import { channelStorageKey } from './site-build-info';
+import { channelStorageKey, siteBuild, type SiteBuildInfo } from './site-build-info';
 
 export interface PlaygroundDraft {
   entry: string;
@@ -135,4 +135,8 @@ export const createDraftStore = (storage: () => DraftStorage, limits: { maxDraft
 };
 
 export const playgroundDrafts = createDraftStore(() => window.sessionStorage);
-export const playgroundDraftKey = (version: string, path: string): string => JSON.stringify([version, path]);
+export const playgroundDraftKey = (
+  version: string,
+  path: string,
+  build: Pick<SiteBuildInfo, 'packageVersion' | 'sourceSha'> = siteBuild,
+): string => JSON.stringify(version === 'current' ? [version, build.packageVersion, build.sourceSha, path] : [version, path]);

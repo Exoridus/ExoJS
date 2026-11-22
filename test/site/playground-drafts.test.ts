@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
-import { createDraftStore } from '../../site/src/lib/playground-drafts';
+import { createDraftStore, playgroundDraftKey } from '../../site/src/lib/playground-drafts';
 
 const fixture = () => {
   let serialized: string | null = null;
@@ -16,6 +16,21 @@ const fixture = () => {
 };
 
 const draft = { entry: 'edited entry', helpers: { 'shared/runtime.ts': { source: 'edited helper', original: 'original helper' } } };
+
+it('isolates current drafts by the deployed engine version and source revision', () => {
+  const { storage } = fixture();
+  const store = createDraftStore(() => storage);
+  const build = { packageVersion: '0.19.1', sourceSha: 'revision-a' };
+  const key = playgroundDraftKey('current', 'example.ts', build);
+  store.save(key, draft);
+
+  expect(createDraftStore(() => storage).load(playgroundDraftKey('current', 'example.ts', build))).toEqual(draft);
+  expect(store.load(playgroundDraftKey('current', 'example.ts', { ...build, sourceSha: 'revision-b' }))).toBeNull();
+  expect(store.load(playgroundDraftKey('current', 'example.ts', { ...build, packageVersion: '0.20.0' }))).toBeNull();
+  expect(playgroundDraftKey('0.19.0', 'example.ts', build)).toBe(
+    playgroundDraftKey('0.19.0', 'example.ts', { packageVersion: '0.20.0', sourceSha: 'revision-b' }),
+  );
+});
 
 it('restores the entry and edited helpers across a new store instance', () => {
   const { storage } = fixture();

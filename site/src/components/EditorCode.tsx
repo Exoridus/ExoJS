@@ -23,6 +23,7 @@ import { findFootgunCandidates, footgunMessage, type QuickInfoResponse, returnsP
 import { type PlaygroundDraft, playgroundDraftKey, playgroundDrafts } from '../lib/playground-drafts';
 import { isEditableSharedFile } from '../lib/preview-modules';
 import { createRequest } from '../lib/request-manager';
+import { siteBuild } from '../lib/site-build-info';
 import { buildExampleUrl, buildGithubRawExampleUrl, buildPublicUrl } from '../lib/url-builder';
 import { CURRENT_VERSION_ID, isCurrentVersion } from '../lib/versions';
 import styles from './EditorCode.module.scss';
@@ -978,6 +979,11 @@ export const EditorCode = ({
           {toolbarControls}
         </div>
         <p role="status" data-draft-status className={css(styles, 'file-status')}>
+          <span data-source-provenance>
+            {isCurrentVersion(selectedVersionId)
+              ? `Current build: ExoJS ${siteBuild.packageVersion || 'development'}${siteBuild.sourceSha ? ` (${siteBuild.sourceSha.slice(0, 7)})` : ''}. `
+              : `Pinned release: ExoJS ${selectedVersionId}. `}
+          </span>
           {draftStatus}
         </p>
         {typingsLoading && (
@@ -1218,18 +1224,30 @@ const getExecutionCode = async (model: monaco.editor.ITextModel, language: 'java
   type MonacoTs = { getTypeScriptWorker(): Promise<TsWorkerFactory> };
 
   for (const attempt of [0, 1]) {
+    let deadline: ReturnType<typeof setTimeout> | undefined;
+
     try {
-      const monacoTs = (monaco.languages as unknown as { typescript: MonacoTs }).typescript;
-      const workerFactory = await monacoTs.getTypeScriptWorker();
-      const worker = await workerFactory(model.uri);
-      const output = await worker.getEmitOutput(model.uri.toString());
+      const output = await Promise.race([
+        (async () => {
+          const monacoTs = (monaco.languages as unknown as { typescript: MonacoTs }).typescript;
+          const workerFactory = await monacoTs.getTypeScriptWorker();
+          const worker = await workerFactory(model.uri);
+
+          return worker.getEmitOutput(model.uri.toString());
+        })(),
+        new Promise<never>((_resolve, reject) => {
+          deadline = setTimeout(() => reject(new Error('The TypeScript compiler did not respond.')), 8000);
+        }),
+      ]);
       const jsFile = output.outputFiles.find(file => file.name.endsWith('.js'));
 
-      if (jsFile?.text) {
+      if (jsFile) {
         return jsFile.text;
       }
     } catch {
       // Fall through to the retry below - the TS worker may still be warming up.
+    } finally {
+      clearTimeout(deadline);
     }
 
     if (attempt === 0) {

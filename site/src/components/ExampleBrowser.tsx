@@ -55,6 +55,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
   const selectedVersionRef = useRef<VersionInfo | null>(null);
   const activeExampleRef = useRef<Example | null>(null);
   const bodyOverflowBeforeDrawerOpenRef = useRef<string | null>(null);
+  const breakpointRef = useRef<{ desktop: boolean; compact: boolean } | null>(null);
 
   useEffect(() => {
     selectedVersionRef.current = selectedVersion;
@@ -229,15 +230,22 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     const compactMobileMediaQuery = window.matchMedia('(max-width: 760px)');
 
     const syncBreakpoints = (): void => {
+      const desktop = desktopMediaQuery.matches;
+      const compact = compactMobileMediaQuery.matches;
+
+      if (breakpointRef.current?.desktop === desktop && breakpointRef.current.compact === compact) {
+        return;
+      }
+
+      breakpointRef.current = { desktop, compact };
       // Mirror viewport media-query state into React - the canonical
       // "subscribe to an external system, setState on change" effect use.
       // The synchronous initial call is the SSR-safe form of that pattern.
       /* eslint-disable @eslint-react/set-state-in-effect */
-      setSearchRequest(0);
-      setIsCompactMobile(compactMobileMediaQuery.matches);
-      setSidebarOpen(desktopMediaQuery.matches && !compactMobileMediaQuery.matches);
+      setIsCompactMobile(compact);
+      setSidebarOpen(desktop && !compact);
 
-      if (!compactMobileMediaQuery.matches) {
+      if (!compact) {
         setExamplesSheetOpen(false);
       }
       /* eslint-enable @eslint-react/set-state-in-effect */
@@ -258,6 +266,13 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       const versionId = readUrlState().version;
       const next = getVersionById(versionId);
 
+      if (versionId && !next) {
+        setSelectionError(`The requested version "${versionId}" is not recognized. Open the current Playground to continue.`);
+        setActiveExample(null);
+
+        return;
+      }
+
       if (next && selectedVersionRef.current?.id !== next.id) {
         setSelectedVersion(next);
         selectedVersionRef.current = next;
@@ -268,6 +283,11 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
           setExamples(getNestedExamples(next.id));
           resolveActiveExample({ canonicaliseUrl: false });
         } else {
+          setActiveExample(null);
+          setLoaded(false);
+          setLoadError(null);
+          setSelectionError(null);
+          setExamples(new Map());
           void loadExamples(next.id);
         }
 
@@ -308,8 +328,13 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
         )
       ) {
         event.preventDefault();
+        const compact = window.matchMedia('(max-width: 760px)').matches;
+        // A queued media-query event must not close the navigation immediately
+        // after this shortcut opens it for the live viewport.
+        breakpointRef.current = { compact, desktop: window.matchMedia('(min-width: 1120px)').matches };
+        setIsCompactMobile(compact);
 
-        if (isCompactMobile) {
+        if (compact) {
           setExamplesSheetOpener(document.activeElement as HTMLElement | null);
           setExamplesSheetOpen(true);
         } else {
@@ -323,7 +348,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     document.addEventListener('keydown', focusFilter);
 
     return () => document.removeEventListener('keydown', focusFilter);
-  }, [isCompactMobile]);
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
