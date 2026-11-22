@@ -133,7 +133,7 @@ describe('WebGL2 tilemap — multiple tilesets', () => {
 // Multi-texture batching must reduce draw calls without defeating the ordered
 // overhang pages from PR #832, on BOTH GPU backends.
 describe('WebGL2 tilemap — multi-texture batching', () => {
-  test('batches alternating atlas runs without changing their painter order', async  => {
+  test('batches alternating atlas runs without changing their painter order', async () => {
     const backend = await createBackend();
     const textures = ["#ff0000","#0000ff"].map(color => createSolidRectTexture(color, 12, 20));
     const map = orderedTextureRunMap(textures, [0, 1, 0, 1]);
@@ -156,7 +156,7 @@ describe('WebGL2 tilemap — multi-texture batching', () => {
     }
   });
 
-  test('flushes safely on the fifth distinct atlas', async  => {
+  test('flushes safely on the fifth distinct atlas', async () => {
     const backend = await createBackend();
     const textures = ["#ff0000","#00ff00","#0000ff","#ffff00","#00ffff"].map(color => createSolidRectTexture(color, 12, 20));
     const map = orderedTextureRunMap(textures, [0, 1, 2, 3, 4]);
