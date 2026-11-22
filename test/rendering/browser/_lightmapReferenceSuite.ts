@@ -15,6 +15,7 @@ import { type Light, LightmapLighting, LineLight, PointLight, PolygonOccluder, S
 import { describe, expect, test } from 'vitest';
 
 import { Color } from '#core/Color';
+import { View } from '#rendering/View';
 
 import { type ContactBackend, contactCanvasSize, type ContactHost, createContactHost } from './_lightmapContact';
 
@@ -255,6 +256,9 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
   describe('finite LineLight source visibility', () => {
     test('samples the emitting segment instead of casting all shadows from its centre', async () => {
       const host = await createContactHost(backend);
+
+      host.context.view = new View(128, 128, contactCanvasSize, contactCanvasSize);
+
       const lighting = new LightmapLighting(host.app, {
         ambient: Color.black,
         lightResolution: 1,
