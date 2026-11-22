@@ -1,0 +1,38 @@
+name: Temporary native tooling qualification
+
+on:
+  push:
+    branches:
+      - chore/ts71-oxlint-final-migration
+    paths:
+      - .github/workflows/ts71-tooling-probe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  tooling:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Format exact file and return source
+        shell: bash
+        run: |
+          pnpm exec oxfmt --write scripts/typecheck-type-tests.ts
+          echo '__TS71_FORMAT_BEGIN__'
+          cat scripts/typecheck-type-tests.ts
+          echo '__TS71_FORMAT_END__'
+      - name: Validate native React policy
+        shell: bash
+        run: pnpm lint:react:shadow
+      - name: Validate native ExoJS custom policy
+        shell: bash
+        run: pnpm lint:exojs:shadow
