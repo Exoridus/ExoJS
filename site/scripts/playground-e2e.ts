@@ -1251,6 +1251,98 @@ const typecheckSnippets = async (snippets: string[]): Promise<void> => {
 };
 
 const exampleLifecycleChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('video controls: real shortcuts, playback, resize and end', async () => {
+    const session = await openPlayground(browser, origin, base, 'sprites-textures/video-drawable', { width: 1000, height: 700 });
+    const { page, pageErrors } = session;
+
+    try {
+      const source = await readFile(resolve(repoRoot, 'examples/sprites-textures/video-drawable.ts'), 'utf8');
+      await runSource(
+        page,
+        `${source}\n(globalThis as any).__videoApp = app;
+(globalThis as any).__videoErrors = [];
+app.onError.add(error => (globalThis as any).__videoErrors.push(error.message));`,
+      );
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('globalThis.__videoApp?.scenes.currentScene?.video?.duration > 0');
+      const canvas = frame.locator('canvas').first();
+      const nextFrames = () => frame.evaluate('new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))');
+
+      const pressUntil = async (key: string, condition: string, argument?: number): Promise<void> => {
+        // Scene.inputs.onTrigger handles a released tap, not a held key.
+        await page.keyboard.press(key);
+        await frame.waitForFunction(condition, argument);
+        await nextFrames();
+      };
+
+      await canvas.click({ position: { x: 100, y: 100 } });
+      await pressUntil('Space', 'globalThis.__videoApp.scenes.currentScene.video.currentTime > 0');
+      await pressUntil('Space', 'globalThis.__videoApp.scenes.currentScene.video.paused');
+
+      for (const [key, expected] of [
+        ['2', 1],
+        ['1', 0],
+        ['2', 1],
+      ] as const) {
+        await pressUntil(
+          key,
+          `index => {
+            const scene = globalThis.__videoApp.scenes.currentScene;
+            return scene.videoIdx === index && !scene.loading && scene.video.duration > 0;
+          }`,
+          expected,
+        );
+      }
+
+      const messagesBeforeUnboundKey = session.console.length;
+      await page.keyboard.press('3');
+      await nextFrames();
+      assert(
+        (await frame.evaluate<number>('globalThis.__videoApp.scenes.currentScene.videoIdx')) === 1,
+        'Unbound key 3 must preserve the clip',
+      );
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+      const shortcutErrors = session.console.slice(messagesBeforeUnboundKey).filter(message => message.type === 'error');
+      assert(shortcutErrors.length === 0, shortcutErrors.map(message => message.text).join('\n'));
+      const inputErrors = await frame.evaluate<string[]>('globalThis.__videoErrors');
+      assert(inputErrors.length === 0, inputErrors.join('\n'));
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole('tab', { name: 'Demo', exact: true }).click();
+      const resized = await canvas.boundingBox();
+      assert(resized !== null && resized.width <= 390 && resized.height > 0, 'Video preview must fit the resized viewport');
+      await frame.evaluate(`(() => {
+        const scene = globalThis.__videoApp.scenes.currentScene;
+        scene.panel.set('loop', false);
+        scene.panel.set('seek', 99);
+      })()`);
+      await canvas.click({ position: { x: 100, y: 100 } });
+      await pressUntil('Space', '!globalThis.__videoApp.scenes.currentScene.video.paused');
+      await frame.waitForFunction('globalThis.__videoApp.scenes.currentScene.video.videoElement.ended', undefined, { timeout: 15_000 });
+      assert(
+        await frame.evaluate<boolean>('globalThis.__videoApp.scenes.currentScene.panel.values.paused'),
+        'End must update the pause control',
+      );
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } catch (error) {
+      const state = await (
+        await previewFrame(page)
+      ).evaluate(`(() => {
+        const app = globalThis.__videoApp;
+        const scene = app?.scenes.currentScene;
+        return { clip: scene?.videoIdx, loading: scene?.loading, media: scene?.mediaState, values: scene?.panel?.values,
+          time: scene?.video?.currentTime, paused: scene?.video?.paused, errors: globalThis.__videoErrors,
+          focus: document.activeElement?.tagName, visibility: document.visibilityState };
+      })()`);
+      console.error('[e2e] Video state:', JSON.stringify(state));
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
   const examples = [
     'input/mouse-and-pointer',
     'input/key-rebinding',
