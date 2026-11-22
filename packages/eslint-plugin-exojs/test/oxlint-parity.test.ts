@@ -22,6 +22,12 @@ interface OxlintDiagnostic {
 interface OxlintOutput {
   diagnostics: OxlintDiagnostic[];
 }
+interface ParityDiagnostic {
+  ruleId: string;
+  message: string;
+  line: number;
+  column: number;
+}
 interface Fixture {
   id: string;
   bad: string;
@@ -39,9 +45,15 @@ const fixtures: Fixture[] = [
     bad: "import { Old } from '@codexo/exojs';",
     options: { source: '@codexo/exojs', deprecated: { Old: 'Use New instead.' } },
   },
-  { id: 'exojs/no-self-enabled-check', bad: 'class Pass extends RenderPass { execute(context) { if (!this.enabled) return; } }' },
+  {
+    id: 'exojs/no-self-enabled-check',
+    bad: 'class Pass extends RenderPass { execute(context) { if (!this.enabled) return; } }',
+  },
   { id: 'exojs/no-unregistered-system', bad: 'const physics = new PhysicsSystem();' },
-  { id: 'exojs/require-super-destroy', bad: 'class Node extends Container { destroy() { this.texture.destroy(); } }' },
+  {
+    id: 'exojs/require-super-destroy',
+    bad: 'class Node extends Container { destroy() { this.texture.destroy(); } }',
+  },
   {
     id: 'exojs-engine/no-allocation-in-hot-hook',
     bad: 'class Effect { getOutputBounds(input, output) { return { x: 1 }; } }',
@@ -61,15 +73,17 @@ const oxlintBin = resolve(dirname(oxlintManifestPath), binRelative);
 
 let directory: string;
 
-const eslintDiagnostics = (fixture: Fixture, source: string): Array<{ ruleId: string; message: string; line: number; column: number }> => {
+const eslintDiagnostics = (fixture: Fixture, source: string): ParityDiagnostic[] => {
   const configured: Linter.RuleEntry = fixture.options ? ['error', fixture.options] : 'error';
   const linted = new Linter().verify(
     source,
-    [{
-      files: ['**/*.js'],
-      plugins: { exojs: exoPlugin, 'exojs-engine': exoEnginePlugin },
-      rules: { [fixture.id]: configured },
-    }],
+    [
+      {
+        files: ['**/*.js'],
+        plugins: { exojs: exoPlugin, 'exojs-engine': exoEnginePlugin },
+        rules: { [fixture.id]: configured },
+      },
+    ],
     'fixture.js',
   );
 
@@ -81,14 +95,22 @@ const eslintDiagnostics = (fixture: Fixture, source: string): Array<{ ruleId: st
   }));
 };
 
-const oxlintDiagnostics = (fixture: Fixture, source: string): Array<{ ruleId: string; message: string; line: number; column: number }> => {
+const oxlintDiagnostics = (fixture: Fixture, source: string): ParityDiagnostic[] => {
   const input = join(directory, 'fixture.js');
   const config = join(directory, '.oxlintrc.json');
   writeFileSync(input, source);
   writeFileSync(
     config,
     JSON.stringify({
-      categories: { correctness: 'off', suspicious: 'off', pedantic: 'off', perf: 'off', style: 'off', restriction: 'off', nursery: 'off' },
+      categories: {
+        correctness: 'off',
+        suspicious: 'off',
+        pedantic: 'off',
+        perf: 'off',
+        style: 'off',
+        restriction: 'off',
+        nursery: 'off',
+      },
       jsPlugins: ['./oxlint.mjs', './oxlint-engine.mjs'],
       rules: { [fixture.id]: fixture.options ? ['error', fixture.options] : 'error' },
     }),

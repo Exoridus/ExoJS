@@ -142,29 +142,23 @@ Creating a nested function, including a local function declaration, is reported 
 
 These callback models match names and argument positions, assuming the synchronous Array/TypedArray contracts for the listed methods; they do not resolve receiver types or shadowed builtins. A custom or lazy iterator method with the same name can therefore be classified as synchronous. Unknown callback APIs, named helper calls, aliases, computed invocation forms and `.bind` remain opaque. Nested `async` and generator functions also remain opaque, including their synchronous portions: the rule does not perform `await`/`yield` control-flow analysis. Their creation still produces a closure diagnostic. An immediate call inside a deferred function stays behind that outer execution boundary.
 
-## License
-
-MIT
-
 ## Experimental Oxlint integration
 
 Oxlint's JavaScript plugin API can load the same ExoJS rule modules without rewriting their AST checks. Two **opt-in** subpaths provide default exports with the plugin metadata Oxlint expects:
 
 ```json
 {
-  "jsPlugins": [
-    "@codexo/eslint-plugin-exojs/oxlint",
-    "@codexo/eslint-plugin-exojs/oxlint-engine"
-  ],
+  "jsPlugins": ["@codexo/eslint-plugin-exojs/oxlint", "@codexo/eslint-plugin-exojs/oxlint-engine"],
   "rules": {
     "exojs/no-async-update": "error",
     "exojs/require-super-destroy": "error",
-    "exojs-engine/no-allocation-in-hot-hook": [
-      "error",
-      { "methods": ["getOutputBounds"] }
-    ]
+    "exojs-engine/no-allocation-in-hot-hook": ["error", { "methods": ["getOutputBounds"] }]
   }
 }
 ```
 
 The `oxlint-engine` entry is engine-only and must not be enabled by general ExoJS consumer presets. The `recommended` / `strict` ESLint presets remain unchanged. The module/namespace contract is unit-tested; a separate real-Oxlint CLI smoke test compares one known red and one clean fixture per rule against ESLint. Full RuleTester matrices, TypeScript parser/option contexts, suppression behavior, Windows parity and timing still require verification before transferring ownership. Oxlint JS plugins are currently experimental. No default lint or CI coverage is removed by these entries.
+
+## License
+
+MIT
