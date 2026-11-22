@@ -68,7 +68,9 @@ const oxlintManifest = JSON.parse(readFileSync(oxlintManifestPath, 'utf8')) as {
   bin: string | { oxlint?: string };
 };
 const binRelative = typeof oxlintManifest.bin === 'string' ? oxlintManifest.bin : oxlintManifest.bin.oxlint;
-if (!binRelative) throw new Error('Installed oxlint package does not define its CLI binary.');
+if (!binRelative) {
+  throw new Error('Installed oxlint package does not define its CLI binary.');
+}
 const oxlintBin = resolve(dirname(oxlintManifestPath), binRelative);
 
 let directory: string;
@@ -120,7 +122,9 @@ const oxlintDiagnostics = (fixture: Fixture, source: string): ParityDiagnostic[]
     cwd: directory,
     encoding: 'utf8',
   });
-  if (result.error) throw result.error;
+  if (result.error) {
+    throw result.error;
+  }
   expect([0, 1]).toContain(result.status);
   let output: OxlintOutput;
   try {
@@ -156,7 +160,9 @@ describe('ExoJS custom rules through the real Oxlint CLI', () => {
   });
 
   afterAll(() => {
-    if (directory) rmSync(directory, { recursive: true, force: true });
+    if (directory) {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   for (const fixture of fixtures) {
