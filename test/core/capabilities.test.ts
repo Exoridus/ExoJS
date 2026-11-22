@@ -98,7 +98,9 @@ describe('Capabilities', () => {
     Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
       configurable: true,
       value: (kind: string) => {
-        if (kind === 'webgl2') webGlProbes++;
+        if (kind === 'webgl2') {
+          webGlProbes++;
+        }
         return null;
       },
     });
@@ -122,6 +124,7 @@ describe('Capabilities', () => {
       Reflect.set(Capabilities, '_observedOffscreenWebGl2', previousObservedOffscreen);
     }
   });
+
   test('Capabilities cannot be constructed externally via the public API', () => {
     // The constructor is TS-private. Compile-time, `new Capabilities(...)`
     // is rejected. Runtime, TS-private is not enforced, so a cast can
