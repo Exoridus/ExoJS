@@ -28,6 +28,7 @@ import {
   isometricOverlapMap,
   makeTileset,
   orthogonalOverhangLayer,
+  orderedTextureRunMap,
   singleTileMap,
   wireTilemapRenderers,
   wireViaTiledExtension,
@@ -145,6 +146,66 @@ describe('WebGPU tilemap — multiple tilesets', () => {
       backend.destroy();
     }
   });
+});
+
+// Multi-texture batching must reduce draw calls without defeating the ordered
+// overhang pages from PR #832, on BOTH GPU backends.
+describe('WebGPU tilemap — multi-texture batching', () => {
+  test('batches alternating atlas runs without changing their painter order', async ctx => {
+    const backend = await setupBackend();
+    const textures = ["#ff0000","#0000ff"].map(color => createSolidRectTexture(color, 12, 20));
+    const map = orderedTextureRunMap(textures, [0, 1, 0, 1]);
+    const node = new TileMapNode(map);
+
+    try {
+      node.setPosition(0, 12);
+      if (!(await renderScene(ctx, backend, node))) {
+        return;
+      }
+
+      const read = readWebGpuPixels(backend, canvasSize);
+      expect(backend.stats.drawCalls).toBe(1);
+      expectPixelNear(read(6, 18), [255, 0, 0, 255]);
+      expectPixelNear(read(18, 18), [0, 0, 255, 255]);
+      expectPixelNear(read(30, 18), [255, 0, 0, 255]);
+      expectPixelNear(read(42, 18), [0, 0, 255, 255]);
+    } finally {
+      node.destroy();
+      for (const texture of textures) {
+        texture.destroy();
+      }
+      backend.destroy();
+    }
+  });
+
+  test('flushes safely on the fifth distinct atlas', async ctx => {
+    const backend = await setupBackend();
+    const textures = ["#ff0000","#00ff00","#0000ff","#ffff00","#00ffff"].map(color => createSolidRectTexture(color, 12, 20));
+    const map = orderedTextureRunMap(textures, [0, 1, 2, 3, 4]);
+    const node = new TileMapNode(map);
+
+    try {
+      node.setPosition(0, 12);
+      if (!(await renderScene(ctx, backend, node))) {
+        return;
+      }
+
+      const read = readWebGpuPixels(backend, canvasSize);
+      expect(backend.stats.drawCalls).toBe(2);
+      expectPixelNear(read(6, 18), [255, 0, 0, 255]);
+      expectPixelNear(read(18, 18), [0, 255, 0, 255]);
+      expectPixelNear(read(30, 18), [0, 0, 255, 255]);
+      expectPixelNear(read(42, 18), [255, 255, 0, 255]);
+      expectPixelNear(read(54, 18), [0, 255, 255, 255]);
+    } finally {
+      node.destroy();
+      for (const texture of textures) {
+        texture.destroy();
+      }
+      backend.destroy();
+    }
+  });
+
 });
 
 // ── orientation (G-FLIP / G-PARITY) ──────────────────────────────────────
