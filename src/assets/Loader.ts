@@ -1476,16 +1476,18 @@ export class Loader {
 
     const prototype: unknown = Object.getPrototypeOf(input);
 
-    if (
-      (prototype !== Object.prototype && prototype !== null) ||
-      _readMeta(input) !== undefined ||
-      typeof (input as { type?: unknown }).type === 'string'
-    ) {
+    if ((prototype !== Object.prototype && prototype !== null) || _readMeta(input) !== undefined) {
       return false;
     }
 
-    for (const entry of Object.values(input)) {
-      this._releaseFrom(claimer, entry);
+    // Match load(): named records may use the alias "type" and enumerable
+    // symbol keys. Object.values silently drops symbols, leaking their claims.
+    const record = input as Record<string | symbol, unknown>;
+
+    for (const key of Reflect.ownKeys(record)) {
+      if (Object.getOwnPropertyDescriptor(record, key)?.enumerable === true) {
+        this._releaseFrom(claimer, record[key]);
+      }
     }
 
     return true;
