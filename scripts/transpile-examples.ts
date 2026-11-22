@@ -24,7 +24,7 @@ import sharedPrettierConfig from '@codexo/exojs-config/prettier';
 import { format as formatSource } from 'prettier';
 import babelParser from 'prettier/plugins/babel';
 import estreePrinter from 'prettier/plugins/estree';
-import ts from 'typescript';
+import { transpileNative } from '@codexo/exojs-config/typescript/transpile';
 
 /**
  * Matches a whole-line `import name from './x.worker.ts?worker';` statement.
@@ -111,15 +111,7 @@ export const transpileExampleSource = async (source: string, tsFilePath: string)
   const executable = tsFilePath.endsWith('.worker.ts')
     ? `export default ${JSON.stringify(bundledWorkerSource(tsFilePath))};`
     : inlineWorkerImports(source, tsFilePath);
-  const { outputText } = ts.transpileModule(executable, {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-      removeComments: false,
-      declaration: false,
-      sourceMap: false,
-    },
-  });
+  const outputText = transpileNative(executable, { target: 'es2022' });
 
   // The shared monorepo Prettier options, imported rather than discovered from
   // disk: `resolveConfig` is absent from the browser build of Prettier, and the
