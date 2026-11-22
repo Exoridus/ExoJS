@@ -451,7 +451,10 @@ export const nativeEslintOverrides = (root: string): Linter.Config[] => {
     !isAbsolute(path) ||
     !isRecord(parsed) ||
     parsed.version !== 1 ||
-    parsed.root !== root ||
+    typeof parsed.root !== 'string' ||
+    !isAbsolute(parsed.root) ||
+    // Jiti uses forward slashes for import.meta.dirname on Windows.
+    resolve(parsed.root) !== resolve(root) ||
     !Array.isArray(parsed.globs) ||
     !parsed.globs.every(item => typeof item === 'string') ||
     !isRecord(parsed.inputs) ||
