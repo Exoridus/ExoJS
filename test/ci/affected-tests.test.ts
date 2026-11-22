@@ -371,6 +371,52 @@ describe('affected tests from the Vite graph', () => {
   });
 
   it.each([
+    'export const value = (out, offset: number, input) => { out[offset] = input; };',
+    'export const value = (out, input, offset = 0) => { out[offset + 1] = input; };',
+    'export const value = (out, input) => { for (let tap = 0; tap < 4; tap++) out[tap] = input; };',
+    'export const value = (out, input) => { const offset = 0; const alias = offset; out[alias] = input; };',
+    'export const value = (out, input) => { let offset = 0; offset += 1; out[offset] = input; };',
+    'export const value = (out, input) => { const offset = 0 as const; out[offset] = input; };',
+    "export const value = (out, input, axis: 'x' | 'y') => { out[axis] = input; };",
+    "export const value = (out, input) => { for (const key of ['maxSamples', 'maxTextures'] as const) out[key] = input; };",
+    'class Store { private offset = 0; value(out, input) { out[this.offset] = input; this.offset++; } } export const value = Store;',
+  ])('proves local numeric or finite keys cannot name asset properties: %s', async source => {
+    write('test/helper.ts', source);
+    test('test/nonreader.test.ts', "import { value } from './helper.ts';", 'void value');
+
+    expect((await select('src/leaf.ts')).tests.map(entry => entry.file)).toEqual(['test/related.test.ts']);
+  });
+
+  it.each([
+    'export const value = (element, key: any, input) => { element[key] = input; };',
+    'export const value = (element, key: unknown, input) => { element[key] = input; };',
+    'export const value = (element, key: number | string, input) => { element[key] = input; };',
+    'export const value = (element, key: string, input) => { element[key as unknown as number] = input; };',
+    "export const value = (element, input) => { const key = 'src' as unknown as number; element[key] = input; };",
+    "export const value = (element, input) => { const key = 'src' as unknown as number; const alias = key; element[alias] = input; };",
+    "export const value = (element, input) => { let key = 0; key = 'src' as unknown as number; element[key] = input; };",
+    "export const value = (element, input) => { let key = 0; const next: any = 'src'; key = next; element[key] = input; };",
+    "export const value = (element, input) => { let key = 0; [key] = ['src' as any]; element[key] = input; };",
+    "export const value = (element, input) => { let key = 0; for (key of ['src'] as any) element[key] = input; };",
+    "const key = 0; export const value = (element, input) => { const write = (key: string) => { element[key] = input; }; write('src'); };",
+    "export const value = (element, key: 'x' | 'src', input) => { element[key] = input; };",
+    "export const value = (element, input) => { for (const key of ['x', 'src'] as const) element[key] = input; };",
+    "class Store { private key = 0; value(element, input) { this.key = 'src' as unknown as number; element[this.key] = input; } } export const value = Store;",
+    "class Store { private key = 0; value(element, input) { this['key'] = 'src' as unknown as number; element[this.key] = input; } } export const value = Store;",
+    "class Store { private key = 0; value(element, input) { Object.assign(this, { key: 'src' }); element[this.key] = input; } } export const value = Store;",
+    "class Store { private key = 0; value(element, input) { Reflect.set(this, 'key', 'src'); element[this.key] = input; } } export const value = Store;",
+  ])('keeps unknown, asserted, reassigned and shadowed computed keys conservative: %s', async source => {
+    write('src/unobserved.ts', 'export const unused = 1;\n');
+    write('test/helper.ts', source);
+    test('test/reader.test.ts', "import { value } from './helper.ts';", 'void value');
+
+    const selection = await select('src/unobserved.ts');
+
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/reader.test.ts']);
+    expect(selection.tests[0]?.reasons.some(reason => reason.kind === 'untracked')).toBe(true);
+  });
+
+  it.each([
     'element.style.color = value;',
     'element.style.imageRendering = value;',
     'element.style.touchAction = value;',

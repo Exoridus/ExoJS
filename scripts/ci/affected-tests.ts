@@ -105,6 +105,207 @@ interface SourceInputs {
   readonly imports: string[];
 }
 
+/** Local type facts only; module and library resolution remain entirely outside this proof. */
+const nonAssetIndexCheck = (source: ts.SourceFile): ((expression: ts.Expression, literal: (key: string) => boolean) => boolean) => {
+  const options: ts.CompilerOptions = { noResolve: true, noLib: true, noEmit: true, allowJs: true, target: ts.ScriptTarget.Latest };
+  const host = ts.createCompilerHost(options);
+
+  const canonical = (name: string): string => {
+    const normalized = name.replaceAll('\\', '/');
+
+    return ts.sys.useCaseSensitiveFileNames ? normalized : normalized.toLowerCase();
+  };
+
+  host.getCanonicalFileName = canonical;
+  host.getSourceFile = name => (canonical(name) === canonical(source.fileName) ? source : undefined);
+  host.fileExists = name => canonical(name) === canonical(source.fileName);
+  host.readFile = () => undefined;
+  const checker = ts.createProgram([source.fileName], options, host).getTypeChecker();
+  const writes = new Map<ts.Symbol, Array<ts.Expression | undefined>>();
+  const iterations = new Map<ts.Symbol, ts.Expression>();
+  let opaquePropertyWrites = false;
+
+  const recordWrite = (target: ts.Node, value?: ts.Expression): void => {
+    if (ts.isIdentifier(target) || ts.isPropertyAccessExpression(target) || ts.isElementAccessExpression(target)) {
+      const property = memberName(target);
+      const symbol =
+        target.parent && ts.isShorthandPropertyAssignment(target.parent)
+          ? checker.getShorthandAssignmentValueSymbol(target.parent)
+          : ts.isElementAccessExpression(target) && property !== undefined
+            ? checker.getPropertyOfType(checker.getTypeAtLocation(target.expression), property)
+            : checker.getSymbolAtLocation(target);
+
+      if (symbol) {
+        const values = writes.get(symbol) ?? [];
+        values.push(value);
+        writes.set(symbol, values);
+      }
+    } else {
+      ts.forEachChild(target, child => recordWrite(child));
+    }
+  };
+
+  const scan = (node: ts.Node): void => {
+    if (
+      (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) &&
+      ts.isIdentifier(node.expression) &&
+      ['Object', 'Reflect'].includes(node.expression.text) &&
+      ['assign', 'defineProperty', 'defineProperties', 'set'].includes(memberName(node) ?? '')
+    ) {
+      opaquePropertyWrites = true;
+    } else if (
+      ts.isVariableDeclaration(node) &&
+      node.initializer &&
+      ts.isIdentifier(node.initializer) &&
+      ['Object', 'Reflect'].includes(node.initializer.text)
+    ) {
+      opaquePropertyWrites = true;
+    }
+
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+    ) {
+      recordWrite(node.left, node.right);
+    } else if (ts.isForOfStatement(node) || ts.isForInStatement(node)) {
+      if (!ts.isVariableDeclarationList(node.initializer)) {
+        recordWrite(node.initializer);
+      } else if (ts.isForOfStatement(node)) {
+        for (const declaration of node.initializer.declarations) {
+          const symbol = ts.isIdentifier(declaration.name) ? checker.getSymbolAtLocation(declaration.name) : undefined;
+
+          if (symbol) {
+            iterations.set(symbol, node.expression);
+          }
+        }
+      }
+    }
+
+    ts.forEachChild(node, scan);
+  };
+
+  scan(source);
+  const safeType = (type: ts.Type, literal: (key: string) => boolean): boolean =>
+    type.isUnion()
+      ? type.types.every(member => safeType(member, literal))
+      : (type.flags & ts.TypeFlags.NumberLike) !== 0 || (type.isStringLiteral() && literal(type.value));
+  const visiting = new Set<ts.Symbol>();
+
+  const prove = (expression: ts.Expression, known: ReadonlySet<ts.Symbol>, literal: (key: string) => boolean): boolean => {
+    if (
+      ts.isParenthesizedExpression(expression) ||
+      ts.isAsExpression(expression) ||
+      ts.isTypeAssertionExpression(expression) ||
+      ts.isNonNullExpression(expression) ||
+      ts.isSatisfiesExpression(expression)
+    ) {
+      return prove(expression.expression, known, literal);
+    }
+
+    const symbol =
+      ts.isIdentifier(expression) || ts.isPropertyAccessExpression(expression) ? checker.getSymbolAtLocation(expression) : undefined;
+    let iterable = symbol ? iterations.get(symbol) : undefined;
+
+    while (iterable && (ts.isAsExpression(iterable) || ts.isTypeAssertionExpression(iterable) || ts.isParenthesizedExpression(iterable))) {
+      iterable = iterable.expression;
+    }
+
+    if (symbol && iterable) {
+      return (
+        ts.isArrayLiteralExpression(iterable) &&
+        iterable.elements.every(element => !ts.isSpreadElement(element) && prove(element, known, literal)) &&
+        (writes.get(symbol) ?? []).every(value => value !== undefined && prove(value, new Set([...known, symbol]), literal))
+      );
+    }
+
+    if (!safeType(checker.getTypeAtLocation(expression), literal)) {
+      return false;
+    }
+
+    if (
+      ts.isNumericLiteral(expression) ||
+      ts.isStringLiteralLike(expression) ||
+      ts.isPrefixUnaryExpression(expression) ||
+      ts.isPostfixUnaryExpression(expression)
+    ) {
+      return true;
+    }
+
+    if (ts.isBinaryExpression(expression)) {
+      if (expression.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+        return prove(expression.left, known, literal) && prove(expression.right, known, literal);
+      }
+
+      return [
+        ts.SyntaxKind.MinusToken,
+        ts.SyntaxKind.AsteriskToken,
+        ts.SyntaxKind.SlashToken,
+        ts.SyntaxKind.PercentToken,
+        ts.SyntaxKind.AsteriskAsteriskToken,
+        ts.SyntaxKind.LessThanLessThanToken,
+        ts.SyntaxKind.GreaterThanGreaterThanToken,
+        ts.SyntaxKind.GreaterThanGreaterThanGreaterThanToken,
+        ts.SyntaxKind.AmpersandToken,
+        ts.SyntaxKind.BarToken,
+        ts.SyntaxKind.CaretToken,
+      ].includes(expression.operatorToken.kind);
+    }
+
+    if (ts.isConditionalExpression(expression)) {
+      return prove(expression.whenTrue, known, literal) && prove(expression.whenFalse, known, literal);
+    }
+
+    if (
+      !ts.isIdentifier(expression) &&
+      !(ts.isPropertyAccessExpression(expression) && expression.expression.kind === ts.SyntaxKind.ThisKeyword)
+    ) {
+      return false;
+    }
+
+    const declaration = symbol?.valueDeclaration;
+
+    if (
+      !symbol ||
+      !declaration ||
+      (!ts.isVariableDeclaration(declaration) && !ts.isParameter(declaration) && !ts.isPropertyDeclaration(declaration))
+    ) {
+      return false;
+    }
+
+    if (known.has(symbol)) {
+      return true;
+    }
+
+    if (visiting.has(symbol)) {
+      return false;
+    }
+
+    if (ts.isPropertyDeclaration(declaration) && opaquePropertyWrites) {
+      return false;
+    }
+
+    visiting.add(symbol);
+
+    try {
+      if (
+        !safeType(checker.getTypeAtLocation(declaration.name), literal) ||
+        (declaration.initializer ? !prove(declaration.initializer, known, literal) : !ts.isParameter(declaration))
+      ) {
+        return false;
+      }
+
+      const next = new Set([...known, symbol]);
+
+      return (writes.get(symbol) ?? []).every(value => value !== undefined && prove(value, next, literal));
+    } finally {
+      visiting.delete(symbol);
+    }
+  };
+
+  return (expression, literal) => prove(expression, new Set(), literal);
+};
+
 /** Inspect possible hidden inputs, leaving all module resolution to Vite. */
 const sourceInputs = (file: string): SourceInputs => {
   if (!CODE.test(file)) {
@@ -116,9 +317,10 @@ const sourceInputs = (file: string): SourceInputs => {
     };
   }
 
-  const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, false);
+  const source = ts.createSourceFile(portable(file), readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
   const hazards = new Set<string>();
   const imports = new Set<string>();
+  let nonAssetIndex: ReturnType<typeof nonAssetIndexCheck> | undefined;
 
   const module = (specifier: string, commands = false): void => {
     imports.add(specifier);
@@ -193,8 +395,13 @@ const sourceInputs = (file: string): SourceInputs => {
       (ts.isPropertyAccessExpression(node.left) || ts.isElementAccessExpression(node.left))
     ) {
       const property = memberName(node.left);
+      const style = memberName(node.left.expression) === 'style';
+      const safeIndex =
+        property === undefined &&
+        ts.isElementAccessExpression(node.left) &&
+        (nonAssetIndex ??= nonAssetIndexCheck(source))(node.left.argumentExpression, key => !propertyCanLoad(key, node.right, style));
 
-      if (propertyCanLoad(property, node.right, memberName(node.left.expression) === 'style')) {
+      if (!safeIndex && propertyCanLoad(property, node.right, style)) {
         hazards.add(`A DOM or CSS ${property ?? 'computed property'} assignment can load an asset outside the import graph.`);
       }
     }
