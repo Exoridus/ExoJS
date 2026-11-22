@@ -5,6 +5,7 @@
 import { isClassDeclaration } from '@typescript/native/ast/is';
 import { API } from '@typescript/native/sync';
 
+/** @type {API | undefined} */
 let client;
 
 /** @returns {API} */
