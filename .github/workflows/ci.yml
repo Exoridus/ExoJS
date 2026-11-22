@@ -375,11 +375,16 @@ jobs:
   # colour alone, which reads as blank for every entry. WebGPU itself is
   # covered by the webgpu test lane.
   smoke:
+    name: smoke (${{ matrix.suite }})
     needs: [plan, site]
     if: ${{ !cancelled() && needs.plan.outputs.smoke == 'true' && needs.site.result == 'success' }}
     runs-on: ubuntu-latest
-    # The full catalog and Playground suites run serially on software graphics.
+    # Each suite remains serial on software graphics in its own runner.
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [examples, playground]
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
@@ -392,23 +397,33 @@ jobs:
           path: site/dist
 
       - run: pnpm test:examples:smoke --renderer webgl2 ${{ needs.plan.outputs.smokeSample == 'true' && '--sample' || '' }}
+        if: matrix.suite == 'examples'
 
       # The playground shell around the examples: console capture across the
       # preview iframe and the Output panel's layouts, and the Asset Browser's
-      # previews, cancelled loads and generated snippets. Runs after a failed
-      # smoke too, so one run reports both.
+      # previews, cancelled loads and generated snippets. Independent of the
+      # examples runner, so a failure in either suite still reports both.
       - run: pnpm test:playground:e2e
-        if: ${{ !cancelled() }}
+        if: ${{ matrix.suite == 'playground' && !cancelled() }}
 
-      - name: Keep the smoke report
-        if: ${{ !cancelled() }}
+      - name: Keep the example smoke report
+        if: ${{ matrix.suite == 'examples' && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: example-smoke-report
           path: |
             .workspace/reports/example-smoke.md
             .workspace/reports/example-smoke-artifacts
-            .workspace/reports/playground-e2e
+          retention-days: 7
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+      - name: Keep the Playground E2E report
+        if: ${{ matrix.suite == 'playground' && !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playground-e2e-report
+          path: .workspace/reports/playground-e2e
           retention-days: 7
           include-hidden-files: true
           if-no-files-found: ignore
