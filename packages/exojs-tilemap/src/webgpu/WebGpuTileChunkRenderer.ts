@@ -595,30 +595,87 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   }
 
   /**
-   * Build (or reuse) the group(1) texture bind group for `texture`. The
-   * binding is resolved BEFORE the cache lookup on purpose: resolving is what
-   * syncs a dirty/mutated texture's content to the GPU, so it must run every
-   * flush/replay even when the bind group itself is served from cache.
+   * Resolve and cache the ordered atlas set, refreshing each live GPU view and
+   * sampler BEFORE cache lookup (uploading dirty textures is a side effect).
+   * Unused bindings repeat slot 0, but cannot be sampled by any packed tile.
    */
-  private _getOrCreateTextureBindGroup(device: GPUDevice, backend: WebGpuBackend, texture: Texture | RenderTexture): GPUBindGroup {
-    const { view, sampler } = backend.getTextureBinding(texture);
-    const premultiply = backend.shouldPremultiplyTextureSample(texture);
-    const cached = this._textureBindGroups.get(texture);
+  private _getOrCreateTextureBindGroup(
+    device: GPUDevice,
+    backend: WebGpuBackend,
+    textures: readonly (Texture | RenderTexture)[],
+  ): GPUBindGroup {
+    const first = textures[0];
 
-    if (cached?.view === view && cached.sampler === sampler && cached.premultiply === premultiply) {
+    if (first === undefined || textures.length > TILE_TEXTURE_SLOTS) {
+      throw new Error('WebGpuTileChunkRenderer: expected 1..4 atlas textures.');
+    }
+
+    const ids: number[] = [];
+    const views: GPUTextureView[] = [];
+    const samplers: GPUSampler[] = [];
+    let mask = 0;
+
+    for (let slot = 0; slot < TILE_TEXTURE_SLOTS; slot++) {
+      const texture = textures[slot] ?? first;
+      const binding = backend.getTextureBinding(texture);
+
+      views.push(binding.view);
+      samplers.push(binding.sampler);
+
+      if (slot < textures.length) {
+        let id = this._textureIds.get(texture);
+
+        if (id === undefined) {
+          id = this._nextTextureId++;
+          this._textureIds.set(texture, id);
+        }
+
+        ids.push(id);
+
+        if (backend.shouldPremultiplyTextureSample(texture)) {
+          mask |= 1 << slot;
+        }
+      }
+    }
+
+    const key = ids.join(',');
+    const cached = this._textureBindGroups.get(key);
+
+    if (
+      cached !== undefined &&
+      cached.mask === mask &&
+      views.every((view, slot) => view === cached.views[slot] && samplers[slot] === cached.samplers[slot])
+    ) {
+      // LRU: move to the back without allocating a new bind group.
+      this._textureBindGroups.delete(key);
+      this._textureBindGroups.set(key, cached);
+
       return cached.group;
     }
 
-    const group = device.createBindGroup({
-      layout: this._textureBindGroupLayout!,
-      entries: [
-        { binding: 0, resource: view },
-        { binding: 1, resource: sampler },
-        { binding: 2, resource: { buffer: this._sampleAlphaBuffers[premultiply ? 1 : 0]! } },
-      ],
-    });
+    const entries: GPUBindGroupEntry[] = [];
 
-    this._textureBindGroups.set(texture, { group, view, sampler, premultiply });
+    for (let slot = 0; slot < TILE_TEXTURE_SLOTS; slot++) {
+      entries.push(
+        { binding: slot, resource: views[slot]! },
+        { binding: TILE_TEXTURE_SLOTS + slot, resource: samplers[slot]! },
+      );
+    }
+
+    entries.push({ binding: TILE_TEXTURE_SLOTS * 2, resource: { buffer: this._sampleAlphaBuffers[mask]! } });
+
+    const group = device.createBindGroup({ layout: this._textureBindGroupLayout!, entries });
+
+    this._textureBindGroups.delete(key);
+    this._textureBindGroups.set(key, { group, views, samplers, mask });
+
+    if (this._textureBindGroups.size > 128) {
+      const oldest = this._textureBindGroups.keys().next().value;
+
+      if (oldest !== undefined) {
+        this._textureBindGroups.delete(oldest);
+      }
+    }
 
     return group;
   }
