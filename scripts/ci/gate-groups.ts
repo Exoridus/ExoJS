@@ -33,6 +33,7 @@ export const GATE_GROUPS = {
     'lint:source-hygiene',
     'format:check',
     'lint:react:shadow',
+    'lint:exojs:shadow',
     'lint:all',
   ],
   // `perf:smoke` runs the benchmarks for their EXIT CODE, not their numbers -
