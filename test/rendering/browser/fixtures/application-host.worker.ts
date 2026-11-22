@@ -213,10 +213,19 @@ const initialize = async (message: InitMessage): Promise<void> => {
 const shutdown = async (): Promise<void> => {
   closing = true;
   progress('teardown', 'start');
+  let contextLost = false;
 
   try {
     if (app !== null) {
+      const gl = (app.backend as WebGl2Backend).context;
+      const loseContext = gl.getExtension('WEBGL_lose_context');
+
       await app.destroy();
+
+      // The transferred canvas stays alive until the host receives the shutdown reply.
+      loseContext?.loseContext();
+      contextLost = gl.isContextLost();
+
       const outcome = app.destroyOutcome;
 
       if (app.state !== ApplicationState.Destroyed || outcome?.status !== 'completed') {
@@ -231,7 +240,7 @@ const shutdown = async (): Promise<void> => {
     progress('teardown', 'end');
   }
 
-  self.postMessage({ kind: 'closed', loadAborted, unloads });
+  self.postMessage({ kind: 'closed', loadAborted, unloads, contextLost });
 };
 
 self.onmessage = async (event: MessageEvent<HostMessage>): Promise<void> => {

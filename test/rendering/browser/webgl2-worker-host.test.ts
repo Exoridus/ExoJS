@@ -39,6 +39,7 @@ interface ClosedMessage {
   readonly kind: 'closed';
   readonly loadAborted: boolean;
   readonly unloads: number;
+  readonly contextLost: boolean;
 }
 
 interface LoadingMessage {
@@ -285,6 +286,7 @@ describe('an application hosted in a worker', () => {
     const closed = await closeWorker();
 
     expect(closed.unloads).toBe(1);
+    expect(closed.contextLost).toBe(true);
   });
 
   test('shuts down after a scene load fails', { timeout: TEST_TIMEOUT_MS }, async ctx => {
@@ -293,7 +295,9 @@ describe('an application hosted in a worker', () => {
     }
 
     await expect(startWorker<ReadyMessage>('ready', 'fail-load')).rejects.toThrow('Worker scene load failed');
-    await closeWorker();
+    const closed = await closeWorker();
+
+    expect(closed.contextLost).toBe(true);
   });
 
   test('aborts an in-flight scene load before termination', { timeout: TEST_TIMEOUT_MS }, async ctx => {
@@ -305,6 +309,7 @@ describe('an application hosted in a worker', () => {
     const closed = await closeWorker();
 
     expect(closed.loadAborted).toBe(true);
+    expect(closed.contextLost).toBe(true);
   });
 
   test('reports a failed teardown even when destroy resolves', { timeout: TEST_TIMEOUT_MS }, async ctx => {
