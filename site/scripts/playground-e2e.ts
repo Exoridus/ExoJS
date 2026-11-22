@@ -1271,9 +1271,16 @@ app.onError.add(error => (globalThis as any).__videoErrors.push(error.message));
       const nextFrames = () => frame.evaluate('new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))');
 
       const pressUntil = async (key: string, condition: string, argument?: number): Promise<void> => {
-        // Scene.inputs.onTrigger handles a released tap, not a held key.
-        await page.keyboard.press(key);
-        await frame.waitForFunction(condition, argument);
+        // Commands act on press. A slow render or a held key must not turn
+        // Play/Pause into a timing-dependent tap gesture.
+        await page.keyboard.down(key);
+
+        try {
+          await frame.waitForFunction(condition, argument);
+        } finally {
+          await page.keyboard.up(key);
+        }
+
         await nextFrames();
       };
 

@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises';
-
 import type { Browser } from 'playwright';
 
 interface OwnershipResult {
@@ -43,7 +41,15 @@ export const exampleSceneOwnershipChecks = async (
 
       try {
         await page.goto(`${origin}${base}/preview.html?v=current`, { waitUntil: 'domcontentloaded' });
-        let source = await readFile(new URL(`../../examples/${example}.js`, import.meta.url), 'utf8');
+        // CI consumes the built site artifact without locally generated example
+        // files. Exercise the runtime actually served by that same build.
+        const response = await page.request.get(`${origin}${base}/examples/${example}.js`);
+
+        if (!response.ok()) {
+          throw new Error(`Cannot load built example ${example}: HTTP ${response.status()}`);
+        }
+
+        let source = await response.text();
         const sceneName = source.match(/class (\w+Scene) extends Scene/)?.[1];
 
         if (!sceneName) {

@@ -27,7 +27,7 @@ const createScene = () => {
     demoPanel: () => ({ set: (_key: string, value: string) => selected.push(value), status() {}, dispose() {} }),
   }) as Exo.Scene & { switchVideo(index: number): Promise<void>; generation: number };
   Object.defineProperty(scene, 'loader', { value: { get: () => null } });
-  Object.defineProperty(scene, 'inputs', { value: { onTrigger: (key: number, callback: () => void) => bindings.set(key, callback) } });
+  Object.defineProperty(scene, 'inputs', { value: { onStart: (key: number, callback: () => void) => bindings.set(key, callback) } });
   scene.init();
 
   return { scene, selected, bindings, options };

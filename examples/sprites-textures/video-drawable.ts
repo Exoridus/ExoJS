@@ -80,15 +80,17 @@ class VideoDrawableScene extends Scene {
         }
       },
     });
-    this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('paused'));
-    this.inputs.onTrigger(Keyboard.R, () => {
+    // Commands respond on key press, including a held key. They do not need
+    // onTrigger's short release window, which is intended for tap gestures.
+    this.inputs.onStart(Keyboard.Space, () => this.panel.step('paused'));
+    this.inputs.onStart(Keyboard.R, () => {
       this.elapsed = 0;
       this.panel.set('paused', true);
       this.panel.set('seek', 0);
     });
 
     for (const video of VIDEOS) {
-      this.inputs.onTrigger(video.key, () => this.panel.set('clip', video.label));
+      this.inputs.onStart(video.key, () => this.panel.set('clip', video.label));
     }
   }
 
