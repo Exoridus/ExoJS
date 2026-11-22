@@ -235,7 +235,6 @@ export default [
     // stay on full ESLint, without constructing an invalid empty files array.
     configure("{ files: ['src/git-ignored.ts'], languageOptions: { globals: { fixtureGlobal: 'readonly' } } },");
     write('src/vendor/invalid.ts', 'debugger;\n');
-    expect(run().status).toBe(0);
     write('.gitignore', 'node_modules\n.workspace\n.*\nsrc/git-ignored.ts\n');
     write('src/git-ignored.ts', 'debugger;\n');
 
@@ -243,7 +242,8 @@ export default [
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain('=== lint: engine');
-    expect(result.stdout).toContain('src/git-ignored.ts');
+    expect(result.stdout).toContain(join('src', 'git-ignored.ts'));
+    expect(result.stdout).not.toContain(join('src', 'vendor', 'invalid.ts'));
     assertCleaned();
   });
 
@@ -259,8 +259,8 @@ export default [
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain('=== lint: engine');
-    expect(result.stdout).toContain('src/custom.ts');
-    expect(result.stdout).toContain('src/nested/entry.ts');
+    expect(result.stdout).toContain(join('src', 'custom.ts'));
+    expect(result.stdout).toContain(join('src', 'nested', 'entry.ts'));
     assertCleaned();
   });
 
@@ -272,7 +272,7 @@ export default [
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain('=== lint: engine');
-    expect(result.stdout).toContain('src/custom.ts');
+    expect(result.stdout).toContain(join('src', 'custom.ts'));
     expect(result.stdout).toContain('no-debugger');
     assertCleaned();
   });
