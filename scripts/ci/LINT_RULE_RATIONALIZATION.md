@@ -52,50 +52,29 @@ This **does not approve blanket removal** of rules. The inventory reports **513*
 
 ## First policy simplification after triage
 
-The original 513-rule inventory stays as a historical baseline. This branch
-actually removes three redundant ESLint-only policies while keeping the native
-and fallback gates intact:
+The original 513-rule inventory stays as a historical baseline. This branch retires three ESLint-only policies while keeping the native and fallback gates intact:
 
 | Rule | Decision | Reason |
 | --- | --- | --- |
 | `no-dupe-args` | Retire | Strict ESM syntax already rejects duplicate parameter names |
 | `no-octal` | Retire | Strict ESM syntax rejects legacy octal literals |
-| `no-undef-init` | Retire | Purely stylistic; redundant with the existing authoring and type safety policy |
+| `no-undef-init` | Retire | Style-only, no correctness check removed |
 
-Node's real module parser is exercised by `test/ci/lint-retirement-syntax.test.ts`
-for the first two. `no-undef-init` is intentionally retired as a style choice,
-not presented as a compiler diagnostic. Current lint-rule counts must be
-regenerated after merging; do not rewrite PR #1131's measured baseline.
+Node's module parser is exercised by `test/ci/lint-retirement-syntax.test.ts` for the first two. `no-undef-init` is intentionally retired as a style choice, not described as a compiler diagnostic. Regenerate current lint-rule totals after integration; do not rewrite #1131's historical baseline.
 
-**Unicorn is not wholesale disposable:** it contains runtime and performance
-rules alongside style preferences. In particular `unicorn/no-for-each` is retained
-at present because it protects allocation-sensitive code from accidental
-per-frame callback creation; the two current Map.forEach exceptions have a
-documented, opposite performance reason. Further retirement needs a concrete
-rule-by-rule contract decision.
+**Unicorn is not wholesale disposable:** It contains runtime and performance rules as well as style preferences. For example, `unicorn/no-for-each` currently protects allocation-sensitive code; exceptions for `Map.forEach` in specific hot paths are deliberate. Further retirement needs a rule-by-rule decision.
 
 ## Native React shadow pilot
 
-The opt-in `pnpm lint:react:shadow` probes native Oxlint React, React
-Compiler and JSX accessibility diagnostics over the React package and the
-site's TSX islands. Its config is
-[`oxlint-react-shadow.json`](oxlint-react-shadow.json), and a focused CLI
-test verifies red/green fixtures. This intentionally does **not** replace the
-current `packages/exojs-react/eslint.config.ts` or the site's Astro/React
-ESLint policy until positive/negative parity, override/suppression behavior
-and existing code diagnostics have been measured.
+The opt-in `pnpm lint:react:shadow` probes native Oxlint React, React Compiler and JSX accessibility diagnostics over `@codexo/exojs-react` and the site's TSX islands. Its configuration is [`oxlint-react-shadow.json`](oxlint-react-shadow.json), and a focused CLI test includes known failing and clean fixtures.
 
-React already has an isolated package-local ESLint config, while the site uses
-the same shared `@codexo/exojs-config/eslint/react` policy. A final native
-React setup must preserve both scopes; moving the rule implementation into
-one package does not exempt site React components from the same checks.
-Oxlint supports native `react/*`, including compiler-derived checks from
-v1.79 onward. These are distinct implementations from `@eslint-react` and
-must be compared rather than assumed equivalent.
+The React package already has its own ESLint scope, while the site's React islands reuse shared React policy. The intended next step is native Oxlint for both sets of React files, retaining only verified exceptional checks; they must remain subject to equivalent native React diagnostics and intentional imperative-binding exemptions. The shadow pilot is not yet a full replacement.
 
-Astro templates remain on ESLint; Oxfmt formats Astro and Stylelint checks
-CSS/SCSS and Astro style blocks. Oxlint does not yet own Astro template
-parsing, accessibility validation in Astro markup or `astro/valid-compile`.
+## Astro: native scripts and community plugin status
+
+Oxlint parses the `<script>` blocks of `.astro` files, **not their full markup templates**. A community Rust/NAPI port, [`oxlint-plugins`](https://github.com/ubugeeei-prod/oxlint-plugins), tracks 7 of 20 `eslint-plugin-astro` rules, including `no-set-html-directive` and `prefer-class-list-directive`. It does **not** implement `astro/valid-compile` and does not solve Astro template parsing or markup accessibility. The community package currently identifies itself as version `0.0.0`; publication and production compatibility remain unverified. [Oxlint's compatibility table](https://oxc.rs/compatibility.html) explicitly states that template linting is not yet supported.
+
+Consequently Astro template linting remains with `eslint-plugin-astro`, Astro's compiler/checker, and the current JSX accessibility rules. Oxfmt continues formatting Astro and Stylelint continues checking CSS/SCSS and Astro `<style>` blocks. An Oxlint Astro script-block pass may be added without disabling template diagnostics; the community port is suitable only for a separate experimental probe until end-to-end parity exists.
 
 ## ExoJS plugin adapter
 
