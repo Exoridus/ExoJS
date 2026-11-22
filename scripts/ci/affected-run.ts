@@ -16,6 +16,7 @@ import {
   type Vitest,
 } from 'vitest/node';
 
+import { runAffectedProcess, watchAffectedCancellation } from './affected-process.ts';
 import { type AffectedPlanDocument, assertAffectedPlanCheckout, readAffectedPlan } from './affected-reporter.ts';
 
 type TestFile = AffectedPlanDocument['selections'][number]['inventory'][number];
@@ -92,67 +93,6 @@ const runNative = (args: readonly string[], env: NodeJS.ProcessEnv = process.env
       onAbort();
     }
 
-    child.once('error', error => {
-      cleanup();
-      reject(error);
-    });
-    child.once('close', (code, signal) => {
-      cleanup();
-      resolvePromise(interrupted || code || (signal === 'SIGINT' ? 130 : signal === 'SIGTERM' ? 143 : signal ? 1 : 0));
-    });
-  });
-
-/**
- * Vitest's terminal signal listener exits before async cleanup can complete.
- * Keep its process outside the caller's signal group and request public
- * cancellation over IPC, then wait for close() and the ordinary exit status.
- */
-const runControlled = (args: readonly string[]): Promise<number> =>
-  new Promise((resolvePromise, reject) => {
-    const child = spawn(process.execPath, [fileURLToPath(import.meta.url), ...args], {
-      stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
-      detached: process.platform !== 'win32',
-    });
-    let interrupted = 0;
-    let forcedTermination: ReturnType<typeof setTimeout> | undefined;
-
-    const cancel = (code: number): void => {
-      interrupted = code;
-
-      if (child.connected) {
-        child.send({ type: 'affected-run-cancel', code }, () => {
-          // An already-finished child needs no cancellation.
-        });
-      }
-
-      // A configuration hook can hang before createVitest returns a context.
-      // Bound cancellation cleanup without changing any test's timeout.
-      forcedTermination ??= setTimeout(() => {
-        console.error('[affected-run] ERROR: cancellation cleanup did not finish within 30 seconds');
-
-        try {
-          if (process.platform !== 'win32' && child.pid) {
-            process.kill(-child.pid, 'SIGKILL');
-          } else {
-            child.kill('SIGKILL');
-          }
-        } catch {
-          // The child may have exited immediately before the deadline.
-        }
-      }, 30_000).unref();
-    };
-
-    const onInterrupt = (): void => cancel(130);
-    const onTerminate = (): void => cancel(143);
-
-    const cleanup = (): void => {
-      clearTimeout(forcedTermination);
-      process.removeListener('SIGINT', onInterrupt);
-      process.removeListener('SIGTERM', onTerminate);
-    };
-
-    process.once('SIGINT', onInterrupt);
-    process.once('SIGTERM', onTerminate);
     child.once('error', error => {
       cleanup();
       reject(error);
@@ -276,20 +216,6 @@ const main = async (args: string[]): Promise<number> => {
     });
   };
 
-  const onMessage = (message: unknown): void => {
-    if (
-      typeof message === 'object' &&
-      message !== null &&
-      'type' in message &&
-      message.type === 'affected-run-cancel' &&
-      'code' in message &&
-      (message.code === 130 || message.code === 143)
-    ) {
-      cancel(message.code);
-    }
-  };
-
-  const onDisconnect = (): void => cancel(143);
   const executionReporter: Reporter = {
     onTestRunEnd(modules, errors, reason): void {
       const observed = modules.map(module => observeFile(root, module));
@@ -342,8 +268,7 @@ const main = async (args: string[]): Promise<number> => {
     },
   };
 
-  process.on('message', onMessage);
-  process.once('disconnect', onDisconnect);
+  const stopWatchingCancellation = watchAffectedCancellation(cancel);
 
   try {
     context = await createVitest(
@@ -447,8 +372,7 @@ const main = async (args: string[]): Promise<number> => {
       await context?.close();
       assertAffectedPlanCheckout(document, root, true);
     } finally {
-      process.removeListener('message', onMessage);
-      process.removeListener('disconnect', onDisconnect);
+      stopWatchingCancellation();
 
       if (interrupted) {
         process.exitCode = interrupted;
@@ -459,9 +383,10 @@ const main = async (args: string[]): Promise<number> => {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
-  const execute = process.env.EXOJS_AFFECTED_MODE === 'enforce' && !process.send ? runControlled : main;
+  const execution =
+    process.env.EXOJS_AFFECTED_MODE === 'enforce' && !process.send ? runAffectedProcess(fileURLToPath(import.meta.url), args) : main(args);
 
-  const code = await execute(args).catch((error: unknown) => {
+  const code = await execution.catch((error: unknown) => {
     // The timeout-only wrapper treats this marker as fatal even if a test
     // report also contains a timeout. Manifest or reporter errors must not retry.
     console.error(`[affected-run] ERROR: ${error instanceof Error ? error.message : String(error)}`);

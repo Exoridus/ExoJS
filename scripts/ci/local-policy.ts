@@ -155,6 +155,7 @@ export const CI_TOOLING_FILES: ReadonlySet<string> = new Set([
   ...[
     'affected-plan',
     'affected-probe',
+    'affected-process',
     'affected-range',
     'affected-reporter',
     'affected-run',

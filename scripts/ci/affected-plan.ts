@@ -1,9 +1,10 @@
 import { mkdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { createVitest, parseCLI } from 'vitest/node';
+import { createVitest, parseCLI, type Vitest } from 'vitest/node';
 
+import { runAffectedProcess, watchAffectedCancellation } from './affected-process.ts';
 import { readAffectedRange } from './affected-range.ts';
 import type { AffectedPlanDocument } from './affected-reporter.ts';
 import { selectAffectedTests } from './affected-tests.ts';
@@ -125,23 +126,32 @@ const main = async (): Promise<void> => {
   const native = parseAffectedVitestOptions(options.vitestArgs);
   const rangeOptions = { base: options.base, root: resolve(native.options.root ?? process.cwd()), committed: options.committed };
   const range = readAffectedRange(rangeOptions);
-  const context = await createVitest({ ...native.options, watch: false, run: true });
+
+  const assertUnchanged = (discovery = false): void => {
+    if (JSON.stringify(readAffectedRange(rangeOptions)) !== JSON.stringify(range)) {
+      throw new Error(
+        `The checkout or input files changed ${discovery ? 'during' : 'after'} dependency discovery. Calculate a fresh selection before running tests.`,
+      );
+    }
+  };
+
+  let context: Vitest | undefined;
   let interrupted = 0;
-
-  const onInterrupt = (): void => {
-    interrupted = 130;
-    void context.cancelCurrentRun('keyboard-input');
-  };
-
-  const onTerminate = (): void => {
-    interrupted = 143;
-    void context.cancelCurrentRun('keyboard-input');
-  };
-
-  process.once('SIGINT', onInterrupt);
-  process.once('SIGTERM', onTerminate);
+  let discoveryComplete = false;
+  const stopWatchingCancellation = watchAffectedCancellation(code => {
+    interrupted = code;
+    void context?.cancelCurrentRun('keyboard-input').catch(() => {
+      // The awaited operation reports its own error; context cleanup follows.
+    });
+  });
 
   try {
+    context = await createVitest({ ...native.options, watch: false, run: true });
+
+    if (interrupted) {
+      return;
+    }
+
     if (realpathSync(context.config.root) !== realpathSync(rangeOptions.root)) {
       throw new Error('The Vitest root differs from the pinned checkout. Pass its root explicitly.');
     }
@@ -162,9 +172,8 @@ const main = async (): Promise<void> => {
       }
     }
 
-    if (JSON.stringify(readAffectedRange(rangeOptions)) !== JSON.stringify(range)) {
-      throw new Error('The checkout or input files changed during dependency discovery. Calculate a fresh selection before running tests.');
-    }
+    assertUnchanged(true);
+    discoveryComplete = true;
 
     const document: AffectedPlanDocument = { version: 1, base: range.base, head: range.head, tree: range.tree, selections };
     const output = resolve(options.output);
@@ -197,10 +206,17 @@ const main = async (): Promise<void> => {
       await context.start();
     } else {
       await context.standalone();
+      assertUnchanged();
+
+      if (interrupted) {
+        return;
+      }
+
       const keys = new Set(selection.tests.map(test => JSON.stringify([test.project, test.file])));
       const inventory = await context.globTestSpecifications();
+      const root = context.config.root;
       const specifications = inventory.filter(specification =>
-        keys.has(JSON.stringify([specification.project.name, relative(context.config.root, specification.moduleId).split(sep).join('/')])),
+        keys.has(JSON.stringify([specification.project.name, relative(root, specification.moduleId).split(sep).join('/')])),
       );
 
       if (specifications.length !== keys.size) {
@@ -219,20 +235,36 @@ const main = async (): Promise<void> => {
         process.exitCode = 1;
       }
     }
-  } finally {
-    process.removeListener('SIGINT', onInterrupt);
-    process.removeListener('SIGTERM', onTerminate);
-    await context.close();
 
-    if (interrupted !== 0) {
-      process.exitCode = interrupted;
+    assertUnchanged();
+  } finally {
+    try {
+      await context?.close();
+
+      if (discoveryComplete) {
+        assertUnchanged();
+      }
+    } finally {
+      stopWatchingCancellation();
+
+      if (interrupted !== 0) {
+        process.exitCode = interrupted;
+      }
     }
   }
 };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  await main().catch((error: unknown) => {
+  const execution = process.send ? main() : runAffectedProcess(fileURLToPath(import.meta.url), process.argv.slice(2));
+  const code = await execution.catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 1;
+
+    return Number(process.exitCode) || 1;
   });
+
+  process.exitCode = code || Number(process.exitCode) || 0;
+
+  if (process.connected) {
+    process.disconnect?.();
+  }
 }
