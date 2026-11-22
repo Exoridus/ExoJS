@@ -41,7 +41,17 @@ export const Navigation = ({
     const focusFilter = (event: KeyboardEvent): void => {
       const target = event.target as HTMLElement | null;
 
-      if (event.key === '/' && !event.ctrlKey && !event.metaKey && !target?.closest?.('input, textarea, [contenteditable="true"]')) {
+      if (
+        event.key === '/' &&
+        !event.defaultPrevented &&
+        !event.isComposing &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !target?.closest?.(
+          'input, textarea, select, [role="textbox"], [role="searchbox"], [contenteditable]:not([contenteditable="false"]), .monaco-editor',
+        )
+      ) {
         event.preventDefault();
         filterRef.current?.focus();
       }
