@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { isClassDeclaration, withNativeSourceFile } from '@codexo/exojs-config/typescript/ast';
+import { describe, expect, it } from 'vitest';
 
 describe('TypeScript 7.1 leased syntax trees', () => {
   it('visits class declarations and preserves source ranges', () => {

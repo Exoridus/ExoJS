@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { transpileNative } from '@codexo/exojs-config/typescript/transpile';
+import { describe, expect, it } from 'vitest';
 
 describe('native TypeScript 7.1 syntax-only transpile', () => {
   it('strips TypeScript annotations while retaining ESM exports and ES2022 output', () => {

@@ -528,6 +528,7 @@ const collectFileImportLines = (filePath: string): string[] => {
 const collectFileClasses = (filePath: string): string[] => {
   try {
     const content = readFileSync(join(REPO_ROOT, filePath), 'utf8');
+
     return withNativeSourceFile(filePath, content, sourceFile => {
       const classes: string[] = [];
 
@@ -671,6 +672,7 @@ const wrapFragment = (body: string): string => {
  */
 const splitSiblingMethods = (body: string): string[] => {
   const wrapped = `class __Probe {\n${body}\n}`;
+
   return withNativeSourceFile('__probe.ts', wrapped, sourceFile => {
     const classDecl = sourceFile.statements.find(isClassDeclaration);
 

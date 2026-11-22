@@ -21,10 +21,10 @@ import path from 'node:path';
 
 import { createWorkerPlugin } from '@codexo/exojs-build';
 import sharedPrettierConfig from '@codexo/exojs-config/prettier';
+import { transpileNative } from '@codexo/exojs-config/typescript/transpile';
 import { format as formatSource } from 'prettier';
 import babelParser from 'prettier/plugins/babel';
 import estreePrinter from 'prettier/plugins/estree';
-import { transpileNative } from '@codexo/exojs-config/typescript/transpile';
 
 /**
  * Matches a whole-line `import name from './x.worker.ts?worker';` statement.
