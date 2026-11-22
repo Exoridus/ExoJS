@@ -153,9 +153,7 @@ try {
 
     if (checked.status !== 0) {
       console.error(checked.output);
-      console.error(
-        `typecheck:type-tests [${profile.name}]: ${checked.diagnostics.length} error(s) - ${profile.proves}.`,
-      );
+      console.error(`typecheck:type-tests [${profile.name}]: ${checked.diagnostics.length} error(s) - ${profile.proves}.`);
       failed = true;
       continue;
     }
