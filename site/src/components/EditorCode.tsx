@@ -177,6 +177,7 @@ export const EditorCode = ({
   const lastRunFilesRef = useRef(new Map<string, string>());
   const [draftStatus, setDraftStatus] = useState('Original source. Run updates the demo; Export downloads the selected file.');
   const [draftChanged, setDraftChanged] = useState(false);
+  const [otherUnpersistedDrafts, setOtherUnpersistedDrafts] = useState(false);
   const originalEntryRef = useRef<string | null>(originalSourceCode ?? sourceCode);
   const suppressDraftRef = useRef(false);
   const draftDurableRef = useRef(true);
@@ -228,31 +229,18 @@ export const EditorCode = ({
     const key = playgroundDraftKey(selectedVersionId, sourcePath);
     const result = changed ? playgroundDrafts.save(key, draft) : playgroundDrafts.remove(key);
     draftDurableRef.current = result.persistence === 'session';
+    setOtherUnpersistedDrafts(playgroundDrafts.hasUnpersistedChanges() && draftDurableRef.current);
 
     if (result.persistence === 'memory') {
       setDraftStatus(
         'Draft kept in this page only. Reload may lose recent edits or restore an earlier draft; export your files to keep them.',
       );
     } else if (changed) {
-      setDraftStatus(
-        `Session draft saved in this tab.${result.evicted ? ' Older drafts are now kept in this page only to stay within the session storage limit.' : ''} Run updates the demo; Export downloads the selected file.`,
-      );
+      setDraftStatus('Session draft saved in this tab. Run updates the demo; Export downloads the selected file.');
     } else {
       setDraftStatus('Original source. Run updates the demo; Export downloads the selected file.');
     }
   }, [selectedVersionId, sourcePath]);
-
-  useEffect(() => {
-    const warnUnsaved = (event: BeforeUnloadEvent): void => {
-      if (!draftDurableRef.current) {
-        event.preventDefault();
-      }
-    };
-
-    window.addEventListener('beforeunload', warnUnsaved);
-
-    return () => window.removeEventListener('beforeunload', warnUnsaved);
-  }, []);
 
   useEffect(() => {
     autoRefreshRef.current = autoRefresh;
@@ -547,6 +535,8 @@ export const EditorCode = ({
       );
     }
 
+    setOtherUnpersistedDrafts(playgroundDrafts.hasUnpersistedChanges() && draftDurableRef.current);
+
     disposablesRef.current.push(
       editor.onDidChangeCursorSelection(event => {
         const selection = event.selection;
@@ -677,6 +667,7 @@ export const EditorCode = ({
     setDraftChanged(false);
     const reset = sourcePath ? playgroundDrafts.remove(playgroundDraftKey(selectedVersionId, sourcePath)) : null;
     draftDurableRef.current = reset?.persistence === 'session';
+    setOtherUnpersistedDrafts(playgroundDrafts.hasUnpersistedChanges() && draftDurableRef.current);
     setDraftStatus(
       reset?.persistence === 'session'
         ? 'Reset to original source. The session draft was removed.'
@@ -985,6 +976,8 @@ export const EditorCode = ({
               : `Pinned release: ExoJS ${selectedVersionId}. `}
           </span>
           {draftStatus}
+          {otherUnpersistedDrafts &&
+            ' Other drafts have changes or resets that are not stored for reload. Export any edits you need before reloading.'}
         </p>
         {typingsLoading && (
           <p role="status" data-typings-status="loading" className={css(styles, 'file-status')}>

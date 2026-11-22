@@ -9,6 +9,7 @@ import {
   loadExamples,
   onExamplesLoaded,
 } from '../lib/example-store';
+import { playgroundDrafts } from '../lib/playground-drafts';
 import { detectRuntimeSupport, onRuntimeDetected } from '../lib/runtime-support';
 import type { Example, ExamplesMap } from '../lib/types';
 import { configureUrlsFromLocation } from '../lib/url-builder';
@@ -56,6 +57,18 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
   const activeExampleRef = useRef<Example | null>(null);
   const bodyOverflowBeforeDrawerOpenRef = useRef<string | null>(null);
   const breakpointRef = useRef<{ desktop: boolean; compact: boolean } | null>(null);
+
+  useEffect(() => {
+    const warnUnsaved = (event: BeforeUnloadEvent): void => {
+      if (playgroundDrafts.hasUnpersistedChanges()) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('beforeunload', warnUnsaved);
+
+    return () => window.removeEventListener('beforeunload', warnUnsaved);
+  }, []);
 
   useEffect(() => {
     selectedVersionRef.current = selectedVersion;

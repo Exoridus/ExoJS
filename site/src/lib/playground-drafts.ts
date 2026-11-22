@@ -15,6 +15,7 @@ type DraftStorage = Pick<Storage, 'getItem' | 'setItem'>;
 interface DraftStore {
   load(key: string): PlaygroundDraft | null;
   isPersisted(key: string): boolean;
+  hasUnpersistedChanges(): boolean;
   save(key: string, draft: PlaygroundDraft): DraftWriteResult;
   remove(key: string): DraftWriteResult;
 }
@@ -100,6 +101,13 @@ export const createDraftStore = (storage: () => DraftStorage, limits: { maxDraft
       read();
 
       return drafts.has(key) && JSON.stringify(drafts.get(key)) === JSON.stringify(persisted.get(key));
+    },
+    hasUnpersistedChanges(): boolean {
+      read();
+
+      return (
+        drafts.size !== persisted.size || [...drafts].some(([key, draft]) => JSON.stringify(draft) !== JSON.stringify(persisted.get(key)))
+      );
     },
     save(key, draft): DraftWriteResult {
       read();

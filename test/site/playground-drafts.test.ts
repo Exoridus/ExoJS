@@ -78,6 +78,35 @@ it('reports eviction when the bounded session fills up', () => {
   expect(createDraftStore(() => storage).load('c')).toEqual(draft);
 });
 
+it('continues reporting reload risk when another draft is persisted or a reset cannot be stored', () => {
+  const { storage } = fixture();
+  let denied = false;
+  const store = createDraftStore(
+    () => ({
+      getItem: storage.getItem,
+      setItem: (key, value) => {
+        if (denied) {
+          throw new Error('quota');
+        }
+
+        storage.setItem(key, value);
+      },
+    }),
+    { maxDrafts: 1 },
+  );
+  store.save('a', draft);
+  expect(store.hasUnpersistedChanges()).toBe(false);
+  store.save('b', draft);
+  store.save('b', { entry: 'another edit', helpers: {} });
+  expect(store.isPersisted('b')).toBe(true);
+  expect(store.hasUnpersistedChanges()).toBe(true);
+  store.remove('a');
+  expect(store.hasUnpersistedChanges()).toBe(false);
+  denied = true;
+  store.remove('b');
+  expect(store.hasUnpersistedChanges()).toBe(true);
+});
+
 it('retains an oversized edit in memory while preserving the previous durable snapshot', () => {
   const { storage } = fixture();
   const store = createDraftStore(() => storage, { maxChars: 200 });
