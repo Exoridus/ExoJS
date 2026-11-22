@@ -197,6 +197,44 @@ describe('affected tests from the Vite graph', () => {
     expect(selection.tests[0]?.reasons.some(reason => reason.kind === 'untracked')).toBe(true);
   });
 
+  it.each([
+    ['an image attribute', "const image = document.createElement('img'); image.setAttribute('src', '/src/photo.svg');"],
+    ['a namespaced href attribute', "element.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/src/photo.svg');"],
+    ['a dynamic attribute', "const attribute = 'src'; element.setAttribute(attribute, '/src/photo.svg');"],
+    ['an aliased attribute setter', "const assign = element.setAttribute.bind(element); assign('src', '/src/photo.svg');"],
+    ['a CSS background image', "element.style.backgroundImage = 'url(/src/photo.svg)';"],
+    ['a computed CSS property', "element.style['backgroundImage'] = 'url(/src/photo.svg)';"],
+    ['a CSS property setter', "element.style.setProperty('background-image', 'url(/src/photo.svg)');"],
+    ['CSS text', "element.style.cssText = 'background: url(/src/photo.svg)';"],
+    ['a stylesheet rule', "sheet.insertRule('body { background: url(/src/photo.svg) }');"],
+    ['HTML content', 'element.innerHTML = \'<img src="/src/photo.svg">\';'],
+  ])('retains %s readers when another test already imports the changed asset', async (_label, body) => {
+    write('src/photo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
+    test('test/asset.test.ts', "import value from '../src/photo.svg?raw';", 'void value');
+    write('test/helper.ts', `export const value = (element, sheet) => { ${body} };\n`);
+    test('test/reader.test.ts', "import { value } from './helper.ts';", 'void value');
+
+    const selection = await select('src/photo.svg');
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/asset.test.ts', 'test/reader.test.ts']);
+    expect(selection.tests.find(entry => entry.file === 'test/reader.test.ts')?.reasons).toContainEqual(
+      expect.objectContaining({ kind: 'untracked', path: ['test/helper.ts', 'test/reader.test.ts'] }),
+    );
+  });
+
+  it('does not classify literal styling without URLs or metadata attributes as asset loads', async () => {
+    write('src/photo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
+    test('test/asset.test.ts', "import value from '../src/photo.svg?raw';", 'void value');
+    write(
+      'test/helper.ts',
+      "export const value = element => { element.style.cssText = 'color: red'; element.setAttribute('aria-label', 'example'); };\n",
+    );
+    test('test/nonreader.test.ts', "import { value } from './helper.ts';", 'void value');
+
+    expect((await select('src/photo.svg')).tests.map(entry => entry.file)).toEqual(['test/asset.test.ts']);
+  });
+
   it('does not collapse a shared test file across distinct projects', async () => {
     write(
       'vitest.config.ts',

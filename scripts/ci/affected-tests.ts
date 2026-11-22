@@ -39,6 +39,21 @@ const errorMessage = (error: unknown): string => (error instanceof Error ? error
 const uniquePath = (path: string[]): string[] => path.filter((file, index) => index === 0 || file !== path[index - 1]);
 const harnessImport = (specifier: string): boolean => specifier === 'vitest' || specifier.startsWith('vitest/');
 
+const memberName = (node: ts.Node): string | undefined => {
+  if (ts.isPropertyAccessExpression(node)) {
+    return node.name.text;
+  }
+
+  if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression)) {
+    return node.argumentExpression.text;
+  }
+
+  return undefined;
+};
+
+const cssCanLoad = (value: ts.Expression | undefined): boolean =>
+  !value || !ts.isStringLiteralLike(value) || /(?:url|(?:-webkit-)?image-set)\s*\(|@import/i.test(value.text);
+
 interface SourceInputs {
   readonly hazards: string[];
   readonly imports: string[];
@@ -116,10 +131,65 @@ const sourceInputs = (file: string): SourceInputs => {
       hazards.add(`A computed ${node.expression.text} member can provide a hidden input reader.`);
     } else if (
       ts.isBinaryExpression(node) &&
-      ts.isPropertyAccessExpression(node.left) &&
-      ['src', 'srcset', 'href'].includes(node.left.name.text)
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
+      (ts.isPropertyAccessExpression(node.left) || ts.isElementAccessExpression(node.left))
     ) {
-      hazards.add(`A DOM ${node.left.name.text} assignment can load an asset outside the import graph.`);
+      const property = memberName(node.left)?.toLowerCase();
+      const style =
+        memberName(node.left.expression) === 'style' ||
+        (property &&
+          ['backgroundimage', 'borderimage', 'borderimagesource', 'liststyleimage', 'maskimage', 'csstext', 'style'].includes(property));
+
+      if (
+        (property && ['src', 'srcset', 'href', 'poster', 'innerhtml', 'outerhtml'].includes(property)) ||
+        (style && cssCanLoad(node.right))
+      ) {
+        hazards.add(`A DOM or CSS ${property ?? 'computed property'} assignment can load an asset outside the import graph.`);
+      }
+    }
+
+    const method = memberName(node);
+
+    if (
+      method &&
+      ['setAttribute', 'setAttributeNS', 'setProperty', 'insertRule', 'addRule', 'replaceSync', 'insertAdjacentHTML'].includes(method)
+    ) {
+      const call = parent && ts.isCallExpression(parent) && parent.expression === node ? parent : undefined;
+      let reads = true;
+
+      if (call && (method === 'setAttribute' || method === 'setAttributeNS')) {
+        const offset = method === 'setAttributeNS' ? 1 : 0;
+        const attribute = call.arguments[offset];
+
+        if (attribute && ts.isStringLiteralLike(attribute)) {
+          const name = attribute.text.toLowerCase();
+          reads = [
+            'src',
+            'srcset',
+            'href',
+            'xlink:href',
+            'poster',
+            'data',
+            'background',
+            'style',
+            'fill',
+            'stroke',
+            'filter',
+            'cursor',
+          ].includes(name);
+
+          if (name === 'style') {
+            reads = cssCanLoad(call.arguments[offset + 1]);
+          }
+        }
+      } else if (call && ['setProperty', 'insertRule', 'addRule', 'replaceSync'].includes(method)) {
+        reads = cssCanLoad(call.arguments[method === 'setProperty' || method === 'addRule' ? 1 : 0]);
+      }
+
+      if (reads) {
+        hazards.add(`A DOM or CSS ${method} reader can load assets outside the import graph, including through an alias.`);
+      }
     }
 
     if (ts.isImportDeclaration(node) && !node.importClause?.isTypeOnly && ts.isStringLiteral(node.moduleSpecifier)) {
