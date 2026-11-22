@@ -146,7 +146,7 @@
     "lint": "node ./scripts/lint.ts",
     "validation:unlock": "tsx scripts/lib/validation-lock.ts",
     "lint:fast": "pnpm lint --cache --cache-location .cache/eslintcache",
-    "lint:exojs:shadow": "pnpm build:tooling && oxlint --config scripts/ci/oxlint-exojs-shadow.json -- src packages",
+    "lint:exojs:shadow": "pnpm build:tooling && oxlint --config scripts/ci/oxlint-exojs-shadow.json -- src packages/*/src",
     "lint:site": "pnpm --filter @codexo/exojs-examples lint",
     "lint:all": "pnpm lint && pnpm lint:site",
     "lint:fix": "pnpm lint --fix && pnpm lint:site --fix",
