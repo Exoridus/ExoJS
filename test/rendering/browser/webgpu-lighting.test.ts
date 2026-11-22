@@ -191,8 +191,11 @@ describe('lighting WebGPU browser', () => {
 
       line.rotation = 90;
       await render();
-      expect(readPixel(32, 50)[0]).toBeGreaterThan(170);
-      expect(readPixel(50, 32)[0]).toBeLessThan(10);
+      // Readback is a snapshot: obtain fresh pixels after rendering the rotated line.
+      const rotatedReadPixel = readWebGpuPixels(backend, canvasSize);
+
+      expect(rotatedReadPixel(32, 50)[0]).toBeGreaterThan(170);
+      expect(rotatedReadPixel(50, 32)[0]).toBeLessThan(10);
       expect(await device.popErrorScope()).toBeNull();
     } catch (error) {
       if (error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError')) {
