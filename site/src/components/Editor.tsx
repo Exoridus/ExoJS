@@ -7,9 +7,10 @@ import { PreviewConsole } from '../lib/preview-console';
 import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry } from '../lib/types';
 import { buildPublicUrl } from '../lib/url-builder';
+import { buildExampleHref } from '../lib/url-state';
 import { type DiagnosticJumpEvent, DiagnosticsStrip } from './DiagnosticsStrip';
 import styles from './Editor.module.scss';
-import type { EditorCodeHandle, EditorCodeProps, EditorDiagnostic, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
+import type { EditorCodeHandle, EditorCodeProps, EditorDiagnostic, EditorRunStatus, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
 import { type CanvasSizeEvent, EditorPreview, type EditorPreviewHandle } from './EditorPreview';
 import { OutputPanel } from './OutputPanel';
 import { SidebarToggle } from './PlaygroundButtons';
@@ -43,22 +44,28 @@ const SPLIT_STORAGE_KEY = 'exo-playground-split';
 
 export interface EditorProps {
   activeExample: Example | null;
+  nextExample?: Example | null;
+  compact?: boolean;
   catalogLoadError: string | null;
   selectedVersionId: string;
   showSidebarToggle: boolean;
   sidebarOpen: boolean;
   sidebarToggleRef: Ref<HTMLButtonElement>;
   onToggleSidebar(): void;
+  onSelectExample?(path: string): void;
 }
 
 export const Editor = ({
   activeExample,
+  nextExample,
+  compact = false,
   catalogLoadError,
   selectedVersionId,
   showSidebarToggle,
   sidebarOpen,
   sidebarToggleRef,
   onToggleSidebar,
+  onSelectExample,
 }: EditorProps): JSX.Element => {
   const [rendererStatus, setRendererStatus] = useState<ExampleRendererStatus | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -76,6 +83,7 @@ export const Editor = ({
   const [previewZoom, setPreviewZoom] = useState(1);
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [runStatus, setRunStatus] = useState<EditorRunStatus>('idle');
   const [diagnostics, setDiagnostics] = useState<ReadonlyArray<EditorDiagnostic>>([]);
   const [layout, setLayout] = useState<EditorLayout>('stacked');
   const [order, setOrder] = useState<EditorOrder>('preview-first');
@@ -84,6 +92,7 @@ export const Editor = ({
   const [toolbarTarget, setToolbarTarget] = useState<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLElement | null>(null);
   const codeEditorRef = useRef<EditorCodeHandle | null>(null);
+  const codeFrameRef = useRef<HTMLElement | null>(null);
   const [assetSources, setAssetSources] = useState<readonly string[] | null>(null);
   const previewRef = useRef<EditorPreviewHandle | null>(null);
   const previewFrameRef = useRef<HTMLElement | null>(null);
@@ -105,6 +114,7 @@ export const Editor = ({
     // Monaco on every example switch, so we suppress the heuristic here instead.
     /* eslint-disable @eslint-react/set-state-in-effect */
     setRendererStatus(null);
+    setRunStatus('idle');
     setSourceCode(null);
     setOriginalSourceCode(null);
     setExecutionCode(null);
@@ -171,6 +181,16 @@ export const Editor = ({
   }, [activeExample, selectedVersionId]);
 
   useEffect(() => () => output.dispose(), [output]);
+
+  useEffect(
+    () =>
+      output.subscribe(() => {
+        if (output.getSnapshot().exceptions > 0) {
+          setRunStatus('error');
+        }
+      }),
+    [output],
+  );
 
   // Runs once the first client render has matched the server's output, which is
   // the point from which the editor can differ from it safely.
@@ -302,6 +322,48 @@ export const Editor = ({
     setPreviewZoom(event.zoom);
   }, []);
 
+  const onRendererStatus = useCallback((status: ExampleRendererStatus | null): void => {
+    setRendererStatus(status);
+
+    if (status?.phase === 'failed') {
+      setRunStatus('error');
+    }
+  }, []);
+
+  const onExecutionStatus = useCallback(
+    (status: 'updated' | 'error'): void => {
+      if (status === 'error' || output.getSnapshot().exceptions > 0) {
+        setRunStatus('error');
+
+        return;
+      }
+
+      setRunStatus(current => (current === 'running' ? 'updated' : current));
+    },
+    [output],
+  );
+
+  const showCode = (): void => {
+    setActiveView('code');
+
+    if (window.matchMedia('(min-width: 1120px)').matches && layout === 'stacked') {
+      toggleLayout();
+    }
+
+    requestAnimationFrame(() => {
+      (window.matchMedia('(min-width: 1120px)').matches ? rootRef : codeFrameRef).current?.scrollIntoView({ block: 'start' });
+      codeFrameRef.current?.focus({ preventScroll: true });
+    });
+  };
+
+  const showDemo = (): void => {
+    setActiveView('demo');
+    requestAnimationFrame(() => {
+      rootRef.current?.scrollIntoView({ block: 'start' });
+      rootRef.current?.querySelector<HTMLButtonElement>('#demo-view-tab')?.focus({ preventScroll: true });
+    });
+  };
+
   const onDiagnosticJump = (event: DiagnosticJumpEvent): void => {
     setActiveView('code');
     requestAnimationFrame(() => codeEditorRef.current?.jumpToLine(event.lineNumber, event.column));
@@ -319,6 +381,7 @@ export const Editor = ({
   const availability = getExampleAvailability(activeExample);
   const editorLanguage = activeExample?.language === 'typescript' ? 'typescript' : 'javascript';
   const displayPath = getDisplayPath(activeExample);
+  const runMessage = getRunMessage(runStatus, dirty, Boolean(rendererStatus?.actual));
 
   const sidebarToggle =
     showSidebarToggle && !sidebarOpen ? <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} /> : null;
@@ -337,6 +400,9 @@ export const Editor = ({
           <div className={css(styles, 'example-heading')} data-header-row="primary">
             {sidebarToggle}
             <h1 title={activeExample.title}>{activeExample.title}</h1>
+            <button type="button" className={css(styles, 'code-link')} onClick={showCode}>
+              View code
+            </button>
             <div className={css(styles, 'toolbar-slot')}>
               <PreviewToolbar actionsRef={setToolbarTarget} />
             </div>
@@ -346,13 +412,35 @@ export const Editor = ({
               {activeExample.description}
             </p>
             {renderLearningLinks(activeExample, 1)}
-            <div className={css(styles, 'view-tabs')} role="tablist" aria-label="Example view">
+          </div>
+          <div className={css(styles, 'example-actions')}>
+            <div
+              className={css(styles, 'view-tabs')}
+              role="tablist"
+              aria-label="Example view"
+              onKeyDown={event => {
+                if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                  event.preventDefault();
+                  let next: 'demo' | 'code' = activeView === 'demo' ? 'code' : 'demo';
+
+                  if (event.key === 'Home') {
+                    next = 'demo';
+                  } else if (event.key === 'End') {
+                    next = 'code';
+                  }
+
+                  setActiveView(next);
+                  event.currentTarget.querySelector<HTMLButtonElement>(`#${next}-view-tab`)?.focus();
+                }
+              }}
+            >
               <button
                 id="demo-view-tab"
                 type="button"
                 role="tab"
                 aria-selected={activeView === 'demo'}
                 aria-controls="playground-demo"
+                tabIndex={activeView === 'demo' ? 0 : -1}
                 onClick={() => setActiveView('demo')}
               >
                 Demo
@@ -363,11 +451,36 @@ export const Editor = ({
                 role="tab"
                 aria-selected={activeView === 'code'}
                 aria-controls="playground-code"
+                tabIndex={activeView === 'code' ? 0 : -1}
                 onClick={() => setActiveView('code')}
               >
                 Code
               </button>
             </div>
+            {nextExample && onSelectExample && (
+              <a
+                className={css(styles, 'next-example')}
+                href={buildExampleHref(nextExample.path, selectedVersionId)}
+                onClick={event => {
+                  if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+                    event.preventDefault();
+                    onSelectExample(nextExample.path);
+                  }
+                }}
+              >
+                <span>Next experiment</span> {nextExample.title} <span aria-hidden="true">→</span>
+              </a>
+            )}
+          </div>
+          <div className={css(styles, 'run-feedback')} data-run-status={runStatus}>
+            <p role="status" aria-live="polite">
+              {runMessage}
+            </p>
+            {activeView === 'code' && (runStatus === 'updated' || runStatus === 'running') && (
+              <button type="button" onClick={showDemo}>
+                Show demo
+              </button>
+            )}
           </div>
         </header>
       )}
@@ -376,6 +489,9 @@ export const Editor = ({
         ref={previewFrameRef}
         className={cx(css(styles, 'preview-frame'), expandedActive && css(styles, 'preview-frame--expanded'))}
         aria-label="Example preview"
+        role={compact ? 'tabpanel' : undefined}
+        aria-labelledby={compact ? 'demo-view-tab' : undefined}
+        tabIndex={compact ? 0 : undefined}
       >
         <div className={css(styles, 'preview-surface')} data-preview-surface>
           <div className={css(styles, 'preview-component')}>
@@ -388,7 +504,8 @@ export const Editor = ({
               selectedVersionId={selectedVersionId}
               output={output}
               onCanvasSize={onCanvasSize}
-              onRendererStatus={setRendererStatus}
+              onRendererStatus={onRendererStatus}
+              onExecutionStatus={onExecutionStatus}
               onAssets={setAssetSources}
             />
           </div>
@@ -441,7 +558,15 @@ export const Editor = ({
       <div className={css(styles, 'output-slot')}>
         <OutputPanel output={output} systemErrors={combinedErrors} />
       </div>
-      <section id="playground-code" className={css(styles, 'editor-frame')} aria-label="Source editor">
+      <section
+        id="playground-code"
+        ref={codeFrameRef}
+        tabIndex={compact ? 0 : -1}
+        className={css(styles, 'editor-frame')}
+        aria-label="Source editor"
+        role={compact ? 'tabpanel' : undefined}
+        aria-labelledby={compact ? 'code-view-tab' : undefined}
+      >
         <UsedAssets sources={assetSources} />
         {/*
           Held back until after hydration. The lazy loader resolves to an empty
@@ -518,12 +643,30 @@ export const Editor = ({
               onCursorChange={() => undefined}
               onDiagnostic={setDiagnostics}
               onDirty={setDirty}
+              onRunStatus={setRunStatus}
             />
           )}
         </Suspense>
       </section>
     </section>
   );
+};
+
+const getRunMessage = (status: EditorRunStatus, dirty: boolean, ready: boolean): string => {
+  if (status === 'idle') {
+    if (dirty) {
+      return 'Changed — Run to update the demo';
+    }
+
+    return ready ? 'Ready to play' : 'Loading demo…';
+  }
+
+  return {
+    compiling: 'Compiling changes…',
+    running: 'Running code…',
+    updated: 'Demo updated',
+    error: 'Run failed. Check the editor and Output.',
+  }[status];
 };
 
 const renderLearningLinks = (example: Example, apiLimit = 3): JSX.Element | null => {

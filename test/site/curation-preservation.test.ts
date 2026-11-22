@@ -4,11 +4,48 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import catalog from '../../docs/curation/catalog.json';
-import { getCuratedExamples, getPlaygroundNavigation } from '../../site/src/lib/curation-catalog';
+import {
+  getCuratedExamples,
+  getNextPlaygroundHighlight,
+  getPlaygroundDefault,
+  getPlaygroundHighlights,
+  getPlaygroundNavigation,
+} from '../../site/src/lib/curation-catalog';
 import { EXAMPLE_ALIASES, resolveExampleAlias } from '../../site/src/lib/example-aliases';
 import { getRunnableExamples } from '../../site/src/lib/examples-catalog';
 
 describe('runnable curriculum preservation', () => {
+  it('offers four ordered experiments without duplicating or changing catalog entries', () => {
+    const entries = [...getPlaygroundNavigation().values()].flat();
+    const highlights = getPlaygroundHighlights(entries);
+    expect(highlights.map(example => example.path)).toEqual([
+      'physics/sprite-follows-body.js',
+      'tweens-animation/tween-basics.js',
+      'filters/custom-fragment-shader.js',
+      'showcase/boss-intro-cinematic.js',
+    ]);
+
+    for (const example of highlights) {
+      expect(entries.find(entry => entry.path === example.path)).toBe(example);
+    }
+
+    expect(getPlaygroundDefault(entries)).toBe(highlights[0]);
+    expect(getNextPlaygroundHighlight(entries, highlights[0]!.path)).toBe(highlights[1]);
+    expect(getNextPlaygroundHighlight(entries, highlights[3]!.path)).toBe(highlights[0]);
+    expect(getNextPlaygroundHighlight(entries, 'getting-started/hello-world.js')).toBe(highlights[0]);
+  });
+
+  it('respects explicit featured opt-outs and missing examples in older catalogs', () => {
+    const entries = [...getPlaygroundNavigation().values()].flat();
+    const physics = entries.find(example => example.path === 'physics/sprite-follows-body.js')!;
+    const lesson = entries.find(example => example.path === 'getting-started/hello-world.js')!;
+    expect(getPlaygroundHighlights([{ ...physics, featured: false }, lesson])).toEqual([]);
+    expect(getPlaygroundDefault([lesson])).toBe(lesson);
+    expect(getPlaygroundDefault([])).toBeNull();
+    expect(getNextPlaygroundHighlight([], physics.path)).toBeNull();
+    expect(getNextPlaygroundHighlight([physics], physics.path)).toBeNull();
+  });
+
   it('resolves every original source and every historical alias without discarding its code', () => {
     const entries = getRunnableExamples();
     const paths = new Set(entries.map(entry => entry.path));

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { getNextPlaygroundHighlight, getPlaygroundDefault } from '../lib/curation-catalog';
 import {
   getExampleByPath,
   getExamplesList,
@@ -158,7 +159,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
 
       const requested = requestedPath ? getExampleByPath(versionId, requestedPath) : null;
       const fellBack = requestedPath !== null && requested === null;
-      const example = requested ?? getExamplesList(versionId)[0] ?? null;
+      const example = requested ?? getPlaygroundDefault(getExamplesList(versionId));
 
       setActiveExample(example);
 
@@ -397,6 +398,9 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
         <div className={css(styles, 'main-content')}>
           <Editor
             activeExample={activeExample}
+            nextExample={getNextPlaygroundHighlight(Array.from(examples.values()).flat(), activeExample?.path ?? '')}
+            compact={isCompactMobile}
+            onSelectExample={selectExample}
             catalogLoadError={loadError}
             selectedVersionId={selectedVersion?.id ?? ''}
             showSidebarToggle={!isCompactMobile}

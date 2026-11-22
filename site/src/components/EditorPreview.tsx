@@ -37,6 +37,8 @@ const CAPABILITY_LABELS: Record<Capability, string> = {
 };
 
 const PREVIEW_SCROLL_KEYS = new Set([' ', 'PageUp', 'PageDown', 'End', 'Home', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown']);
+const PREVIEW_COMPLETE_EVENT = 'exo-preview-complete';
+const PREVIEW_COMPLETE_MODULE = `data:text/javascript,${encodeURIComponent(`window.dispatchEvent(new Event('${PREVIEW_COMPLETE_EVENT}'));`)}`;
 
 export interface CanvasSizeEvent {
   height: number;
@@ -64,6 +66,7 @@ export interface EditorPreviewProps {
   runId?: number;
   onCanvasSize?(event: CanvasSizeEvent): void;
   onRendererStatus?(status: ExampleRendererStatus | null): void;
+  onExecutionStatus?(status: 'updated' | 'error'): void;
   onAssets?(sources: readonly string[] | null): void;
 }
 
@@ -72,6 +75,7 @@ export const EditorPreview = ({
   executionModules,
   onCanvasSize,
   onRendererStatus,
+  onExecutionStatus,
   onAssets,
   output,
   ref,
@@ -87,10 +91,12 @@ export const EditorPreview = ({
   }>({ id: 0, modules: null, error: null });
   const requestRef = useRef(previewRequest);
   const rendererStatusRef = useRef(onRendererStatus);
+  const executionStatusRef = useRef(onExecutionStatus);
   const assetsRef = useRef(onAssets);
   const rendererCleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     rendererStatusRef.current = onRendererStatus;
+    executionStatusRef.current = onExecutionStatus;
     assetsRef.current = onAssets;
   });
   useEffect(() => () => rendererCleanupRef.current?.(), []);
@@ -142,6 +148,11 @@ export const EditorPreview = ({
     rendererStatusRef.current?.(null);
     assetsRef.current?.(null);
     outputRef.current?.detach();
+
+    if (error) {
+      executionStatusRef.current?.('error');
+    }
+
     disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
     currentCanvasRef.current = { width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 };
     // Before the example reports its canvas, the frame already takes the
@@ -342,12 +353,20 @@ export const EditorPreview = ({
       const report = (event: Event): void => {
         const status = readRendererStatus((event as CustomEvent<unknown>).detail);
 
-        if (status) {
+        if (status && loadedId === String(requestRef.current.id)) {
           rendererStatusRef.current?.(status);
         }
       };
 
       iframeWindow.addEventListener('exo-renderer-status', report);
+
+      const complete = (): void => {
+        if (loadedId === String(requestRef.current.id)) {
+          executionStatusRef.current?.('updated');
+        }
+      };
+
+      iframeWindow.addEventListener(PREVIEW_COMPLETE_EVENT, complete, { once: true });
 
       const forwardShortcut = (event: KeyboardEvent): void => {
         const target = event.target as HTMLElement | null;
@@ -380,6 +399,7 @@ export const EditorPreview = ({
       rendererCleanupRef.current = () => {
         window.clearInterval(assetTimer);
         iframeWindow.removeEventListener('exo-renderer-status', report);
+        iframeWindow.removeEventListener(PREVIEW_COMPLETE_EVENT, complete);
         iframeWindow.removeEventListener('keydown', forwardShortcut);
       };
 
@@ -390,21 +410,41 @@ export const EditorPreview = ({
 
       iframeWindow.__EXAMPLE_META__ = exampleRef.current;
       installPreviewErrorHandlers(iframeWindow, iframeBody, error => {
-        sink?.writeException(generation, error.summary, error.details ?? null);
+        if (loadedId === String(requestRef.current.id)) {
+          sink?.writeException(generation, error.summary, error.details ?? null);
+          executionStatusRef.current?.('error');
+        }
       });
 
       const modulesError = iframeBody.ownerDocument.documentElement.dataset.previewModulesError;
 
       if (modulesError) {
         sink?.writeException(generation, modulesError, null);
+        executionStatusRef.current?.('error');
         renderExecutionError(iframeBody);
 
         return;
       }
     }
 
+    const reportExecutionFailure = (error?: PreviewErrorEntry): void => {
+      if (loadedId !== String(requestRef.current.id)) {
+        return;
+      }
+
+      if (error) {
+        const sink = outputRef.current;
+        sink?.writeException(sink.generation, error.summary, error.details ?? null);
+        renderExecutionError(iframeBody);
+      }
+
+      executionStatusRef.current?.('error');
+    };
+
     iframeBody.tabIndex = -1;
-    void executePreviewSource(iframeBody, source, exampleRef.current);
+    void executePreviewSource(iframeBody, source, exampleRef.current, reportExecutionFailure).catch(error => {
+      reportExecutionFailure(createPreviewErrorEntry(error));
+    });
     watchForCanvas(iframeBody);
 
     if (document.activeElement === document.body || document.activeElement === iframe) {
@@ -439,6 +479,7 @@ export const EditorPreview = ({
           const sink = outputRef.current;
 
           sink?.writeException(sink.generation, 'The preview iframe failed to load.', null);
+          executionStatusRef.current?.('error');
         }}
         onPointerDown={() => focusPreviewSurface(iframeRef.current)}
         onKeyDown={(event: ReactKeyboardEvent<HTMLIFrameElement>) => {
@@ -542,7 +583,12 @@ const installPreviewErrorHandlers = (
   };
 };
 
-const executePreviewSource = async (iframeBody: HTMLBodyElement, sourceCode: string, exampleMeta: Example | null): Promise<void> => {
+const executePreviewSource = async (
+  iframeBody: HTMLBodyElement,
+  sourceCode: string,
+  exampleMeta: Example | null,
+  onFailure: (error?: PreviewErrorEntry) => void,
+): Promise<void> => {
   const required = exampleMeta?.capabilities ?? [];
 
   if (required.length > 0) {
@@ -555,6 +601,7 @@ const executePreviewSource = async (iframeBody: HTMLBodyElement, sourceCode: str
 
     if (missing && missing.length > 0) {
       renderCapabilityOverlay(iframeBody, required, missing);
+      onFailure();
 
       return;
     }
@@ -564,7 +611,16 @@ const executePreviewSource = async (iframeBody: HTMLBodyElement, sourceCode: str
 
   const script = iframeBody.ownerDocument.createElement('script');
   script.type = 'module';
-  script.textContent = `${sourceCode}\n`;
+  // Inline modules have no load event. A separate, constant module signals
+  // completion after the user's last statement and top-level awaits. Keeping
+  // the entry inline preserves its relative imports and import.meta.url;
+  // the notifier has its own scope and cannot collide with user bindings.
+  script.textContent = `${sourceCode}\n;await import(${JSON.stringify(PREVIEW_COMPLETE_MODULE)});\n`;
+  script.addEventListener(
+    'error',
+    () => onFailure({ summary: 'The preview module could not load. Check its imports and the browser console.' }),
+    { once: true },
+  );
   iframeBody.appendChild(script);
 };
 
@@ -576,10 +632,9 @@ const executePreviewSource = async (iframeBody: HTMLBodyElement, sourceCode: str
  * module graph is per realm, so a signal imported here would be a different
  * object from the one the sample's engine dispatches on.
  *
- * Kept out of the sample's own module for the reason the gate exists at all:
- * the editor shows the visitor's code, and what runs must be exactly that.
- * Which also rules out reading the sample's variables - a visitor names their
- * application whatever they like, or builds none.
+ * Kept in its own module scope so it cannot collide with the sample's
+ * bindings. The gate never reads the sample's variables: a visitor names
+ * their application whatever they like, or builds none.
  *
  * The gesture needs no handling of its own. The engine resumes a suspended
  * context on a pointer or key event anywhere in the realm, so clicking the

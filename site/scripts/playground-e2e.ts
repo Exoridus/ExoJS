@@ -1828,6 +1828,186 @@ const audioBusChecks = async (browser: Browser, origin: string, base: string): P
 };
 
 const headerChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('experience: fresh visitors can play, inspect code and choose the next experiment', async () => {
+    const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+    const page = await context.newPage();
+    watchPage(page);
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/`, { waitUntil: 'domcontentloaded' });
+      await page.getByRole('heading', { name: 'Drag and Throw Physics', exact: true }).waitFor();
+      assert((await page.locator('[data-layout]').getAttribute('data-layout')) === 'stacked', 'fresh entry did not retain stacked layout');
+      const paths = await page
+        .locator('#playground-navigation nav a')
+        .evaluateAll(links => links.map(link => new URL((link as HTMLAnchorElement).href).hash.split('/').slice(2).join('/')));
+      assert(
+        paths.join('|') ===
+          'physics/sprite-follows-body|tweens-animation/tween-basics|filters/custom-fragment-shader|showcase/boss-intro-cinematic',
+        `unexpected highlight order: ${paths.join(', ')}`,
+      );
+      await page.getByRole('button', { name: 'View code', exact: true }).click();
+      assert((await page.locator('[data-layout]').getAttribute('data-layout')) === 'split', 'View code did not reveal the workspace');
+      assert(await page.locator('#playground-code').isVisible(), 'source is not visible');
+      await page.getByRole('link', { name: /Next experiment Tweens and Easing/ }).click();
+      await page.getByRole('heading', { name: 'Tweens and Easing', exact: true }).waitFor();
+      await page.goBack();
+      await page.getByRole('heading', { name: 'Drag and Throw Physics', exact: true }).waitFor();
+      await page.locator('#playground-navigation').getByRole('button', { name: 'All examples', exact: true }).click();
+      assert(
+        await page
+          .locator('#playground-navigation')
+          .getByRole('link', { name: /^Lazy Sprite from a Path/ })
+          .isVisible(),
+        'the original recipe is not discoverable',
+      );
+    } finally {
+      await context.close();
+    }
+  });
+
+  await check('experience: mobile tabs and file menu provide complete keyboard navigation', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world', { width: 390, height: 844 });
+
+    try {
+      const demo = page.getByRole('tab', { name: 'Demo', exact: true });
+      const code = page.getByRole('tab', { name: 'Code', exact: true });
+      await demo.focus();
+      await page.keyboard.press('ArrowRight');
+      assert(
+        (await code.getAttribute('aria-selected')) === 'true' && (await code.evaluate(node => node === document.activeElement)),
+        'ArrowRight did not select and focus Code',
+      );
+      await page.keyboard.press('Home');
+      assert((await demo.getAttribute('aria-selected')) === 'true', 'Home did not select Demo');
+      await page.keyboard.press('End');
+      assert((await code.getAttribute('aria-selected')) === 'true', 'End did not select Code');
+      const trigger = page.getByRole('button', { name: 'File options', exact: true });
+      await trigger.click();
+      const menu = page.getByRole('menu', { name: 'File options', exact: true });
+      await waitFor(() => menu.evaluate(node => node.contains(document.activeElement)), Boolean, 'initial file menu focus');
+      await page.keyboard.press('End');
+      assert(
+        await menu.getByRole('menuitem', { name: 'Import main file', exact: true }).evaluate(node => node === document.activeElement),
+        'End did not focus last menu action',
+      );
+      await page.keyboard.press('Home');
+      assert(
+        await menu.getByRole('menuitem', { name: 'Copy', exact: true }).evaluate(node => node === document.activeElement),
+        'Home did not focus first menu action',
+      );
+      await page.keyboard.press('Escape');
+      assert(await trigger.evaluate(node => node === document.activeElement), 'file menu Escape lost focus');
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('experience: mobile Run reports completion and preserves the active file and cursor', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world', { width: 390, height: 844 });
+
+    try {
+      await page.getByRole('tab', { name: 'Code', exact: true }).click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      await page.locator('.monaco-editor [role="textbox"]').focus();
+      await page.keyboard.press(endOfDocumentKey);
+      await page.keyboard.type('\ndocument.body.dataset.experienceRun = "updated";');
+      await page.getByText('Changed — Run to update the demo', { exact: true }).waitFor();
+      const snapshot = () =>
+        page.evaluate<string>(
+          'JSON.stringify({uri:window.monaco.editor.getEditors()[0].getModel().uri.toString(),source:window.monaco.editor.getEditors()[0].getValue(),cursor:window.monaco.editor.getEditors()[0].getPosition()})',
+        );
+      const before = await snapshot();
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      await page.locator('[data-run-status="updated"]').waitFor();
+      assert(
+        (await page.getByRole('tab', { name: 'Code', exact: true }).getAttribute('aria-selected')) === 'true',
+        'Run unexpectedly changed the active editor view',
+      );
+      await page.getByRole('button', { name: 'Show demo', exact: true }).click();
+      await (await previewFrame(page)).waitForFunction(() => document.body.dataset.experienceRun === 'updated');
+      await page.getByRole('tab', { name: 'Code', exact: true }).click();
+      assert((await snapshot()) === before, 'view switching changed source, file or cursor');
+
+      const previousUrl = (await previewFrame(page)).url();
+      await page.evaluate(
+        `window.__experiencePostMessage = Worker.prototype.postMessage;
+        Worker.prototype.postMessage = function(message, ...rest) {
+          if (JSON.stringify(message).includes('getEmitOutput')) {
+            // Return the worker protocol's normal rejection. Throwing from
+            // postMessage is swallowed by Monaco before its RPC can settle.
+            queueMicrotask(() => this.dispatchEvent(new MessageEvent('message', { data: {
+              type: 1, vsWorker: message.vsWorker, seq: message.req,
+              err: { $isError: true, name: 'Error', message: 'controlled emit failure' }
+            } })));
+            return;
+          }
+          return window.__experiencePostMessage.call(this, message, ...rest);
+        };`,
+      );
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      await page.locator('[data-run-status="error"]').waitFor();
+      assert((await previewFrame(page)).url() === previousUrl, 'failed emit replaced the last running preview');
+      assert((await snapshot()) === before, 'failed emit changed the editor state');
+      await page.evaluate('Worker.prototype.postMessage = window.__experiencePostMessage');
+      await runSource(page, "throw new Error('EXPERIENCE_RUNTIME');");
+      await page.locator('[data-run-status="error"]').waitFor();
+      assert(
+        (await page.getByRole('button', { name: 'Show demo', exact: true }).count()) === 0,
+        'runtime failure was presented as an updated demo',
+      );
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('experience: completion follows module evaluation, imports and top-level await', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+
+    try {
+      await runSource(page, "console.log('COMPLETE_WITHOUT_RENDERER');");
+      await page.locator('[data-run-status="updated"]').waitFor();
+
+      await runSource(
+        page,
+        `import { startExample } from './examples/shared/runtime.js';
+        document.body.dataset.entryUrl = import.meta.url;
+        document.body.dataset.relativeImport = typeof startExample;
+        await new Promise(resolve => { (globalThis as any).finishRun = resolve; });
+        document.body.dataset.afterAwait = 'complete';`,
+      );
+      const awaiting = await previewFrame(page);
+      await awaiting.waitForFunction("typeof globalThis.finishRun === 'function'");
+      assert((await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'running', 'pending await completed early');
+      assert((await awaiting.locator('body').getAttribute('data-entry-url')) === awaiting.url(), 'inline import.meta.url changed');
+      assert((await awaiting.locator('body').getAttribute('data-relative-import')) === 'function', 'relative import failed');
+      await awaiting.evaluate('globalThis.finishRun()');
+      await page.locator('[data-run-status="updated"]').waitFor();
+      assert((await awaiting.locator('body').getAttribute('data-after-await')) === 'complete', 'completion preceded the final statement');
+
+      for (const source of ["await Promise.reject(new Error('EXPERIENCE_AWAIT_REJECTION'));", "import './missing-experience-module.js';"]) {
+        await runSource(page, source);
+        await page.locator('[data-run-status="error"]').waitFor();
+      }
+
+      await runSource(page, 'await new Promise(() => {});');
+      await page.locator('[data-run-status="running"]').waitFor();
+      await page.evaluate('window.__olderPreviewError = document.querySelector(\'iframe[title^="Live demo:"]\').contentWindow.onerror');
+      await runSource(page, "document.body.dataset.newGeneration = 'complete';");
+      await page.locator('[data-run-status="updated"]').waitFor();
+      await page.evaluate("window.__olderPreviewError('older run error', '', 0, 0, new Error('older run error'))");
+      assert(
+        (await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'updated',
+        'an older error changed the current status',
+      );
+      assert(
+        (await (await previewFrame(page)).locator('body').getAttribute('data-new-generation')) === 'complete',
+        'a pending older run blocked the newest completion',
+      );
+    } finally {
+      await page.context().close();
+    }
+  });
+
   await check('experience: navigation dialogs contain focus and restore their opener', async () => {
     for (const width of [900, 390]) {
       const context = await browser.newContext({ viewport: { width, height: 900 } });
@@ -1920,7 +2100,6 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
       try {
         await page.getByRole('button', { name: 'Run', exact: true }).waitFor();
         const header = page.locator('[data-example-header]');
-        const height = (await header.boundingBox())!.height;
         assert(
           await header.locator('[data-header-row="context"] > p').isVisible(),
           'Example instructions must remain visible on narrow screens',
@@ -1942,7 +2121,12 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
               value => value === title,
               'selected example title',
             );
-            assert((await header.boundingBox())!.height === height, 'example selection changed the header height');
+            assert(
+              await header
+                .locator('[data-header-row="context"] > p')
+                .evaluate(node => node.scrollHeight <= node.clientHeight && node.scrollWidth <= node.clientWidth),
+              'the selected example instruction is clipped',
+            );
           }
 
           await page.getByRole('button', { name: 'Hide example list', exact: true }).click();

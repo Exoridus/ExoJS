@@ -39,6 +39,68 @@
   min-width: 0;
 }
 
+.example-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+.code-link,
+.run-feedback button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-2);
+  background: var(--accent-soft);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+  }
+}
+
+.next-example {
+  color: var(--fg);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  text-decoration: none;
+
+  span:first-child {
+    color: var(--fg-muted);
+    margin-right: var(--s-2);
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.run-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+  min-height: 24px;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+
+  p {
+    margin: 0;
+  }
+
+  &[data-run-status='error'] {
+    color: var(--fg);
+  }
+}
+
 .example-description {
   flex: 1 1 auto;
   min-width: 0;
@@ -416,6 +478,20 @@
     }
   }
 
+  .code-link {
+    display: none;
+  }
+
+  .example-actions {
+    flex-wrap: wrap;
+    row-gap: var(--s-2);
+  }
+
+  .next-example {
+    width: 100%;
+    font-size: var(--text-xs);
+  }
+
   .example-context {
     flex-wrap: wrap;
     row-gap: var(--s-1);
@@ -423,7 +499,6 @@
 
   .example-description {
     flex: 1 1 100%;
-    order: 1;
   }
 
   .learning-links {
@@ -437,7 +512,7 @@
     flex: 1 1 auto;
 
     button {
-      min-height: 2rem;
+      min-height: 36px;
       padding: 0 var(--s-3);
       border: 1px solid var(--line);
       border-radius: var(--r-2);
@@ -449,6 +524,11 @@
         color: var(--fg);
         background: var(--accent-soft);
         border-color: var(--accent-line);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--accent-line);
+        outline-offset: 2px;
       }
     }
   }
