@@ -38,10 +38,12 @@ export interface AffectedCommandOptions {
   readonly name: string;
   readonly full?: boolean;
   readonly serial?: boolean;
+  /** Compare committed inputs only; do not pick unrelated worktree edits. */
+  readonly committed?: boolean;
 }
 
 /** One discovery and execution pass; file paths remain inside the NUL-safe Git reader and Vite graph. */
-export const affectedTestCommand = ({ base, projects, name, full = false, serial = false }: AffectedCommandOptions): string => {
+export const affectedTestCommand = ({ base, projects, name, full = false, serial = false, committed = false }: AffectedCommandOptions): string => {
   if ((!COMMIT.test(base.ref) && !(base.ref === 'HEAD' && base.full)) || !/^[a-z][a-z\d-]*$/i.test(name)) {
     throw new Error('Affected-test commands require a verified base and a fixed report name.');
   }
@@ -53,6 +55,7 @@ export const affectedTestCommand = ({ base, projects, name, full = false, serial
   return [
     'node --import tsx scripts/ci/affected-plan.ts --run',
     `--base ${base.ref}`,
+    committed ? '--committed' : '',
     full || base.full ? '--full' : '',
     `--output .workspace/affected-tests/local-${name}.json`,
     '--',
