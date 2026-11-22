@@ -12,6 +12,7 @@ import { css } from './react-utils';
 
 export interface NavigationProps {
   locale?: 'en' | 'de';
+  focusSearchRequest?: number;
   headerAction?: ReactNode;
   activeExample: Example | null;
   examples: ExamplesMap;
@@ -23,6 +24,7 @@ export interface NavigationProps {
 
 export const Navigation = ({
   locale = 'en',
+  focusSearchRequest = 0,
   headerAction,
   activeExample,
   examples,
@@ -38,29 +40,14 @@ export const Navigation = ({
   const categories = useMemo(() => buildPlaygroundNavModel(allExamples, undefined, query), [allExamples, query]);
 
   useEffect(() => {
-    const focusFilter = (event: KeyboardEvent): void => {
-      const target = event.target as HTMLElement | null;
+    if (focusSearchRequest === 0) {
+      return;
+    }
 
-      if (
-        event.key === '/' &&
-        !event.defaultPrevented &&
-        !event.isComposing &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.altKey &&
-        !target?.closest?.(
-          'input, textarea, select, [role="textbox"], [role="searchbox"], [contenteditable]:not([contenteditable="false"]), .monaco-editor',
-        )
-      ) {
-        event.preventDefault();
-        filterRef.current?.focus();
-      }
-    };
+    const frame = requestAnimationFrame(() => filterRef.current?.focus());
 
-    document.addEventListener('keydown', focusFilter);
-
-    return () => document.removeEventListener('keydown', focusFilter);
-  }, []);
+    return () => cancelAnimationFrame(frame);
+  }, [focusSearchRequest]);
 
   useEffect(() => {
     const list = listRef.current;

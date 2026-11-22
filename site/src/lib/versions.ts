@@ -10,6 +10,8 @@
 // versions with a `deprecated` field on the registry are filtered out so the
 // dropdown never offers a release the user shouldn't be using.
 
+import { createRequest } from './request-manager';
+
 const REGISTRY_URL = 'https://registry.npmjs.org/@codexo/exojs';
 const CACHE_KEY = 'exojs-version-catalog-v2';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1h — releases don't appear that often.
@@ -60,9 +62,9 @@ const currentEntry: VersionInfo = {
   latest: false,
 };
 
-export const hasVersions = (): boolean => _catalog !== null && _catalog.versions.length > 0;
+export const hasVersions = (): boolean => true;
 
-export const getVersions = (): ReadonlyArray<VersionInfo> => _catalog?.versions ?? [];
+export const getVersions = (): ReadonlyArray<VersionInfo> => _catalog?.versions ?? [currentEntry];
 
 export const getLatestStableId = (): string | null => _catalog?.latestStable ?? null;
 
@@ -71,7 +73,14 @@ export const getVersionById = (id: string | null | undefined): VersionInfo | nul
     return null;
   }
 
-  return _catalog?.versions.find(version => version.id === id) ?? null;
+  if (id === CURRENT_VERSION_ID) {
+    return currentEntry;
+  }
+
+  // A pinned release link is usable without the optional registry directory.
+  return (
+    _catalog?.versions.find(version => version.id === id) ?? (/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(id) ? { id, track: 'stable' } : null)
+  );
 };
 
 export const isCurrentVersion = (id: string | null | undefined): boolean => id === CURRENT_VERSION_ID;
@@ -183,6 +192,11 @@ const buildCatalog = (doc: NpmRegistryDocument): VersionCatalog => {
 export const loadVersionCatalog = async (): Promise<void> => {
   _loadError = null;
 
+  // Publish the locally known selection before the optional registry request.
+  for (const listener of _loadListeners) {
+    listener();
+  }
+
   const cached = readCache();
 
   if (cached !== null) {
@@ -196,17 +210,9 @@ export const loadVersionCatalog = async (): Promise<void> => {
   }
 
   try {
-    const response = await fetch(REGISTRY_URL, {
-      // Ask for the abbreviated registry document; smaller payload, same
-      // shape for the fields we care about (versions, dist-tags, time).
+    const document = await createRequest(REGISTRY_URL, {
       headers: { Accept: 'application/vnd.npm.install-v1+json, application/json' },
-    });
-
-    if (!response.ok) {
-      throw new Error(`npm registry returned ${response.status} ${response.statusText}.`);
-    }
-
-    const document = (await response.json()) as NpmRegistryDocument;
+    }).getJson<NpmRegistryDocument>();
     const catalog = buildCatalog(document);
 
     _catalog = catalog;

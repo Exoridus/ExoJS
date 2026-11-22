@@ -6,7 +6,7 @@ import { expect, it, vi } from 'vitest';
 
 const source = ts.createSourceFile(
   'Navigation.tsx',
-  readFileSync('site/src/components/Navigation.tsx', 'utf8'),
+  readFileSync('site/src/components/Navigation.tsx', 'utf8') + readFileSync('site/src/components/ExampleBrowser.tsx', 'utf8'),
   ts.ScriptTarget.Latest,
   true,
   ts.ScriptKind.TSX,
@@ -39,7 +39,9 @@ it.each([
   container.innerHTML = markup;
   const focus = vi.fn();
   const event = { key: '/', target: container.querySelector('span') ?? container.lastElementChild, preventDefault: vi.fn() };
-  const handler = runInNewContext(code, { filterRef: { current: { focus } } }) as (event: object) => void;
+  const handler = runInNewContext(code, { setSearchRequest: focus, isCompactMobile: false, setSidebarOpen: vi.fn() }) as (
+    event: object,
+  ) => void;
   handler(event);
   expect(focus).not.toHaveBeenCalled();
   expect(event.preventDefault).not.toHaveBeenCalled();
@@ -49,7 +51,9 @@ it.each([{ isComposing: true }, { defaultPrevented: true }, { altKey: true }, { 
   'ignores a reserved or composing key: %o',
   modifiers => {
     const focus = vi.fn();
-    const handler = runInNewContext(code, { filterRef: { current: { focus } } }) as (event: object) => void;
+    const handler = runInNewContext(code, { setSearchRequest: focus, isCompactMobile: false, setSidebarOpen: vi.fn() }) as (
+      event: object,
+    ) => void;
     handler({ key: '/', preventDefault: vi.fn(), ...modifiers });
     expect(focus).not.toHaveBeenCalled();
   },
@@ -58,8 +62,22 @@ it.each([{ isComposing: true }, { defaultPrevented: true }, { altKey: true }, { 
 it('focuses example search for an unmodified slash outside editable widgets', () => {
   const focus = vi.fn();
   const preventDefault = vi.fn();
-  const handler = runInNewContext(code, { filterRef: { current: { focus } } }) as (event: object) => void;
+  const handler = runInNewContext(code, { setSearchRequest: focus, isCompactMobile: false, setSidebarOpen: vi.fn() }) as (
+    event: object,
+  ) => void;
   handler({ key: '/', target: document.createElement('button'), preventDefault });
   expect(focus).toHaveBeenCalledOnce();
   expect(preventDefault).toHaveBeenCalledOnce();
+});
+
+it('opens the navigation before focusing the global search', () => {
+  const setSidebarOpen = vi.fn();
+  const handler = runInNewContext(code, {
+    filterRef: { current: { focus: vi.fn() } },
+    isCompactMobile: false,
+    setSidebarOpen,
+    setSearchRequest: vi.fn(),
+  }) as (event: object) => void;
+  handler({ key: '/', target: document.createElement('button'), preventDefault: vi.fn() });
+  expect(setSidebarOpen).toHaveBeenCalledWith(true);
 });

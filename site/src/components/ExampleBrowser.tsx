@@ -10,7 +10,6 @@ import {
   onExamplesLoaded,
 } from '../lib/example-store';
 import { detectRuntimeSupport, onRuntimeDetected } from '../lib/runtime-support';
-import { showToast } from '../lib/toast-store';
 import type { Example, ExamplesMap } from '../lib/types';
 import { configureUrlsFromLocation } from '../lib/url-builder';
 import { loadStoredVersion, readUrlState, storeSelectedVersion, writeUrlState } from '../lib/url-state';
@@ -44,20 +43,18 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
   const [selectedVersion, setSelectedVersion] = useState<VersionInfo | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [versionLoadError, setVersionLoadError] = useState<string | null>(null);
+  const [searchRequest, setSearchRequest] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isCompactMobile, setIsCompactMobile] = useState(false);
   const [examplesSheetOpen, setExamplesSheetOpen] = useState(false);
   const [examplesSheetOpener, setExamplesSheetOpener] = useState<HTMLElement | null>(null);
   const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
   const mobileExamplesButtonRef = useRef<HTMLButtonElement | null>(null);
-  const previousVersionIdRef = useRef<string | null>(null);
-  const missingExampleToastEnabledRef = useRef(false);
   const selectedVersionRef = useRef<VersionInfo | null>(null);
   const activeExampleRef = useRef<Example | null>(null);
   const bodyOverflowBeforeDrawerOpenRef = useRef<string | null>(null);
-  // Late-bound to break the showMissingExampleToast <-> ensureExamplesLoaded cycle
-  // (the toast action calls it, but it is declared after the toast helper).
-  const ensureExamplesLoadedRef = useRef<(versionId: string) => Promise<void>>(() => Promise.resolve());
 
   useEffect(() => {
     selectedVersionRef.current = selectedVersion;
@@ -112,67 +109,39 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     return getVersions()[0] ?? null;
   }, []);
 
-  const showMissingExampleToast = useCallback((missingPath: string, currentVersionId: string): void => {
-    const previousId = previousVersionIdRef.current;
-    const action =
-      previousId && previousId !== currentVersionId
-        ? {
-            label: `Back to v${previousId}`,
-            onClick: () => {
-              const next = getVersionById(previousId);
+  const resolveActiveExample = useCallback((options: { canonicaliseUrl: boolean }): void => {
+    const selected = selectedVersionRef.current;
 
-              if (!next) {
-                return;
-              }
+    if (!selected || !hasExamplesFor(selected.id)) {
+      return;
+    }
 
-              previousVersionIdRef.current = selectedVersionRef.current?.id ?? null;
-              missingExampleToastEnabledRef.current = true;
-              setSelectedVersion(next);
-              storeSelectedVersion(previousId);
-              writeUrlState({ version: previousId });
-              void ensureExamplesLoadedRef.current(previousId);
-            },
-          }
-        : undefined;
-    showToast(`"${missingPath}" isn't available in @codexo/exojs@${currentVersionId}`, action ? { action } : undefined);
+    const versionId = selected.id;
+    const requestedPath = readUrlState().example;
+    const requested = requestedPath ? getExampleByPath(versionId, requestedPath) : null;
+
+    if (requestedPath && !requested) {
+      setActiveExample(null);
+      setSelectionError(
+        `The example "${requestedPath.replace(/\.js$/, '')}" is not available in ${versionId}. Choose an example from the list or open the starting example.`,
+      );
+
+      return;
+    }
+
+    const example = requested ?? getExamplesList(versionId)[0] ?? null;
+    setSelectionError(example ? null : 'This version has no examples. Open the current Playground to continue.');
+    setActiveExample(example);
+
+    if (options.canonicaliseUrl) {
+      const nextExample = example?.path ?? null;
+      const current = readUrlState();
+
+      if (current.example !== nextExample || current.version !== versionId) {
+        writeUrlState({ example: nextExample, version: versionId }, { replace: true });
+      }
+    }
   }, []);
-
-  const resolveActiveExample = useCallback(
-    (options: { canonicaliseUrl: boolean }): void => {
-      const selected = selectedVersionRef.current;
-
-      if (!selected || !hasExamplesFor(selected.id)) {
-        return;
-      }
-
-      const versionId = selected.id;
-      const requestedPath = readUrlState().example ?? null;
-
-      const requested = requestedPath ? getExampleByPath(versionId, requestedPath) : null;
-      const fellBack = requestedPath !== null && requested === null;
-      const example = requested ?? getExamplesList(versionId)[0] ?? null;
-
-      setActiveExample(example);
-
-      if (options.canonicaliseUrl) {
-        const nextExample = example?.path ?? null;
-        const current = readUrlState();
-
-        if (current.example !== nextExample || current.version !== versionId) {
-          writeUrlState({ example: nextExample, version: versionId }, { replace: true });
-        }
-      }
-
-      if (missingExampleToastEnabledRef.current) {
-        missingExampleToastEnabledRef.current = false;
-
-        if (fellBack && requestedPath) {
-          showMissingExampleToast(requestedPath, versionId);
-        }
-      }
-    },
-    [showMissingExampleToast],
-  );
 
   const syncExampleState = useCallback((): void => {
     const selected = selectedVersionRef.current;
@@ -200,11 +169,16 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     [syncExampleState],
   );
 
-  useEffect(() => {
-    ensureExamplesLoadedRef.current = ensureExamplesLoaded;
-  }, [ensureExamplesLoaded]);
-
   const syncVersionState = useCallback((): void => {
+    const requestedVersion = readUrlState().version;
+
+    if (requestedVersion && !getVersionById(requestedVersion)) {
+      setSelectionError(`The requested version "${requestedVersion}" is not recognized. Open the current Playground to continue.`);
+      setActiveExample(null);
+
+      return;
+    }
+
     const nextSelected = resolveSelectedVersion();
     setSelectedVersion(nextSelected);
     selectedVersionRef.current = nextSelected;
@@ -217,11 +191,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       }
     }
 
-    const versionError = getVersionLoadError();
-
-    if (versionError) {
-      setLoadError(versionError);
-    }
+    setVersionLoadError(getVersionLoadError());
 
     if (nextSelected) {
       void ensureExamplesLoaded(nextSelected.id);
@@ -322,6 +292,39 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
   }, [isCompactMobile, lockBodyScroll, sidebarOpen, unlockBodyScroll]);
 
   useEffect(() => {
+    const focusFilter = (event: KeyboardEvent): void => {
+      const target = event.target as HTMLElement | null;
+
+      if (
+        event.key === '/' &&
+        !event.defaultPrevented &&
+        !event.isComposing &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !target?.closest?.(
+          'input, textarea, select, [role="textbox"], [role="searchbox"], [contenteditable]:not([contenteditable="false"]), .monaco-editor',
+        )
+      ) {
+        event.preventDefault();
+
+        if (isCompactMobile) {
+          setExamplesSheetOpener(document.activeElement as HTMLElement | null);
+          setExamplesSheetOpen(true);
+        } else {
+          setSidebarOpen(true);
+        }
+
+        setSearchRequest(request => request + 1);
+      }
+    };
+
+    document.addEventListener('keydown', focusFilter);
+
+    return () => document.removeEventListener('keydown', focusFilter);
+  }, [isCompactMobile]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (!sidebarOpen || window.matchMedia('(min-width: 1120px)').matches) {
         return;
@@ -352,6 +355,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       return;
     }
 
+    setSelectionError(null);
     setActiveExample(example);
     writeUrlState({ version: selected.id, example: example.path });
 
@@ -360,6 +364,23 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     } else if (!window.matchMedia('(min-width: 1120px)').matches) {
       setSidebarOpen(false);
     }
+  };
+
+  const openCurrent = (): void => {
+    const current = getVersionById(CURRENT_VERSION_ID)!;
+    const requestedPath = readUrlState().example;
+    const path = requestedPath && getExampleByPath(CURRENT_VERSION_ID, requestedPath) ? requestedPath : null;
+    writeUrlState({ version: CURRENT_VERSION_ID, example: path });
+    storeSelectedVersion(CURRENT_VERSION_ID);
+    setSelectionError(null);
+    setSelectedVersion(current);
+    selectedVersionRef.current = current;
+    void ensureExamplesLoaded(CURRENT_VERSION_ID);
+  };
+
+  const selectStartingExample = (): void => {
+    writeUrlState({ example: null });
+    resolveActiveExample({ canonicaliseUrl: true });
   };
 
   const toggleSidebar = (): void => {
@@ -380,6 +401,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
           aria-hidden={!sidebarOpen}
         >
           <Navigation
+            focusSearchRequest={searchRequest}
             locale={locale}
             headerAction={sidebarOpen ? <SidebarToggle open toggleRef={sidebarToggleRef} onToggle={toggleSidebar} /> : undefined}
             examples={examples}
@@ -393,7 +415,19 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       )}
       <div className={css(styles, 'right-column')}>
         <div className={css(styles, 'main-content')}>
+          {versionLoadError && (
+            <p role="status">
+              Release list unavailable. The current Playground is still available.{' '}
+              <button type="button" onClick={() => void loadVersionCatalog()}>
+                Retry release list
+              </button>
+            </p>
+          )}
           <Editor
+            selectionError={selectionError}
+            onSelectStartingExample={selectStartingExample}
+            onRecoverCurrent={openCurrent}
+            onRetryCatalog={() => selectedVersion && void loadExamples(selectedVersion.id)}
             activeExample={activeExample}
             catalogLoadError={loadError}
             selectedVersionId={selectedVersion?.id ?? ''}
@@ -426,6 +460,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
         <BottomSheet open={examplesSheetOpen} title="Examples" opener={examplesSheetOpener} onOpenChange={setExamplesSheetOpen}>
           <div className={css(styles, 'sheet-navigation')}>
             <Navigation
+              focusSearchRequest={searchRequest}
               examples={examples}
               activeExample={activeExample}
               selectedVersion={selectedVersion}

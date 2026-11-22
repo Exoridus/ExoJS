@@ -220,7 +220,7 @@ export const EditorPreview = ({
       openPreviewInTab(): void {
         const source = sourceRef.current;
 
-        if (!source) {
+        if (source === null) {
           return;
         }
 
@@ -324,7 +324,7 @@ export const EditorPreview = ({
     const iframeBody = (iframe.contentDocument ?? iframe.contentWindow?.document)?.body as HTMLBodyElement | null;
     const source = sourceRef.current;
 
-    if (!iframeBody || !source) {
+    if (!iframeBody || source === null) {
       return;
     }
 
@@ -358,7 +358,10 @@ export const EditorPreview = ({
 
         if (
           ((event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey)) || event.key === '/') &&
-          !target?.closest?.('input, textarea, [contenteditable="true"]')
+          !event.defaultPrevented &&
+          !event.isComposing &&
+          !event.altKey &&
+          !target?.closest?.('input, textarea, select, [role="textbox"], [contenteditable]:not([contenteditable="false"])')
         ) {
           event.preventDefault();
           document.dispatchEvent(new KeyboardEvent('keydown', { key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey }));
@@ -412,7 +415,7 @@ export const EditorPreview = ({
     }
   };
 
-  if (!sourceCode) {
+  if (sourceCode === null) {
     return (
       <div ref={rootRef} className={css(styles, 'root')}>
         <LoadingSpinner centered />

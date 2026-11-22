@@ -44,6 +44,10 @@ const SPLIT_STORAGE_KEY = 'exo-playground-split';
 export interface EditorProps {
   activeExample: Example | null;
   catalogLoadError: string | null;
+  selectionError?: string | null;
+  onRetryCatalog?(): void;
+  onRecoverCurrent?(): void;
+  onSelectStartingExample?(): void;
   selectedVersionId: string;
   showSidebarToggle: boolean;
   sidebarOpen: boolean;
@@ -54,6 +58,10 @@ export interface EditorProps {
 export const Editor = ({
   activeExample,
   catalogLoadError,
+  selectionError,
+  onRetryCatalog,
+  onRecoverCurrent,
+  onSelectStartingExample,
   selectedVersionId,
   showSidebarToggle,
   sidebarOpen,
@@ -67,6 +75,7 @@ export const Editor = ({
   const [executionCode, setExecutionCode] = useState<string | null>(null);
   const [executionModules, setExecutionModules] = useState<Record<string, string>>({});
   const [originalExecutionCode, setOriginalExecutionCode] = useState<string | null>(null);
+  const [sourceRetry, setSourceRetry] = useState(0);
   const [sourceLoadError, setSourceLoadError] = useState<PreviewErrorEntry | null>(null);
   const [output] = useState(() => new PreviewConsole());
   // Counts explicit runs, so running unchanged code still restarts the preview.
@@ -91,7 +100,7 @@ export const Editor = ({
 
   useEffect(() => {
     const path = activeExample?.path ?? null;
-    const loadKey = path && selectedVersionId ? `${selectedVersionId}::${path}` : null;
+    const loadKey = path && selectedVersionId ? `${selectedVersionId}::${path}::${sourceRetry}` : null;
 
     if (loadKey === loadKeyRef.current) {
       return;
@@ -168,7 +177,7 @@ export const Editor = ({
     return () => {
       cancelled = true;
     };
-  }, [activeExample, selectedVersionId]);
+  }, [activeExample, selectedVersionId, sourceRetry]);
 
   useEffect(() => () => output.dispose(), [output]);
 
@@ -294,6 +303,7 @@ export const Editor = ({
     setSourceCode(originalSourceCode);
     setExecutionCode(originalExecutionCode);
     setExecutionModules({});
+    setRunId(id => id + 1);
   };
 
   const onCanvasSize = useCallback((event: CanvasSizeEvent): void => {
@@ -310,10 +320,28 @@ export const Editor = ({
   const combinedErrors = [
     ...(catalogLoadError ? [{ summary: 'Failed to load examples catalog', details: catalogLoadError }] : []),
     ...(sourceLoadError ? [sourceLoadError] : []),
+    ...(selectionError ? [{ summary: 'Example unavailable', details: selectionError }] : []),
   ];
 
   if (!activeExample && combinedErrors.length > 0) {
-    return <section className={css(styles, 'root')}>{renderErrors(combinedErrors)}</section>;
+    return (
+      <section className={css(styles, 'root')}>
+        {renderErrors(combinedErrors)}
+        {catalogLoadError && (
+          <button type="button" onClick={onRetryCatalog}>
+            Retry examples catalog
+          </button>
+        )}
+        {selectionError && (
+          <button type="button" onClick={onSelectStartingExample}>
+            Open starting example
+          </button>
+        )}
+        <button type="button" onClick={onRecoverCurrent}>
+          Open current Playground
+        </button>
+      </section>
+    );
   }
 
   const availability = getExampleAvailability(activeExample);
@@ -332,6 +360,15 @@ export const Editor = ({
       data-active-view={activeView}
       style={{ '--split-percent': `${splitPercent}%` } as CSSProperties}
     >
+      {selectedVersionId && selectedVersionId !== 'current' && (
+        <p role="status">
+          Historical source and core runtime: {selectedVersionId}. Shared support and extensions come from this deployment. Version-specific
+          editor types may be unavailable.{' '}
+          <button type="button" onClick={onRecoverCurrent}>
+            Open current Playground
+          </button>
+        </p>
+      )}
       {activeExample && (
         <header className={css(styles, 'example-header')} data-example-header>
           <div className={css(styles, 'example-heading')} data-header-row="primary">
@@ -379,18 +416,33 @@ export const Editor = ({
       >
         <div className={css(styles, 'preview-surface')} data-preview-surface>
           <div className={css(styles, 'preview-component')}>
-            <EditorPreview
-              ref={previewRef}
-              sourceCode={executionCode ?? sourceCode}
-              executionModules={executionModules}
-              runId={runId}
-              exampleMeta={activeExample}
-              selectedVersionId={selectedVersionId}
-              output={output}
-              onCanvasSize={onCanvasSize}
-              onRendererStatus={setRendererStatus}
-              onAssets={setAssetSources}
-            />
+            {sourceLoadError ? (
+              <div role="alert">
+                <p>{sourceLoadError.summary}</p>
+                <p>{sourceLoadError.details}</p>
+                <button type="button" onClick={() => setSourceRetry(value => value + 1)}>
+                  Retry source
+                </button>
+                {selectedVersionId !== 'current' && (
+                  <button type="button" onClick={onRecoverCurrent}>
+                    Open current Playground
+                  </button>
+                )}
+              </div>
+            ) : (
+              <EditorPreview
+                ref={previewRef}
+                sourceCode={executionCode ?? sourceCode}
+                executionModules={executionModules}
+                runId={runId}
+                exampleMeta={activeExample}
+                selectedVersionId={selectedVersionId}
+                output={output}
+                onCanvasSize={onCanvasSize}
+                onRendererStatus={setRendererStatus}
+                onAssets={setAssetSources}
+              />
+            )}
           </div>
           {!availability.available && (
             <div className={css(styles, 'unavailable-overlay')}>
@@ -510,7 +562,7 @@ export const Editor = ({
               sourcePath={displayPath}
               language={editorLanguage}
               compiledCode={executionCode}
-              canReset={Boolean(originalSourceCode && (dirty || sourceCode !== originalSourceCode))}
+              canReset={originalSourceCode !== null && (dirty || sourceCode !== originalSourceCode)}
               exampleTitle={activeExample?.title ?? 'Loading...'}
               selectedVersionId={selectedVersionId}
               onUpdateCode={onUpdateCode}
@@ -572,7 +624,7 @@ const renderErrors = (errors: PreviewErrorEntry[]): JSX.Element | null => {
   }
 
   return (
-    <details className={css(styles, 'error-panel')}>
+    <details open className={css(styles, 'error-panel')}>
       <summary className={css(styles, 'error-summary')}>
         <span className={css(styles, 'error-summary-label')}>Errors</span>
         <span className={css(styles, 'error-summary-count')}>{errors.length}</span>
