@@ -44,7 +44,10 @@ const memberName = (node: ts.Node): string | undefined => {
     return node.name.text;
   }
 
-  if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression)) {
+  if (
+    ts.isElementAccessExpression(node) &&
+    (ts.isStringLiteralLike(node.argumentExpression) || ts.isNumericLiteral(node.argumentExpression))
+  ) {
     return node.argumentExpression.text;
   }
 
@@ -55,6 +58,17 @@ const memberName = (node: ts.Node): string | undefined => {
 // dynamically. Keep unknown properties, custom properties and whole styles
 // conservative; a value such as var(--image) can otherwise hide a URL.
 const CSS_VALUE_ONLY = new Set(['color', 'imagerendering', 'touchaction', 'width', 'height']);
+const DOM_ASSET_PROPERTIES = new Set(['src', 'srcset', 'href', 'poster', 'innerhtml', 'outerhtml']);
+const CSS_ASSET_PROPERTIES = new Set([
+  'backgroundimage',
+  'borderimage',
+  'borderimagesource',
+  'liststyleimage',
+  'maskimage',
+  'csstext',
+  'style',
+]);
+const HARNESS_READERS = new Set(['importActual', 'importMock', 'toMatchFileSnapshot']);
 
 const cssCanLoad = (value: ts.Expression | undefined, property?: string): boolean => {
   if (property && !property.startsWith('--') && CSS_VALUE_ONLY.has(property.replaceAll('-', '').toLowerCase())) {
@@ -64,6 +78,28 @@ const cssCanLoad = (value: ts.Expression | undefined, property?: string): boolea
   return !value || !ts.isStringLiteralLike(value) || /(?:url|(?:-webkit-)?image-set)\s*\(|@import/i.test(value.text);
 };
 
+const propertyCanLoad = (property: string | undefined, value: ts.Expression | undefined, style: boolean): boolean =>
+  property === undefined ||
+  DOM_ASSET_PROPERTIES.has(property.toLowerCase()) ||
+  ((style || CSS_ASSET_PROPERTIES.has(property.toLowerCase())) && cssCanLoad(value, property));
+
+const assignedPropertiesCanLoad = (argument: ts.Expression, style: boolean): boolean =>
+  !ts.isObjectLiteralExpression(argument) ||
+  argument.properties.some(property => {
+    if (ts.isSpreadAssignment(property)) {
+      return true;
+    }
+
+    const name = ts.isComputedPropertyName(property.name) ? property.name.expression : property.name;
+    const literal = ts.isIdentifier(property.name)
+      ? property.name.text
+      : ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)
+        ? name.text
+        : undefined;
+
+    return propertyCanLoad(literal, ts.isPropertyAssignment(property) ? property.initializer : undefined, style);
+  });
+
 interface SourceInputs {
   readonly hazards: string[];
   readonly imports: string[];
@@ -72,7 +108,12 @@ interface SourceInputs {
 /** Inspect possible hidden inputs, leaving all module resolution to Vite. */
 const sourceInputs = (file: string): SourceInputs => {
   if (!CODE.test(file)) {
-    return { hazards: [], imports: [] };
+    // CSS URL reads and custom loaders can disappear from the SSR graph. Only
+    // the repository's data-only JSON/shader formats are safe without code inspection.
+    return {
+      hazards: MODULE.test(file) ? [] : ['A non-code module can load inputs outside the SSR dependency graph.'],
+      imports: [],
+    };
   }
 
   const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, false);
@@ -151,21 +192,41 @@ const sourceInputs = (file: string): SourceInputs => {
       node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
       (ts.isPropertyAccessExpression(node.left) || ts.isElementAccessExpression(node.left))
     ) {
-      const property = memberName(node.left)?.toLowerCase();
-      const style =
-        memberName(node.left.expression) === 'style' ||
-        (property &&
-          ['backgroundimage', 'borderimage', 'borderimagesource', 'liststyleimage', 'maskimage', 'csstext', 'style'].includes(property));
+      const property = memberName(node.left);
 
-      if (
-        (property && ['src', 'srcset', 'href', 'poster', 'innerhtml', 'outerhtml'].includes(property)) ||
-        (style && cssCanLoad(node.right, property))
-      ) {
+      if (propertyCanLoad(property, node.right, memberName(node.left.expression) === 'style')) {
         hazards.add(`A DOM or CSS ${property ?? 'computed property'} assignment can load an asset outside the import graph.`);
       }
     }
 
     const method = memberName(node);
+
+    if ((ts.isIdentifier(node) && HARNESS_READERS.has(node.text)) || (method && HARNESS_READERS.has(method))) {
+      hazards.add('A Vitest runtime import or file snapshot can read inputs outside the static module graph.');
+    }
+
+    if (
+      method === 'assign' &&
+      (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 'Object'
+    ) {
+      const call = parent && ts.isCallExpression(parent) && parent.expression === node ? parent : undefined;
+      const style = Boolean(call?.arguments[0] && memberName(call.arguments[0]) === 'style');
+
+      if (!call || call.arguments.slice(1).some(argument => assignedPropertiesCanLoad(argument, style))) {
+        hazards.add('Object.assign can install DOM or CSS asset properties, including unknown sources or aliases.');
+      }
+    } else if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.initializer &&
+      ts.isIdentifier(node.initializer) &&
+      node.initializer.text === 'Object' &&
+      node.name.elements.some(binding => (binding.propertyName ?? binding.name).getText(source) === 'assign')
+    ) {
+      hazards.add('A destructured Object.assign can install DOM or CSS asset properties.');
+    }
 
     if (
       method &&

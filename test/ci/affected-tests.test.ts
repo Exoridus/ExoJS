@@ -127,6 +127,46 @@ describe('affected tests from the Vite graph', () => {
     expect(selection.tests.map(entry => entry.file)).toEqual(['test/raw.test.ts']);
   });
 
+  it('retains a stylesheet consumer when SSR omits its asset URL edge', async () => {
+    write('src/photo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
+    write('src/style.css', "body { background-image: url('./photo.svg'); }\n");
+    test('test/asset.test.ts', "import value from '../src/photo.svg?raw';", 'void value');
+    test('test/style.test.ts', "import '../src/style.css';", 'void 0');
+
+    const selection = await select('src/photo.svg');
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/asset.test.ts', 'test/style.test.ts']);
+    expect(selection.tests.find(entry => entry.file === 'test/style.test.ts')?.reasons).toContainEqual(
+      expect.objectContaining({ kind: 'untracked', path: ['src/style.css', 'test/style.test.ts'] }),
+    );
+  });
+
+  it('retains non-code modules whose transformed runtime can read hidden inputs', async () => {
+    write('src/photo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
+    write('src/view.asset-reader', 'load /src/photo.svg');
+    write(
+      'vitest.config.ts',
+      `export default {
+  cacheDir: '.cache/vite',
+  plugins: [{ name: 'asset-reader', transform(code, id) {
+    return id.endsWith('.asset-reader') ? { code: "export default () => fetch('/src/photo.svg');", map: null } : undefined;
+  } }],
+  test: { name: 'unit', include: ['test/**/*.test.ts'] },
+};\n`,
+    );
+    test('test/asset.test.ts', "import value from '../src/photo.svg?raw';", 'void value');
+    test('test/view.test.ts', "import value from '../src/view.asset-reader';", 'void value');
+
+    const selection = await select('src/photo.svg');
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/asset.test.ts', 'test/view.test.ts']);
+    expect(selection.tests.find(entry => entry.file === 'test/view.test.ts')?.reasons).toContainEqual(
+      expect.objectContaining({ kind: 'untracked', path: ['src/view.asset-reader', 'test/view.test.ts'] }),
+    );
+  });
+
   it.each(['vert', 'frag', 'glsl', 'wgsl', 'json'])('follows a changed .%s module through its configured loader', async extension => {
     write(`src/data.${extension}`, extension === 'json' ? '{"value":1}' : 'void main() {}');
     write(
@@ -254,9 +294,35 @@ describe('affected tests from the Vite graph', () => {
   });
 
   it.each([
+    "import { vi } from 'vitest'; export const value = () => vi.importActual('../src/unobserved.ts');",
+    "import { vi } from 'vitest'; export const value = () => vi['importMock']('../src/unobserved.ts');",
+    "import { vi } from 'vitest'; const { importActual: load } = vi; export const value = () => load('../src/unobserved.ts');",
+    "import { expect } from 'vitest'; export const value = () => expect('text').toMatchFileSnapshot('../src/unobserved.ts');",
+  ])('retains Vitest runtime input readers outside the static module graph: %s', async source => {
+    write('src/unobserved.ts', 'export const value = 1;\n');
+    write('test/helper.ts', source);
+    test('test/reader.test.ts', "import { value } from './helper.ts';", 'void value');
+
+    const selection = await select('src/unobserved.ts');
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/reader.test.ts']);
+    expect(selection.tests[0]?.reasons).toContainEqual(
+      expect.objectContaining({ kind: 'untracked', path: ['test/helper.ts', 'test/reader.test.ts'] }),
+    );
+  });
+
+  it.each([
     ['an image attribute', "const image = document.createElement('img'); image.setAttribute('src', '/src/photo.svg');"],
     ['a namespaced href attribute', "element.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/src/photo.svg');"],
     ['a dynamic attribute', "const attribute = 'src'; element.setAttribute(attribute, '/src/photo.svg');"],
+    ['a computed DOM property', "const property = 'src'; element[property] = '/src/photo.svg';"],
+    ['object-assigned DOM properties', "Object.assign(element, { src: '/src/photo.svg' });"],
+    ['object-assigned CSS properties', "Object.assign(element.style, { backgroundImage: 'url(/src/photo.svg)' });"],
+    ['unknown object-assigned properties', "const properties = { src: '/src/photo.svg' }; Object.assign(element, properties);"],
+    ['a computed object-assigned property', "Object.assign(element, { [property]: '/src/photo.svg' });"],
+    ['an aliased object property assigner', "const assign = Object.assign; assign(element, { src: '/src/photo.svg' });"],
+    ['a destructured object property assigner', "const { assign } = Object; assign(element, { src: '/src/photo.svg' });"],
     ['an aliased attribute setter', "const assign = element.setAttribute.bind(element); assign('src', '/src/photo.svg');"],
     ['a CSS background image', "element.style.backgroundImage = 'url(/src/photo.svg)';"],
     ['a dynamic CSS image', 'element.style.backgroundImage = assetPath;'],
@@ -292,6 +358,16 @@ describe('affected tests from the Vite graph', () => {
     test('test/nonreader.test.ts', "import { value } from './helper.ts';", 'void value');
 
     expect((await select('src/photo.svg')).tests.map(entry => entry.file)).toEqual(['test/asset.test.ts']);
+  });
+
+  it('does not classify numeric property stores or known harmless object assignments as asset readers', async () => {
+    write(
+      'test/helper.ts',
+      'export const value = (element, value) => { element[0] = value; Object.assign(element, { id: value }); Object.assign(element.style, { width: value, color: value }); };\n',
+    );
+    test('test/nonreader.test.ts', "import { value } from './helper.ts';", 'void value');
+
+    expect((await select('src/leaf.ts')).tests.map(entry => entry.file)).toEqual(['test/related.test.ts']);
   });
 
   it.each([
