@@ -1,12 +1,302 @@
+import { SceneState } from '#core/scene/SceneState';
 import { Keyboard } from '#input/types';
 import type { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import type { PlatformTextInput } from '#platform/PlatformTextInput';
+import { Button } from '#ui/Button';
 import { TextInput } from '#ui/TextInput';
 
+import { frameDelta } from '../support/frame-delta';
 import { createUIApp, fireBeforeInput, makePointer, press, transportTextarea, type } from '../support/text-field-harness';
 
+const nativeKey = (eventType: 'keydown' | 'keyup', code: string): KeyboardEvent => {
+  const event = new KeyboardEvent(eventType, { code, bubbles: true, cancelable: true });
+
+  transportTextarea().dispatchEvent(event);
+
+  return event;
+};
+
 describe('TextInput', () => {
+  test('a canvas click needs the interaction frame before native typing reaches the field', () => {
+    const { scene, im } = createUIApp(null, true);
+    const app = scene.app;
+    const canvas = app.canvas as HTMLCanvasElement;
+    const field = new TextInput({ width: 200, height: 36 });
+    const save = new Button({ label: 'Save', width: 100, height: 36 });
+
+    canvas.width = 800;
+    canvas.height = 600;
+    canvas.tabIndex = 0;
+    document.body.append(canvas);
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 800, 600));
+    Object.assign(app, { _backingStoreToLogical: (x: number, y: number) => ({ x, y }) });
+    save.y = 100;
+    scene.ui.addChild(field, save);
+    field.focus();
+    save.focus();
+
+    const typeAtHostFocus = (text: string): void => {
+      for (const char of text) {
+        const target = document.activeElement!;
+        const code = `Key${char.toUpperCase()}`;
+        const down = new KeyboardEvent('keydown', { code, key: char, bubbles: true, cancelable: true });
+
+        target.dispatchEvent(down);
+
+        // jsdom has no native editing default. A real browser produces
+        // beforeinput only when the key actually reaches an editable host.
+        if (!down.defaultPrevented && target instanceof HTMLTextAreaElement) {
+          target.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data: char, bubbles: true, cancelable: true }));
+        }
+
+        target.dispatchEvent(new KeyboardEvent('keyup', { code, key: char, bubbles: true }));
+      }
+    };
+
+    try {
+      for (const eventType of ['pointerover', 'pointerdown', 'pointerup']) {
+        canvas.dispatchEvent(
+          new PointerEvent(eventType, {
+            pointerId: 1,
+            pointerType: 'mouse',
+            isPrimary: true,
+            clientX: 100,
+            clientY: 18,
+            buttons: eventType === 'pointerdown' ? 1 : 0,
+            bubbles: true,
+          }),
+        );
+      }
+
+      expect(field.focused).toBe(false);
+      expect(app.platform.textInputFocused).toBe(false);
+      expect(document.activeElement).toBe(canvas);
+      typeAtHostFocus('Grac');
+      expect(field.value).toBe('');
+      app.input.preFrame(frameDelta);
+      expect(field.focused).toBe(false);
+      im.preFrame(frameDelta);
+      app.input._finishInteractionFrame();
+      expect(field.focused).toBe(true);
+      expect(app.platform.textInputFocused).toBe(true);
+      expect(document.activeElement).toBe(transportTextarea());
+      typeAtHostFocus('e');
+      expect(field.value).toBe('e');
+
+      field.value = '';
+      typeAtHostFocus('Grace');
+      app.input.preFrame(frameDelta);
+      im.preFrame(frameDelta);
+      app.input._finishInteractionFrame();
+      expect(field.value).toBe('Grace');
+      expect([field.selectionStart, field.selectionEnd]).toEqual([5, 5]);
+      expect(transportTextarea().value).toBe('Grace');
+    } finally {
+      canvas.remove();
+    }
+  });
+
+  test.each(['deleteContentBackward', 'insertFromPaste'])(
+    'native textarea %s honors selection before the engine shortcut frame',
+    inputType => {
+      const { scene } = createUIApp(null, true);
+      const field = new TextInput({ width: 200 });
+
+      scene.ui.addChild(field);
+      field.focus();
+      field.value = 'Ada';
+      nativeKey('keydown', 'ControlLeft');
+      nativeKey('keydown', 'KeyA');
+      nativeKey('keyup', 'KeyA');
+      nativeKey('keyup', 'ControlLeft');
+      expect([transportTextarea().selectionStart, transportTextarea().selectionEnd]).toEqual([0, 3]);
+
+      if (inputType === 'deleteContentBackward') {
+        const deletion = nativeKey('keydown', 'Backspace');
+
+        expect(deletion.defaultPrevented).toBe(true);
+        nativeKey('keyup', 'Backspace');
+      } else {
+        fireBeforeInput(inputType, { data: 'Grace' });
+      }
+
+      scene.app.input.preFrame(frameDelta);
+      scene.app.input._finishInteractionFrame();
+      const expected = inputType === 'deleteContentBackward' ? '' : 'Grace';
+
+      expect(field.value).toBe(expected);
+      expect([field.selectionStart, field.selectionEnd]).toEqual([expected.length, expected.length]);
+      expect(transportTextarea().value).toBe(expected);
+    },
+  );
+
+  test('native history intents apply once while their queued shortcut still reaches the input frame', () => {
+    const { scene } = createUIApp(null, true);
+    const field = new TextInput({ width: 200 });
+
+    scene.ui.addChild(field);
+    field.focus();
+    fireBeforeInput('insertFromPaste', { data: 'first' });
+    fireBeforeInput('insertFromPaste', { data: ' second' });
+    nativeKey('keydown', 'ControlLeft');
+    expect(nativeKey('keydown', 'KeyZ').defaultPrevented).toBe(true);
+    nativeKey('keyup', 'KeyZ');
+    nativeKey('keyup', 'ControlLeft');
+    scene.app.input.preFrame(frameDelta);
+    scene.app.input._finishInteractionFrame();
+
+    expect(field.value).toBe('first');
+
+    nativeKey('keydown', 'ControlLeft');
+    nativeKey('keydown', 'ShiftLeft');
+    expect(nativeKey('keydown', 'KeyZ').defaultPrevented).toBe(true);
+    nativeKey('keyup', 'KeyZ');
+    nativeKey('keyup', 'ShiftLeft');
+    nativeKey('keyup', 'ControlLeft');
+    scene.app.input.preFrame(frameDelta);
+    scene.app.input._finishInteractionFrame();
+    expect(field.value).toBe('first second');
+
+    // Native menu commands still enter through the semantic transport alone.
+    fireBeforeInput('historyUndo');
+    expect(field.value).toBe('first');
+    fireBeforeInput('historyRedo');
+    expect(field.value).toBe('first second');
+  });
+
+  test('custom intents without native range metadata retain relative editing and delete deduplication', () => {
+    const platform = new BrowserPlatform(document.createElement('canvas'));
+    const createOriginal = platform.createTextInput.bind(platform);
+    const create = vi.spyOn(platform, 'createTextInput').mockImplementation(() => {
+      const seam = createOriginal();
+
+      if (seam !== null) {
+        Reflect.deleteProperty(seam, '_synchronousKeyboard');
+      }
+
+      return seam;
+    });
+    const { scene } = createUIApp(platform, true);
+    const field = new TextInput({ width: 200 });
+
+    scene.ui.addChild(field);
+    field.focus();
+    field.value = 'Ada';
+    const seam = create.mock.results[0]!.value!;
+
+    seam.onEdit.dispatch({ kind: 'insert', text: 'B' });
+    expect(field.value).toBe('AdaB');
+
+    nativeKey('keydown', 'Backspace');
+    seam.onEdit.dispatch({ kind: 'deleteContent', direction: 'backward', granularity: 'character' });
+    nativeKey('keyup', 'Backspace');
+    scene.app.input.preFrame(frameDelta);
+    scene.app.input._finishInteractionFrame();
+    expect(field.value).toBe('Ada');
+
+    nativeKey('keydown', 'Backspace');
+    nativeKey('keyup', 'Backspace');
+    scene.app.input.preFrame(frameDelta);
+    scene.app.input._finishInteractionFrame();
+    expect(field.value).toBe('Ad');
+  });
+
+  test.each(['transition', 'inactive', 'unfocusable'] as const)(
+    'a %s field rejects native follow-up edits as well as capture commands',
+    gate => {
+      const { scene } = createUIApp(null, true);
+      const field = new TextInput({ value: 'Ada' });
+
+      scene.ui.addChild(field);
+      field.focus();
+
+      if (gate === 'transition') {
+        Object.assign(scene.app.scenes, { _transitionGateOpen: true });
+      } else if (gate === 'inactive') {
+        Object.assign(scene.app.scenes, { state: SceneState.Ready });
+      } else {
+        field.focusable = false;
+      }
+
+      expect(nativeKey('keydown', 'Backspace').defaultPrevented).toBe(false);
+      fireBeforeInput('deleteContentBackward');
+      nativeKey('keyup', 'Backspace');
+      expect(field.value).toBe('Ada');
+      expect(transportTextarea().value).toBe('Ada');
+      scene.app.input.preFrame(frameDelta);
+      scene.app.input._finishInteractionFrame();
+      expect(field.value).toBe('Ada');
+    },
+  );
+
+  test.each([
+    { modifiers: ['AltLeft'], inputType: 'deleteWordBackward', expected: 'one ' },
+    { modifiers: ['MetaLeft'], inputType: 'deleteSoftLineBackward', expected: '' },
+    { modifiers: ['ControlLeft', 'ShiftLeft'], inputType: 'deleteSoftLineBackward', expected: '' },
+  ])('native $inputType semantics survive $modifiers and the later key frame', ({ modifiers, inputType, expected }) => {
+    const { scene } = createUIApp(null, true);
+    const field = new TextInput({ value: 'one two' });
+
+    scene.ui.addChild(field);
+    field.focus();
+
+    for (const modifier of modifiers) {
+      nativeKey('keydown', modifier);
+    }
+
+    expect(nativeKey('keydown', 'Backspace').defaultPrevented).toBe(false);
+    fireBeforeInput(inputType);
+    nativeKey('keyup', 'Backspace');
+
+    for (const modifier of modifiers) {
+      nativeKey('keyup', modifier);
+    }
+
+    fireBeforeInput('insertText', { data: 'x' });
+    scene.app.input.preFrame(frameDelta);
+    scene.app.input._finishInteractionFrame();
+    expect(field.value).toBe(`${expected}x`);
+    expect(field.selectionStart).toBe(expected.length + 1);
+  });
+
+  test('range-bearing custom edits do not leave pending legacy delete counters unconsumed', () => {
+    const platform = new BrowserPlatform(document.createElement('canvas'));
+    const createOriginal = platform.createTextInput.bind(platform);
+    const create = vi.spyOn(platform, 'createTextInput').mockImplementation(() => {
+      const seam = createOriginal();
+
+      if (seam !== null) {
+        Reflect.deleteProperty(seam, '_synchronousKeyboard');
+      }
+
+      return seam;
+    });
+    const { scene } = createUIApp(platform, true);
+    const field = new TextInput({ width: 200 });
+
+    scene.ui.addChild(field);
+    field.focus();
+    field.value = 'abc';
+    const seam = create.mock.results[0]!.value!;
+
+    nativeKey('keydown', 'Backspace');
+    seam.onEdit.dispatch({ kind: 'deleteContent', direction: 'backward', granularity: 'character' });
+    nativeKey('keyup', 'Backspace');
+    nativeKey('keydown', 'KeyX');
+    seam.onEdit.dispatch({ kind: 'insert', text: 'x', range: { start: 2, end: 2 } });
+    nativeKey('keyup', 'KeyX');
+    scene.app.input.preFrame(frameDelta);
+    scene.app.input._finishInteractionFrame();
+    expect(field.value).toBe('abx');
+
+    nativeKey('keydown', 'Backspace');
+    nativeKey('keyup', 'Backspace');
+    scene.app.input.preFrame(frameDelta);
+    scene.app.input._finishInteractionFrame();
+    expect(field.value).toBe('ab');
+  });
+
   test('a pointer press takes focus and places the caret', () => {
     const harness = createUIApp();
     const field = new TextInput({ width: 200, height: 36 });

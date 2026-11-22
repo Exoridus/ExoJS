@@ -936,6 +936,72 @@ describe('serialization — AnimatedSprite', () => {
     expect(restored.getLocalBounds().y).toBe(-2);
   });
 
+  it('round-trips authored source dimensions without rescaling trimmed clips', () => {
+    const texture = createTexture(64, 16);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const sprite = new AnimatedSprite(texture, {
+      idle: {
+        frames: [new Rectangle(0, 0, 12, 10)],
+        frameOffsets: [{ x: 58, y: 86 }],
+        sourceSize: { width: 128, height: 128 },
+      },
+      walk: {
+        frames: [new Rectangle(12, 0, 20, 12)],
+        frameOffsets: [{ x: 54, y: 84 }],
+        sourceSize: { width: 128, height: 128 },
+      },
+    });
+
+    sprite.setAnchor(0.5, 0.75).setScale(2).play('idle');
+
+    const data = serializeTree(sprite, loader);
+
+    expect((data.clips as Record<string, { sourceSize: number[] }>).idle!.sourceSize).toEqual([128, 128]);
+
+    const restored = deserializeTree(data, loader) as AnimatedSprite;
+
+    restored.play('walk');
+
+    expect(restored.origin.x).toBe(64);
+    expect(restored.origin.y).toBe(96);
+    expect(restored.scale.x).toBe(2);
+    expect(restored.scale.y).toBe(2);
+    sprite.destroy();
+    restored.destroy();
+  });
+
+  it.each([1, 2, 3])('preserves derived pivots and display size in legacy version %s clips without sourceSize', version => {
+    const texture = createTexture(64, 16);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const data: SerializedNode = Object.freeze({
+      type: 'AnimatedSprite',
+      texture: 'hero.png',
+      anchorX: 0.5,
+      anchorY: 0.5,
+      currentClip: 'idle',
+      clips: {
+        idle: { frames: [[0, 0, 12, 12]], frameOffsets: [[0, 0]] },
+        walk: { frames: [[12, 0, 8, 12]], frameOffsets: [[8, 0]] },
+      },
+    });
+    const sprite = deserializeTree(data, loader, undefined, version) as AnimatedSprite;
+
+    expect(sprite.origin.x).toBe(6);
+    expect(sprite.origin.y).toBe(6);
+    sprite.play('walk');
+
+    expect(sprite.origin.x).toBe(8);
+    expect(sprite.origin.y).toBe(6);
+    expect(sprite.width).toBe(12);
+    expect(sprite.scale.x).toBe(1.5);
+
+    const clips = serializeTree(sprite, loader).clips as Record<string, { sourceSize?: unknown }>;
+
+    expect(clips.idle!.sourceSize).toBeUndefined();
+    expect(clips.walk!.sourceSize).toBeUndefined();
+    sprite.destroy();
+  });
+
   it('round-trips a finite repeat count', () => {
     const texture = createTexture(64, 16);
     const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);

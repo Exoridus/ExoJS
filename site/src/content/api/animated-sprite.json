@@ -187,7 +187,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Anchor against the untrimmed SOURCE canvas, not against the per-frame trimmed rectangle. A trimmed atlas gives every frame its own size and its own AnimatedSpriteClipDefinition.frameOffsets entry. Measuring the anchor against that rectangle would move the pivot on every frame advance, so an anchored character would wobble around its own feet for the length of the animation. The pivot has to stand still, which means measuring against a box that is constant for the whole clip. A clip carries no explicit untrimmed size, so the box is derived from the frames themselves: width = max(offset.x + frame.width) and height = max(offset.y + frame.height) over every frame, anchored at the local origin (0, 0) - the point the offsets are expressed relative to. That is the smallest canvas every frame of the clip fits on, it is computed once per clip in addClip, and it is identical for every frame index. It can under-report an authored canvas whose right or bottom edge is empty in every single frame; nothing in the frame data can distinguish that case, and the pivot stays stable either way. A clip WITHOUT frameOffsets is not trimmed, so its frame rectangle is its layout box and the base implementation already measures the right thing. It is used unchanged there - deriving a clip-wide box would be actively wrong for it, because such a clip keeps its rendered pixel size across differently-sized frames (see _applyFrame) and the per-frame extent is what maps onto that constant rendered box."
+          "description": "Anchor against the untrimmed SOURCE canvas, not against the per-frame trimmed rectangle. A trimmed atlas gives every frame its own size and its own AnimatedSpriteClipDefinition.frameOffsets entry. Measuring the anchor against that rectangle would move the pivot on every frame advance, so an anchored character would wobble around its own feet for the length of the animation. The pivot has to stand still, which means measuring against a box that is constant for the whole clip. The authored AnimatedSpriteClipDefinition.sourceSize includes transparent right/bottom padding that no crop can recover. Older clips retain their offset-plus-frame estimate, computed once in addClip; a clip with neither canvas metadata nor offsets keeps its per-frame box."
         },
         {
           "name": "addClip",
@@ -3767,7 +3767,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space corner positions of the sprite quad, computed lazily from the current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3] (TL, TR, BR, BL). Cached until the transform is invalidated."
+          "description": "Rendering-space corner positions of the sprite quad: world space normally, group-local space below a retained transform boundary. Computed lazily from the current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3] (TL, TR, BR, BL). Cached until the transform is invalidated."
         },
         {
           "name": "visible",

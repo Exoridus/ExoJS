@@ -147,6 +147,21 @@ const validateFrames = (frames: object, source: string): void => {
         `"frames.${key}" must have frame and spriteSourceSize rectangles, a finite duration and a boolean trimmed flag`,
       );
     }
+
+    const size = frame.sourceSize;
+
+    if (
+      size !== undefined &&
+      (!isRecord(size) ||
+        typeof size.w !== 'number' ||
+        !Number.isFinite(size.w) ||
+        size.w <= 0 ||
+        typeof size.h !== 'number' ||
+        !Number.isFinite(size.h) ||
+        size.h <= 0)
+    ) {
+      throw new AsepriteFormatError(source, `"frames.${key}.sourceSize" must have positive finite w and h`);
+    }
   }
 };
 

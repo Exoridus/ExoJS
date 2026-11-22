@@ -1,6 +1,6 @@
 {
   "title": "TextStyle",
-  "description": "Describes how a Text node renders its string. Every setter marks the style dirty with a StyleChangeHint so that the owning node can batch-rebuild efficiently on the next frame: - `'tint'` - only updates `Mesh.tint`, no atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild Call consumeDirty at the start of each frame to get the accumulated hint and clear the flag.",
+  "description": "Describes how Text and BitmapText render their strings. Assign the same instance to multiple nodes' `style` properties to share it; each node observes changes independently and rebuilds on its next read. Every setter marks the style dirty with a StyleChangeHint so that nodes can batch-rebuild efficiently: - `'tint'` - render state only, no layout or atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild consumeDirty reads and clears the public dirty cycle without acknowledging changes on behalf of any node.",
   "symbol": "TextStyle",
   "kind": "class",
   "subsystem": "rendering",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Describes how a Text node renders its string.",
-        "Every setter marks the style dirty with a StyleChangeHint so that the owning node can batch-rebuild efficiently on the next frame: - `'tint'` - only updates `Mesh.tint`, no atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild",
-        "Call consumeDirty at the start of each frame to get the accumulated hint and clear the flag."
+        "Describes how Text and BitmapText render their strings. Assign the same instance to multiple nodes' `style` properties to share it; each node observes changes independently and rebuilds on its next read.",
+        "Every setter marks the style dirty with a StyleChangeHint so that nodes can batch-rebuild efficiently: - `'tint'` - render state only, no layout or atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild",
+        "consumeDirty reads and clears the public dirty cycle without acknowledging changes on behalf of any node."
       ],
       "importLine": "import { TextStyle } from '@codexo/exojs'",
       "sourceLink": null
@@ -150,7 +150,7 @@
           ],
           "params": [],
           "returnType": "StyleChangeHint | null",
-          "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Call this once per frame from the owning node's layout pass."
+          "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Text nodes track their own revisions, so consuming this hint cannot hide a change from another node sharing the style."
         },
         {
           "name": "copy",

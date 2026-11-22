@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 6,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -216,6 +216,63 @@
           "params": [],
           "returnType": null,
           "description": "How many full cycles (advancing through every frame once counts as one cycle) the clip plays before stopping and dispatching onComplete. -1 (the default when omitted) loops indefinitely; 1 plays once; any other positive integer plays exactly that many times. Use this to preserve Aseprite's frame-tag repeat count (e.g. an attack that should play exactly twice, not once or forever)."
+        },
+        {
+          "name": "sourceSize",
+          "signature": "sourceSize?: { height: number; width: number }",
+          "signatureTokens": [
+            {
+              "text": "sourceSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Original untrimmed canvas in local (pre-scale) logical pixels. Anchors use this box, and frame changes preserve the sprite's scale so differently cropped frames retain their authored proportions. Both dimensions must be positive and finite. When omitted, clips with offsets infer a canvas from their frame extents; other clips anchor to each frame. These legacy clips keep their rendered width and height when the frame changes."
         }
       ],
       "paragraphs": [],

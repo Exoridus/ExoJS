@@ -1734,6 +1734,16 @@ export class Loader {
     this._residency._adopt(handle, claimer, background);
   }
 
+  /** Validate a prospective claim without changing the handle or its owner. @internal */
+  public _assertLeafOwner(leaf: object): void {
+    this._residency._assertLeafOwner(leaf);
+  }
+
+  /** @internal */
+  public get _ownershipRevision(): number {
+    return this._residency._ownershipRevision;
+  }
+
   /**
    * Register a claim on a resource key under a claim scope (idempotent per
    * scope). On an evicted key, kick a re-fetch into the existing, already

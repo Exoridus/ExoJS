@@ -10,9 +10,9 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 A path is a list of points. Getting an actor along it — progressing from waypoint to waypoint, slowing down onto the destination, sliding along walls, noticing that the route went stale — is the part every game used to write itself. Three pieces cover it, each usable on its own:
 
-- [`KinematicMovementComponent`](/ExoJS/en/api/kinematic-movement-component/) in `@codexo/exojs-physics` performs motion: it moves a kinematic body in the direction it is told, stops at colliders and slides along them.
-- [`NavigationAgentComponent`](/ExoJS/en/api/navigation-agent-component/) in `@codexo/exojs-pathfinding` decides motion: it plans routes through any navigation space and tells a movement where to go next.
-- [`TileNavigationSpace`](/ExoJS/en/api/tile-navigation-space/) in `@codexo/exojs-pathfinding` turns a tile layer into a navigation space that keeps up with edits.
+- [`KinematicMovementComponent`](/ExoJS/en/api/kinematic-movement-component/) in `@codexo/exojs/physics` performs motion: it moves a kinematic body in the direction it is told, stops at colliders and slides along them.
+- [`NavigationAgentComponent`](/ExoJS/en/api/navigation-agent-component/) in `@codexo/exojs/pathfinding` decides motion: it plans routes through any navigation space and tells a movement where to go next.
+- [`TileNavigationSpace`](/ExoJS/en/api/tile-navigation-space/) in `@codexo/exojs/pathfinding` turns a tile layer into a navigation space that keeps up with edits.
 
 None of them imports another. The agent talks to its movement through the four-member [`NavigationMovement`](/ExoJS/en/api/navigation-movement/) contract, and the tile space reads the layer through a structural [`TileNavigationSource`](/ExoJS/en/api/tile-navigation-source/), so a `TileLayer` fits without the pathfinding package depending on the tilemap package.
 
@@ -50,7 +50,7 @@ Synchronisation is pull-based. Reading the space's `revision` — which every se
 
 If the layer is destroyed, the space becomes `invalidated`: every cell turns blocked, one warning is logged, and agents navigating it come to rest as `unreachable`.
 
-Navigation cost and physical collision are separate decisions on purpose. Water can be walkable but expensive, a sensor need not block a route, and a door can close for one actor and not another. Build colliders with `TileColliderStreamer` from `@codexo/exojs-tilemap-physics` and navigation with `TileNavigationSpace`, from the same layer, with the rules each needs.
+Navigation cost and physical collision are separate decisions on purpose. Water can be walkable but expensive, a sensor need not block a route, and a door can close for one actor and not another. Build colliders with `TileColliderStreamer` from `@codexo/exojs/tilemap-physics` and navigation with `TileNavigationSpace`, from the same layer, with the rules each needs.
 
 <Callout type="warning" title="Logical coordinates">
 Routes are in the layer's logical space — the space its physics colliders live in. For an isometric map that is the unprojected grid of square cells, not the screen diamonds. Orthogonal maps with non-square tiles, and orientations other than orthogonal and isometric, are rejected with an error rather than routed with a wrong distance metric.

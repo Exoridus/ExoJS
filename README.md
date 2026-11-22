@@ -23,7 +23,7 @@
 
 ExoJS brings scenes, rendering, input, audio, UI, and asset lifetimes into one application model. Build a game, a visualization, or an interactive canvas inside an existing web application. Keep the surrounding page in your web framework; use ExoJS for the canvas.
 
-> **Pre-1.0:** minor releases may change public APIs. Pin exact package versions, keep official runtime packages on a compatible release line, and read the release notes before upgrading. `main` tracks the latest release; `next` can contain work that is not yet published on npm. The CI and coverage badges above describe `main`.
+> **Pre-1.0:** minor releases may change public APIs. Pin exact package versions, keep integrations compatible with the Core release line, and read the release notes before upgrading. `main` tracks the latest release; `next` can contain work that is not yet published on npm. The CI and coverage badges above describe `main`.
 
 ## Start a project
 
@@ -82,24 +82,24 @@ ExoJS is a code-first runtime, not a visual game editor. Its benchmarks describe
 
 ## Packages
 
-Core owns the application, scenes, scene graph, rendering, input, UI, asset loading, and basic audio. Install only the optional systems you use. Runtime packages follow the Core release line; check their declared peer dependencies when choosing versions.
+Core owns the application, scenes, scene graph, rendering, input, UI, asset loading, and basic audio. The seven optional runtime modules ship in `@codexo/exojs` and are imported through subpaths; the root entry does not import them. Install format adapters and framework integrations separately, checking their Core peer dependencies.
 
 ### Runtime and integrations
 
-| Package                                                                                        | Purpose                                                              | Documentation                                                                                  |
-| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| [`@codexo/exojs`](https://www.npmjs.com/package/@codexo/exojs)                                 | Core runtime: scenes, rendering, input, UI, assets, and audio        | [Guide](https://exoridus.github.io/ExoJS/en/guide/)                                            |
-| [`@codexo/exojs-physics`](https://www.npmjs.com/package/@codexo/exojs-physics)                 | 2D rigid bodies, colliders, joints, and queries                      | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/README.md)         |
-| [`@codexo/exojs-particles`](https://www.npmjs.com/package/@codexo/exojs-particles)             | Particle emitters, CPU simulation, and eligible WebGPU compute paths | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/README.md)       |
-| [`@codexo/exojs-tilemap`](https://www.npmjs.com/package/@codexo/exojs-tilemap)                 | Format-neutral tilemaps, chunk rendering, and world loading          | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/README.md)         |
-| [`@codexo/exojs-tiled`](https://www.npmjs.com/package/@codexo/exojs-tiled)                     | Tiled JSON maps, tilesets, and authored objects                      | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/README.md)           |
-| [`@codexo/exojs-ldtk`](https://www.npmjs.com/package/@codexo/exojs-ldtk)                       | LDtk worlds, levels, IntGrid data, and level streaming               | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/README.md)            |
-| [`@codexo/exojs-aseprite`](https://www.npmjs.com/package/@codexo/exojs-aseprite)               | Aseprite sprite sheets and tagged animations                         | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/README.md)        |
-| [`@codexo/exojs-tilemap-physics`](https://www.npmjs.com/package/@codexo/exojs-tilemap-physics) | Static physics colliders from tilemap geometry                       | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap-physics/README.md) |
-| [`@codexo/exojs-lighting`](https://www.npmjs.com/package/@codexo/exojs-lighting)               | Forward, shadowed lightmap, and radiance-cascade lighting            | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/README.md)        |
-| [`@codexo/exojs-pathfinding`](https://www.npmjs.com/package/@codexo/exojs-pathfinding)         | A* search over weighted grids and waypoint graphs                    | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/README.md)     |
-| [`@codexo/exojs-audio-fx`](https://www.npmjs.com/package/@codexo/exojs-audio-fx)               | Audio effects, analysis, worklets, and beat detection                | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/README.md)        |
-| [`@codexo/exojs-react`](https://www.npmjs.com/package/@codexo/exojs-react)                     | React canvas hosting, declarative scenes, and hooks                  | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-react/README.md)           |
+| Package                                                                          | Purpose                                                              | Documentation                                                                                  |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [`@codexo/exojs`](https://www.npmjs.com/package/@codexo/exojs)                   | Core runtime: scenes, rendering, input, UI, assets, and audio        | [Guide](https://exoridus.github.io/ExoJS/en/guide/)                                            |
+| `@codexo/exojs/physics`                                                          | 2D rigid bodies, colliders, joints, and queries                      | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/README.md)         |
+| `@codexo/exojs/particles`                                                        | Particle emitters, CPU simulation, and eligible WebGPU compute paths | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/README.md)       |
+| `@codexo/exojs/tilemap`                                                          | Format-neutral tilemaps, chunk rendering, and world loading          | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/README.md)         |
+| [`@codexo/exojs-tiled`](https://www.npmjs.com/package/@codexo/exojs-tiled)       | Tiled JSON maps, tilesets, and authored objects                      | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/README.md)           |
+| [`@codexo/exojs-ldtk`](https://www.npmjs.com/package/@codexo/exojs-ldtk)         | LDtk worlds, levels, IntGrid data, and level streaming               | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/README.md)            |
+| [`@codexo/exojs-aseprite`](https://www.npmjs.com/package/@codexo/exojs-aseprite) | Aseprite sprite sheets and tagged animations                         | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/README.md)        |
+| `@codexo/exojs/tilemap-physics`                                                  | Static physics colliders from tilemap geometry                       | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap-physics/README.md) |
+| `@codexo/exojs/lighting`                                                         | Forward, shadowed lightmap, and radiance-cascade lighting            | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/README.md)        |
+| `@codexo/exojs/pathfinding`                                                      | A* search over weighted grids and waypoint graphs                    | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/README.md)     |
+| `@codexo/exojs/audio-fx`                                                         | Audio effects, analysis, worklets, and beat detection                | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/README.md)        |
+| [`@codexo/exojs-react`](https://www.npmjs.com/package/@codexo/exojs-react)       | React canvas hosting, declarative scenes, and hooks                  | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-react/README.md)           |
 
 ### Project tooling
 
@@ -110,7 +110,7 @@ Core owns the application, scenes, scene graph, rendering, input, UI, asset load
 | [`@codexo/exojs-build`](https://www.npmjs.com/package/@codexo/exojs-build)                 | Vite/Rollup transforms for shaders, workers, and AudioWorklets | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-build/README.md)         |
 | [`@codexo/eslint-plugin-exojs`](https://www.npmjs.com/package/@codexo/eslint-plugin-exojs) | Lifecycle and engine-specific correctness checks               | [README](https://github.com/Exoridus/ExoJS/blob/main/packages/eslint-plugin-exojs/README.md) |
 
-Package names open npm; documentation links describe the released packages. In a checkout of `next`, read the matching local package README for unreleased changes. Runtime libraries such as physics and pathfinding are constructed directly; renderer and asset extensions use explicit application descriptors. Each package documents its setup.
+The runtime subpaths need only the Core installation. `@codexo/exojs/debug` provides diagnostics, `/renderer-sdk` serves renderer authors, and `/extensions` is types-only. The old `@codexo/exojs-<module>` names remain compatibility shims on the 0.20 line; new code should use the subpaths. See the [migration guide](https://exoridus.github.io/ExoJS/en/guide/getting-started/migration-v020/) for imports and dependency changes. Integration package links open npm. In a checkout of `next`, read the matching local README for unreleased changes. Physics and pathfinding are constructed directly; renderer and asset extensions use explicit application descriptors.
 
 ## Installation and distribution
 

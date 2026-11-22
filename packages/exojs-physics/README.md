@@ -1,16 +1,18 @@
-# @codexo/exojs-physics
+# @codexo/exojs/physics
 
 A TypeScript 2D rigid-body runtime for ExoJS: bodies, colliders, joints, sensors, contact policy, spatial queries, and scene-node binding.
 
 Use it for simulated motion and collision response. Core's geometric queries are sufficient for simpler hit tests and overlaps. This package contributes no application extension descriptor: construct a `PhysicsWorld` and give it a scene or another explicit owner.
 
+The former `@codexo/exojs-physics` package name remains a 0.20 compatibility shim that forwards to this subpath. Prefer the subpath for new code.
+
 ## Install
 
 ```sh
-npm install --save-exact @codexo/exojs @codexo/exojs-physics
+npm install --save-exact @codexo/exojs
 ```
 
-Core is a peer dependency. Keep the packages on a compatible release line.
+This module ships inside Core. Import its public classes from `@codexo/exojs/physics`; no second runtime package is required.
 
 ## Start a scene-owned world
 
@@ -156,7 +158,7 @@ Physics angles use radians and clockwise-positive screen rotation. Scene-node ro
 
 Continuous collision covers supported translational shape casts, not unrestricted rotational sweeping. Boundary-only geometry is not a solid dynamic mass. Fixed timesteps do not promise cross-build or cross-machine lockstep determinism, and performance depends on the actual contacts, shapes, and workload.
 
-For tilemap collision, use [`@codexo/exojs-tilemap-physics`](https://github.com/Exoridus/ExoJS/tree/next/packages/exojs-tilemap-physics). For diagnostic drawing, use the package's `@codexo/exojs-physics/debug` entry point.
+For tilemap collision, use [`@codexo/exojs/tilemap-physics`](https://github.com/Exoridus/ExoJS/tree/next/packages/exojs-tilemap-physics). For diagnostic drawing, use the package's `@codexo/exojs/debug` entry point.
 
 ## Documentation
 

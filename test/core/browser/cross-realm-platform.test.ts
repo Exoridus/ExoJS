@@ -114,7 +114,7 @@ test('textarea focus, keyboard delivery, edits and composition stay in the owner
     const edit = new ownerWindow.InputEvent('beforeinput', { inputType: 'insertText', data: 'x', cancelable: true });
     element.dispatchEvent(edit);
     expect(edit.defaultPrevented).toBe(true);
-    expect(edits).toHaveBeenCalledWith({ kind: 'insert', text: 'x' });
+    expect(edits).toHaveBeenCalledWith({ kind: 'insert', text: 'x', range: { start: 1, end: 2 } });
 
     element.dispatchEvent(new ownerWindow.CompositionEvent('compositionstart'));
     element.dispatchEvent(new ownerWindow.CompositionEvent('compositionupdate', { data: '漢' }));

@@ -1,11 +1,13 @@
-# @codexo/exojs-pathfinding
+# @codexo/exojs/pathfinding
 
 Weighted-grid and waypoint-graph path queries for ExoJS, plus navigation agents that follow the routes. Use it to find a route through your navigation model and to move an actor along it through a movement you choose; collision response, animation, and special traversal remain the movement's and the game's responsibilities.
+
+The former `@codexo/exojs-pathfinding` package name remains a 0.20 compatibility shim that forwards to this subpath. Prefer the subpath for new code.
 
 ## Install
 
 ```sh
-npm install --save-exact @codexo/exojs @codexo/exojs-pathfinding
+npm install --save-exact @codexo/exojs
 ```
 
 This is a directly used library. It has no application extension descriptor or global registration step.
@@ -30,7 +32,7 @@ Zero-cost cells are blocked; positive costs describe traversal weight. `findPath
 
 ## Navigate an agent
 
-`NavigationAgentComponent` plans a route through any navigation space, progresses along it and replans when the route goes stale. It never moves its node itself: a `NavigationMovement` - anything with `maxSpeed`, `move` and `stop` - performs the motion, such as `KinematicMovementComponent` from `@codexo/exojs-physics` or a few lines that write a node position.
+`NavigationAgentComponent` plans a route through any navigation space, progresses along it and replans when the route goes stale. It never moves its node itself: a `NavigationMovement` - anything with `maxSpeed`, `move` and `stop` - performs the motion, such as `KinematicMovementComponent` from `@codexo/exojs/physics` or a few lines that write a node position.
 
 ```ts
 import { Container, type PointLike, type Seconds } from '@codexo/exojs';
@@ -64,7 +66,7 @@ agent.onStatusChange.add(status => console.log(status));
 
 ## Navigate a tile layer
 
-`TileNavigationSpace` turns a tile layer into a navigation space with a cost callback and keeps itself in step with tile edits and chunk streaming, resampling only the chunks that changed. It reads the layer through a structural contract, so the package has no dependency on `@codexo/exojs-tilemap`.
+`TileNavigationSpace` turns a tile layer into a navigation space with a cost callback and keeps itself in step with tile edits and chunk streaming, resampling only the chunks that changed. It reads the layer through a structural contract, so the package has no dependency on `@codexo/exojs/tilemap`.
 
 ```ts
 import { TileNavigationSpace } from '@codexo/exojs/pathfinding';

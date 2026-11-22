@@ -1,6 +1,7 @@
+import { Loader } from '#assets/Loader';
 import type { Application } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
-import type { SceneScope } from '#core/scene/SceneScope';
+import { SceneScope } from '#core/scene/SceneScope';
 import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import type { ContextMenuRequest } from '#input/ContextMenuRequest';
@@ -22,6 +23,13 @@ import { frameDelta } from '../support/frame-delta';
 // Camera offset so world-space coordinates differ from screen-space ones; the
 // screenView stays identity, proving UI is hit-tested in screen space.
 const CAMERA_OFFSET = 1000;
+const cleanups: Array<() => void> = [];
+
+afterEach(() => {
+  for (const cleanup of cleanups.splice(0)) {
+    cleanup();
+  }
+});
 
 class TestSprite extends Drawable {
   private readonly _rect = new Rectangle(0, 0, 0, 0);
@@ -82,6 +90,8 @@ const createUIApp = (): {
     platform: new BrowserPlatform(canvas),
     width: 800,
     height: 600,
+    loader: new Loader(),
+    onError: new Signal<[Error]>(),
     input: signals as unknown as InputSystem,
     focus: null as FocusController | null,
     interaction: null as InteractionSystem | null,
@@ -101,7 +111,15 @@ const createUIApp = (): {
 
   app.focus = new FocusController(typed);
   app.interaction = new InteractionSystem(typed);
-  scene._attach(typed, {} as unknown as SceneScope<void>);
+  const scope = new SceneScope(typed, scene);
+
+  cleanups.push(() => {
+    scope.destroyFailedActivation();
+    app.interaction?.destroy();
+    app.focus?.destroy();
+    app.loader.destroy();
+    app.onError.destroy();
+  });
   app.interaction.attachRoot(scene.root);
 
   return { scene, im: app.interaction, focus: app.focus, signals };

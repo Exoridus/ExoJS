@@ -36,6 +36,34 @@ const createStage = (): { stage: Stage; focus: FocusController } => {
 };
 
 describe('Container structural methods are atomic against user callbacks', () => {
+  test('a reparent during blur supersedes the outer move without duplicating or detaching the child', () => {
+    const { stage, focus } = createStage();
+    const source = new Container();
+    const target = new Container();
+    const newer = new Container();
+    const moving = new DummyDrawable();
+
+    source._setStage(stage);
+    target._setStage(stage);
+    newer._setStage(stage);
+    moving.focusable = true;
+    source.addChild(moving);
+    focus.focus(moving);
+    moving.onBlur.add(() => newer.addChild(moving));
+
+    target.addChild(moving);
+
+    expect(source.children).toHaveLength(0);
+    expect(target.children).toHaveLength(0);
+    expect(newer.children).toHaveLength(1);
+    expect(moving.parent === newer).toBe(true);
+    expect(moving._getStage() === stage).toBe(true);
+
+    source.destroy();
+    target.destroy();
+    newer.destroy();
+  });
+
   test('removeChildren has already committed the array when a synchronous onBlur handler runs', () => {
     const { stage, focus } = createStage();
     const container = new Container();

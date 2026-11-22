@@ -493,6 +493,45 @@ describe('FocusController', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  test.each(['keyboard', 'gamepad'] as const)('%s directional navigation respects transition and inactive-scene gates', device => {
+    const { app, scene, focus, onKeyDown, onAnyGamepadButtonDown } = createFocusApp();
+    const left = spatial(0, 0);
+    const right = spatial(50, 0);
+    const scenes = app.scenes as unknown as { state: SceneState | null; _transitionGateOpen: boolean };
+
+    const pressRight = (): void => {
+      if (device === 'keyboard') {
+        onKeyDown.dispatch(Keyboard.Right);
+      } else {
+        onAnyGamepadButtonDown.dispatch({} as Gamepad, padButton(GamepadButton.DPadRight), 1);
+      }
+    };
+
+    scene.root.addChild(left, right);
+    focus.navigation = 'always';
+    focus.focus(left);
+    pressRight();
+    expect(focus.focused).toBe(right);
+
+    focus.focus(left);
+    scenes._transitionGateOpen = true;
+    pressRight();
+    expect(focus.focused).toBe(left);
+
+    // Programmatic focus still follows its ownership/scope contract while hardware is gated.
+    focus.focus(right);
+    expect(focus.focused).toBe(right);
+    focus.focus(left);
+    scenes._transitionGateOpen = false;
+    scenes.state = SceneState.Suspended;
+    pressRight();
+    expect(focus.focused).toBe(left);
+
+    scenes.state = SceneState.Active;
+    pressRight();
+    expect(focus.focused).toBe(right);
+  });
+
   test('focusPrevious() with nothing focused wraps to the last focusable node', () => {
     const { scene, focus } = createFocusApp();
     const a = focusable();

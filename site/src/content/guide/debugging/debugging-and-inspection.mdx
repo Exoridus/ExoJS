@@ -38,8 +38,15 @@ Call the returned disposer when the development host no longer needs the tools. 
 | Hit test | Interactive, hovered, and captured nodes. | F3 |
 | Pointer stack | Candidate nodes under the pointer and their ordering. | F4 |
 | Render-pass inspector | Attached filters, masks, cache flags, and an optional logical pipeline. | F6 |
+| Asset cache (`AssetCacheLayer`) | Loader residency, claims, owners, and pending work. | F7 |
 
 Shortcuts apply while the canvas has focus. F5 remains available for the browser's reload action. The overlay releases its shortcut claims on destruction.
+
+## Inspect asset ownership
+
+Enable `debug.layers.assetCache.visible` or press F7 to inspect the application's loader. `app.loader.inspect()` provides resident entries and their claims/owners; `app.loader.stats()` provides aggregate status and estimated residency sizes. Use these to check whether a scene, child scope, or application claim still holds a resource after a transition.
+
+The [Asset Browser](/ExoJS/en/tools/asset-browser/) is a media catalog and preview tool, while the AssetCacheLayer describes this application's live residency. Estimated payload bytes are not measured GPU memory. Performance counters and available GPU timing answer different questions; the render-pass inspector describes structure, not hardware time per pass.
 
 ## Visibility and input
 

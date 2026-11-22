@@ -7,6 +7,10 @@ class MainScene extends Scene {
   }
 }
 
-const app = new Application({ scenes: { MainScene } });
+const app = new Application({
+  scenes: { MainScene },
+  loader: { basePath: 'assets/' },
+  canvas: { width: 800, height: 450, mount: document.body, tabIndex: 0 },
+});
 await app.start(MainScene);
 // #endregion guide:lazy-sprite

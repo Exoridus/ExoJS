@@ -111,7 +111,9 @@ export class FocusController implements FocusHooks {
     this._onKeyUpHandler = this._handleKeyUp.bind(this);
 
     this._onGamepadButtonDownHandler = (_pad, button): void => {
-      this._handleDirectionalChannel(button.channel);
+      if (!this._isGated()) {
+        this._handleDirectionalChannel(button.channel);
+      }
     };
 
     app.input.onKeyDown.add(this._onKeyDownHandler);
@@ -409,6 +411,14 @@ export class FocusController implements FocusHooks {
     }
 
     const focused = this._liveFocused();
+    const editTarget = this._app.input._keyEventTextEditTarget;
+
+    // An editing command already handled for the previous focus owner must
+    // not activate or navigate a different widget during frame delivery.
+    if (editTarget != null && editTarget !== focused) {
+      return;
+    }
+
     let defaultPrevented = false;
 
     if (focused !== null) {

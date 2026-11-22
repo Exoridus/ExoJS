@@ -1,14 +1,16 @@
-# @codexo/exojs-tilemap
+# @codexo/exojs/tilemap
 
 Generic, format-independent tilemap runtime **and** WebGL2/WebGPU chunk renderer for [ExoJS](https://exoridus.github.io/ExoJS/). No Tiled (or any other on-disk format) vocabulary leaks into this package - adapters such as [`@codexo/exojs-tiled`](https://www.npmjs.com/package/@codexo/exojs-tiled) parse their format and hand this runtime fully resolved tiles.
+
+The former `@codexo/exojs-tilemap` package name remains a 0.20 compatibility shim that forwards to this subpath. Prefer the subpath for new code.
 
 ## Installation
 
 ```sh
-npm install @codexo/exojs @codexo/exojs-tilemap
+npm install --save-exact @codexo/exojs
 ```
 
-`@codexo/exojs` is a peer dependency, so install it explicitly. This package is itself a peer of the format adapters (`@codexo/exojs-tiled`, `@codexo/exojs-ldtk`) rather than something they pull in transitively — install it whether you use an adapter or build procedural / custom-format maps directly.
+The tilemap runtime and renderer ship inside Core. Import them from `@codexo/exojs/tilemap`. Format adapters (`@codexo/exojs-tiled`, `@codexo/exojs-ldtk`) remain separate packages; install only the adapter your format needs.
 
 ## What this package provides
 
@@ -157,7 +159,7 @@ Object layers remain data-only. With a projection their objects use logical coor
 
 ## Core compatibility
 
-This package follows the Core lockstep release line and declares the compatible `@codexo/exojs` minor as a peer dependency. Install matching package versions.
+This module is built and released with Core. Its private workspace implementation package is not a separate application dependency.
 
 ## Links
 

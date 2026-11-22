@@ -59,7 +59,7 @@ export class Vector extends AbstractVector implements ShapeLike {
   public intersectsWith(target: Collidable): boolean {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return intersectionPointRect(this, (target as SceneNode).getBounds());
+        return intersectionPointRect(this, (target as SceneNode)._getWorldBounds());
       case CollisionType.Rectangle:
         return intersectionPointRect(this, target as Rectangle);
       case CollisionType.Polygon:

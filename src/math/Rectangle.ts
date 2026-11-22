@@ -313,8 +313,8 @@ export class Rectangle extends ShapeRevision implements ShapeLike, ReadonlyRecta
   public intersectsWith(target: Collidable): boolean {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return (target as SceneNode).isAlignedBox
-          ? intersectionRectRect(this, (target as SceneNode).getBounds())
+        return (target as SceneNode)._isWorldAligned()
+          ? intersectionRectRect(this, (target as SceneNode)._getWorldBounds())
           : intersectionSat(this, target);
       case CollisionType.Rectangle:
         return intersectionRectRect(this, target as Rectangle);
@@ -336,8 +336,8 @@ export class Rectangle extends ShapeRevision implements ShapeLike, ReadonlyRecta
   public collidesWith(target: Collidable): CollisionResponse | null {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return (target as SceneNode).isAlignedBox
-          ? getCollisionRectangleRectangle(this, (target as SceneNode).getBounds())
+        return (target as SceneNode)._isWorldAligned()
+          ? getCollisionRectangleRectangle(this, (target as SceneNode)._getWorldBounds())
           : getCollisionSat(this, target);
       case CollisionType.Rectangle:
         return getCollisionRectangleRectangle(this, target as Rectangle);
