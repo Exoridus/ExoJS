@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { planCi } from '../../scripts/ci/lanes.ts';
+
 /**
  * Locks the build-once/deploy-once contract for GitHub Pages.
  *
@@ -46,6 +48,10 @@ const runScripts = (workflow: string): string[] =>
 
 describe('site candidate production (ci.yml)', () => {
   const site = jobBlock(ci, 'site');
+  const smokePlans = [false, true].map(
+    fullQualification =>
+      planCi({ eventName: 'pull_request', changedFiles: ['examples/basics/sprite.ts'], refName: 'feature', fullQualification }).smokeMatrix,
+  );
 
   it('builds the channel the branch publishes, from the one channel table', () => {
     expect(site).toContain('node scripts/pages/site-channel.ts >> "$GITHUB_OUTPUT"');
@@ -77,22 +83,28 @@ describe('site candidate production (ci.yml)', () => {
     expect(uploadIndex).toBeGreaterThan(verifyIndex);
   });
 
-  it('runs both smoke suites independently against exactly that candidate', () => {
+  it('runs every planned smoke partition independently against exactly that candidate', () => {
     const smoke = jobBlock(ci, 'smoke');
-    expect(smoke).toContain('name: smoke (${{ matrix.suite }})');
+    expect(smoke).toContain('name: smoke (${{ matrix.id }})');
     expect(smoke).toContain('fail-fast: false');
-    expect(smoke).toContain('suite: [examples, playground]');
+    expect(smoke).toContain('include: ${{ fromJSON(needs.plan.outputs.smokeMatrix) }}');
     expect(smoke).toContain('browser: chromium');
     expect(smoke.match(/actions\/download-artifact@/g)).toHaveLength(1);
     expect(smoke).toContain('name: ${{ needs.site.outputs.candidate }}');
     expect(smoke).toContain('path: site/dist');
-    expect(runScripts(smoke)).toEqual([
-      "pnpm test:examples:smoke --renderer webgl2 ${{ needs.plan.outputs.smokeSample == 'true' && '--sample' || '' }}",
-      'pnpm test:playground:e2e',
-    ]);
-    expect(smoke).toContain("if: matrix.suite == 'examples'");
-    expect(smoke).toContain("if: ${{ matrix.suite == 'playground' && !cancelled() }}");
+    expect(runScripts(smoke)).toEqual(['${{ matrix.run }}']);
+    expect(smoke).toMatch(/^ {6}- run: \$\{\{ matrix\.run \}\}\n\n/m);
     expect(smoke).not.toContain('continue-on-error:');
+
+    for (const [index, entries] of smokePlans.entries()) {
+      expect(entries.filter(entry => entry.suite === 'examples')).toHaveLength(index === 0 ? 1 : 3);
+      expect(entries.filter(entry => entry.suite === 'playground').map(entry => entry.run)).toEqual([
+        'pnpm test:playground:e2e --suite shell',
+        'pnpm test:playground:e2e --suite rendering',
+        'pnpm test:playground:e2e --suite lifecycle',
+        'pnpm test:playground:e2e --suite assets',
+      ]);
+    }
   });
 
   it('keeps distinct reports from both smoke runners, including their failures', () => {
@@ -100,12 +112,16 @@ describe('site candidate production (ci.yml)', () => {
     const uploads = smoke.split(/(?=^ {6}- )/m).filter(step => step.includes('actions/upload-artifact@'));
     expect(uploads).toHaveLength(2);
     expect(uploads[0]).toContain("if: ${{ matrix.suite == 'examples' && !cancelled() }}");
-    expect(uploads[0]).toContain('name: example-smoke-report');
+    expect(uploads[0]).toContain('name: smoke-${{ matrix.id }}');
     expect(uploads[0]).toContain('.workspace/reports/example-smoke.md');
     expect(uploads[0]).toContain('.workspace/reports/example-smoke-artifacts');
     expect(uploads[1]).toContain("if: ${{ matrix.suite == 'playground' && !cancelled() }}");
-    expect(uploads[1]).toContain('name: playground-e2e-report');
+    expect(uploads[1]).toContain('name: smoke-${{ matrix.id }}');
     expect(uploads[1]).toContain('.workspace/reports/playground-e2e');
+
+    for (const entries of smokePlans) {
+      expect(new Set(entries.map(entry => `smoke-${entry.id}`)).size).toBe(entries.length);
+    }
   });
 });
 
