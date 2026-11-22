@@ -112,10 +112,10 @@ if [ "$is_branch_push" = "1" ]; then
                     echo "[pre-push] checking dist against the sources"
                     node scripts/check-dist-fresh.ts --rebuild || exit 1
                 fi
-    
+
                 echo "[pre-push] static validation"
                 npm run gates -- affected-rest "$lane_base" "$push_head_sha" || exit 1
-    
+
                 if [ -n "$lane_base" ]; then
                     echo "[pre-push] running the test lanes this push requires"
                     npm run lanes -- --run --tests-only --pre-push --base "$lane_base" || exit 1
