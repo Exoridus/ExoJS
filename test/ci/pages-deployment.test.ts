@@ -1,7 +1,10 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+
+import { planCi } from '../../scripts/ci/lanes.ts';
 
 /**
  * Locks the build-once/deploy-once contract for GitHub Pages.
@@ -45,6 +48,10 @@ const runScripts = (workflow: string): string[] =>
 
 describe('site candidate production (ci.yml)', () => {
   const site = jobBlock(ci, 'site');
+  const smokePlans = [false, true].map(
+    fullQualification =>
+      planCi({ eventName: 'pull_request', changedFiles: ['examples/basics/sprite.ts'], refName: 'feature', fullQualification }).smokeMatrix,
+  );
 
   it('builds the channel the branch publishes, from the one channel table', () => {
     expect(site).toContain('node scripts/pages/site-channel.ts >> "$GITHUB_OUTPUT"');
@@ -76,10 +83,88 @@ describe('site candidate production (ci.yml)', () => {
     expect(uploadIndex).toBeGreaterThan(verifyIndex);
   });
 
-  it('smokes exactly that candidate', () => {
+  it('runs every planned smoke partition independently against exactly that candidate', () => {
     const smoke = jobBlock(ci, 'smoke');
+    expect(smoke).toContain('name: smoke (${{ matrix.id }})');
+    expect(smoke).toContain('fail-fast: false');
+    expect(smoke).toContain('include: ${{ fromJSON(needs.plan.outputs.smokeMatrix) }}');
+    expect(smoke).toContain('browser: chromium');
+    expect(smoke.match(/actions\/download-artifact@/g)).toHaveLength(1);
     expect(smoke).toContain('name: ${{ needs.site.outputs.candidate }}');
     expect(smoke).toContain('path: site/dist');
+    expect(runScripts(smoke)).toEqual(['${{ matrix.run }}']);
+    expect(smoke).toMatch(/^ {6}- run: \$\{\{ matrix\.run \}\}\n\n/m);
+    expect(smoke).not.toContain('continue-on-error:');
+
+    for (const [index, entries] of smokePlans.entries()) {
+      expect(entries.filter(entry => entry.suite === 'examples')).toHaveLength(index === 0 ? 1 : 3);
+      expect(entries.filter(entry => entry.suite === 'playground').map(entry => entry.run)).toEqual([
+        'pnpm test:playground:e2e --suite shell',
+        'pnpm test:playground:e2e --suite rendering',
+        'pnpm test:playground:e2e --suite lifecycle',
+        'pnpm test:playground:e2e --suite assets',
+      ]);
+    }
+  });
+
+  it('keeps distinct reports from both smoke runners, including their failures', () => {
+    const smoke = jobBlock(ci, 'smoke');
+    const uploads = smoke.split(/(?=^ {6}- )/m).filter(step => step.includes('actions/upload-artifact@'));
+    expect(uploads).toHaveLength(2);
+    expect(uploads[0]).toContain("if: ${{ matrix.suite == 'examples' && !cancelled() }}");
+    expect(uploads[0]).toContain('name: smoke-${{ matrix.id }}');
+    expect(uploads[0]).toContain('.workspace/reports/example-smoke.md');
+    expect(uploads[0]).toContain('.workspace/reports/example-smoke-artifacts');
+    expect(uploads[1]).toContain("if: ${{ matrix.suite == 'playground' && !cancelled() }}");
+    expect(uploads[1]).toContain('name: smoke-${{ matrix.id }}');
+    expect(uploads[1]).toContain('.workspace/reports/playground-e2e');
+
+    for (const entries of smokePlans) {
+      expect(new Set(entries.map(entry => `smoke-${entry.id}`)).size).toBe(entries.length);
+    }
+  });
+});
+
+describe('the required smoke verdict', () => {
+  const verdict = jobBlock(ci, 'verdict');
+
+  const verdictResult = (smoke: string | undefined, required = true) => {
+    const needs: Record<string, { result: string }> = Object.fromEntries(
+      ['plan', 'gates', 'test', 'skip-budget', 'build', 'verify', 'site'].map(job => [job, { result: 'success' }]),
+    );
+
+    if (smoke !== undefined) {
+      needs['smoke'] = { result: smoke };
+    }
+
+    return spawnSync(process.execPath, ['scripts/ci/verdict.ts'], {
+      cwd: repoRoot,
+      env: { ...process.env, NEEDS: JSON.stringify(needs), PLAN: JSON.stringify({ smoke: String(required) }) },
+      encoding: 'utf8',
+      timeout: 10_000,
+    });
+  };
+
+  it('waits for the smoke matrix aggregate even after a failed or cancelled job', () => {
+    expect(verdict).toContain('if: always()');
+    expect(verdict).toMatch(/needs: \[[^\]\n]*\bsmoke\b[^\]\n]*\]/);
+    expect(verdictResult('success').status).toBe(0);
+  });
+
+  it.each(['failure', 'cancelled', 'skipped'])('rejects a required smoke aggregate that is %s', result => {
+    const actual = verdictResult(result);
+    expect(actual.status).toBe(1);
+    expect(actual.stdout).toMatch(new RegExp(`FAIL smoke\\s+${result}`));
+  });
+
+  it('rejects a missing smoke aggregate', () => {
+    const actual = verdictResult(undefined);
+    expect(actual.status).toBe(1);
+    expect(actual.stdout).toMatch(/FAIL smoke\s+missing from needs/);
+  });
+
+  it('allows smoke to be skipped only when the plan did not require it', () => {
+    expect(verdictResult('skipped', false).status).toBe(0);
   });
 });
 

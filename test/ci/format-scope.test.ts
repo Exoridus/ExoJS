@@ -10,7 +10,7 @@ import { chunkFiles, FORMAT_CONFIG_FILES, formatRangeFiles, selectFormatScope } 
 import { runCommand } from '../../scripts/lib/run-command.ts';
 
 const present = (): boolean => true;
-const prettierCli = fileURLToPath(import.meta.resolve('prettier/bin/prettier.cjs'));
+const formatterCli = fileURLToPath(new URL('./bin/oxfmt', import.meta.resolve('oxfmt/package.json')));
 const posixNames = [
   ['a tab', 'src/tab\tname.ts'],
   ['a newline', 'src/line\nbreak.ts'],
@@ -51,11 +51,17 @@ describe('format scope selection', () => {
     'site/package.json',
     'pnpm-lock.yaml',
     'pnpm-workspace.yaml',
+    'lint-staged.config.ts',
+    'scripts/ci/format-scope.ts',
+    'scripts/ci/gates.ts',
     '.editorconfig',
     '.prettierignore',
     '.gitignore',
     '.prettierrc.json',
     'prettier.config.mjs',
+    'oxfmt.config.ts',
+    'examples/oxfmt.config.mjs',
+    'site/.oxfmtrc.jsonc',
     'packages/exojs-config/prettier/index.js',
     'packages/exojs-config/package.json',
     'packages/create-exo-app/templates/minimal/.gitignore',
@@ -266,15 +272,14 @@ describe('pushed range', () => {
   });
 });
 
-describe('selective prettier invocation', () => {
+describe('selective formatter invocation', () => {
   let root: string;
 
   const check = (...files: string[]): number | null => {
-    const result = spawnSync(
-      process.execPath,
-      [prettierCli, '--check', '--ignore-unknown', '--no-error-on-unmatched-pattern', '--', ...files],
-      { cwd: root, encoding: 'utf8' },
-    );
+    const result = spawnSync(process.execPath, [formatterCli, '--check', '--no-error-on-unmatched-pattern', '--', ...files], {
+      cwd: root,
+      encoding: 'utf8',
+    });
 
     expect({ error: result.error, signal: result.signal, stdout: result.stdout, stderr: result.stderr }).toMatchObject({
       error: undefined,
@@ -287,8 +292,8 @@ describe('selective prettier invocation', () => {
   };
 
   beforeEach(() => {
-    root = realpathSync(mkdtempSync(join(tmpdir(), 'exojs-prettier-')));
-    writeFileSync(join(root, '.prettierrc.json'), '{"singleQuote":true}\n');
+    root = realpathSync(mkdtempSync(join(tmpdir(), 'exojs-formatter-')));
+    writeFileSync(join(root, '.oxfmtrc.json'), '{"singleQuote":true}\n');
     writeFileSync(join(root, '.prettierignore'), 'ignored/\n');
     mkdirSync(join(root, 'ignored'));
     writeFileSync(join(root, 'good.ts'), "export const a = 'x';\n");
@@ -316,7 +321,7 @@ describe('selective prettier invocation', () => {
     expect(check('blob.bin')).toBe(0);
   });
 
-  it('passes names with spaces and shell metacharacters through runCommand to Prettier', async () => {
+  it('passes names with spaces and shell metacharacters through runCommand to the formatter', async () => {
     const names = ["it's $HOME.ts", 'a&b;c(d).ts', '\u00E4 \u65E5.ts', ' lead.ts'];
 
     for (const name of names) {
@@ -327,7 +332,7 @@ describe('selective prettier invocation', () => {
       runCommand({
         label: 'format-smoke',
         command: process.execPath,
-        args: [prettierCli, '--check', '--ignore-unknown', '--', ...files],
+        args: [formatterCli, '--check', '--', ...files],
         cwd: root,
         output: 'silent',
       });

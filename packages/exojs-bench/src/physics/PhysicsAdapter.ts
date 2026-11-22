@@ -12,7 +12,13 @@ import type { BaseCellResult } from '../shared/result';
  * solving.
  */
 export type PhysicsArchetypeId =
-  'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'raycast' | 'body-churn' | 'joints' | 'settling-pile';
+  | 'box-stack'
+  | 'many-dynamic'
+  | 'mixed-static-dynamic'
+  | 'raycast'
+  | 'body-churn'
+  | 'joints'
+  | 'settling-pile';
 
 /**
  * Body layout an archetype simulates, independent of what its per-step work is.

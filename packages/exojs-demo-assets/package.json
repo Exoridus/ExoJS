@@ -51,7 +51,7 @@
   ],
   "scripts": {
     "generate": "tsx scripts/generate.ts",
-    "build": "tsx scripts/generate.ts --check --media && exo-tsc -p tsconfig.build.json",
+    "build": "node --import tsx scripts/generate.ts --check --media && exo-tsc -p tsconfig.build.json",
     "archive": "tsx scripts/archive.ts",
     "typecheck": "exo-tsc --noEmit && exo-tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint \"src/**/*.ts\"",

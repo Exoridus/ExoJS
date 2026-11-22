@@ -7,10 +7,10 @@
 // may be held to a lower correctness bar - the examples are copy-paste material
 // with the type-aware rules off - without looking any different from the engine.
 //
-// Ownership: Prettier owns indentation, quotes, semicolons, commas, whitespace
+// Ownership: Oxfmt owns indentation, quotes, semicolons, commas, whitespace
 // and wrapping. ESLint owns the choices that need the syntax tree - braces,
 // blank-line structure, import hygiene, which construct is spelled how - and no
-// rule here restates a Prettier decision. The one exception is `curly`, which
+// rule here restates a formatter decision. The one exception is `curly`, which
 // `eslint-config-prettier` switches off wholesale; see `prettierCompatConfig`.
 //
 // Measured and deliberately NOT enabled (re-open by re-measuring):

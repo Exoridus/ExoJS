@@ -1,11 +1,12 @@
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import { type CiPlan, LANES, planCi } from '../../scripts/ci/lanes';
+import { PLAYGROUND_SUITES } from '../../site/scripts/playground-suites.ts';
 
 /**
  * What `ci.yml` receives from the `plan` job for representative events. The
@@ -91,10 +92,331 @@ describe('lane table', () => {
     }
   });
 
+  it('audits every blocking Vitest lane while retaining its ordinary full command', () => {
+    const plan = planCi({ eventName: 'workflow_dispatch', changedFiles: [], refName: 'next' });
+
+    for (const entry of plan.test.filter(lane => lane.junit)) {
+      expect(entry.affectedProjects.length, `${entry.id} has a discovery inventory`).toBeGreaterThan(0);
+      expect(entry.run).toContain('--reporter=./scripts/ci/affected-reporter.ts');
+      expect(entry.run).not.toContain('affected-plan.ts');
+      expect(entry.run).not.toContain('--changed');
+      expect(entry.run).not.toContain('--related');
+    }
+  });
+
   it('never mentions a lane by name in the workflow', () => {
     for (const lane of LANES) {
       expect(workflow).not.toMatch(new RegExp(`\\b${lane.run.split(' ').slice(0, 3).join(' ')}\\b`));
     }
+  });
+});
+
+describe('affected-test CI activation contract', () => {
+  const shadow = workflow.slice(
+    workflow.indexOf('      - name: Calculate affected tests'),
+    workflow.indexOf('      - name: Keep the JUnit'),
+  );
+
+  it('discovers only the planner-selected mode from the exact event base', () => {
+    expect(shadow).toContain("if: ${{ matrix.affectedMode != '' }}");
+    expect(shadow).toContain('AFFECTED_BASE: ${{ github.event.pull_request.base.sha }}');
+    expect(shadow).toContain('AFFECTED_MODE: ${{ matrix.affectedMode }}');
+    expect(shadow).toContain('run: ${{ matrix.run }}');
+    expect(shadow).not.toMatch(/affected-plan\.ts[^\n]* --run\b/);
+    expect(shadow).not.toContain('continue-on-error:');
+  });
+
+  it('still executes the full lane if discovery fails and retains its shadow evidence', () => {
+    expect(shadow).toMatch(/- run: \$\{\{ matrix\.run \}\}\n\s+if: \$\{\{ !cancelled\(\) \}\}/);
+    expect(shadow).toContain('name: affected-tests-${{ matrix.id }}');
+    expect(shadow).toContain('include-hidden-files: true');
+    expect(shadow).toContain('if-no-files-found: error');
+    expect(shadow).toContain("!cancelled() && matrix.affectedMode != ''");
+  });
+
+  it('reserves scenario audits for the explicit shadow and probe labels', () => {
+    expect(workflow).toContain(
+      "AFFECTED_SHADOW: ${{ contains(github.event.pull_request.labels.*.name, 'ci:affected-shadow') || contains(github.event.pull_request.labels.*.name, 'ci:affected-probe') }}",
+    );
+    expect(workflow).toContain(
+      "FULL_QUALIFICATION: ${{ inputs.full_qualification || contains(github.event.pull_request.labels.*.name, 'ci:full') }}",
+    );
+  });
+
+  it('measures subsets only after successful full execution and keeps their reports outside the skip budget', () => {
+    const probe = shadow.slice(shadow.indexOf('- name: Measure an audited affected subset'));
+
+    expect(shadow.indexOf('run: ${{ matrix.run }}')).toBeLessThan(shadow.indexOf('- name: Measure an audited affected subset'));
+    expect(probe).toContain('success()');
+    expect(probe).toContain("'ci:affected-probe'");
+    expect(probe).toContain("matrix.affectedMode == 'shadow'");
+    expect(probe).toContain('affected-probe.ts --plan');
+    expect(probe).toContain('--results .workspace/affected-tests/results');
+    expect(probe).toContain('--outputFile.junit=.workspace/affected-tests/probe-unit.junit.xml');
+    expect(probe).not.toContain('--outputFile.junit=./test-results/');
+  });
+
+  it('proves browser receipt delivery with the Media project after the complete scenario audit', () => {
+    const probe = shadow.slice(shadow.indexOf('- name: Measure an audited affected subset'));
+
+    expect(probe).toContain('--scenario AnimatedSprite');
+    expect(probe).toContain(
+      "--row 'Diagnostic / AnimatedSprite WebGPU Media' --preflight chromium-webgpu --requires webgpu-device,media-frame --timeout 6",
+    );
+    expect(probe).toContain('node scripts/ci/affected-run.ts --project=browser-webgpu-media ');
+    expect(probe).toContain('--outputFile.junit=.workspace/affected-tests/probe-webgpu-media.junit.xml');
+    expect(probe).not.toContain('--project=browser-webgpu ');
+    expect(probe).toContain('EXOJS_AFFECTED_EXECUTION_DIR=.workspace/affected-tests/probe-execution');
+  });
+
+  const runDiscovery = (mode: string, discoveryExit = 0, fetchExit = 0) => {
+    const directory = mkdtempSync(resolve(tmpdir(), 'exo-ci-discovery-'));
+    const output = resolve(directory, 'affected plan', 'webgpu.json');
+    const environment = resolve(directory, 'github-env');
+    const calls = resolve(directory, 'calls');
+    const calculation = shadow.slice(0, shadow.indexOf('      # A browser lane'));
+    const script = calculation
+      .slice(calculation.indexOf('        run: |\n') + '        run: |\n'.length)
+      .trimEnd()
+      .split('\n')
+      .map(line => line.slice(10))
+      .join('\n');
+
+    try {
+      mkdirSync(resolve(directory, 'affected plan'));
+      writeFileSync(environment, '');
+      const result = spawnSync(
+        'bash',
+        [
+          '--noprofile',
+          '--norc',
+          '-eo',
+          'pipefail',
+          '-c',
+          [
+            'git() { return "$CI_FETCH_EXIT"; }',
+            'node() {',
+            '  printf \'%s\\0\' "$@" > "$CI_DISCOVERY_CALLS"',
+            "  printf 'fixture discovery output\\n'",
+            "  printf 'fixture discovery diagnostic\\n' >&2",
+            '  if [ "$CI_DISCOVERY_EXIT" = 0 ]; then printf \'{}\\n\' > "$AFFECTED_OUTPUT"; fi',
+            '  return "$CI_DISCOVERY_EXIT"',
+            '}',
+            script,
+          ].join('\n'),
+        ],
+        {
+          cwd: directory,
+          env: {
+            ...process.env,
+            AFFECTED_MODE: mode,
+            AFFECTED_BASE: '0123456789abcdef0123456789abcdef01234567',
+            AFFECTED_PROJECTS: 'browser-webgpu,browser-webgpu-media',
+            AFFECTED_OUTPUT: output,
+            GITHUB_ENV: environment,
+            CI_DISCOVERY_CALLS: calls,
+            CI_DISCOVERY_EXIT: String(discoveryExit),
+            CI_FETCH_EXIT: String(fetchExit),
+          },
+          encoding: 'utf8',
+        },
+      );
+
+      return {
+        status: result.status,
+        stdout: result.stdout,
+        stderr: result.stderr,
+        output,
+        args: existsSync(calls) ? readFileSync(calls, 'utf8').split('\0').slice(0, -1) : [],
+        environment: Object.fromEntries(
+          readFileSync(environment, 'utf8')
+            .trim()
+            .split('\n')
+            .filter(Boolean)
+            .map(line => {
+              const separator = line.indexOf('=');
+
+              return [line.slice(0, separator), line.slice(separator + 1)];
+            }),
+        ),
+        log: existsSync(output.replace(/\.json$/, '.log')) ? readFileSync(output.replace(/\.json$/, '.log'), 'utf8') : '',
+      };
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  };
+
+  it.skipIf(process.platform === 'win32').each(['enforce', 'shadow'])(
+    'exports a successful %s plan and preserves exact project/output arguments',
+    mode => {
+      const result = runDiscovery(mode);
+
+      expect(result.status).toBe(0);
+      expect(result.args).toEqual([
+        'scripts/ci/affected-plan.ts',
+        '--base',
+        '0123456789abcdef0123456789abcdef01234567',
+        '--committed',
+        ...(mode === 'shadow' ? ['--scenarios'] : []),
+        '--output',
+        result.output,
+        '--',
+        '--project=browser-webgpu',
+        '--project=browser-webgpu-media',
+      ]);
+      expect(result.environment).toEqual({ EXOJS_AFFECTED_PLAN: result.output, EXOJS_AFFECTED_MODE: mode });
+    },
+  );
+
+  it.skipIf(process.platform === 'win32').each(['enforce', 'shadow'])(
+    'leaves native execution active and preserves failed %s discovery diagnostics',
+    mode => {
+      const result = runDiscovery(mode, 17);
+
+      expect(result.status).toBe(17);
+      expect(result.environment).toEqual({ EXOJS_AFFECTED_PLAN: '', EXOJS_AFFECTED_MODE: '' });
+      expect(result.log).toContain('fixture discovery output');
+      expect(result.log).toContain('fixture discovery diagnostic');
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')('lets the range reader fail closed when fetching the base fails', () => {
+    const result = runDiscovery('enforce', 0, 1);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('could not fetch its base');
+    expect(result.args.slice(0, 3)).toEqual(['scripts/ci/affected-plan.ts', '--base', '0123456789abcdef0123456789abcdef01234567']);
+    expect(result.environment['EXOJS_AFFECTED_MODE']).toBe('enforce');
+  });
+
+  it.skipIf(process.platform === 'win32')('rejects an unknown discovery mode without enabling selected execution', () => {
+    const result = runDiscovery('invalid');
+
+    expect(result.status).not.toBe(0);
+    expect(result.args).toEqual([]);
+    expect(result.environment).toEqual({ EXOJS_AFFECTED_PLAN: '', EXOJS_AFFECTED_MODE: '' });
+  });
+});
+
+describe('affected execution modes in the CI matrix', () => {
+  const projects = {
+    webgl: ['browser-webgl-chromium', 'browser-build-chromium', 'browser-assets-chromium', 'browser-core-chromium'],
+    webgpu: ['browser-webgpu', 'browser-webgpu-media'],
+    firefox: ['browser-webgl-firefox'],
+    audio: ['browser-audio-chromium'],
+    tilemap: ['browser-tilemap-chromium'],
+  };
+
+  it('enforces only supported blocking test lanes on an ordinary pull request', () => {
+    const plan = pullRequest(['.github/workflows/ci.yml']);
+
+    expect(plan.test.filter(entry => entry.affectedMode === 'enforce').map(entry => entry.id)).toEqual([
+      'unit',
+      'webgl',
+      'webgpu',
+      'firefox',
+      'audio',
+      'tilemap',
+    ]);
+    expect([...plan.gates, ...plan.verify, plan.test.find(entry => entry.id === 'bench')!].every(entry => entry.affectedMode === '')).toBe(
+      true,
+    );
+    expect(plan.coverage).toBe(false);
+  });
+
+  it('uses full native execution with scenario audits for an explicit shadow request', () => {
+    const plan = planCi({
+      eventName: 'pull_request',
+      changedFiles: ['.github/workflows/ci.yml'],
+      refName: 'feature',
+      affectedShadow: true,
+    });
+
+    expect(plan.test.filter(entry => entry.affectedMode === 'shadow').map(entry => entry.id)).toEqual([
+      'unit',
+      'webgl',
+      'webgpu',
+      'firefox',
+      'audio',
+      'tilemap',
+    ]);
+    expect(plan.test.every(entry => entry.affectedMode !== 'enforce')).toBe(true);
+  });
+
+  it.each([false, true])('disables both selection and shadow discovery for full qualification (shadow=%s)', affectedShadow => {
+    const plan = planCi({ eventName: 'pull_request', changedFiles: [], refName: 'feature', fullQualification: true, affectedShadow });
+
+    expect(plan.coverage).toBe(true);
+    expect(plan.test.every(entry => entry.affectedMode === '')).toBe(true);
+    expect(plan.test.find(entry => entry.id === 'unit')?.run).toContain('test:coverage');
+  });
+
+  it.each(['push', 'workflow_dispatch', 'merge_group'])('never selects a subset on %s, even with a shadow request', eventName => {
+    const plan = planCi({ eventName, changedFiles: [], refName: 'next', affectedShadow: true });
+
+    expect(plan.test.every(entry => entry.affectedMode === '')).toBe(true);
+  });
+
+  it.each(Object.entries(projects))(
+    'routes every blocking %s row through its matching project without changing local commands',
+    (id, expected) => {
+      const lane = LANES.find(entry => entry.id === id)!;
+      const commands = [...lane.ciRun!.matchAll(/node scripts\/ci\/affected-run\.ts --project=([\w-]+)/g)].map(match => match[1]);
+
+      expect(commands).toEqual(expected);
+      expect(lane.affectedProjects).toEqual(expected);
+      expect(lane.run).not.toContain('affected-run.ts');
+      expect(lane.run).toContain('pnpm test:browser:');
+    },
+  );
+
+  it('keeps informational Firefox rows native and outside the affected project inventory', () => {
+    const lane = LANES.find(entry => entry.id === 'firefox')!;
+    const informational = lane.ciRun!.split(' && ').slice(1);
+
+    expect(informational).toHaveLength(3);
+    expect(informational.every(command => command.includes('--policy informational'))).toBe(true);
+    expect(informational.every(command => !command.includes('affected-run.ts'))).toBe(true);
+    expect(informational.map(command => command.slice(command.lastIndexOf(' -- ') + 4))).toEqual([
+      'pnpm test:browser:webgpu:firefox',
+      'pnpm test:browser:webgpu:firefox:media',
+      'pnpm test:browser:webgpu:firefox:isolated',
+    ]);
+  });
+
+  it('retains unit supervision, allocation and physics checks around the existing test adapter', () => {
+    const command = pullRequest(['src/rendering/sprite/Sprite.ts']).test.find(entry => entry.id === 'unit')!.run;
+
+    expect(command).toMatch(/^node --test test\/ci\/validation\.node\.ts test\/ci\/qualify\.node\.ts && EXOJS_REQUIRE_NAGA=1 pnpm test /);
+    expect(command).toMatch(/ && pnpm test:alloc && pnpm test:physics-perf$/);
+  });
+
+  it.each([
+    ['false', 'enforce'],
+    ['true', 'shadow'],
+  ])('transports the shadow request %s through the dependency-free planner CLI', (shadow, mode) => {
+    const output = execFileSync(process.execPath, ['scripts/ci/lanes.ts'], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        EVENT_NAME: 'pull_request',
+        REF_NAME: 'feature',
+        CHANGED_FILES: '["src/rendering/sprite/Sprite.ts"]',
+        CHANGED_FILES_FILE: '',
+        FULL_QUALIFICATION: 'false',
+        AFFECTED_SHADOW: shadow,
+      },
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const matrix = JSON.parse(
+      output
+        .split('\n')
+        .find(line => line.startsWith('test='))!
+        .slice(5),
+    ) as CiPlan['test'];
+
+    expect(matrix.find(entry => entry.id === 'unit')?.affectedMode).toBe(mode);
   });
 });
 
@@ -208,6 +530,52 @@ describe('plan for events that always validate everything', () => {
     expect(plan.areas).toEqual(planCi({ eventName: 'workflow_dispatch', changedFiles: [], refName: 'next' }).areas);
     expect(ids(plan.test)).toEqual(['unit', 'webgl', 'webgpu', 'firefox', 'audio', 'tilemap', 'bench']);
   });
+
+  it('qualifies a final PR head in full even when its diff would only need documentation gates', () => {
+    const plan = planCi({ eventName: 'pull_request', changedFiles: ['CONTRIBUTING.md'], refName: 'feature', fullQualification: true });
+
+    expect(Object.values(plan.areas).every(Boolean)).toBe(true);
+    expect(ids(plan.test)).toEqual(['unit', 'webgl', 'webgpu', 'firefox', 'audio', 'tilemap', 'bench']);
+    expect(ids(plan.verify)).toEqual(['package', 'release', 'create-exo-app']);
+    expect(plan).toMatchObject({ fullQualification: true, coverage: true, build: true, site: true, smoke: true, smokeSample: false });
+    expect(plan.test.find(entry => entry.id === 'unit')?.run).toContain('test:coverage');
+  });
+
+  it('retains ordinary selective, uninstrumented PR validation without a full request', () => {
+    expect(pullRequest(['CONTRIBUTING.md'])).toMatchObject({ fullQualification: false, coverage: false, test: [] });
+  });
+});
+
+describe('independent smoke inventories', () => {
+  it('keeps the PR category sample on one runner and all four Playground suites', () => {
+    const plan = pullRequest(['src/rendering/sprite/Sprite.ts']);
+
+    expect(plan.smokeMatrix.filter(entry => entry.suite === 'examples').map(entry => entry.run)).toEqual([
+      'pnpm test:examples:smoke --renderer webgl2 --sample',
+    ]);
+    expect(plan.smokeMatrix.filter(entry => entry.suite === 'playground')).toHaveLength(4);
+  });
+
+  it('requires every full-catalog shard and every Playground suite exactly once', () => {
+    const plan = planCi({ eventName: 'pull_request', changedFiles: [], refName: 'feature', fullQualification: true });
+
+    expect(new Set(plan.smokeMatrix.map(entry => entry.id)).size).toBe(7);
+    expect(plan.smokeMatrix.filter(entry => entry.suite === 'examples').map(entry => entry.run)).toEqual(
+      ['1/3', '2/3', '3/3'].map(shard => `pnpm test:examples:smoke --renderer webgl2 --shard ${shard}`),
+    );
+    expect(plan.smokeMatrix.filter(entry => entry.suite === 'playground').map(entry => entry.run)).toEqual(
+      PLAYGROUND_SUITES.map(suite => `pnpm test:playground:e2e --suite ${suite}`),
+    );
+  });
+
+  it('executes one required command in each smoke row and retains distinct artifacts', () => {
+    const smoke = workflow.slice(workflow.indexOf('\n  smoke:\n'), workflow.indexOf('\n  verdict:\n'));
+
+    expect(smoke).toContain('include: ${{ fromJSON(needs.plan.outputs.smokeMatrix) }}');
+    expect(smoke).toContain('run: ${{ matrix.run }}');
+    expect(smoke).toContain('name: smoke-${{ matrix.id }}');
+    expect(smoke).not.toContain('continue-on-error');
+  });
 });
 
 describe('plan for a pull request', () => {
@@ -259,8 +627,8 @@ describe('the matrix entries carry what the setup action needs', () => {
   it('names the browser and the apt packages per lane', () => {
     const byId = Object.fromEntries(plan.test.map(entry => [entry.id, entry]));
     expect(byId['webgl']).toMatchObject({ browser: 'chromium', apt: 'ffmpeg' });
-    expect(byId['webgpu']).toMatchObject({ browser: 'chromium', apt: 'xvfb' });
-    expect(byId['firefox']).toMatchObject({ browser: 'firefox', apt: 'xvfb pulseaudio pulseaudio-utils' });
+    expect(byId['webgpu']).toMatchObject({ browser: 'chromium', apt: '' });
+    expect(byId['firefox']).toMatchObject({ browser: 'firefox', apt: 'pulseaudio pulseaudio-utils' });
     expect(byId['unit']).toMatchObject({ browser: '', apt: '', naga: true });
   });
 

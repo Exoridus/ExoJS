@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -70,7 +70,7 @@ beforeAll(() => {
   files.push(`${FIXTURE_DIRECTORY}/string-literal.ts`);
 
   try {
-    report = execFileSync('node', [join('node_modules', 'tsx', 'dist', 'cli.mjs'), SCANNER, ...files], {
+    report = execFileSync(process.execPath, ['--import', 'tsx', SCANNER, ...files], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],

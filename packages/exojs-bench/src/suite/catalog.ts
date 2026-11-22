@@ -22,7 +22,17 @@ export type SuiteKind = 'reference' | 'full';
  * it beside the figure.
  */
 export type LoadUnit =
-  'sprites' | 'nodes' | 'labels' | 'tiles' | 'layers' | 'particles' | 'lights' | 'widgets' | 'rects' | 'bodies' | 'viewport';
+  | 'sprites'
+  | 'nodes'
+  | 'labels'
+  | 'tiles'
+  | 'layers'
+  | 'particles'
+  | 'lights'
+  | 'widgets'
+  | 'rects'
+  | 'bodies'
+  | 'viewport';
 
 /** One selectable load of one scenario. */
 export interface LoadSpec {

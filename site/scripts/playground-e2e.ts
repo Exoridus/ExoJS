@@ -24,6 +24,7 @@
  *
  * Usage:
  *   pnpm --filter @codexo/exojs-examples playground:e2e
+ *   ... --suite shell        # one complete CI suite: shell, rendering, lifecycle or assets
  *   ... --only asset          # run the standalone Asset Browser checks and snippet typechecks
  *   ... --origin http://127.0.0.1:4333 --only asset  # reuse a running site
  *   ... --shots <dir>         # write a screenshot after each asset preview
@@ -42,6 +43,7 @@ import ts from 'typescript';
 import { resolveSiteChannel } from '../../scripts/pages/site-channel.ts';
 import { readSiteBuildManifest } from '../../scripts/pages/site-manifest.ts';
 import { playgroundDiagnostics } from './playground-diagnostics';
+import { assertPlaygroundSuiteResults, type PlaygroundGroup, runPlaygroundGroups, selectPlaygroundGroups } from './playground-suites';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, '..');
@@ -52,6 +54,7 @@ const snippetDir = resolve(repoRoot, '.workspace', 'playground-e2e', 'snippets')
 const { values: options } = parseArgs({
   args: process.argv.slice(2),
   options: {
+    suite: { type: 'string' },
     only: { type: 'string' },
     origin: { type: 'string' },
     shots: { type: 'string' },
@@ -59,6 +62,7 @@ const { values: options } = parseArgs({
     browser: { type: 'string', default: 'chromium' },
   },
 });
+const selectedGroups = selectPlaygroundGroups(options.suite, options.only);
 
 const MIME: Record<string, string> = {
   '.js': 'text/javascript',
@@ -2301,26 +2305,29 @@ const main = async (): Promise<void> => {
       }));
 
   try {
-    if (options.only?.toLowerCase() !== 'asset' && !options.only?.toLowerCase().includes('asset browser')) {
-      await fileTabChecks(browser, origin, base);
-      await headerChecks(browser, origin, base);
-      await nativeControlChecks(browser, origin, base);
-      await responsivePreviewChecks(browser, origin, base);
-      await crtChecks(browser, origin, base);
-      await maskChecks(browser, origin, base);
-      await audioBusChecks(browser, origin, base);
-      await workerChecks(browser, origin, base);
-      await newTabChecks(browser, origin, base);
-      await exampleLifecycleChecks(browser, origin, base);
-      await consoleChecks(browser, origin, base);
-    }
+    const groups: Record<PlaygroundGroup, () => Promise<void>> = {
+      'file-tabs': () => fileTabChecks(browser, origin, base),
+      header: () => headerChecks(browser, origin, base),
+      'native-controls': () => nativeControlChecks(browser, origin, base),
+      'responsive-preview': () => responsivePreviewChecks(browser, origin, base),
+      crt: () => crtChecks(browser, origin, base),
+      mask: () => maskChecks(browser, origin, base),
+      'audio-bus': () => audioBusChecks(browser, origin, base),
+      worker: () => workerChecks(browser, origin, base),
+      'new-tab': () => newTabChecks(browser, origin, base),
+      'example-lifecycle': () => exampleLifecycleChecks(browser, origin, base),
+      console: () => consoleChecks(browser, origin, base),
+      'widget-lab': () => widgetLabChecks(browser, origin, base),
+      assets: async () => typecheckSnippets(await assetChecks(browser, origin, base)),
+    };
 
-    await widgetLabChecks(browser, origin, base);
-    await typecheckSnippets(await assetChecks(browser, origin, base));
+    await runPlaygroundGroups(selectedGroups, groups);
   } finally {
     await browser.close();
     server?.close();
   }
+
+  assertPlaygroundSuiteResults(options.suite, results.length);
 
   const failed = results.filter(result => result.error !== null);
 

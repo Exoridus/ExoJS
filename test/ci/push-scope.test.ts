@@ -81,7 +81,7 @@ describe('pre-push ref handling', () => {
     expect(hook).toContain('node scripts/ci/push-range.ts "$push_head_sha" "${push_base_sha:-$null_sha}"');
     expect(hook).toContain('npm run gates -- affected-fast "$lane_base" "$push_head_sha"');
     expect(hook).toContain('npm run gates -- affected-rest "$lane_base" "$push_head_sha"');
-    expect(hook).toContain('npm run lanes -- --run --tests-only --base "$lane_base"');
+    expect(hook).toContain('npm run lanes -- --run --tests-only --pre-push --base "$lane_base"');
   });
 
   it('runs the cheap gates before the dist rebuild, and the rest after it', () => {

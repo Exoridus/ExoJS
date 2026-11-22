@@ -18,7 +18,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /** The part of Vitest's JSON report the recheck reads. */
 export interface VitestJsonReport {
@@ -33,7 +33,7 @@ export interface VitestJsonReport {
 const TIMEOUT_FAILURE = /^(?:Error: )?(?:Test|Hook) timed out in \d+ms/;
 
 /** Vitest's banner for errors raised outside any test; they belong to no file and cannot be rerun. */
-const UNHANDLED_ERRORS = /Unhandled (?:Errors?|Rejections?)/;
+const UNHANDLED_ERRORS = /Unhandled (?:Errors?|Rejections?)|error during close|close timed out|\[affected-run\] ERROR:/;
 
 /**
  * The files to recheck when every failure in `report` is a timeout, or `null`
@@ -79,13 +79,46 @@ export const recheckArguments = (args: readonly string[], files: readonly string
 const vitestBin = (): string => join(dirname(createRequire(import.meta.url).resolve('vitest/package.json')), 'vitest.mjs');
 
 /** Runs Vitest, echoing its output, and reports whether it printed unhandled errors. */
-const runVitest = (args: readonly string[]): Promise<{ code: number; unhandled: boolean }> =>
+const runVitest = (args: readonly string[], useAffectedPlan = false): Promise<{ code: number; unhandled: boolean }> =>
   new Promise((resolvePromise, reject) => {
-    const child = spawn(process.execPath, [vitestBin(), 'run', ...args], {
+    const command =
+      useAffectedPlan && process.env.EXOJS_AFFECTED_MODE === 'enforce'
+        ? [fileURLToPath(new URL('./ci/affected-run.ts', import.meta.url)), ...args]
+        : [vitestBin(), 'run', ...args];
+    const env = { ...process.env };
+
+    if (!useAffectedPlan) {
+      // The native retry owns a different inventory. Its workers and nested
+      // test runners must not reactivate the original invocation's plan.
+      delete env.EXOJS_AFFECTED_MODE;
+      delete env.EXOJS_AFFECTED_PLAN;
+    }
+
+    if (process.stdout.isTTY && env.FORCE_COLOR === undefined) {
+      env.FORCE_COLOR = '1';
+    }
+
+    const child = spawn(process.execPath, command, {
       stdio: ['inherit', 'pipe', 'pipe'],
-      env: process.stdout.isTTY && process.env.FORCE_COLOR === undefined ? { ...process.env, FORCE_COLOR: '1' } : process.env,
+      env,
     });
     let unhandled = false;
+    let interrupted = 0;
+
+    const onInterrupt = (): void => {
+      interrupted = 130;
+      child.kill('SIGINT');
+    };
+
+    const onTerminate = (): void => {
+      interrupted = 143;
+      child.kill('SIGTERM');
+    };
+
+    const cleanup = (): void => {
+      process.removeListener('SIGINT', onInterrupt);
+      process.removeListener('SIGTERM', onTerminate);
+    };
 
     const forward = (target: NodeJS.WriteStream) => (chunk: Buffer) => {
       target.write(chunk);
@@ -97,8 +130,16 @@ const runVitest = (args: readonly string[]): Promise<{ code: number; unhandled: 
 
     child.stdout.on('data', forward(process.stdout));
     child.stderr.on('data', forward(process.stderr));
-    child.on('error', reject);
-    child.on('close', code => resolvePromise({ code: code ?? 1, unhandled }));
+    process.once('SIGINT', onInterrupt);
+    process.once('SIGTERM', onTerminate);
+    child.once('error', error => {
+      cleanup();
+      reject(error);
+    });
+    child.once('close', code => {
+      cleanup();
+      resolvePromise({ code: interrupted || code || (code === 0 ? 0 : 1), unhandled: unhandled || interrupted !== 0 });
+    });
   });
 
 const withJsonReport = (args: readonly string[], file: string): string[] => {
@@ -111,7 +152,7 @@ const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
 
   if (args.includes('--coverage')) {
-    process.exitCode = (await runVitest(args)).code;
+    process.exitCode = (await runVitest(args, true)).code;
 
     return;
   }
@@ -120,7 +161,7 @@ const main = async (): Promise<void> => {
   const reportFile = join(directory, 'report.json');
 
   try {
-    const first = await runVitest(withJsonReport(args, reportFile));
+    const first = await runVitest(withJsonReport(args, reportFile), true);
 
     if (first.code === 0) {
       return;
@@ -148,6 +189,8 @@ const main = async (): Promise<void> => {
       console.log(`  ${relative(process.cwd(), file)}`);
     }
 
+    // A retry names the original failed files. It must never consume a plan
+    // again or change scope if that plan was edited during the first run.
     const recheck = await runVitest(recheckArguments(args, files, process.cwd()));
 
     if (recheck.code !== 0 || recheck.unhandled) {

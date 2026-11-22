@@ -3,7 +3,7 @@ import { relative } from 'node:path';
 import type { Configuration } from 'lint-staged';
 
 // Authored TypeScript and Astro components that the ESLint config governs.
-// Anything outside these trees (generated output, vendored code, ad-hoc files) goes to Prettier only,
+// Anything outside these trees (generated output, vendored code, ad-hoc files) goes to Oxfmt only,
 // because a TypeScript file no config block claims would be linted without a
 // program and crash the type-aware rules.
 const LINTED = /^(?:(?:src|test|examples|scripts|packages|site)\/.+\.(?:ts|tsx|mts|cts)|site\/src\/.+\.astro)$/u;
@@ -41,7 +41,7 @@ const chunked = (command: string, files: readonly string[]): string[] => {
 };
 
 // One task per commit rather than one per glob: ESLint and Stylelint rewrite a
-// file and Prettier then reformats the same file, so they must run in that order.
+// file and Oxfmt then reformats the same file, so they must run in that order.
 // Separate globs run concurrently and would race on any file both match.
 const config: Configuration = {
   '*': stagedFiles => {
@@ -60,7 +60,7 @@ const config: Configuration = {
         styled.map(file => file.slice('site/'.length)),
       ),
     );
-    commands.push(...chunked('prettier --write --ignore-unknown', files));
+    commands.push(...chunked('oxfmt --write --no-error-on-unmatched-pattern', files));
 
     return commands;
   },

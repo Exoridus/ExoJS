@@ -1,13 +1,12 @@
-import { spawnSync } from 'node:child_process';
-
 import { type Lane, LANES, selectLanes } from './lanes.ts';
 import { selectLocalPolicy } from './local-policy.ts';
-import { relatedCoreCommands } from './related-tests.ts';
+import { affectedTestCommand, resolveRelatedBase } from './related-tests.ts';
 import type { EffectiveLanes } from './select-lanes.ts';
 
 export interface LocalLaneOptions {
   run: boolean;
   quick: boolean;
+  prePush: boolean;
   testsOnly: boolean;
   all: boolean;
   base: string;
@@ -29,17 +28,10 @@ const SMOKE_LANE: Lane = {
  * runs: a missing or stale build then costs its build time up front instead of
  * failing the dist lane after every other lane has already run.
  */
-export const DIST_PREFLIGHT = 'tsx scripts/check-dist-fresh.ts --rebuild';
+export const DIST_PREFLIGHT = 'node --import tsx scripts/check-dist-fresh.ts --rebuild';
 
 /** The dependency-free supervisor tests the CI `unit` lane runs before its Vitest projects. */
 const NODE_TESTS = 'node --test test/ci/validation.node.ts test/ci/qualify.node.ts';
-
-/** The fork point Vitest's change detection diffs against; an unresolvable ref is passed through, which only widens the selection. */
-const mergeBase = (base: string): string => {
-  const result = spawnSync('git', ['merge-base', base, 'HEAD'], { encoding: 'utf8', timeout: 30_000 });
-
-  return result.status === 0 ? result.stdout.trim() : base;
-};
 
 /** Whether any of `lanes` reads the built dist rather than the sources. */
 export const needsDist = (lanes: readonly Lane[]): boolean => lanes.some(lane => lane.dist === true);
@@ -48,7 +40,7 @@ const available = (): Lane[] => [...LANES.filter(eligible), SITE_LANE, SMOKE_LAN
 
 /** Strict argument handling prevents a typo from silently running or certifying a different scope. */
 export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions => {
-  const options: LocalLaneOptions = { run: false, quick: false, testsOnly: false, all: false, base: 'origin/HEAD' };
+  const options: LocalLaneOptions = { run: false, quick: false, prePush: false, testsOnly: false, all: false, base: 'origin/HEAD' };
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
@@ -57,6 +49,8 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
       options.run = true;
     } else if (arg === '--quick') {
       options.quick = true;
+    } else if (arg === '--pre-push') {
+      options.prePush = true;
     } else if (arg === '--tests-only') {
       options.testsOnly = true;
     } else if (arg === '--all') {
@@ -84,7 +78,7 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
         options.only = [...new Set(names)];
       }
     } else {
-      throw new Error(`Unknown option '${arg}'. Use --run, --base <ref>, --only <id[,id]>, --quick, --tests-only or --all.`);
+      throw new Error(`Unknown option '${arg}'. Use --run, --base <ref>, --only <id[,id]>, --quick, --pre-push, --tests-only or --all.`);
     }
   }
 
@@ -92,12 +86,22 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
     throw new Error('--only cannot combine with --quick, --tests-only or --all.');
   }
 
+  if (options.prePush && (options.only || options.quick)) {
+    throw new Error('--pre-push cannot combine with --only or --quick.');
+  }
+
   return options;
 };
 
-export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOptions, files: readonly string[] = []): Lane[] => {
+export interface LocalLanePlan {
+  selected: Lane[];
+  deferred: Array<{ id: string; reason: string }>;
+}
+
+/** Pre-push deferral is explicit; uncertain or full scopes keep their original local obligations. */
+export const planLocalLanes = (effective: EffectiveLanes, options: LocalLaneOptions, files: readonly string[] = []): LocalLanePlan => {
   if (options.only) {
-    return options.only.map(id => available().find(lane => lane.id === id)!);
+    return { selected: options.only.map(id => available().find(lane => lane.id === id)!), deferred: [] };
   }
 
   const policy = selectLocalPolicy(options.all ? [] : files);
@@ -116,22 +120,23 @@ export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOp
     : policy.nodeTests
       ? { ...effective, unit: true } // `.husky/` is outside every CI area, yet `test/ci` reads the hooks
       : effective;
-  const wholeProjects = policy.relatedCore ? policy.unitProjects.filter(project => project !== 'exojs') : policy.unitProjects;
-  const unitCommand = policy.fullUnit
-    ? undefined
-    : [
-        policy.nodeTests ? NODE_TESTS : '',
-        wholeProjects.length
-          ? `pnpm exec vitest run ${wholeProjects.map(project => `--project=${project}`).join(' ')}${policy.unitFilter ? ` ${policy.unitFilter}` : ''}`
-          : '',
-        ...(policy.relatedCore ? relatedCoreCommands(mergeBase(options.base)) : []),
-        policy.allocation ? 'pnpm test:alloc' : '',
-        policy.physicsPerf ? 'pnpm test:physics-perf' : '',
-      ]
-        .filter(Boolean)
-        .join(' && ');
+  const base = resolveRelatedBase(options.base);
+  const full = policy.fullUnit || !policy.relatedTests;
+  const unitProjects = policy.fullUnit ? ['exojs*', 'rendering-perf'] : policy.unitProjects;
+  const unitCommand = [
+    policy.nodeTests ? NODE_TESTS : '',
+    unitProjects.length
+      ? policy.unitFilter
+        ? `pnpm exec vitest run ${unitProjects.map(project => `--project=${project}`).join(' ')} ${policy.unitFilter}`
+        : affectedTestCommand({ base, projects: unitProjects, name: 'unit', full })
+      : '',
+    policy.allocation ? 'pnpm test:alloc' : '',
+    policy.physicsPerf ? 'pnpm test:physics-perf' : '',
+  ]
+    .filter(Boolean)
+    .join(' && ');
 
-  return [
+  const selected = [
     ...selectLanes(selectedEffective, false).filter(eligible),
     ...(selectedEffective.siteBuild ? [SITE_LANE] : []),
     ...(selectedEffective.exampleSmoke ? [SMOKE_LANE] : []),
@@ -141,7 +146,54 @@ export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOp
     )
     .filter(lane => lane.id !== 'smoke' || policy.smoke)
     .filter(lane => lane.id !== 'unit' || policy.fullUnit || unitCommand !== '')
-    .map(lane => (lane.id === 'unit' && unitCommand ? { ...lane, run: unitCommand } : lane))
+    .map(lane => {
+      if (lane.id === 'unit' && unitCommand) {
+        return { ...lane, run: unitCommand };
+      }
+
+      if (lane.stage === 'test' && lane.affectedProjects?.length) {
+        return {
+          ...lane,
+          // Keep the existing separate invocations and their order. Combining
+          // projects could change the browser's runtime concurrency contract.
+          run: lane.affectedProjects
+            .map((project, index) =>
+              affectedTestCommand({
+                base,
+                projects: [project],
+                name: `${lane.id}-${index}`,
+                full,
+                serial: lane.id === 'webgpu' && index === 0,
+              }),
+            )
+            .join(' && '),
+        };
+      }
+
+      return lane;
+    })
     .filter(lane => !(options.quick && lane.local === 'browser'))
     .filter(lane => !(options.testsOnly && lane.local === 'gate'));
+
+  if (!options.prePush || options.all || base.full || full) {
+    return { selected, deferred: [] };
+  }
+
+  const deferred = selected.filter(lane => lane.local === 'browser' || lane.id === 'bench');
+
+  return {
+    selected: selected
+      .filter(lane => !deferred.includes(lane))
+      // Retained unit files can read built output too. Keep the existing
+      // freshness requirement even when the browser and smoke lanes defer.
+      .map(lane => (lane.id === 'unit' && policy.needsDist ? { ...lane, dist: true } : lane)),
+    deferred: deferred.map(lane => ({
+      id: lane.id,
+      reason: 'Resolved source scope; mandatory CI validates this lane for the pushed commit.',
+    })),
+  };
 };
+
+/** Selected commands for callers that do not need the deferral report. */
+export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOptions, files: readonly string[] = []): Lane[] =>
+  planLocalLanes(effective, options, files).selected;

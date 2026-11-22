@@ -1,0 +1,1256 @@
+{
+  "version": 1,
+  "versions": {
+    "node_modules/eslint/package.json": "10.11.0",
+    "node_modules/typescript/package.json": "6.0.3",
+    "node_modules/typescript-eslint/package.json": "8.70.1",
+    "node_modules/eslint-plugin-unicorn/package.json": "76.0.0",
+    "packages/exojs-config/node_modules/@vitest/eslint-plugin/package.json": "1.6.27",
+    "node_modules/oxlint/package.json": "1.94.0",
+    "node_modules/oxlint-tsgolint/package.json": "7.0.2007"
+  },
+  "parser": {
+    "name": "typescript-eslint/parser",
+    "version": "8.70.1"
+  },
+  "rules": {
+    "@typescript-eslint/adjacent-overload-signatures": {
+      "native": "typescript/adjacent-overload-signatures",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/array-type": {
+      "native": "typescript/array-type",
+      "typeAware": false,
+      "options": ["064422e1d24cdd93fdcf87c4d57cc788d4effceb43583e714cdb1a90c7df6d8b"]
+    },
+    "@typescript-eslint/await-thenable": {
+      "native": "typescript/await-thenable",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/ban-ts-comment": {
+      "native": "typescript/ban-ts-comment",
+      "typeAware": false,
+      "options": [
+        "038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b",
+        "360c582a5e835b881ff864af7861c1f06d2b327baf52d6c8469af2bf95073f7c"
+      ]
+    },
+    "@typescript-eslint/ban-tslint-comment": {
+      "native": "typescript/ban-tslint-comment",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/class-literal-property-style": {
+      "native": "typescript/class-literal-property-style",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/consistent-type-assertions": {
+      "native": "typescript/consistent-type-assertions",
+      "typeAware": false,
+      "options": [
+        "038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b",
+        "eef28266d9722bbfffdb7af5dfcd6e6db7f673027f63711fe4400f8b594e70f2"
+      ]
+    },
+    "@typescript-eslint/consistent-type-definitions": {
+      "native": "typescript/consistent-type-definitions",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/consistent-type-exports": {
+      "native": "typescript/consistent-type-exports",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/consistent-type-imports": {
+      "native": "typescript/consistent-type-imports",
+      "typeAware": false,
+      "options": ["7aa7d2ca1f47ac4eaab45100b6191fe970440d26b7c67c23a33ec8355925c931"]
+    },
+    "@typescript-eslint/default-param-last": {
+      "native": "default-param-last",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/dot-notation": {
+      "native": "typescript/dot-notation",
+      "typeAware": true,
+      "options": ["ad938bcd637b3bf0b9872fd1098743c609e6258e676d5d9e5d5d310192d0e920"]
+    },
+    "@typescript-eslint/explicit-function-return-type": {
+      "native": "typescript/explicit-function-return-type",
+      "typeAware": false,
+      "options": ["0bce747fc6103ff318d5a9d43da2c9d112f1554946e3d14b11df8b2d877a0ef1"]
+    },
+    "@typescript-eslint/explicit-member-accessibility": {
+      "native": "typescript/explicit-member-accessibility",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-array-constructor": {
+      "native": "no-array-constructor",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-array-delete": {
+      "native": "typescript/no-array-delete",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-base-to-string": {
+      "native": "typescript/no-base-to-string",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-confusing-non-null-assertion": {
+      "native": "typescript/no-confusing-non-null-assertion",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-confusing-void-expression": {
+      "native": "typescript/no-confusing-void-expression",
+      "typeAware": true,
+      "options": ["2d36d68938edf15b8a2ec4e1d0a77693cbeac8241778626849c92ad46a97ad22"]
+    },
+    "@typescript-eslint/no-dupe-class-members": {
+      "native": "no-dupe-class-members",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-duplicate-enum-values": {
+      "native": "typescript/no-duplicate-enum-values",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-duplicate-type-constituents": {
+      "native": "typescript/no-duplicate-type-constituents",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-empty-object-type": {
+      "native": "typescript/no-empty-object-type",
+      "typeAware": false,
+      "options": [
+        "038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b",
+        "a519278c76cf46889d615da4bad999379ac3bc09a1759be4e8a9ee4779646ed1"
+      ]
+    },
+    "@typescript-eslint/no-explicit-any": {
+      "native": "typescript/no-explicit-any",
+      "typeAware": false,
+      "options": [
+        "038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b",
+        "74138e35c8d77e7aa6789c707c63ac325b79419009609da3d07f266b33ed17a5"
+      ]
+    },
+    "@typescript-eslint/no-extra-non-null-assertion": {
+      "native": "typescript/no-extra-non-null-assertion",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-floating-promises": {
+      "native": "typescript/no-floating-promises",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-for-in-array": {
+      "native": "typescript/no-for-in-array",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-implied-eval": {
+      "native": "typescript/no-implied-eval",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-inferrable-types": {
+      "native": "typescript/no-inferrable-types",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-meaningless-void-operator": {
+      "native": "typescript/no-meaningless-void-operator",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-misused-new": {
+      "native": "typescript/no-misused-new",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-misused-promises": {
+      "native": "typescript/no-misused-promises",
+      "typeAware": true,
+      "options": [
+        "038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b",
+        "3ec1e16daf2a830d125b35ada51efb2f1551768fde2470eedc0afe95b907fe18"
+      ]
+    },
+    "@typescript-eslint/no-misused-spread": {
+      "native": "typescript/no-misused-spread",
+      "typeAware": true,
+      "options": ["0c0049d0e78ebb9f58ff7083c75013ba52efe93f76b6df1c8972824688afe1ed"]
+    },
+    "@typescript-eslint/no-mixed-enums": {
+      "native": "typescript/no-mixed-enums",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-namespace": {
+      "native": "typescript/no-namespace",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-non-null-asserted-nullish-coalescing": {
+      "native": "typescript/no-non-null-asserted-nullish-coalescing",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-non-null-asserted-optional-chain": {
+      "native": "typescript/no-non-null-asserted-optional-chain",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-non-null-assertion": {
+      "native": "typescript/no-non-null-assertion",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-redundant-type-constituents": {
+      "native": "typescript/no-redundant-type-constituents",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-require-imports": {
+      "native": "typescript/no-require-imports",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-shadow": {
+      "native": "no-shadow",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-this-alias": {
+      "native": "typescript/no-this-alias",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unnecessary-boolean-literal-compare": {
+      "native": "typescript/no-unnecessary-boolean-literal-compare",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unnecessary-template-expression": {
+      "native": "typescript/no-unnecessary-template-expression",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unnecessary-type-arguments": {
+      "native": "typescript/no-unnecessary-type-arguments",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unnecessary-type-constraint": {
+      "native": "typescript/no-unnecessary-type-constraint",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unsafe-argument": {
+      "native": "typescript/no-unsafe-argument",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "native": "typescript/no-unsafe-assignment",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "native": "typescript/no-unsafe-call",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unsafe-declaration-merging": {
+      "native": "typescript/no-unsafe-declaration-merging",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unsafe-enum-comparison": {
+      "native": "typescript/no-unsafe-enum-comparison",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unsafe-function-type": {
+      "native": "typescript/no-unsafe-function-type",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "native": "typescript/no-unsafe-member-access",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unsafe-return": {
+      "native": "typescript/no-unsafe-return",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unsafe-unary-minus": {
+      "native": "typescript/no-unsafe-unary-minus",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-unused-expressions": {
+      "native": "no-unused-expressions",
+      "typeAware": false,
+      "options": ["d44d4fbce641b21e73cd15a3b77a3f07d794ed0d4740436b58b339edc002f597"]
+    },
+    "@typescript-eslint/no-unused-vars": {
+      "native": "no-unused-vars",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-useless-constructor": {
+      "native": "no-useless-constructor",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-useless-default-assignment": {
+      "native": "typescript/no-useless-default-assignment",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/no-wrapper-object-types": {
+      "native": "typescript/no-wrapper-object-types",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/non-nullable-type-assertion-style": {
+      "native": "typescript/non-nullable-type-assertion-style",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/only-throw-error": {
+      "native": "typescript/only-throw-error",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/prefer-as-const": {
+      "native": "typescript/prefer-as-const",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/prefer-find": {
+      "native": "typescript/prefer-find",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/prefer-for-of": {
+      "native": "typescript/prefer-for-of",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/prefer-function-type": {
+      "native": "typescript/prefer-function-type",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/prefer-includes": {
+      "native": "typescript/prefer-includes",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/prefer-namespace-keyword": {
+      "native": "typescript/prefer-namespace-keyword",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/prefer-nullish-coalescing": {
+      "native": "typescript/prefer-nullish-coalescing",
+      "typeAware": true,
+      "options": [
+        "038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b",
+        "9755a1f3838f0ee21ef8715c0cb533986659932f90736f26133ded58105294be"
+      ]
+    },
+    "@typescript-eslint/prefer-promise-reject-errors": {
+      "native": "typescript/prefer-promise-reject-errors",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/prefer-reduce-type-parameter": {
+      "native": "typescript/prefer-reduce-type-parameter",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/prefer-regexp-exec": {
+      "native": "typescript/prefer-regexp-exec",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/prefer-return-this-type": {
+      "native": "typescript/prefer-return-this-type",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/prefer-string-starts-ends-with": {
+      "native": "typescript/prefer-string-starts-ends-with",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/related-getter-setter-pairs": {
+      "native": "typescript/related-getter-setter-pairs",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/require-await": {
+      "native": "typescript/require-await",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/restrict-plus-operands": {
+      "native": "typescript/restrict-plus-operands",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/restrict-template-expressions": {
+      "native": "typescript/restrict-template-expressions",
+      "typeAware": true,
+      "options": [
+        "038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b",
+        "5b9d86848192d2ad592e4e22f9a924016c526d9a0c092bebeb8353321f5fdaa5"
+      ]
+    },
+    "@typescript-eslint/return-await": {
+      "native": "typescript/return-await",
+      "typeAware": true,
+      "options": ["5bbb967ad765e19ad856e9d4f30aecfc57d53e91e2dce10ab7f4daa1042548ed"]
+    },
+    "@typescript-eslint/strict-boolean-expressions": {
+      "native": "typescript/strict-boolean-expressions",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/switch-exhaustiveness-check": {
+      "native": "typescript/switch-exhaustiveness-check",
+      "typeAware": true,
+      "options": ["64f879aa12c01546fd6039392d4e41456a1dc51ae74227e48399631240d2d99b"]
+    },
+    "@typescript-eslint/triple-slash-reference": {
+      "native": "typescript/triple-slash-reference",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/unbound-method": {
+      "native": "typescript/unbound-method",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/unified-signatures": {
+      "native": "typescript/unified-signatures",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "@typescript-eslint/use-unknown-in-catch-callback-variable": {
+      "native": "typescript/use-unknown-in-catch-callback-variable",
+      "typeAware": true,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "arrow-body-style": {
+      "native": "arrow-body-style",
+      "typeAware": false,
+      "options": ["453fe59fbeb9b34ffa56553ce44cea4920a2559127e21b76d6197e06c6d6b9ab"]
+    },
+    "complexity": {
+      "native": "complexity",
+      "typeAware": false,
+      "options": ["936ff6b23dc2079b8b77ed48aac1bc787abafb1b43f725d0cd5c4580cdc3d114"]
+    },
+    "constructor-super": {
+      "native": "constructor-super",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "curly": {
+      "native": "curly",
+      "typeAware": false,
+      "options": ["f6f50441f275d08e44742c5fd71b80c3edffa3b66b1cc4bc65859c9fa02f443b"]
+    },
+    "default-case-last": {
+      "native": "default-case-last",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "eqeqeq": {
+      "native": "eqeqeq",
+      "typeAware": false,
+      "options": ["8d0cbeeba4a5a4717858e99132fcc217b95a1ad80df4a25ff36873bad84de864"]
+    },
+    "for-direction": {
+      "native": "for-direction",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "func-style": {
+      "native": "func-style",
+      "typeAware": false,
+      "options": ["dee4216a829431b71e3fc376223781c2a9c89c749ba0807169d79009960d7a26"]
+    },
+    "getter-return": {
+      "native": "getter-return",
+      "typeAware": false,
+      "options": ["bb6e1a967cdee29f98238ac988527791e0e63d8defed9e87f20c8b125aa9614e"]
+    },
+    "guard-for-in": {
+      "native": "guard-for-in",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "logical-assignment-operators": {
+      "native": "logical-assignment-operators",
+      "typeAware": false,
+      "options": ["158f22ea8fceb6354a492de0c4e73e8ae7e9e1b4fe5cce6c1c26b99990024e91"]
+    },
+    "max-lines": {
+      "native": "max-lines",
+      "typeAware": false,
+      "options": [
+        "81e9a21b8899b6bac359bf734f7f8788b395b96f8dbce21da6874ad31ee5a781",
+        "98515bca7b6ba4436a714802adf1ea8c8e1933423b9a4bb3a9aea0e2234c241a",
+        "99611dc663bdf39f7d7827bf2d760c67ebc09a8544b12a96d0e0cfb259782b0f",
+        "e57f973208d564cb008536256b26ad6514aee22b82c0631acdc533b8f529794c",
+        "1b17a912d418b6cc9d6ecb70a6049e7c2da0a3dbed534d05dbfdcb32009b8428"
+      ]
+    },
+    "no-async-promise-executor": {
+      "native": "no-async-promise-executor",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-caller": {
+      "native": "no-caller",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-case-declarations": {
+      "native": "no-case-declarations",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-class-assign": {
+      "native": "no-class-assign",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-compare-neg-zero": {
+      "native": "no-compare-neg-zero",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-cond-assign": {
+      "native": "no-cond-assign",
+      "typeAware": false,
+      "options": ["a7f74410211e4f2adbabc62b0abbb456df324855503ff0ad93abf4e74ca35ddd"]
+    },
+    "no-console": {
+      "native": "no-console",
+      "typeAware": false,
+      "options": [
+        "ef1424cb5c9d0ebc1aa25ca99fc2847f0ddac10a84526abf45ff7fd4553fdadb",
+        "be910a36d56208c54b0523a6f648113bf4ff5675885d3303face8aaf81458ebf"
+      ]
+    },
+    "no-const-assign": {
+      "native": "no-const-assign",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-constant-binary-expression": {
+      "native": "no-constant-binary-expression",
+      "typeAware": false,
+      "options": ["853df633f1e5132570bf4758c90f0ad2d509a56c3411a08be12573eb6c1e1af6"]
+    },
+    "no-constant-condition": {
+      "native": "no-constant-condition",
+      "typeAware": false,
+      "options": ["10cc8e54d6098270527b99fac09a323755652c003ea3f1e5e68448713046953e"]
+    },
+    "no-control-regex": {
+      "native": "no-control-regex",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-debugger": {
+      "native": "no-debugger",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-delete-var": {
+      "native": "no-delete-var",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-dupe-class-members": {
+      "native": "no-dupe-class-members",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-dupe-else-if": {
+      "native": "no-dupe-else-if",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-dupe-keys": {
+      "native": "no-dupe-keys",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-duplicate-case": {
+      "native": "no-duplicate-case",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-empty": {
+      "native": "no-empty",
+      "typeAware": false,
+      "options": ["929ca4ab4ccc424942f98a22c98b091a1bbdda33fab90e26eb0895643b4d48fe"]
+    },
+    "no-empty-character-class": {
+      "native": "no-empty-character-class",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-empty-pattern": {
+      "native": "no-empty-pattern",
+      "typeAware": false,
+      "options": ["b91d328057da88962b977a97dd83100ec5c7f17b0fb5d4ccc15a67ff94ad2ee2"]
+    },
+    "no-empty-static-block": {
+      "native": "no-empty-static-block",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-eval": {
+      "native": "no-eval",
+      "typeAware": false,
+      "options": ["94b6a8f9d9eb2f8b80bc0204d81158d270d71dd06ef9c742d65bf4670cb8aa35"]
+    },
+    "no-ex-assign": {
+      "native": "no-ex-assign",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-extra-bind": {
+      "native": "no-extra-bind",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-extra-boolean-cast": {
+      "native": "no-extra-boolean-cast",
+      "typeAware": false,
+      "options": ["ef1424cb5c9d0ebc1aa25ca99fc2847f0ddac10a84526abf45ff7fd4553fdadb"]
+    },
+    "no-fallthrough": {
+      "native": "no-fallthrough",
+      "typeAware": false,
+      "options": ["a310f6357f233b019425d1634786bfb8c3ccf1fa1632801106ce217237920b1b"]
+    },
+    "no-func-assign": {
+      "native": "no-func-assign",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-global-assign": {
+      "native": "no-global-assign",
+      "typeAware": false,
+      "options": ["8f4a37151aa96ee9dec6c19ac8c1b144e8beb4644eb3e656e371095c38db4879"]
+    },
+    "no-import-assign": {
+      "native": "no-import-assign",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-invalid-regexp": {
+      "native": "no-invalid-regexp",
+      "typeAware": false,
+      "options": ["ef1424cb5c9d0ebc1aa25ca99fc2847f0ddac10a84526abf45ff7fd4553fdadb"]
+    },
+    "no-irregular-whitespace": {
+      "native": "no-irregular-whitespace",
+      "typeAware": false,
+      "options": ["7cbf3c22ed38e1a0651da2328208819380b8c7b0a82a77dd3838093c543e3371"]
+    },
+    "no-label-var": {
+      "native": "no-label-var",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-loss-of-precision": {
+      "native": "no-loss-of-precision",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-misleading-character-class": {
+      "native": "no-misleading-character-class",
+      "typeAware": false,
+      "options": ["77c2dce72f650544121d1399cbfad7332391c21c37a352bf5636c12ba279e8c7"]
+    },
+    "no-nested-ternary": {
+      "native": "no-nested-ternary",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-new-func": {
+      "native": "no-new-func",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-new-native-nonconstructor": {
+      "native": "no-new-native-nonconstructor",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-new-wrappers": {
+      "native": "no-new-wrappers",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-nonoctal-decimal-escape": {
+      "native": "no-nonoctal-decimal-escape",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-obj-calls": {
+      "native": "no-obj-calls",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-promise-executor-return": {
+      "native": "no-promise-executor-return",
+      "typeAware": false,
+      "options": ["fafd3af469ec1c66a722b64dbf5a7545f1bdf869fa32b1e9ae4cb7eb838d112e"]
+    },
+    "no-prototype-builtins": {
+      "native": "no-prototype-builtins",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-redeclare": {
+      "native": "no-redeclare",
+      "typeAware": false,
+      "options": ["8b3920c043695a7808f4dd2a3018f2b51672361978be1bc4c6130c7f5d78f4a7"]
+    },
+    "no-regex-spaces": {
+      "native": "no-regex-spaces",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-restricted-globals": {
+      "native": "no-restricted-globals",
+      "typeAware": false,
+      "options": [
+        "b140f98f0f96898d9b539895eb8c11fe958c45e2bfaf64b2120356d8e9c1b51f",
+        "5f96b343973d2736b81a98da4a570639fc57fed7ad80f95bef196e57c8b9e24c"
+      ]
+    },
+    "no-restricted-imports": {
+      "native": "no-restricted-imports",
+      "typeAware": false,
+      "options": ["29f66f98209e63c1d723aa4500caacba0f8be2ee0a3ae7b9ae536ae9bb44dd00"]
+    },
+    "no-self-assign": {
+      "native": "no-self-assign",
+      "typeAware": false,
+      "options": ["1af3e00c736db0cb82d87eb64e23f9bc78ead3e1a18b470b521289ac115354e6"]
+    },
+    "no-self-compare": {
+      "native": "no-self-compare",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-sequences": {
+      "native": "no-sequences",
+      "typeAware": false,
+      "options": ["676b6fb38913eedc002342d03af1ee995e7bdad0da5eb24cc7c8f45a264a3f8d"]
+    },
+    "no-setter-return": {
+      "native": "no-setter-return",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-shadow-restricted-names": {
+      "native": "no-shadow-restricted-names",
+      "typeAware": false,
+      "options": ["b2dc5c18789d3a83ba56f20f7cf98498dfcae199031fa00960d74c7edadf7377"]
+    },
+    "no-sparse-arrays": {
+      "native": "no-sparse-arrays",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-template-curly-in-string": {
+      "native": "no-template-curly-in-string",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-this-before-super": {
+      "native": "no-this-before-super",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-unassigned-vars": {
+      "native": "no-unassigned-vars",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-unmodified-loop-condition": {
+      "native": "no-unmodified-loop-condition",
+      "typeAware": false,
+      "options": ["d77a7c007c9b7f07bd3d901f0dd636a08b87cd599535cf547baedce6426b760c"]
+    },
+    "no-unreachable": {
+      "native": "no-unreachable",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-unsafe-finally": {
+      "native": "no-unsafe-finally",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-unsafe-negation": {
+      "native": "no-unsafe-negation",
+      "typeAware": false,
+      "options": ["2ce557222d518501d596208a9e6bbb9a5ff25800a876f52663ae710447b2af47"]
+    },
+    "no-unused-labels": {
+      "native": "no-unused-labels",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-unused-private-class-members": {
+      "native": "no-unused-private-class-members",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-useless-backreference": {
+      "native": "no-useless-backreference",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-useless-catch": {
+      "native": "no-useless-catch",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-useless-escape": {
+      "native": "no-useless-escape",
+      "typeAware": false,
+      "options": ["f140d76ff8c5de3ecbb297f1f26e40a09f2e75d1d3002f2fb126548b5d7c93c3"]
+    },
+    "no-useless-return": {
+      "native": "no-useless-return",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-var": {
+      "native": "no-var",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "no-with": {
+      "native": "no-with",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "object-shorthand": {
+      "native": "object-shorthand",
+      "typeAware": false,
+      "options": ["19eb3534f50caa7fde814bfffab7da81d9d916204d8103cb5f3a3a773ee62a22"]
+    },
+    "prefer-arrow-callback": {
+      "native": "prefer-arrow-callback",
+      "typeAware": false,
+      "options": ["9935340d912808b8a19ba9e6d92694d4dc04574ca8554978b18b40234be3b6de"]
+    },
+    "prefer-const": {
+      "native": "prefer-const",
+      "typeAware": false,
+      "options": ["7e9b5d5032e74e93b0b1d7a9fda7297d0194d8c4ea299d27c386d0781917b449"]
+    },
+    "prefer-object-spread": {
+      "native": "prefer-object-spread",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "prefer-rest-params": {
+      "native": "prefer-rest-params",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "prefer-spread": {
+      "native": "prefer-spread",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "prefer-template": {
+      "native": "prefer-template",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "radix": {
+      "native": "radix",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "require-yield": {
+      "native": "require-yield",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/catch-error-name": {
+      "native": "unicorn/catch-error-name",
+      "typeAware": false,
+      "options": ["ac8090580869d3447292f460a5bee03230d5cb31c6e5ef57ffbc05fad7e86b20"]
+    },
+    "unicorn/consistent-date-clone": {
+      "native": "unicorn/consistent-date-clone",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/consistent-empty-array-spread": {
+      "native": "unicorn/consistent-empty-array-spread",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/consistent-existence-index-check": {
+      "native": "unicorn/consistent-existence-index-check",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/error-message": {
+      "native": "unicorn/error-message",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/explicit-length-check": {
+      "native": "unicorn/explicit-length-check",
+      "typeAware": false,
+      "options": ["c00f0f3e0ff9069cb4422ddd774328bad2a6d5c100c459322c215911590cc32e"]
+    },
+    "unicorn/explicit-timer-delay": {
+      "native": "unicorn/explicit-timer-delay",
+      "typeAware": false,
+      "options": ["19eb3534f50caa7fde814bfffab7da81d9d916204d8103cb5f3a3a773ee62a22"]
+    },
+    "unicorn/filename-case": {
+      "native": "unicorn/filename-case",
+      "typeAware": false,
+      "options": ["a9b1d2672ad0780be55443a42268c4902849e13a7f877911b514a3931585f180"]
+    },
+    "unicorn/no-array-fill-with-reference-type": {
+      "native": "unicorn/no-array-fill-with-reference-type",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-await-expression-member": {
+      "native": "unicorn/no-await-expression-member",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-confusing-array-with": {
+      "native": "unicorn/no-confusing-array-with",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-document-cookie": {
+      "native": "unicorn/no-document-cookie",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-instanceof-builtins": {
+      "native": "unicorn/no-instanceof-builtins",
+      "typeAware": false,
+      "options": ["4a3b08ee539e3bb431b6a112a8797adeab016247db8cae77ad4f474dd34cf6c5"]
+    },
+    "unicorn/no-invalid-fetch-options": {
+      "native": "unicorn/no-invalid-fetch-options",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-invalid-remove-event-listener": {
+      "native": "unicorn/no-invalid-remove-event-listener",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-lonely-if": {
+      "native": "unicorn/no-lonely-if",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-magic-array-flat-depth": {
+      "native": "unicorn/no-magic-array-flat-depth",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-object-as-default-parameter": {
+      "native": "unicorn/no-object-as-default-parameter",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-single-promise-in-promise-methods": {
+      "native": "unicorn/no-single-promise-in-promise-methods",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-this-assignment": {
+      "native": "unicorn/no-this-assignment",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-typeof-undefined": {
+      "native": "unicorn/no-typeof-undefined",
+      "typeAware": false,
+      "options": ["8807cfc02c336dc84e46e085fa795a855fd0a6c3ea60e731cfe85eab47aea938"]
+    },
+    "unicorn/no-unnecessary-array-splice-count": {
+      "native": "unicorn/no-unnecessary-array-splice-count",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-unnecessary-await": {
+      "native": "unicorn/no-unnecessary-await",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-useless-fallback-in-spread": {
+      "native": "unicorn/no-useless-fallback-in-spread",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-useless-length-check": {
+      "native": "unicorn/no-useless-length-check",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-useless-promise-resolve-reject": {
+      "native": "unicorn/no-useless-promise-resolve-reject",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/no-zero-fractions": {
+      "native": "unicorn/no-zero-fractions",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-array-flat-map": {
+      "native": "unicorn/prefer-array-flat-map",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-array-index-of": {
+      "native": "unicorn/prefer-array-index-of",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-array-some": {
+      "native": "unicorn/prefer-array-some",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-blob-reading-methods": {
+      "native": "unicorn/prefer-blob-reading-methods",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-date-now": {
+      "native": "unicorn/prefer-date-now",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-default-parameters": {
+      "native": "unicorn/prefer-default-parameters",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-dom-node-append": {
+      "native": "unicorn/prefer-dom-node-append",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-event-target": {
+      "native": "unicorn/prefer-event-target",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-global-this": {
+      "native": "unicorn/prefer-global-this",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-includes": {
+      "native": "unicorn/prefer-includes",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-logical-operator-over-ternary": {
+      "native": "unicorn/prefer-logical-operator-over-ternary",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-native-coercion-functions": {
+      "native": "unicorn/prefer-native-coercion-functions",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-negative-index": {
+      "native": "unicorn/prefer-negative-index",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-node-protocol": {
+      "native": "unicorn/prefer-node-protocol",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-object-from-entries": {
+      "native": "unicorn/prefer-object-from-entries",
+      "typeAware": false,
+      "options": ["a22f37a704c1ae6d4d7bc82ff8dc8e0a9de986235738db667611660fab3ff15d"]
+    },
+    "unicorn/prefer-optional-catch-binding": {
+      "native": "unicorn/prefer-optional-catch-binding",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-regexp-test": {
+      "native": "unicorn/prefer-regexp-test",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-spread": {
+      "native": "unicorn/prefer-spread",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-string-replace-all": {
+      "native": "unicorn/prefer-string-replace-all",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-string-slice": {
+      "native": "unicorn/prefer-string-slice",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-string-starts-ends-with": {
+      "native": "unicorn/prefer-string-starts-ends-with",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/prefer-structured-clone": {
+      "native": "unicorn/prefer-structured-clone",
+      "typeAware": false,
+      "options": ["a22f37a704c1ae6d4d7bc82ff8dc8e0a9de986235738db667611660fab3ff15d"]
+    },
+    "unicorn/relative-url-style": {
+      "native": "unicorn/relative-url-style",
+      "typeAware": false,
+      "options": ["3df2338d30d43bc9ff49bc3aebe08aefbc28d3064ed4223696d2a0e52169b4d2"]
+    },
+    "unicorn/require-array-join-separator": {
+      "native": "unicorn/require-array-join-separator",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/require-number-to-fixed-digits-argument": {
+      "native": "unicorn/require-number-to-fixed-digits-argument",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "unicorn/text-encoding-identifier-case": {
+      "native": "unicorn/text-encoding-identifier-case",
+      "typeAware": false,
+      "options": ["2333bc58438cd6ff9ff22a8071a2de9e22de7569d1e2e3fcb75b59ded4407b72"]
+    },
+    "unicorn/throw-new-error": {
+      "native": "unicorn/throw-new-error",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "use-isnan": {
+      "native": "use-isnan",
+      "typeAware": false,
+      "options": ["cdc459c07deaed584ee6e0a112014f28aa34977ba584019f7b0405c0751fe7e7"]
+    },
+    "valid-typeof": {
+      "native": "valid-typeof",
+      "typeAware": false,
+      "options": ["5db6f00ac9575dba00be6712a993b7ce74a2bbcc9ec22e797e289d200a9eb9bb"]
+    },
+    "vitest/no-commented-out-tests": {
+      "native": "vitest/no-commented-out-tests",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "vitest/no-disabled-tests": {
+      "native": "vitest/no-disabled-tests",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "vitest/no-identical-title": {
+      "native": "vitest/no-identical-title",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "vitest/no-import-node-test": {
+      "native": "vitest/no-import-node-test",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "vitest/no-interpolation-in-snapshots": {
+      "native": "vitest/no-interpolation-in-snapshots",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "vitest/no-mocks-import": {
+      "native": "vitest/no-mocks-import",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "vitest/no-unneeded-async-expect-function": {
+      "native": "vitest/no-unneeded-async-expect-function",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "vitest/prefer-called-exactly-once-with": {
+      "native": "vitest/prefer-called-exactly-once-with",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "vitest/require-local-test-context-for-concurrent-snapshots": {
+      "native": "vitest/require-local-test-context-for-concurrent-snapshots",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "vitest/valid-describe-callback": {
+      "native": "vitest/valid-describe-callback",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    },
+    "vitest/valid-expect": {
+      "native": "vitest/valid-expect",
+      "typeAware": false,
+      "options": ["dc89c3ea65f4624597429ff7a001c05ebba01b0ab73b9f454df376a4e9e88c23"]
+    },
+    "vitest/valid-expect-in-promise": {
+      "native": "vitest/valid-expect-in-promise",
+      "typeAware": false,
+      "options": ["038966de9f6b9a901b20b4c6ca8b2a46009feebe031babc842d43690c0bc222b"]
+    }
+  }
+}

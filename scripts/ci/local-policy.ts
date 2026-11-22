@@ -43,8 +43,8 @@ export interface LocalPolicy {
   needsDist: boolean;
   /** Run the dependency-free supervisor tests (`node --test`) that the unit lane starts with. */
   nodeTests: boolean;
-  /** Run the core project's tests that the import graph (or an untracked input) ties to the change, not the whole project. */
-  relatedCore: boolean;
+  /** Discover affected files across the normal workspace unit inventory; uncertain changes keep it full. */
+  relatedTests: boolean;
 }
 
 interface PackageManifest {
@@ -153,6 +153,13 @@ const hasUnitProject = (manifest: PackageManifest): boolean =>
  */
 export const CI_TOOLING_FILES: ReadonlySet<string> = new Set([
   ...[
+    'affected-plan',
+    'affected-probe',
+    'affected-process',
+    'affected-range',
+    'affected-reporter',
+    'affected-run',
+    'affected-tests',
     'browser-probe',
     'capability',
     'gate-groups',
@@ -196,14 +203,18 @@ const TOOLING_GATES = [
 const toolingTestFilters = (file: string): string[] =>
   file === 'scripts/ci/select-lanes.ts' ? ['test/ci', 'test/site/readme-examples'] : ['test/ci'];
 
+const isInfrastructureDocumentation = (file: string): boolean => /\.mdx?$/.test(file) && !/(?:^|\/)(?:dist|generated)\//.test(file);
+
 const isGlobal = (file: string): boolean =>
   file === 'package.json' ||
   file === 'pnpm-lock.yaml' ||
   file === 'pnpm-workspace.yaml' ||
   file === 'vitest.config.ts' ||
-  (file.startsWith('scripts/ci/') && !isCiTooling(file)) ||
-  file.startsWith('.github/workflows/') ||
+  (((file.startsWith('scripts/ci/') && !isCiTooling(file)) || file.startsWith('.github/workflows/')) &&
+    !isInfrastructureDocumentation(file)) ||
   file.startsWith('packages/exojs-config/') ||
+  file.startsWith('packages/exojs-build/') ||
+  file === 'packages/exojs-cli/src/commands/assetsPack.ts' ||
   /^tsconfig\..*\.json$/.test(file);
 
 const emptyPolicy = (): LocalPolicy => ({
@@ -218,7 +229,7 @@ const emptyPolicy = (): LocalPolicy => ({
   physicsPerf: false,
   needsDist: false,
   nodeTests: false,
-  relatedCore: false,
+  relatedTests: false,
 });
 
 const historyInputs = (): Set<string> => {
@@ -247,7 +258,7 @@ const historyInputs = (): Set<string> => {
 
 /** Local pre-push selection. Unknown files take the complete policy; CI keeps its own authoritative matrix. */
 export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy => {
-  const files = changedFiles.map(file => String(file).replaceAll('\\', '/').trim()).filter(Boolean);
+  const files = changedFiles.filter(Boolean);
   const policy = emptyPolicy();
   const gates = new Set<string>();
   const projects = new Set<string>();
@@ -439,7 +450,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
       physicsPerf: true,
       needsDist: true,
       nodeTests: true,
-      relatedCore: false,
+      relatedTests: false,
     };
   }
 
@@ -448,8 +459,12 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
     ...[...gates].filter(name => !ALL_GATES.some(gate => gate === name)),
   ]);
   policy.packageTypechecks = [...typechecks].sort();
-  policy.unitProjects = [...projects].sort();
-  policy.relatedCore = projects.has('exojs') && !files.some(isCiTooling) && isRelatedEligible(files);
+  // Runtime consumers include workspace extensions even when no package
+  // manifest names a Core subpath. Vite determines which files can observe it.
+  policy.unitProjects = !siteOnlyUnits && projects.size > 0 ? ['exojs*', 'rendering-perf'] : [...projects].sort();
+  // Content contributes its own gates and its readers remain in the graph plan.
+  const graphInputs = files.filter(file => !/\.mdx?$/.test(file) && !/(^|\/)LICENSE$/.test(file));
+  policy.relatedTests = !siteOnlyUnits && projects.size > 0 && !files.some(isCiTooling) && isRelatedEligible(graphInputs);
 
   if (siteOnlyUnits && policy.unitProjects.length === 1 && policy.unitProjects[0] === 'exojs') {
     policy.unitFilter = [...(siteUnits ? ['test/site'] : []), ...toolingFilters].join(' ');
@@ -462,8 +477,8 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
 
 /** Renames count as a deletion plus an addition, so the vanished original path is seen. */
 export const changedFilesBetween = (base: string, head: string, cwd?: string): string[] =>
-  execFileSync('git', ['diff', '--name-only', '--no-renames', `${base}..${head}`], { encoding: 'utf8', cwd })
-    .split(/\r?\n/)
+  execFileSync('git', ['diff', '-z', '--name-only', '--no-renames', `${base}..${head}`], { encoding: 'utf8', cwd })
+    .split('\0')
     .filter(Boolean);
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

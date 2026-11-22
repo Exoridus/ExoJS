@@ -220,30 +220,31 @@ void test('cleanup evidence never treats a missing or invalid PID marker as a pr
 if (process.platform === 'win32') {
   void test('Windows cleanup phases remain bounded and preserve terminal phases after truncation', async () => {
     const { spawnSync } = await import('node:child_process');
-    const script = resolve(import.meta.dirname, '../../scripts/lib/stop-process-tree.ps1').replaceAll("'", "''");
-    const command = `
-      $ProgressPreference = 'SilentlyContinue'
-      $tokens = $null; $errors = $null
-      $ast = [Management.Automation.Language.Parser]::ParseFile('${script}', [ref]$tokens, [ref]$errors)
-      if ($errors.Count) { throw 'Invalid cleanup script' }
-      $writer = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Write-CleanupPhase' }, $true)
-      foreach ($statement in $ast.EndBlock.Statements) {
-        if ($statement.Extent.StartOffset -ge $writer.Extent.StartOffset) { break }
-        if ($statement -is [Management.Automation.Language.AssignmentStatementAst]) { Invoke-Expression $statement.Extent.Text }
-      }
-      Invoke-Expression $writer.Extent.Text
+    const source = readFileSync(resolve(import.meta.dirname, '../../scripts/lib/stop-process-tree.ps1'), 'utf8');
+    const start = source.indexOf("$ErrorActionPreference = 'Stop'");
+    const end = source.indexOf("\nWrite-CleanupPhase 'entry'");
+    assert.ok(start >= 0 && end > start, 'The production phase-writer boundary must remain explicit.');
+    const writer = source.slice(start, end);
+    assert.match(writer, /function Write-CleanupPhase\s*\{/);
+    // Execute the production initializer and writer directly. Parsing an AST
+    // and repeatedly invoking source text adds test-only PowerShell cold-start
+    // work inside the same deadline as the production cleanup process.
+    const command = `${writer}
       foreach ($phase in @('entry', 'cim-begin', 'cim-end', 'root-identity-begin', 'root-identity-end', 'targets')) { Write-CleanupPhase $phase }
       for ($index = 0; $index -lt 100; $index++) { Write-CleanupPhase 'identity-begin' "target=$index" -TargetDetail }
       Write-CleanupPhase 'remaining-begin'
       Write-CleanupPhase 'remaining-end' 'count=0'
       Write-CleanupPhase 'exit'
     `;
-    const result = spawnSync(
-      'powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')],
-      { encoding: 'utf8', windowsHide: true, timeout: 8000 },
-    );
-    assert.equal(result.error, undefined);
+    const script = join(directory(), 'cleanup-phase-fixture.ps1');
+    writeFileSync(script, command);
+    const powershell = join(process.env['SystemRoot'] ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+    const result = spawnSync(powershell, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script], {
+      encoding: 'utf8',
+      windowsHide: true,
+      timeout: 8000,
+    });
+    assert.equal(result.error, undefined, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
     assert.equal(result.status, 0, result.stderr);
     const phases = result.stderr.trim().split(/\r?\n/);
     assert.ok(phases.length <= 32, `Diagnostic output must stay bounded: ${result.stderr}`);
@@ -892,11 +893,12 @@ void test('the shared lane budget is finite and preserves the longer bench timeo
   assert.equal(laneTimeoutMinutes(LANES.find(lane => lane.id === 'bench')!), 30);
 });
 
-void test('local WebGPU bounds file concurrency without narrowing the CI test inventory', async () => {
+void test('local WebGPU bounds file concurrency while CI delegates selection to its exact project adapter', async () => {
   const { LANES } = await import('../../scripts/ci/lanes.ts');
   const lane = LANES.find(item => item.id === 'webgpu')!;
   assert.match(lane.run, /--no-file-parallelism/);
-  assert.match(lane.ciRun!, /test:browser:webgpu --reporter=minimal/);
+  assert.match(lane.ciRun!, /node scripts\/ci\/affected-run\.ts --project=browser-webgpu --reporter=minimal/);
+  assert.match(lane.ciRun!, /node scripts\/ci\/affected-run\.ts --project=browser-webgpu-media --reporter=minimal/);
   assert.doesNotMatch(lane.run + lane.ciRun, /--retry|--exclude|--bail|\|\| true/);
 });
 
@@ -1406,7 +1408,7 @@ void test('format gate file names with spaces and shell specials reach the child
     'src/ leading.ts',
     'C:\\path with spaces\\file.ts',
   ];
-  const args = ['exec', 'prettier', '--check', '--ignore-unknown', '--no-error-on-unmatched-pattern', '--', ...files];
+  const args = ['exec', 'oxfmt', '--check', '--no-error-on-unmatched-pattern', '--', ...files];
 
   assert.deepEqual(await runArguments(args, { pnpmAlias: true }), args);
   assert.deepEqual(await runArguments(args), args);

@@ -131,12 +131,9 @@ export class Quadtree<T> {
     }
 
     for (const item of this._items) {
-      if (!(
-        item.bounds.right < rect.left ||
-        item.bounds.left > rect.right ||
-        item.bounds.bottom < rect.top ||
-        item.bounds.top > rect.bottom
-      )) {
+      if (
+        !(item.bounds.right < rect.left || item.bounds.left > rect.right || item.bounds.bottom < rect.top || item.bounds.top > rect.bottom)
+      ) {
         results.push(item);
       }
     }

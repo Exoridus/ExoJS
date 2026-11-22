@@ -3,12 +3,12 @@ import { resolve } from 'node:path';
 import { packageRoot, resolveCatalog } from '../../../packages/exojs-demo-assets/scripts/catalog.ts';
 import { copyStandardMedia } from '../../../packages/exojs-demo-assets/scripts/generate.ts';
 
-// Projects have separate module runners but share the Node process. Prepare the
-// real package media once before either WebGL project imports the guide modules.
+// The guide suite requests real package media before importing its modules.
+// Both WebGL projects share the Node process, so the checked copy happens once.
 const prepared = Symbol.for('exojs.test.guide-media-prepared');
 const processState = globalThis as typeof globalThis & { [prepared]?: boolean };
 
-export const setup = (): void => {
+export const prepareGuideMedia = (): void => {
   if (processState[prepared]) {
     return;
   }

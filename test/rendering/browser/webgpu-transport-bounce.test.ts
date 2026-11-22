@@ -12,6 +12,8 @@
 import { describe, expect, test } from 'vitest';
 
 import { Color } from '#core/Color';
+import { Mesh } from '#rendering/mesh/Mesh';
+import { Sprite } from '#rendering/sprite/Sprite';
 import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -32,7 +34,9 @@ const host = async (): Promise<BounceHost> => {
   const app = makeTestApp(makeTestCanvas(BOUNCE_SIZE), BOUNCE_SIZE);
   const backend = new WebGpuBackend(app);
 
-  wireCoreRenderers(backend);
+  // The floor and bar use Sprite; the lighting's RenderBatch passes use Mesh.
+  // Each host still gets a fresh backend and device with these scene bindings.
+  wireCoreRenderers(backend, {}, [Sprite, Mesh]);
   await backend.initialize();
 
   return createBounceHost(backend, app);

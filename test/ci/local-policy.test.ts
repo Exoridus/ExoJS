@@ -4,6 +4,7 @@ import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { GATE_GROUPS, orderGates } from '../../scripts/ci/gate-groups.ts';
+import { LANES } from '../../scripts/ci/lanes.ts';
 import { needsDist, parseLocalLaneOptions, selectLocalLanes } from '../../scripts/ci/local-lanes.ts';
 import { CI_TOOLING_FILES, isCiTooling, selectLocalPolicy } from '../../scripts/ci/local-policy.ts';
 import { effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.ts';
@@ -15,6 +16,137 @@ const lanesFor = (file: string) => {
 };
 
 describe('local validation policy', () => {
+  it.each(['src/rendering/sprite/Sprite.ts', 'src/rendering/sprite/AnimatedSprite.ts'])(
+    'defers browser, benchmark and smoke lanes only in pre-push mode for %s',
+    file => {
+      const effective = effectiveLanes(selectAreas([file]));
+      const options = { ...parseLocalLaneOptions(['--tests-only', '--base', 'HEAD']), prePush: true };
+      const selected = selectLocalLanes(effective, options, [file]);
+
+      expect(selected.map(lane => lane.id)).toEqual(['unit']);
+      expect(selected[0]!.run).toContain('affected-plan.ts --run');
+      expect(selected[0]!.run).toContain('pnpm test:alloc');
+      expect(selected[0]!.run).not.toContain('--full');
+      expect(needsDist(selected)).toBe(true);
+      expect(selectLocalPolicy([file]).gates).toContain('docs:api:check');
+    },
+  );
+
+  it('keeps the full manual lane selection when pre-push mode is absent', () => {
+    const file = 'src/rendering/sprite/AnimatedSprite.ts';
+    const selected = selectLocalLanes(effectiveLanes(selectAreas([file])), parseLocalLaneOptions(['--tests-only', '--base', 'HEAD']), [
+      file,
+    ]);
+
+    expect(selected.map(lane => lane.id)).toEqual(['unit', 'webgl', 'webgpu', 'bench', 'smoke']);
+  });
+
+  it.each(['vitest.config.ts', 'unexpected/new.kind', 'src/rendering/DefinitelyDeleted.ts', 'packages/exojs-build/src/shaderPlugin.ts'])(
+    'retains broad pre-push validation for uncertain input %s',
+    file => {
+      const options = { ...parseLocalLaneOptions(['--tests-only', '--base', 'HEAD']), prePush: true };
+      const selected = selectLocalLanes(effectiveLanes(selectAreas([file])), options, [file]);
+
+      expect(selected.map(lane => lane.id)).toEqual(expect.arrayContaining(['unit', 'webgl', 'webgpu', 'smoke']));
+      expect(selected.find(lane => lane.id === 'unit')!.run).toContain('--full');
+    },
+  );
+
+  it.each([['--all'], ['--base', 'missing-pre-push-base']].map(flags => ({ flags })))(
+    'does not defer lanes for an explicit full or unresolved range $flags',
+    ({ flags }) => {
+      const file = 'src/rendering/sprite/Sprite.ts';
+      const options = { ...parseLocalLaneOptions(['--tests-only', ...flags]), prePush: true };
+      const selected = selectLocalLanes(effectiveLanes(selectAreas([file])), options, [file]);
+
+      expect(selected.map(lane => lane.id)).toEqual(expect.arrayContaining(['unit', 'webgl', 'webgpu', 'bench', 'smoke']));
+      expect(selected.find(lane => lane.id === 'unit')!.run).toContain('--full');
+    },
+  );
+
+  it('retains physics qualification in pre-push mode', () => {
+    const file = 'packages/exojs-physics/src/PhysicsWorld.ts';
+    const options = { ...parseLocalLaneOptions(['--tests-only', '--base', 'HEAD']), prePush: true };
+    const selected = selectLocalLanes(effectiveLanes(selectAreas([file])), options, [file]);
+
+    expect(selected.find(lane => lane.id === 'unit')!.run).toContain('pnpm test:physics-perf');
+  });
+
+  it('accepts the explicit pre-push mode while keeping diagnostics separate', () => {
+    expect(() => parseLocalLaneOptions(['--pre-push', '--tests-only', '--base', 'HEAD'])).not.toThrow();
+    expect(() => parseLocalLaneOptions(['--pre-push', '--only=unit'])).toThrow(/cannot combine/);
+    expect(() => parseLocalLaneOptions(['--pre-push', '--quick'])).toThrow(/cannot combine/);
+  });
+
+  it('uses one graph selection for the normal workspace unit inventory', () => {
+    const lanes = lanesFor('src/math/Vector.ts');
+    const command = lanes.find(lane => lane.id === 'unit')!.run;
+
+    expect(command.match(/affected-plan\.ts/g)).toHaveLength(1);
+    expect(command).toContain('--run');
+    expect(command).toContain('--project="exojs*"');
+    expect(command).toContain('--project="rendering-perf"');
+    expect(command).not.toContain('--changed');
+    expect(command).not.toContain('test/rendering/multi-attachment-guard.test.ts');
+  });
+
+  it('preserves separate ordered browser invocations and WebGPU serial execution', () => {
+    const lanes = lanesFor('src/rendering/sprite/Sprite.ts');
+    const webgl = lanes.find(lane => lane.id === 'webgl')!.run;
+    const webgpu = lanes.find(lane => lane.id === 'webgpu')!.run;
+
+    expect(webgl.match(/affected-plan\.ts/g)).toHaveLength(4);
+    expect([...webgl.matchAll(/--project="([^"]+)"/g)].map(match => match[1])).toEqual([
+      'browser-webgl-chromium',
+      'browser-build-chromium',
+      'browser-assets-chromium',
+      'browser-core-chromium',
+    ]);
+    expect(webgpu.match(/affected-plan\.ts/g)).toHaveLength(2);
+    expect(webgpu.split(' && ')[0]).toContain('--no-file-parallelism');
+    expect(webgpu.split(' && ')[1]).toContain('--project="browser-webgpu-media"');
+    expect(lanes.find(lane => lane.id === 'unit')!.run).toContain('pnpm test:alloc');
+  });
+
+  it('keeps package consumers in the graph inventory and physics qualification separate', () => {
+    const command = lanesFor('packages/exojs-physics/src/PhysicsWorld.ts').find(lane => lane.id === 'unit')!.run;
+
+    expect(command).toContain('--project="exojs*"');
+    expect(command).toContain('--project="rendering-perf"');
+    expect(command.match(/affected-plan\.ts/g)).toHaveLength(1);
+    expect(command).toContain('pnpm test:physics-perf');
+  });
+
+  it('keeps explicit diagnostic lane commands unchanged', () => {
+    const selected = selectLocalLanes(effectiveLanes(selectAreas([])), parseLocalLaneOptions(['--only', 'unit,webgpu']));
+
+    expect(selected.map(lane => lane.run)).toEqual(['unit', 'webgpu'].map(id => LANES.find(lane => lane.id === id)!.run));
+  });
+
+  it.each(['vitest.config.ts', 'unexpected/new.kind', 'src/math/DefinitelyNotThere.ts', 'packages/exojs-build/src/shaderPlugin.ts'])(
+    'executes full graph inventories for %s',
+    file => {
+      const lanes = lanesFor(file);
+
+      for (const lane of lanes.filter(
+        candidate => candidate.id === 'unit' || ['webgl', 'webgpu', 'audio', 'tilemap'].includes(candidate.id),
+      )) {
+        expect(lane.run).toContain('affected-plan.ts');
+        expect(lane.run).toContain('--full');
+      }
+    },
+  );
+
+  it('keeps --all full and quick mode diagnostic without browser work', () => {
+    const effective = effectiveLanes(selectAreas(['src/rendering/sprite/Sprite.ts']));
+    const all = selectLocalLanes(effective, parseLocalLaneOptions(['--all']), ['src/rendering/sprite/Sprite.ts']);
+    const quick = selectLocalLanes(effective, parseLocalLaneOptions(['--quick']), ['src/rendering/sprite/Sprite.ts']);
+
+    expect(all.find(lane => lane.id === 'unit')!.run).toContain('--full');
+    expect(quick.every(lane => lane.local !== 'browser')).toBe(true);
+    expect(quick.find(lane => lane.id === 'unit')!.run).toContain('affected-plan.ts');
+  });
+
   it('keeps CI gate inventory independent of local selection', () => {
     expect(GATE_GROUPS.typecheck).toContain('typecheck:packages');
     expect(GATE_GROUPS.sync).toContain('perf:smoke');
@@ -43,7 +175,7 @@ describe('local validation policy', () => {
       expect(policy.gates).toContain('typecheck');
       expect(policy.gates).toContain('typecheck:test');
       expect(policy.gates).toContain('lint');
-      expect(policy.unitProjects).toEqual(['exojs']);
+      expect(policy.unitProjects).toEqual(['exojs*', 'rendering-perf']);
       expect(policy.browser).toEqual([]);
       expect(policy.smoke).toBe(false);
     }
@@ -60,7 +192,7 @@ describe('local validation policy', () => {
     const pathfinding = selectLocalPolicy(['packages/exojs-pathfinding/src/Grid.ts']);
     expect(pathfinding.packageTypechecks).toContain('@codexo/exojs-module-pathfinding');
     expect(pathfinding.gates).toContain('lint');
-    expect(pathfinding.unitProjects).toContain('exojs-pathfinding');
+    expect(pathfinding.unitProjects).toContain('exojs*');
     expect(pathfinding.browser).toEqual([]);
     expect(pathfinding.smoke).toBe(false);
     expect(pathfinding.needsDist).toBe(false);
@@ -71,7 +203,7 @@ describe('local validation policy', () => {
 
     const audio = selectLocalPolicy(['packages/exojs-audio-fx/src/AudioFx.ts']);
     expect(audio.browser).toEqual(['audio']);
-    expect(audio.unitProjects).toContain('exojs-audio-fx');
+    expect(audio.unitProjects).toContain('exojs*');
   });
 
   it('keeps global and unknown paths broad', () => {
@@ -96,13 +228,13 @@ describe('local validation policy', () => {
   it('runs narrow local tests while CI retains the full affected matrix', () => {
     const input = lanesFor('src/input/gamepadMappings.ts');
     expect(input.map(lane => lane.id)).toEqual(['unit']);
-    expect(input[0]?.run).toContain('--project=exojs');
+    expect(input[0]?.run).toContain('--project="exojs*"');
     expect(input[0]?.run).not.toContain('test:alloc');
     expect(lanesFor('README.md')[0]?.run).toContain('test/site');
     expect(lanesFor('src/rendering/Renderer.ts').map(lane => lane.id)).toEqual(['unit', 'webgl', 'webgpu', 'bench', 'smoke']);
     expect(lanesFor('packages/exojs-pathfinding/src/Grid.ts').map(lane => lane.id)).toEqual(['unit']);
     expect(lanesFor('packages/exojs-audio-fx/src/AudioFx.ts').map(lane => lane.id)).toEqual(['unit', 'audio']);
-    expect(lanesFor('vitest.config.ts').find(lane => lane.id === 'unit')?.run).toContain('pnpm test && pnpm test:alloc');
+    expect(lanesFor('vitest.config.ts').find(lane => lane.id === 'unit')?.run).toContain('--full');
     expect(lanesFor('unexpected/new.kind').map(lane => lane.id)).toContain('webgpu');
   });
 
@@ -273,23 +405,58 @@ describe('CI tooling scope', () => {
   });
 });
 
-describe('dependency-aware core tests', () => {
+describe('dependency-aware workspace tests', () => {
   const unitCommand = (...files: string[]): string =>
-    selectLocalLanes(effectiveLanes(selectAreas(files)), parseLocalLaneOptions(['--base', 'origin/HEAD']), files).find(
-      lane => lane.id === 'unit',
-    )!.run;
+    selectLocalLanes(effectiveLanes(selectAreas(files)), parseLocalLaneOptions(['--base', 'HEAD']), files).find(lane => lane.id === 'unit')!
+      .run;
 
   it('narrows the core project for an engine-only change, keeping tests that read untracked input', () => {
     const command = unitCommand('src/math/Vector.ts');
 
-    expect(selectLocalPolicy(['src/math/Vector.ts']).relatedCore).toBe(true);
-    expect(command).toContain('--project=exojs --passWithNoTests --changed=');
-    expect(command).toContain('test/rendering/multi-attachment-guard.test.ts');
-    expect(command).not.toMatch(/vitest run --project=exojs( |$)(?!--passWithNoTests)(?!test\/)/);
+    expect(selectLocalPolicy(['src/math/Vector.ts']).relatedTests).toBe(true);
+    expect(command).toContain('--project="exojs*"');
+    expect(command.match(/affected-plan\.ts/g)).toHaveLength(1);
+    expect(command).not.toContain('--changed');
   });
 
   it('narrows a test-only change the same way', () => {
-    expect(selectLocalPolicy(['test/math/vector.test.ts']).relatedCore).toBe(true);
+    expect(selectLocalPolicy(['test/math/vector.test.ts']).relatedTests).toBe(true);
+  });
+
+  it('keeps graph selection when an engine change also updates documentation', () => {
+    const files = ['src/rendering/sprite/Sprite.ts', 'docs/architecture.md'];
+
+    expect(selectLocalPolicy(files).relatedTests).toBe(true);
+    expect(unitCommand(...files)).toContain('affected-plan.ts');
+    expect(selectLocalPolicy(files).gates).toContain('format:check');
+  });
+
+  it.each(['scripts/ci/VALIDATION.md', '.github/workflows/README.md'])(
+    'keeps infrastructure documentation %s with the ordinary graph inputs',
+    documentation => {
+      const files = ['src/rendering/sprite/AnimatedSprite.ts', documentation];
+      const policy = selectLocalPolicy(files);
+
+      expect(policy.relatedTests).toBe(true);
+      expect(policy.fullUnit).toBe(false);
+      expect(policy.gates).toContain('format:check');
+      expect(unitCommand(...files)).not.toContain('--full');
+    },
+  );
+
+  it.each(['README.md', 'site/src/content/guide/sprites.mdx'])(
+    'adds the content tests for %s without widening the engine tests',
+    documentation => {
+      const files = ['src/rendering/sprite/Sprite.ts', documentation];
+
+      expect(selectLocalPolicy(files).relatedTests).toBe(true);
+      expect(unitCommand(...files)).toContain('affected-plan.ts');
+      expect(unitCommand(...files)).not.toContain('test/site');
+    },
+  );
+
+  it('does not rewrite an unknown path into a recognized documentation file', () => {
+    expect(selectLocalPolicy([' README.md ']).fullUnit).toBe(true);
   });
 
   it.each([
@@ -300,21 +467,22 @@ describe('dependency-aware core tests', () => {
     ['an engine change together with a root config', ['src/math/Vector.ts', 'vitest.config.ts']],
     ['an engine change together with an unknown file', ['src/math/Vector.ts', 'mystery.bin']],
     ['an engine change together with CI tooling', ['src/math/Vector.ts', 'scripts/ci/gates.ts']],
+    ['generated infrastructure content', ['src/math/Vector.ts', 'scripts/ci/generated/template.md']],
     ['a lockfile', ['pnpm-lock.yaml']],
   ])('keeps the whole core project for %s', (_name, files) => {
-    expect(selectLocalPolicy(files).relatedCore).toBe(false);
+    expect(selectLocalPolicy(files).relatedTests).toBe(false);
   });
 
-  it('keeps the other test projects whole while narrowing the core project', () => {
+  it('finds consumers in every normal workspace unit project', () => {
     const policy = selectLocalPolicy(['src/index.ts']);
 
-    expect(policy.relatedCore).toBe(true);
-    expect(policy.unitProjects).toContain('exojs-particles');
-    expect(unitCommand('src/index.ts')).toMatch(/--project=exojs-particles/);
+    expect(policy.relatedTests).toBe(true);
+    expect(policy.unitProjects).toContain('exojs*');
+    expect(unitCommand('src/index.ts')).toContain('--project="exojs*"');
   });
 
   it('never narrows the full-unit fallback', () => {
-    expect(selectLocalPolicy([]).relatedCore).toBe(false);
+    expect(selectLocalPolicy([]).relatedTests).toBe(false);
     expect(unitCommand('vitest.config.ts')).not.toContain('--changed');
   });
 });

@@ -29,7 +29,7 @@ export interface Lane {
   ciRun?: string;
   /** Replaces `ciRun` when the run collects coverage (pushes to a long-lived branch). */
   coverageRun?: string;
-  /** Playwright browser to install on the runner. */
+  /** Playwright browser to install with its host dependencies, including Xvfb. */
   browser?: 'chromium' | 'firefox';
   /** Extra apt packages the runner needs. */
   apt?: readonly string[];
@@ -45,6 +45,8 @@ export interface Lane {
   minimumOutput?: 'compact' | 'normal' | 'silent' | 'verbose';
   /** Emits `test-results/<id>.junit.xml` for the skip budget and Codecov. */
   junit?: boolean;
+  /** Vitest projects selected on ordinary PRs and audited against full execution in shadow mode. */
+  affectedProjects?: readonly string[];
   /** Pull requests only. */
   pullRequestOnly?: boolean;
   timeoutMinutes?: number;
@@ -54,7 +56,8 @@ export const laneTimeoutMinutes = (lane: Pick<Lane, 'timeoutMinutes'>): number =
 
 const supervisorTests = 'node --test test/ci/validation.node.ts test/ci/qualify.node.ts && ';
 
-const junit = (id: string): string => `--reporter=minimal --reporter=junit --outputFile.junit=./test-results/${id}.junit.xml`;
+const junit = (id: string): string =>
+  `--reporter=minimal --reporter=junit --reporter=./scripts/ci/affected-reporter.ts --outputFile.junit=./test-results/${id}.junit.xml`;
 
 /** One row of the browser qualification matrix; `pnpm qualify` runs it. */
 interface QualifiedRow {
@@ -98,14 +101,26 @@ const webgl2Row = (coverage: boolean): QualifiedRow => ({
   preflight: 'chromium-webgl2',
   requires: ['webgl2'],
   timeoutMinutes: 10,
-  command: `pnpm test:browser:webgl ${junit('webgl')}${coverage ? ` ${coverageFlags}` : ''}`,
+  command: `node scripts/ci/affected-run.ts --project=browser-webgl-chromium ${junit('webgl')}${coverage ? ` ${coverageFlags}` : ''}`,
 });
 
 /** Chromium suites with no GPU contract of their own: the build output, the asset cache and core surfaces jsdom cannot host. */
 const chromiumHostRows: QualifiedRow[] = [
-  { name: 'Chromium / Build Output', timeoutMinutes: 6, command: `pnpm test:browser:build ${junit('webgl-build')}` },
-  { name: 'Chromium / Assets', timeoutMinutes: 6, command: `pnpm test:browser:assets ${junit('webgl-assets')}` },
-  { name: 'Chromium / Core Surfaces', timeoutMinutes: 6, command: `pnpm test:browser:core ${junit('webgl-core')}` },
+  {
+    name: 'Chromium / Build Output',
+    timeoutMinutes: 6,
+    command: `node scripts/ci/affected-run.ts --project=browser-build-chromium ${junit('webgl-build')}`,
+  },
+  {
+    name: 'Chromium / Assets',
+    timeoutMinutes: 6,
+    command: `node scripts/ci/affected-run.ts --project=browser-assets-chromium ${junit('webgl-assets')}`,
+  },
+  {
+    name: 'Chromium / Core Surfaces',
+    timeoutMinutes: 6,
+    command: `node scripts/ci/affected-run.ts --project=browser-core-chromium ${junit('webgl-core')}`,
+  },
 ];
 
 // Chromium's Dawn brings its own SwiftShader Vulkan implementation, which is the adapter this lane
@@ -131,6 +146,7 @@ export const LANES: readonly Lane[] = [
     coverageRun: `${supervisorTests}EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
     naga: true,
     junit: true,
+    affectedProjects: ['exojs*', 'rendering-perf'],
   },
   {
     id: 'webgl',
@@ -143,6 +159,7 @@ export const LANES: readonly Lane[] = [
     apt: ['ffmpeg'],
     local: 'browser',
     junit: true,
+    affectedProjects: ['browser-webgl-chromium', 'browser-build-chromium', 'browser-assets-chromium', 'browser-core-chromium'],
     timeoutMinutes: 30,
   },
   {
@@ -151,8 +168,8 @@ export const LANES: readonly Lane[] = [
     when: 'browserWebgpu',
     run: 'pnpm test:browser:webgpu --no-file-parallelism && pnpm test:browser:webgpu:media',
     // Local diagnostics avoid concurrent files competing for one GPU process.
-    // CI keeps its existing, independently qualified parallel configuration for
-    // Core; Media is serial in its project definition. Each row gets its own
+    // Vitest 5 also uses one file worker in CI's headed browser pool;
+    // Media is serial in its project definition. Each row gets its own
     // virtual display so one row's X server cannot outlive it into the next.
     ciRun: rows(
       {
@@ -162,7 +179,7 @@ export const LANES: readonly Lane[] = [
         timeoutMinutes: 15,
         env: webgpuEnv,
         xvfb: true,
-        command: `pnpm test:browser:webgpu ${junit('webgpu')}`,
+        command: `node scripts/ci/affected-run.ts --project=browser-webgpu ${junit('webgpu')}`,
       },
       {
         name: 'Chromium / WebGPU Media',
@@ -171,13 +188,13 @@ export const LANES: readonly Lane[] = [
         timeoutMinutes: 6,
         env: webgpuEnv,
         xvfb: true,
-        command: `pnpm test:browser:webgpu:media ${junit('webgpu-media')}`,
+        command: `node scripts/ci/affected-run.ts --project=browser-webgpu-media ${junit('webgpu-media')}`,
       },
     ),
     browser: 'chromium',
-    apt: ['xvfb'],
     local: 'browser',
     junit: true,
+    affectedProjects: ['browser-webgpu', 'browser-webgpu-media'],
     timeoutMinutes: 30,
   },
   {
@@ -199,7 +216,7 @@ export const LANES: readonly Lane[] = [
         timeoutMinutes: 8,
         env: `EXOJS_FIREFOX_CI_HEADED=1 ${firefoxEnv}`,
         xvfb: true,
-        command: `pnpm test:browser:webgl:firefox ${junit('firefox')}`,
+        command: `node scripts/ci/affected-run.ts --project=browser-webgl-firefox ${junit('firefox')}`,
       },
       {
         name: 'Firefox / WebGPU Core',
@@ -235,10 +252,11 @@ export const LANES: readonly Lane[] = [
       },
     ),
     browser: 'firefox',
-    apt: ['xvfb', 'pulseaudio', 'pulseaudio-utils'],
+    apt: ['pulseaudio', 'pulseaudio-utils'],
     local: 'browser',
     ciOnly: true,
     junit: true,
+    affectedProjects: ['browser-webgl-firefox'],
     timeoutMinutes: 30,
   },
   {
@@ -246,20 +264,30 @@ export const LANES: readonly Lane[] = [
     stage: 'test',
     when: 'browserAudio',
     run: 'pnpm test:browser:audio',
-    ciRun: rows({ name: 'Chromium / Audio Worklets', timeoutMinutes: 8, command: `pnpm test:browser:audio ${junit('audio')}` }),
+    ciRun: rows({
+      name: 'Chromium / Audio Worklets',
+      timeoutMinutes: 8,
+      command: `node scripts/ci/affected-run.ts --project=browser-audio-chromium ${junit('audio')}`,
+    }),
     browser: 'chromium',
     local: 'browser',
     junit: true,
+    affectedProjects: ['browser-audio-chromium'],
   },
   {
     id: 'tilemap',
     stage: 'test',
     when: 'browserTilemapWorker',
     run: 'pnpm test:browser:tilemap',
-    ciRun: rows({ name: 'Chromium / Tilemap Worker', timeoutMinutes: 8, command: `pnpm test:browser:tilemap ${junit('tilemap')}` }),
+    ciRun: rows({
+      name: 'Chromium / Tilemap Worker',
+      timeoutMinutes: 8,
+      command: `node scripts/ci/affected-run.ts --project=browser-tilemap-chromium ${junit('tilemap')}`,
+    }),
     browser: 'chromium',
     local: 'browser',
     junit: true,
+    affectedProjects: ['browser-tilemap-chromium'],
   },
   {
     id: 'bench',
@@ -321,8 +349,32 @@ export interface MatrixEntry {
   dist: boolean;
   junit: boolean;
   coverage: boolean;
+  affectedProjects: readonly string[];
+  /** Empty outside supported PR lanes; shadow retains native execution. */
+  affectedMode: '' | 'enforce' | 'shadow';
   timeoutMinutes: number;
 }
+
+export interface SmokeEntry {
+  id: string;
+  suite: 'examples' | 'playground';
+  run: string;
+}
+
+const smokeEntries = (sample: boolean): SmokeEntry[] => [
+  ...(sample
+    ? [{ id: 'examples', suite: 'examples' as const, run: 'pnpm test:examples:smoke --renderer webgl2 --sample' }]
+    : [1, 2, 3].map(index => ({
+        id: `examples-${index}`,
+        suite: 'examples' as const,
+        run: `pnpm test:examples:smoke --renderer webgl2 --shard ${index}/3`,
+      }))),
+  ...['shell', 'rendering', 'lifecycle', 'assets'].map(suite => ({
+    id: `playground-${suite}`,
+    suite: 'playground' as const,
+    run: `pnpm test:playground:e2e --suite ${suite}`,
+  })),
+];
 
 export interface CiPlan {
   areas: LaneAreas;
@@ -337,10 +389,14 @@ export interface CiPlan {
   smoke: boolean;
   /** Smoke one example per category rather than the whole catalog. */
   smokeSample: boolean;
+  /** Disjoint smoke inventories on independent runners, against the same candidate. */
+  smokeMatrix: SmokeEntry[];
   /** Evaluate the skip budget over the test lanes' JUnit reports. */
   skipBudget: boolean;
   /** Collect and upload coverage. */
   coverage: boolean;
+  /** A final-candidate request overrides all selective and sampled paths. */
+  fullQualification: boolean;
 }
 
 export interface PlanInput {
@@ -355,6 +411,10 @@ export interface PlanInput {
   changedFiles: readonly string[];
   /** Branch the event ran on; coverage is collected on the long-lived ones. */
   refName: string;
+  /** Request all areas, coverage and the complete example catalog on this exact head. */
+  fullQualification?: boolean;
+  /** Shadow/probe labels request full execution with scenario audits. */
+  affectedShadow?: boolean;
 }
 
 const COVERAGE_BRANCHES = new Set(['main', 'next']);
@@ -376,7 +436,7 @@ const ALL_AREAS: LaneAreas = {
   authoredMapFixture: true,
 };
 
-const toEntry = (lane: Lane, coverage: boolean): MatrixEntry => ({
+const toEntry = (lane: Lane, coverage: boolean, affectedMode: MatrixEntry['affectedMode']): MatrixEntry => ({
   id: lane.id,
   run: (coverage && lane.coverageRun) || lane.ciRun || lane.run,
   browser: lane.browser ?? '',
@@ -385,6 +445,8 @@ const toEntry = (lane: Lane, coverage: boolean): MatrixEntry => ({
   dist: lane.dist ?? false,
   junit: lane.junit ?? false,
   coverage: coverage && lane.coverageRun !== undefined,
+  affectedProjects: lane.affectedProjects ?? [],
+  affectedMode: lane.affectedProjects?.length ? affectedMode : '',
   timeoutMinutes: laneTimeoutMinutes(lane),
 });
 
@@ -398,14 +460,16 @@ export const selectLanes = (effective: EffectiveLanes, isPullRequest: boolean): 
  * else - an unresolved push diff, `merge_group`, a tag/release or a manual
  * dispatch - validates every area, fail closed.
  */
-export const planCi = ({ eventName, changedFiles, refName }: PlanInput): CiPlan => {
+export const planCi = ({ eventName, changedFiles, refName, fullQualification = false, affectedShadow = false }: PlanInput): CiPlan => {
   const isPullRequest = eventName === 'pull_request';
   const isSelectivePush = eventName === 'push' && changedFiles.length > 0;
-  const areas = isPullRequest || isSelectivePush ? selectAreas(changedFiles) : ALL_AREAS;
+  const areas = !fullQualification && (isPullRequest || isSelectivePush) ? selectAreas(changedFiles) : ALL_AREAS;
   const effective = effectiveLanes(areas);
-  const coverage = eventName === 'push' && COVERAGE_BRANCHES.has(refName);
+  const coverage = fullQualification || (eventName === 'push' && COVERAGE_BRANCHES.has(refName));
+  const affectedMode = isPullRequest && !fullQualification && !coverage ? (affectedShadow ? 'shadow' : 'enforce') : '';
   const lanes = selectLanes(effective, isPullRequest);
-  const stage = (name: Stage): MatrixEntry[] => lanes.filter(lane => lane.stage === name).map(lane => toEntry(lane, coverage));
+  const stage = (name: Stage): MatrixEntry[] =>
+    lanes.filter(lane => lane.stage === name).map(lane => toEntry(lane, coverage, affectedMode));
   // The smoke drives the site job's artifact, so a catalog change builds the
   // site even when nothing under site/ changed.
   const site = areas.site || areas.exampleCatalog;
@@ -413,6 +477,8 @@ export const planCi = ({ eventName, changedFiles, refName }: PlanInput): CiPlan 
   // that tree is always smoked at its real base before the run can turn green;
   // one example per category suffices when the catalog itself is unchanged.
   const candidate = eventName === 'push' && CHANNEL_BRANCHES.has(refName) && site;
+  const smoke = areas.exampleCatalog || candidate;
+  const smokeSample = !fullQualification && (isPullRequest || !areas.exampleCatalog);
 
   return {
     areas,
@@ -424,10 +490,12 @@ export const planCi = ({ eventName, changedFiles, refName }: PlanInput): CiPlan 
     // changed.
     build: areas.engine || areas.createExoApp || site,
     site,
-    smoke: areas.exampleCatalog || candidate,
-    smokeSample: isPullRequest || !areas.exampleCatalog,
+    smoke,
+    smokeSample,
+    smokeMatrix: smoke ? smokeEntries(smokeSample) : [],
     skipBudget: effective.unit,
     coverage,
+    fullQualification,
   };
 };
 
@@ -468,15 +536,18 @@ const main = (): void => {
     eventName: process.env['EVENT_NAME'] ?? '',
     changedFiles: parseChangedFiles(changedFiles),
     refName: process.env['REF_NAME'] ?? '',
+    fullQualification: process.env['FULL_QUALIFICATION'] === 'true',
+    affectedShadow: process.env['AFFECTED_SHADOW'] === 'true',
   });
 
-  const { areas, gates, test, verify, ...flags } = plan;
+  const { areas, gates, test, verify, smokeMatrix, ...flags } = plan;
   process.stderr.write(`plan: ${JSON.stringify({ areas, lanes: [...gates, ...test, ...verify].map(entry => entry.id), ...flags })}\n`);
 
   const lines = [
     `gates=${JSON.stringify(gates)}`,
     `test=${JSON.stringify(test)}`,
     `verify=${JSON.stringify(verify)}`,
+    `smokeMatrix=${JSON.stringify(smokeMatrix)}`,
     `hasTest=${test.length > 0}`,
     `hasVerify=${verify.length > 0}`,
     ...Object.entries(flags).map(([key, value]) => `${key}=${value}`),

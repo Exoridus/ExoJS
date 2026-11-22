@@ -1,0 +1,514 @@
+eslint_rule,requires_type_information,native_rule,evaluation,active_files,option_variants,eslint_options,notes
+@eslint-react/dom-no-dangerously-set-innerhtml,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/dom-no-dangerously-set-innerhtml-with-children,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/dom-no-find-dom-node,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/dom-no-flush-sync,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/dom-no-hydrate,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/dom-no-render,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/dom-no-render-return-value,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/dom-no-script-url,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/dom-no-unsafe-iframe-sandbox,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/dom-no-use-form-state,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/dom-no-void-elements-with-children,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/error-boundaries,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/exhaustive-deps,false,,retain: unavailable natively,66,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/jsx-no-children-prop,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/jsx-no-children-prop-with-children,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/jsx-no-comment-textnodes,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/jsx-no-key-after-spread,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/jsx-no-leaked-dollar,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/jsx-no-leaked-semicolon,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/jsx-no-namespace,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/naming-convention-context-name,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/naming-convention-id-name,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/naming-convention-ref-name,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-access-state-in-setstate,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-array-index-key,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-children-count,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-children-for-each,false,,retain: unavailable natively,66,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-children-map,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-children-only,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-children-to-array,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-clone-element,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-component-will-mount,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-component-will-receive-props,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-component-will-update,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-context-provider,false,,retain: unavailable natively,66,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-create-ref,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-direct-mutation-state,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-duplicate-key,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-forward-ref,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-implicit-key,true,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-implicit-ref,true,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-leaked-conditional-rendering,true,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-missing-context-display-name,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-missing-key,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-misused-capture-owner-stack,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-nested-component-definitions,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-nested-lazy-component-declarations,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-set-state-in-component-did-mount,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-set-state-in-component-did-update,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-set-state-in-component-will-update,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-unnecessary-use-prefix,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-unsafe-component-will-mount,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-unsafe-component-will-receive-props,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-unsafe-component-will-update,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-unstable-context-value,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-unstable-default-props,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-unused-class-component-members,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/no-unused-props,true,,retain: unavailable natively,73,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-unused-state,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/no-use-context,false,,retain: unavailable natively,66,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/purity,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/refs,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/rsc-function-definition,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/rules-of-hooks,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/set-state-in-effect,false,,retain: unavailable natively,66,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/set-state-in-render,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/static-components,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/unsupported-syntax,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/use-memo,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+@eslint-react/use-state,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/web-api-no-leaked-event-listener,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/web-api-no-leaked-fetch,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/web-api-no-leaked-intersection-observer,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/web-api-no-leaked-interval,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/web-api-no-leaked-resize-observer,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@eslint-react/web-api-no-leaked-timeout,false,,retain: unavailable natively,74,1,[[1]],Original ESLint implementation remains active.
+@stylistic/curly-newline,false,,retain: unavailable natively,3353,1,"[[2,{""minElements"":1,""consistent"":true}]]",Original ESLint implementation remains active.
+@stylistic/lines-between-class-members,false,,retain: unavailable natively,3353,1,"[[2,{""enforce"":[{""blankLine"":""always"",""prev"":""*"",""next"":""method""},{""blankLine"":""always"",""prev"":""method"",""next"":""*""}]},{""exceptAfterOverload"":true,""exceptAfterSingleLine"":false}]]",Original ESLint implementation remains active.
+@stylistic/padding-line-between-statements,false,,retain: unavailable natively,3353,1,"[[2,{""blankLine"":""always"",""prev"":""*"",""next"":[""return"",""throw""]},{""blankLine"":""always"",""prev"":""multiline-block-like"",""next"":""*""},{""blankLine"":""always"",""prev"":""*"",""next"":""multiline-block-like""},{""blankLine"":""always"",""prev"":[""import"",""cjs-import""],""next"":""*""},{""blankLine"":""any"",""prev"":[""import"",""cjs-import""],""next"":[""import"",""cjs-import""]},{""blankLine"":""any"",""prev"":""directive"",""next"":""*""},{""blankLine"":""any"",""prev"":[""case"",""default""],""next"":""*""}]]",Original ESLint implementation remains active.
+@stylistic/spaced-comment,false,,retain: unavailable natively,3353,1,"[[2,""always"",{""line"":{""markers"":[""/"",""!"",""#region"",""#endregion""],""exceptions"":[""-"",""+"",""*"",""=""]},""block"":{""markers"":[""!""],""exceptions"":[""*""],""balanced"":true}}]]",Original ESLint implementation remains active.
+@typescript-eslint/adjacent-overload-signatures,false,typescript/adjacent-overload-signatures,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/array-type,false,typescript/array-type,native hybrid candidate,3279,1,"[[2,{""default"":""array-simple""}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/await-thenable,true,typescript/await-thenable,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/ban-ts-comment,false,typescript/ban-ts-comment,native hybrid candidate,3353,2,"[[2],[2,{""ts-expect-error"":""allow-with-description"",""ts-ignore"":false,""ts-nocheck"":false,""ts-check"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/ban-tslint-comment,false,typescript/ban-tslint-comment,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/class-literal-property-style,false,typescript/class-literal-property-style,native hybrid candidate,1455,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/consistent-generic-constructors,false,typescript/consistent-generic-constructors,retain: observed diagnostic mismatch,3353,1,[[2]],Current source produces a native diagnostic while original ESLint is clean.
+@typescript-eslint/consistent-indexed-object-style,false,typescript/consistent-indexed-object-style,retain: observed diagnostic mismatch,3279,1,[[2]],Current source produces a native diagnostic while original ESLint is clean.
+@typescript-eslint/consistent-type-assertions,false,typescript/consistent-type-assertions,native hybrid candidate,3257,2,"[[2],[2,{""assertionStyle"":""as"",""objectLiteralTypeAssertions"":""never""}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/consistent-type-definitions,false,typescript/consistent-type-definitions,native hybrid candidate,3279,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/consistent-type-exports,true,typescript/consistent-type-exports,native hybrid candidate,1020,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/consistent-type-imports,false,typescript/consistent-type-imports,native hybrid candidate,3353,1,"[[2,{""prefer"":""type-imports"",""disallowTypeAnnotations"":false,""fixStyle"":""inline-type-imports""}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/default-param-last,false,default-param-last,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/dot-notation,true,typescript/dot-notation,native hybrid candidate,1033,1,"[[2,{""allowIndexSignaturePropertyAccess"":false,""allowKeywords"":true,""allowPattern"":"""",""allowPrivateClassPropertyAccess"":false,""allowProtectedClassPropertyAccess"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/explicit-function-return-type,false,typescript/explicit-function-return-type,native hybrid candidate,960,1,"[[2,{""allowExpressions"":true,""allowTypedFunctionExpressions"":true,""allowHigherOrderFunctions"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/explicit-member-accessibility,false,typescript/explicit-member-accessibility,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/naming-convention,true,,retain: unavailable natively,934,3,"[[2,{""selector"":""variable"",""modifiers"":[""const""],""format"":[""strictCamelCase"",""StrictPascalCase"",""UPPER_CASE""],""leadingUnderscore"":""allow"",""trailingUnderscore"":""forbid""},{""selector"":""variableLike"",""format"":[""strictCamelCase""],""leadingUnderscore"":""allow"",""trailingUnderscore"":""forbid""},{""selector"":""memberLike"",""format"":[""strictCamelCase""],""leadingUnderscore"":""allow"",""trailingUnderscore"":""forbid""},{""selector"":""typeLike"",""format"":[""StrictPascalCase""],""leadingUnderscore"":""forbid"",""trailingUnderscore"":""forbid""},{""selector"":""typeLike"",""filter"":{""regex"":""(HTML|UI|JSON)"",""match"":true},""format"":[""PascalCase""],""leadingUnderscore"":""forbid"",""trailingUnderscore"":""forbid""},{""selector"":[""variableLike"",""memberLike""],""filter"":{""regex"":""(HTML|UI|JSON|DPad)"",""match"":true},""format"":[""camelCase"",""PascalCase""],""leadingUnderscore"":""allow"",""trailingUnderscore"":""forbid""},{""selector"":""variable"",""modifiers"":[""const""],""filter"":{""regex"":""(HTML|UI|JSON|DPad)"",""match"":true},""format"":[""camelCase"",""PascalCase"",""UPPER_CASE""],""leadingUnderscore"":""allow"",""trailingUnderscore"":""forbid""},{""selector"":""typeProperty"",""filter"":{""regex"":""^[A-Z][A-Z0-9_]*$"",""match"":true},""format"":[""UPPER_CASE""],""leadingUnderscore"":""forbid"",""trailingUnderscore"":""forbid""},{""selector"":""enumMember"",""format"":null,""custom"":{""regex"":""^[A-Z][A-Za-z0-9]*$|^[a-z][A-Za-z0-9]*$|^[A-Z][A-Z0-9_]*$"",""match"":true},""leadingUnderscore"":""forbid"",""trailingUnderscore"":""forbid""}],[2,{""selector"":[""typeProperty"",""objectLiteralProperty""],""format"":null,""leadingUnderscore"":""allowDouble""}],[2,{""selector"":""parameter"",""format"":[""strictCamelCase"",""StrictPascalCase""],""leadingUnderscore"":""allow""}]]",Original ESLint implementation remains active.
+@typescript-eslint/no-array-constructor,false,no-array-constructor,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-array-delete,true,typescript/no-array-delete,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-base-to-string,true,typescript/no-base-to-string,native hybrid candidate,2293,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-confusing-non-null-assertion,false,typescript/no-confusing-non-null-assertion,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-confusing-void-expression,true,typescript/no-confusing-void-expression,native hybrid candidate,952,1,"[[2,{""ignoreArrowShorthand"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-deprecated,true,typescript/no-deprecated,retain: observed diagnostic mismatch,952,1,[[2]],Current source produces a native diagnostic while original ESLint is clean.
+@typescript-eslint/no-dupe-class-members,false,no-dupe-class-members,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-duplicate-enum-values,false,typescript/no-duplicate-enum-values,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-duplicate-type-constituents,true,typescript/no-duplicate-type-constituents,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-empty-function,false,no-empty-function,retain: option schema differs,1533,2,"[[2,{""allow"":[]}],[1,{""allow"":[""private-constructors"",""protected-constructors"",""decoratedFunctions"",""overrideMethods""]}]]",One or more resolved option variants do not match native schema.
+@typescript-eslint/no-empty-object-type,false,typescript/no-empty-object-type,native hybrid candidate,3353,2,"[[2],[2,{""allowInterfaces"":""always"",""allowObjectTypes"":""always""}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-explicit-any,false,typescript/no-explicit-any,native hybrid candidate,1726,2,"[[2],[2,{""ignoreRestArgs"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-extra-non-null-assertion,false,typescript/no-extra-non-null-assertion,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-floating-promises,true,typescript/no-floating-promises,native hybrid candidate,2641,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-for-in-array,true,typescript/no-for-in-array,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-implied-eval,true,typescript/no-implied-eval,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-inferrable-types,false,typescript/no-inferrable-types,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-meaningless-void-operator,true,typescript/no-meaningless-void-operator,native hybrid candidate,952,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-misused-new,false,typescript/no-misused-new,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-misused-promises,true,typescript/no-misused-promises,native hybrid candidate,2291,2,"[[2],[2,{""checksVoidReturn"":{""arguments"":false,""attributes"":false}}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-misused-spread,true,typescript/no-misused-spread,native hybrid candidate,952,1,"[[2,{""allow"":[""string""]}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-mixed-enums,true,typescript/no-mixed-enums,native hybrid candidate,952,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-namespace,false,typescript/no-namespace,native hybrid candidate,3350,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-non-null-asserted-nullish-coalescing,false,typescript/no-non-null-asserted-nullish-coalescing,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-non-null-asserted-optional-chain,false,typescript/no-non-null-asserted-optional-chain,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-non-null-assertion,false,typescript/no-non-null-assertion,native hybrid candidate,338,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-redundant-type-constituents,true,typescript/no-redundant-type-constituents,native hybrid candidate,1033,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-require-imports,false,typescript/no-require-imports,native hybrid candidate,2986,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-shadow,false,no-shadow,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-this-alias,false,typescript/no-this-alias,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unnecessary-boolean-literal-compare,true,typescript/no-unnecessary-boolean-literal-compare,native hybrid candidate,952,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unnecessary-condition,true,typescript/no-unnecessary-condition,retain: nursery implementation,431,1,[[2]],Unstable native implementation excluded.
+@typescript-eslint/no-unnecessary-template-expression,true,typescript/no-unnecessary-template-expression,native hybrid candidate,952,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unnecessary-type-arguments,true,typescript/no-unnecessary-type-arguments,native hybrid candidate,952,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unnecessary-type-assertion,true,typescript/no-unnecessary-type-assertion,retain: observed diagnostic mismatch,1033,1,[[2]],Current source produces a native diagnostic while original ESLint is clean.
+@typescript-eslint/no-unnecessary-type-constraint,false,typescript/no-unnecessary-type-constraint,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unsafe-argument,true,typescript/no-unsafe-argument,native hybrid candidate,959,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unsafe-assignment,true,typescript/no-unsafe-assignment,native hybrid candidate,727,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unsafe-call,true,typescript/no-unsafe-call,native hybrid candidate,959,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unsafe-declaration-merging,false,typescript/no-unsafe-declaration-merging,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unsafe-enum-comparison,true,typescript/no-unsafe-enum-comparison,native hybrid candidate,2102,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unsafe-function-type,false,typescript/no-unsafe-function-type,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unsafe-member-access,true,typescript/no-unsafe-member-access,native hybrid candidate,959,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unsafe-return,true,typescript/no-unsafe-return,native hybrid candidate,959,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unsafe-unary-minus,true,typescript/no-unsafe-unary-minus,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unused-expressions,false,no-unused-expressions,native hybrid candidate,3353,1,"[[2,{""allowShortCircuit"":false,""allowTaggedTemplates"":false,""allowTernary"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-unused-vars,false,no-unused-vars,native hybrid candidate,100,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-useless-constructor,false,no-useless-constructor,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-useless-default-assignment,true,typescript/no-useless-default-assignment,native hybrid candidate,952,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/no-wrapper-object-types,false,typescript/no-wrapper-object-types,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/non-nullable-type-assertion-style,true,typescript/non-nullable-type-assertion-style,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/only-throw-error,true,typescript/only-throw-error,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-as-const,false,typescript/prefer-as-const,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-find,true,typescript/prefer-find,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-for-of,false,typescript/prefer-for-of,native hybrid candidate,2297,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-function-type,false,typescript/prefer-function-type,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-includes,true,typescript/prefer-includes,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-literal-enum-member,false,typescript/prefer-literal-enum-member,retain: observed diagnostic mismatch,1055,1,"[[2,{""allowBitwiseExpressions"":true}]]",Current source produces a native diagnostic while original ESLint is clean.
+@typescript-eslint/prefer-namespace-keyword,false,typescript/prefer-namespace-keyword,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-nullish-coalescing,true,typescript/prefer-nullish-coalescing,native hybrid candidate,1870,2,"[[2],[2,{""ignoreIfStatements"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-optional-chain,true,typescript/prefer-optional-chain,retain: nursery implementation,2102,1,[[2]],Unstable native implementation excluded.
+@typescript-eslint/prefer-promise-reject-errors,true,typescript/prefer-promise-reject-errors,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-reduce-type-parameter,true,typescript/prefer-reduce-type-parameter,native hybrid candidate,952,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-regexp-exec,true,typescript/prefer-regexp-exec,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-return-this-type,true,typescript/prefer-return-this-type,native hybrid candidate,952,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/prefer-string-starts-ends-with,true,typescript/prefer-string-starts-ends-with,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/related-getter-setter-pairs,true,typescript/related-getter-setter-pairs,native hybrid candidate,952,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/require-await,true,typescript/require-await,native hybrid candidate,1033,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/restrict-plus-operands,true,typescript/restrict-plus-operands,native hybrid candidate,2291,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/restrict-template-expressions,true,typescript/restrict-template-expressions,native hybrid candidate,2291,2,"[[2],[2,{""allowNumber"":true,""allowBoolean"":false,""allowAny"":false,""allowNullish"":false,""allowRegExp"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/return-await,true,typescript/return-await,native hybrid candidate,952,1,"[[2,""in-try-catch""]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/strict-boolean-expressions,true,typescript/strict-boolean-expressions,native hybrid candidate,441,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/switch-exhaustiveness-check,true,typescript/switch-exhaustiveness-check,native hybrid candidate,952,1,"[[2,{""considerDefaultExhaustiveForUnions"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/triple-slash-reference,false,typescript/triple-slash-reference,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/unbound-method,true,typescript/unbound-method,native hybrid candidate,959,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/unified-signatures,false,typescript/unified-signatures,native hybrid candidate,1054,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+@typescript-eslint/use-unknown-in-catch-callback-variable,true,typescript/use-unknown-in-catch-callback-variable,native hybrid candidate,952,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+arrow-body-style,false,arrow-body-style,native hybrid candidate,3353,1,"[[2,""as-needed""]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+astro/jsx-a11y/alt-text,false,,retain: unavailable natively,175,1,"[[2,{""elements"":[""img"",""object"",""area"",""input[type=\""image\""]""]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/anchor-has-content,false,,retain: unavailable natively,175,1,"[[2,{""components"":[]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/anchor-is-valid,false,,retain: unavailable natively,175,1,"[[2,{""components"":[],""specialLink"":[],""aspects"":[""noHref"",""invalidHref"",""preferButton""]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/aria-activedescendant-has-tabindex,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/jsx-a11y/aria-props,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/jsx-a11y/aria-proptypes,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/jsx-a11y/aria-role,false,,retain: unavailable natively,175,1,"[[2,{""allowedInvalidRoles"":[],""ignoreNonDOM"":false}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/aria-unsupported-elements,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/jsx-a11y/autocomplete-valid,false,,retain: unavailable natively,175,1,"[[2,{""inputComponents"":[]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/click-events-have-key-events,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/jsx-a11y/heading-has-content,false,,retain: unavailable natively,175,1,"[[2,{""components"":[]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/html-has-lang,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/jsx-a11y/iframe-has-title,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/jsx-a11y/img-redundant-alt,false,,retain: unavailable natively,175,1,"[[2,{""components"":[],""words"":[]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/interactive-supports-focus,false,,retain: unavailable natively,175,1,"[[2,{""tabbable"":[""button"",""checkbox"",""link"",""progressbar"",""searchbox"",""slider"",""spinbutton"",""switch"",""textbox""]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/label-has-associated-control,false,,retain: unavailable natively,175,1,"[[2,{""labelComponents"":[],""labelAttributes"":[],""controlComponents"":[],""assert"":""either"",""depth"":2}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/media-has-caption,false,,retain: unavailable natively,175,1,"[[2,{""audio"":[],""video"":[],""track"":[]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/mouse-events-have-key-events,false,,retain: unavailable natively,175,1,"[[2,{""hoverInHandlers"":[""onMouseOver""],""hoverOutHandlers"":[""onMouseOut""]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/no-access-key,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/jsx-a11y/no-autofocus,false,,retain: unavailable natively,175,1,"[[2,{""ignoreNonDOM"":false}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/no-distracting-elements,false,,retain: unavailable natively,175,1,"[[2,{""elements"":[""marquee"",""blink""]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/no-interactive-element-to-noninteractive-role,false,,retain: unavailable natively,175,1,"[[2,{}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/no-noninteractive-element-interactions,false,,retain: unavailable natively,175,1,"[[2,{""handlers"":[""onFocus"",""onBlur"",""onLoad"",""onError"",""onKeyDown"",""onKeyPress"",""onKeyUp"",""onClick"",""onContextMenu"",""onDblClick"",""onDoubleClick"",""onDrag"",""onDragEnd"",""onDragEnter"",""onDragExit"",""onDragLeave"",""onDragOver"",""onDragStart"",""onDrop"",""onMouseDown"",""onMouseEnter"",""onMouseLeave"",""onMouseMove"",""onMouseOut"",""onMouseOver"",""onMouseUp""],""body"":[""onError"",""onLoad""],""iframe"":[""onError"",""onLoad""],""img"":[""onError"",""onLoad""]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/no-noninteractive-element-to-interactive-role,false,,retain: unavailable natively,175,1,"[[2,{}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/no-noninteractive-tabindex,false,,retain: unavailable natively,175,1,"[[2,{""roles"":[],""tags"":[]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/no-redundant-roles,false,,retain: unavailable natively,175,1,"[[2,{}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/no-static-element-interactions,false,,retain: unavailable natively,175,1,"[[2,{""handlers"":[""onFocus"",""onBlur"",""onKeyDown"",""onKeyPress"",""onKeyUp"",""onClick"",""onContextMenu"",""onDblClick"",""onDoubleClick"",""onDrag"",""onDragEnd"",""onDragEnter"",""onDragExit"",""onDragLeave"",""onDragOver"",""onDragStart"",""onDrop"",""onMouseDown"",""onMouseEnter"",""onMouseLeave"",""onMouseMove"",""onMouseOut"",""onMouseOver"",""onMouseUp""]}]]",Original ESLint implementation remains active.
+astro/jsx-a11y/role-has-required-aria-props,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/jsx-a11y/role-supports-aria-props,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/jsx-a11y/scope,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/jsx-a11y/tabindex-no-positive,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/missing-client-only-directive-value,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/no-conflict-set-directives,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/no-deprecated-astro-canonicalurl,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/no-deprecated-astro-fetchcontent,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/no-deprecated-astro-resolve,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/no-deprecated-getentrybyslug,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/no-exports-from-components,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/no-prerender-export-outside-pages,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/no-set-html-directive,false,,retain: unavailable natively,87,1,[[2]],Original ESLint implementation remains active.
+astro/no-unused-define-vars-in-style,false,,retain: unavailable natively,175,1,[[2]],Original ESLint implementation remains active.
+astro/prefer-class-list-directive,false,,retain: unavailable natively,87,1,[[2]],Original ESLint implementation remains active.
+astro/valid-compile,false,,retain: unavailable natively,87,1,[[2]],Original ESLint implementation remains active.
+complexity,false,complexity,native hybrid candidate,488,1,"[[2,20]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+constructor-super,false,constructor-super,native hybrid candidate,87,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+curly,false,curly,native hybrid candidate,3353,1,"[[2,""all""]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+default-case-last,false,default-case-last,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+eqeqeq,false,eqeqeq,native hybrid candidate,1475,1,"[[2,""always"",{""null"":""ignore""}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+exojs-engine/no-allocation-in-hot-hook,false,,retain: unavailable natively,602,1,"[[2,{""methods"":[""getOutputBounds"",""_notifyEnclosingRetainedGroup""]}]]",Original ESLint implementation remains active.
+exojs/migration-chain,false,,retain: unavailable natively,2310,1,[[2]],Original ESLint implementation remains active.
+exojs/migration-purity,false,,retain: unavailable natively,2310,1,[[2]],Original ESLint implementation remains active.
+exojs/migration-step,false,,retain: unavailable natively,2310,1,[[2]],Original ESLint implementation remains active.
+exojs/no-async-render-hook,false,,retain: unavailable natively,1050,1,[[2]],Original ESLint implementation remains active.
+exojs/no-async-update,false,,retain: unavailable natively,1050,1,[[2]],Original ESLint implementation remains active.
+exojs/no-deprecated-api,false,,retain: unavailable natively,1050,1,"[[2,{""source"":""@codexo/exojs"",""deprecated"":{""Ktx2Payload"":""Use `levels[0]`. Kept for existing parser consumers. */ readonly width: number; /** @deprecated Use `levels[0]`. Kept for existing parser consumers. */ readonly height: number; /** @deprecated Use `levels[0]`. Kept for existing parser consumers. */ readonly data: Uint8Array; readonly levels: readonly Rgba8TextureLevel[]; readonly colorSpace: TextureColorSpace; readonly alphaMode: TextureAlphaMode; } /** What {@link parseKtx2} produces.""}}]]",Original ESLint implementation remains active.
+exojs/no-self-enabled-check,false,,retain: unavailable natively,1050,1,[[2]],Original ESLint implementation remains active.
+exojs/no-unregistered-system,false,,retain: unavailable natively,1050,1,[[2]],Original ESLint implementation remains active.
+exojs/require-super-destroy,false,,retain: unavailable natively,1050,1,[[2]],Original ESLint implementation remains active.
+for-direction,false,for-direction,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+func-style,false,func-style,native hybrid candidate,3353,1,"[[2,""expression"",{""allowArrowFunctions"":false,""allowTypeAnnotation"":false,""overrides"":{}}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+getter-return,false,getter-return,native hybrid candidate,3353,1,"[[2,{""allowImplicit"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+guard-for-in,false,guard-for-in,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+logical-assignment-operators,false,logical-assignment-operators,native hybrid candidate,3353,1,"[[2,""always"",{""enforceForIfStatements"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+max-lines,false,max-lines,native hybrid candidate,1052,5,"[[2,{""max"":999,""skipBlankLines"":true,""skipComments"":true}],[2,{""max"":1034,""skipBlankLines"":true,""skipComments"":true}],[2,{""max"":1055,""skipBlankLines"":true,""skipComments"":true}],[2,{""max"":1000,""skipBlankLines"":true,""skipComments"":true}],[2,{""max"":1016,""skipBlankLines"":true,""skipComments"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-async-promise-executor,false,no-async-promise-executor,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-caller,false,no-caller,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-case-declarations,false,no-case-declarations,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-class-assign,false,no-class-assign,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-compare-neg-zero,false,no-compare-neg-zero,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-cond-assign,false,no-cond-assign,native hybrid candidate,3353,1,"[[2,""except-parens""]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-console,false,no-console,native hybrid candidate,1016,2,"[[2,{}],[2,{""allow"":[""warn"",""error""]}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-const-assign,false,no-const-assign,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-constant-binary-expression,false,no-constant-binary-expression,native hybrid candidate,3353,1,"[[2,{""checkRelationalComparisons"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-constant-condition,false,no-constant-condition,native hybrid candidate,3353,1,"[[2,{""checkLoops"":""allExceptWhileTrue""}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-control-regex,false,no-control-regex,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-debugger,false,no-debugger,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-delete-var,false,no-delete-var,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-dupe-args,false,,retain: unavailable natively,3353,1,[[2]],Original ESLint implementation remains active.
+no-dupe-class-members,false,no-dupe-class-members,native hybrid candidate,87,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-dupe-else-if,false,no-dupe-else-if,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-dupe-keys,false,no-dupe-keys,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-duplicate-case,false,no-duplicate-case,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-empty,false,no-empty,native hybrid candidate,3353,1,"[[2,{""allowEmptyCatch"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-empty-character-class,false,no-empty-character-class,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-empty-pattern,false,no-empty-pattern,native hybrid candidate,3353,1,"[[2,{""allowObjectPatternsAsParameters"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-empty-static-block,false,no-empty-static-block,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-eval,false,no-eval,native hybrid candidate,1056,1,"[[2,{""allowIndirect"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-ex-assign,false,no-ex-assign,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-extra-bind,false,no-extra-bind,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-extra-boolean-cast,false,no-extra-boolean-cast,native hybrid candidate,3353,1,"[[2,{}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-fallthrough,false,no-fallthrough,native hybrid candidate,3353,1,"[[2,{""allowEmptyCase"":false,""reportUnusedFallthroughComment"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-func-assign,false,no-func-assign,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-global-assign,false,no-global-assign,native hybrid candidate,3353,1,"[[2,{""exceptions"":[]}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-import-assign,false,no-import-assign,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-invalid-regexp,false,no-invalid-regexp,native hybrid candidate,3353,1,"[[2,{}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-irregular-whitespace,false,no-irregular-whitespace,native hybrid candidate,3353,1,"[[2,{""skipComments"":false,""skipJSXText"":false,""skipRegExps"":false,""skipStrings"":true,""skipTemplates"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-label-var,false,no-label-var,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-loss-of-precision,false,no-loss-of-precision,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-misleading-character-class,false,no-misleading-character-class,native hybrid candidate,3353,1,"[[2,{""allowEscape"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-nested-ternary,false,no-nested-ternary,native hybrid candidate,1124,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-new-func,false,no-new-func,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-new-native-nonconstructor,false,no-new-native-nonconstructor,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-new-wrappers,false,no-new-wrappers,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-nonoctal-decimal-escape,false,no-nonoctal-decimal-escape,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-obj-calls,false,no-obj-calls,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-octal,false,,retain: unavailable natively,3353,1,[[2]],Original ESLint implementation remains active.
+no-promise-executor-return,false,no-promise-executor-return,native hybrid candidate,1056,1,"[[2,{""allowVoid"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-prototype-builtins,false,no-prototype-builtins,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-redeclare,false,no-redeclare,native hybrid candidate,87,1,"[[2,{""builtinGlobals"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-regex-spaces,false,no-regex-spaces,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-restricted-globals,false,no-restricted-globals,native hybrid candidate,14,2,"[[2,""window"",""document"",""localStorage"",""sessionStorage"",""alert"",""confirm"",""prompt""],[2,""window"",""document"",""navigator"",""fetch"",""localStorage"",""sessionStorage"",""alert"",""confirm"",""prompt""]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-restricted-imports,false,no-restricted-imports,native hybrid candidate,602,1,"[[2,{""patterns"":[{""group"":[""@/*""],""message"":""The '@/' alias was removed. Use '#dir/X' package-internal subpath imports (or './X' for the same directory).""},{""group"":[""../*"",""../**""],""message"":""No parent-relative imports. Use '#dir/X' for cross-directory or './X' for the same directory.""},{""group"":[""audio/*"",""core/*"",""input/*"",""math/*"",""animation/*"",""extensions/*"",""debug/*"",""particles/*"",""physics/*"",""rendering/*"",""resources/*"",""vendor/*""],""message"":""Package-internal imports use the '#' prefix \u2014 e.g. '#core/X' instead of 'core/X'.""},{""group"":[""@codexo/exojs-*"",""@codexo/exojs/src"",""@codexo/exojs/src/*"",""@codexo/exojs-*/src"",""@codexo/exojs-*/src/*""],""message"":""Do not import another package via its /src internals; Core must not import extension packages.""}]}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-restricted-syntax,false,,retain: unavailable natively,1056,1,"[[2,{""selector"":""MethodDefinition[value.async=true][key.name=\""init\""]"",""message"":""Scene.init() must be synchronous \u2014 an async override runs after activation instead of gating it. Move asynchronous setup into load() instead.""}]]",Original ESLint implementation remains active.
+no-self-assign,false,no-self-assign,native hybrid candidate,3353,1,"[[2,{""props"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-self-compare,false,no-self-compare,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-sequences,false,no-sequences,native hybrid candidate,1056,1,"[[2,{""allowInParentheses"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-setter-return,false,no-setter-return,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-shadow-restricted-names,false,no-shadow-restricted-names,native hybrid candidate,3353,1,"[[2,{""reportGlobalThis"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-sparse-arrays,false,no-sparse-arrays,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-template-curly-in-string,false,no-template-curly-in-string,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-this-before-super,false,no-this-before-super,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-unassigned-vars,false,no-unassigned-vars,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-undef,false,no-undef,retain: nursery implementation,87,1,"[[2,{""typeof"":false}]]",Unstable native implementation excluded.
+no-undef-init,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+no-unmodified-loop-condition,false,no-unmodified-loop-condition,native hybrid candidate,1056,1,"[[2,{""checkConditionalExpressions"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-unreachable,false,no-unreachable,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-unreachable-loop,false,no-unreachable-loop,retain: nursery implementation,1056,1,"[[2,{""ignore"":[]}]]",Unstable native implementation excluded.
+no-unsafe-finally,false,no-unsafe-finally,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-unsafe-negation,false,no-unsafe-negation,native hybrid candidate,3353,1,"[[2,{""enforceForOrderingRelations"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-unsafe-optional-chaining,false,no-unsafe-optional-chaining,retain: observed diagnostic mismatch,3353,1,"[[2,{""disallowArithmeticOperators"":false}]]",Current source produces a native diagnostic while original ESLint is clean.
+no-unused-labels,false,no-unused-labels,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-unused-private-class-members,false,no-unused-private-class-members,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-useless-assignment,false,no-useless-assignment,retain: nursery implementation,3353,1,[[2]],Unstable native implementation excluded.
+no-useless-backreference,false,no-useless-backreference,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-useless-catch,false,no-useless-catch,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-useless-escape,false,no-useless-escape,native hybrid candidate,3353,1,"[[2,{""allowRegexCharacters"":[]}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-useless-return,false,no-useless-return,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-var,false,no-var,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+no-with,false,no-with,native hybrid candidate,87,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+object-shorthand,false,object-shorthand,native hybrid candidate,3353,1,"[[2,""always""]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+prefer-arrow-callback,false,prefer-arrow-callback,native hybrid candidate,1726,1,"[[2,{""allowNamedFunctions"":false,""allowUnboundThis"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+prefer-const,false,prefer-const,native hybrid candidate,3353,1,"[[2,{""destructuring"":""any"",""ignoreReadBeforeAssign"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+prefer-object-spread,false,prefer-object-spread,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+prefer-rest-params,false,prefer-rest-params,native hybrid candidate,3266,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+prefer-spread,false,prefer-spread,native hybrid candidate,3266,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+prefer-template,false,prefer-template,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+preserve-caught-error,false,preserve-caught-error,retain: option schema differs,3353,1,"[[2,{""requireCatchParameter"":false,""errorClassNames"":[]}]]",One or more resolved option variants do not match native schema.
+radix,false,radix,native hybrid candidate,1124,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+react-hooks/config,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+react-hooks/error-boundaries,false,react/error-boundaries,retain: absent from generated native config,74,1,[[2]],Nested React configuration stays on ESLint.
+react-hooks/exhaustive-deps,false,react/exhaustive-deps,retain: absent from generated native config,74,1,[[2]],Nested React configuration stays on ESLint.
+react-hooks/gating,false,,retain: unavailable natively,74,1,[[2]],Original ESLint implementation remains active.
+react-hooks/globals,false,react/globals,retain: absent from generated native config,74,1,[[2]],Nested React configuration stays on ESLint.
+react-hooks/immutability,false,react/immutability,retain: absent from generated native config,66,1,[[2]],Nested React configuration stays on ESLint.
+react-hooks/incompatible-library,false,react/incompatible-library,retain: absent from generated native config,74,1,[[1]],Nested React configuration stays on ESLint.
+react-hooks/preserve-manual-memoization,false,react/preserve-manual-memoization,retain: absent from generated native config,74,1,[[2]],Nested React configuration stays on ESLint.
+react-hooks/purity,false,react/purity,retain: absent from generated native config,74,1,[[2]],Nested React configuration stays on ESLint.
+react-hooks/refs,false,react/refs,retain: absent from generated native config,74,1,[[2]],Nested React configuration stays on ESLint.
+react-hooks/rules-of-hooks,false,react/rules-of-hooks,retain: absent from generated native config,74,1,[[2]],Nested React configuration stays on ESLint.
+react-hooks/set-state-in-effect,false,react/set-state-in-effect,retain: absent from generated native config,66,1,[[2]],Nested React configuration stays on ESLint.
+react-hooks/set-state-in-render,false,react/set-state-in-render,retain: absent from generated native config,74,1,[[2]],Nested React configuration stays on ESLint.
+react-hooks/static-components,false,react/static-components,retain: absent from generated native config,74,1,[[2]],Nested React configuration stays on ESLint.
+react-hooks/unsupported-syntax,false,react/unsupported-syntax,retain: absent from generated native config,74,1,[[1]],Nested React configuration stays on ESLint.
+react-hooks/use-memo,false,react/use-memo,retain: absent from generated native config,74,1,[[2]],Nested React configuration stays on ESLint.
+require-yield,false,require-yield,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+security/detect-bidi-characters,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+security/detect-buffer-noassert,false,,retain: unavailable natively,1056,1,[[1]],Original ESLint implementation remains active.
+security/detect-child-process,false,,retain: unavailable natively,1056,1,[[1]],Original ESLint implementation remains active.
+security/detect-disable-mustache-escape,false,,retain: unavailable natively,1056,1,[[1]],Original ESLint implementation remains active.
+security/detect-eval-with-expression,false,,retain: unavailable natively,1056,1,[[1]],Original ESLint implementation remains active.
+security/detect-new-buffer,false,,retain: unavailable natively,1056,1,[[1]],Original ESLint implementation remains active.
+security/detect-no-csrf-before-method-override,false,,retain: unavailable natively,1056,1,[[1]],Original ESLint implementation remains active.
+security/detect-non-literal-fs-filename,false,,retain: unavailable natively,602,1,[[1]],Original ESLint implementation remains active.
+security/detect-non-literal-require,false,,retain: unavailable natively,1056,1,[[1]],Original ESLint implementation remains active.
+security/detect-pseudoRandomBytes,false,,retain: unavailable natively,1056,1,[[1]],Original ESLint implementation remains active.
+security/detect-unsafe-regex,false,,retain: unavailable natively,1056,1,[[1]],Original ESLint implementation remains active.
+simple-import-sort/exports,false,,retain: unavailable natively,3353,1,[[2]],Original ESLint implementation remains active.
+simple-import-sort/imports,false,,retain: unavailable natively,3353,1,[[2]],Original ESLint implementation remains active.
+unicorn/catch-error-name,false,unicorn/catch-error-name,native hybrid candidate,1056,1,"[[2,{""name"":""error"",""ignore"":[]}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/consistent-date-clone,false,unicorn/consistent-date-clone,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/consistent-empty-array-spread,false,unicorn/consistent-empty-array-spread,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/consistent-existence-index-check,false,unicorn/consistent-existence-index-check,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/consistent-json-file-read,false,,retain: unavailable natively,1056,1,"[[2,""string""]]",Original ESLint implementation remains active.
+unicorn/dom-node-dataset,false,,retain: unavailable natively,1056,1,"[[2,{""preferAttributes"":false}]]",Original ESLint implementation remains active.
+unicorn/error-message,false,unicorn/error-message,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/escape-case,false,unicorn/escape-case,retain: option schema differs,3353,1,"[[2,""uppercase""]]",One or more resolved option variants do not match native schema.
+unicorn/explicit-length-check,false,unicorn/explicit-length-check,native hybrid candidate,1056,1,"[[2,{""non-zero"":""greater-than""}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/explicit-timer-delay,false,unicorn/explicit-timer-delay,native hybrid candidate,1056,1,"[[2,""always""]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/filename-case,false,unicorn/filename-case,native hybrid candidate,602,1,"[[2,{""cases"":{""camelCase"":true,""pascalCase"":true},""ignore"":[{""regexp"":""\\.d\\.ts$"",""flags"":""u""},{""regexp"":""^renderer-sdk\\.ts$"",""flags"":""u""},{""regexp"":""^(?:HTMLText|UIClipBox|UIRoot)\\.ts$"",""flags"":""u""}]}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-accidental-bitwise-operator,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-array-concat-in-loop,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-array-fill-with-reference-type,false,unicorn/no-array-fill-with-reference-type,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-array-from-fill,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-array-sort-for-min-max,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-async-promise-finally,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-await-expression-member,false,unicorn/no-await-expression-member,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-boolean-sort-comparator,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-canvas-to-image,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-chained-comparison,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-collection-bracket-access,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-confusing-array-splice,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-confusing-array-with,false,unicorn/no-confusing-array-with,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-document-cookie,false,unicorn/no-document-cookie,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-double-comparison,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-duplicate-logical-operands,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-duplicate-set-values,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-for-each,false,,retain: unavailable natively,1054,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-impossible-length-comparison,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-incorrect-query-selector,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-incorrect-template-string-interpolation,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-instanceof-builtins,false,unicorn/no-instanceof-builtins,native hybrid candidate,1056,1,"[[2,{""useErrorIsError"":false,""strategy"":""loose"",""include"":[],""exclude"":[]}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-invalid-argument-count,false,,retain: unavailable natively,1056,1,"[[2,{}]]",Original ESLint implementation remains active.
+unicorn/no-invalid-character-comparison,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-invalid-fetch-options,false,unicorn/no-invalid-fetch-options,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-invalid-remove-event-listener,false,unicorn/no-invalid-remove-event-listener,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-invalid-well-known-symbol-methods,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-late-current-target-access,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-late-event-control,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-lonely-if,false,unicorn/no-lonely-if,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-loop-iterable-mutation,false,,retain: unavailable natively,1055,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-magic-array-flat-depth,false,unicorn/no-magic-array-flat-depth,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-mismatched-map-key,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-misrefactored-assignment,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-multiple-promise-resolver-calls,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-negated-comparison,false,,retain: unavailable natively,1056,1,"[[2,{""checkLogicalExpressions"":false}]]",Original ESLint implementation remains active.
+unicorn/no-nonstandard-builtin-properties,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-object-as-default-parameter,false,unicorn/no-object-as-default-parameter,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-object-methods-with-collections,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-optional-chaining-on-undeclared-variable,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-redundant-comparison,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-selector-as-dom-name,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-shorthand-property-overrides,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-single-promise-in-promise-methods,false,unicorn/no-single-promise-in-promise-methods,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-this-assignment,false,unicorn/no-this-assignment,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-typeof-undefined,false,unicorn/no-typeof-undefined,native hybrid candidate,1056,1,"[[2,{""checkGlobalVariables"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-uncalled-method,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-undeclared-class-members,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-unnecessary-array-flat-map,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-unnecessary-array-splice-count,false,unicorn/no-unnecessary-array-splice-count,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-unnecessary-await,false,unicorn/no-unnecessary-await,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-unnecessary-fetch-options,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-unnecessary-nested-ternary,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-unnecessary-string-trim,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-unreadable-object-destructuring,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-unsafe-buffer-conversion,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-unsafe-dom-html,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-unsafe-promise-all-settled-values,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-unused-array-method-return,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-useless-boolean-cast,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-useless-compound-assignment,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-useless-continue,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-useless-delete-check,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-useless-fallback-in-spread,false,unicorn/no-useless-fallback-in-spread,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-useless-length-check,false,unicorn/no-useless-length-check,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-useless-logical-operand,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-useless-override,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-useless-promise-resolve-reject,false,unicorn/no-useless-promise-resolve-reject,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/no-useless-recursion,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-useless-undefined,false,unicorn/no-useless-undefined,retain: observed diagnostic mismatch,3353,2,"[[2,{""checkArguments"":true,""checkArrowFunctionBody"":false}],[2,{""checkArguments"":false,""checkArrowFunctionBody"":false}]]",Current source produces a native diagnostic while original ESLint is clean.
+unicorn/no-xor-as-exponentiation,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/no-zero-fractions,false,unicorn/no-zero-fractions,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-abort-signal-any,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-abort-signal-timeout,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-aggregate-error,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-array-find,false,unicorn/prefer-array-find,retain: option schema differs,1056,1,"[[2,{""checkFromLast"":true}]]",One or more resolved option variants do not match native schema.
+unicorn/prefer-array-flat,false,unicorn/prefer-array-flat,retain: option schema differs,1056,1,"[[2,{""functions"":[]}]]",One or more resolved option variants do not match native schema.
+unicorn/prefer-array-flat-map,false,unicorn/prefer-array-flat-map,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-array-from-range,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-array-index-of,false,unicorn/prefer-array-index-of,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-array-iterable-methods,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-array-some,false,unicorn/prefer-array-some,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-blob-reading-methods,false,unicorn/prefer-blob-reading-methods,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-block-statement-over-iife,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-boolean-return,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-date-now,false,unicorn/prefer-date-now,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-default-parameters,false,unicorn/prefer-default-parameters,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-dom-node-append,false,unicorn/prefer-dom-node-append,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-dom-node-html-methods,false,,retain: unavailable natively,1056,1,"[[2,{""checkGetHTML"":true,""checkSetHTML"":false}]]",Original ESLint implementation remains active.
+unicorn/prefer-dom-node-replace-children,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-event-target,false,unicorn/prefer-event-target,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-flat-math-min-max,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-global-this,false,unicorn/prefer-global-this,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-has-check,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-identifier-import-export-specifiers,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-includes,false,unicorn/prefer-includes,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-location-assign,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-logical-operator-over-ternary,false,unicorn/prefer-logical-operator-over-ternary,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-map-from-entries,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-math-abs,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-native-coercion-functions,false,unicorn/prefer-native-coercion-functions,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-negative-index,false,unicorn/prefer-negative-index,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-node-protocol,false,unicorn/prefer-node-protocol,native hybrid candidate,1558,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-object-destructuring-defaults,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-object-from-entries,false,unicorn/prefer-object-from-entries,native hybrid candidate,1056,1,"[[2,{""functions"":[]}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-optional-catch-binding,false,unicorn/prefer-optional-catch-binding,native hybrid candidate,3353,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-path2d,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-queue-microtask,false,,retain: unavailable natively,1056,1,"[[2,{""checkSetImmediate"":false,""checkSetTimeout"":false}]]",Original ESLint implementation remains active.
+unicorn/prefer-regexp-test,false,unicorn/prefer-regexp-test,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-simplified-conditions,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-single-array-predicate,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-single-replace,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-spread,false,unicorn/prefer-spread,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-string-match-all,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-string-pad-start-end,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-string-replace-all,false,unicorn/prefer-string-replace-all,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-string-slice,false,unicorn/prefer-string-slice,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-string-starts-ends-with,false,unicorn/prefer-string-starts-ends-with,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-structured-clone,false,unicorn/prefer-structured-clone,native hybrid candidate,1056,1,"[[2,{""functions"":[]}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/prefer-toggle-attribute,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-unary-minus,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-unicode-code-point-escapes,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-url-can-parse,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-url-search-parameters,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/prefer-while-loop-condition,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/relative-url-style,false,unicorn/relative-url-style,native hybrid candidate,1056,1,"[[2,""never""]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/require-array-join-separator,false,unicorn/require-array-join-separator,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/require-number-to-fixed-digits-argument,false,unicorn/require-number-to-fixed-digits-argument,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/require-passive-events,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/require-proxy-trap-boolean-return,false,,retain: unavailable natively,1056,1,[[2]],Original ESLint implementation remains active.
+unicorn/text-encoding-identifier-case,false,unicorn/text-encoding-identifier-case,native hybrid candidate,1056,1,"[[2,{""withDash"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unicorn/throw-new-error,false,unicorn/throw-new-error,native hybrid candidate,1056,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+unused-imports/no-unused-imports,false,,retain: unavailable natively,3353,1,[[2]],Original ESLint implementation remains active.
+unused-imports/no-unused-vars,false,,retain: unavailable natively,1303,2,"[[2,{""argsIgnorePattern"":""^_"",""varsIgnorePattern"":""^_""}],[1,{""argsIgnorePattern"":""^_"",""caughtErrorsIgnorePattern"":""^_"",""destructuredArrayIgnorePattern"":""^_"",""varsIgnorePattern"":""^_"",""ignoreRestSiblings"":true}]]",Original ESLint implementation remains active.
+use-isnan,false,use-isnan,native hybrid candidate,3353,1,"[[2,{""enforceForIndexOf"":false,""enforceForSwitchCase"":true}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+valid-typeof,false,valid-typeof,native hybrid candidate,3353,1,"[[2,{""requireStringLiterals"":false}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/no-commented-out-tests,false,vitest/no-commented-out-tests,native hybrid candidate,1627,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/no-disabled-tests,false,vitest/no-disabled-tests,native hybrid candidate,1625,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/no-focused-tests,false,vitest/no-focused-tests,retain: option schema differs,1627,1,"[[2,{""fixable"":true}]]",One or more resolved option variants do not match native schema.
+vitest/no-identical-title,false,vitest/no-identical-title,native hybrid candidate,1627,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/no-import-node-test,false,vitest/no-import-node-test,native hybrid candidate,1625,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/no-interpolation-in-snapshots,false,vitest/no-interpolation-in-snapshots,native hybrid candidate,1627,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/no-mocks-import,false,vitest/no-mocks-import,native hybrid candidate,1627,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/no-unneeded-async-expect-function,false,vitest/no-unneeded-async-expect-function,native hybrid candidate,1627,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/prefer-called-exactly-once-with,false,vitest/prefer-called-exactly-once-with,native hybrid candidate,1627,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/require-local-test-context-for-concurrent-snapshots,false,vitest/require-local-test-context-for-concurrent-snapshots,native hybrid candidate,1627,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/valid-describe-callback,false,vitest/valid-describe-callback,native hybrid candidate,1627,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/valid-expect,false,vitest/valid-expect,native hybrid candidate,1627,1,"[[2,{""alwaysAwait"":false,""asyncMatchers"":[""toReject"",""toResolve""],""minArgs"":1,""maxArgs"":1}]]","Only validated root scopes; named projects, directives, React and site stay on ESLint."
+vitest/valid-expect-in-promise,false,vitest/valid-expect-in-promise,native hybrid candidate,1627,1,[[2]],"Only validated root scopes; named projects, directives, React and site stay on ESLint."
