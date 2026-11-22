@@ -87,7 +87,9 @@ export const sdfEffectCapability = (sdfRadius: number): TextEffectCapability => 
 // at or below one logical pixel (at most half a pixel of rounding error).
 export const textMaxAutoReach = 255 / 2;
 export const autoTextEffectCapability = sdfEffectCapability(textMaxAutoReach);
-const textReachTiers: readonly number[] = [4, 8, 16, 32, 64, textMaxAutoReach];
+// Use two codes per pixel in the penultimate tier so integer effect widths
+// land on the same sub-code phase as the fill edge.
+const textReachTiers: readonly number[] = [4, 8, 16, 32, textMaxAutoReach / 2, textMaxAutoReach];
 
 /**
  * Logical pixels of outward reach, antialiasing reserve included, needed to

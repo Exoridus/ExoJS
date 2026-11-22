@@ -200,9 +200,9 @@ An effect is requested by `outlineWidth > 0` or `shadowAlpha > 0`; offsets and b
 
 One logical pixel of the reach is kept for the antialiased edge, so `outlineWidth` — and, for a shadow, the larger of `|shadowOffsetX|` and `|shadowOffsetY|` plus `shadowBlur` — may use the reach minus one.
 
-Runtime SDF text starts with 4 pixels of reach and grows to 8, 16, 32, 64 or 127.5 when effects need more. For example, `outlineWidth: 4` selects an 8-pixel field. Growth switches to a new atlas tier. A smaller effect reuses the current tier, and text using the same typeface, tier and raster density shares rasterized glyphs. `Label` and `Button` use the same sizing.
+Runtime SDF text starts with 4 pixels of reach and grows to 8, 16, 32, 63.75 or 127.5 when effects need more. For example, `outlineWidth: 4` selects an 8-pixel field. Growth switches to a new atlas tier. A smaller effect reuses the current tier, and text using the same typeface, tier and raster density shares rasterized glyphs. `Label` and `Button` use the same sizing.
 
-At the largest automatic tier, the R8 distance field has one logical pixel per quantization step. An explicit larger radius trades away that precision. Each glyph tile gains `2 × ceil(sdfRadius × rasterPixelRatio)` texels along both dimensions, so more reach reduces the number of tiles that fit in a 1024 × 1024 page (1 MiB for the R8 pixels per page). Very large fonts, densities and effects can exceed the space available for a single glyph tile.
+The two largest automatic tiers use half-pixel and whole-pixel steps in the R8 distance field. Integer effect lengths then shift the threshold by a whole number of steps. An explicit larger radius trades away that precision. Each glyph tile gains `2 × ceil(sdfRadius × rasterPixelRatio)` texels along both dimensions, so more reach reduces the number of tiles that fit in a 1024 × 1024 page (1 MiB for the R8 pixels per page). Very large fonts, densities and effects can exceed the space available for a single glyph tile.
 
 Pass `sdfRadius` to fix the reach instead. It then also becomes a hard limit that never grows - useful to pin atlas memory. A larger reach costs atlas space for the wider tile padding, and because the 8-bit field spreads over twice the reach, it coarsens glyph edges under strong magnification, which is why the reach is not simply set to the maximum.
 

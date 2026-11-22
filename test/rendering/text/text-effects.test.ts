@@ -163,7 +163,7 @@ describe('runtime SDF capacity', () => {
       [{ outlineWidth: 8 }, 16],
       [{ shadowAlpha: 1, shadowOffsetX: 9, shadowBlur: 2 }, 16],
       [{ outlineWidth: 31 }, 32],
-      [{ outlineWidth: 48 }, 64],
+      [{ outlineWidth: 48 }, 63.75],
       [{ outlineWidth: 96 }, 127.5],
     ])('%j needs a reach of %i', (options, reach) => {
       expect(new Text('H', options).sdfRadius).toBe(reach);
