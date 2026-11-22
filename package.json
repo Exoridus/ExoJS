@@ -242,7 +242,8 @@
     "release:registry-plan": "tsx ./scripts/release/run.ts registry-plan",
     "release:notes": "tsx ./scripts/generate-release-notes.ts",
     "release:changelog": "tsx ./scripts/release/generate-changelog.ts",
-    "lint:react:shadow": "oxlint --config scripts/ci/oxlint-react-shadow.json --format=json packages/exojs-react/src packages/exojs-react/examples site/src/components"
+    "lint:react:shadow": "oxlint --config scripts/ci/oxlint-react-shadow.json --format=json packages/exojs-react/src packages/exojs-react/examples site/src/components",
+    "typecheck:native-api": "node packages/exojs-config/typescript/verify-native-api.mjs"
   },
   "license": "MIT",
   "publishConfig": {

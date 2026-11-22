@@ -38,7 +38,7 @@ export const GATE_GROUPS = {
   // a shared runner measures nothing meaningful. Every one of these executes
   // engine source in-process, so they rot silently against an API change or a
   // module-resolution change and no other lane touches them.
-  sync: ['docs:api:check', 'docs:history:check', 'examples:sync:check', 'legacy-shims:check', 'assets:compact:check', 'perf:smoke'],
+  sync: ['typecheck:native-api', 'docs:api:check', 'docs:history:check', 'examples:sync:check', 'legacy-shims:check', 'assets:compact:check', 'perf:smoke'],
   // `dist:check` runs the freshness gate: a dist that lags the sources fails
   // in seconds here rather than after the site typecheck. The site job already
   // builds dist, so the check is a fast verification, and the hybrid-runtime
