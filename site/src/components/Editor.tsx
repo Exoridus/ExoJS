@@ -96,23 +96,15 @@ export const Editor = ({
   const [assetSources, setAssetSources] = useState<readonly string[] | null>(null);
   const previewRef = useRef<EditorPreviewHandle | null>(null);
   const previewFrameRef = useRef<HTMLElement | null>(null);
-  const loadKeyRef = useRef<string | null>(null);
+  const examplePath = activeExample?.path;
+  const exampleLanguage = activeExample?.language;
 
   useEffect(() => {
-    const path = activeExample?.path ?? null;
-    const loadKey = path && selectedVersionId ? `${selectedVersionId}::${path}::${sourceRetry}` : null;
-
-    if (loadKey === loadKeyRef.current) {
-      return;
-    }
-
-    loadKeyRef.current = loadKey;
-
     // Reset the editor for the newly-selected example before loading its source
     // asynchronously below. This is a prop-change reset (not a render-derived
     // value); the React-idiomatic alternative - a `key` remount - would re-init
     // Monaco on every example switch, so we suppress the heuristic here instead.
-    /* eslint-disable @eslint-react/set-state-in-effect */
+    /* eslint-disable @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect */
     setRendererStatus(null);
     setSourceCode(null);
     setOriginalSourceCode(null);
@@ -121,9 +113,9 @@ export const Editor = ({
     setOriginalExecutionCode(null);
     setSourceLoadError(null);
     setDiagnostics([]);
-    /* eslint-enable @eslint-react/set-state-in-effect */
+    /* eslint-enable @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect */
 
-    if (!activeExample || !selectedVersionId) {
+    if (!examplePath || !selectedVersionId) {
       return;
     }
 
@@ -131,11 +123,11 @@ export const Editor = ({
 
     const load = async (): Promise<void> => {
       try {
-        if (activeExample.language === 'typescript') {
-          const tsPath = activeExample.path.replace(/\.js$/, '.ts');
+        if (exampleLanguage === 'typescript') {
+          const tsPath = examplePath.replace(/\.js$/, '.ts');
           const [tsSource, jsSource] = await Promise.all([
             loadExampleSource(selectedVersionId, tsPath),
-            loadExampleSource(selectedVersionId, activeExample.path),
+            loadExampleSource(selectedVersionId, examplePath),
           ]);
 
           if (cancelled) {
@@ -150,7 +142,7 @@ export const Editor = ({
           return;
         }
 
-        const nextSource = await loadExampleSource(selectedVersionId, activeExample.path);
+        const nextSource = await loadExampleSource(selectedVersionId, examplePath);
 
         if (cancelled) {
           return;
@@ -177,7 +169,7 @@ export const Editor = ({
     return () => {
       cancelled = true;
     };
-  }, [activeExample, selectedVersionId, sourceRetry]);
+  }, [exampleLanguage, examplePath, selectedVersionId, sourceRetry]);
 
   useEffect(() => () => output.dispose(), [output]);
 
@@ -559,6 +551,7 @@ export const Editor = ({
                 </details>
               }
               sourceCode={sourceCode}
+              originalSourceCode={originalSourceCode}
               sourcePath={displayPath}
               language={editorLanguage}
               compiledCode={executionCode}

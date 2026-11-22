@@ -1,0 +1,79 @@
+// @vitest-environment node
+import { expect, it } from 'vitest';
+
+import { createDraftStore } from '../../site/src/lib/playground-drafts';
+
+const fixture = () => {
+  let serialized: string | null = null;
+  const storage = {
+    getItem: () => serialized,
+    setItem: (_key: string, value: string) => {
+      serialized = value;
+    },
+  };
+
+  return { storage, read: () => serialized };
+};
+
+const draft = { entry: 'edited entry', helpers: { 'shared/runtime.ts': { source: 'edited helper', original: 'original helper' } } };
+
+it('restores the entry and edited helpers across a new store instance', () => {
+  const { storage } = fixture();
+  const store = createDraftStore(() => storage);
+  expect(store.save('current/example.ts', draft).persistence).toBe('session');
+  expect(createDraftStore(() => storage).load('current/example.ts')).toEqual(draft);
+  expect(store.load('0.19.0/example.ts')).toBeNull();
+});
+
+it('keeps independent snapshots instead of retaining mutable caller objects', () => {
+  const { storage } = fixture();
+  const store = createDraftStore(() => storage);
+  const edited = { entry: 'entry', helpers: {} };
+  store.save('a', edited);
+  edited.entry = 'later';
+  expect(store.load('a')?.entry).toBe('entry');
+});
+
+it('retains drafts in memory and reports that reload recovery is unavailable when storage throws', () => {
+  const store = createDraftStore(() => {
+    throw new Error('storage denied');
+  });
+  expect(store.save('a', draft).persistence).toBe('memory');
+  expect(store.load('a')).toEqual(draft);
+});
+
+it('removes reset drafts from storage so reload returns the original', () => {
+  const { storage } = fixture();
+  const store = createDraftStore(() => storage);
+  store.save('a', draft);
+  store.remove('a');
+  expect(createDraftStore(() => storage).load('a')).toBeNull();
+});
+
+it('reports eviction when the bounded session fills up', () => {
+  const { storage } = fixture();
+  const store = createDraftStore(() => storage, { maxDrafts: 2 });
+  store.save('a', draft);
+  store.save('b', draft);
+  expect(store.save('c', draft).evicted).toBe(1);
+  expect(store.load('a')).toEqual(draft);
+  expect(store.isPersisted('a')).toBe(false);
+  expect(createDraftStore(() => storage).load('a')).toBeNull();
+  expect(store.load('b')).toEqual(draft);
+  expect(createDraftStore(() => storage).load('c')).toEqual(draft);
+});
+
+it('retains an oversized edit in memory while preserving the previous durable snapshot', () => {
+  const { storage } = fixture();
+  const store = createDraftStore(() => storage, { maxChars: 200 });
+  store.save('a', { entry: 'small', helpers: {} });
+  expect(store.save('a', { entry: 'x'.repeat(500), helpers: {} }).persistence).toBe('memory');
+  expect(store.load('a')?.entry).toBe('x'.repeat(500));
+  expect(store.isPersisted('a')).toBe(false);
+  expect(createDraftStore(() => storage).load('a')?.entry).toBe('small');
+});
+
+it('ignores corrupt or unsupported stored data', () => {
+  const store = createDraftStore(() => ({ getItem: () => '{broken', setItem() {} }));
+  expect(store.load('a')).toBeNull();
+});

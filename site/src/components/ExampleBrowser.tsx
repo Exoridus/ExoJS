@@ -233,6 +233,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       // "subscribe to an external system, setState on change" effect use.
       // The synchronous initial call is the SSR-safe form of that pattern.
       /* eslint-disable @eslint-react/set-state-in-effect */
+      setSearchRequest(0);
       setIsCompactMobile(compactMobileMediaQuery.matches);
       setSidebarOpen(desktopMediaQuery.matches && !compactMobileMediaQuery.matches);
 
@@ -369,7 +370,10 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
   const openCurrent = (): void => {
     const current = getVersionById(CURRENT_VERSION_ID)!;
     const requestedPath = readUrlState().example;
-    const path = requestedPath && getExampleByPath(CURRENT_VERSION_ID, requestedPath) ? requestedPath : null;
+    const path =
+      requestedPath && (selectedVersionRef.current?.id !== CURRENT_VERSION_ID || getExampleByPath(CURRENT_VERSION_ID, requestedPath))
+        ? requestedPath
+        : null;
     writeUrlState({ version: CURRENT_VERSION_ID, example: path });
     storeSelectedVersion(CURRENT_VERSION_ID);
     setSelectionError(null);

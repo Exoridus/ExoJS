@@ -44,7 +44,20 @@ export const Navigation = ({
       return;
     }
 
-    const frame = requestAnimationFrame(() => filterRef.current?.focus());
+    const deadline = performance.now() + 1000;
+    let frame = 0;
+
+    const focusVisibleFilter = (): void => {
+      const filter = filterRef.current;
+
+      if (filter && getComputedStyle(filter).visibility !== 'hidden' && filter.getClientRects().length > 0) {
+        filter.focus();
+      } else if (performance.now() < deadline) {
+        frame = requestAnimationFrame(focusVisibleFilter);
+      }
+    };
+
+    frame = requestAnimationFrame(focusVisibleFilter);
 
     return () => cancelAnimationFrame(frame);
   }, [focusSearchRequest]);

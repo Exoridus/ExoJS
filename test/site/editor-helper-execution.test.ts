@@ -66,6 +66,12 @@ const fixture = (helperCode = 'edited helper') => {
   const onDirty = vi.fn();
   const emit = vi.fn(async (model: typeof entry) => `compiled ${model.getValue()}`);
   const run = runInNewContext(`${compiled}\nrun;`, {
+    persistDraft: vi.fn(),
+    suppressDraftRef: { current: false },
+    setRunError: vi.fn(),
+    onRunStatus: vi.fn(),
+    lastRunFilesRef: { current: new Map() },
+    runGenerationRef: { current: 0 },
     readOnly: false,
     language: 'typescript',
     entryModelRef: { current: entry },
@@ -95,7 +101,7 @@ const fixture = (helperCode = 'edited helper') => {
   };
 };
 
-it('runs the entry with compiled local helper edits and retains reset availability', async () => {
+it('runs the entry with compiled local helper edits and clears the unrun state', async () => {
   const editor = fixture();
   await editor.run();
   expect(editor.onUpdateCode).toHaveBeenCalledExactlyOnceWith({
@@ -103,7 +109,7 @@ it('runs the entry with compiled local helper edits and retains reset availabili
     executionCode: 'compiled main source',
     executionModules: { 'shared/runtime.ts': 'compiled edited helper' },
   });
-  expect(editor.onDirty).toHaveBeenCalledWith(true);
+  expect(editor.onDirty).toHaveBeenCalledWith(false);
 });
 
 it('does not override unmodified helpers', async () => {
@@ -176,6 +182,11 @@ it.each([false, true])('auto-runs restored helper source only when the visible b
     compilerOptions: { target: ts.ScriptTarget.ES2022 },
   }).outputText;
   runInNewContext(code, {
+    persistDraft: vi.fn(),
+    suppressDraftRef: { current: false },
+    setRunError: vi.fn(),
+    onRunStatus: vi.fn(),
+    lastRunFilesRef: { current: new Map() },
     editor: { getModel: () => helper, getOption: () => readOnly },
     monacoApi: { editor: { EditorOption: { readOnly: 1 } } },
     entryModelRef: { current: entry },
@@ -232,6 +243,12 @@ it.each(['source-sync', 'import'] as const)('preserves helper reset availability
     originalFilesRef: { current: new Map([['shared/runtime.ts', 'original helper']]) },
     isEditableSharedFile,
     onDirty,
+    persistDraft: vi.fn(),
+    suppressDraftRef: { current: false },
+    setRunError: vi.fn(),
+    onRunStatus: vi.fn(),
+    lastRunFilesRef: { current: new Map() },
+    runGenerationRef: { current: 0 },
     readOnly: false,
     importReaderRef: { current: null },
     FileReader,

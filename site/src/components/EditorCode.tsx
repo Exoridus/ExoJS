@@ -20,12 +20,16 @@ import { createPortal } from 'react-dom';
 
 import { findExampleCompanions } from '../lib/example-companions';
 import { findFootgunCandidates, footgunMessage, type QuickInfoResponse, returnsPromise } from '../lib/footgun-diagnostics';
+import { type PlaygroundDraft, playgroundDraftKey, playgroundDrafts } from '../lib/playground-drafts';
 import { isEditableSharedFile } from '../lib/preview-modules';
+import { createRequest } from '../lib/request-manager';
 import { buildExampleUrl, buildGithubRawExampleUrl, buildPublicUrl } from '../lib/url-builder';
 import { CURRENT_VERSION_ID, isCurrentVersion } from '../lib/versions';
 import styles from './EditorCode.module.scss';
 import { css } from './react-utils';
 import { Toolbar } from './Toolbar';
+
+export type EditorRunStatus = 'idle' | 'compiling' | 'running' | 'updated' | 'error';
 
 export interface UpdateCodeEvent {
   code: string;
@@ -73,12 +77,14 @@ export interface EditorCodeProps {
   ref?: Ref<EditorCodeHandle>;
   selectedVersionId: string;
   sourceCode: string | null;
+  originalSourceCode?: string | null;
   sourcePath: string | null;
   onCursorChange(event: EditorCursorEvent): void;
   onDiagnostic(diagnostics: ReadonlyArray<EditorDiagnostic>): void;
   onDirty(dirty: boolean): void;
   onResetCode(event: ResetCodeEvent): void;
   onUpdateCode(event: UpdateCodeEvent): void;
+  onRunStatus?(status: EditorRunStatus): void;
 }
 
 interface MonacoLanguageDefaults {
@@ -128,6 +134,7 @@ const SHARED_LIB_FILES = [
 ] as const;
 
 const typingsCache = new Map<string, Promise<ReadonlyArray<ExtraLib>>>();
+const typingsFileCache = new Map<string, Promise<string>>();
 let monacoConfiguredPromise: Promise<void> | null = null;
 
 loader.config({ monaco });
@@ -143,10 +150,12 @@ export const EditorCode = ({
   onDirty,
   onResetCode,
   onUpdateCode,
+  onRunStatus,
   readOnly = false,
   ref,
   selectedVersionId,
   sourceCode,
+  originalSourceCode,
   sourcePath,
   toolbarTarget,
   menuItems,
@@ -159,6 +168,17 @@ export const EditorCode = ({
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [activeFile, setActiveFile] = useState(sourcePath);
   const [fileStatus, setFileStatus] = useState('');
+  const [typingsError, setTypingsError] = useState<string | null>(null);
+  const [typingsLoading, setTypingsLoading] = useState(true);
+  const [typingsRetry, setTypingsRetry] = useState(0);
+  const [runError, setRunError] = useState<string | null>(null);
+  const runGenerationRef = useRef(0);
+  const lastRunFilesRef = useRef(new Map<string, string>());
+  const [draftStatus, setDraftStatus] = useState('Original source. Run updates the demo; Export downloads the selected file.');
+  const [draftChanged, setDraftChanged] = useState(false);
+  const originalEntryRef = useRef<string | null>(originalSourceCode ?? sourceCode);
+  const suppressDraftRef = useRef(false);
+  const draftDurableRef = useRef(true);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const readOnlyRef = useRef(readOnly);
   const modelRef = useRef<monaco.editor.ITextModel | null>(null);
@@ -182,7 +202,56 @@ export const EditorCode = ({
   useEffect(() => {
     sourceCodeRef.current = sourceCode;
     selectedVersionRef.current = selectedVersionId;
+    originalEntryRef.current = originalSourceCode ?? originalEntryRef.current ?? sourceCode;
   });
+
+  const persistDraft = useCallback((): void => {
+    const model = entryModelRef.current;
+
+    if (suppressDraftRef.current || !model || model.isDisposed() || !sourcePath) {
+      return;
+    }
+
+    const draft: PlaygroundDraft = { entry: model.getValue(), helpers: {} };
+
+    for (const [path, file] of filesRef.current) {
+      const original = originalFilesRef.current.get(path);
+
+      if (isEditableSharedFile(path) && original !== undefined && file.model.getValue() !== original) {
+        draft.helpers[path] = { source: file.model.getValue(), original };
+      }
+    }
+
+    const changed = draft.entry !== originalEntryRef.current || Object.keys(draft.helpers).length > 0;
+    setDraftChanged(changed);
+    const key = playgroundDraftKey(selectedVersionId, sourcePath);
+    const result = changed ? playgroundDrafts.save(key, draft) : playgroundDrafts.remove(key);
+    draftDurableRef.current = result.persistence === 'session';
+
+    if (result.persistence === 'memory') {
+      setDraftStatus(
+        'Draft kept in this page only. Reload may lose recent edits or restore an earlier draft; export your files to keep them.',
+      );
+    } else if (changed) {
+      setDraftStatus(
+        `Session draft saved in this tab.${result.evicted ? ' Older drafts are now kept in this page only to stay within the session storage limit.' : ''} Run updates the demo; Export downloads the selected file.`,
+      );
+    } else {
+      setDraftStatus('Original source. Run updates the demo; Export downloads the selected file.');
+    }
+  }, [selectedVersionId, sourcePath]);
+
+  useEffect(() => {
+    const warnUnsaved = (event: BeforeUnloadEvent): void => {
+      if (!draftDurableRef.current) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('beforeunload', warnUnsaved);
+
+    return () => window.removeEventListener('beforeunload', warnUnsaved);
+  }, []);
 
   useEffect(() => {
     autoRefreshRef.current = autoRefresh;
@@ -203,16 +272,15 @@ export const EditorCode = ({
     // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
     setEditorValue(sourceCode ?? '');
 
-    if (entryModelRef.current?.getValue() !== (sourceCode ?? '')) {
-      entryModelRef.current?.setValue(sourceCode ?? '');
-    }
-
     // eslint-disable-next-line @eslint-react/set-state-in-effect -- feedback belongs to the selected source, not the previous file
     setCopyStatus('Copy');
     onDirty(
-      [...filesRef.current].some(
-        ([path, file]) => isEditableSharedFile(path) && file.model.getValue() !== originalFilesRef.current.get(path),
-      ),
+      (entryModelRef.current !== null && entryModelRef.current.getValue() !== sourceCode) ||
+        [...filesRef.current].some(
+          ([path, file]) =>
+            isEditableSharedFile(path) &&
+            file.model.getValue() !== (lastRunFilesRef.current.get(path) ?? originalFilesRef.current.get(path)),
+        ),
     );
   }, [onDirty, sourceCode, sourcePath]);
 
@@ -229,10 +297,34 @@ export const EditorCode = ({
       return;
     }
 
-    void ensureTypingsForVersion(selectedVersionId, selectedVersionRef, typingsAppliedVersionRef, () =>
-      updateDiagnostics(modelRef.current, selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic),
-    );
-  }, [onDiagnostic, selectedVersionId]);
+    let cancelled = false;
+    typingsAppliedVersionRef.current = null;
+    // Loading state belongs to this external declaration request, including retries.
+    /* eslint-disable @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect */
+    setTypingsLoading(true);
+    setTypingsError(null);
+    /* eslint-enable @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect */
+    onDiagnostic([]);
+    void ensureTypingsForVersion(selectedVersionId, selectedVersionRef, typingsAppliedVersionRef, () => {
+      if (!cancelled) {
+        setTypingsLoading(false);
+        updateDiagnostics(modelRef.current, selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic);
+      }
+    }).catch((error: unknown) => {
+      if (cancelled || selectedVersionRef.current !== selectedVersionId) {
+        return;
+      }
+
+      clearTypings();
+      setTypingsLoading(false);
+      setTypingsError(error instanceof Error ? error.message : String(error));
+      onDiagnostic([]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [onDiagnostic, selectedVersionId, typingsRetry]);
 
   useEffect(() => {
     const onDocumentClick = (event: MouseEvent): void => {
@@ -272,6 +364,7 @@ export const EditorCode = ({
 
       disposablesRef.current = [];
       selectedVersionRef.current = '';
+      runGenerationRef.current++;
       fileRequestRef.current?.abort();
       importReaderRef.current?.abort();
       importReaderRef.current = null;
@@ -301,6 +394,9 @@ export const EditorCode = ({
       return;
     }
 
+    const generation = ++runGenerationRef.current;
+    setRunError(null);
+    onRunStatus?.('compiling');
     const code = model.getValue();
     const version = model.getVersionId();
     const editableHelpers = [...filesRef.current]
@@ -312,10 +408,18 @@ export const EditorCode = ({
       ...helpers.map(file => getExecutionCode(file.model, 'typescript')),
     ]);
 
+    if (generation !== runGenerationRef.current || model.isDisposed()) {
+      return;
+    }
+
+    if (executionCode === null || compiledHelpers.some(code => code === null)) {
+      setRunError('Could not compile the edited files. Run again to retry; the previous demo is unchanged.');
+      onRunStatus?.('error');
+
+      return;
+    }
+
     if (
-      executionCode === null ||
-      compiledHelpers.some(code => code === null) ||
-      model.isDisposed() ||
       model.getVersionId() !== version ||
       editableHelpers.some(file => file.model.isDisposed() || file.model.getVersionId() !== file.version) ||
       [...filesRef.current].some(
@@ -325,16 +429,24 @@ export const EditorCode = ({
           file.model.getValue() !== originalFilesRef.current.get(path),
       )
     ) {
+      setRunError('Files changed during compilation. Run again to apply the latest edits.');
+      onRunStatus?.('error');
+
       return;
     }
 
+    for (const file of editableHelpers) {
+      lastRunFilesRef.current.set(file.path, file.model.getValue());
+    }
+
+    onRunStatus?.('running');
     onUpdateCode({
       code,
       executionCode,
       executionModules: Object.fromEntries(helpers.map((file, index) => [file.path, compiledHelpers[index]!])),
     });
-    onDirty(helpers.length > 0);
-  }, [language, onUpdateCode, onDirty, readOnly]);
+    onDirty(false);
+  }, [language, onUpdateCode, onDirty, onRunStatus, readOnly]);
 
   // `onMount` runs once, so the addCommand closures below would otherwise
   // capture the initial (never-read-only) triggerRefresh forever; read this
@@ -406,6 +518,33 @@ export const EditorCode = ({
     }
 
     window.monaco = monacoApi;
+    const draft = sourcePath ? playgroundDrafts.load(playgroundDraftKey(selectedVersionId, sourcePath)) : null;
+
+    if (draft && sourcePath && entryModelRef.current) {
+      suppressDraftRef.current = true;
+      entryModelRef.current.setValue(draft.entry);
+      setEditorValue(draft.entry);
+
+      for (const [path, helper] of Object.entries(draft.helpers)) {
+        const model = monacoApi.editor.createModel(
+          helper.source,
+          'typescript',
+          monacoApi.Uri.parse(getModelUrl(path, selectedVersionId, sourcePath)),
+        );
+        filesRef.current.set(path, { model, view: null });
+        originalFilesRef.current.set(path, helper.original);
+      }
+
+      suppressDraftRef.current = false;
+      setDraftChanged(true);
+      onDirty(true);
+      draftDurableRef.current = playgroundDrafts.isPersisted(playgroundDraftKey(selectedVersionId, sourcePath));
+      setDraftStatus(
+        draftDurableRef.current
+          ? 'Session draft restored. Run to apply your entry and helper edits to the demo.'
+          : 'In-page draft restored. Reload may lose recent edits or restore an earlier draft; export your files to keep them.',
+      );
+    }
 
     disposablesRef.current.push(
       editor.onDidChangeCursorSelection(event => {
@@ -416,10 +555,19 @@ export const EditorCode = ({
         onCursorChange({ lineNumber: position.lineNumber, column: position.column, selectionLength });
       }),
       editor.onDidChangeModelContent(() => {
+        persistDraft();
+
+        if (!suppressDraftRef.current) {
+          setRunError(null);
+          onRunStatus?.('idle');
+        }
+
         const dirty =
           entryModelRef.current?.getValue() !== sourceCodeRef.current ||
           [...filesRef.current].some(
-            ([path, file]) => isEditableSharedFile(path) && file.model.getValue() !== originalFilesRef.current.get(path),
+            ([path, file]) =>
+              isEditableSharedFile(path) &&
+              file.model.getValue() !== (lastRunFilesRef.current.get(path) ?? originalFilesRef.current.get(path)),
           );
         onDirty(dirty);
 
@@ -501,7 +649,7 @@ export const EditorCode = ({
   const resetCode = (): void => {
     setShowMenu(false);
 
-    if (!canReset || !window.confirm('Reset the example and edited helper files to their original source?')) {
+    if (!(canReset || draftChanged) || !window.confirm('Reset the example and edited helper files to their original source?')) {
       return;
     }
 
@@ -513,18 +661,33 @@ export const EditorCode = ({
       autoRefreshTimerRef.current = null;
     }
 
+    suppressDraftRef.current = true;
+    runGenerationRef.current++;
+    lastRunFilesRef.current.clear();
+    setRunError(null);
+
     for (const [path, original] of originalFilesRef.current) {
       filesRef.current.get(path)?.model.setValue(original);
     }
 
-    setEditorValue(sourceCodeRef.current ?? '');
-    entryModelRef.current?.setValue(sourceCodeRef.current ?? '');
+    setEditorValue(originalEntryRef.current ?? '');
+    entryModelRef.current?.setValue(originalEntryRef.current ?? '');
+    suppressDraftRef.current = false;
+    setDraftChanged(false);
+    const reset = sourcePath ? playgroundDrafts.remove(playgroundDraftKey(selectedVersionId, sourcePath)) : null;
+    draftDurableRef.current = reset?.persistence === 'session';
+    setDraftStatus(
+      reset?.persistence === 'session'
+        ? 'Reset to original source. The session draft was removed.'
+        : 'Reset to original source in this page. Storage is unavailable; an older draft may return after reload.',
+    );
 
     if (autoRefreshTimerRef.current !== null) {
       clearTimeout(autoRefreshTimerRef.current);
       autoRefreshTimerRef.current = null;
     }
 
+    onRunStatus?.('idle');
     onResetCode({ confirmed: true });
     onDirty(false);
   };
@@ -558,16 +721,9 @@ export const EditorCode = ({
       setFileStatus(`Loading ${path}...`);
 
       try {
-        const response = await fetch(
+        const source = await createRequest(
           isCurrentVersion(selectedVersionId) ? buildExampleUrl(path) : buildGithubRawExampleUrl(selectedVersionId, path),
-          { signal: request.signal },
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const source = await response.text();
+        ).getText();
 
         if (request.signal.aborted || !sourcePath) {
           return;
@@ -653,10 +809,13 @@ export const EditorCode = ({
 
       setEditorValue(reader.result);
       model.setValue(reader.result);
+      persistDraft();
       onDirty(
         reader.result !== sourceCodeRef.current ||
           [...filesRef.current].some(
-            ([path, file]) => isEditableSharedFile(path) && file.model.getValue() !== originalFilesRef.current.get(path),
+            ([path, file]) =>
+              isEditableSharedFile(path) &&
+              file.model.getValue() !== (lastRunFilesRef.current.get(path) ?? originalFilesRef.current.get(path)),
           ),
       );
     };
@@ -688,12 +847,18 @@ export const EditorCode = ({
         type="button"
         title="Run example (Ctrl+Enter)"
         aria-keyshortcuts="Control+Enter Meta+Enter"
-        disabled={readOnly || !sourceCode}
+        disabled={readOnly || sourceCode === null}
         onClick={() => void triggerRefresh()}
       >
         Run
       </button>
-      <button className={css(styles, 'action-button')} data-action="reset" type="button" disabled={!canReset} onClick={resetCode}>
+      <button
+        className={css(styles, 'action-button')}
+        data-action="reset"
+        type="button"
+        disabled={!(canReset || draftChanged)}
+        onClick={resetCode}
+      >
         Reset
       </button>
       {menuItems}
@@ -706,7 +871,7 @@ export const EditorCode = ({
         className={css(styles, 'action-button')}
         data-action="copy"
         type="button"
-        disabled={!sourceCode}
+        disabled={sourceCode === null}
         onClick={() => void copyCode()}
       >
         {copyStatus}
@@ -745,7 +910,7 @@ export const EditorCode = ({
           }}
         >
           <div className={css(styles, 'compact-actions')}>
-            <button className={css(styles, 'menu-item')} role="menuitem" disabled={!sourceCode} onClick={() => void copyCode()}>
+            <button className={css(styles, 'menu-item')} role="menuitem" disabled={sourceCode === null} onClick={() => void copyCode()}>
               {copyStatus}
             </button>
           </div>
@@ -812,6 +977,28 @@ export const EditorCode = ({
           </div>
           {toolbarControls}
         </div>
+        <p role="status" data-draft-status className={css(styles, 'file-status')}>
+          {draftStatus}
+        </p>
+        {typingsLoading && (
+          <p role="status" data-typings-status="loading" className={css(styles, 'file-status')}>
+            Loading editor types...
+          </p>
+        )}
+        {typingsError && (
+          <div role="status" data-typings-status="error" className={css(styles, 'file-status')}>
+            <p>Editor types could not be fully loaded. Your source and demo are kept.</p>
+            <p>{typingsError}</p>
+            <button type="button" onClick={() => setTypingsRetry(value => value + 1)}>
+              Retry editor types
+            </button>
+          </div>
+        )}
+        {runError && (
+          <p role="alert" className={css(styles, 'file-status')}>
+            {runError}
+          </p>
+        )}
         {fileStatus && (
           <p role="status" className={css(styles, 'file-status')}>
             {fileStatus}
@@ -826,7 +1013,7 @@ export const EditorCode = ({
             language service - one 6.9 MB `ts.worker` download - per language
             that owns a live model.
           */}
-          {sourcePath === null ? null : (
+          {sourcePath === null || sourceCode === null ? null : (
             <MonacoReactEditor
               beforeMount={beforeMount}
               height="100%"
@@ -1110,7 +1297,13 @@ const getTypingsForVersion = (versionId: string): Promise<ReadonlyArray<ExtraLib
   let pending = typingsCache.get(versionId);
 
   if (!pending) {
-    pending = loadTypingsForVersion(versionId);
+    pending = loadTypingsForVersion(versionId).catch((error: unknown) => {
+      if (typingsCache.get(versionId) === pending) {
+        typingsCache.delete(versionId);
+      }
+
+      throw error;
+    });
     typingsCache.set(versionId, pending);
   }
 
@@ -1151,120 +1344,60 @@ const loadSharedTypings = async (): Promise<ReadonlyArray<ExtraLib>> =>
     })),
   );
 
-const loadVersionedExoJsTypings = async (versionId: string): Promise<ReadonlyArray<ExtraLib>> => {
-  if (versionId === CURRENT_VERSION_ID) {
-    return loadPackageTypingsFromBase('vendor/exojs/', '@codexo/exojs');
-  }
-
-  const fromVersioned = await loadPackageTypingsFromBase(`vendor/exojs/${versionId}/`, '@codexo/exojs');
-
-  if (fromVersioned.length > 0) {
-    return fromVersioned;
-  }
-
-  console.warn(`[EditorCode] Versioned typings missing for @codexo/exojs@${versionId}; falling back to flat vendor path.`);
-
-  return loadPackageTypingsFromBase('vendor/exojs/', '@codexo/exojs');
-};
+const loadVersionedExoJsTypings = (versionId: string): Promise<ReadonlyArray<ExtraLib>> =>
+  loadPackageTypingsFromBase(versionId === CURRENT_VERSION_ID ? 'vendor/exojs/' : `vendor/exojs/${versionId}/`, '@codexo/exojs');
 
 const loadPackageTypingsFromBase = async (baseUrl: string, packageName: string): Promise<ReadonlyArray<ExtraLib>> => {
-  const libs: ExtraLib[] = [];
+  const registry = JSON.parse(await fetchTextFile(buildPublicUrl(`${baseUrl}monaco-registry.json`))) as Record<string, unknown>;
 
-  try {
-    const registryResponse = await fetch(buildPublicUrl(`${baseUrl}monaco-registry.json`), { cache: 'no-cache' });
+  if (typeof registry.packageJson !== 'string' || !Array.isArray(registry.subpathShims)) {
+    throw new Error(`Invalid editor type registry for ${packageName}.`);
+  }
 
-    if (registryResponse.ok) {
-      const registry = (await registryResponse.json()) as Record<string, unknown>;
+  const libs: ExtraLib[] = [{ content: registry.packageJson, filePath: `file:///node_modules/${packageName}/package.json` }];
 
-      if (typeof registry.packageJson === 'string') {
-        libs.push({
-          content: registry.packageJson,
-          filePath: `file:///node_modules/${packageName}/package.json`,
-        });
-      }
-
-      const shims = registry.subpathShims;
-
-      if (Array.isArray(shims)) {
-        for (const shim of shims as Record<string, unknown>[]) {
-          if (typeof shim.virtualPath === 'string' && typeof shim.content === 'string') {
-            libs.push({ content: shim.content, filePath: shim.virtualPath });
-          }
-        }
-      }
+  for (const shim of registry.subpathShims as Record<string, unknown>[]) {
+    if (typeof shim.virtualPath !== 'string' || typeof shim.content !== 'string') {
+      throw new Error(`Invalid editor type shim for ${packageName}.`);
     }
-  } catch {
-    // Fall through to legacy shims.
+
+    libs.push({ content: shim.content, filePath: shim.virtualPath });
   }
 
   const manifest = await fetchTypingsManifest(`${baseUrl}esm-typings.json`);
+  const treeLibs = await Promise.all(
+    manifest.map(async relativePath => ({
+      content: await fetchTextFile(buildPublicUrl(`${baseUrl}esm/${relativePath}`)),
+      filePath: `file:///node_modules/${packageName}/dist/esm/${relativePath}`,
+    })),
+  );
 
-  if (manifest && manifest.length > 0) {
-    const treeLibs = await Promise.all(
-      manifest.map(async relativePath => {
-        try {
-          const content = await fetchTextFile(buildPublicUrl(`${baseUrl}esm/${relativePath}`));
-
-          return {
-            content,
-            filePath: `file:///node_modules/${packageName}/dist/esm/${relativePath}`,
-          } satisfies ExtraLib;
-        } catch {
-          return null;
-        }
-      }),
-    );
-
-    for (const lib of treeLibs) {
-      if (lib) {
-        libs.push(lib);
-      }
-    }
-
-    return libs;
-  }
-
-  try {
-    libs.push({
-      content: await fetchTextFile(buildPublicUrl(`${baseUrl}module-shims.d.ts`)),
-      filePath: `file:///node_modules/${packageName}/dist/module-shims.d.ts`,
-    });
-  } catch {
-    // Missing shims; editor still works without package-aware imports.
-  }
-
-  try {
-    libs.push({
-      content: await fetchTextFile(buildPublicUrl(`${baseUrl}exo.d.ts`)),
-      filePath: `file:///node_modules/${packageName}/dist/exo.d.ts`,
-    });
-  } catch {
-    // No usable declarations.
-  }
-
-  return libs;
+  return [...libs, ...treeLibs];
 };
 
-const fetchTypingsManifest = async (relativePath: string): Promise<ReadonlyArray<string> | null> => {
-  try {
-    const response = await fetch(buildPublicUrl(relativePath), { cache: 'no-cache' });
+const fetchTypingsManifest = async (relativePath: string): Promise<ReadonlyArray<string>> => {
+  const data: unknown = JSON.parse(await fetchTextFile(buildPublicUrl(relativePath)));
 
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = (await response.json()) as unknown;
-
-    if (!Array.isArray(data)) {
-      return null;
-    }
-
-    return data.filter(
-      (entry): entry is string => typeof entry === 'string' && entry.endsWith('.d.ts') && !entry.includes('..') && !entry.startsWith('/'),
-    );
-  } catch {
-    return null;
+  if (
+    !Array.isArray(data) ||
+    data.length === 0 ||
+    !data.every(entry => typeof entry === 'string' && entry.endsWith('.d.ts') && !entry.includes('..') && !entry.startsWith('/'))
+  ) {
+    throw new Error(`Invalid editor type manifest at ${relativePath}.`);
   }
+
+  return data as string[];
+};
+
+const clearTypings = (): void => {
+  const tsApi = (monaco.languages as unknown as { typescript: MonacoTypeScriptApi }).typescript;
+
+  for (const path of Object.keys(tsApi.typescriptDefaults.getExtraLibs())) {
+    monaco.editor.getModel(monaco.Uri.parse(path))?.dispose();
+  }
+
+  tsApi.javascriptDefaults.setExtraLibs([]);
+  tsApi.typescriptDefaults.setExtraLibs([]);
 };
 
 const configureLanguageDefaults = (): void => {
@@ -1318,12 +1451,26 @@ const configureLanguageDefaults = (): void => {
   tsApi.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
 };
 
-const fetchTextFile = async (url: string): Promise<string> => {
-  const response = await fetch(url, { cache: 'no-cache' });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch editor support file at ${url}.`);
+const fetchTextFile = (url: string): Promise<string> => {
+  // Registries/manifests must be revalidated after malformed JSON or metadata.
+  if (url.endsWith('.json')) {
+    return createRequest(url).getText();
   }
 
-  return response.text();
+  let pending = typingsFileCache.get(url);
+
+  if (!pending) {
+    pending = createRequest(url)
+      .getText()
+      .catch((error: unknown) => {
+        if (typingsFileCache.get(url) === pending) {
+          typingsFileCache.delete(url);
+        }
+
+        throw error;
+      });
+    typingsFileCache.set(url, pending);
+  }
+
+  return pending;
 };
