@@ -7,7 +7,9 @@ interface OwnershipResult {
   restored: boolean;
   reentered: boolean;
   inactive: boolean;
-  sharedAlive: boolean;
+  sharedAlive: boolean | null;
+  sharedAsset: string | null;
+  lighting: Record<string, boolean> | null;
   cancelled: boolean;
   voiceStopped: boolean;
   destroyed: Array<{ key: string; calls: number }>;
@@ -24,14 +26,15 @@ export const exampleSceneOwnershipChecks = async (
   check: (name: string, run: () => Promise<void>) => Promise<void>,
 ): Promise<void> => {
   const cases = [
-    ['showcase/audio-reactive-particles', ['analyser', 'detector', 'ps']],
-    ['render-targets/water-mirror', ['target', 'map', 'source', 'mirror', 'ripple', 'pipeline']],
-    ['tilemap/tiled-infinite-map', ['camera', 'mapNode', 'groundStreamer', 'propsStreamer', 'borders']],
-    ['showcase/boss-intro-cinematic', ['view', 'bg', 'bars', 'title', 'boss', 'tapPrompt']],
-    ['lighting/radiance-rooms', ['world']],
+    ['showcase/audio-reactive-particles', ['analyser', 'detector', 'ps'], 'particleLight'],
+    ['render-targets/water-mirror', ['target', 'map', 'source', 'mirror', 'ripple', 'pipeline'], 'ship'],
+    ['tilemap/tiled-infinite-map', ['camera', 'mapNode', 'groundStreamer', 'propsStreamer', 'borders'], 'tiledSource'],
+    ['showcase/boss-intro-cinematic', ['view', 'bg', 'bars', 'title', 'boss', 'tapPrompt'], 'spaceBossRed'],
+    ['lighting/radiance-rooms', ['world', 'lamp'], null],
+    ['lighting/shadow-casters', ['world', 'torch', 'beam'], null],
   ] as const;
 
-  for (const [example, fields] of cases) {
+  for (const [example, fields, sharedAsset] of cases) {
     await check(`same-application scene ownership: ${example}`, async () => {
       const context = await browser.newContext({ viewport: { width: 640, height: 360 } });
       const page = await context.newPage();
@@ -139,10 +142,21 @@ export const exampleSceneOwnershipChecks = async (
 
         const result = await page.evaluate<OwnershipResult>(`(async () => {
           const fields = ${JSON.stringify(fields)};
+          const sharedAsset = ${JSON.stringify(sharedAsset)};
           const { app, SceneType, Empty, applicationErrors, assets } = globalThis.__ownership;
           const first = app.scenes.currentScene;
-          // A separate app claim must survive the scene's resource release.
-          const shared = assets?.ship ? await app.loader.load(assets.ship) : null;
+          // Claim an asset the scene genuinely uses, not an unrelated survivor.
+          let shared = null;
+          if (sharedAsset === 'tiledSource') {
+            const { Asset } = await import('@codexo/exojs');
+            await app.loader.load(Asset.type('tiledSource', assets.driftFieldsMap.source));
+            shared = first.mapNode.map.tilesets[0].texture.texture;
+          } else if (sharedAsset !== null) {
+            shared = await app.loader.load(assets[sharedAsset]);
+            if (![first.ps?.texture, first.source?.texture, first.boss?.texture].includes(shared)) {
+              throw new Error('Shared asset claim does not match a texture used by the scene: ' + sharedAsset);
+            }
+          }
           const resources = fields.map(key => ({ key, value: first[key], calls: 0 }));
 
           if (first.world?.children) {
@@ -169,6 +183,29 @@ export const exampleSceneOwnershipChecks = async (
             };
           }
 
+          const lighting = first.lighting ? {} : null;
+          let ownedPasses = [];
+          const retiredPasses = [];
+          const absent = passes => passes.every(pass => !app.framePasses.hasPass(pass));
+          const presentOnce = passes => passes.length > 0 && passes.every(pass =>
+            [...app.framePasses].filter(candidate => candidate === pass).length === 1);
+          if (lighting) {
+            lighting.rebuildKeepsLamp = true;
+            lighting.rebuildRemovesOldPasses = true;
+            if (typeof first.build === 'function') {
+              const lamp = first.lamp;
+              for (const [cascading, bounce] of [[false, true], [true, false], [true, true]]) {
+                const outgoing = [...app.framePasses];
+                retiredPasses.push(...outgoing);
+                first.build(cascading, bounce);
+                lighting.rebuildKeepsLamp &&= first.lamp === lamp;
+                lighting.rebuildRemovesOldPasses &&= absent(outgoing) && presentOnce([...app.framePasses]);
+              }
+            }
+            ownedPasses = [...app.framePasses];
+            lighting.activePasses = presentOnce(ownedPasses);
+          }
+
           const signals = ['onPointerDown', 'onPointerMove', 'onPointerUp', 'onPointerTap', 'onPointerCancel'];
           const counts = () => signals.map(key => app.input[key].count);
           const before = counts();
@@ -182,6 +219,7 @@ export const exampleSceneOwnershipChecks = async (
           });
           await app.scenes.change(Empty, { suspendCurrent: true });
           const retained = resources.every(entry => entry.calls === 0) && !first.musicVoice?.ended;
+          if (lighting) lighting.retainedPassesAbsent = absent(ownedPasses);
           const retainedVoiceTime = first.musicVoice?.time;
           if (first.musicVoice) await new Promise(resolve => setTimeout(resolve, 100));
           const held = !first.musicVoice || first.musicVoice.time === retainedVoiceTime;
@@ -194,14 +232,41 @@ export const exampleSceneOwnershipChecks = async (
           const inactive = held && dormant.tint === afterDormant.tint && JSON.stringify(dormant) === JSON.stringify(afterDormant);
           await app.scenes.restore(SceneType);
           const restored = app.scenes.currentScene === first;
+          if (lighting) lighting.restoredPassesOnce = presentOnce(ownedPasses);
           await app.scenes.change(Empty);
           const destroyed = resources.map(entry => ({ key: entry.key, calls: entry.calls }));
           const voiceStopped = !first.musicVoice || first.musicVoice.ended;
+          if (lighting) lighting.destroyedPassesAbsent = absent([...retiredPasses, ...ownedPasses]);
           await app.scenes.change(SceneType);
           const reentered = app.scenes.currentScene !== first;
           const after = counts();
-          const sharedAlive = !shared?.destroyed;
+          const sharedAlive = shared === null ? null : !shared.destroyed;
           let cancelled = true;
+
+          if (lighting) {
+            await app.scenes.change(Empty);
+            const originalInit = SceneType.prototype.init;
+            let prepared;
+            SceneType.prototype.init = function (...args) {
+              prepared = this;
+              return originalInit.apply(this, args);
+            };
+            try {
+              await app.scenes.preload(SceneType);
+            } finally {
+              SceneType.prototype.init = originalInit;
+            }
+            const whilePrepared = [...app.framePasses];
+            await app.scenes.change(SceneType);
+            const preparedPasses = [...app.framePasses];
+            // Compare the actual prepared renderer's pass identities after
+            // activation, when scene-bound systems first publish them.
+            lighting.preloadedPassesAbsent = app.scenes.currentScene === prepared &&
+              preparedPasses.length > 0 && preparedPasses.every(pass => !whilePrepared.includes(pass));
+            lighting.preloadedActivationOnce = presentOnce(preparedPasses);
+            await app.scenes.change(Empty);
+            lighting.preloadedDestroyRemovesPasses = absent(preparedPasses);
+          }
 
           if (Object.hasOwn(SceneType.prototype, 'load')) {
             await app.scenes.change(Empty);
@@ -247,7 +312,7 @@ export const exampleSceneOwnershipChecks = async (
           }
 
           await app.destroy();
-          return { retained, restored, reentered, inactive, sharedAlive, cancelled, voiceStopped, destroyed, before, after, applicationErrors };
+          return { retained, restored, reentered, inactive, sharedAlive, sharedAsset, lighting, cancelled, voiceStopped, destroyed, before, after, applicationErrors };
         })()`);
 
         if (
@@ -255,7 +320,8 @@ export const exampleSceneOwnershipChecks = async (
           !result.restored ||
           !result.reentered ||
           !result.inactive ||
-          !result.sharedAlive ||
+          result.sharedAlive === false ||
+          (result.lighting !== null && Object.values(result.lighting).some(passed => !passed)) ||
           !result.cancelled ||
           !result.voiceStopped
         ) {

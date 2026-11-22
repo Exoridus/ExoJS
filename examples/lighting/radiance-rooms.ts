@@ -166,6 +166,7 @@ class RadianceRoomsScene extends Scene {
   private world!: Container;
   private panel!: Sprite;
   private lighting!: Lighting;
+  private lamp!: PointLight;
   private cascading = true;
   private intensity = 3;
   private softness = 0.35;
@@ -219,6 +220,9 @@ class RadianceRoomsScene extends Scene {
     // them out again on `destroy()`. Importing the class is also what links it,
     // so a project that only ever builds one leaves the other out of its bundle.
     // Space pauses the lamp, so both renderers can be compared at one instant.
+    this.lamp = this.track(
+      new PointLight({ radius: 600, intensity: this.intensity, softness: this.softness, color: new Color(255, 226, 180) }),
+    );
     this.build(this.cascading, this.bounce);
     const panel = demoPanel({
       scene: this,
@@ -263,10 +267,6 @@ class RadianceRoomsScene extends Scene {
     this.lamp.setPosition(x, y);
   }
 
-  private get lamp(): PointLight {
-    return this.lighting.lights[0] as PointLight;
-  }
-
   /** Builds the lighting system for the selected renderer, unless it is already the one running. */
   private build(cascading: boolean, bounce: boolean): void {
     if (this.lighting !== undefined && cascading === this.cascading && (bounce === this.bounce || !cascading)) {
@@ -281,13 +281,15 @@ class RadianceRoomsScene extends Scene {
       this.lighting.destroy();
     }
 
-    const options = { ambient: new Color(10, 11, 16), lightResolution };
+    const options = { scene: this, ambient: new Color(10, 11, 16), lightResolution };
 
     this.lighting = this.cascading
       ? new RadianceLighting(this.app, { ...options, bounce: this.bounce ? bounceFactor : 0 })
       : new LightmapLighting(this.app, options);
     this.systems.add(this.lighting);
-    this.lighting.add(new PointLight({ radius: 600, intensity: this.intensity, softness: this.softness, color: new Color(255, 226, 180) }));
+    // Registration does not own a light. Reuse the scene-owned lamp when
+    // the selected renderer or bounce setting replaces the lighting system.
+    this.lighting.add(this.lamp);
     // Placed straight away rather than on the next tick: switching renderer
     // while the motion is paused would otherwise leave the new lamp at the
     // origin, and the A/B this scene exists for would compare two different

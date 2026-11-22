@@ -81,7 +81,7 @@ class ShadowCastersScene extends Scene {
     this.world.addChild(floor);
     const wallTexture = this.track(new Texture(wallCanvas));
     const pillarTexture = this.track(new Texture(pillarCanvas));
-    this.lighting = new LightmapLighting(this.app, { ambient: new Color(82, 87, 100), lightResolution: 1 });
+    this.lighting = new LightmapLighting(this.app, { scene: this, ambient: new Color(82, 87, 100), lightResolution: 1 });
     this.systems.add(this.lighting);
 
     for (let i = 0; i < 3; i++) {
@@ -93,9 +93,13 @@ class ShadowCastersScene extends Scene {
 
     this.turntable = this.walls[2];
     this.root.addChild(this.world);
-    this.torch = this.lighting.add(new PointLight({ radius: 500, intensity: 2.1, softness: 0.35, color: new Color(255, 210, 160) }));
-    this.beam = this.lighting.add(
-      new SpotLight({ radius: 500, angle: 40, coneSoftness: 0.35, intensity: 0, softness: 0.35, color: new Color(255, 210, 160) }),
+    this.torch = this.track(
+      this.lighting.add(new PointLight({ radius: 500, intensity: 2.1, softness: 0.35, color: new Color(255, 210, 160) })),
+    );
+    this.beam = this.track(
+      this.lighting.add(
+        new SpotLight({ radius: 500, angle: 40, coneSoftness: 0.35, intensity: 0, softness: 0.35, color: new Color(255, 210, 160) }),
+      ),
     );
     this.panel = demoPanel({
       scene: this,
