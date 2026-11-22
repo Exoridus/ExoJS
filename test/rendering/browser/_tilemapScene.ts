@@ -69,6 +69,57 @@ export const createQuadrantTexture = (): Texture => {
   return new Texture(canvas);
 };
 
+/**
+ * Every cell overhangs upwards, so the chunk builder must preserve exact cell
+ * order rather than texture-sorting. The GPU can still merge distinct atlas
+ * runs into one draw via per-instance texture slots.
+ *
+ * Textures supplied by a test are 12x20 px. This helper never owns them.
+ */
+export const orderedTextureRunMap = (textures: readonly Texture[], order: readonly number[]): TileMap => {
+  const tilesets = textures.map(
+    (texture, index) =>
+      new TileSet({
+        name: `ordered-${index}`,
+        texture: new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }),
+        tileWidth: 12,
+        tileHeight: 20,
+        tileCount: 1,
+      }),
+  );
+  const layer = new TileLayer({
+    id: 1,
+    name: 'ordered-runs',
+    width: order.length,
+    height: 1,
+    tileWidth: 12,
+    tileHeight: 12,
+    chunkWidth: order.length,
+    chunkHeight: 1,
+    tilesets,
+  });
+
+  for (let x = 0; x < order.length; x++) {
+    const tileset = tilesets[order[x]!];
+
+    if (tileset === undefined) {
+      throw new Error('orderedTextureRunMap: invalid texture index.');
+    }
+
+    layer.setTileAt(x, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+  }
+
+  return new TileMap({
+    name: 'ordered-texture-runs',
+    width: order.length,
+    height: 1,
+    tileWidth: 12,
+    tileHeight: 12,
+    tilesets,
+    layers: [layer],
+  });
+};
+
 /** A single 16×16 tile tileset over a texture (`tileCount` covering the grid). */
 export const makeTileset = (texture: Texture, name = 'tiles', tileCount = 1): TileSet =>
   new TileSet({
