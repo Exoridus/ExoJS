@@ -162,6 +162,7 @@ describe('lighting WebGPU browser', () => {
     root.addChild(surface);
 
     const line = lighting.add(new LineLight({ length: 40, radius: 8, height: 16, intensity: 1 })).setPosition(32, 32);
+
     const render = async (): Promise<void> => {
       lighting.update();
       backend.clear(Color.black);
@@ -169,6 +170,7 @@ describe('lighting WebGPU browser', () => {
       backend.flush();
       await device.queue.onSubmittedWorkDone();
     };
+
     const cleanup = (): void => {
       root.destroy();
       material.destroy();
