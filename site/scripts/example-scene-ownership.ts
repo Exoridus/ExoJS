@@ -262,7 +262,7 @@ export const exampleSceneOwnershipChecks = async (
           throw new Error(`${example}: retention/restore/reentry failed: ${JSON.stringify(result)}`);
         }
 
-        const missed = result.destroyed.filter(entry => entry.calls === 0);
+        const missed = result.destroyed.filter(entry => entry.calls !== 1);
 
         if (
           missed.length ||
