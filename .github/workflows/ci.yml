@@ -168,10 +168,43 @@ jobs:
           apt: ${{ matrix.apt }}
           naga: ${{ matrix.naga }}
 
+      # Shadow only: discovery records candidate subsets while the unchanged
+      # commands below still execute every required test. Each row's reporter
+      # compares the plan with the actual full inventory and failures.
+      - name: Calculate affected tests in shadow mode
+        if: github.event_name == 'pull_request' && matrix.affectedProjects[0] != null
+        env:
+          AFFECTED_BASE: ${{ github.event.pull_request.base.sha }}
+          AFFECTED_PROJECTS: ${{ join(matrix.affectedProjects, ',') }}
+          AFFECTED_OUTPUT: .workspace/affected-tests/${{ matrix.id }}.json
+        shell: bash
+        run: |
+          if ! git fetch --no-tags --depth=1 origin "$AFFECTED_BASE"; then
+            printf '%s\n' '::warning::Dependency selection could not fetch its base; the selector will retain full validation.'
+          fi
+          args=()
+          IFS=',' read -ra projects <<< "$AFFECTED_PROJECTS"
+          for project in "${projects[@]}"; do
+            args+=("--project=$project")
+          done
+          node scripts/ci/affected-plan.ts --base "$AFFECTED_BASE" --committed --scenarios --output "$AFFECTED_OUTPUT" -- "${args[@]}"
+          printf 'EXOJS_AFFECTED_PLAN=%s\n' "$AFFECTED_OUTPUT" >> "$GITHUB_ENV"
+
       # A browser lane runs several qualification rows (`pnpm qualify`), each
       # with its own JUnit report, deadline and log; the summary of which rows
       # passed, were unsupported on this host or failed is on the job page.
       - run: ${{ matrix.run }}
+        if: ${{ !cancelled() }}
+
+      - name: Keep dependency-selection evidence
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.affectedProjects[0] != null }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: affected-tests-${{ matrix.id }}
+          path: .workspace/affected-tests/
+          retention-days: 7
+          include-hidden-files: true
+          if-no-files-found: error
 
       - name: Keep the JUnit reports for the skip budget
         if: ${{ matrix.junit && !cancelled() }}

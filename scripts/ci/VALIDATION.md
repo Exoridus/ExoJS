@@ -10,6 +10,8 @@ Run named tests while editing. Inspect the affected lanes before pushing:
 pnpm lanes --base origin/next
 ```
 
+The [dependency-selection guide](AFFECTED_TESTS.md) documents graph discovery, reason paths, full fallbacks and the PR shadow artifacts. During the shadow phase, the required CI commands still run their complete project inventories and the reporter compares them with the proposed subsets.
+
 The pre-push hook defaults to `EXOJS_OUTPUT=compact`; set `EXOJS_OUTPUT=normal` or `verbose` to stream command output. Every command still has a unique full log under `.workspace/logs/`, and failures print a diagnostic tail and the log path. A new branch push uses the merge base with `origin/HEAD`; an incremental push uses the previous remote branch SHA. The hook runs static gates selected by `scripts/ci/local-policy.ts` and the local test lanes for that range. Unknown paths and unresolved ranges run every gate and lane. CI continues to run its complete affected matrix. Do not run a complete duplicate suite immediately before the hook.
 
 `node scripts/ci/local-policy.ts --files <path...>` prints the local selection for a proposed change. The explicitly listed random and input-mapping utilities run core unit tests without browser, smoke, allocation or physics performance suites. Other math modules remain broad because rendering and parity suites directly import Matrix, Rectangle and related geometry. Rendering and relevant extension changes retain their browser and perf contracts. Package tests and typechecks follow workspace package dependencies. CI deliberately keeps broader engine coverage, including example smoke, for pull requests.

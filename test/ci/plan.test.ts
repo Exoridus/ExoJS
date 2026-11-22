@@ -91,10 +91,45 @@ describe('lane table', () => {
     }
   });
 
+  it('audits every blocking Vitest lane while retaining its ordinary full command', () => {
+    const plan = planCi({ eventName: 'workflow_dispatch', changedFiles: [], refName: 'next' });
+
+    for (const entry of plan.test.filter(lane => lane.junit)) {
+      expect(entry.affectedProjects.length, `${entry.id} has a discovery inventory`).toBeGreaterThan(0);
+      expect(entry.run).toContain('--reporter=./scripts/ci/affected-reporter.ts');
+      expect(entry.run).not.toContain('affected-plan.ts');
+      expect(entry.run).not.toContain('--changed');
+      expect(entry.run).not.toContain('--related');
+    }
+  });
+
   it('never mentions a lane by name in the workflow', () => {
     for (const lane of LANES) {
       expect(workflow).not.toMatch(new RegExp(`\\b${lane.run.split(' ').slice(0, 3).join(' ')}\\b`));
     }
+  });
+});
+
+describe('affected-test CI shadow contract', () => {
+  const shadow = workflow.slice(
+    workflow.indexOf('      - name: Calculate affected tests'),
+    workflow.indexOf('      - name: Keep the JUnit'),
+  );
+
+  it('computes PR selections from the exact event base without filtering the full run', () => {
+    expect(shadow).toContain("if: github.event_name == 'pull_request'");
+    expect(shadow).toContain('AFFECTED_BASE: ${{ github.event.pull_request.base.sha }}');
+    expect(shadow).toContain('--committed --scenarios');
+    expect(shadow).toContain('run: ${{ matrix.run }}');
+    expect(shadow).not.toMatch(/affected-plan\.ts[^\n]* --run\b/);
+    expect(shadow).not.toContain('continue-on-error:');
+  });
+
+  it('still executes the full lane if discovery fails and retains its shadow evidence', () => {
+    expect(shadow).toMatch(/- run: \$\{\{ matrix\.run \}\}\n\s+if: \$\{\{ !cancelled\(\) \}\}/);
+    expect(shadow).toContain('name: affected-tests-${{ matrix.id }}');
+    expect(shadow).toContain('include-hidden-files: true');
+    expect(shadow).toContain('if-no-files-found: error');
   });
 });
 

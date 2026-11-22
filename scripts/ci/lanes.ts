@@ -45,6 +45,8 @@ export interface Lane {
   minimumOutput?: 'compact' | 'normal' | 'silent' | 'verbose';
   /** Emits `test-results/<id>.junit.xml` for the skip budget and Codecov. */
   junit?: boolean;
+  /** Vitest projects whose dependency selection is compared with full execution in CI. */
+  affectedProjects?: readonly string[];
   /** Pull requests only. */
   pullRequestOnly?: boolean;
   timeoutMinutes?: number;
@@ -54,7 +56,8 @@ export const laneTimeoutMinutes = (lane: Pick<Lane, 'timeoutMinutes'>): number =
 
 const supervisorTests = 'node --test test/ci/validation.node.ts test/ci/qualify.node.ts && ';
 
-const junit = (id: string): string => `--reporter=minimal --reporter=junit --outputFile.junit=./test-results/${id}.junit.xml`;
+const junit = (id: string): string =>
+  `--reporter=minimal --reporter=junit --reporter=./scripts/ci/affected-reporter.ts --outputFile.junit=./test-results/${id}.junit.xml`;
 
 /** One row of the browser qualification matrix; `pnpm qualify` runs it. */
 interface QualifiedRow {
@@ -131,6 +134,7 @@ export const LANES: readonly Lane[] = [
     coverageRun: `${supervisorTests}EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
     naga: true,
     junit: true,
+    affectedProjects: ['exojs*', 'rendering-perf'],
   },
   {
     id: 'webgl',
@@ -142,6 +146,7 @@ export const LANES: readonly Lane[] = [
     browser: 'chromium',
     local: 'browser',
     junit: true,
+    affectedProjects: ['browser-webgl-chromium', 'browser-build-chromium', 'browser-assets-chromium', 'browser-core-chromium'],
     timeoutMinutes: 30,
   },
   {
@@ -176,6 +181,7 @@ export const LANES: readonly Lane[] = [
     browser: 'chromium',
     local: 'browser',
     junit: true,
+    affectedProjects: ['browser-webgpu', 'browser-webgpu-media'],
     timeoutMinutes: 30,
   },
   {
@@ -236,6 +242,7 @@ export const LANES: readonly Lane[] = [
     local: 'browser',
     ciOnly: true,
     junit: true,
+    affectedProjects: ['browser-webgl-firefox'],
     timeoutMinutes: 30,
   },
   {
@@ -247,6 +254,7 @@ export const LANES: readonly Lane[] = [
     browser: 'chromium',
     local: 'browser',
     junit: true,
+    affectedProjects: ['browser-audio-chromium'],
   },
   {
     id: 'tilemap',
@@ -257,6 +265,7 @@ export const LANES: readonly Lane[] = [
     browser: 'chromium',
     local: 'browser',
     junit: true,
+    affectedProjects: ['browser-tilemap-chromium'],
   },
   {
     id: 'bench',
@@ -318,6 +327,7 @@ export interface MatrixEntry {
   dist: boolean;
   junit: boolean;
   coverage: boolean;
+  affectedProjects: readonly string[];
   timeoutMinutes: number;
 }
 
@@ -382,6 +392,7 @@ const toEntry = (lane: Lane, coverage: boolean): MatrixEntry => ({
   dist: lane.dist ?? false,
   junit: lane.junit ?? false,
   coverage: coverage && lane.coverageRun !== undefined,
+  affectedProjects: lane.affectedProjects ?? [],
   timeoutMinutes: laneTimeoutMinutes(lane),
 });
 
