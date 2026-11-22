@@ -4,6 +4,7 @@
 import { ScriptTarget } from '@typescript/native/ast';
 import { API, ModuleKind, formatDiagnosticsWithColorAndContext } from '@typescript/native/sync';
 
+/** @type {API | undefined} */
 let client;
 
 /** @returns {API} */

@@ -98,11 +98,6 @@ const PROFILES: readonly Profile[] = [
   },
 ];
 
-const fail = (message: string): never => {
-  console.error(message);
-  process.exit(1);
-};
-
 /** Materialize an isolated native compiler profile with repo-absolute paths. */
 const profileConfig = (profile: Profile, directory: string): string => {
   const config = profile.config as {
@@ -121,11 +116,14 @@ const profileConfig = (profile: Profile, directory: string): string => {
   }
 
   const path = join(directory, `${profile.name}.json`);
-  writeFileSync(path, JSON.stringify({
-    extends: resolve(REPO_ROOT, config.extends),
-    include: config.include.map(pattern => resolve(REPO_ROOT, pattern)),
-    compilerOptions,
-  }));
+  writeFileSync(
+    path,
+    JSON.stringify({
+      extends: resolve(REPO_ROOT, config.extends),
+      include: config.include.map(pattern => resolve(REPO_ROOT, pattern)),
+      compilerOptions,
+    }),
+  );
 
   return path;
 };
@@ -155,7 +153,9 @@ try {
 
     if (checked.status !== 0) {
       console.error(checked.output);
-      console.error(`typecheck:type-tests [${profile.name}]: ${checked.diagnostics.length} error(s) - ${profile.proves}.`);
+      console.error(
+        `typecheck:type-tests [${profile.name}]: ${checked.diagnostics.length} error(s) - ${profile.proves}.`,
+      );
       failed = true;
       continue;
     }

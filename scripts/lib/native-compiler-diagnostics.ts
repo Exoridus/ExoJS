@@ -35,10 +35,7 @@ export const parseNativeDiagnostics = (output: string, cwd: string): NativeDiagn
 };
 
 /** Execute a config-scoped native typecheck without silently dropping failures. */
-export const checkNativeProject = (
-  tsconfig: string,
-  cwd: string,
-): { status: number; diagnostics: NativeDiagnostic[]; output: string } => {
+export const checkNativeProject = (tsconfig: string, cwd: string): { status: number; diagnostics: NativeDiagnostic[]; output: string } => {
   const result = runTypeScriptCompiler(['--noEmit', '--pretty', 'false', '-p', tsconfig], { cwd, stdio: 'pipe' });
   const diagnostics = parseNativeDiagnostics(result.output, cwd);
 
