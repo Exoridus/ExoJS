@@ -135,7 +135,7 @@ describe('WebGL2 tilemap — multiple tilesets', () => {
 describe('WebGL2 tilemap — multi-texture batching', () => {
   test('batches alternating atlas runs without changing their painter order', async () => {
     const backend = await createBackend();
-    const textures = ["#ff0000","#0000ff"].map(color => createSolidRectTexture(color, 12, 20));
+    const textures = ['#ff0000', '#0000ff'].map(color => createSolidRectTexture(color, 12, 20));
     const map = orderedTextureRunMap(textures, [0, 1, 0, 1]);
     const node = new TileMapNode(map);
 
@@ -158,7 +158,7 @@ describe('WebGL2 tilemap — multi-texture batching', () => {
 
   test('flushes safely on the fifth distinct atlas', async () => {
     const backend = await createBackend();
-    const textures = ["#ff0000","#00ff00","#0000ff","#ffff00","#00ffff"].map(color => createSolidRectTexture(color, 12, 20));
+    const textures = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff'].map(color => createSolidRectTexture(color, 12, 20));
     const map = orderedTextureRunMap(textures, [0, 1, 2, 3, 4]);
     const node = new TileMapNode(map);
 
@@ -179,7 +179,6 @@ describe('WebGL2 tilemap — multi-texture batching', () => {
       backend.destroy();
     }
   });
-
 });
 
 // ── orientation (G-FLIP) ─────────────────────────────────────────────────
