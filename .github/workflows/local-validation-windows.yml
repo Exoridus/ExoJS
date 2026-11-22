@@ -14,6 +14,8 @@ on:
       - 'scripts/ci/select-lanes.ts'
       - 'scripts/ci/format-scope.ts'
       - 'scripts/ci/related-tests.ts'
+      - 'scripts/ci/affected-*.ts'
+      - 'scripts/run-tests.ts'
       - 'scripts/ci/local-policy.ts'
       - 'scripts/ci/qualify.ts'
       - 'scripts/ci/capability.ts'
@@ -22,6 +24,9 @@ on:
       - 'test/ci/qualify.node.ts'
       - 'test/ci/format-scope.test.ts'
       - 'test/ci/related-tests.test.ts'
+      - 'test/ci/affected-*.test.ts'
+      - 'test/ci/run-tests.test.ts'
+      - 'test/core/browser/fixtures/inline-worker-*.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -42,6 +47,8 @@ on:
       - 'scripts/ci/select-lanes.ts'
       - 'scripts/ci/format-scope.ts'
       - 'scripts/ci/related-tests.ts'
+      - 'scripts/ci/affected-*.ts'
+      - 'scripts/run-tests.ts'
       - 'scripts/ci/local-policy.ts'
       - 'scripts/ci/qualify.ts'
       - 'scripts/ci/capability.ts'
@@ -50,6 +57,9 @@ on:
       - 'test/ci/qualify.node.ts'
       - 'test/ci/format-scope.test.ts'
       - 'test/ci/related-tests.test.ts'
+      - 'test/ci/affected-*.test.ts'
+      - 'test/ci/run-tests.test.ts'
+      - 'test/core/browser/fixtures/inline-worker-*.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -79,5 +89,5 @@ jobs:
       - name: Check process ownership, cancellation and lane execution
         run: node --test test/ci/validation.node.ts test/ci/qualify.node.ts
       - uses: ./.github/actions/setup
-      - name: Check format scope and related-test CLI selection
-        run: pnpm exec vitest run --project exojs test/ci/format-scope.test.ts test/ci/related-tests.test.ts
+      - name: Check format scope, dependency selection and native execution
+        run: pnpm exec vitest run --project exojs test/ci/format-scope.test.ts test/ci/related-tests.test.ts test/ci/affected- test/ci/run-tests.test.ts
