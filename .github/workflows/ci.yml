@@ -24,6 +24,10 @@ on:
     branches: [main, next]
   workflow_dispatch:
     inputs:
+      full_qualification:
+        description: Qualify the complete candidate with coverage and every example
+        type: boolean
+        default: true
       runner:
         description: Image for the browser and unit lanes (a manual run on a candidate image qualifies it before any migration)
         type: choice
@@ -61,6 +65,7 @@ jobs:
       smokeSample: ${{ steps.plan.outputs.smokeSample }}
       skipBudget: ${{ steps.plan.outputs.skipBudget }}
       coverage: ${{ steps.plan.outputs.coverage }}
+      fullQualification: ${{ steps.plan.outputs.fullQualification }}
       guideMotion: ${{ steps.changed.outputs.guide_motion }}
     steps:
       - uses: actions/checkout@v6
@@ -120,6 +125,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           CHANGED_FILES_FILE: ${{ runner.temp }}/changed-files
           REF_NAME: ${{ github.ref_name }}
+          FULL_QUALIFICATION: ${{ inputs.full_qualification || contains(github.event.pull_request.labels.*.name, 'ci:full') }}
         run: node scripts/ci/lanes.ts >> "$GITHUB_OUTPUT"
 
   gates:
@@ -192,7 +198,7 @@ jobs:
       # commands below still execute every required test. Each row's reporter
       # compares the plan with the actual full inventory and failures.
       - name: Calculate affected tests in shadow mode
-        if: github.event_name == 'pull_request' && matrix.affectedProjects[0] != null
+        if: github.event_name == 'pull_request' && matrix.affectedProjects[0] != null && needs.plan.outputs.fullQualification != 'true'
         env:
           AFFECTED_BASE: ${{ github.event.pull_request.base.sha }}
           AFFECTED_PROJECTS: ${{ join(matrix.affectedProjects, ',') }}
@@ -222,7 +228,7 @@ jobs:
           EXOJS_VISUAL_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Keep dependency-selection evidence
-        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.affectedProjects[0] != null }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.affectedProjects[0] != null && needs.plan.outputs.fullQualification != 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: affected-tests-${{ matrix.id }}

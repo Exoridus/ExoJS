@@ -156,8 +156,8 @@ export const LANES: readonly Lane[] = [
     when: 'browserWebgpu',
     run: 'pnpm test:browser:webgpu --no-file-parallelism && pnpm test:browser:webgpu:media',
     // Local diagnostics avoid concurrent files competing for one GPU process.
-    // CI keeps its existing, independently qualified parallel configuration for
-    // Core; Media is serial in its project definition. Each row gets its own
+    // Vitest 5 also uses one file worker in CI's headed browser pool;
+    // Media is serial in its project definition. Each row gets its own
     // virtual display so one row's X server cannot outlive it into the next.
     ciRun: rows(
       {
@@ -350,6 +350,8 @@ export interface CiPlan {
   skipBudget: boolean;
   /** Collect and upload coverage. */
   coverage: boolean;
+  /** A final-candidate request overrides all selective and sampled paths. */
+  fullQualification: boolean;
 }
 
 export interface PlanInput {
@@ -364,6 +366,8 @@ export interface PlanInput {
   changedFiles: readonly string[];
   /** Branch the event ran on; coverage is collected on the long-lived ones. */
   refName: string;
+  /** Request all areas, coverage and the complete example catalog on this exact head. */
+  fullQualification?: boolean;
 }
 
 const COVERAGE_BRANCHES = new Set(['main', 'next']);
@@ -408,12 +412,12 @@ export const selectLanes = (effective: EffectiveLanes, isPullRequest: boolean): 
  * else - an unresolved push diff, `merge_group`, a tag/release or a manual
  * dispatch - validates every area, fail closed.
  */
-export const planCi = ({ eventName, changedFiles, refName }: PlanInput): CiPlan => {
+export const planCi = ({ eventName, changedFiles, refName, fullQualification = false }: PlanInput): CiPlan => {
   const isPullRequest = eventName === 'pull_request';
   const isSelectivePush = eventName === 'push' && changedFiles.length > 0;
-  const areas = isPullRequest || isSelectivePush ? selectAreas(changedFiles) : ALL_AREAS;
+  const areas = !fullQualification && (isPullRequest || isSelectivePush) ? selectAreas(changedFiles) : ALL_AREAS;
   const effective = effectiveLanes(areas);
-  const coverage = eventName === 'push' && COVERAGE_BRANCHES.has(refName);
+  const coverage = fullQualification || (eventName === 'push' && COVERAGE_BRANCHES.has(refName));
   const lanes = selectLanes(effective, isPullRequest);
   const stage = (name: Stage): MatrixEntry[] => lanes.filter(lane => lane.stage === name).map(lane => toEntry(lane, coverage));
   // The smoke drives the site job's artifact, so a catalog change builds the
@@ -435,9 +439,10 @@ export const planCi = ({ eventName, changedFiles, refName }: PlanInput): CiPlan 
     build: areas.engine || areas.createExoApp || site,
     site,
     smoke: areas.exampleCatalog || candidate,
-    smokeSample: isPullRequest || !areas.exampleCatalog,
+    smokeSample: !fullQualification && (isPullRequest || !areas.exampleCatalog),
     skipBudget: effective.unit,
     coverage,
+    fullQualification,
   };
 };
 
@@ -478,6 +483,7 @@ const main = (): void => {
     eventName: process.env['EVENT_NAME'] ?? '',
     changedFiles: parseChangedFiles(changedFiles),
     refName: process.env['REF_NAME'] ?? '',
+    fullQualification: process.env['FULL_QUALIFICATION'] === 'true',
   });
 
   const { areas, gates, test, verify, ...flags } = plan;

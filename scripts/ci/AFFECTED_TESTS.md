@@ -40,3 +40,9 @@ For each invocation, the reporter verifies committed HEAD/tree identity and the 
 The `affected-tests-<lane>` Actions artifact contains the plan and observed results; the job summary gives the selected/omitted totals. Read `inventoryComplete`, `inventoryProblems` and `excludedFailures` before using any proposed reduction as evidence. A green full run establishes inventory agreement; positive and negative selector tests and mutation tests establish that relevant regressions are selected.
 
 Required checks, JUnit skip-budget reports, qualification preflights, deadlines and `verdict` remain independent of the proposed subsets. Manual/full qualification and release validation continue to execute the complete required inventories. Shadow data alone does not authorize reducing a lane.
+
+## Qualify the final candidate
+
+Add the `ci:full` label before the final PR push. The next CI event for that exact head requests every lane, coverage, release preparation and consumer checks, plus the entire example catalog. It bypasses dependency selection and PR smoke sampling. Adding the label by itself does not start or cancel a run. Keep the PR as a draft until the required checks on the final combined head are green; a subsequent source or base-branch change needs fresh qualification.
+
+The manual workflow dispatch also defaults to full qualification. None of these validation paths merges the PR, publishes packages or deploys a release.

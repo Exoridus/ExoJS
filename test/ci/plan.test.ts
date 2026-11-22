@@ -243,6 +243,20 @@ describe('plan for events that always validate everything', () => {
     expect(plan.areas).toEqual(planCi({ eventName: 'workflow_dispatch', changedFiles: [], refName: 'next' }).areas);
     expect(ids(plan.test)).toEqual(['unit', 'webgl', 'webgpu', 'firefox', 'audio', 'tilemap', 'bench']);
   });
+
+  it('qualifies a final PR head in full even when its diff would only need documentation gates', () => {
+    const plan = planCi({ eventName: 'pull_request', changedFiles: ['CONTRIBUTING.md'], refName: 'feature', fullQualification: true });
+
+    expect(Object.values(plan.areas).every(Boolean)).toBe(true);
+    expect(ids(plan.test)).toEqual(['unit', 'webgl', 'webgpu', 'firefox', 'audio', 'tilemap', 'bench']);
+    expect(ids(plan.verify)).toEqual(['package', 'release', 'create-exo-app']);
+    expect(plan).toMatchObject({ fullQualification: true, coverage: true, build: true, site: true, smoke: true, smokeSample: false });
+    expect(plan.test.find(entry => entry.id === 'unit')?.run).toContain('test:coverage');
+  });
+
+  it('retains ordinary selective, uninstrumented PR validation without a full request', () => {
+    expect(pullRequest(['CONTRIBUTING.md'])).toMatchObject({ fullQualification: false, coverage: false, test: [] });
+  });
 });
 
 describe('plan for a pull request', () => {
