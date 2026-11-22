@@ -1,0 +1,318 @@
+{
+  "title": "VideoFrameSource",
+  "description": "An `HTMLVideoElement` as a FrameSource. Where the browser supports `requestVideoFrameCallback`, every presented frame advances revision, so a paused video uploads nothing. Elsewhere the revision follows the playback position, polled when it is read. Metadata, resize and seek events advance it as well, so dimension changes and seeks while paused reach the texture. The source does not own the element: destroying it removes its listeners and callbacks, and leaves playback alone.",
+  "symbol": "VideoFrameSource",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 6,
+    "events": 1
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An `HTMLVideoElement` as a FrameSource.",
+        "Where the browser supports `requestVideoFrameCallback`, every presented frame advances revision, so a paused video uploads nothing. Elsewhere the revision follows the playback position, polled when it is read. Metadata, resize and seek events advance it as well, so dimension changes and seeks while paused reach the texture.",
+        "The source does not own the element: destroying it removes its listeners and callbacks, and leaves playback alone."
+      ],
+      "importLine": "import { VideoFrameSource } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(video: HTMLVideoElement): VideoFrameSource",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "video",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLVideoElement",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VideoFrameSource",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "video",
+              "type": "HTMLVideoElement",
+              "optional": false
+            }
+          ],
+          "returnType": "VideoFrameSource",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Releases listeners and callbacks the source registered. Its revision stops changing."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height of the current frame in pixels; 0 while no frame is available."
+        },
+        {
+          "name": "image",
+          "signature": "image: TextureSource",
+          "signatureTokens": [
+            {
+              "text": "image",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The browser image a renderer uploads, or null when there is none."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: boolean",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once the element has decoded data for its current position."
+        },
+        {
+          "name": "revision",
+          "signature": "revision: number",
+          "signatureTokens": [
+            {
+              "text": "revision",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Increases whenever a new frame or a new size is available. Reading it may poll the underlying source, and is cheap enough to do on every bind."
+        },
+        {
+          "name": "video",
+          "signature": "video: HTMLVideoElement",
+          "signatureTokens": [
+            {
+              "text": "video",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLVideoElement",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width of the current frame in pixels; 0 while no frame is available."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onFrame",
+          "signature": "onFrame: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onFrame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched when the source advances its revision on its own, so a cached render can redraw."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/VideoFrameSource.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/VideoFrameSource.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/VideoFrameSource.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/VideoFrameSource.ts"
+}
