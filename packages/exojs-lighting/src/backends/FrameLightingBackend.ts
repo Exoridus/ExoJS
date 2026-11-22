@@ -68,9 +68,7 @@ export const lightCompositeShader = new Shader({
 
 /**
  * What the light quads read besides their instances and textures.
- * @internal
- */
-/**
+ *
  * `u_shadowClearance` keeps an occluder's lit face out of its own shadow, in
  * light-target fragments along the ray. The fragment in front of a face on a
  * fragment boundary is half a fragment from it: a quarter keeps that one lit
@@ -78,6 +76,7 @@ export const lightCompositeShader = new Shader({
  * seam along every face. Where a light texel spans several output pixels the
  * composite filters across it, so the texel behind the face must stay lit as
  * well or the floor in front goes dark; three quarters does that.
+ * @internal
  */
 export const lightQuadUniforms = { u_shadowPrecision: UniformType.Float, u_shadowClearance: UniformType.Float } as const;
 

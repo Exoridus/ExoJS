@@ -210,6 +210,34 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
         'a crate overlapping a pillar',
         { light: 'point', lightX: 50, lightY: 90, polygons: [square(130, 110, 180, 160), square(110, 140, 140, 175)] },
       ],
+      [
+        // Their silhouettes share angular bins without meeting: one straight
+        // span from the near box to the far one would run behind the near box.
+        'two boxes apart whose silhouettes share a bin',
+        { light: 'point', lightX: 40, lightY: 128, polygons: [square(90, 120, 100, 130), square(180, 132.2, 200, 170)] },
+      ],
+      [
+        // Its end turned almost edge-on to the light, so both faces meeting
+        // there fall inside one bin.
+        'the end of a thin wall seen almost edge-on',
+        {
+          light: 'point',
+          lightX: 40,
+          lightY: 128,
+          polygons: [
+            [
+              [100, 128],
+              [220, 139],
+              [220, 142],
+              [100, 131.5],
+            ],
+          ],
+        },
+      ],
+      [
+        'a wall behind the light, across the seam of its row',
+        { light: 'point', lightX: 180, lightY: 128, polygons: [square(96, 90, 104, 170), square(60, 120, 80, 140)] },
+      ],
     ])('%s matches it wherever no edge crosses the pixel', async (_name, scene) => {
       const result = await worstDisagreement(backend, scene);
 

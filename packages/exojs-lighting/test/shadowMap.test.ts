@@ -240,4 +240,42 @@ describe('buildShadowRow', () => {
     expect(row[texel + 6]).toBeCloseTo(Math.hypot(30, corner) / 100, 5);
     expect(row[texel + 6]!).toBeLessThan(start + (end - start) * 0.4);
   });
+
+  test('two separate occluders overlapping in one bin are not joined into one sloped span', () => {
+    // A near box ending at 0.6 of the bin and a far one starting at 0.2: a
+    // straight span from one to the other would run behind the near box.
+    const near = segments(30, -10, 30, 30 * Math.tan(insideFirstBin(0.6)));
+    const far = segments(80, 80 * Math.tan(insideFirstBin(0.2)), 80, 60);
+    const row = rowFor(new Float32Array([...near, ...far]), 2);
+    const partial = partialAt(row, bins / 2);
+
+    expect(partial).toEqual([expect.closeTo(0.3, 2), 0, expect.closeTo(0.6, 3), expect.closeTo(0.3, 2)]);
+    // The far one only shadows what lies beyond it, over the whole bin.
+    expect(endsAt(row, bins / 2)).toEqual([expect.closeTo(0.8, 2), expect.closeTo(0.8, 2)]);
+  });
+
+  test("a corner inside a part that stops short of the bin's end is kept", () => {
+    // The end of a thin wall turned almost edge-on: both faces meeting at its
+    // near corner end inside the same bin.
+    const corner = 30 * Math.tan(insideFirstBin(0.5));
+    const row = rowFor(segments(70, 70 * Math.tan(insideFirstBin(0.8)), 30, corner, 30, corner, 70, 70 * Math.tan(insideFirstBin(0.3))), 2);
+    const texel = (bins / 2) * shadowRowStride;
+
+    expect(partialAt(row, bins / 2)).not.toBeNull();
+    expect(row[texel + 5]).toBeCloseTo(0.5, 5);
+    expect(row[texel + 6]).toBeCloseTo(Math.hypot(30, corner) / 100, 5);
+  });
+
+  test('a bin with more parts than are remembered keeps no corner it cannot vouch for', () => {
+    // Nine far slivers fill the bin's memory before the near corner arrives.
+    const slivers = Array.from({ length: 9 }, (_, index) => {
+      const x = 80 + index;
+
+      return [x, x * Math.tan(insideFirstBin(0.1 + index * 0.08)), x, x * Math.tan(insideFirstBin(0.15 + index * 0.08))];
+    }).flat();
+    const corner = 30 * Math.tan(insideFirstBin(0.4));
+    const row = rowFor(new Float32Array([...slivers, 60, -20, 30, corner, 30, corner, 60, 40]), 11);
+
+    expect(row[(bins / 2) * shadowRowStride + 1]).not.toBe(-1);
+  });
 });

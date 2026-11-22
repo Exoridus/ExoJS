@@ -35,10 +35,10 @@ export interface FrameLightingOptions extends LightingOptions {
    * bins and the light count. Defaults to `256`, clamped to 8..4096. A
    * non-finite value throws.
    *
-   * It bounds how wide a penumbra can get. The shadow filter samples every
-   * bin under its kernel, at most 23 fetches, so the widest kernel is ten bins
-   * either side - three percent of a turn at the default, and proportionally
-   * less as the resolution rises.
+   * It bounds how wide a penumbra can get. The shadow filter reads every bin
+   * under its widest kernel and caps that kernel at ten bins either side -
+   * three percent of a turn at the default, and proportionally less as the
+   * resolution rises. Each bin is 32 bytes of row to build and upload.
    */
   readonly shadowResolution?: number;
   /**

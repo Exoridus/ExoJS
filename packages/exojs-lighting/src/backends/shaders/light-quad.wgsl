@@ -71,7 +71,12 @@ fn tentMass(span: vec2<f32>, center: f32, radius: f32) -> f32 {
 
 /** Where within `lower .. upper` a face through `(x0, d0)` and `(x1, d1)` lies beyond `threshold`. See `light-quad.frag`. */
 fn beyond(d0: f32, d1: f32, x0: f32, x1: f32, threshold: f32, lower: f32, upper: f32) -> vec2<f32> {
-    let slope = (d1 - d0) / (x1 - x0);
+    // A span rounded to no width at all stands for the distance at its start.
+    var slope = 0.0;
+
+    if (x1 > x0) {
+        slope = (d1 - d0) / (x1 - x0);
+    }
 
     if (abs(slope) < 1e-9) {
         return select(vec2<f32>(lower, lower), vec2<f32>(lower, upper), d0 > threshold);
@@ -88,8 +93,7 @@ fn beyond(d0: f32, d1: f32, x0: f32, x1: f32, threshold: f32, lower: f32, upper:
 }
 
 /** One bin's part in the kernel: the share the light reaches through, and its whole share. See `light-quad.frag`. */
-fn binTerm(bin: i32, texel: vec4<f32>, bins: i32, row: i32, threshold: f32, center: f32, radius: f32) -> vec2<f32> {
-    let low = f32(bin) - 0.5;
+fn binTerm(bin: i32, low: f32, texel: vec4<f32>, bins: i32, row: i32, threshold: f32, center: f32, radius: f32) -> vec2<f32> {
     let high = low + 1.0;
     let mass = tentMass(vec2<f32>(low, high), center, radius);
 
@@ -112,12 +116,19 @@ fn binTerm(bin: i32, texel: vec4<f32>, bins: i32, row: i32, threshold: f32, cent
         let extra = binAt(bin, 1, bins, row);
         let steps = floor(texel.g / 4096.0);
         let span = low + vec2<f32>(steps, texel.g - steps * 4096.0) / SPAN_STEPS;
-        let rest = beyond(texel.b, texel.a, low, high, threshold, span.x, span.y);
-        let own = beyond(texel.r, extra.r, span.x, span.y, threshold, span.x, span.y);
+        // Followed to a corner where two faces meet inside the part, and on
+        // from there; see `light-quad.frag`.
+        let corner = select(span.y, low + extra.g, extra.g > 0.0);
+        let cornerDistance = select(extra.r, extra.b, extra.g > 0.0);
+        let rest = beyond(texel.b, texel.a, low, high, threshold, span.x, corner);
+        let own = beyond(texel.r, cornerDistance, span.x, corner, threshold, span.x, corner);
+        let restBeyond = beyond(texel.b, texel.a, low, high, threshold, corner, span.y);
+        let ownBeyond = beyond(cornerDistance, extra.r, corner, span.y, threshold, corner, span.y);
 
         open = tentMass(beyond(texel.b, texel.a, low, high, threshold, low, span.x), center, radius) +
             tentMass(beyond(texel.b, texel.a, low, high, threshold, span.y, high), center, radius) +
-            tentMass(vec2<f32>(max(rest.x, own.x), min(rest.y, own.y)), center, radius);
+            tentMass(vec2<f32>(max(rest.x, own.x), min(rest.y, own.y)), center, radius) +
+            tentMass(vec2<f32>(max(restBeyond.x, ownBeyond.x), min(restBeyond.y, ownBeyond.y)), center, radius);
     } else if (texel.g < 0.0) {
         let extra = binAt(bin, 1, bins, row);
         let corner = low + extra.g;
@@ -141,9 +152,11 @@ fn shadowTerm(local: vec2<f32>, threshold: f32, shadowRow: f32, softness: f32, f
     let row = i32(shadowRow);
     let narrowest = clamp(0.5 * footprint * f32(bins) / (2.0 * PI), 0.02, f32(MAX_HALF));
     let widest = clamp(narrowest + max(0.0, softness) * f32(bins) * MAX_PENUMBRA, narrowest, f32(MAX_HALF));
-    let center = (atan2(local.y, local.x) + PI) / (2.0 * PI) * f32(bins) - 0.5;
-    // Bin `i` spans `i - 0.5 .. i + 0.5` here, so these are the bins the tent touches.
-    let base = i32(floor(center + 0.5));
+    let angle = (atan2(local.y, local.x) + PI) / (2.0 * PI) * f32(bins) - 0.5;
+    // Bin `i` spans `i - 0.5 .. i + 0.5` here; measured from `base` after, so a
+    // fraction of a bin keeps its bits; see `light-quad.frag`.
+    let base = i32(floor(angle + 0.5));
+    let center = angle - f32(base);
     let reach = i32(ceil(widest + 0.5));
 
     // The blocker search, an estimate that sets only the kernel's width and
@@ -162,13 +175,17 @@ fn shadowTerm(local: vec2<f32>, threshold: f32, shadowRow: f32, softness: f32, f
         let texel = binAt(bin, 0, bins, row);
         let near = min(texel.b, texel.a);
         let far = max(texel.b, texel.a);
-        let weight = max(0.0, 1.0 - abs(f32(bin) - center) / (widest + 0.5));
+        let weight = max(0.0, 1.0 - abs(f32(offset) - center) / (widest + 0.5));
         var blocked = clamp((threshold - near) / max(far - near, 1e-4), 0.0, 1.0);
         var depth = 0.5 * (near + far);
 
-        if (texel.g > 0.0 && texel.r < threshold) {
-            blocked = max(blocked, 0.5);
-            depth = min(depth, texel.r);
+        if (texel.g > 0.0) {
+            // The part's share of the bin, ramped in past its distance; see `light-quad.frag`.
+            let steps = floor(texel.g / 4096.0);
+            let part = (texel.g - steps * 4097.0) / SPAN_STEPS * clamp((threshold - texel.r) / max(0.02 * texel.r, 1e-4), 0.0, 1.0);
+
+            depth = (blocked * depth + part * texel.r) / max(blocked + part, 1e-6);
+            blocked = min(1.0, blocked + part);
         }
 
         // A partial blocker or a corner needs the bin's second texel to be sure of.
@@ -186,7 +203,8 @@ fn shadowTerm(local: vec2<f32>, threshold: f32, shadowRow: f32, softness: f32, f
         return 0.0;
     }
 
-    var spread = 1.0;
+    // Nothing blocking yet: in front of whatever is there, no penumbra begun.
+    var spread = 0.0;
 
     if (blockedShare > 0.0 && threshold > 0.0) {
         spread = clamp(1.0 - blockedDistance / (blockedShare * threshold), 0.0, 1.0);
@@ -204,7 +222,7 @@ fn shadowTerm(local: vec2<f32>, threshold: f32, shadowRow: f32, softness: f32, f
         }
 
         // Fetched again rather than kept from the first pass; see `light-quad.frag`.
-        let term = binTerm(base + offset, binAt(base + offset, 0, bins, row), bins, row, threshold, center, radius);
+        let term = binTerm(base + offset, f32(offset) - 0.5, binAt(base + offset, 0, bins, row), bins, row, threshold, center, radius);
 
         lit = lit + term.x;
         total = total + term.y;

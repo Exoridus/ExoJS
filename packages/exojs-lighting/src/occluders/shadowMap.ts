@@ -303,6 +303,10 @@ const coverBin = (row: Float32Array, slot: number, low: number, high: number, lo
     parts[part + 2] = lowDistance;
     parts[part + 3] = highDistance;
     partCounts[slot]!++;
+  } else {
+    // A dropped part may be the one that hides a farther vertex, so no
+    // corner in this bin can be trusted any more.
+    partCounts[slot] = maxParts + 1;
   }
 
   // Wholly behind what covers the rest of the bin, so it can never decide.
@@ -327,14 +331,16 @@ const coverBin = (row: Float32Array, slot: number, low: number, high: number, lo
     return;
   }
 
-  if (low < spanHigh && high > spanLow) {
+  if (low < spanHigh && high > spanLow && sharesEnd(scratch, low, high, lowDistance, highDistance)) {
     overlapSpan(scratch, low, high, lowDistance, highDistance);
 
     return;
   }
 
-  // Apart, so one span would also cover the gap between them at the nearer
-  // distance. The farther part joins the rest of the bin instead.
+  // Apart, or two occluders whose parts overlap without meeting: one span
+  // would also cover the gap between them, or follow a line from one to the
+  // other that runs behind the nearer. The farther part joins the rest of the
+  // bin instead, which can only shadow more.
   const near = Math.min(lowDistance, highDistance);
   const kept = Math.min(spans[scratch + 2]!, spans[scratch + 3]!);
   const farther = Math.max(near, kept);
@@ -357,6 +363,15 @@ const joinAtCorner = (scratch: number, low: number, high: number, lowDistance: n
     spans[scratch + 2] = lowDistance;
   }
 };
+
+/**
+ * Whether a part shares an end - the same place and distance - with the span:
+ * a solid's near and far faces meeting at its silhouette, which is the only
+ * overlap that one straight span describes.
+ */
+const sharesEnd = (scratch: number, low: number, high: number, lowDistance: number, highDistance: number): boolean =>
+  (Math.abs(low - spans[scratch]!) <= coverageEpsilon && Math.abs(lowDistance - spans[scratch + 2]!) <= coverageEpsilon) ||
+  (Math.abs(high - spans[scratch + 1]!) <= coverageEpsilon && Math.abs(highDistance - spans[scratch + 3]!) <= coverageEpsilon);
 
 /** Overlapping parts, as a solid's near and far faces are: each end is the nearer of the parts that reach it. */
 const overlapSpan = (scratch: number, low: number, high: number, lowDistance: number, highDistance: number): void => {
@@ -402,7 +417,7 @@ const encodeSpans = (row: Float32Array, bins: number): void => {
       row[texel + 2] = Math.min(start, spans[scratch + 2]!);
       row[texel + 3] = Math.min(end, spans[scratch + 3]!);
 
-      if (findCorner(bin, start, end, row[texel + 2]!, row[texel + 3]!)) {
+      if (findCorner(bin, start, end, 0, row[texel + 2]!, 1, row[texel + 3]!)) {
         row[texel + 1] = -1;
         row[texel + 5] = cornerFraction;
         row[texel + 6] = cornerDistance;
@@ -414,6 +429,13 @@ const encodeSpans = (row: Float32Array, bins: number): void => {
     row[texel] = spans[scratch + 2]!;
     row[texel + 1] = Math.floor(low * shadowSpanSteps) * 4096 + Math.ceil(high * shadowSpanSteps);
     row[texel + 4] = spans[scratch + 3]!;
+
+    // Two faces meeting inside a part that stops short of the bin's far end -
+    // the end of a wall seen nearly edge-on - bend there too.
+    if (findCorner(bin, row[texel + 2]!, row[texel + 3]!, low, row[texel], high, row[texel + 4]!)) {
+      row[texel + 5] = cornerFraction;
+      row[texel + 6] = cornerDistance;
+    }
   }
 };
 
@@ -421,9 +443,9 @@ let cornerFraction = 0;
 let cornerDistance = 0;
 
 /**
- * Where the surface the light reaches bends inside a covered bin, into
- * {@link cornerFraction} and {@link cornerDistance}; `false` where it runs
- * straight from `start` to `end`.
+ * Where the surface the light reaches bends between `(x0, d0)` and `(x1, d1)`,
+ * fractions of the bin and distances, into {@link cornerFraction} and
+ * {@link cornerDistance}; `false` where it runs straight.
  *
  * The corner is a vertex of one of the parts that meet there - turned towards
  * the light, a straight line from end to end would cut across it and let light
@@ -433,21 +455,29 @@ let cornerDistance = 0;
  * in the same bin as its near ones. `priorStart` and `priorEnd` describe what
  * covered the whole bin by itself.
  */
-const findCorner = (bin: number, priorStart: number, priorEnd: number, start: number, end: number): boolean => {
+const findCorner = (bin: number, priorStart: number, priorEnd: number, x0: number, d0: number, x1: number, d1: number): boolean => {
   const count = partCounts[bin]!;
   let found = false;
   let deviation = 1e-6;
+
+  if (count > maxParts) {
+    return false;
+  }
 
   for (let candidate = 0; candidate < count * 2; candidate++) {
     const part = (bin * maxParts + (candidate >> 1)) * 4;
     const fraction = parts[part + (candidate & 1)]!;
     const distance = parts[part + 2 + (candidate & 1)]!;
 
-    if (fraction <= 0 || fraction >= 1 || distance > surfaceAt(bin, fraction, priorStart, priorEnd) + 1e-6) {
+    if (
+      fraction <= x0 + coverageEpsilon ||
+      fraction >= x1 - coverageEpsilon ||
+      distance > surfaceAt(bin, fraction, priorStart, priorEnd) + 1e-6
+    ) {
       continue;
     }
 
-    const off = Math.abs(distance - (start + (end - start) * fraction));
+    const off = Math.abs(distance - (d0 + ((d1 - d0) * (fraction - x0)) / (x1 - x0)));
 
     if (off > deviation) {
       deviation = off;

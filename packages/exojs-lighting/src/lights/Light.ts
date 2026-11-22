@@ -30,11 +30,12 @@ export interface LightOptions {
    *   between the wall and what the shadow falls on.
    *
    * Neither adds a pass, so it is free of extra draws and can differ per
-   * light. Under `lightmap` the filter samples every bin under its kernel and
-   * spends between 3 and 23 texture fetches per shadowed fragment doing it,
-   * and two more for each bin a silhouette or a corner falls in, which also
-   * bounds the kernel at ten bins either side - see
-   * {@link LightingOptions.shadowResolution}.
+   * light. Under `lightmap` the filter reads every bin under its widest kernel
+   * once - 3 to 23 texture fetches per shadowed fragment, which bounds the
+   * kernel at ten bins either side - and only where the kernel meets a
+   * shadow's edge reads the bins under its actual width again, with a second
+   * texel for each bin a silhouette or a corner falls in: 69 at the very most.
+   * See {@link LightingOptions.shadowResolution}.
    */
   readonly softness?: number;
   /**
