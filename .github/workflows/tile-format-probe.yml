@@ -1,8 +1,8 @@
 # Temporary read-only diagnostic; removed after capturing the formatter diff.
 name: Tilemap formatter probe
 on:
-  push:
-    branches: [perf/tile-multitexture-batches]
+  pull_request:
+    branches: [next]
 permissions:
   contents: read
 jobs:
