@@ -7,7 +7,7 @@
 
   display: grid;
   grid-template-columns: var(--nav-width) minmax(0, 1fr);
-  min-height: calc(100vh - 64px - var(--playground-offset, 0px));
+  min-height: calc(100dvh - var(--playground-chrome-height, 64px));
   position: relative;
   background: var(--bg-canvas);
   overflow-x: clip;
@@ -55,7 +55,7 @@
   .side-content {
     position: sticky;
     top: 64px;
-    height: calc(100vh - 64px - var(--playground-offset, 0px));
+    height: calc(100dvh - var(--playground-chrome-height, 64px));
     align-self: start;
   }
 
@@ -106,10 +106,9 @@
 
 @media (width <= 760px) {
   .root {
-    height: calc(100dvh - 64px - var(--playground-offset, 0px));
-    min-height: calc(100dvh - 64px - var(--playground-offset, 0px));
+    height: calc(100dvh - var(--playground-chrome-height, 64px));
+    min-height: 0;
     grid-template-columns: minmax(0, 1fr);
-    --mobile-actions-block-size: 68px;
   }
 
   .side-content {
@@ -124,7 +123,7 @@
 
   .main-content {
     overflow-y: auto;
-    padding: 0.45rem 0 calc(var(--mobile-actions-block-size) + env(safe-area-inset-bottom) + 1rem);
+    padding: 0.45rem 0 0.75rem;
   }
 
   .mobile-actions {
@@ -132,6 +131,7 @@
     bottom: 0;
     z-index: 25;
     display: grid;
+    flex: 0 0 auto;
     grid-template-columns: minmax(0, 1fr);
     gap: 0.48rem;
     padding: 0.46rem 0.54rem calc(0.46rem + env(safe-area-inset-bottom));

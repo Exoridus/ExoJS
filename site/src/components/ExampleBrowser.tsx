@@ -9,6 +9,7 @@ import {
   loadExamples,
   onExamplesLoaded,
 } from '../lib/example-store';
+import { activateModalFocus } from '../lib/modal-focus';
 import { detectRuntimeSupport, onRuntimeDetected } from '../lib/runtime-support';
 import { showToast } from '../lib/toast-store';
 import type { Example, ExamplesMap } from '../lib/types';
@@ -46,15 +47,17 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isCompactMobile, setIsCompactMobile] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
   const [examplesSheetOpen, setExamplesSheetOpen] = useState(false);
   const [examplesSheetOpener, setExamplesSheetOpener] = useState<HTMLElement | null>(null);
+  const rootRef = useRef<HTMLElement | null>(null);
+  const navigationRef = useRef<HTMLElement | null>(null);
   const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
   const mobileExamplesButtonRef = useRef<HTMLButtonElement | null>(null);
   const previousVersionIdRef = useRef<string | null>(null);
   const missingExampleToastEnabledRef = useRef(false);
   const selectedVersionRef = useRef<VersionInfo | null>(null);
   const activeExampleRef = useRef<Example | null>(null);
-  const bodyOverflowBeforeDrawerOpenRef = useRef<string | null>(null);
   // Late-bound to break the showMissingExampleToast <-> ensureExamplesLoaded cycle
   // (the toast action calls it, but it is declared after the toast helper).
   const ensureExamplesLoadedRef = useRef<(versionId: string) => Promise<void>>(() => Promise.resolve());
@@ -67,16 +70,21 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     activeExampleRef.current = activeExample;
   }, [activeExample]);
 
-  const unlockBodyScroll = useCallback((): void => {
-    if (bodyOverflowBeforeDrawerOpenRef.current !== null) {
-      document.body.style.overflow = bodyOverflowBeforeDrawerOpenRef.current;
-      bodyOverflowBeforeDrawerOpenRef.current = null;
-    }
-  }, []);
+  useEffect(() => {
+    const root = rootRef.current;
+    const chrome = Array.from(document.querySelectorAll<HTMLElement>('[data-app-header], [data-channel-banner]'));
 
-  const lockBodyScroll = useCallback((): void => {
-    bodyOverflowBeforeDrawerOpenRef.current ??= document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const measureChrome = (): void => {
+      const height = chrome.reduce((sum, element) => sum + element.getBoundingClientRect().height, 0);
+      root?.style.setProperty('--playground-chrome-height', `${height}px`);
+    };
+
+    const observer = new ResizeObserver(measureChrome);
+
+    chrome.forEach(element => observer.observe(element));
+    measureChrome();
+
+    return () => observer.disconnect();
   }, []);
 
   const resolveSelectedVersion = useCallback((): VersionInfo | null => {
@@ -250,9 +258,8 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       unsubscribeExamples();
       unsubscribeVersions();
       unsubscribeRuntime();
-      unlockBodyScroll();
     };
-  }, [baseUrl, syncExampleState, syncVersionState, unlockBodyScroll]);
+  }, [baseUrl, syncExampleState, syncVersionState]);
 
   useEffect(() => {
     const desktopMediaQuery = window.matchMedia('(min-width: 1120px)');
@@ -264,6 +271,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       // The synchronous initial call is the SSR-safe form of that pattern.
       /* eslint-disable @eslint-react/set-state-in-effect */
       setIsCompactMobile(compactMobileMediaQuery.matches);
+      setIsDesktop(desktopMediaQuery.matches);
       setSidebarOpen(desktopMediaQuery.matches && !compactMobileMediaQuery.matches);
 
       if (!compactMobileMediaQuery.matches) {
@@ -311,33 +319,19 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     return () => window.removeEventListener('popstate', onPopState);
   }, [resolveActiveExample]);
 
-  useEffect(() => {
-    if (sidebarOpen && !window.matchMedia('(min-width: 1120px)').matches && !isCompactMobile) {
-      lockBodyScroll();
+  const drawerOpen = sidebarOpen && !isDesktop && !isCompactMobile;
 
+  useEffect(() => {
+    if (!drawerOpen || !navigationRef.current) {
       return;
     }
 
-    unlockBodyScroll();
-  }, [isCompactMobile, lockBodyScroll, sidebarOpen, unlockBodyScroll]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (!sidebarOpen || window.matchMedia('(min-width: 1120px)').matches) {
-        return;
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setSidebarOpen(false);
-        window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
-      }
-    };
-
-    document.addEventListener('keydown', onKeyDown);
-
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [sidebarOpen]);
+    return activateModalFocus(
+      navigationRef.current,
+      () => setSidebarOpen(false),
+      () => sidebarToggleRef.current,
+    );
+  }, [drawerOpen]);
 
   const selectExample = (path: string): void => {
     const selected = selectedVersionRef.current;
@@ -364,17 +358,25 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
 
   const toggleSidebar = (): void => {
     setSidebarOpen(value => !value);
-    window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
+
+    if (isDesktop) {
+      window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
+    }
   };
 
   return (
     // The grid has a column for the navigation only while the navigation is
     // actually rendered: a `display: none` sidebar leaves its track behind, and
     // the preview then folds itself into the 280px meant for the list.
-    <section className={css(styles, 'root')} data-sidebar={!isCompactMobile && sidebarOpen ? 'open' : 'closed'}>
+    <section ref={rootRef} className={css(styles, 'root')} data-sidebar={!isCompactMobile && sidebarOpen ? 'open' : 'closed'}>
       {!isCompactMobile && (
         <aside
           id="playground-navigation"
+          ref={navigationRef}
+          role={drawerOpen ? 'dialog' : undefined}
+          aria-modal={drawerOpen ? true : undefined}
+          aria-label="Examples"
+          tabIndex={-1}
           className={css(styles, 'side-content')}
           data-open={sidebarOpen ? 'true' : undefined}
           aria-hidden={!sidebarOpen}
@@ -421,11 +423,21 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
           </nav>
         )}
       </div>
-      {!isCompactMobile && sidebarOpen && <div className={css(styles, 'backdrop')} onClick={() => setSidebarOpen(false)} />}
+      {!isCompactMobile && sidebarOpen && (
+        <button
+          className={css(styles, 'backdrop')}
+          data-modal-backdrop
+          type="button"
+          tabIndex={-1}
+          aria-label="Close examples"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {isCompactMobile && (
         <BottomSheet open={examplesSheetOpen} title="Examples" opener={examplesSheetOpener} onOpenChange={setExamplesSheetOpen}>
           <div className={css(styles, 'sheet-navigation')}>
             <Navigation
+              locale={locale}
               examples={examples}
               activeExample={activeExample}
               selectedVersion={selectedVersion}

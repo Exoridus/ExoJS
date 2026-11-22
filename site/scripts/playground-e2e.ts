@@ -1828,6 +1828,91 @@ const audioBusChecks = async (browser: Browser, origin: string, base: string): P
 };
 
 const headerChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('experience: navigation dialogs contain focus and restore their opener', async () => {
+    for (const width of [900, 390]) {
+      const context = await browser.newContext({ viewport: { width, height: 900 } });
+      const page = await context.newPage();
+      watchPage(page);
+
+      try {
+        await page.goto(`${origin}${base}/en/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
+        const openerName = width === 900 ? 'Show example list' : 'Examples';
+        const opener = page.getByRole('button', { name: openerName, exact: true });
+        await opener.click();
+        const dialog = page.getByRole('dialog', { name: 'Examples', exact: true });
+        await dialog.waitFor();
+        await waitFor(() => dialog.evaluate(node => node.contains(document.activeElement)), Boolean, 'initial dialog focus');
+        await page.keyboard.press('Shift+Tab');
+        assert(await dialog.evaluate(node => node.contains(document.activeElement)), 'reverse Tab escaped the navigation dialog');
+        await page.keyboard.press('Tab');
+        assert(await dialog.evaluate(node => node.contains(document.activeElement)), 'Tab escaped the navigation dialog');
+        assert(
+          await page.locator('[data-app-header]').evaluate(node => Boolean(node.closest('[inert]'))),
+          'the header remains interactive behind the dialog',
+        );
+        await page.keyboard.press('Escape');
+        await waitFor(() => opener.evaluate(node => node === document.activeElement), Boolean, 'dialog return focus');
+        await page.keyboard.press('Enter');
+        await waitFor(() => dialog.evaluate(node => node.contains(document.activeElement)), Boolean, 'keyboard-open dialog focus');
+        await page.keyboard.press('Escape');
+        assert(await opener.evaluate(node => node === document.activeElement), 'keyboard-open dialog did not restore focus');
+      } finally {
+        await context.close();
+      }
+    }
+  });
+
+  await check('experience: mobile actions and complete instructions fit the initial viewport', async () => {
+    for (const viewport of [
+      { width: 390, height: 844 },
+      { width: 320, height: 740 },
+    ]) {
+      const context = await browser.newContext({ viewport, hasTouch: true, deviceScaleFactor: 2 });
+      const page = await context.newPage();
+      watchPage(page);
+
+      try {
+        await page.goto(`${origin}${base}/de/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
+        await page.getByRole('button', { name: 'Examples', exact: true }).waitFor();
+
+        for (const action of [
+          page.getByRole('tab', { name: 'Demo', exact: true }),
+          page.getByRole('tab', { name: 'Code', exact: true }),
+          page.getByRole('button', { name: 'Examples', exact: true }),
+        ]) {
+          const bounds = await action.boundingBox();
+          assert(
+            bounds !== null && bounds.y >= 0 && bounds.y + bounds.height <= viewport.height,
+            'primary action is below the initial viewport',
+          );
+        }
+
+        const description = page.locator('[data-header-row="context"] > p');
+        assert(
+          await description.evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight),
+          'instructions are clipped',
+        );
+        assert(
+          !(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)),
+          'the mobile document overflows horizontally',
+        );
+        await page.getByRole('button', { name: 'Examples', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Examples', exact: true });
+        await dialog.waitFor();
+        assert(
+          (await dialog.getByRole('link', { name: 'All examples', exact: true }).getAttribute('href'))?.includes('/de/'),
+          'All examples lost the DE locale',
+        );
+        assert(
+          (await dialog.getByRole('link', { name: /^Asset Browser/ }).getAttribute('href'))?.includes('/de/'),
+          'Asset Browser lost the DE locale',
+        );
+      } finally {
+        await context.close();
+      }
+    }
+  });
+
   await check('header stays stable and navigation remains compact', async () => {
     for (const width of [1440, 1024, 390, 320]) {
       const { page } = await openPlayground(browser, origin, base, 'filters/bloom-filter', { width, height: 1000 });

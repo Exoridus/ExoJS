@@ -71,6 +71,7 @@ export const Navigation = ({
       <div className={css(styles, 'filter')}>
         <input
           ref={filterRef}
+          data-modal-initial-focus
           type="search"
           aria-label="Filter examples and tools"
           placeholder="Filter examples and tools..."
