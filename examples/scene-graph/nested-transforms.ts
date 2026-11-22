@@ -63,7 +63,7 @@ class NestedTransformsScene extends Scene {
     this.app.rendering.view.setCenter(this.app.width / 2, this.app.height / 2);
     const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
     this.root.setScale(scale);
-    const dataHeight = 70;
+    const dataHeight = 78;
     const diagramHeight = Math.max(20, contentHeight - dataHeight);
     const orbitScale = Math.max(0.05, Math.min(1.8, (diagramHeight - 20) / 310, (width - 32) / 310));
     this.planetOrbit.setPosition(width / 2, diagramHeight / 2).setScale(orbitScale);
@@ -84,7 +84,7 @@ class NestedTransformsScene extends Scene {
       this.localLabels[index].text = `${index === 0 ? 'Planet' : 'Moon'} local (${node.x}, ${node.y})`;
       this.localLabels[index].setPosition(labelX, diagramHeight + 10);
       this.worldLabels[index].text = `World (${world.x.toFixed(0)}, ${world.y.toFixed(0)})`;
-      this.worldLabels[index].setPosition(labelX, diagramHeight + 33);
+      this.worldLabels[index].setPosition(labelX, diagramHeight + 38);
     }
 
     this.panel.status(`${this.playing ? 'Running' : 'Paused'} | amber: local offset | cyan: world position`);

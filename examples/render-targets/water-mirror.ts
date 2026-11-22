@@ -139,7 +139,8 @@ class WaterMirrorScene extends Scene {
     const horizon = Math.round(height * 0.52);
 
     if (this.target.height !== horizon || this.target.width !== width) {
-      this.target.resize(width, Math.max(1, horizon));
+      // Resize the sampled texture storage as well as its camera and sprite frame.
+      this.target.setSize(width, Math.max(1, horizon));
       this.target.view.reset(width / 2, horizon / 2, width, Math.max(1, horizon));
       this.mirror.resetTextureFrame().setScale(1, -1);
     }
