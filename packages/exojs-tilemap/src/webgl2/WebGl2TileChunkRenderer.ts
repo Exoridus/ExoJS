@@ -266,12 +266,13 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
 
     this._stageViewUniforms(backend);
 
-    // Other renderers may have reused any unit; establish the live slot table.
-    for (let slot = 0; slot < this._textures.length; slot++) {
-      backend.bindTexture(this._textures[slot]!, slot);
-    }
+    // Every active sampler must be texture-complete in WebGL2, even when a
+    // dynamic branch will never select its slot. Fill unused slots from slot 0;
+    // another renderer may have overwritten ANY unit since our last flush.
+    const firstTexture = this._textures[0]!;
 
     for (let slot = 0; slot < TILE_TEXTURE_SLOTS; slot++) {
+      backend.bindTexture(this._textures[slot] ?? firstTexture, slot);
       this._shader.getUniform(`u_texture${slot}`).setValue(this._samplerUnits[slot]!);
     }
 
@@ -444,13 +445,14 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     this._stageViewUniforms(backend);
 
     const textures = payload.textures;
+    const firstTexture = textures[0];
 
-    for (let i = 0; i < textures.length; i++) {
-      // In-bounds: i < textures.length.
-      backend.bindTexture(textures[i]!, i);
+    if (firstTexture === undefined) {
+      return false;
     }
 
     for (let slot = 0; slot < TILE_TEXTURE_SLOTS; slot++) {
+      backend.bindTexture(textures[slot] ?? firstTexture, slot);
       this._shader.getUniform(`u_texture${slot}`).setValue(this._samplerUnits[slot]!);
     }
 
