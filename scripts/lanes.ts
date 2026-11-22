@@ -5,8 +5,8 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { laneTimeoutMinutes } from './ci/lanes.ts';
-import { changedFilesBetween } from './ci/local-policy.ts';
 import { DIST_PREFLIGHT, needsDist, parseLocalLaneOptions, planLocalLanes } from './ci/local-lanes.ts';
+import { changedFilesBetween } from './ci/local-policy.ts';
 import { effectiveLanes, type LaneAreas, selectAreas } from './ci/select-lanes.ts';
 import { atLeastOutputMode, readOutputOptions } from './lib/output.ts';
 import { runCommand, type RunCommandResult } from './lib/run-command.ts';
