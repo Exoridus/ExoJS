@@ -2188,36 +2188,61 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
       await page.goto(`${origin}${base}/en/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
       const frame = await previewFrame(page);
       await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.actual === "webgl2"');
-      await frame.evaluate(`(() => {
-        const gl = document.querySelector('canvas').getContext('webgl2');
-        window.__rendererRecovery = gl.getExtension('WEBGL_lose_context');
-        if (!window.__rendererRecovery) throw new Error('WEBGL_lose_context is unavailable');
-        window.__rendererRecovery.loseContext();
-      })()`);
-      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.phase === "failed"');
-      await frame.evaluate('window.__rendererRecovery.restoreContext()');
-      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.actual === "webgl2"');
-      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-      assert(
-        (await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'idle',
-        'renderer recovery left a false Run failure',
-      );
+      const generation = frame.url();
 
-      await frame.evaluate('window.__rendererRecovery.loseContext()');
-      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.phase === "failed"');
-      await frame.evaluate(`new Promise(resolve => {
-        window.addEventListener('error', event => {
-          if (event.message.includes('RENDERER_RECOVERY_RUNTIME_ERROR')) resolve();
-        }, { once: true });
-        setTimeout(() => { throw new Error('RENDERER_RECOVERY_RUNTIME_ERROR'); }, 0);
-      })`);
-      await frame.evaluate('window.__rendererRecovery.restoreContext()');
-      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.actual === "webgl2"');
-      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-      assert(
-        (await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'error',
-        'renderer recovery cleared a real execution error',
-      );
+      for (const runtimeError of [false, true]) {
+        // The backend owns automatic restoration. Observe both events before
+        // loss instead of polling a failed phase that can last under a frame.
+        await frame.evaluate(`(() => {
+          const canvas = document.querySelector('canvas');
+          const gl = canvas.getContext('webgl2');
+          const extension = gl.getExtension('WEBGL_lose_context');
+          if (!extension) throw new Error('WEBGL_lose_context is unavailable');
+          const state = window.__rendererRecovery = { phases: [], exception: false, raised: false, result: null };
+          const onError = event => {
+            if (event.message.includes('RENDERER_RECOVERY_RUNTIME_ERROR')) state.exception = true;
+          };
+          const onStatus = event => {
+            state.phases.push(event.detail.phase);
+            if (event.detail.phase === 'failed' && ${runtimeError} && !state.raised) {
+              state.raised = true;
+              throw new Error('RENDERER_RECOVERY_RUNTIME_ERROR');
+            }
+            if (state.phases.includes('failed') && event.detail.actual === 'webgl2') {
+              window.removeEventListener('exo-renderer-status', onStatus);
+              window.removeEventListener('error', onError);
+              state.result = {
+                phases: state.phases,
+                exception: state.exception,
+                sameOwner: gl.canvas === canvas && canvas.ownerDocument === document,
+                connected: canvas.isConnected
+              };
+            }
+          };
+          window.addEventListener('error', onError);
+          window.addEventListener('exo-renderer-status', onStatus);
+          extension.loseContext();
+        })()`);
+        await frame.waitForFunction('Boolean(window.__rendererRecovery?.result)');
+        const result = await frame.evaluate<{
+          phases: string[];
+          exception: boolean;
+          sameOwner: boolean;
+          connected: boolean;
+        }>('window.__rendererRecovery.result');
+        assert(
+          result.phases[0] === 'failed' && result.phases.some(phase => phase === 'active' || phase === 'fallback'),
+          'renderer did not complete loss and restoration',
+        );
+        assert(frame.url() === generation && result.sameOwner, 'context recovery changed the iframe or canvas owner');
+        assert(result.exception === runtimeError, 'the real runtime exception was not observed');
+        assert(runtimeError || result.connected, 'renderer recovery detached the live canvas');
+        await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+        assert(
+          (await page.locator('[data-run-status]').getAttribute('data-run-status')) === (runtimeError ? 'error' : 'idle'),
+          runtimeError ? 'renderer recovery cleared a real execution error' : 'renderer recovery left a false Run failure',
+        );
+      }
     } catch (error) {
       await reportFailure(page, error);
 
