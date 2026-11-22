@@ -292,6 +292,29 @@ describe('dependency-aware core tests', () => {
     expect(selectLocalPolicy(['test/math/vector.test.ts']).relatedCore).toBe(true);
   });
 
+  it('keeps graph selection when an engine change also updates documentation', () => {
+    const files = ['src/rendering/sprite/Sprite.ts', 'docs/architecture.md'];
+
+    expect(selectLocalPolicy(files).relatedCore).toBe(true);
+    expect(unitCommand(...files)).toContain('--project=exojs --passWithNoTests --changed=');
+    expect(selectLocalPolicy(files).gates).toContain('format:check');
+  });
+
+  it.each(['README.md', 'site/src/content/guide/sprites.mdx'])(
+    'adds the content tests for %s without widening the engine tests',
+    documentation => {
+      const files = ['src/rendering/sprite/Sprite.ts', documentation];
+
+      expect(selectLocalPolicy(files).relatedCore).toBe(true);
+      expect(unitCommand(...files)).toContain('--project=exojs --passWithNoTests --changed=');
+      expect(unitCommand(...files)).toContain('test/site');
+    },
+  );
+
+  it('does not rewrite an unknown path into a recognized documentation file', () => {
+    expect(selectLocalPolicy([' README.md ']).fullUnit).toBe(true);
+  });
+
   it.each([
     ['a module that was removed', ['src/math/DefinitelyNotThere.ts']],
     ['a declaration file', ['src/globals.d.ts']],

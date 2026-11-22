@@ -122,9 +122,9 @@ export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOp
     : [
         policy.nodeTests ? NODE_TESTS : '',
         wholeProjects.length
-          ? `pnpm exec vitest run ${wholeProjects.map(project => `--project=${project}`).join(' ')}${policy.unitFilter ? ` ${policy.unitFilter}` : ''}`
+          ? `pnpm exec vitest run ${wholeProjects.map(project => `--project=${project}`).join(' ')}${policy.unitFilter && !policy.relatedCore ? ` ${policy.unitFilter}` : ''}`
           : '',
-        ...(policy.relatedCore ? relatedCoreCommands(mergeBase(options.base)) : []),
+        ...(policy.relatedCore ? relatedCoreCommands(mergeBase(options.base), '.', policy.unitFilter?.split(' ')) : []),
         policy.allocation ? 'pnpm test:alloc' : '',
         policy.physicsPerf ? 'pnpm test:physics-perf' : '',
       ]

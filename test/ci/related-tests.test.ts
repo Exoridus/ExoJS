@@ -338,6 +338,25 @@ describe('renamed and deleted paths', () => {
     expect(changedFiles('HEAD', root).sort()).toEqual(['src/new.ts', 'src/old.ts']);
   });
 
+  it('preserves exact Git paths in committed and untracked changes', () => {
+    const files = ['src/Größe.ts', 'src/space name.ts', 'src/ padded .ts'];
+
+    if (process.platform !== 'win32') {
+      files.push('src/tab\tname.ts', 'src/new\nline.ts', 'src/back\\slash.ts', 'src/quote"name.ts');
+    }
+
+    for (const file of files) {
+      writeFileSync(join(root, file), 'export const value = 1;\n');
+    }
+
+    expect(changedFiles('HEAD', root).sort()).toEqual([...files].sort());
+    git('add', '-A');
+    git('commit', '-q', '-m', 'paths');
+
+    expect(changedFilesBetween('HEAD~1', 'HEAD', root).sort()).toEqual([...files].sort());
+    expect(changedFiles('HEAD~1', root).sort()).toEqual([...files].sort());
+  });
+
   it('keeps the whole core project when a changed engine file was renamed', () => {
     expect(selectLocalPolicy(['src/new.ts', 'src/definitely-missing-original.ts']).relatedCore).toBe(false);
   });

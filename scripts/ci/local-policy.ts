@@ -247,7 +247,7 @@ const historyInputs = (): Set<string> => {
 
 /** Local pre-push selection. Unknown files take the complete policy; CI keeps its own authoritative matrix. */
 export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy => {
-  const files = changedFiles.map(file => String(file).replaceAll('\\', '/').trim()).filter(Boolean);
+  const files = changedFiles.filter(Boolean);
   const policy = emptyPolicy();
   const gates = new Set<string>();
   const projects = new Set<string>();
@@ -449,10 +449,15 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
   ]);
   policy.packageTypechecks = [...typechecks].sort();
   policy.unitProjects = [...projects].sort();
-  policy.relatedCore = projects.has('exojs') && !files.some(isCiTooling) && isRelatedEligible(files);
+  // Content contributes its own gates/tests without invalidating the runtime graph.
+  // Readers outside the import graph are still retained by relatedCoreCommands.
+  const graphInputs = files.filter(file => !/\.mdx?$/.test(file) && !/(^|\/)LICENSE$/.test(file));
+  policy.relatedCore = projects.has('exojs') && !files.some(isCiTooling) && isRelatedEligible(graphInputs);
 
   if (siteOnlyUnits && policy.unitProjects.length === 1 && policy.unitProjects[0] === 'exojs') {
     policy.unitFilter = [...(siteUnits ? ['test/site'] : []), ...toolingFilters].join(' ');
+  } else if (policy.relatedCore && siteUnits) {
+    policy.unitFilter = 'test/site';
   }
 
   policy.browser = [...browsers];
@@ -462,8 +467,8 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
 
 /** Renames count as a deletion plus an addition, so the vanished original path is seen. */
 export const changedFilesBetween = (base: string, head: string, cwd?: string): string[] =>
-  execFileSync('git', ['diff', '--name-only', '--no-renames', `${base}..${head}`], { encoding: 'utf8', cwd })
-    .split(/\r?\n/)
+  execFileSync('git', ['diff', '-z', '--name-only', '--no-renames', `${base}..${head}`], { encoding: 'utf8', cwd })
+    .split('\0')
     .filter(Boolean);
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

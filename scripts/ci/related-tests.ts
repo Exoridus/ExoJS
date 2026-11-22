@@ -112,8 +112,8 @@ export const untrackedInputTests = (root = '.'): string[] =>
  * that import any changed file, then the tests that read untracked input.
  * `--passWithNoTests` covers a change no test reaches.
  */
-export const relatedCoreCommands = (base: string, root = '.'): string[] => {
-  const keep = untrackedInputTests(root);
+export const relatedCoreCommands = (base: string, root = '.', additionalTests: readonly string[] = []): string[] => {
+  const keep = [...new Set([...untrackedInputTests(root), ...additionalTests])];
 
   return [
     `pnpm exec vitest run --project=exojs --passWithNoTests --changed=${base}`,

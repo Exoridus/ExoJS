@@ -22,11 +22,7 @@ const git = (cwd: string, ...args: string[]): string => {
   return result.stdout;
 };
 
-const lines = (output: string): string[] =>
-  output
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(Boolean);
+const paths = (output: string): string[] => output.split('\0').filter(Boolean);
 
 /**
  * Renames are reported as a deletion plus an addition: with rename detection a
@@ -38,10 +34,10 @@ export const changedFiles = (base: string, cwd = process.cwd()): string[] => {
 
   return [
     ...new Set([
-      ...lines(git(cwd, 'diff', '--name-only', '--no-renames', from, 'HEAD')),
-      ...lines(git(cwd, 'diff', '--name-only', '--no-renames', 'HEAD')),
-      ...lines(git(cwd, 'diff', '--name-only', '--no-renames', '--cached')),
-      ...lines(git(cwd, 'ls-files', '--others', '--exclude-standard')),
+      ...paths(git(cwd, 'diff', '-z', '--name-only', '--no-renames', from, 'HEAD')),
+      ...paths(git(cwd, 'diff', '-z', '--name-only', '--no-renames', 'HEAD')),
+      ...paths(git(cwd, 'diff', '-z', '--name-only', '--no-renames', '--cached')),
+      ...paths(git(cwd, 'ls-files', '-z', '--others', '--exclude-standard')),
     ]),
   ];
 };
