@@ -715,10 +715,10 @@ ${sunQuadWgsl}`,
   private _writeLights(lights: readonly Light[], occluders: OccluderField): boolean {
     // Each finite line needs four independent emitter positions; ordinary
     // lights and Radiance's cascading renderer retain their one-row layout.
-    const shadowRowsBudget = lights.reduce(
-      (total, light) => total + (!this._cascading && light instanceof LineLight && lightHalfLength(light) > 0 ? lineShadowSamples.length : 1),
-      0,
-    );
+    const shadowRowsBudget = lights.reduce((total, light) => {
+      const finiteLine = !this._cascading && light instanceof LineLight && lightHalfLength(light) > 0;
+      return total + (finiteLine ? lineShadowSamples.length : 1);
+    }, 0);
 
     this._growShadowMap(shadowRowsBudget);
 
