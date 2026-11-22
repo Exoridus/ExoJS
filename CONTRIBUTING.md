@@ -130,6 +130,8 @@ pnpm site:build   pnpm test:examples:smoke
 
 Scripts forward their arguments, so a variant is an argument rather than a script of its own: `pnpm lint --fix`, `pnpm test --coverage`, `pnpm test:browser:webgl --reporter=verbose`. The measurement harnesses run through one runner, `pnpm perf <name>` (`pnpm perf` lists them); the cross-library benchmarks through `pnpm bench` (see `packages/exojs-bench`).
 
+The standard `pnpm lint` invocation runs validated Oxlint rules first, then the remaining ESLint rules in the existing engine and package passes. ESLint configuration remains authoritative. Named TypeScript projects, inline directives, nested or custom parser contexts, changed rule options and unvalidated dependency versions retain full ESLint coverage. Arguments such as `--fix` and `--cache`, editor linting, staged-file linting and the site use the original ESLint behavior. The [Oxc evaluation](scripts/ci/OXC_EVALUATION.md) records the complete rule inventory, compatibility boundaries and local timing evidence.
+
 The root gate and lane runners share an output policy. `auto` is the default: it uses `normal` for an interactive terminal and `compact` for CI or redirected output. Override it with `--output normal|compact|silent|verbose`, or set `EXOJS_OUTPUT` for a process tree. Compact and silent runs stream complete output to `.workspace/logs/` without buffering it in memory; failures print the last diagnostic lines and the log path. Benchmark and release lanes keep at least normal output.
 
 ## Code style

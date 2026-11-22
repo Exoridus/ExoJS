@@ -14,6 +14,8 @@ import security from 'eslint-plugin-security';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+import { nativeEslintOverrides } from './scripts/lint-native.ts';
+
 // `no-deprecated-api`'s table, read from the engine's own JSDoc rather than
 // hand-maintained: every exported symbol under `src/` whose doc comment
 // carries `@deprecated`. Computed once, from this repository's own sources -
@@ -1336,7 +1338,11 @@ export default defineConfig([
     },
   },
 
-  // Prettier compatibility: keep this last. It also re-enables `curly`,
-  // which Prettier compatibility would otherwise leave off.
+  // Prettier compatibility is the final authored style layer. It also
+  // re-enables `curly`, which Prettier compatibility would otherwise leave off.
   ...prettierCompatConfig({ files: STYLE_FILES }),
+
+  // Empty for ordinary ESLint and editor invocations. The standard lint runner
+  // supplies this only after native rules passed on the same verified inputs.
+  ...nativeEslintOverrides(import.meta.dirname),
 ]);

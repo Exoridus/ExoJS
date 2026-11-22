@@ -159,17 +159,65 @@ It does not follow those passes with another full-rule ESLint run.
 | ESLint package pass |  42.53 s |             34.28 s |
 | Total               | 175.53 s |            110.41 s |
 
-All reported steps exited successfully. This initial local comparison is a
-37.1% reduction for the timed root scope; React, site, dependency installation,
-and configuration generation are outside this timing. It uses warm installed
-dependencies and filesystem caches, not a cold-machine or CI claim. Some
-inspection work overlapped the initial baseline; repeat measurements are
-needed before treating the percentage as a stable runner estimate.
+All reported steps exited successfully. A repeat original run with less
+concurrent inspection took 150.24 seconds: 113.43 seconds for the engine and
+36.80 seconds for packages. Compared with 110.41 seconds for the hybrid, that
+is a 26.5% local reduction. The repeat is the more conservative comparison;
+the initial baseline was affected by contention. React, site, dependency
+installation and configuration generation are outside these timings. They
+use warm installed dependencies and filesystem caches and do not predict a
+cold-machine or GitHub runner percentage.
 
 The host's default Node heap limit was 2,240 MiB. The first original engine
 pass exhausted that heap and aborted after 85.3 seconds; it is a failed run,
 not a timing improvement. The explicit 4,096 MiB limit applies equally to the
 successful comparison variants and does not modify the production wrapper.
+
+## Standard root lint behavior
+
+`pnpm lint` derives native configuration from ESLint's effective configuration
+for every file matched by the existing lint passes, including new untracked
+files. `scripts/lint-native-policy.json` contains evaluated implementation
+versions and exact option signatures. A new rule or option variant retains
+its original implementation. The native backend is pinned explicitly; an
+unvalidated dependency version or unsupported path form uses full ESLint.
+
+Root configuration files, named TypeScript projects, ESLint directives,
+custom parsers or settings, and nested configurations retain full ESLint.
+Other files keep all unsupported rules and custom ExoJS rules in residual
+ESLint. Native traversal is restricted to inspected files and its actual
+discovery is checked before linting. Files hidden from native directory
+discovery, including Git-ignored authored files, retain full ESLint.
+
+Only a successful native run creates a temporary rule-ownership plan. Each
+ESLint process checks its source and configuration inventory and byte hashes
+before using that plan, including imported code/configuration modules,
+TypeScript profiles, package resolution data and dependency lock inputs.
+Changed or newly added inputs restore full ESLint. Temporary plans and native
+configs are removed after the run.
+
+The default then runs each existing ESLint pass once. It does not add another
+full-rule pass. Any CLI arguments retain the original ESLint contract, which
+preserves fixes, caches, custom config flags and positional arguments without
+partially translating their meaning. Direct ESLint/editor invocations and
+staged-file linting keep the original full rule set.
+
+The policy is a compatibility guard, not a second source of lint settings.
+Update it only after checking the new implementation, option variants,
+project assignment and directive behavior. A policy mismatch is a safe
+fallback, not a reason to disable a required rule.
+
+The implemented standard command also passed as
+`NODE_OPTIONS=--max-old-space-size=4096 pnpm lint` in 119.32 seconds, including
+configuration generation, native inventory verification, 2,738 admitted native
+files, and both complete root ESLint file passes. This includes React and the
+new tooling files, so its scope differs from the earlier paired subset.
+No stale-input fallback occurred. The 16 real child-process regression cases
+also pass, covering changed/new files, Unicode and spaces, custom rules,
+named-project imported promises, directive hygiene, ignores, nested/custom
+parser contexts, version/option drift, CLI forwarding and inputs that change
+after native lint. These local checks do not substitute for the combined
+change's required CI lanes or measurements on a GitHub runner.
 
 ## Reproducing the rule inventory
 
