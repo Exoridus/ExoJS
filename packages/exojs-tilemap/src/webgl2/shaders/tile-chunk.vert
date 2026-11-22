@@ -7,7 +7,7 @@ precision highp int;
 layout(location = 0) in vec4 a_quadBounds;   // x0, y0, x1, y1 (chunk-local)
 layout(location = 1) in vec4 a_uvBounds;     // uMin, vMin, uMax, vMax (flipX/Y + texture flipY baked)
 layout(location = 2) in vec4 a_color;        // RGBA tint (layer opacity in alpha)
-layout(location = 3) in uint a_tileWord;     // transform row (bits 0..28) | diagonal (bit 29)
+layout(location = 3) in uint a_tileWord;     // transform row (0..28) | diagonal (29) | texture slot (30..31)
 
 uniform mat3 u_projection;
 uniform mat3 u_group;
@@ -18,6 +18,7 @@ uniform sampler2D u_transforms;              // shared per-frame transform buffe
 
 out vec2 v_texcoord;
 out vec4 v_color;
+flat out uint v_textureSlot;
 
 void main(void) {
     // gl_VertexID 0..3 -> corner: 0=TL, 1=TR, 2=BL, 3=BR (TRIANGLE_STRIP order)
@@ -30,6 +31,7 @@ void main(void) {
 
     int row = int(a_tileWord & {{tileRowMask}}u);
     bool diagonal = (a_tileWord & {{tileDiagonalBit}}u) != 0u;
+    v_textureSlot = a_tileWord >> {{tileTextureSlotShift}}u;
 
     vec4 m0 = texelFetch(u_transforms, exoTransformTexel(row, 0), 0); // a, b, c, d
     vec4 m1 = texelFetch(u_transforms, exoTransformTexel(row, 1), 0); // tx, ty, snapMode, 0
