@@ -136,19 +136,19 @@ export const neighbours = async (): Promise<void> => {
   expectType<Equal<typeof path, Texture>>();
 };
 
-// --- negative: a plain record is not a catalog ------------------------------
+// --- a plain record of paths is a named load group --------------------------
 
 declare const plainRecord: { player: 'sprites/player.png'; config: 'data/config.json' };
 
+export const records = async (): Promise<void> => {
+  const loaded = await loader.load(plainRecord);
+  expectType<Equal<typeof loaded, { player: Texture; config: unknown }>>();
+
+  const scoped = await scene.loader.load(plainRecord);
+  expectType<Equal<typeof scoped, { player: Texture; config: unknown }>>();
+};
+
 export const negatives = (): void => {
-  // @ts-expect-error - a definition RECORD is not a materialized `Assets`
-  // catalog; the catalog overload takes `Assets.from(...)` output, not the
-  // record it was built from.
-  loader.load(plainRecord);
-
-  // @ts-expect-error - and the scene-scoped mirror rejects it just the same.
-  scene.loader.load(plainRecord);
-
   // @ts-expect-error - an arbitrary object matches no loader input either.
   loader.load({ nope: 1 });
 };

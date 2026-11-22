@@ -1,11 +1,9 @@
 import { AnimationSystem } from '#animation/AnimationSystem';
 import { TweenSystem } from '#animation/TweenSystem';
-import type { AssetLoadGroup, AssetLoadHandle, LoadedAssetGroup } from '#assets/assetLoadGroup';
-import type { AssetTypes } from '#assets/AssetTypes';
+import type { ApplicationAssets } from '#assets/ApplicationAssets';
 import { probeAssetImageFormats } from '#assets/assetVariantCapabilities';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
-import type { LoadingQueue } from '#assets/LoadingQueue';
 import { AudioSystem } from '#audio/AudioSystem';
 import { ApplicationErrorReporter, maxConsecutiveFrameErrors, type RecentErrorEntry } from '#core/application/ApplicationErrorReporter';
 import {
@@ -238,8 +236,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public readonly connectivity: Connectivity;
   public readonly loader: Loader;
-  /** Defines the asset types this application can load. */
-  public readonly assets: AssetTypes;
+  /**
+   * The asset types this application can load, and the assets it owns for its
+   * whole lifetime. Scenes load their own assets through `scene.assets`.
+   */
+  public readonly assets: ApplicationAssets;
   public readonly input: InputSystem;
   /** @internal Fixed-step clock behind every action's `tick` view - see {@link InputTickClock}. */
   public readonly _inputTickClock = new InputTickClock();
@@ -1551,21 +1552,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       return false;
     }
-  }
-
-  /** Loads a handle or a group into application ownership. The queue exposes progress and can be cancelled. */
-  public load<const Input extends AssetLoadGroup>(input: Input): LoadingQueue<LoadedAssetGroup<Input>>;
-  public load<const Items extends readonly [AssetLoadHandle, AssetLoadHandle, ...AssetLoadHandle[]]>(
-    ...items: Items
-  ): LoadingQueue<LoadedAssetGroup<Items>>;
-  public load(...input: readonly unknown[]): LoadingQueue<unknown> {
-    return this.loader._loadHandleGroup(input.length === 1 ? input[0] : input);
-  }
-
-  /** Preloads assets at background priority. Demand joins and promotes the same request. */
-  public loadBackground<const Input extends AssetLoadGroup>(input: Input): LoadingQueue<LoadedAssetGroup<Input>>;
-  public loadBackground(input: unknown): LoadingQueue<unknown> {
-    return this.loader._loadHandleGroup(input, undefined, true);
   }
 
   /**

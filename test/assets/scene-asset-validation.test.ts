@@ -129,7 +129,7 @@ describe('scope preflight boundaries', () => {
     const branch = root();
     const nested = new Container();
 
-    await b.createScope().loadGroup(foreign);
+    await b.createScope().load(foreign);
     nested.addChild(new Sprite(fresh), new Sprite(foreign));
     branch.addChild(nested);
 
@@ -137,7 +137,7 @@ describe('scope preflight boundaries', () => {
     expect(branch._getAssetScope()).toBeNull();
     expect(nested._getAssetScope()).toBeNull();
     expect(a.inspect()).toHaveLength(0);
-    await expect(b.createScope().loadGroup(fresh)).resolves.toBe(fresh);
+    await expect(b.createScope().load(fresh)).resolves.toBe(fresh);
   });
 
   test('a nested independent scope entry still preflights its whole subtree', async () => {
@@ -150,7 +150,7 @@ describe('scope preflight boundaries', () => {
     const branch = root();
     const trigger = new Texture('trigger.png');
 
-    await b.createScope().loadGroup(foreign);
+    await b.createScope().load(foreign);
     independent.addChild(new Sprite(fresh), new Sprite(foreign));
     branch.addChild(new Sprite(trigger));
     const adopt = a._adopt.bind(a);
@@ -163,7 +163,7 @@ describe('scope preflight boundaries', () => {
 
     branch._setAssetScope(scope);
     await trigger.loaded;
-    await expect(b.createScope().loadGroup(fresh)).resolves.toBe(fresh);
+    await expect(b.createScope().load(fresh)).resolves.toBe(fresh);
   });
 
   test.each(['insert', 'texture'])('an earlier acquisition cannot lend stale preflight after a later subtree %s', async mode => {
@@ -175,7 +175,7 @@ describe('scope preflight boundaries', () => {
     const later = new Container();
     const replacement = new Sprite();
 
-    await b.createScope().loadGroup(foreign);
+    await b.createScope().load(foreign);
     later.addChild(new Sprite(fresh), replacement);
     branch.addChild(new Sprite('trigger.png'), later);
     const adopt = a._adopt.bind(a);
@@ -193,7 +193,7 @@ describe('scope preflight boundaries', () => {
     expect(() => branch._setAssetScope(a.createScope())).toThrow(/already belongs to another loader/);
     expect(branch._getAssetScope()).toBeNull();
     expect(later._getAssetScope()).toBeNull();
-    await expect(b.createScope().loadGroup(fresh)).resolves.toBe(fresh);
+    await expect(b.createScope().load(fresh)).resolves.toBe(fresh);
   });
 
   test('an external first claim invalidates preflight without changing the later subtree', async () => {
@@ -220,7 +220,7 @@ describe('scope preflight boundaries', () => {
     expect(branch._getAssetScope()).toBeNull();
     expect(later._getAssetScope()).toBeNull();
     await newlyForeign.loaded;
-    await expect(b.createScope().loadGroup(fresh)).resolves.toBe(fresh);
+    await expect(b.createScope().load(fresh)).resolves.toBe(fresh);
   });
 
   test('a same-scope reparent during propagation rejects foreign descendants before unlinking', async () => {

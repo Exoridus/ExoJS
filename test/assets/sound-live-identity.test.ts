@@ -46,7 +46,7 @@ describe('path-backed sound sprite identity', () => {
       expect(loader.identify(Asset.type('sound', source, { sprites: {} }))).toEqual(loader.identify(plain));
 
       await loader.cacheSource(plain);
-      await expect(scope.loadGroup([a, b])).resolves.toEqual([a, b]);
+      await expect(scope.load([a, b])).resolves.toEqual([a, b]);
       expect(a.hasSprite('a')).toBe(true);
       expect(a.hasSprite('b')).toBe(false);
       expect(b.hasSprite('b')).toBe(true);
@@ -68,7 +68,7 @@ describe('path-backed sound sprite identity', () => {
 
     try {
       await loader.cacheSource(Asset.type('sound', 'sample.wav'));
-      await expect(scope.loadGroup([a, b])).rejects.toThrow(/exceeds sound duration/);
+      await expect(scope.load([a, b])).rejects.toThrow(/exceeds sound duration/);
       await expect(a.loaded).resolves.toBe(a);
       await expect(b.loaded).rejects.toThrow(/exceeds sound duration/);
       expect(a.hasSprite('valid')).toBe(true);
