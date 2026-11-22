@@ -2,7 +2,19 @@
  * Native TypeScript 7.1 AST entry point shared by scripts that inspect syntax.
  * SourceFile leases are disposed immediately after the visitor returns.
  */
-import { isClassDeclaration } from '@typescript/native/ast/is';
+import {
+  isClassDeclaration,
+  isEnumDeclaration,
+  isFunctionDeclaration,
+  isIdentifier,
+  isInterfaceDeclaration,
+  isModuleDeclaration,
+  isStringLiteralLikeNode,
+  isTemplateExpression,
+  isTypeAliasDeclaration,
+  isVariableStatement,
+} from '@typescript/native/ast/is';
+import { SyntaxKind } from '@typescript/native/ast';
 import { API } from '@typescript/native/sync';
 
 /** @type {API | undefined} */
@@ -36,4 +48,16 @@ export const withNativeSourceFile = (filename, text, visit) => {
   }
 };
 
-export { isClassDeclaration };
+export {
+  isClassDeclaration,
+  isEnumDeclaration,
+  isFunctionDeclaration,
+  isIdentifier,
+  isInterfaceDeclaration,
+  isModuleDeclaration,
+  isStringLiteralLikeNode,
+  isTemplateExpression,
+  isTypeAliasDeclaration,
+  isVariableStatement,
+  SyntaxKind,
+};
