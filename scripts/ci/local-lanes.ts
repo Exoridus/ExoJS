@@ -93,7 +93,9 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
         options.only = [...new Set(names)];
       }
     } else {
-      throw new Error(`Unknown option '${arg}'. Use --run, --base <ref>, --head <sha>, --only <id[,id]>, --quick, --pre-push, --tests-only or --all.`);
+      throw new Error(
+        `Unknown option '${arg}'. Use --run, --base <ref>, --head <sha>, --only <id[,id]>, --quick, --pre-push, --tests-only or --all.`,
+      );
     }
   }
 
@@ -153,7 +155,13 @@ export const planLocalLanes = (effective: EffectiveLanes, options: LocalLaneOpti
     unitProjects.length
       ? policy.unitFilter
         ? `pnpm exec vitest run ${unitProjects.map(project => `--project=${project}`).join(' ')} ${policy.unitFilter}`
-        : affectedTestCommand({ base, projects: unitProjects, name: 'unit', full, committed: options.prePush && options.head !== undefined })
+        : affectedTestCommand({
+            base,
+            projects: unitProjects,
+            name: 'unit',
+            full,
+            committed: options.prePush && options.head !== undefined,
+          })
       : '',
     policy.allocation ? 'pnpm test:alloc' : '',
     policy.physicsPerf ? 'pnpm test:physics-perf' : '',
