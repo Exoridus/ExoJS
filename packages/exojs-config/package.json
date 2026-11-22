@@ -30,7 +30,8 @@
     "./typescript/package-test.json": "./typescript/package-test.json",
     "./typescript/worker.json": "./typescript/worker.json",
     "./typescript/workspace-paths.json": "./typescript/workspace-paths.json",
-    "./typescript/transpile": "./typescript/transpile.js"
+    "./typescript/transpile": "./typescript/transpile.js",
+    "./typescript/ast": "./typescript/ast.js"
   },
   "dependencies": {
     "@codecov/rollup-plugin": "^2.0.1",
