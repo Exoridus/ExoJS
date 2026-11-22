@@ -41,8 +41,19 @@ const shadowDirections = (bins: number): Float64Array => {
 };
 
 /**
+ * Texels per angular bin of a polar shadow row: what the light shader reads
+ * from each `RGBA32F` texel.
+ * @internal
+ */
+export const shadowRowStride = 4;
+
+/** Edges of a bin closer than this, as a fraction of the bin, count as covering it. */
+const coverageEpsilon = 1e-6;
+
+/**
  * Fill one light's 1D shadow map: for every angular bin, how far the nearest
- * occluder is, as a fraction of the light's radius.
+ * occluder is, as a fraction of the light's radius, and which part of the bin
+ * it covers.
  *
  * The map is polar and centred on the light, so the whole shadow term for a
  * light is one texture row and every light still draws in the same instanced
@@ -54,13 +65,24 @@ const shadowDirections = (bins: number): Float64Array => {
  * `(axisCos, axisSin)`, because that is the frame the light quad is drawn in.
  * A point light passes `(1, 0)`.
  *
- * `row` is filled from index `0` to `bins` with `1` where nothing blocks.
+ * Each bin is {@link shadowRowStride} floats, and `row` holds `bins` of them:
+ *
+ * - `[0]` the distance of an occluder covering only part of the bin,
+ * - `[1]`, `[2]` where that part starts and ends, as fractions of the bin, and
+ *   equal when no occluder covers only part of it,
+ * - `[3]` the distance of the nearest occluder over the rest of the bin, `1`
+ *   where nothing blocks.
+ *
+ * A silhouette rarely falls on a bin boundary. Storing a single distance per
+ * bin moves it to the nearest bin centre, which leaves the edge up to half a
+ * bin off and makes it jump a whole bin as the occluder or the light moves.
+ * The covered part keeps the silhouette where the geometry puts it.
+ *
+ * Two occluders that each cover part of the same bin merge into one span at
+ * the nearer distance, so only a gap narrower than a bin between them is lost.
+ *
  * Segments outside the light's circle are skipped, so the cost of a light is
  * the occluders it can actually see.
- *
- * Bins sample at their centre, so a silhouette edge is accurate to half a bin.
- * That is what the shader's kernel smooths over, and what a larger `bins`
- * buys.
  * @internal
  */
 export const buildShadowRow = (
@@ -74,7 +96,14 @@ export const buildShadowRow = (
   row: Float32Array,
   bins: number,
 ): void => {
-  row.fill(unoccluded, 0, bins);
+  for (let bin = 0; bin < bins; bin++) {
+    const texel = bin * shadowRowStride;
+
+    row[texel] = unoccluded;
+    row[texel + 1] = 0;
+    row[texel + 2] = 0;
+    row[texel + 3] = unoccluded;
+  }
 
   if (radius <= 0 || bins <= 0) {
     return;
@@ -104,32 +133,85 @@ export const buildShadowRow = (
     const span = wrapSigned(Math.atan2(y2, x2) - first);
     const start = span >= 0 ? first : first + span;
     const width = Math.abs(span);
-
-    // One bin of slack on each side: a ray whose bin centre falls outside the
-    // segment simply misses it, so over-testing costs an intersection and
-    // under-testing would leave a lit seam where two segments meet.
-    const firstBin = Math.floor((start + Math.PI) * binsPerRadian) - 1;
-    const lastBin = Math.ceil((start + width + Math.PI) * binsPerRadian) + 1;
+    const firstBin = Math.floor((start + Math.PI) * binsPerRadian);
+    const lastBin = Math.floor((start + width + Math.PI) * binsPerRadian);
 
     const edgeX = x2 - x1;
     const edgeY = y2 - y1;
 
     for (let bin = firstBin; bin <= lastBin; bin++) {
-      const directionOffset = (bin + bins + 1) * 2;
-      const distance = rayHit(x1, y1, edgeX, edgeY, directions[directionOffset]!, directions[directionOffset + 1]!);
+      // Unwrapped, like `start`, so a segment across the seam needs no special case.
+      const binStart = -Math.PI + bin / binsPerRadian;
+      let low = (start - binStart) * binsPerRadian;
+      let high = (start + width - binStart) * binsPerRadian;
+
+      low = low <= coverageEpsilon ? 0 : low;
+      high = high >= 1 - coverageEpsilon ? 1 : high;
+
+      if (high <= low) {
+        continue;
+      }
+
+      let distance: number;
+
+      if (low <= 0.5 && high >= 0.5) {
+        const directionOffset = (bin + bins + 1) * 2;
+
+        distance = distanceAlong(x1, y1, edgeX, edgeY, directions[directionOffset]!, directions[directionOffset + 1]!);
+      } else {
+        // The part of the segment nearest the bin centre: one of its ends.
+        const angle = binStart + (low > 0.5 ? low : high) / binsPerRadian;
+
+        distance = distanceAlong(x1, y1, edgeX, edgeY, Math.cos(angle), Math.sin(angle));
+      }
 
       if (distance <= 0 || distance >= radius) {
         continue;
       }
 
-      const slot = ((bin % bins) + bins) % bins;
-      const normalized = distance / radius;
-
-      if (normalized < row[slot]!) {
-        row[slot] = normalized;
-      }
+      coverBin(row, (((bin % bins) + bins) % bins) * shadowRowStride, distance / radius, low, high);
     }
   }
+
+  // Spans that joined up across a whole bin - two faces meeting at a corner
+  // inside it - describe a covered bin, whose distance the shader may then
+  // compare against its neighbours'.
+  for (let bin = 0; bin < bins; bin++) {
+    const texel = bin * shadowRowStride;
+
+    if (row[texel + 1] === 0 && row[texel + 2] === 1) {
+      row[texel + 3] = Math.min(row[texel + 3]!, row[texel]!);
+      row[texel + 2] = 0;
+    }
+  }
+};
+
+/** Record an occluder at `distance` over the part `low..high` of the bin whose texel starts at `texel`. */
+const coverBin = (row: Float32Array, texel: number, distance: number, low: number, high: number): void => {
+  if (low === 0 && high === 1) {
+    row[texel + 3] = Math.min(row[texel + 3]!, distance);
+    // The partial span is never further than what covers the whole bin, or
+    // the fragments in it would see past a blocker that is there.
+    row[texel] = Math.min(row[texel]!, distance);
+
+    return;
+  }
+
+  if (distance >= row[texel + 3]!) {
+    return;
+  }
+
+  if (row[texel + 2]! <= row[texel + 1]!) {
+    row[texel] = distance;
+    row[texel + 1] = low;
+    row[texel + 2] = high;
+
+    return;
+  }
+
+  row[texel] = Math.min(row[texel]!, distance);
+  row[texel + 1] = Math.min(row[texel + 1]!, low);
+  row[texel + 2] = Math.max(row[texel + 2]!, high);
 };
 
 /** Whether a segment comes within `radius` of the light-space origin. */
@@ -149,26 +231,26 @@ const reaches = (x1: number, y1: number, x2: number, y2: number, radius: number)
 };
 
 /**
- * Distance from the origin to a segment along a unit ray, or `-1` when the ray
- * misses it.
+ * Distance from the origin to where a unit ray meets a segment, clamped onto
+ * the segment, or `-1` when the ray runs parallel to it.
+ *
+ * Clamped because the caller already knows the ray falls within the segment's
+ * angular span: a ray along one of its ends must still meet it there, however
+ * the rounding of the intersection lands.
  *
  * The segment runs from `(x1, y1)` along `(edgeX, edgeY)`; both are already in
  * light space, which is why the ray needs no origin of its own.
  */
-const rayHit = (x1: number, y1: number, edgeX: number, edgeY: number, dirX: number, dirY: number): number => {
+const distanceAlong = (x1: number, y1: number, edgeX: number, edgeY: number, dirX: number, dirY: number): number => {
   const denominator = dirX * edgeY - dirY * edgeX;
 
   if (denominator === 0) {
     return -1;
   }
 
-  const along = (x1 * dirY - y1 * dirX) / denominator;
+  const along = Math.min(1, Math.max(0, (x1 * dirY - y1 * dirX) / denominator));
 
-  if (along < 0 || along > 1) {
-    return -1;
-  }
-
-  return (x1 * edgeY - y1 * edgeX) / denominator;
+  return Math.hypot(x1 + edgeX * along, y1 + edgeY * along);
 };
 
 /** An angle difference folded into `(-pi, pi]`, so a span is always the short way round. */

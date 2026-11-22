@@ -70,5 +70,7 @@ void main() {
         }
     }
 
-    fragColor = vec4(walked / reach, 0.0, 0.0, 1.0);
+    // The light shader's texel layout (see `buildShadowRow`): the march only
+    // knows whole bins, so the distance covers all of it and no part is partial.
+    fragColor = vec4(walked / reach, 0.0, 0.0, walked / reach);
 }

@@ -64,5 +64,7 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
         }
     }
 
-    return vec4<f32>(walked / reach, 0.0, 0.0, 1.0);
+    // The light shader's texel layout (see `buildShadowRow`): the march only
+    // knows whole bins, so the distance covers all of it and no part is partial.
+    return vec4<f32>(walked / reach, 0.0, 0.0, walked / reach);
 }

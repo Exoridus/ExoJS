@@ -32,7 +32,7 @@ import { assertNumericNormalTexture, normalGreenSign } from '../normals/NormalSo
 import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import type { OccluderDrawable } from '../occluders/OccluderSource';
-import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
+import { buildShadowRow, buildSunShadowRow, shadowRowStride } from '../occluders/shadowMap';
 import { pickDebugTexture, releaseDestroyedBatches } from './backendHelpers';
 import { fieldGrid } from './fieldGrid';
 import type { LightingBackend } from './LightingBackend';
@@ -77,7 +77,7 @@ type LightQuadMaterial = MeshMaterial<typeof lightQuadUniforms>;
 /**
  * How far a distance stored in a half-float shadow row can have rounded,
  * relative to itself: half a unit in the last of its ten mantissa bits. The
- * `R32F` rows round some ten thousand times finer, below anything a fragment
+ * `RGBA32F` rows round some ten thousand times finer, below anything a fragment
  * resolves, and are read as exact.
  */
 const halfFloatRounding = 2 ** -11;
@@ -289,7 +289,7 @@ export abstract class FrameLightingBackend implements LightingBackend {
    * wrong for them.
    */
   private readonly _ambientClear: Color = Color.black.clone();
-  private _shadowMap: DataTexture<TextureFormat.R32F>;
+  private _shadowMap: DataTexture<TextureFormat.Rgba32F>;
   /**
    * The directional lights' rows, in a texture of their own. A sun's row is
    * linear where a point light's is polar, so the two are numbered per texture
@@ -328,7 +328,7 @@ export abstract class FrameLightingBackend implements LightingBackend {
       format: this.hdr ? TextureFormat.Rgba16F : TextureFormat.Rgba8,
       scaleMode: ScaleModes.Linear,
     });
-    this._shadowMap = new DataTexture({ width: this._shadowResolution, height: 1, format: TextureFormat.R32F });
+    this._shadowMap = new DataTexture({ width: this._shadowResolution, height: 1, format: TextureFormat.Rgba32F });
     this._sunShadowMap = new DataTexture({ width: this._shadowResolution, height: 1, format: TextureFormat.R32F });
 
     this._sunMaterial = new MeshMaterial({
@@ -792,7 +792,7 @@ ${sunQuadWgsl}`,
       const rows = lastDirtyRow - firstDirtyRow + 1;
 
       this._shadowMap.commitRect(0, firstDirtyRow, this._shadowResolution, rows);
-      this._shadowBytesUploaded += this._shadowResolution * rows * Float32Array.BYTES_PER_ELEMENT;
+      this._shadowBytesUploaded += this._shadowResolution * rows * shadowRowStride * Float32Array.BYTES_PER_ELEMENT;
     }
 
     const suns = this._writeSuns(lights, casting, segments, segmentCount, geometryRevision, epoch);
@@ -919,7 +919,7 @@ ${sunQuadWgsl}`,
       scratchDirection.x,
       scratchDirection.y,
       radius,
-      this._shadowMap.buffer.subarray(row * bins, (row + 1) * bins),
+      this._shadowMap.buffer.subarray(row * bins * shadowRowStride, (row + 1) * bins * shadowRowStride),
       bins,
     );
     this._shadowRowsRebuilt++;
@@ -1367,7 +1367,7 @@ ${sunQuadWgsl}`,
   }
 
   /** The polar rows the light shader should read: the marched atlas, or the walked ones. */
-  private _boundShadows(): DataTexture<TextureFormat.R32F> | RenderTexture {
+  private _boundShadows(): DataTexture<TextureFormat.Rgba32F> | RenderTexture {
     return this.shadowFiller === 'gpu' ? this._filler!.texture : this._shadowMap;
   }
 
@@ -1560,7 +1560,7 @@ ${sunQuadWgsl}`,
     this._sunShadowMap.destroy();
     this._shadowRows.clear();
     this._sunShadowRows.clear();
-    this._shadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.R32F });
+    this._shadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.Rgba32F });
     this._sunShadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.R32F });
 
     for (const batch of this._lightBatches.values()) {

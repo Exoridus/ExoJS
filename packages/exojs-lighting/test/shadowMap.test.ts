@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { buildShadowRow, buildSunShadowRow } from '../src/occluders/shadowMap';
+import { buildShadowRow, buildSunShadowRow, shadowRowStride } from '../src/occluders/shadowMap';
 
 const bins = 64;
 
@@ -24,46 +24,59 @@ describe('buildSunShadowRow', () => {
 });
 
 const rowFor = (data: Float32Array, count: number, centerX = 0, centerY = 0, axisCos = 1, axisSin = 0, radius = 100): Float32Array => {
-  const row = new Float32Array(bins);
+  const row = new Float32Array(bins * shadowRowStride);
 
   buildShadowRow(data, count, centerX, centerY, axisCos, axisSin, radius, row, bins);
 
   return row;
 };
 
+/** The distance blocking the whole of `bin`, `1` where nothing does. */
+const fullAt = (row: Float32Array, bin: number): number => row[bin * shadowRowStride + 3]!;
+
+/** What covers only part of `bin`: its distance and where it starts and ends, or `null`. */
+const partialAt = (row: Float32Array, bin: number): [number, number, number] | null => {
+  const texel = bin * shadowRowStride;
+
+  return row[texel + 2]! > row[texel + 1]! ? [row[texel]!, row[texel + 1]!, row[texel + 2]!] : null;
+};
+
+const isOpen = (row: Float32Array): boolean =>
+  Array.from({ length: bins }, (_, bin) => bin).every(bin => fullAt(row, bin) === 1 && partialAt(row, bin) === null);
+
+/** Bin `bins / 2` starts at angle zero; `fraction` of the way into it. */
+const binWidth = (Math.PI * 2) / bins;
+const insideFirstBin = (fraction: number): number => fraction * binWidth;
+
 describe('buildShadowRow', () => {
   test('an unoccluded direction reads as the full radius', () => {
-    const row = rowFor(segments(), 0);
-
-    expect([...row].every(value => value === 1)).toBe(true);
+    expect(isOpen(rowFor(segments(), 0))).toBe(true);
   });
 
   test('a wall records its distance in the bins it covers and leaves the rest open', () => {
     // A vertical wall at x = 40, spanning y in [-20, 20], seen from the origin.
     const row = rowFor(segments(40, -20, 40, 20), 1);
 
-    expect(row[binOf(0)]).toBeCloseTo(0.4, 2);
-    expect(row[binOf(Math.PI)]).toBe(1);
+    expect(fullAt(row, binOf(0))).toBeCloseTo(0.4, 2);
+    expect(fullAt(row, binOf(Math.PI))).toBe(1);
     // The wall subtends about 53 degrees, so a ray 60 degrees off axis misses it.
-    expect(row[binOf(Math.PI / 3)]).toBe(1);
+    expect(fullAt(row, binOf(Math.PI / 3))).toBe(1);
   });
 
   test('a ray meeting the wall at an angle travels further than one meeting it head on', () => {
     const row = rowFor(segments(40, -40, 40, 40), 1);
 
-    expect(row[binOf(Math.PI / 4)]!).toBeGreaterThan(row[binOf(0)]!);
+    expect(fullAt(row, binOf(Math.PI / 4))).toBeGreaterThan(fullAt(row, binOf(0)));
   });
 
   test('a segment beyond the radius leaves every bin open', () => {
-    const row = rowFor(segments(400, -20, 400, 20), 1);
-
-    expect([...row].every(value => value === 1)).toBe(true);
+    expect(isOpen(rowFor(segments(400, -20, 400, 20), 1))).toBe(true);
   });
 
   test('the segment is measured from the light, not from the world origin', () => {
     const row = rowFor(segments(540, 480, 540, 520), 1, 500, 500);
 
-    expect(row[binOf(0)]).toBeCloseTo(0.4, 2);
+    expect(fullAt(row, binOf(0))).toBeCloseTo(0.4, 2);
   });
 
   test("angles are measured in the light's own frame, so a rotated light shifts the bins", () => {
@@ -71,28 +84,73 @@ describe('buildShadowRow', () => {
     // wall now sits a quarter turn clockwise of the axis.
     const row = rowFor(segments(40, -20, 40, 20), 1, 0, 0, 0, 1);
 
-    expect(row[binOf(-Math.PI / 2)]).toBeCloseTo(0.4, 2);
-    expect(row[binOf(0)]).toBe(1);
+    expect(fullAt(row, binOf(-Math.PI / 2))).toBeCloseTo(0.4, 2);
+    expect(fullAt(row, binOf(0))).toBe(1);
   });
 
   test('a closed box around the light leaves no bin open', () => {
     const box = segments(-30, -30, 30, -30, 30, -30, 30, 30, 30, 30, -30, 30, -30, 30, -30, -30);
     const row = rowFor(box, 4);
 
-    expect([...row].every(value => value < 1)).toBe(true);
+    expect(Array.from({ length: bins }, (_, bin) => fullAt(row, bin)).every(value => value < 1)).toBe(true);
   });
 
   test('the nearest of two walls along the same direction is the one recorded', () => {
     const row = rowFor(segments(80, -20, 80, 20, 30, -20, 30, 20), 2);
 
-    expect(row[binOf(0)]).toBeCloseTo(0.3, 2);
+    expect(fullAt(row, binOf(0))).toBeCloseTo(0.3, 2);
   });
 
   test('a light with no radius records nothing rather than dividing by zero', () => {
-    const row = new Float32Array(bins);
+    const row = new Float32Array(bins * shadowRowStride);
 
     buildShadowRow(segments(40, -20, 40, 20), 1, 0, 0, 1, 0, 0, row, bins);
 
-    expect([...row].every(value => value === 1)).toBe(true);
+    expect(isOpen(row)).toBe(true);
+  });
+
+  test('a silhouette inside a bin covers only its part of it, at its own distance', () => {
+    const covering = rowFor(segments(40, 40 * Math.tan(insideFirstBin(0.3)), 40, 40), 1);
+    const short = rowFor(segments(40, 40 * Math.tan(insideFirstBin(0.7)), 40, 40), 1);
+
+    expect(fullAt(covering, bins / 2)).toBe(1);
+    expect(fullAt(covering, bins / 2 + 1)).toBeLessThan(1);
+    // Measured along the bin centre where the part covers it, and at the
+    // silhouette - the nearest the part comes to the centre - where it does not.
+    expect(partialAt(covering, bins / 2)).toEqual([expect.closeTo(40 / Math.cos(insideFirstBin(0.5)) / 100, 5), expect.closeTo(0.3, 5), 1]);
+    expect(partialAt(short, bins / 2)).toEqual([expect.closeTo(40 / Math.cos(insideFirstBin(0.7)) / 100, 5), expect.closeTo(0.7, 5), 1]);
+  });
+
+  test('the covered part follows the silhouette continuously rather than a bin at a time', () => {
+    for (const fraction of [0.05, 0.25, 0.5, 0.75, 0.95]) {
+      const row = rowFor(segments(40, 40 * Math.tan(insideFirstBin(fraction)), 40, 40), 1);
+
+      expect(partialAt(row, bins / 2)?.[1]).toBeCloseTo(fraction, 5);
+    }
+  });
+
+  test('two faces meeting inside a bin cover the whole of it', () => {
+    const corner = 40 * Math.tan(insideFirstBin(0.4));
+    const row = rowFor(segments(40, -20, 40, corner, 40, corner, 40, 20), 2);
+
+    expect(partialAt(row, bins / 2)).toBeNull();
+    expect(fullAt(row, bins / 2)).toBeCloseTo(0.4, 2);
+  });
+
+  test('a silhouette in front of a wall keeps both distances', () => {
+    const angle = insideFirstBin(0.3);
+    const row = rowFor(segments(80, -80, 80, 80, 30, 30 * Math.tan(angle), 30, 30), 2);
+
+    expect(fullAt(row, bins / 2)).toBeCloseTo(0.8, 2);
+    expect(partialAt(row, bins / 2)).toEqual([expect.closeTo(0.3, 2), expect.closeTo(0.3, 5), 1]);
+  });
+
+  test('a silhouette behind a wall is never read as further than the wall', () => {
+    const angle = insideFirstBin(0.3);
+    const row = rowFor(segments(80, 80 * Math.tan(angle), 80, 80, 30, -30, 30, 30), 2);
+    const partial = partialAt(row, bins / 2);
+
+    expect(fullAt(row, bins / 2)).toBeCloseTo(0.3, 2);
+    expect(partial === null || partial[0] <= fullAt(row, bins / 2)).toBe(true);
   });
 });

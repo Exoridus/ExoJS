@@ -13,9 +13,11 @@ flat in float v_softness;
 flat in vec4 v_surface;
 flat in float v_half;
 
-// One row per shadowed light: the distance to the nearest occluder along each
-// angular bin, as a fraction of the light's radius. A row index below zero
-// means this light sees no occluder at all.
+// One row per shadowed light, one texel per angular bin, distances as a
+// fraction of the light's radius: `r` an occluder covering only the part of the
+// bin from `g` to `b`, and `a` the nearest occluder over the rest of it (see
+// `buildShadowRow`). A row index below zero means this light sees no occluder
+// at all.
 uniform highp sampler2D u_shadow;
 // The normal prepass, in screen space at this target's own size. Alpha is
 // coverage: zero means nothing described a surface there.
@@ -29,8 +31,8 @@ out vec4 fragColor;
 const float PI = 3.14159265359;
 /**
  * Widest kernel, as a half-width in bins, and therefore also the fetch budget:
- * one tap per bin, and a bin either side of the kernel for the slope its
- * outermost taps read - `2 * MAX_HALF + 3` fetches.
+ * one tap per bin the kernel touches, and a bin either side of those for the
+ * slope the outermost taps read - at most `2 * MAX_HALF + 5` fetches.
  *
  * It bounds the penumbra in BINS, so a larger `shadowResolution` buys a
  * sharper hard edge rather than a wider softest penumbra. Sampling every bin
@@ -50,9 +52,9 @@ const float MAX_PENUMBRA = 0.03;
  */
 const float SHADOW_CLEARANCE = 0.75;
 /**
- * Kernel half-width, in bins, at zero softness. The row samples each bin at
- * its centre and is accurate to half a bin, so a kernel narrower than this
- * would show the bin grid itself along an edge.
+ * Kernel half-width, in bins, at zero softness. A bin holds one distance for
+ * the whole of its covered part, so a kernel narrower than this would show
+ * the step between neighbouring bins' distances along a wall seen at a slant.
  */
 const float MIN_RADIUS = 1.5;
 /**
@@ -62,11 +64,22 @@ const float MIN_RADIUS = 1.5;
  */
 const float MIN_SLOPE = 1e-4;
 
-/** The blocker distance bin `bin` holds. The row is polar, so the index wraps. */
-float depthAt(int bin, int bins, int row) {
+/** The texel bin `bin` holds. The row is polar, so the index wraps. */
+vec4 binAt(int bin, int bins, int row) {
     int slot = bin - bins * int(floor(float(bin) / float(bins)));
 
-    return texelFetch(u_shadow, ivec2(slot, row), 0).r;
+    return texelFetch(u_shadow, ivec2(slot, row), 0);
+}
+
+/**
+ * The share of the kernel - a unit-area tent of half-width `radius` around
+ * `center` - that falls between `low` and `high`, all in bins.
+ */
+float tentMass(float low, float high, float center, float radius) {
+    vec2 u = clamp((vec2(low, high) - center) / radius, -1.0, 1.0);
+    vec2 area = u - u * abs(u) * 0.5;
+
+    return area.y - area.x;
 }
 
 /**
@@ -113,14 +126,19 @@ float coverageAt(float here, float previous, float next, float threshold) {
  *
  * The filter is a normalized tent over the bins the penumbra spans. Its taps
  * sit on the BINS, not on the fragment's own angle, and each one is weighted
- * by how far that bin is from the angle: the weights then slide continuously
- * as the fragment moves, and the tap that enters or leaves the window as the
- * angle crosses a bin carries no weight at the moment it does. Placing the
- * taps at fixed offsets from the angle instead - and rounding each to a bin -
- * makes every weight constant and moves the whole window at once, which puts
- * a step the size of the centre tap back into the edge. Each tap then reads a
- * COVERAGE rather than a yes or no, which is what leaves the term continuous
- * in the fragment's distance as well as in its angle.
+ * by the share of the tent that falls on that bin: the weights then slide
+ * continuously as the fragment moves, and a bin that enters or leaves the
+ * window carries no weight at the moment it does. Placing the taps at fixed
+ * offsets from the angle instead - and rounding each to a bin - makes every
+ * weight constant and moves the whole window at once, which puts a step the
+ * size of the centre tap back into the edge. Each tap then reads a COVERAGE
+ * rather than a yes or no, which is what leaves the term continuous in the
+ * fragment's distance as well as in its angle.
+ *
+ * Within a bin, the part a silhouette covers is weighted by the share of the
+ * tent over that part alone. That is what keeps the edge where the geometry
+ * puts it rather than at the nearest bin centre, and moving smoothly with the
+ * occluder rather than a bin at a time.
  *
  * It is an ANGULAR filter, not an area source: it widens the edge a point
  * source casts, and it does not make the shadow behave like one cast by a
@@ -135,31 +153,37 @@ float shadowTerm(float threshold) {
     int row = int(v_shadowRow);
     float radius = min(MIN_RADIUS + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA, float(MAX_HALF));
     float center = (atan(v_local.y, v_local.x) + PI) / (2.0 * PI) * float(bins) - 0.5;
-    int base = int(floor(center));
-    int reach = int(ceil(radius));
+    // Bin `i` spans `i - 0.5 .. i + 0.5` here, so these are the bins the tent touches.
+    int base = int(floor(center + 0.5));
+    int reach = int(ceil(radius + 0.5));
     float lit = 0.0;
     float total = 0.0;
     // Rolling, so the bin either side of a tap costs no extra fetch: every bin
     // under the kernel is read once and serves as its own tap and as both its
     // neighbours' slope.
-    float previous = depthAt(base - reach - 1, bins, row);
-    float here = depthAt(base - reach, bins, row);
+    float previous = binAt(base - reach - 1, bins, row).a;
+    vec4 here = binAt(base - reach, bins, row);
 
-    for (int offset = -MAX_HALF; offset <= MAX_HALF; offset++) {
+    for (int offset = -MAX_HALF - 1; offset <= MAX_HALF + 1; offset++) {
         if (offset < -reach || offset > reach) {
             continue;
         }
 
         int bin = base + offset;
-        float next = depthAt(bin + 1, bins, row);
-        float weight = max(0.0, 1.0 - abs(float(bin) - center) / radius);
+        vec4 next = binAt(bin + 1, bins, row);
+        float low = float(bin) - 0.5;
+        float mass = tentMass(low, low + 1.0, center, radius);
 
-        if (weight > 0.0) {
-            lit += weight * coverageAt(here, previous, next, threshold);
-            total += weight;
+        if (mass > 0.0) {
+            // A partial blocker has no neighbour to read a slope from: across
+            // its own silhouette the distance jumps to whatever lies behind.
+            float covered = here.b > here.g ? tentMass(low + here.g, low + here.b, center, radius) : 0.0;
+
+            lit += covered * coverageAt(here.r, here.r, here.r, threshold) + (mass - covered) * coverageAt(here.a, previous, next.a, threshold);
+            total += mass;
         }
 
-        previous = here;
+        previous = here.a;
         here = next;
     }
 
