@@ -351,16 +351,17 @@ describe('affected-test execution adapter with real Vitest', () => {
     expect(executions()[0].files[0].state).toBe('failed');
   });
 
-  it.each(['selected', 'full', 'coverage'] as const)(
+  it.each(['selected', 'full', 'coverage', 'retry'] as const)(
     'does not activate the outer plan in nested child runners during %s execution',
     mode => {
       write(
         selectedFile.file,
         `
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, it } from 'vitest';
+${mode === 'retry' ? "it('transient timeout', async () => { if (!existsSync('.workspace/retried')) { writeFileSync('.workspace/retried', 'yes'); writeFileSync('.workspace/plan.json', 'invalid after original selection'); await new Promise(() => {}); } }, 50);" : ''}
 it('nested runner uses its complete independent fixture', () => {
   const nested = resolve('.workspace/nested');
   mkdirSync(nested, { recursive: true });
@@ -372,7 +373,7 @@ it('nested runner uses its complete independent fixture', () => {
   const git = (...args) => execFileSync('git', ['-c', 'user.name=nested', '-c', 'user.email=nested@example.test', ...args], { cwd: nested });
   git('init', '-q');
   git('add', '-A');
-  git('commit', '-qm', 'nested fixture');
+  git('commit', '--allow-empty', '-qm', 'nested fixture');
   const result = spawnSync(process.execPath, [${JSON.stringify(runner)}, '--config=vitest.config.mjs', '--project=nested', '--reporter=default', ${JSON.stringify(`--reporter=${shadowReporter}`)}], { cwd: nested, env: process.env, encoding: 'utf8' });
   if (result.status !== 0) throw new Error(result.stdout + result.stderr);
   expect(result.stdout).toMatch(/2 passed/);
@@ -388,13 +389,25 @@ it('nested runner uses its complete independent fixture', () => {
         document.selections[0].tests = document.selections[0].inventory;
       }
 
-      const result = run(document, mode === 'coverage' ? ['--coverage'] : []);
+      const result = run(document, mode === 'coverage' ? ['--coverage'] : [], {}, mode === 'retry' ? runner : adapter);
+
+      if (mode === 'retry') {
+        expect(result.stderr.match(/\[affected-run\] ERROR:[^\n]*/g)).toBeNull();
+      }
 
       expect({ status: result.status, stderr: result.stderr }).toEqual({
-        status: mode === 'selected' ? 0 : 1,
+        status: mode === 'selected' || mode === 'retry' ? 0 : 1,
         stderr: mode === 'selected' ? '' : expect.any(String),
       });
-      expect(readReport()).toMatchObject({ numTotalTests: mode === 'selected' ? 1 : 2, numPassedTests: 1 });
+
+      if (mode === 'retry') {
+        expect(result.stdout).toContain('Rechecking 1 file(s)');
+        expect(result.stdout).toContain('2 passed');
+        expect(executions()).toHaveLength(1);
+        expect(executions()[0].files[0].counts).toMatchObject({ total: 2, failed: 1, passed: 1 });
+      } else {
+        expect(readReport()).toMatchObject({ numTotalTests: mode === 'selected' ? 1 : 2, numPassedTests: 1 });
+      }
     },
   );
 

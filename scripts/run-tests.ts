@@ -85,9 +85,22 @@ const runVitest = (args: readonly string[], useAffectedPlan = false): Promise<{ 
       useAffectedPlan && process.env.EXOJS_AFFECTED_MODE === 'enforce'
         ? [fileURLToPath(new URL('./ci/affected-run.ts', import.meta.url)), ...args]
         : [vitestBin(), 'run', ...args];
+    const env = { ...process.env };
+
+    if (!useAffectedPlan) {
+      // The native retry owns a different inventory. Its workers and nested
+      // test runners must not reactivate the original invocation's plan.
+      delete env.EXOJS_AFFECTED_MODE;
+      delete env.EXOJS_AFFECTED_PLAN;
+    }
+
+    if (process.stdout.isTTY && env.FORCE_COLOR === undefined) {
+      env.FORCE_COLOR = '1';
+    }
+
     const child = spawn(process.execPath, command, {
       stdio: ['inherit', 'pipe', 'pipe'],
-      env: process.stdout.isTTY && process.env.FORCE_COLOR === undefined ? { ...process.env, FORCE_COLOR: '1' } : process.env,
+      env,
     });
     let unhandled = false;
     let interrupted = 0;
