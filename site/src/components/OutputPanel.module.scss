@@ -1,4 +1,9 @@
 .root {
+  // This console stays dark in both site themes.
+  --fg: oklch(95% 0.005 245);
+  --fg-muted: oklch(75% 0.012 245);
+  --fg-faint: oklch(68% 0.012 245);
+
   width: min(100%, 1160px);
   margin: 0 auto 0.62rem;
   border: 1px solid oklch(30% 0.014 245);
