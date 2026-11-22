@@ -1,8 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { createRequire } from 'node:module';
 
 import { describe, expect, it } from 'vitest';
 
