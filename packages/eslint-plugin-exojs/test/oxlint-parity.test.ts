@@ -132,6 +132,7 @@ const oxlintDiagnostics = (fixture: Fixture, source: string): ParityDiagnostic[]
   expect([0, 1]).toContain(result.status);
 
   let output: OxlintOutput;
+
   try {
     output = JSON.parse(result.stdout) as OxlintOutput;
   } catch {
