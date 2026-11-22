@@ -31,15 +31,17 @@ import { getBackendDevice } from './webgpu-test-helpers';
  * construction. The canvas keeps the default opaque `alphaMode` and
  * `preserveDrawingBuffer` is on so a rendered frame can be read back unmodified.
  */
-export const makeTestApp = (canvas: RenderSurface, size: number, pixelRatio?: number): Application =>
+export const makeTestApp = (canvas: RenderSurface, size: number, pixelRatio?: number, releaseContext = true): Application =>
   ({
     canvas,
     options: {
-      // The test fixture supplies the canvas; its context remains caller-owned.
+      // The fixture supplies the canvas and releases its context at test teardown.
+      // Tests asserting GL state after destruction explicitly opt out.
       canvas: { element: canvas, width: size, height: size, ...(pixelRatio !== undefined && { pixelRatio }) },
       clearColor: Color.black,
       rendering: {
         debug: false,
+        releaseContext,
         webglAttributes: {
           antialias: false,
           preserveDrawingBuffer: true,
@@ -110,14 +112,22 @@ export const webGpuAvailable = async (): Promise<boolean> => {
 /** The same question for WebGL2, which no shipping browser currently answers with `false`. */
 export const webGl2Available = (): boolean => {
   try {
-    return document.createElement('canvas').getContext('webgl2') !== null;
+    const gl = document.createElement('canvas').getContext('webgl2');
+
+    if (gl === null) {
+      return false;
+    }
+
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+
+    return true;
   } catch {
     return false;
   }
 };
 
-export const createWebGl2TestBackend = async (size: number, pixelRatio?: number): Promise<WebGl2Backend> => {
-  const app = makeTestApp(makeTestCanvas(size), size, pixelRatio);
+export const createWebGl2TestBackend = async (size: number, pixelRatio?: number, releaseContext = true): Promise<WebGl2Backend> => {
+  const app = makeTestApp(makeTestCanvas(size), size, pixelRatio, releaseContext);
   const backend = new WebGl2Backend(app);
 
   await backend.initialize();

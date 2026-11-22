@@ -101,6 +101,7 @@ describe('Capabilities', () => {
         if (kind === 'webgl2') {
           webGlProbes++;
         }
+
         return null;
       },
     });

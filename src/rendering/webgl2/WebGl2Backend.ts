@@ -6,8 +6,8 @@
  */
 /* eslint-disable max-lines */
 import type { Application } from '#core/Application';
-import { Capabilities } from '#core/Capabilities';
 import type { CanvasAlphaMode, RenderingApplicationOptions } from '#core/application/ApplicationOptions';
+import { Capabilities } from '#core/Capabilities';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
@@ -574,6 +574,7 @@ export class WebGl2Backend implements RenderBackend {
 
     this._context = __DEV__ && debug ? makeWebGl2DebugContext(gl) : gl;
     this._contextLost = this._context.isContextLost();
+
     if (!this._contextLost) {
       Capabilities._observeWebGl2Context(this._canvas);
     }
