@@ -8,7 +8,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, globSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { ESLint, type Linter } from 'eslint';
 import type { OxlintConfig } from 'oxlint';
@@ -31,6 +31,11 @@ interface NativeGroup {
   rules: Record<string, Linter.RuleEntry>;
   globals: Record<string, 'readonly' | 'writable' | 'off'>;
   disabled: string[];
+}
+
+interface NativeImplementations {
+  parser: { instance: unknown; parse: unknown; parseForESLint: unknown };
+  rules: Map<string, { namespace: string; plugin: unknown; rule: unknown; create: unknown }>;
 }
 
 interface NativePlan {
@@ -94,6 +99,40 @@ export const nativeVersionsMatch = (expected: NativePolicy = policy): boolean =>
   }
 };
 
+/** Capture evaluated implementations before configuration can replace a plugin or rule. */
+const nativeImplementations = async (): Promise<NativeImplementations | null> => {
+  try {
+    const [{ default: tseslint }, { default: unicorn }, { default: vitest }] = await Promise.all([
+      import('typescript-eslint'),
+      import('eslint-plugin-unicorn'),
+      // This pinned plugin has distinct ESM/CJS implementations. Shared ESLint
+      // configuration imports its ESM entry; a different layout keeps full ESLint.
+      import(pathToFileURL(resolve(toolingRoot, 'packages/exojs-config/node_modules/@vitest/eslint-plugin/dist/index.mjs')).href),
+    ]);
+    const plugins: Record<string, unknown> = { '@typescript-eslint': tseslint.plugin, unicorn, vitest };
+    const rules: NativeImplementations['rules'] = new Map();
+
+    for (const [namespace, plugin] of Object.entries(plugins)) {
+      if (!isRecord(plugin) || !isRecord(plugin.rules)) {
+        return null;
+      }
+
+      for (const [name, rule] of Object.entries(plugin.rules)) {
+        if (isRecord(rule)) {
+          rules.set(`${namespace}/${name}`, { namespace, plugin, rule, create: rule.create });
+        }
+      }
+    }
+
+    return {
+      parser: { instance: tseslint.parser, parse: tseslint.parser.parse, parseForESLint: tseslint.parser.parseForESLint },
+      rules,
+    };
+  } catch {
+    return null;
+  }
+};
+
 const selectedFiles = (root: string, globs: readonly string[]): string[] =>
   [...new Set(globSync(globs, { cwd: root }).map(unixPath))].toSorted();
 const snapshot = (paths: readonly string[]): Record<string, string> =>
@@ -134,15 +173,23 @@ const nativeGlobals = (globals: unknown): NativeGroup['globals'] | null => {
 };
 
 /** Return no native ownership for contexts whose parser or type program differs. */
-export const nativeRulesForConfig = (config: Linter.Config, source: string, expected: NativePolicy = policy): NativeGroup | null => {
+export const nativeRulesForConfig = (
+  config: Linter.Config,
+  source: string,
+  implementations: NativeImplementations,
+  expected: NativePolicy = policy,
+): NativeGroup | null => {
   const language = config.languageOptions;
-  const parser = language?.parser as { meta?: { name?: string; version?: string } } | undefined;
+  const parser = language?.parser as { meta?: { name?: string; version?: string }; parse?: unknown; parseForESLint?: unknown } | undefined;
   const parserOptions = language?.parserOptions;
 
   if (
     config.processor ||
     config.linterOptions?.noInlineConfig ||
     (config.settings && Object.keys(config.settings).length > 0) ||
+    parser !== implementations.parser.instance ||
+    parser?.parse !== implementations.parser.parse ||
+    parser?.parseForESLint !== implementations.parser.parseForESLint ||
     parser?.meta?.name !== expected.parser.name ||
     parser.meta.version !== expected.parser.version ||
     language?.sourceType !== 'module' ||
@@ -170,12 +217,22 @@ export const nativeRulesForConfig = (config: Linter.Config, source: string, expe
 
   for (const [id, options] of Object.entries(config.rules ?? {})) {
     const entry = expected.rules[id];
+    const implementation = implementations.rules.get(id);
+    const rule = implementation
+      ? config.plugins?.[implementation.namespace]?.rules?.[id.slice(implementation.namespace.length + 1)]
+      : undefined;
 
     if (
       !entry ||
       options === undefined ||
       !entry.options.includes(signature(options)) ||
-      (entry.typeAware && parserOptions.projectService !== true)
+      (entry.typeAware && parserOptions.projectService !== true) ||
+      (id.includes('/') &&
+        (!implementation ||
+          config.plugins?.[implementation.namespace] !== implementation.plugin ||
+          rule !== implementation.rule ||
+          !isRecord(rule) ||
+          rule.create !== implementation.create))
     ) {
       continue;
     }
@@ -222,6 +279,14 @@ export const runNativeLint = async (root: string, globs: readonly string[]): Pro
     return null;
   }
 
+  const implementations = await nativeImplementations();
+
+  if (!implementations) {
+    console.log('lint: evaluated rule implementations are unavailable; using full ESLint.');
+
+    return null;
+  }
+
   const eslint = new ESLint({ cwd: root });
   const groups = new Map<string, NativeGroup>();
   const sourceFiles = snapshot(paths.map(path => resolve(root, path)));
@@ -246,7 +311,7 @@ export const runNativeLint = async (root: string, globs: readonly string[]): Pro
       continue;
     }
 
-    const group = nativeRulesForConfig(config, readFileSync(resolve(root, file), 'utf8'));
+    const group = nativeRulesForConfig(config, readFileSync(resolve(root, file), 'utf8'), implementations);
 
     if (!group) {
       continue;

@@ -182,8 +182,12 @@ versions and exact option signatures. A new rule or option variant retains
 its original implementation. The native backend is pinned explicitly; an
 unvalidated dependency version or unsupported path form uses full ESLint.
 
-Root configuration files, named TypeScript projects, ESLint directives,
+Root configuration files, named TypeScript projects, ESLint or Oxlint directives,
 custom parsers or settings, and nested configurations retain full ESLint.
+Parser and plugin rule implementations must match the evaluated objects,
+including their parsing and rule-creation functions; matching names or copied
+metadata alone do not authorize native ownership. Replacement rules stay on
+ESLint even when registered under an evaluated namespace.
 Other files keep all unsupported rules and custom ExoJS rules in residual
 ESLint. Native traversal is restricted to inspected files and its actual
 discovery is checked before linting. Files hidden from native directory
@@ -212,11 +216,13 @@ The implemented standard command also passed as
 configuration generation, native inventory verification, 2,738 admitted native
 files, and both complete root ESLint file passes. This includes React and the
 new tooling files, so its scope differs from the earlier paired subset.
-No stale-input fallback occurred. The 16 real child-process regression cases
-also pass, covering changed/new files, Unicode and spaces, custom rules,
+No stale-input fallback occurred. The real child-process regression cases
+cover changed/new files, Unicode and spaces, custom rules,
 named-project imported promises, directive hygiene, ignores, nested/custom
 parser contexts, version/option drift, CLI forwarding and inputs that change
-after native lint. These local checks do not substitute for the combined
+after native lint. Native-only directives, copied parser metadata, replacement
+plugin/rule implementations and retained ownership for evaluated implementations
+have dedicated regressions. These local checks do not substitute for the combined
 change's required CI lanes or measurements on a GitHub runner.
 
 ## Reproducing the rule inventory

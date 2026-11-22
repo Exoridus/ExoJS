@@ -22,6 +22,29 @@ const sources = [
   'packages/eslint-plugin-exojs/src/entry.ts',
   'packages/eslint-plugin-exojs/test/entry.test.ts',
 ];
+const delegatedPlugins = [
+  {
+    id: '@typescript-eslint/no-explicit-any',
+    namespace: '@typescript-eslint',
+    implementation: 'tseslint.plugin',
+    imports: '',
+    violation: 'export let value: any;\n',
+  },
+  {
+    id: 'unicorn/error-message',
+    namespace: 'unicorn',
+    implementation: 'unicorn',
+    imports: "import unicorn from 'eslint-plugin-unicorn';\n",
+    violation: 'throw new Error();\n',
+  },
+  {
+    id: 'vitest/no-identical-title',
+    namespace: 'vitest',
+    implementation: 'vitest',
+    imports: "import vitest from './packages/exojs-config/node_modules/@vitest/eslint-plugin/dist/index.mjs';\n",
+    violation: "import { test } from 'vitest';\ntest('duplicate', () => {});\ntest('duplicate', () => {});\n",
+  },
+];
 
 describe('native lint ownership through the real CLI', () => {
   let root: string;
@@ -70,6 +93,14 @@ export default [
       timeout: 25_000,
       maxBuffer: 8 * 1024 * 1024,
     });
+
+  const configurePluginRule = (id: string, namespace: string, implementation: string, imports = ''): void => {
+    const config = readFileSync(join(root, 'eslint.config.ts'), 'utf8')
+      .replace("plugins: { '@typescript-eslint': tseslint.plugin, fixture: custom }", `plugins: { '${namespace}': ${implementation} }`)
+      .replace("'fixture/no-marker': 'error'", `'${id}': 'error'`);
+
+    write('eslint.config.ts', `${imports}${config}`);
+  };
 
   const assertCleaned = (): void => {
     expect(globSync('.oxlint-run-*.json', { cwd: root })).toEqual([]);
@@ -232,6 +263,74 @@ export default [
     expect(result.stdout).toContain('src/nested/entry.ts');
     assertCleaned();
   });
+
+  it('retains full ESLint for a parser replacement with copied original metadata', () => {
+    configure("{ files: ['src/custom.ts'], languageOptions: { parser: { ...tseslint.parser } } },");
+    write('src/custom.ts', 'debugger;\n');
+
+    const result = run();
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('=== lint: engine');
+    expect(result.stdout).toContain('src/custom.ts');
+    expect(result.stdout).toContain('no-debugger');
+    assertCleaned();
+  });
+
+  it.each(delegatedPlugins)('retains a replacement $id implementation on ESLint', ({ id, namespace, implementation, imports }) => {
+    const name = id.slice(namespace.length + 1);
+
+    configurePluginRule(
+      id,
+      namespace,
+      `{ ...${implementation}, rules: { ...${implementation}.rules, '${name}': custom.rules['no-marker'] } }`,
+      imports,
+    );
+    write('src/entry.ts', 'export const forbidden = 1;\n');
+
+    const result = run();
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('=== lint: native');
+    expect(result.stdout).toContain('=== lint: engine');
+    expect(result.stdout).toContain('Custom coverage marker');
+    assertCleaned();
+  });
+
+  it('retains a rule replaced on the original plugin object on ESLint', () => {
+    configurePluginRule('@typescript-eslint/no-explicit-any', '@typescript-eslint', 'tseslint.plugin');
+    write(
+      'eslint.config.ts',
+      readFileSync(join(root, 'eslint.config.ts'), 'utf8').replace(
+        'export default [',
+        "tseslint.plugin.rules['no-explicit-any'] = custom.rules['no-marker'];\nexport default [",
+      ),
+    );
+    write('src/entry.ts', 'export const forbidden = 1;\n');
+
+    const result = run();
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('=== lint: engine');
+    expect(result.stdout).toContain('Custom coverage marker');
+    assertCleaned();
+  });
+
+  it.each(delegatedPlugins)(
+    'keeps native ownership for the evaluated $id implementation',
+    ({ id, namespace, implementation, imports, violation }) => {
+      configurePluginRule(id, namespace, implementation, imports);
+      write('src/entry.ts', violation);
+
+      const result = run();
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain('=== lint: native');
+      expect(result.stdout).not.toContain('=== lint: engine');
+      expect(result.stdout).toContain(id.slice(namespace.length + 1));
+      assertCleaned();
+    },
+  );
 
   it('keeps an unvalidated rule option variant on ESLint', () => {
     configure('', 'warn');
