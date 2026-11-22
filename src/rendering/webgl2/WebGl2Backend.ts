@@ -557,7 +557,8 @@ export class WebGl2Backend implements RenderBackend {
     const debug = renderingOptions.debug ?? false;
     this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._canvas = app.canvas;
-    this._releaseContextOnDestroy = renderingOptions.releaseContext ?? (canvasOptions.element === undefined);
+    const ownsCanvas = canvasOptions.element === undefined;
+    this._releaseContextOnDestroy = renderingOptions.releaseContext ?? ownsCanvas;
 
     // `webglAttributes.antialias` reaches the device twice. The attribute below
     // asks the browser to multisample the default framebuffer; the colour-
