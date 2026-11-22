@@ -60,7 +60,7 @@ describe('affected-test execution through the real Vitest API', () => {
   let base: string;
 
   const git = (...args: string[]): string =>
-    execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', ...args], {
+    execFileSync('git', ['-c', 'core.autocrlf=false', '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', ...args], {
       cwd: root,
       encoding: 'utf8',
     }).trim();
@@ -240,15 +240,27 @@ describe('affected-test execution through the real Vitest API', () => {
     expect(result.stdout).toMatch(/2 passed/);
   });
 
-  it.each(['startup', 'execution'] as const)('preserves cancellation status and completes cleanup during %s', async phase => {
+  const assertCancellation = async ({
+    phase,
+    transport,
+    signal,
+  }: {
+    phase: 'startup' | 'execution';
+    transport: 'signal' | 'controller';
+    signal: 'SIGINT' | 'SIGTERM';
+  }): Promise<void> => {
     write(
       'test/leaf.test.ts',
-      "import { writeFileSync } from 'node:fs'; import { it } from 'vitest'; it('running', async () => { writeFileSync('.workspace/started', 'yes'); await new Promise(resolve => setTimeout(resolve, 500)); });\n",
+      "import { writeFileSync } from 'node:fs'; import { it } from 'vitest'; it('running', async () => { writeFileSync('.workspace/started', 'yes'); writeFileSync('.workspace/executed', 'yes'); await new Promise(resolve => setTimeout(resolve, 500)); });\n",
     );
     write('setup.ts', "import { writeFileSync } from 'node:fs'; export default () => () => writeFileSync('.workspace/closed', 'yes');\n");
     write(
+      'reporter.ts',
+      "import { writeFileSync } from 'node:fs'; export default class { onTestRunEnd(_modules, _errors, reason) { writeFileSync('.workspace/end-reason', reason); } };\n",
+    );
+    write(
       'vitest.config.ts',
-      "export default { cacheDir: '.cache/vite', test: { name: 'fixture', include: ['test/*.test.ts'], globalSetup: ['./setup.ts'], maxWorkers: 1 } };\n",
+      "export default { cacheDir: '.cache/vite', test: { name: 'fixture', include: ['test/*.test.ts'], globalSetup: ['./setup.ts'], reporters: ['default', './reporter.ts'], maxWorkers: 1 } };\n",
     );
 
     if (phase === 'startup') {
@@ -264,13 +276,21 @@ describe('affected-test execution through the real Vitest API', () => {
     write('.workspace/prepared', 'yes');
     write('src/leaf.ts', 'export const value = 1;\n\n');
 
-    const child = spawn(process.execPath, argumentsFor('--run'), { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+    const args = argumentsFor('--run');
+    const child = spawn(
+      process.execPath,
+      transport === 'controller' ? [resolve('test/ci/fixtures/affected-controller.ts'), ...args] : args,
+      {
+        cwd: root,
+        stdio: transport === 'controller' ? ['ignore', 'pipe', 'pipe', 'ipc'] : ['ignore', 'pipe', 'pipe'],
+      },
+    );
     let output = '';
 
-    child.stdout.on('data', chunk => {
+    child.stdout!.on('data', chunk => {
       output += String(chunk);
     });
-    child.stderr.on('data', chunk => {
+    child.stderr!.on('data', chunk => {
       output += String(chunk);
     });
     const completed = new Promise<number | null>((resolvePromise, reject) => {
@@ -284,15 +304,42 @@ describe('affected-test execution through the real Vitest API', () => {
       }
 
       expect({ started: existsSync(join(root, '.workspace/started')), output }).toMatchObject({ started: true });
-      child.kill('SIGTERM');
-      expect({ code: await completed, output }).toMatchObject({ code: 143 });
+
+      if (transport === 'controller') {
+        child.send(signal);
+      } else {
+        child.kill(signal);
+      }
+
+      expect({ code: await completed, output }).toMatchObject({ code: signal === 'SIGINT' ? 130 : 143 });
       expect(existsSync(join(root, '.workspace/closed'))).toBe(true);
       expect(readFileSync(join(root, '.workspace/closed'), 'utf8')).toBe('yes');
+
+      if (phase === 'startup') {
+        expect(existsSync(join(root, '.workspace/executed'))).toBe(false);
+      } else {
+        expect(readFileSync(join(root, '.workspace/end-reason'), 'utf8')).toBe('interrupted');
+      }
     } finally {
       if (child.exitCode === null && child.signalCode === null) {
         child.kill('SIGKILL');
         await completed;
       }
     }
-  });
+  };
+
+  // Windows kill(SIGTERM) is forced termination, not delivery to a handler.
+  it.skipIf(process.platform === 'win32').each(['startup', 'execution'] as const)(
+    'preserves POSIX termination status and completes cleanup during %s',
+    phase => assertCancellation({ phase, transport: 'signal', signal: 'SIGTERM' }),
+  );
+
+  it.each([
+    { phase: 'startup', signal: 'SIGINT' },
+    { phase: 'startup', signal: 'SIGTERM' },
+    { phase: 'execution', signal: 'SIGINT' },
+    { phase: 'execution', signal: 'SIGTERM' },
+  ] as const)('completes controller cancellation during $phase for $signal', ({ phase, signal }) =>
+    assertCancellation({ phase, signal, transport: 'controller' }),
+  );
 });

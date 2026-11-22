@@ -42,12 +42,16 @@ describe('affected-test execution adapter with real Vitest', () => {
   };
 
   const git = (...args: string[]): string =>
-    execFileSync('git', ['-c', 'user.name=adapter-test', '-c', 'user.email=adapter-test@example.test', ...args], {
-      cwd: root,
-      env: childEnv,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }).trim();
+    execFileSync(
+      'git',
+      ['-c', 'core.autocrlf=false', '-c', 'user.name=adapter-test', '-c', 'user.email=adapter-test@example.test', ...args],
+      {
+        cwd: root,
+        env: childEnv,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    ).trim();
 
   const commit = (): void => {
     git('add', '-A');
@@ -370,8 +374,10 @@ it('nested runner uses its complete independent fixture', () => {
   writeFileSync(resolve(nested, 'vitest.config.mjs'), "export default { cacheDir: '.cache/vite', test: { name: 'nested', include: ['*.test.ts'], maxWorkers: 1 } };");
   writeFileSync(resolve(nested, 'one.test.ts'), "import { it, expect } from 'vitest'; it('one', () => expect(1).toBe(1));");
   writeFileSync(resolve(nested, 'two.test.ts'), "import { it, expect } from 'vitest'; it('two', () => expect(2).toBe(2));");
-  const git = (...args) => execFileSync('git', ['-c', 'user.name=nested', '-c', 'user.email=nested@example.test', ...args], { cwd: nested });
+  const git = (...args) => execFileSync('git', ['-c', 'core.autocrlf=false', '-c', 'user.name=nested', '-c', 'user.email=nested@example.test', ...args], { cwd: nested });
   git('init', '-q');
+  // Exercise the common Windows setting; fixture Git calls must preserve LF inputs.
+  git('config', 'core.autocrlf', 'true');
   git('add', '-A');
   git('commit', '--allow-empty', '-qm', 'nested fixture');
   const result = spawnSync(process.execPath, [${JSON.stringify(runner)}, '--config=vitest.config.mjs', '--project=nested', '--reporter=default', ${JSON.stringify(`--reporter=${shadowReporter}`)}], { cwd: nested, env: process.env, encoding: 'utf8' });
@@ -462,14 +468,20 @@ it('nested runner uses its complete independent fixture', () => {
     expect(result.stdout).not.toContain('Rechecking');
   });
 
-  it.each([
-    { command: adapter, phase: 'execution' },
-    { command: runner, phase: 'execution' },
-    { command: adapter, phase: 'startup' },
-  ])('preserves termination status and closes the Vitest context during $phase through $command', async ({ command, phase }) => {
+  const assertCancellation = async ({
+    command,
+    phase,
+    transport,
+    signal,
+  }: {
+    command: string;
+    phase: 'startup' | 'execution';
+    transport: 'signal' | 'controller';
+    signal: 'SIGINT' | 'SIGTERM';
+  }): Promise<void> => {
     write(
       selectedFile.file,
-      "import { writeFileSync } from 'node:fs'; import { it } from 'vitest'; it('running', async () => { writeFileSync('.workspace/started', 'yes'); await new Promise(resolve => setTimeout(resolve, 500)); });\n",
+      "import { writeFileSync } from 'node:fs'; import { it } from 'vitest'; it('running', async () => { writeFileSync('.workspace/started', 'yes'); writeFileSync('.workspace/executed', 'yes'); await new Promise(resolve => setTimeout(resolve, 500)); });\n",
     );
     write('setup.mjs', "import { writeFileSync } from 'node:fs'; export default () => () => writeFileSync('.workspace/closed', 'yes');\n");
     write(
@@ -487,13 +499,22 @@ it('nested runner uses its complete independent fixture', () => {
     commit();
     write('.workspace/plan.json', JSON.stringify(plan()));
 
-    const child = spawn(process.execPath, argumentsFor(command), { cwd: root, env: environment(), stdio: ['ignore', 'pipe', 'pipe'] });
+    const args = argumentsFor(command);
+    const child = spawn(
+      process.execPath,
+      transport === 'controller' ? [resolve('test/ci/fixtures/affected-controller.ts'), ...args] : args,
+      {
+        cwd: root,
+        env: environment(),
+        stdio: transport === 'controller' ? ['ignore', 'pipe', 'pipe', 'ipc'] : ['ignore', 'pipe', 'pipe'],
+      },
+    );
     let output = '';
 
-    child.stdout.on('data', chunk => {
+    child.stdout!.on('data', chunk => {
       output += String(chunk);
     });
-    child.stderr.on('data', chunk => {
+    child.stderr!.on('data', chunk => {
       output += String(chunk);
     });
 
@@ -508,15 +529,43 @@ it('nested runner uses its complete independent fixture', () => {
       }
 
       expect({ started: existsSync(join(root, '.workspace/started')), output }).toMatchObject({ started: true });
-      child.kill('SIGTERM');
-      expect({ code: await completed, output }).toMatchObject({ code: 143 });
+
+      if (transport === 'controller') {
+        child.send(signal);
+      } else {
+        child.kill(signal);
+      }
+
+      expect({ code: await completed, output }).toMatchObject({ code: signal === 'SIGINT' ? 130 : 143 });
       expect(readFileSync(join(root, '.workspace/closed'), 'utf8')).toBe('yes');
       expect(executions().map(execution => execution.reason)).toEqual(phase === 'startup' ? [] : ['interrupted']);
+
+      if (phase === 'startup') {
+        expect(existsSync(join(root, '.workspace/executed'))).toBe(false);
+      }
     } finally {
-      if (child.exitCode === null) {
+      if (child.exitCode === null && child.signalCode === null) {
         child.kill('SIGKILL');
         await completed;
       }
     }
-  });
+  };
+
+  // Windows kill(SIGTERM) is forced termination, not delivery to a handler.
+  it.skipIf(process.platform === 'win32').each([
+    { command: adapter, phase: 'execution' },
+    { command: runner, phase: 'execution' },
+    { command: adapter, phase: 'startup' },
+  ] as const)('preserves POSIX termination status and closes Vitest during $phase through $command', ({ command, phase }) =>
+    assertCancellation({ command, phase, transport: 'signal', signal: 'SIGTERM' }),
+  );
+
+  it.each([
+    { phase: 'startup', signal: 'SIGINT' },
+    { phase: 'startup', signal: 'SIGTERM' },
+    { phase: 'execution', signal: 'SIGINT' },
+    { phase: 'execution', signal: 'SIGTERM' },
+  ] as const)('completes controller cancellation during $phase for $signal', ({ phase, signal }) =>
+    assertCancellation({ command: adapter, phase, signal, transport: 'controller' }),
+  );
 });
