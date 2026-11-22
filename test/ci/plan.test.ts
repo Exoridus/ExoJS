@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { type CiPlan, LANES, planCi } from '../../scripts/ci/lanes';
+import { PLAYGROUND_SUITES } from '../../site/scripts/playground-suites.ts';
 
 /**
  * What `ci.yml` receives from the `plan` job for representative events. The
@@ -256,6 +257,38 @@ describe('plan for events that always validate everything', () => {
 
   it('retains ordinary selective, uninstrumented PR validation without a full request', () => {
     expect(pullRequest(['CONTRIBUTING.md'])).toMatchObject({ fullQualification: false, coverage: false, test: [] });
+  });
+});
+
+describe('independent smoke inventories', () => {
+  it('keeps the PR category sample on one runner and all four Playground suites', () => {
+    const plan = pullRequest(['src/rendering/sprite/Sprite.ts']);
+
+    expect(plan.smokeMatrix.filter(entry => entry.suite === 'examples').map(entry => entry.run)).toEqual([
+      'pnpm test:examples:smoke --renderer webgl2 --sample',
+    ]);
+    expect(plan.smokeMatrix.filter(entry => entry.suite === 'playground')).toHaveLength(4);
+  });
+
+  it('requires every full-catalog shard and every Playground suite exactly once', () => {
+    const plan = planCi({ eventName: 'pull_request', changedFiles: [], refName: 'feature', fullQualification: true });
+
+    expect(new Set(plan.smokeMatrix.map(entry => entry.id)).size).toBe(7);
+    expect(plan.smokeMatrix.filter(entry => entry.suite === 'examples').map(entry => entry.run)).toEqual(
+      ['1/3', '2/3', '3/3'].map(shard => `pnpm test:examples:smoke --renderer webgl2 --shard ${shard}`),
+    );
+    expect(plan.smokeMatrix.filter(entry => entry.suite === 'playground').map(entry => entry.run)).toEqual(
+      PLAYGROUND_SUITES.map(suite => `pnpm test:playground:e2e --suite ${suite}`),
+    );
+  });
+
+  it('executes one required command in each smoke row and retains distinct artifacts', () => {
+    const smoke = workflow.slice(workflow.indexOf('\n  smoke:\n'), workflow.indexOf('\n  verdict:\n'));
+
+    expect(smoke).toContain('include: ${{ fromJSON(needs.plan.outputs.smokeMatrix) }}');
+    expect(smoke).toContain('run: ${{ matrix.run }}');
+    expect(smoke).toContain('name: smoke-${{ matrix.id }}');
+    expect(smoke).not.toContain('continue-on-error');
   });
 });
 

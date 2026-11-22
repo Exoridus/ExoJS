@@ -333,6 +333,27 @@ export interface MatrixEntry {
   timeoutMinutes: number;
 }
 
+export interface SmokeEntry {
+  id: string;
+  suite: 'examples' | 'playground';
+  run: string;
+}
+
+const smokeEntries = (sample: boolean): SmokeEntry[] => [
+  ...(sample
+    ? [{ id: 'examples', suite: 'examples' as const, run: 'pnpm test:examples:smoke --renderer webgl2 --sample' }]
+    : [1, 2, 3].map(index => ({
+        id: `examples-${index}`,
+        suite: 'examples' as const,
+        run: `pnpm test:examples:smoke --renderer webgl2 --shard ${index}/3`,
+      }))),
+  ...['shell', 'rendering', 'lifecycle', 'assets'].map(suite => ({
+    id: `playground-${suite}`,
+    suite: 'playground' as const,
+    run: `pnpm test:playground:e2e --suite ${suite}`,
+  })),
+];
+
 export interface CiPlan {
   areas: LaneAreas;
   gates: MatrixEntry[];
@@ -346,6 +367,8 @@ export interface CiPlan {
   smoke: boolean;
   /** Smoke one example per category rather than the whole catalog. */
   smokeSample: boolean;
+  /** Disjoint smoke inventories on independent runners, against the same candidate. */
+  smokeMatrix: SmokeEntry[];
   /** Evaluate the skip budget over the test lanes' JUnit reports. */
   skipBudget: boolean;
   /** Collect and upload coverage. */
@@ -427,6 +450,8 @@ export const planCi = ({ eventName, changedFiles, refName, fullQualification = f
   // that tree is always smoked at its real base before the run can turn green;
   // one example per category suffices when the catalog itself is unchanged.
   const candidate = eventName === 'push' && CHANNEL_BRANCHES.has(refName) && site;
+  const smoke = areas.exampleCatalog || candidate;
+  const smokeSample = !fullQualification && (isPullRequest || !areas.exampleCatalog);
 
   return {
     areas,
@@ -438,8 +463,9 @@ export const planCi = ({ eventName, changedFiles, refName, fullQualification = f
     // changed.
     build: areas.engine || areas.createExoApp || site,
     site,
-    smoke: areas.exampleCatalog || candidate,
-    smokeSample: !fullQualification && (isPullRequest || !areas.exampleCatalog),
+    smoke,
+    smokeSample,
+    smokeMatrix: smoke ? smokeEntries(smokeSample) : [],
     skipBudget: effective.unit,
     coverage,
     fullQualification,
@@ -486,13 +512,14 @@ const main = (): void => {
     fullQualification: process.env['FULL_QUALIFICATION'] === 'true',
   });
 
-  const { areas, gates, test, verify, ...flags } = plan;
+  const { areas, gates, test, verify, smokeMatrix, ...flags } = plan;
   process.stderr.write(`plan: ${JSON.stringify({ areas, lanes: [...gates, ...test, ...verify].map(entry => entry.id), ...flags })}\n`);
 
   const lines = [
     `gates=${JSON.stringify(gates)}`,
     `test=${JSON.stringify(test)}`,
     `verify=${JSON.stringify(verify)}`,
+    `smokeMatrix=${JSON.stringify(smokeMatrix)}`,
     `hasTest=${test.length > 0}`,
     `hasVerify=${verify.length > 0}`,
     ...Object.entries(flags).map(([key, value]) => `${key}=${value}`),

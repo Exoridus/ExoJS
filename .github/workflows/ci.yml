@@ -63,6 +63,7 @@ jobs:
       site: ${{ steps.plan.outputs.site }}
       smoke: ${{ steps.plan.outputs.smoke }}
       smokeSample: ${{ steps.plan.outputs.smokeSample }}
+      smokeMatrix: ${{ steps.plan.outputs.smokeMatrix }}
       skipBudget: ${{ steps.plan.outputs.skipBudget }}
       coverage: ${{ steps.plan.outputs.coverage }}
       fullQualification: ${{ steps.plan.outputs.fullQualification }}
@@ -449,7 +450,7 @@ jobs:
   # colour alone, which reads as blank for every entry. WebGPU itself is
   # covered by the webgpu test lane.
   smoke:
-    name: smoke (${{ matrix.suite }})
+    name: smoke (${{ matrix.id }})
     needs: [plan, site]
     if: ${{ !cancelled() && needs.plan.outputs.smoke == 'true' && needs.site.result == 'success' }}
     runs-on: ubuntu-latest
@@ -458,7 +459,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [examples, playground]
+        include: ${{ fromJSON(needs.plan.outputs.smokeMatrix) }}
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
@@ -470,21 +471,15 @@ jobs:
           name: ${{ needs.site.outputs.candidate }}
           path: site/dist
 
-      - run: pnpm test:examples:smoke --renderer webgl2 ${{ needs.plan.outputs.smokeSample == 'true' && '--sample' || '' }}
-        if: matrix.suite == 'examples'
-
-      # The playground shell around the examples: console capture across the
-      # preview iframe and the Output panel's layouts, and the Asset Browser's
-      # previews, cancelled loads and generated snippets. Independent of the
-      # examples runner, so a failure in either suite still reports both.
-      - run: pnpm test:playground:e2e
-        if: ${{ matrix.suite == 'playground' && !cancelled() }}
+      # Each row executes its complete assigned inventory. GPU/page concurrency
+      # within a runner stays unchanged; independent rows share only the candidate.
+      - run: ${{ matrix.run }}
 
       - name: Keep the example smoke report
         if: ${{ matrix.suite == 'examples' && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: example-smoke-report
+          name: smoke-${{ matrix.id }}
           path: |
             .workspace/reports/example-smoke.md
             .workspace/reports/example-smoke-artifacts
@@ -496,7 +491,7 @@ jobs:
         if: ${{ matrix.suite == 'playground' && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: playground-e2e-report
+          name: smoke-${{ matrix.id }}
           path: .workspace/reports/playground-e2e
           retention-days: 7
           include-hidden-files: true
