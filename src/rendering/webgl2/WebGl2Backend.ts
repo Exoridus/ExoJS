@@ -6,6 +6,7 @@
  */
 /* eslint-disable max-lines */
 import type { Application } from '#core/Application';
+import { Capabilities } from '#core/Capabilities';
 import type { CanvasAlphaMode, RenderingApplicationOptions } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
@@ -427,6 +428,8 @@ export class WebGl2Backend implements RenderBackend {
   // triggered on. A fresh `getExtension()` after the loss returns a different
   // object that cannot drive the restore (verified against headless Chromium).
   private readonly _loseContextExtension: WEBGL_lose_context | null;
+  /** Final GL context loss is automatic for application-owned canvases only. */
+  private readonly _releaseContextOnDestroy: boolean;
   /** Whether `EXT_color_buffer_float` is available (float RenderTexture targets are renderable). */
   private _floatRenderable = false;
   /** Whether float32 textures can use linear sampler state. */
@@ -554,6 +557,7 @@ export class WebGl2Backend implements RenderBackend {
     const debug = renderingOptions.debug ?? false;
     this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._canvas = app.canvas;
+    this._releaseContextOnDestroy = renderingOptions.releaseWebGl2ContextOnDestroy ?? (canvasOptions.element === undefined);
 
     // `webglAttributes.antialias` reaches the device twice. The attribute below
     // asks the browser to multisample the default framebuffer; the colour-
@@ -569,6 +573,9 @@ export class WebGl2Backend implements RenderBackend {
 
     this._context = __DEV__ && debug ? makeWebGl2DebugContext(gl) : gl;
     this._contextLost = this._context.isContextLost();
+    if (!this._contextLost) {
+      Capabilities._observeWebGl2Context(this._canvas);
+    }
 
     // Enable + cache float color-buffer renderability. getExtension() is the
     // enable call; without it, RGBA16F/RGBA32F are not color-renderable in WebGL2.
@@ -2792,6 +2799,10 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public destroy(): void {
+    if (this._destroyed) {
+      return;
+    }
+
     this._destroyed = true;
     this._gpuTimingRequested = false;
     this._gpuTimer?.destroy();
@@ -2888,6 +2899,12 @@ export class WebGl2Backend implements RenderBackend {
     this._transformTextureCount = -1;
     this._transformTextureHash = 0;
     this._sampleCountsByFormat.clear();
+
+    // Final step: event listeners and GL-owned resources are already gone.
+    // Keep caller-supplied surfaces alive by default so their last frame remains visible.
+    if (this._releaseContextOnDestroy && !this._context.isContextLost()) {
+      this._loseContextExtension?.loseContext();
+    }
   }
 
   private _createContext(
