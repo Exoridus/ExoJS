@@ -13,6 +13,7 @@
  */
 
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileLayerNode, TileMap, TileMapNode, TileSet } from '@codexo/exojs/tilemap';
+import { page, server } from 'vitest/browser';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -200,6 +201,19 @@ describe('WebGL2 tilemap — multi-texture batching', () => {
       expect(actual[1]![2]).toBeGreaterThan(actual[1]![0]);
       expect(actual[1]![3]).toBeGreaterThan(actual[0]![3]);
       expect(actual[1]![3]).toBeLessThan(255);
+
+      // CI retains both exact-head canvases as reviewable visual evidence.
+      await page.screenshot({
+        element: backend.context.canvas as HTMLCanvasElement,
+        path: `../../../.workspace/visual-review/current/tile-alpha-reference-webgl2-${server.browser}.png`,
+      });
+      backend.clear(Color.transparentBlack);
+      optimized.render(backend);
+      backend.flush();
+      await page.screenshot({
+        element: backend.context.canvas as HTMLCanvasElement,
+        path: `../../../.workspace/visual-review/current/tile-alpha-multitexture-webgl2-${server.browser}.png`,
+      });
     } finally {
       optimized.destroy();
       reference.destroy();

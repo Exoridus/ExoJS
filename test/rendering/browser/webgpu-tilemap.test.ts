@@ -12,6 +12,7 @@
  */
 
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileLayerNode, TileMap, TileMapNode } from '@codexo/exojs/tilemap';
+import { page, server } from 'vitest/browser';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -225,6 +226,19 @@ describe('WebGPU tilemap — multi-texture batching', () => {
       expect(actual[1]![2]).toBeGreaterThan(actual[1]![0]);
       expect(actual[1]![3]).toBeGreaterThan(actual[0]![3]);
       expect(actual[1]![3]).toBeLessThan(255);
+
+      // Capture the visible reference and optimized canvases after all assertions.
+      await page.screenshot({
+        element: backend.context.canvas as HTMLCanvasElement,
+        path: `../../../.workspace/visual-review/current/tile-alpha-reference-webgpu-${server.browser}.png`,
+      });
+      if (!(await renderScene(ctx, backend, optimized, Color.transparentBlack))) {
+        return;
+      }
+      await page.screenshot({
+        element: backend.context.canvas as HTMLCanvasElement,
+        path: `../../../.workspace/visual-review/current/tile-alpha-multitexture-webgpu-${server.browser}.png`,
+      });
     } finally {
       optimized.destroy();
       reference.destroy();
