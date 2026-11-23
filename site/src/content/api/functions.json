@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 90,
+  "memberCount": 91,
   "counts": {
     "constructors": 0,
     "methods": 53,
-    "properties": 37,
+    "properties": 38,
     "events": 0
   },
   "sections": [
@@ -3406,6 +3406,27 @@
       "id": "constants",
       "title": "Constants",
       "members": [
+        {
+          "name": "audioStreamType",
+          "signature": "audioStreamType: AudioStreamAssetType",
+          "signatureTokens": [
+            {
+              "text": "audioStreamType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioStreamAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in audioStream asset type."
+        },
         {
           "name": "binarySourceCodec",
           "signature": "binarySourceCodec: AssetSourceCodec<ArrayBuffer>",

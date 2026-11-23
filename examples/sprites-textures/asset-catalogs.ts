@@ -2,10 +2,10 @@ import {
   Application,
   Asset,
   Assets,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Keyboard,
+  type Music,
   type RenderingContext,
   Scene,
   Sprite,
@@ -57,7 +57,7 @@ class AssetCatalogsScene extends Scene {
 
   private dayGround!: Texture;
   private nightGround!: Texture;
-  private theme!: AudioStream;
+  private theme!: Music;
 
   private frameCount = 0;
   private loadError = '';

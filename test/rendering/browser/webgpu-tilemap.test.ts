@@ -12,6 +12,7 @@
  */
 
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileLayerNode, TileMap, TileMapNode } from '@codexo/exojs/tilemap';
+import { page, server } from 'vitest/browser';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -19,7 +20,7 @@ import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { readWebGpuFrame, readWebGpuPixels } from './_backendSetup';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import {
   createQuadrantTexture,
@@ -27,7 +28,9 @@ import {
   createSolidTexture,
   isometricOverlapMap,
   makeTileset,
+  orderedTextureRunMap,
   orthogonalOverhangLayer,
+  overlappingTextureRunPair,
   singleTileMap,
   wireTilemapRenderers,
   wireViaTiledExtension,
@@ -36,19 +39,22 @@ import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasSize = 64;
 
-const makeApp = (canvas: HTMLCanvasElement): Application =>
+const makeApp = (canvas: HTMLCanvasElement, alphaMode: 'opaque' | 'premultiplied' = 'opaque'): Application =>
   ({
     canvas,
-    options: { canvas: { width: canvasSize, height: canvasSize }, clearColor: Color.black },
+    options: { canvas: { width: canvasSize, height: canvasSize }, clearColor: Color.black, rendering: { alphaMode } },
   }) as unknown as Application;
 
-const setupBackend = async (wire: (backend: WebGpuBackend) => void = wireTilemapRenderers): Promise<WebGpuBackend> => {
+const setupBackend = async (
+  wire: (backend: WebGpuBackend) => void = wireTilemapRenderers,
+  alphaMode: 'opaque' | 'premultiplied' = 'opaque',
+): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
   canvas.height = canvasSize;
 
-  const backend = new WebGpuBackend(makeApp(canvas));
+  const backend = new WebGpuBackend(makeApp(canvas, alphaMode));
 
   wire(backend);
   await backend.initialize();
@@ -59,7 +65,12 @@ const setupBackend = async (wire: (backend: WebGpuBackend) => void = wireTilemap
 const isDeviceLoss = (error: unknown): boolean =>
   error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
-const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
+const renderScene = async (
+  ctx: { skip: (reason: string) => void },
+  backend: WebGpuBackend,
+  root: RenderNode,
+  clear: Color = Color.black,
+): Promise<boolean> => {
   const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
@@ -68,7 +79,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 
   try {
     backend.resetStats();
-    backend.clear(Color.black);
+    backend.clear(clear);
     root.render(backend);
     backend.flush();
     validationError = await device.popErrorScope();
@@ -142,6 +153,144 @@ describe('WebGPU tilemap — multiple tilesets', () => {
       node.destroy();
       red.destroy();
       blue.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+// Multi-texture batching must reduce draw calls without defeating the ordered
+// overhang pages from PR #832, on BOTH GPU backends.
+describe('WebGPU tilemap — multi-texture batching', () => {
+  test('batches alternating atlas runs without changing their painter order', async ctx => {
+    const backend = await setupBackend();
+    const textures = ['#ff0000', '#0000ff'].map(color => createSolidRectTexture(color, 12, 20));
+    const map = orderedTextureRunMap(textures, [0, 1, 0, 1]);
+    const node = new TileMapNode(map);
+
+    try {
+      node.setPosition(0, 12);
+
+      if (!(await renderScene(ctx, backend, node))) {
+        return;
+      }
+
+      const read = readWebGpuPixels(backend, canvasSize);
+      expect(backend.stats.drawCalls).toBe(1);
+      expectPixelNear(read(6, 18), [255, 0, 0, 255]);
+      expectPixelNear(read(18, 18), [0, 0, 255, 255]);
+      expectPixelNear(read(30, 18), [255, 0, 0, 255]);
+      expectPixelNear(read(42, 18), [0, 0, 255, 255]);
+    } finally {
+      node.destroy();
+
+      for (const texture of textures) {
+        texture.destroy();
+      }
+
+      backend.destroy();
+    }
+  });
+
+  test('matches a single-atlas RGBA oracle for actually overlapping translucent A-B-A-B tiles', async ctx => {
+    // Preserve framebuffer alpha here; opaque presentation forces every readback alpha to 255.
+    const backend = await setupBackend(wireTilemapRenderers, 'premultiplied');
+    const pair = overlappingTextureRunPair(['rgba(255, 0, 0, 0.5)', 'rgba(0, 0, 255, 0.5)'], [0, 1, 0, 1]);
+    const optimized = new TileMapNode(pair.optimized);
+    const reference = new TileMapNode(pair.reference);
+    const sampleY = [8, 20, 32, 44, 56];
+    const visualCanvas = document.createElement('canvas');
+
+    visualCanvas.width = canvasSize;
+    visualCanvas.height = canvasSize;
+    document.body.appendChild(visualCanvas);
+
+    const captureContext = visualCanvas.getContext('2d')!;
+
+    try {
+      optimized.setPosition(24, 12);
+      reference.setPosition(24, 12);
+
+      if (!(await renderScene(ctx, backend, optimized, Color.transparentBlack))) {
+        return;
+      }
+
+      const actualPixels = readWebGpuPixels(backend, canvasSize);
+      const actual = sampleY.map(y => actualPixels(30, y));
+
+      expect(backend.stats.drawCalls).toBe(1);
+
+      if (!(await renderScene(ctx, backend, reference, Color.transparentBlack))) {
+        return;
+      }
+
+      const expectedPixels = readWebGpuPixels(backend, canvasSize);
+      const expected = sampleY.map(y => expectedPixels(30, y));
+
+      for (let index = 0; index < sampleY.length; index++) {
+        expectPixelNear(actual[index]!, expected[index]!);
+      }
+
+      expect(actual[1]![2]).toBeGreaterThan(actual[1]![0]);
+      expect(actual[1]![3]).toBeGreaterThan(actual[0]![3]);
+      expect(actual[1]![3]).toBeLessThan(255);
+
+      // Read the actual GPU framebuffer into a separate 2D canvas; attaching the
+      // native WebGPU surface to the document can change its readback lifecycle.
+      captureContext.putImageData(new ImageData(new Uint8ClampedArray(readWebGpuFrame(backend, canvasSize)), canvasSize), 0, 0);
+      await page.screenshot({
+        element: visualCanvas,
+        path: `../../../.workspace/visual-review/current/tile-alpha-reference-webgpu-${server.browser}.png`,
+      });
+
+      if (!(await renderScene(ctx, backend, optimized, Color.transparentBlack))) {
+        return;
+      }
+
+      captureContext.putImageData(new ImageData(new Uint8ClampedArray(readWebGpuFrame(backend, canvasSize)), canvasSize), 0, 0);
+      await page.screenshot({
+        element: visualCanvas,
+        path: `../../../.workspace/visual-review/current/tile-alpha-multitexture-webgpu-${server.browser}.png`,
+      });
+    } finally {
+      visualCanvas.remove();
+      optimized.destroy();
+      reference.destroy();
+
+      for (const texture of pair.textures) {
+        texture.destroy();
+      }
+
+      backend.destroy();
+    }
+  });
+
+  test('flushes safely on the fifth distinct atlas', async ctx => {
+    const backend = await setupBackend();
+    const textures = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff'].map(color => createSolidRectTexture(color, 12, 20));
+    const map = orderedTextureRunMap(textures, [0, 1, 2, 3, 4]);
+    const node = new TileMapNode(map);
+
+    try {
+      node.setPosition(0, 12);
+
+      if (!(await renderScene(ctx, backend, node))) {
+        return;
+      }
+
+      const read = readWebGpuPixels(backend, canvasSize);
+      expect(backend.stats.drawCalls).toBe(2);
+      expectPixelNear(read(6, 18), [255, 0, 0, 255]);
+      expectPixelNear(read(18, 18), [0, 255, 0, 255]);
+      expectPixelNear(read(30, 18), [0, 0, 255, 255]);
+      expectPixelNear(read(42, 18), [255, 255, 0, 255]);
+      expectPixelNear(read(54, 18), [0, 255, 255, 255]);
+    } finally {
+      node.destroy();
+
+      for (const texture of textures) {
+        texture.destroy();
+      }
+
       backend.destroy();
     }
   });

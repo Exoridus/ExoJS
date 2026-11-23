@@ -9,6 +9,7 @@ export { AudioInput } from './AudioInput';
 export { AudioListener, type AudioListenerTarget } from './AudioListener';
 export { AudioOutputClock, type AudioOutputClockSnapshot } from './AudioOutputClock';
 export { AudioSend } from './AudioSend';
+export type { AudioStreamConnection, AudioStreamOptions, AudioStreamReconnectOptions } from './AudioStream';
 export { AudioStream } from './AudioStream';
 export { AudioSystem, onAudioPlaybackBlocked } from './AudioSystem';
 export { AudioUnsupportedError } from './AudioUnsupportedError';
@@ -22,6 +23,8 @@ export { Envelope } from './Envelope';
 export type { HighpassFilterOptions, LowpassFilterOptions } from './filters';
 export { HighpassFilter, LowpassFilter } from './filters';
 export { InputVoice } from './InputVoice';
+export { MediaAudio } from './MediaAudio';
+export { Music } from './Music';
 export type {
   DistanceModel,
   Loopable,

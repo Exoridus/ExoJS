@@ -2,13 +2,13 @@ import {
   AnimatedSprite,
   Application,
   Asset,
-  type AudioStream,
   BitmapText,
   type BmFont,
   Color,
   Graphics,
   type LoaderScope,
   ManualCanvasSizing,
+  type Music,
   type Rectangle,
   type RenderingContext,
   type RenderNode,
@@ -1562,7 +1562,7 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
   drawWaveform();
   drawLive(null);
 
-  const target = (): Sound | AudioStream => (clips.length > 0 ? (playable as Sound).sprite(state.clip) : playable);
+  const target = (): Sound | Music => (clips.length > 0 ? (playable as Sound).sprite(state.clip) : playable);
   const pausable = (candidate: Voice | null): (Voice & { paused: boolean; pause(): void; resume(): void }) | null =>
     candidate && 'pause' in candidate && 'resume' in candidate
       ? (candidate as Voice & { paused: boolean; pause(): void; resume(): void })

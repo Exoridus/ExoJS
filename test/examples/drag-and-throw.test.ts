@@ -46,6 +46,7 @@ const createScene = () => {
   };
   const onFixedFrame = new core.Signal<[core.Seconds]>();
   Object.defineProperty(scene, 'app', { value: { fixedTimeStep: core.Time.seconds(1 / 60), frameAlpha: 0, input, onFixedFrame } });
+  Object.defineProperty(scene, 'state', { value: core.SceneState.Active, configurable: true });
   Object.defineProperty(scene, 'systems', { value: { add: (world: physics.PhysicsWorld) => world } });
   Object.defineProperty(scene, 'inputs', { value: { onTrigger: vi.fn() } });
   Object.defineProperty(scene, 'loader', { value: { get: (asset: keyof typeof textures) => textures[asset] } });
@@ -164,4 +165,27 @@ it('keeps the last flick physical and removes pending release listeners on teard
 
   expect(onFixedFrame.count).toBe(0);
   expect(Object.values(input).every(signal => signal.count === 0)).toBe(true);
+});
+
+it('releases touch cancellation and stops raw pointer input while retained', () => {
+  const { scene, dispose } = createScene();
+  const body = scene.bodies[1]!;
+  const owner = { id: 41 };
+
+  try {
+    scene.onDown(owner, body.x, body.y);
+    const joint = scene.dragJoint;
+    scene.onCancel({ id: 42 });
+    expect(scene.dragJoint).toBe(joint);
+    scene.onCancel(owner);
+    expect(scene.dragJoint).toBeNull();
+    scene.onDown(owner, body.x, body.y);
+    Object.defineProperty(scene, 'state', { value: core.SceneState.Suspended });
+    scene.onSuspend.dispatch();
+    expect(scene.dragJoint).toBeNull();
+    scene.onDown(owner, body.x, body.y);
+    expect(scene.dragJoint).toBeNull();
+  } finally {
+    dispose();
+  }
 });

@@ -1,11 +1,11 @@
 import type { RenderingContext, Seconds } from '@codexo/exojs';
-import { Application, Asset, type AudioStream, Color, Graphics, Scene } from '@codexo/exojs';
+import { Application, Asset, Color, Graphics, type Music, Scene } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
 
 // #region guide:full-visualizer
 
 class AudioReactiveScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private analyser!: AudioAnalyser;
   private detector!: BeatDetector;
   private bars!: Graphics;

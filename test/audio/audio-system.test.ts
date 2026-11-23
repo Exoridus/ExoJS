@@ -3,8 +3,8 @@
 import { AudioBus } from '#audio/AudioBus';
 import { getAudioContext } from '#audio/audioContext';
 import type { AudioInput } from '#audio/AudioInput';
-import { AudioStream } from '#audio/AudioStream';
 import { AudioSystem } from '#audio/AudioSystem';
+import { Music } from '#audio/Music';
 import type { Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import { logger } from '#core/Logger';
@@ -338,7 +338,7 @@ describe('AudioSystem', () => {
   test('destroy() stops a stream voice so its media element stops decoding', () => {
     const system = new AudioSystem();
     const el = createAudioElementStub();
-    const stream = new AudioStream(el);
+    const stream = new Music(el);
     const voice = system.play(stream);
     const pauseSpy = vi.spyOn(el, 'pause');
 

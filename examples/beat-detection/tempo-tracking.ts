@@ -1,9 +1,9 @@
 import {
   Application,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
+  type Music,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -14,7 +14,7 @@ import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 class TempoTrackingScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private detector!: BeatDetector;
   private readout!: Text;
   private confidenceLabel!: Text;
@@ -32,7 +32,7 @@ class TempoTrackingScene extends Scene {
     const { width, height } = app;
     const marginX = width * 0.08;
 
-    // AudioStream has no seamless adapter - await it explicitly.
+    // Music has no seamless adapter - await it explicitly.
     const track = await this.loader.load(assets.musicDrumLoop);
     this.music = track;
 

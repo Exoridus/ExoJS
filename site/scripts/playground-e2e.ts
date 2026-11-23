@@ -42,6 +42,7 @@ import ts from 'typescript';
 
 import { resolveSiteChannel } from '../../scripts/pages/site-channel.ts';
 import { readSiteBuildManifest } from '../../scripts/pages/site-manifest.ts';
+import { exampleSceneOwnershipChecks } from './example-scene-ownership';
 import { playgroundDiagnostics } from './playground-diagnostics';
 import { assertPlaygroundSuiteResults, type PlaygroundGroup, runPlaygroundGroups, selectPlaygroundGroups } from './playground-suites';
 
@@ -1251,6 +1252,443 @@ const typecheckSnippets = async (snippets: string[]): Promise<void> => {
 };
 
 const exampleLifecycleChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  for (const width of [320, 390, 1280]) {
+    for (const example of ['tweens-animation/tween-basics', 'showcase/boss-intro-cinematic']) {
+      await check(`featured example layout: ${example} at ${width}px`, async () => {
+        const phone = width < 720;
+        const context = await browser.newContext({
+          viewport: { width, height: phone ? 844 : 720 },
+          deviceScaleFactor: phone ? 2 : 1,
+          hasTouch: phone,
+          ...(options.shots ? { recordVideo: { dir: options.shots, size: { width, height: phone ? 440 : 720 } } } : {}),
+        });
+        const page = await context.newPage();
+        watchPage(page);
+        const pageErrors: string[] = [];
+        const observations: Array<Record<string, unknown>> = [];
+        page.on('pageerror', error => pageErrors.push(error.message));
+
+        const shot = async (state: string): Promise<void> => {
+          if (options.shots) {
+            await mkdir(options.shots, { recursive: true });
+            await page.locator('canvas').screenshot({ path: join(options.shots, `${example.split('/').at(-1)}-${width}-${state}.png`) });
+          }
+        };
+
+        try {
+          await page.goto(`${origin}${base}/preview.html?v=current`, { waitUntil: 'domcontentloaded' });
+
+          // Match the phone preview's available host height without depending
+          // on shell scaling. Fixed-world examples retain their own aspect.
+          if (phone) {
+            await page.evaluate('document.body.style.height = "440px"');
+          }
+
+          const response = await page.request.get(`${origin}${base}/examples/${example}.js`);
+          assert(response.ok(), `Cannot load served example ${example}: HTTP ${response.status()}`);
+          const source = (await response.text()).replace(
+            '\nawait startExample',
+            '\nglobalThis.__acceptanceApp = app; globalThis.__featuredErrors = []; app.onError.add(error => globalThis.__featuredErrors.push(error.message));\nawait startExample',
+          );
+          await page.evaluate(async source => {
+            const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+
+            try {
+              await import(url);
+            } finally {
+              URL.revokeObjectURL(url);
+            }
+          }, source);
+          await page.waitForFunction('globalThis.__acceptanceApp?.scenes.currentScene?.state === "active"');
+          const frames = () => page.evaluate('new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))');
+          await frames();
+          await shot('initial');
+
+          if (example.startsWith('tweens')) {
+            const geometry = () =>
+              page.evaluate<{
+                sprite: { x: number; y: number; right: number; bottom: number };
+                width: number;
+                panelTop: number;
+                pauseVisible: boolean;
+                paused: boolean;
+                position: { x: number; y: number };
+              }>(`(() => {
+              const app = globalThis.__acceptanceApp, scene = app.scenes.currentScene;
+              const scale = app.canvas.getBoundingClientRect().width / app.width;
+              const sprite = scene.sprite.getBounds(), panel = scene.panel.element.getBounds();
+              const pause = scene.panel.actions['Pause / Resume'].getBounds();
+              const scroll = scene.panel.element.children.find(node => node.constructor.name === 'ScrollContainer');
+              const viewport = scroll.getBounds();
+              return { width: app.canvas.getBoundingClientRect().width, sprite: { x: sprite.x * scale, y: sprite.y * scale,
+                right: (sprite.x + sprite.width) * scale, bottom: (sprite.y + sprite.height) * scale },
+                panelTop: panel.y * scale, paused: scene.motionPaused, position: { ...scene.position },
+                pauseVisible: !scroll.clip && pause.y >= viewport.y && pause.y + pause.height <= viewport.y + viewport.height + 1 };
+            })()`);
+
+            const contained = async (state: string): Promise<void> => {
+              const layout = await geometry();
+              observations.push({ state, ...layout });
+              assert(layout.pauseVisible, `${state}: Pause must be visible without panel scrolling: ${JSON.stringify(layout)}`);
+              assert(
+                layout.sprite.x >= 8 &&
+                  layout.sprite.right <= layout.width * 0.6 &&
+                  layout.sprite.y >= 32 &&
+                  layout.sprite.bottom <= layout.panelTop - 8,
+                `${state}: full actor must remain inside its column above the panel: ${JSON.stringify(layout)}`,
+              );
+            };
+
+            const clickTarget = async (x: number, y: number): Promise<void> => {
+              const point = await page.evaluate<{ x: number; y: number }>(`(() => {
+                const app = globalThis.__acceptanceApp, bounds = app.scenes.currentScene.bounds;
+                const canvas = app.canvas.getBoundingClientRect();
+                globalThis.__targetSteps = app.scenes.currentScene.steps;
+                return { x: canvas.x + (bounds.x + bounds.width * ${x}) * canvas.width / app.width,
+                  y: canvas.y + (bounds.y + bounds.height * ${y}) * canvas.height / app.height };
+              })()`);
+              await (phone ? page.touchscreen.tap(point.x, point.y) : page.mouse.click(point.x, point.y));
+              await page.waitForFunction(`(() => {
+                const scene = globalThis.__acceptanceApp.scenes.currentScene;
+                return scene.moving && scene.steps !== globalThis.__targetSteps;
+              })()`);
+            };
+
+            const pause = async (): Promise<void> => {
+              const point = await page.evaluate<{ x: number; y: number }>(`(() => {
+                const app = globalThis.__acceptanceApp, bounds = app.scenes.currentScene.panel.actions['Pause / Resume'].getBounds();
+                const canvas = app.canvas.getBoundingClientRect();
+                return { x: canvas.x + (bounds.x + bounds.width / 2) * canvas.width / app.width,
+                  y: canvas.y + (bounds.y + bounds.height / 2) * canvas.height / app.height };
+              })()`);
+              await (phone ? page.touchscreen.tap(point.x, point.y) : page.mouse.click(point.x, point.y));
+              await frames();
+            };
+
+            await contained('initial');
+
+            for (const [x, y] of [
+              [0.01, 0.01],
+              [0.99, 0.01],
+              [0.99, 0.99],
+              [0.01, 0.99],
+            ]) {
+              await clickTarget(x!, y!);
+              await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.moving');
+              await frames();
+              const position = (await geometry()).position;
+              assert(
+                Math.abs(position.x - x!) < 0.02 && Math.abs(position.y - y!) < 0.02,
+                `A real corner click must select ${x}, ${y}; got ${JSON.stringify(position)}`,
+              );
+              await contained(`target ${x}, ${y}`);
+            }
+
+            await shot('corner');
+            await clickTarget(0.99, 0.01);
+            await pause();
+            const held = await geometry();
+            assert(held.paused, 'Visible Pause must pause the tween');
+            await page.waitForTimeout(150);
+            assert(JSON.stringify((await geometry()).position) === JSON.stringify(held.position), 'Pause must hold the actor position');
+            await pause();
+            assert(!(await geometry()).paused, 'Visible Pause must resume the tween');
+            await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.moving');
+
+            // Easing uses the native stepper when the complete list cannot fit.
+            const easeButton = await page.evaluate<{ x: number; y: number }>(`(() => {
+              const app = globalThis.__acceptanceApp;
+              let row;
+              const visit = node => { if (node.constructor.name === 'Label' && node.text === 'Ease') row = node.parent;
+                for (const child of node.children ?? []) visit(child); };
+              visit(app.scenes.currentScene._peekUI());
+              const button = row.children.find(node => node.visible && node.labelNode?.text === '>');
+              const bounds = button.getBounds(), canvas = app.canvas.getBoundingClientRect();
+              return { x: canvas.x + (bounds.x + bounds.width / 2) * canvas.width / app.width,
+                y: canvas.y + (bounds.y + bounds.height / 2) * canvas.height / app.height };
+            })()`);
+            const previousEase = await page.evaluate<string>('globalThis.__acceptanceApp.scenes.currentScene.panel.values.easing');
+            await (phone ? page.touchscreen.tap(easeButton.x, easeButton.y) : page.mouse.click(easeButton.x, easeButton.y));
+            await frames();
+            assert(
+              (await page.evaluate<string>('globalThis.__acceptanceApp.scenes.currentScene.panel.values.easing')) !== previousEase,
+              'Clicking Ease must change the curve',
+            );
+            await clickNativeControl(page.mainFrame(), 'Mode', 'DemoDropdown');
+            await page.keyboard.press('ArrowDown');
+            await frames();
+            await page.keyboard.press('ArrowDown');
+            await frames();
+            await page.keyboard.press('Enter');
+            await page.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene.panel.values.mode === "Route"');
+            await clickTarget(0.01, 0.99);
+            await page.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene.leg === 4');
+            await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.moving');
+            await contained('completed route');
+            await shot('route');
+
+            // Sample a curve that leaves [0, 1] throughout the real move.
+            await page.evaluate(
+              'globalThis.__acceptanceApp.scenes.currentScene.panel.set("mode", "One-way"); globalThis.__acceptanceApp.scenes.currentScene.panel.set("easing", "elasticOut")',
+            );
+            await frames();
+            await clickTarget(0.01, 0.99);
+            await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.moving');
+            await clickTarget(0.99, 0.01);
+            const escaped = await page.evaluate<boolean>(`(async () => {
+              const app = globalThis.__acceptanceApp, scene = app.scenes.currentScene;
+              let escaped = false;
+              do {
+                await new Promise(requestAnimationFrame);
+                const scale = app.canvas.getBoundingClientRect().width / app.width;
+                const bounds = scene.sprite.getBounds(), panel = scene.panel.element.getBounds();
+                escaped ||= bounds.x * scale < 8 || (bounds.x + bounds.width) * scale > app.width * scale * 0.6 ||
+                  bounds.y * scale < 32 || bounds.y + bounds.height > panel.y - 8 / scale;
+              } while (scene.moving);
+              return escaped;
+            })()`);
+            assert(!escaped, 'Elastic overshoot must keep the complete actor above the panel and inside its column');
+
+            const holdOvershoot = async (): Promise<void> => {
+              // Native Pause is tested above. Hold a real rendered overshoot
+              // on its observed frame, so input latency cannot miss the peak.
+              await page.evaluate(`(() => {
+                const app = globalThis.__acceptanceApp, scene = app.scenes.currentScene;
+                const hold = () => {
+                  if (scene.moving && scene.position.y > 1.15) {
+                    app.onFrame.remove(hold);
+                    scene.pause();
+                  }
+                };
+                app.onFrame.add(hold);
+              })()`);
+              await clickTarget(0.01, 0.99);
+              await page.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene.motionPaused');
+              const overshot = await geometry();
+              observations.push({ state: 'frame-observed overshoot hold', ...overshot });
+              assert(overshot.position.y > 1.15, `The regression must hold real overshoot: ${JSON.stringify(overshot)}`);
+            };
+
+            await holdOvershoot();
+            await (phone ? page.touchscreen.tap(easeButton.x, easeButton.y) : page.mouse.click(easeButton.x, easeButton.y));
+            await frames();
+            await contained('curve changed during paused overshoot');
+            await pause();
+            await page.evaluate('globalThis.__acceptanceApp.scenes.currentScene.panel.set("easing", "elasticOut")');
+            await frames();
+            await clickTarget(0.99, 0.01);
+            await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.moving');
+            await holdOvershoot();
+            await clickTarget(0.99, 0.01);
+            await pause();
+
+            while (await page.evaluate<boolean>('globalThis.__acceptanceApp.scenes.currentScene.moving')) {
+              await contained('target replaced during overshoot');
+              await frames();
+            }
+
+            await contained('interrupted motion settled');
+
+            if (!phone) {
+              await page.evaluate('document.body.style.height = "440px"');
+              await page.setViewportSize({ width: 390, height: 844 });
+              await frames();
+              await contained('desktop resized to phone');
+              await shot('resized');
+            }
+          } else {
+            const prompt = () =>
+              page.evaluate<{
+                fontSize: number;
+                x: number;
+                right: number;
+                y: number;
+                bottom: number;
+                height: number;
+                width: number;
+                text: string;
+              }>(`(() => {
+              const app = globalThis.__acceptanceApp, text = app.scenes.currentScene.tapPrompt;
+              const canvas = app.canvas.getBoundingClientRect(), scale = canvas.width / app.width, bounds = text.getBounds();
+              return { fontSize: text.style.fontSize * text.scale.y * scale, x: bounds.x * scale,
+                right: (bounds.x + bounds.width) * scale, y: bounds.y * scale,
+                bottom: (bounds.y + bounds.height) * scale, height: canvas.height, width: canvas.width, text: text.text };
+            })()`);
+
+            const readable = async (state: string): Promise<void> => {
+              const text = await prompt();
+              observations.push({ state, ...text });
+              assert(text.fontSize >= 14, `${state}: prompt must be at least 14 CSS px: ${JSON.stringify(text)}`);
+              assert(
+                text.x >= 8 && text.right <= text.width - 8 && text.y >= 8 && text.bottom <= text.height - 8,
+                `${state}: prompt must fit safe insets: ${JSON.stringify(text)}`,
+              );
+            };
+
+            assert(await page.evaluate<boolean>('globalThis.__acceptanceApp.audio.locked'), 'Start prompt must precede gesture unlock');
+            await readable('start');
+            const canvas = page.locator('canvas');
+            await (phone ? canvas.tap({ position: { x: width / 2, y: 50 } }) : canvas.click({ position: { x: width / 2, y: 50 } }));
+            await page.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene.finished');
+            await frames();
+            await readable('replay');
+            assert((await prompt()).text.toLowerCase().includes('replay'), 'Finished sequence must explain replay');
+            await shot('finished');
+            // Report what the scene saw when a replay does not start, not only a timeout.
+            await page.evaluate(
+              "globalThis.__featuredKeys = 0; addEventListener('keydown', () => globalThis.__featuredKeys++, { capture: true })",
+            );
+            const sequence = () =>
+              page.evaluate<Record<string, unknown>>(`(() => {
+                const app = globalThis.__acceptanceApp, scene = app.scenes.currentScene;
+                return { finished: scene.finished, started: scene.started, state: scene.state, locked: app.audio.locked,
+                  keys: globalThis.__featuredKeys, focus: document.activeElement?.tagName, pageFocus: document.hasFocus(), errors: globalThis.__featuredErrors };
+              })()`);
+            // Restore page focus before synthesizing keys: after a touch tap,
+            // headless Chromium on Linux can otherwise deliver none to the document.
+            await page.bringToFront();
+            await page.keyboard.press('r', { delay: 50 });
+            await waitFor(sequence, value => !value.finished, 'keyboard replay to restart the sequence', 30_000);
+            await waitFor(sequence, value => Boolean(value.finished), 'keyboard replay to finish', 30_000);
+            await frames();
+            await readable('keyboard replay');
+
+            if (!phone) {
+              await page.setViewportSize({ width: 320, height: 844 });
+              await frames();
+              await readable('desktop resized to phone');
+              await shot('resized');
+            }
+          }
+
+          const applicationErrors = await page.evaluate<string[]>('globalThis.__featuredErrors');
+          assert(applicationErrors.length === 0, applicationErrors.join('\n'));
+          assert(pageErrors.length === 0, pageErrors.join('\n'));
+        } finally {
+          await context.close();
+
+          if (options.shots) {
+            await writeFile(
+              join(options.shots, `${example.split('/').at(-1)}-${width}-measurements.json`),
+              JSON.stringify(
+                {
+                  example,
+                  width,
+                  deviceScaleFactor: phone ? 2 : 1,
+                  hostHeight: phone ? 440 : 720,
+                  observations,
+                  video: await page.video()?.path(),
+                },
+                null,
+                2,
+              ),
+            );
+          }
+        }
+      });
+    }
+  }
+
+  await exampleSceneOwnershipChecks(browser, origin, base, check);
+  await check('video controls: real shortcuts, playback, resize and end', async () => {
+    const session = await openPlayground(browser, origin, base, 'sprites-textures/video-drawable', { width: 1000, height: 700 });
+    const { page, pageErrors } = session;
+
+    try {
+      const source = await readFile(resolve(repoRoot, 'examples/sprites-textures/video-drawable.ts'), 'utf8');
+      await runSource(
+        page,
+        `${source}\n(globalThis as any).__videoApp = app;
+(globalThis as any).__videoErrors = [];
+app.onError.add(error => (globalThis as any).__videoErrors.push(error.message));`,
+      );
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('globalThis.__videoApp?.scenes.currentScene?.video?.duration > 0');
+      const canvas = frame.locator('canvas').first();
+      const nextFrames = () => frame.evaluate('new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))');
+
+      const pressUntil = async (key: string, condition: string, argument?: number): Promise<void> => {
+        // Commands act on press. A slow render or a held key must not turn
+        // Play/Pause into a timing-dependent tap gesture.
+        await page.keyboard.down(key);
+
+        try {
+          await frame.waitForFunction(condition, argument);
+        } finally {
+          await page.keyboard.up(key);
+        }
+
+        await nextFrames();
+      };
+
+      await canvas.click({ position: { x: 100, y: 100 } });
+      await pressUntil('Space', 'globalThis.__videoApp.scenes.currentScene.video.currentTime > 0');
+      await pressUntil('Space', 'globalThis.__videoApp.scenes.currentScene.video.paused');
+
+      for (const [key, expected] of [
+        ['2', 1],
+        ['1', 0],
+        ['2', 1],
+      ] as const) {
+        await pressUntil(
+          key,
+          `index => {
+            const scene = globalThis.__videoApp.scenes.currentScene;
+            return scene.videoIdx === index && !scene.loading && scene.video.duration > 0;
+          }`,
+          expected,
+        );
+      }
+
+      const messagesBeforeUnboundKey = session.console.length;
+      await page.keyboard.press('3');
+      await nextFrames();
+      assert(
+        (await frame.evaluate<number>('globalThis.__videoApp.scenes.currentScene.videoIdx')) === 1,
+        'Unbound key 3 must preserve the clip',
+      );
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+      const shortcutErrors = session.console.slice(messagesBeforeUnboundKey).filter(message => message.type === 'error');
+      assert(shortcutErrors.length === 0, shortcutErrors.map(message => message.text).join('\n'));
+      const inputErrors = await frame.evaluate<string[]>('globalThis.__videoErrors');
+      assert(inputErrors.length === 0, inputErrors.join('\n'));
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole('tab', { name: 'Demo', exact: true }).click();
+      const resized = await canvas.boundingBox();
+      assert(resized !== null && resized.width <= 390 && resized.height > 0, 'Video preview must fit the resized viewport');
+      await frame.evaluate(`(() => {
+        const scene = globalThis.__videoApp.scenes.currentScene;
+        scene.panel.set('loop', false);
+        scene.panel.set('seek', 99);
+      })()`);
+      await canvas.click({ position: { x: 100, y: 100 } });
+      await pressUntil('Space', '!globalThis.__videoApp.scenes.currentScene.video.paused');
+      await frame.waitForFunction('globalThis.__videoApp.scenes.currentScene.video.videoElement.ended', undefined, { timeout: 15_000 });
+      assert(
+        await frame.evaluate<boolean>('globalThis.__videoApp.scenes.currentScene.panel.values.paused'),
+        'End must update the pause control',
+      );
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } catch (error) {
+      const state = await (
+        await previewFrame(page)
+      ).evaluate(`(() => {
+        const app = globalThis.__videoApp;
+        const scene = app?.scenes.currentScene;
+        return { clip: scene?.videoIdx, loading: scene?.loading, media: scene?.mediaState, values: scene?.panel?.values,
+          time: scene?.video?.currentTime, paused: scene?.video?.paused, errors: globalThis.__videoErrors,
+          focus: document.activeElement?.tagName, visibility: document.visibilityState };
+      })()`);
+      console.error('[e2e] Video state:', JSON.stringify(state));
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
   const examples = [
     'input/mouse-and-pointer',
     'input/key-rebinding',
@@ -3117,6 +3555,605 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
   });
 };
 
+const typeEditorText = async (page: Page, text: string): Promise<void> => {
+  await page.locator('.monaco-editor .overflow-guard').scrollIntoViewIfNeeded();
+  await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
+  await page.keyboard.press(endOfDocumentKey);
+  await page.keyboard.type(text);
+};
+
+const captureReliability = async (page: Page, name: string): Promise<void> => {
+  if (options.shots) {
+    await mkdir(options.shots, { recursive: true });
+    await page.screenshot({ path: join(options.shots, `reliability-${name}.png`) });
+  }
+};
+
+const reliabilityChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('reliability: real slash, paths and regex stay in entry and helper editors', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+    watchPage(page);
+
+    try {
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      const text = '\n// slash /assets/ship.png /a+/g';
+      await typeEditorText(page, text);
+      assert(
+        await page.evaluate(`window.monaco.editor.getEditors()[0].getValue().includes(${JSON.stringify(text.trim())})`),
+        'Slash text stays in the entry model',
+      );
+      assert(await page.evaluate('window.monaco.editor.getEditors()[0].hasTextFocus()'), 'Entry keeps Monaco text focus');
+      await captureReliability(page, 'typed-entry');
+      await page.getByRole('group', { name: 'Example files' }).getByRole('button', { name: 'runtime.ts Editable' }).click();
+      await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/shared/runtime.ts')");
+      await typeEditorText(page, text);
+      assert(
+        await page.evaluate(`window.monaco.editor.getEditors()[0].getValue().includes(${JSON.stringify(text.trim())})`),
+        'Slash text stays in the helper model',
+      );
+
+      for (const width of [900, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.getByRole('button', { name: 'Run', exact: true }).focus();
+        await page.keyboard.press('/');
+        const search = page.getByRole('searchbox', { name: 'Filter examples and tools' });
+        await search.waitFor({ state: 'visible' });
+        await waitFor(
+          () => search.evaluate(node => document.activeElement === node),
+          focused => focused,
+          `visible ${width}px shortcut search focus`,
+        );
+        await page.keyboard.type('/typed/path');
+        assert((await search.inputValue()) === '/typed/path', 'Slash typing stays in search');
+        await captureReliability(page, `search-${width}`);
+        await page.keyboard.press('Escape');
+      }
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: entry and helper drafts survive Run, history, reload, export and Reset', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+    page.on('dialog', dialog => void dialog.accept());
+
+    try {
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      await typeEditorText(page, '\n// draft entry\n(window as any).__draftEntry = "kept";');
+      await page.getByRole('group', { name: 'Example files' }).getByRole('button', { name: 'runtime.ts Editable' }).click();
+      await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/shared/runtime.ts')");
+      await typeEditorText(page, '\n// draft helper\n(window as any).__draftHelper = "kept";');
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      await page.waitForFunction(
+        'document.querySelector("iframe")?.contentWindow?.__draftEntry === "kept" && document.querySelector("iframe")?.contentWindow?.__draftHelper === "kept"',
+      );
+      await page.locator('#playground-navigation a[href="#/current/scene-graph/nested-transforms"]').click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('nested-transforms')");
+      await page.goBack();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('__draftEntry')");
+      await page.goForward();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('nested-transforms')");
+      await page.goBack();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('__draftEntry')");
+      await page.reload();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('__draftEntry')");
+      assert((await page.locator('[data-draft-status]').textContent())?.includes('restored'), 'Reload reports a restored draft');
+      await captureReliability(page, 'draft-restored');
+      await page.getByRole('group', { name: 'Example files' }).getByRole('button', { name: 'runtime.ts Editable' }).click();
+      await page.waitForFunction("window.monaco.editor.getEditors()[0].getValue().includes('__draftHelper')");
+      const helper = await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()');
+      await page.getByRole('button', { name: 'File options', exact: true }).click();
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('menuitem', { name: 'Export this file', exact: true }).click();
+      const download = await downloadPromise;
+      assert((await readFile((await download.path())!, 'utf8')) === helper, 'Export contains the selected edited helper');
+      await page.getByRole('button', { name: 'Reset', exact: true }).click();
+      assert(
+        !(await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('__draftHelper'),
+        'Reset restores helper source',
+      );
+      await page.reload();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      assert(
+        !(await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('__draftEntry'),
+        'Reset clears the stored entry draft',
+      );
+      assert((await page.locator('iframe').count()) === 1, 'Recovery retains one preview iframe');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  for (const failure of [404, 500, 'network'] as const) {
+    await check(`reliability: source ${failure} is a transport error with retry`, async () => {
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      watchPage(page);
+      let broken = failure !== 404;
+      let requests = 0;
+      await page.route(/\/examples\/getting-started\/hello-world\.(?:ts|js)(?:\?.*)?$/, async route => {
+        requests++;
+
+        if (broken) {
+          if (failure === 'network') {
+            await route.abort('failed');
+          } else {
+            await route.fulfill({ status: failure, contentType: 'text/html', body: '<h1>TRANSPORT_ERROR_BODY</h1>' });
+          }
+        } else {
+          await route.continue();
+        }
+      });
+
+      try {
+        await page.goto(`${origin}${base}/en/playground/?version=current&example=getting-started/hello-world`);
+
+        if (failure === 404) {
+          await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+          await typeEditorText(page, '\n// draft survives source recovery');
+          broken = true;
+          await page.reload();
+        }
+
+        await page.getByRole('button', { name: 'Retry source', exact: true }).waitFor();
+        await captureReliability(page, `source-${failure}`);
+        assert((await page.locator('iframe').count()) === 0, 'A transport failure is not executed');
+        assert(
+          !(await page.evaluate<string>('window.monaco?.editor.getEditors()[0]?.getValue() ?? ""')).includes('TRANSPORT_ERROR_BODY'),
+          'An error body never reaches Monaco',
+        );
+        broken = false;
+        await page.getByRole('button', { name: 'Retry source', exact: true }).click();
+        await page.waitForFunction("document.querySelector('iframe')?.contentDocument?.querySelector('canvas')");
+        assert(requests === (failure === 404 ? 6 : 4), `Each TS/JS source loads once per attempt, got ${requests}`);
+
+        if (failure === 404) {
+          await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('draft survives source recovery')");
+        }
+
+        assert(
+          (await page.getByRole('button', { name: 'Retry source', exact: true }).count()) === 0,
+          'Successful retry clears transport error',
+        );
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await page.context().close();
+      }
+    });
+  }
+
+  await check('reliability: current starts while the registry is stalled and its timeout can retry', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    watchPage(page);
+    let broken = true;
+    await page.route('**/registry.npmjs.org/**', async route => {
+      if (!broken) {
+        await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ versions: {}, 'dist-tags': {} }) });
+      }
+    });
+
+    try {
+      const started = Date.now();
+      await page.goto(`${origin}${base}/en/playground/?version=current&example=getting-started/hello-world`);
+      await page.waitForFunction("document.querySelector('iframe')?.contentDocument?.querySelector('canvas')", undefined, {
+        timeout: 12000,
+      });
+      assert(Date.now() - started < 15000, 'Current runs before the registry timeout');
+      await page.getByRole('button', { name: 'Retry release list', exact: true }).waitFor({ timeout: 20000 });
+      broken = false;
+      await page.getByRole('button', { name: 'Retry release list', exact: true }).click();
+      await page.getByRole('button', { name: 'Retry release list', exact: true }).waitFor({ state: 'detached' });
+      assert((await page.locator('iframe').count()) === 1, 'Registry recovery preserves one demo');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  for (const { width, height, colorScheme } of [
+    { width: 320, height: 740, colorScheme: 'light' },
+    { width: 390, height: 844, colorScheme: 'dark' },
+  ] as const) {
+    await check(`reliability: compact registry recovery preserves mobile space at ${width}px`, async () => {
+      const page = await browser.newPage({ viewport: { width, height }, hasTouch: true, colorScheme });
+      watchPage(page);
+      let broken = true;
+      await page.route('**/registry.npmjs.org/**', async route => {
+        await route.fulfill({
+          status: broken ? 503 : 200,
+          contentType: 'application/json',
+          body: JSON.stringify(broken ? { error: 'Unavailable' } : { versions: {}, 'dist-tags': {} }),
+        });
+      });
+
+      try {
+        await page.goto(`${origin}${base}/de/playground/?version=current&example=getting-started/hello-world`);
+        const notice = page.locator('[data-release-notice]');
+        const retry = page.getByRole('button', { name: 'Retry release list', exact: true });
+        await retry.waitFor();
+        await page.waitForFunction("document.querySelector('iframe')?.contentDocument?.querySelector('canvas')");
+        await page.evaluate(() => document.fonts.ready);
+        const geometry = await notice.evaluate(element => {
+          const box = element.getBoundingClientRect();
+          const message = element.querySelector('span')!;
+          const messageBox = message.getBoundingClientRect();
+          const buttonBox = element.querySelector('button')!.getBoundingClientRect();
+
+          return {
+            text: message.textContent,
+            height: box.height,
+            messageHeight: messageBox.height,
+            lineHeight: Number.parseFloat(getComputedStyle(message).lineHeight),
+            buttonWidth: buttonBox.width,
+            buttonHeight: buttonBox.height,
+            sameRow: messageBox.top < buttonBox.bottom && buttonBox.top < messageBox.bottom,
+            fits: box.left >= 0 && box.right <= innerWidth && element.scrollWidth <= element.clientWidth,
+            windowScroll: scrollY,
+            mainScroll: element.parentElement!.scrollTop,
+          };
+        });
+        assert(geometry.text?.includes('Release list unavailable'), 'Notice explains the unavailable release list');
+        assert(geometry.text?.includes('Current Playground is available'), 'Notice confirms the current Playground remains usable');
+        assert(geometry.height <= 60, `Recovery notice leaves room for the editor: ${JSON.stringify(geometry)}`);
+        assert(geometry.messageHeight <= geometry.lineHeight * 2 + 1, 'The complete message uses at most two lines');
+        assert(geometry.sameRow && geometry.fits, 'Retry shares the message row without clipping');
+        assert(geometry.buttonWidth >= 44 && geometry.buttonHeight >= 44, 'Retry retains a 44px touch target');
+        assert(geometry.windowScroll === 0 && geometry.mainScroll === 0, 'The fresh notice is measured without outer or inner scrolling');
+        console.log('Mobile release notice:', JSON.stringify({ viewport: { width, height }, colorScheme, ...geometry }));
+        await captureReliability(page, `registry-${width}-${colorScheme}`);
+
+        const main = await notice.evaluateHandle(element => element.parentElement!);
+        const frame = page.frames().find(candidate => candidate.url().includes('preview.html'))!;
+        const frameUrl = frame.url();
+        broken = false;
+        await retry.click();
+        await notice.waitFor({ state: 'detached' });
+        assert(!frame.isDetached() && frame.url() === frameUrl, 'Registry recovery preserves the running preview frame');
+        assert((await frame.locator('canvas').count()) === 1, 'The current demo remains mounted after registry recovery');
+        assert(
+          (await page.evaluate(() => scrollY === 0)) && (await main.evaluate(element => element.scrollTop === 0)),
+          'Retry does not scroll the page or main content',
+        );
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await page.context().close();
+      }
+    });
+  }
+
+  await check('reliability: missing required types retry without losing source edits', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+    let broken = true;
+    await page.route('**/vendor/exojs-demo-assets/esm/index.d.ts', async route => {
+      if (broken) {
+        await route.abort('failed');
+      } else {
+        await route.continue();
+      }
+    });
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/?version=current&example=getting-started/hello-world`);
+      await page.getByRole('button', { name: 'Retry editor types', exact: true }).waitFor();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      await typeEditorText(page, '\n// retained through type retry');
+      broken = false;
+      await page.getByRole('button', { name: 'Retry editor types', exact: true }).click();
+      await page.locator('[data-typings-status]').waitFor({ state: 'detached' });
+      assert(
+        await page.evaluate("window.monaco.editor.getEditors()[0].getValue().includes('retained through type retry')"),
+        'Typing retry preserves edits',
+      );
+      const diagnostics = await page.evaluate<string[]>(`(async()=>{
+        const model=window.monaco.editor.getEditors()[0].getModel();
+        const factory=await window.monaco.languages.typescript.getTypeScriptWorker();
+        const worker=await factory(model.uri);
+        return (await worker.getSemanticDiagnostics(model.uri.toString())).map(item=>String(item.messageText));
+      })()`);
+      assert(diagnostics.length === 0, diagnostics.join('\n'));
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: storage denial keeps the newest draft across navigation', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+    await page.addInitScript(() => {
+      const setItem = Storage.prototype.setItem;
+
+      Storage.prototype.setItem = function (key, value): void {
+        if (key.includes('playground-drafts')) {
+          throw new DOMException('Quota exceeded', 'QuotaExceededError');
+        }
+
+        setItem.call(this, key, value);
+      };
+    });
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/?version=current&example=getting-started/hello-world`);
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      await typeEditorText(page, '\n// memory-only draft');
+      await page.waitForFunction("document.querySelector('[data-draft-status]')?.textContent?.includes('page only')");
+      assert(
+        (await page.locator('[data-draft-status]').textContent())?.includes('page only'),
+        'Storage failure reports limited durability',
+      );
+      await page.locator('#playground-navigation a[href="#/current/scene-graph/nested-transforms"]').click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('nested-transforms')");
+      await page.waitForFunction("document.querySelector('[data-draft-status]')?.textContent?.includes('Other drafts')");
+      assert(
+        (await page.locator('[data-draft-status]').textContent())?.includes('Other drafts'),
+        'A different example retains the warning for memory-only edits',
+      );
+      await page.goBack();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('memory-only draft')");
+      await page.waitForFunction("document.querySelector('[data-draft-status]')?.textContent?.includes('In-page draft restored')");
+      assert(
+        (await page.locator('[data-draft-status]').textContent())?.includes('In-page draft restored'),
+        'Restored memory draft does not claim session persistence',
+      );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: delayed source cannot replace a newer example selection', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'scene-graph/nested-transforms');
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let delayed = 0;
+    await page.route(/\/examples\/getting-started\/hello-world\.(?:ts|js)(?:\?.*)?$/, async route => {
+      delayed++;
+      await pending;
+      await route.continue();
+    });
+
+    try {
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('nested-transforms')");
+      await page.locator('#playground-navigation a[href="#/current/getting-started/hello-world"]').click();
+      await waitFor(
+        async () => delayed,
+        count => count === 2,
+        'both delayed source requests',
+      );
+      await page.locator('#playground-navigation a[href="#/current/scene-graph/nested-transforms"]').click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('nested-transforms')");
+      const response = page.waitForResponse(url => url.url().includes('/hello-world.ts'));
+      release();
+      await response;
+      await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      assert(page.url().includes('nested-transforms'), 'Late source leaves the current route unchanged');
+      assert(
+        await page.evaluate("window.monaco.editor.getEditors()[0].getModel().uri.path.includes('nested-transforms')"),
+        'Late source leaves the current model unchanged',
+      );
+      assert((await page.locator('iframe').count()) === 1, 'Only the current preview remains active');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      release();
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: delayed version work preserves invalid history', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let requested = false;
+    await page.route('**/examples/examples.json*', async route => {
+      requested = true;
+      await pending;
+      await route.continue();
+    });
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/#/unknown-version/getting-started/hello-world`);
+      await page.getByRole('button', { name: 'Open current Playground', exact: true }).click();
+      await waitFor(
+        async () => requested,
+        value => value,
+        'delayed current catalog',
+      );
+      await page.goBack();
+      await page.getByText('The requested version "unknown-version" is not recognized.', { exact: false }).waitFor();
+      const response = page.waitForResponse(url => url.url().includes('/examples/examples.json'));
+      release();
+      await (await response).finished();
+      await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      assert(page.url().includes('unknown-version'), 'Late catalog must not rewrite an invalid history entry');
+      assert((await page.locator('iframe').count()) === 0, 'Invalid version remains an error after the old catalog arrives');
+      assert(
+        (await page.getByRole('button', { name: 'Open starting example', exact: true }).count()) === 0,
+        'Invalid versions only offer usable current recovery',
+      );
+      await page.goForward();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('/current/')");
+      assert(page.url().includes('current'), 'Forward can recover into the now-loaded current catalog');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      release();
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: delayed version work cannot expose retired types', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let registryRequested = false;
+    let declarationsServed = 0;
+    const declarationCount = (JSON.parse(readFileSync(join(distDir, 'vendor/exojs/esm-typings.json'), 'utf8')) as string[]).length;
+    const pendingRequests = new Set<string>();
+    page.on('request', request => {
+      if (request.url().includes('/vendor/exojs/0.19.0/')) {
+        pendingRequests.add(request.url());
+      }
+    });
+    page.on('requestfinished', request => pendingRequests.delete(request.url()));
+    page.on('requestfailed', request => pendingRequests.delete(request.url()));
+    await page.route('**/raw.githubusercontent.com/**/v0.19.0/examples/**', route => {
+      const path = new URL(route.request().url()).pathname.split('/examples/')[1];
+
+      return route.fulfill({
+        contentType: path.endsWith('.json') ? 'application/json' : 'text/plain',
+        body: readFileSync(join(distDir, 'examples', path), 'utf8'),
+      });
+    });
+    await page.route('**/vendor/exojs/0.19.0/**', async route => {
+      const path = new URL(route.request().url()).pathname.split('/vendor/exojs/0.19.0/')[1];
+
+      if (path === 'monaco-registry.json') {
+        registryRequested = true;
+        await pending;
+      }
+
+      let body = readFileSync(join(distDir, 'vendor/exojs', path), 'utf8');
+
+      if (path === 'monaco-registry.json') {
+        const registry = JSON.parse(body) as { packageJson: string };
+        const packageJson = JSON.parse(registry.packageJson) as { version: string };
+        packageJson.version = '0.19.0';
+        registry.packageJson = JSON.stringify(packageJson);
+        body = JSON.stringify(registry);
+      }
+
+      await route.fulfill({ contentType: path.endsWith('.json') ? 'application/json' : 'text/plain', body });
+
+      if (path.endsWith('.d.ts')) {
+        declarationsServed++;
+      }
+    });
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/#/current/getting-started/hello-world`);
+      await page.waitForFunction(
+        "window.monaco?.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json']",
+      );
+      const currentVersion = await page.evaluate<string>(
+        "JSON.parse(window.monaco.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json'].content).version",
+      );
+      await page.evaluate(
+        "history.pushState(null, '', '#/0.19.0/getting-started/hello-world'); window.dispatchEvent(new PopStateEvent('popstate'));",
+      );
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('/0.19.0/')");
+      await waitFor(
+        async () => registryRequested,
+        value => value,
+        'delayed historical type registry',
+      );
+      const libraries = await page.evaluate<number[]>(
+        "['typescriptDefaults','javascriptDefaults'].map(name => Object.keys(window.monaco.languages.typescript[name].getExtraLibs()).length)",
+      );
+      assert(
+        libraries.every(count => count === 0),
+        `Previous version declarations must be unavailable while loading, got ${libraries.join('/')}`,
+      );
+      await page.goBack();
+      await page.waitForFunction(
+        "window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('/current/') && !!window.monaco.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json']",
+      );
+      release();
+      await waitFor(
+        async () => declarationsServed,
+        count => count === declarationCount,
+        'retired declaration downloads',
+      );
+      await waitFor(
+        async () => pendingRequests.size,
+        count => count === 0,
+        'retired type responses',
+      );
+      await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      const activeVersion = await page.evaluate<string>(
+        "JSON.parse(window.monaco.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json'].content).version",
+      );
+      assert(activeVersion === currentVersion, 'A retired historical request cannot replace current declarations');
+      assert(page.url().includes('current'), 'A late typing response leaves the current route unchanged');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      release();
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: unknown paths stay explicit and historical source failures recover to current', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/?version=current&example=unknown/not-an-example`);
+      await page.getByRole('button', { name: 'Open starting example', exact: true }).waitFor();
+      assert(page.url().includes('unknown'), 'Unknown route remains visible in the URL');
+      assert((await page.locator('iframe').count()) === 0, 'Unknown route is not a silent default demo');
+      await page.route('**/raw.githubusercontent.com/**', route =>
+        route.fulfill({
+          status: route.request().url().endsWith('examples.json') ? 200 : 404,
+          contentType: 'application/json',
+          body: route.request().url().endsWith('examples.json')
+            ? readFileSync(resolve(repoRoot, 'examples/examples.json'), 'utf8')
+            : 'HISTORICAL_SOURCE_MISSING',
+        }),
+      );
+      await page.goto(`${origin}${base}/en/playground/?version=0.19.0&example=getting-started/hello-world`);
+      await page.getByRole('button', { name: 'Retry source', exact: true }).waitFor();
+      assert(page.url().includes('0.19.0'), 'Historical failure retains the requested version');
+      await page.getByRole('button', { name: 'Open current Playground', exact: true }).last().click();
+      await page.waitForFunction("document.querySelector('iframe')?.contentDocument?.querySelector('canvas')");
+      assert(page.url().includes('current'), 'Recovery explicitly selects current');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+};
+
 /** The editor's go-to-end-of-document chord: macOS has no Control+End binding in the editor. */
 const endOfDocumentKey = process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End';
 
@@ -3138,6 +4175,7 @@ const main = async (): Promise<void> => {
   try {
     const groups: Record<PlaygroundGroup, () => Promise<void>> = {
       'file-tabs': () => fileTabChecks(browser, origin, base),
+      reliability: () => reliabilityChecks(browser, origin, base),
       header: () => headerChecks(browser, origin, base),
       'native-controls': () => nativeControlChecks(browser, origin, base),
       'responsive-preview': () => responsivePreviewChecks(browser, origin, base),
