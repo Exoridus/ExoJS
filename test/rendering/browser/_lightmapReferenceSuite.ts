@@ -276,19 +276,22 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
 
       lighting.add(new LineLight({ length: 80, radius: 300, softness: 0 })).setPosition(sourceX, sourceY);
 
-      const visualCanvas = host.app.canvas as HTMLCanvasElement;
+      const visualCanvas = document.createElement('canvas');
 
-      visualCanvas.style.width = `${contactCanvasSize}px`;
-      visualCanvas.style.height = `${contactCanvasSize}px`;
+      visualCanvas.width = contactCanvasSize;
+      visualCanvas.height = contactCanvasSize;
       document.body.appendChild(visualCanvas);
+
+      const captureContext = visualCanvas.getContext('2d')!;
 
       try {
         // WebGPU readback can reuse a backing buffer across frames. Preserve the unoccluded reference.
         const open = (await host.render(lighting))?.slice() ?? null;
 
         if (open !== null) {
+          captureContext.putImageData(new ImageData(new Uint8ClampedArray(open), contactCanvasSize), 0, 0);
           await page.screenshot({
-            element: host.app.canvas as HTMLCanvasElement,
+            element: visualCanvas,
             path: `../../../.workspace/visual-review/current/line-source-open-${backend}-${server.browser}.png`,
           });
         }
@@ -309,8 +312,9 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
           return;
         }
 
+        captureContext.putImageData(new ImageData(new Uint8ClampedArray(walled), contactCanvasSize), 0, 0);
         await page.screenshot({
-          element: host.app.canvas as HTMLCanvasElement,
+          element: visualCanvas,
           path: `../../../.workspace/visual-review/current/line-source-cpu-${backend}-${server.browser}.png`,
         });
 
@@ -357,8 +361,9 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
           const gpuWalled = await host.render(lighting);
 
           if (gpuWalled !== null) {
+            captureContext.putImageData(new ImageData(new Uint8ClampedArray(gpuWalled), contactCanvasSize), 0, 0);
             await page.screenshot({
-              element: host.app.canvas as HTMLCanvasElement,
+              element: visualCanvas,
               path: `../../../.workspace/visual-review/current/line-source-gpu-${backend}-${server.browser}.png`,
             });
             console.info('line-source GPU/CPU visibility at independent ray probe', {
