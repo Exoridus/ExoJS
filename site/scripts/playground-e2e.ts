@@ -2494,6 +2494,80 @@ const reliabilityChecks = async (browser: Browser, origin: string, base: string)
     }
   });
 
+  for (const { width, height, colorScheme } of [
+    { width: 320, height: 740, colorScheme: 'light' },
+    { width: 390, height: 844, colorScheme: 'dark' },
+  ] as const) {
+    await check(`reliability: compact registry recovery preserves mobile space at ${width}px`, async () => {
+      const page = await browser.newPage({ viewport: { width, height }, hasTouch: true, colorScheme });
+      watchPage(page);
+      let broken = true;
+      await page.route('**/registry.npmjs.org/**', async route => {
+        await route.fulfill({
+          status: broken ? 503 : 200,
+          contentType: 'application/json',
+          body: JSON.stringify(broken ? { error: 'Unavailable' } : { versions: {}, 'dist-tags': {} }),
+        });
+      });
+
+      try {
+        await page.goto(`${origin}${base}/de/playground/?version=current&example=getting-started/hello-world`);
+        const notice = page.locator('[data-release-notice]');
+        const retry = page.getByRole('button', { name: 'Retry release list', exact: true });
+        await retry.waitFor();
+        await page.waitForFunction("document.querySelector('iframe')?.contentDocument?.querySelector('canvas')");
+        await page.evaluate(() => document.fonts.ready);
+        const geometry = await notice.evaluate(element => {
+          const box = element.getBoundingClientRect();
+          const message = element.querySelector('span')!;
+          const messageBox = message.getBoundingClientRect();
+          const buttonBox = element.querySelector('button')!.getBoundingClientRect();
+
+          return {
+            text: message.textContent,
+            height: box.height,
+            messageHeight: messageBox.height,
+            lineHeight: Number.parseFloat(getComputedStyle(message).lineHeight),
+            buttonWidth: buttonBox.width,
+            buttonHeight: buttonBox.height,
+            sameRow: messageBox.top < buttonBox.bottom && buttonBox.top < messageBox.bottom,
+            fits: box.left >= 0 && box.right <= innerWidth && element.scrollWidth <= element.clientWidth,
+            windowScroll: scrollY,
+            mainScroll: element.parentElement!.scrollTop,
+          };
+        });
+        assert(geometry.text?.includes('Release list unavailable'), 'Notice explains the unavailable release list');
+        assert(geometry.text?.includes('Current Playground is available'), 'Notice confirms the current Playground remains usable');
+        assert(geometry.height <= 60, `Recovery notice leaves room for the editor: ${JSON.stringify(geometry)}`);
+        assert(geometry.messageHeight <= geometry.lineHeight * 2 + 1, 'The complete message uses at most two lines');
+        assert(geometry.sameRow && geometry.fits, 'Retry shares the message row without clipping');
+        assert(geometry.buttonWidth >= 44 && geometry.buttonHeight >= 44, 'Retry retains a 44px touch target');
+        assert(geometry.windowScroll === 0 && geometry.mainScroll === 0, 'The fresh notice is measured without outer or inner scrolling');
+        console.log('Mobile release notice:', JSON.stringify({ viewport: { width, height }, colorScheme, ...geometry }));
+        await captureReliability(page, `registry-${width}-${colorScheme}`);
+
+        const main = await notice.evaluateHandle(element => element.parentElement!);
+        const frame = page.frames().find(candidate => candidate.url().includes('preview.html'))!;
+        const frameUrl = frame.url();
+        broken = false;
+        await retry.click();
+        await notice.waitFor({ state: 'detached' });
+        assert(!frame.isDetached() && frame.url() === frameUrl, 'Registry recovery preserves the running preview frame');
+        assert((await frame.locator('canvas').count()) === 1, 'The current demo remains mounted after registry recovery');
+        assert(
+          (await page.evaluate(() => scrollY === 0)) && (await main.evaluate(element => element.scrollTop === 0)),
+          'Retry does not scroll the page or main content',
+        );
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await page.context().close();
+      }
+    });
+  }
+
   await check('reliability: missing required types retry without losing source edits', async () => {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     watchPage(page);

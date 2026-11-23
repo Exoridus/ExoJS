@@ -471,10 +471,10 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       <div className={css(styles, 'right-column')}>
         <div className={css(styles, 'main-content')}>
           {versionLoadError && (
-            <p role="status">
-              Release list unavailable. The current Playground is still available.{' '}
-              <button type="button" onClick={() => void loadVersionCatalog()}>
-                Retry release list
+            <p className={css(styles, 'release-notice')} role="status" data-release-notice>
+              <span>Release list unavailable. Current Playground is available.</span>
+              <button type="button" aria-label="Retry release list" onClick={() => void loadVersionCatalog()}>
+                Retry
               </button>
             </p>
           )}
