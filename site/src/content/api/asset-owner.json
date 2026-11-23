@@ -1,0 +1,99 @@
+{
+  "title": "AssetOwner",
+  "description": "Loading, releasing and child scopes on one asset owner. `app.assets`, `scene.assets` and every scope created from them share this surface; only the lifetime of the claims differs.",
+  "symbol": "AssetOwner",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Loading, releasing and child scopes on one asset owner. `app.assets`, `scene.assets` and every scope created from them share this surface; only the lifetime of the claims differs."
+      ],
+      "importLine": "import { AssetOwner } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AssetOwner",
+          "signature": "Pick<LoaderScope, \"createScope\" | \"load\" | \"release\">",
+          "signatureTokens": [
+            {
+              "text": "Pick",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScope",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"createScope\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"load\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"release\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/ApplicationAssets.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/ApplicationAssets.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/ApplicationAssets.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/ApplicationAssets.ts"
+}

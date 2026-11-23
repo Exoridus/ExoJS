@@ -69,7 +69,7 @@ test.for(['webgl2', 'webgpu'] as const)(
     class MainScene extends Scene {
       public override async load(): Promise<void> {
         expect(fetchAsset).not.toHaveBeenCalled();
-        await expect(this.app.load(explicit, sound)).resolves.toEqual([explicit, sound]);
+        await expect(this.app.assets.load([explicit, sound])).resolves.toEqual([explicit, sound]);
         const atlas = await this.app.loader.load('ui.atlas.json');
         expect(atlas).toBeInstanceOf(Atlas);
         expect((atlas as Atlas).document).toEqual({

@@ -1,6 +1,6 @@
 ---
 title: 'Migrating to path-based assets'
-description: 'Replace descriptor-and-loader boilerplate with path-backed Texture, Sprite and Sound, app.load, assetTypes and scene format 4, and keep the loader APIs where they still fit.'
+description: 'Replace descriptor-and-loader boilerplate with path-backed Texture, Sprite and Sound, assets.load, assetTypes and scene format 4, and keep the loader APIs where they still fit.'
 ---
 
 import SourceSnippet from '../../../components/SourceSnippet.astro';
@@ -26,7 +26,7 @@ Place `hero.png` in `public/assets/`. The canvas is mounted explicitly and is re
 
 ## Preload what you need
 
-Layout or gameplay that needs real dimensions or a decoded value should wait for it. `this.assets.load(input, options?)` accepts one handle or one group (array, tuple, or named object). `app.load()` additionally accepts several handles as separate arguments. Use `load({ hero, theme })` at either boundary for the same group shape; `scene.assets.load(hero, theme)` is not a variadic equivalent because its second argument is reserved for options. The scene form gives the scene ownership; the application form keeps the assets resident until the application is destroyed:
+Layout or gameplay that needs real dimensions or a decoded value should wait for it. `this.assets.load(input, options?)` in a scene and `app.assets.load(input, options?)` on the application take the same input: a path whose suffix names its type, a handle such as `new Texture(path)`, a `[Type, source, options?]` request for a type the suffix does not name, or an array, tuple or named object of those. A group resolves to the same shape with every entry loaded. The scene form gives the scene ownership; the application form keeps the assets resident until the application is destroyed:
 
 <SourceSnippet source="examples/guides/model-b-plus/preload.ts" region="preload" language="ts" title="Preload in the scene's load hook" />
 
@@ -36,7 +36,7 @@ Both return a `LoadingQueue`: await it, read `progress`, subscribe to `onProgres
 
 <SourceSnippet source="examples/guides/model-b-plus/preload.ts" region="progress" language="ts" title="Progress" />
 
-`app.loadBackground()` loads at low priority. Using the same asset later promotes the pending request instead of starting a second one:
+`{ priority: LoadPriority.Background }` loads at low priority. Using the same asset later promotes the pending request instead of starting a second one. Types without a placeholder, such as music and video, load at normal priority only:
 
 <SourceSnippet source="examples/guides/model-b-plus/preload.ts" region="background" language="ts" title="Prefetch the next level" />
 
@@ -45,7 +45,7 @@ Both return a `LoadingQueue`: await it, read `progress`, subscribe to `onProgres
 An asset stays resident while an owner holds a claim. Keeping a JavaScript reference or assigning a borrowed texture does not extend that lifetime.
 
 - A path sprite added to a scene belongs to that scene's loader scope and is released when the scene ends.
-- Assets loaded through `this.assets.load()` belong to that scene, those loaded through `app.load()` to the application, which keeps them resident until it is destroyed.
+- Assets loaded through `this.assets.load()` belong to that scene, those loaded through `app.assets.load()` to the application, which keeps them resident until it is destroyed. `assets.createScope()` creates a shorter-lived owner with the same `load` and `release`.
 - Two owners of one file share one decoded resource. Releasing one owner never evicts the file while another still holds it. Each `Texture` keeps its own sampler options, so a nearest-filtered and a linear-filtered `Texture` of the same file do not interfere.
 
 For a replacement node, attach the new node before destroying the old one so a failed attachment leaves the old owner intact. For a texture change on the same Sprite, `setTexture` also acquires before releasing its prior claim:
@@ -56,13 +56,17 @@ Do not call `texture.destroy()` on a path-backed texture that a scene owns; let 
 
 ## Your own asset types
 
-Register a type per application, either at construction or later with `app.assets.define()`. The `type` string is the stable name stored in saved scenes. The factory receives the decoded source; a codec chooses how the response is read.
+Register a type per application, either at construction or later with `app.assets.define()`. The `type` string is the stable name stored in caches and saved scenes. `decode` receives the fetched data and returns the resource, synchronously or as a promise; the loader keeps fetching, caching, deduplication and ownership. `read` chooses whether `decode` gets bytes (the default), `'text'`, `'json'` or a `'blob'`, and a document `parser` validates the data before `decode` runs. Load a custom type with a `[Type, source]` request so the result is typed without declaring anything else.
 
 <SourceSnippet source="examples/guides/model-b-plus/custom-type.ts" region="custom-type" language="ts" title="Register a type at startup" />
 
 <SourceSnippet source="examples/guides/model-b-plus/custom-type.ts" region="define-later" language="ts" title="Or define it later" />
 
-A type id belongs to one class, and a class has one active definition. Defining the same class and id again before its first request replaces the factory. Give each application its own factory instance. A versioned, migrating document type adds a `parser`, `version` and `migrations`; see [Authoring extensions](/ExoJS/en/guide/debugging/authoring-extensions/).
+A binary format needs only `decode`:
+
+<SourceSnippet source="examples/guides/model-b-plus/custom-type.ts" region="custom-binary" language="ts" title="A custom binary format" />
+
+A type id belongs to one class, and a class has one active definition. Defining the same class and id again before its first request replaces it. A `decode` that throws or rejects fails the load, and the next load retries. Use `context.signal` in long-running decoding; it aborts once no owner needs the result. Add `dispose` when a resource holds something the garbage collector cannot reclaim. A type that needs per-application state, such as a worker, supplies a `loader` factory instead of `decode`. A versioned, migrating document type adds `version` and `migrations` to its `parser`; see [Authoring extensions](/ExoJS/en/guide/debugging/authoring-extensions/).
 
 ## Scenes and prefabs: format 4
 
@@ -88,13 +92,11 @@ A path may name its candidates: `'hero@{1,2,3}x.{webp,png}'` expands to concrete
 
 ## When to keep the loader APIs
 
-Prefer the path form for scene-attached sprites and for handles you explicitly preload. Keep the loader, scopes and descriptors for:
+Prefer paths and handles with `assets.load()` for everything you load. Streamed media and other types without a placeholder load the same way with a typed request, `await this.assets.load([Video, 'intro.mp4'])`, and per-asset options ride on it: `[Texture, path, { textureOptions }]`. Keep the lower-level APIs for:
 
-- **Streamed or non-handle assets.** Music, video, fonts, bitmap fonts and JSON data have no synchronous placeholder: `await this.loader.load(...)`.
-- **Several owners with different lifetimes.** A streamed level or dialog with its own `createScope()` that you destroy explicitly.
-- **Named groups.** An `Assets.from()` catalog that several scenes share.
-- **Per-asset options** that a path alone cannot express, through `Asset.type('texture', path, options)`.
-- **Cache policy and diagnostics.** `cacheSource()`, `peek()` and the request log.
+- **Shared leaves.** An `Assets.from()` catalog whose properties several scenes hold before they load.
+- **Synchronous placeholders.** `scope.get(path)` returns a handle that fills in place.
+- **Cache policy and diagnostics.** `cacheSource()`, `peek()`, `inspect()` and the request log on `app.loader`.
 
 The demo-asset package exposes the same files both ways: `demoAssets.ship` is a descriptor for the loader, and `demoAssets.ship.source` is the path for `new Sprite(...)`.
 

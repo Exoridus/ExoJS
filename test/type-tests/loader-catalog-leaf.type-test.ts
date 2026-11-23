@@ -240,6 +240,10 @@ const sceneLoadDescriptorTexture = () => scene.loader.load(scene.loader.get(Asse
 const sceneLoadDescriptorMetrics = () => scene.loader.load(scene.loader.get(Asset.type('atlasMetrics', 'atlases/hero.meta')));
 
 // --- negative: only a MATERIALIZED leaf is a leaf ---------------------------
+//
+// A raw Texture, Sound or AssetRef has the same static type as a path-backed
+// handle (`new Texture('hero.png')`), so `load` accepts it at compile time and
+// rejects it at runtime. Types without a readiness promise stay compile errors.
 
 declare const rawTexture: Texture;
 declare const rawSound: Sound;
@@ -254,14 +258,8 @@ declare const image: HTMLImageElement;
 declare const fontFace: FontFace;
 
 export const negatives = (): void => {
-  // @ts-expect-error - a raw resource carries no `_assetMeta` stamp.
-  loader.load(rawTexture);
-  // @ts-expect-error - ...and `get` rejects it for the same reason.
+  // @ts-expect-error - `get` hands out leaves, and a raw resource carries no `_assetMeta` stamp.
   loader.get(rawTexture);
-  // @ts-expect-error - raw Sound is not a leaf either.
-  loader.load(rawSound);
-  // @ts-expect-error - a bare `AssetRef` is not a materialized value leaf.
-  loader.load(rawRef);
   // @ts-expect-error - nor is a raw instance of a CUSTOM seamless resource.
   loader.load(rawAtlas);
 
@@ -274,12 +272,8 @@ export const negatives = (): void => {
   loader.load(bmFont);
   // @ts-expect-error - HTMLImageElement is not a catalog leaf.
   loader.load(image);
-  // @ts-expect-error - FontFace is not a catalog leaf.
-  loader.load(fontFace);
 
   // The scene-scoped mirror enforces the same contract.
-  // @ts-expect-error - raw resource, scene loader.
-  scene.loader.load(rawTexture);
   // @ts-expect-error - raw resource, scene loader `get`.
   scene.loader.get(rawTexture);
 };
@@ -288,7 +282,7 @@ export const negatives = (): void => {
 //
 // The deliberate asymmetry: a bare path resolves through the source-keyed dedup
 // rather than `createLeaf`, so the handle it returns carries no `_assetMeta`
-// stamp at runtime - and must therefore not be re-loadable as a single leaf.
+// stamp at runtime. Load the path again instead of the handle.
 
 export const barePathStaysUnbranded = (): void => {
   const bareTexture = loader.get('player.png');
@@ -297,17 +291,8 @@ export const barePathStaysUnbranded = (): void => {
   const bareRef = loader.get('config.json');
   expectType<Equal<typeof bareRef, AssetRef<unknown>>>();
 
-  // @ts-expect-error - an unstamped bare-path handle is not a single leaf.
-  loader.load(bareTexture);
-  // @ts-expect-error - ...nor is the bare-path AssetRef.
-  loader.load(bareRef);
-  // @ts-expect-error - inline form, same contract.
-  loader.load(loader.get('player.png'));
-
   const sceneBareTexture = scene.loader.get('player.png');
   expectType<Equal<typeof sceneBareTexture, Texture>>();
-  // @ts-expect-error - the scene mirror keeps the asymmetry.
-  scene.loader.load(sceneBareTexture);
 };
 
-void [texture, sound, config, atlas, metrics, new AssetRef<unknown>()];
+void [texture, sound, config, atlas, metrics, rawSound, rawRef, fontFace, new AssetRef<unknown>()];

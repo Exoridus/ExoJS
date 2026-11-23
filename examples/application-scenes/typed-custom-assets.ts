@@ -1,14 +1,4 @@
-import {
-  Application,
-  Asset,
-  type AssetFactory,
-  Color,
-  type DocumentParser,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  Scene,
-  Text,
-} from '@codexo/exojs';
+import { Application, Color, type DocumentParser, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { startExample } from '@examples/runtime';
 
 interface PaletteDocument {
@@ -37,22 +27,11 @@ const paletteParser: DocumentParser<PaletteDocument> = {
   },
 };
 
-const paletteFactory: AssetFactory<PaletteDocument, Palette> = {
-  create: document =>
-    Promise.resolve(
-      new Palette(
-        document.name,
-        document.colors.map(color => Color.fromCss(color)),
-      ),
-    ),
-};
-
-// Declaring the type here makes Asset.type('palette', ...) return a typed Palette asset.
-declare module '@codexo/exojs' {
-  interface AssetDefinitions {
-    palette: { resource: Palette; config: { source: string } };
-  }
-}
+const decodePalette = (document: PaletteDocument): Palette =>
+  new Palette(
+    document.name,
+    document.colors.map(color => Color.fromCss(color)),
+  );
 // #endregion guide:custom-palette-type
 
 const dataUrl = (document: object): string =>
@@ -80,11 +59,11 @@ class PaletteScene extends Scene {
 
   override async load(): Promise<void> {
     // #region guide:custom-palette-load
-    this.palette = await this.loader.load(Asset.type('palette', sunset));
+    this.palette = await this.assets.load([Palette, sunset]);
     // #endregion guide:custom-palette-load
 
     try {
-      await this.loader.load(Asset.type('palette', broken));
+      await this.assets.load([Palette, broken]);
     } catch (error) {
       this.rejection = rootCause(error);
     }
@@ -106,7 +85,7 @@ const app = new Application({
   scenes: { PaletteScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(18, 24, 29),
-  assetTypes: [[Palette, { type: 'palette', parser: paletteParser, loader: paletteFactory }]],
+  assetTypes: [[Palette, { type: 'palette', parser: paletteParser, decode: decodePalette }]],
 });
 
 await startExample(app, () => app.start(PaletteScene));

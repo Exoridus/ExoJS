@@ -79,7 +79,7 @@ describe('scene asset mutations', () => {
     const sprite = new Sprite(original);
 
     parent.addChild(sprite);
-    await Promise.all([original.loaded, b.createScope().loadGroup(foreign)]);
+    await Promise.all([original.loaded, b.createScope().load(foreign)]);
     sprite.setScale(2, 3).setAnchor(0.5);
 
     const owners = a.inspect().map(row => row.owners);
@@ -105,7 +105,7 @@ describe('scene asset mutations', () => {
     const sprite = new Sprite(foreign);
 
     parent._setStage(stage());
-    await b.createScope().loadGroup(foreign);
+    await b.createScope().load(foreign);
 
     expect(() => parent.addChild(sprite)).toThrow(/already belongs to another loader/);
     expect(parent.children).toHaveLength(0);
@@ -149,7 +149,7 @@ describe('scene asset mutations', () => {
     const foreign = new Texture('foreign.png');
 
     branch.addChild(new Sprite(fresh), new Sprite(foreign));
-    await b.createScope().loadGroup(foreign);
+    await b.createScope().load(foreign);
 
     expect(() => parent.addChild(branch)).toThrow(/already belongs to another loader/);
     expect(parent.children).toHaveLength(0);
@@ -157,7 +157,7 @@ describe('scene asset mutations', () => {
     expect(branch._getAssetScope()).toBeNull();
     expect(a.inspect()).toHaveLength(0);
     expect(fresh.loadState).toBe('idle');
-    await expect(b.createScope().loadGroup(fresh)).resolves.toBe(fresh);
+    await expect(b.createScope().load(fresh)).resolves.toBe(fresh);
   });
 
   test('a successful same-source replacement retains residency and the new claim', async () => {

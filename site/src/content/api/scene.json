@@ -865,7 +865,7 @@
         },
         {
           "name": "assets",
-          "signature": "assets: { createScope: (options?: LoaderScopeOptions) => LoaderScope; load: (input: Input, options?: LoadOptions) => LoadingQueue<LoadedAssetGroup<Input>> }",
+          "signature": "assets: AssetOwner",
           "signatureTokens": [
             {
               "text": "assets",
@@ -876,133 +876,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "createScope",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoaderScopeOptions",
+              "text": "AssetOwner",
               "kind": "type"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoaderScope",
-              "kind": "type"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "load",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "input",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Input",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadOptions",
-              "kind": "type"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadingQueue",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadedAssetGroup",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Input",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The assets owned by this scene, released when the scene ends."
+          "description": "Loads assets this scene owns. They are released when the scene ends permanently, unless another owner still holds them."
         },
         {
           "name": "attached",
