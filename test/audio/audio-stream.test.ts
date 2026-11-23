@@ -198,6 +198,24 @@ describe('AudioStream', () => {
     expect(stream.destroyed).toBe(true);
   });
 
+  test('a browser-induced media pause during an outage does not cancel playback intent', () => {
+    const el = createLiveElement();
+    const stream = new AudioStream(el, { reconnect: { delay: 10 } });
+    const voice = new AudioSystem().play(stream) as AudioStreamVoice;
+    const resume = vi.spyOn(voice, 'resume');
+
+    // The browser can pause the HTMLMediaElement automatically on error;
+    // the user has not called voice.pause().
+    Object.defineProperty(el, 'paused', { configurable: true, value: true });
+    fire(el, 'error');
+    vi.advanceTimersByTime(10);
+    fire(el, 'canplay');
+
+    expect(resume).toHaveBeenCalledTimes(1);
+    expect(voice.ended).toBe(false);
+    stream.destroy();
+  });
+
   test('pausing after reopen but before canplay prevents automatic playback', () => {
     const el = createLiveElement();
     const stream = new AudioStream(el, { reconnect: { attempts: 2, delay: 10 } });
