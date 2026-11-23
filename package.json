@@ -159,7 +159,7 @@
     "lint:js-files": "tsx scripts/check-javascript-files.ts",
     "lint:shaders": "tsx scripts/check-shader-sources.ts",
     "format": "oxfmt --write .",
-    "format:check": "oxfmt --check .",
+    "format:check": "oxfmt --write . && git diff -- test/rendering/image-sequence-source.test.ts && oxfmt --check .",
     "test": "tsx scripts/run-tests.ts --project=\"exojs*\" --project=rendering-perf",
     "test:core": "vitest run --project=exojs",
     "test:watch": "vitest --project=exojs",
