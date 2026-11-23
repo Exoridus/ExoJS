@@ -90,9 +90,8 @@ export class AssetResidency {
   private readonly _resources = new Map<ResourceKey, ResidentEntry>();
   // Identity this residency binds catalog leaves to; see `_bindLeaves`.
   private readonly _leafOwner = {};
-  // Reverse lookup: loaded resource object -> the (type, source) it was first
-  // stored under. Backs Loader.keyFor for scene serialization. A WeakMap so
-  // it never retains resources; only object resources participate.
+  // Loaded resource object -> the (type, source, key) it was first stored under, and whether its source
+  // was direct. Backs keyFor and releasing a direct resource; a WeakMap, so it never retains resources.
   private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string; key: ResourceKey; direct: boolean }>();
   private readonly _inFlight = new Map<ResourceKey, Promise<unknown>>();
   private readonly _acquisitionOptions = new Map<ResourceKey, unknown>();
@@ -1905,10 +1904,6 @@ export class AssetResidency {
     const key = loaded?.key ?? this._handleKeys.get(resource);
     const meta = _readMeta(resource);
 
-    if (loaded?.direct === true) {
-      return { kind: 'error', message: 'A resource built from a non-locator source cannot be referenced by a saved document.' };
-    }
-
     if (key === undefined) {
       return meta?.live === true ? this._requestLog.declared(meta, resource) : null;
     }
@@ -1916,16 +1911,12 @@ export class AssetResidency {
     return this._requestLog.lookup(key, loaded, resource, this._resources.get(key)?.value, meta?.live === true ? meta.src : undefined);
   }
 
-  /**
-   * The canonical key a deferred handle / value-ref is registered under - or,
-   * for a resource built from a direct source, the key it is stored under, as
-   * such a resource is its own claim identity - or `undefined`. Backs releasing
-   * a handle. @internal
-   */
+  /** The key a deferred handle / value-ref, or a live direct resource (its own claim identity), is held under. @internal */
   public _getHandleKey(handle: object): ResourceKey | undefined {
     const direct = this._resourceKeys.get(handle);
+    const live = direct?.direct === true && this._resources.get(direct.key)?.value === handle;
 
-    return this._handleKeys.get(handle) ?? (direct?.direct === true ? direct.key : undefined);
+    return this._handleKeys.get(handle) ?? (live ? direct.key : undefined);
   }
 
   /**
@@ -1938,7 +1929,7 @@ export class AssetResidency {
    * @internal
    */
   public _wasEverRegisteredHandle(handle: object): boolean {
-    return this._everRegisteredHandles.has(handle);
+    return this._everRegisteredHandles.has(handle) || this._resourceKeys.get(handle)?.direct === true;
   }
 
   // -----------------------------------------------------------------------

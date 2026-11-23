@@ -116,15 +116,22 @@ export type AssetDescriptorLeaf<D> =
         : CatalogResourceLeaf<AssetDescriptorResource<D>> | CatalogValueLeaf<AssetDescriptorResource<D>>;
 
 /**
- * The descriptor shape an {@link AssetType} instance accepts: an optional
- * locator or factory source, and its options. An existential {@link AnyAssetType}
- * declares no options, so its descriptor is not checked.
+ * The descriptor shape an {@link AssetType} instance accepts: a locator or
+ * factory source - optional only when the type's source admits `undefined` -
+ * its options, and a `parse` transform for a value type. An existential
+ * {@link AnyAssetType} declares no options, so its descriptor is not checked.
  */
 type TypeObjectShape<T, D> = 0 extends 1 & AssetTypeParts<T>['options']
   ? D
-  : { readonly type: T; readonly source?: string | AssetTypeParts<T>['source'] } & ([AssetTypeParts<T>['options']] extends [undefined]
-      ? unknown
-      : AssetTypeParts<T>['options']);
+  : { readonly type: T } & (undefined extends AssetTypeParts<T>['source']
+      ? { readonly source?: string | AssetTypeParts<T>['source'] }
+      : { readonly source: string | AssetTypeParts<T>['source'] }) &
+      (T extends AnyAssetType
+        ? PolicyOfLeaf<T['leaf']> extends 'ref'
+          ? { readonly parse?: (raw: AssetTypeParts<T>['resource']) => unknown }
+          : unknown
+        : unknown) &
+      ([AssetTypeParts<T>['options']] extends [undefined] ? unknown : AssetTypeParts<T>['options']);
 
 /** The shape a descriptor is checked against, or the descriptor itself when its type is not visible to the type system. */
 type DescriptorShape<D> = D extends { readonly type: infer T extends AnyAssetType }

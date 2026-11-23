@@ -231,6 +231,10 @@ export const _normalizeEntry = (
     throw new TypeError(`Assets: catalog entry "${id}" needs a string source; a catalog holds placeholders keyed by locator.`);
   }
 
+  if (Object.hasOwn(rest, 'parse') && leaf !== 'ref') {
+    throw new TypeError(`Assets: "parse" is a transform for value asset types, which the "${id}" type is not.`);
+  }
+
   return Object.keys(rest).length > 0 ? { type: id, source, leaf, options: rest } : { type: id, source, leaf };
 };
 

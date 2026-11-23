@@ -213,9 +213,10 @@ interface LoadUnit {
   readonly failure?: Error;
 }
 
-/** A descriptor whose type is installed on this loader. */
+/** A descriptor whose type is installed on this loader, with any `parse` transform split off its options. */
 interface ResolvedDescriptor extends SplitAssetDescriptor {
   readonly installed: InstalledAssetType;
+  readonly parse?: unknown;
 }
 
 interface QueueItem {
@@ -376,12 +377,26 @@ export class Loader {
     return id;
   }
 
-  /** The installed type a descriptor names, with its source and options; `undefined` when no such type is installed. */
+  /**
+   * The installed type a descriptor names, with its source and options;
+   * `undefined` when no such type is installed. A `parse` transform is split off
+   * the options, so it never takes part in identity or reaches a factory.
+   */
   private _resolveDescriptor(descriptor: AssetDescriptor): ResolvedDescriptor | undefined {
     const split = _splitAssetDescriptor(descriptor);
     const installed = this._typeRegistry._resolveReference(split.type);
 
-    return installed === undefined ? undefined : { ...split, installed };
+    if (installed === undefined) {
+      return undefined;
+    }
+
+    if (split.options === undefined || !Object.hasOwn(split.options, 'parse')) {
+      return { ...split, installed };
+    }
+
+    const { parse, ...rest } = split.options;
+
+    return { ...split, options: Object.keys(rest).length > 0 ? rest : undefined, installed, parse };
   }
 
   private _requireDescriptor(descriptor: AssetDescriptor, api: string): ResolvedDescriptor {
@@ -1119,18 +1134,10 @@ export class Loader {
     }
 
     const assetType = resolved.installed.type;
-    let options = resolved.options;
-    let parse: ((raw: unknown) => unknown) | undefined;
+    const { options, parse } = resolved;
 
-    if (options !== undefined && Object.hasOwn(options, 'parse')) {
-      const { parse: transform, ...rest } = options;
-
-      if (typeof transform !== 'function' || assetType.leaf !== 'ref') {
-        throw new TypeError(`Loader: "parse" is a synchronous function for value asset types, which the "${assetType.id}" type is not.`);
-      }
-
-      parse = transform as (raw: unknown) => unknown;
-      options = Object.keys(rest).length > 0 ? rest : undefined;
+    if (parse !== undefined && (typeof parse !== 'function' || assetType.leaf !== 'ref')) {
+      throw new TypeError(`Loader: "parse" is a synchronous function for value asset types, which the "${assetType.id}" type is not.`);
     }
 
     if (background) {
@@ -1144,17 +1151,26 @@ export class Loader {
         );
       }
 
+      const leafOptions = parse === undefined ? options : { ...options, parse };
+
       return {
         alias,
         key: batchKey,
         src: resolved.source,
-        leaf: createLeaf(assetType.leaf as AssetLeaf<unknown>, assetType.id, resolved.source, resolved.options),
+        leaf: createLeaf(assetType.leaf as AssetLeaf<unknown>, assetType.id, resolved.source, leafOptions),
       };
     }
 
-    const canonical = this._canonicalizeDescriptor({ ...resolved, options }, descriptor);
+    const canonical = this._canonicalizeDescriptor(resolved, descriptor);
 
-    return { alias, key: batchKey, src: label, canonical, options, ...(parse !== undefined && { parse }) };
+    return {
+      alias,
+      key: batchKey,
+      src: label,
+      canonical,
+      options,
+      ...(parse !== undefined && { parse: parse as (raw: unknown) => unknown }),
+    };
   }
 
   /** Normalize one load entry to a leaf to adopt or a canonical request to load. */
@@ -1364,7 +1380,16 @@ export class Loader {
         throw new Error(`Loader: get() hands out a catalog leaf, and the "${assetType.id}" type has none - load it with load() instead.`);
       }
 
-      const leaf = createLeaf(assetType.leaf as AssetLeaf<unknown>, assetType.id, resolved.source, resolved.options);
+      if (resolved.parse !== undefined && (typeof resolved.parse !== 'function' || assetType.leaf !== 'ref')) {
+        throw new TypeError(`Loader: "parse" is a synchronous function for value asset types, which the "${assetType.id}" type is not.`);
+      }
+
+      const leaf = createLeaf(
+        assetType.leaf as AssetLeaf<unknown>,
+        assetType.id,
+        resolved.source,
+        resolved.parse === undefined ? resolved.options : { ...resolved.options, parse: resolved.parse },
+      );
       this._adopt(leaf, claimer);
 
       return leaf;
@@ -1506,6 +1531,16 @@ export class Loader {
       );
     }
 
+    // A resource built from a direct source is its own claim identity, and may
+    // itself be a plain object or array: it must not be read as a group.
+    const directKey = this._residency._getHandleKey(handleOrType);
+
+    if (directKey !== undefined) {
+      this._release(directKey, claimer);
+
+      return;
+    }
+
     if (this._releaseGroup(claimer, handleOrType)) {
       return;
     }
@@ -1516,14 +1551,6 @@ export class Loader {
       for (const leaf of Object.values((handleOrType as AssetsImpl<Record<string, CatalogEntry>>).entries)) {
         this._releaseFrom(claimer, leaf);
       }
-
-      return;
-    }
-
-    const key = this._residency._getHandleKey(handleOrType);
-
-    if (key !== undefined) {
-      this._release(key, claimer);
 
       return;
     }
@@ -1541,20 +1568,9 @@ export class Loader {
   private _releaseDescriptor(claimer: LoaderScope, descriptor: AssetDescriptor): void {
     const resolved = this._resolveDescriptor(descriptor);
 
-    if (resolved === undefined) {
-      return;
+    if (resolved !== undefined) {
+      this._release(this._canonicalizeDescriptor(resolved, descriptor).key, claimer);
     }
-
-    const options =
-      resolved.options === undefined ? undefined : Object.fromEntries(Object.entries(resolved.options).filter(([key]) => key !== 'parse'));
-
-    this._release(
-      this._canonicalizeDescriptor(
-        { ...resolved, options: options !== undefined && Object.keys(options).length > 0 ? options : undefined },
-        descriptor,
-      ).key,
-      claimer,
-    );
   }
 
   /** Release a descriptor, an array or a plain group. */

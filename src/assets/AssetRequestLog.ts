@@ -84,11 +84,15 @@ export class AssetRequestLog {
    */
   public lookup(
     key: ResourceKey,
-    fallback: Pick<CanonicalAsset, 'type' | 'source'> | undefined,
+    fallback: (Pick<CanonicalAsset, 'type' | 'source'> & { readonly direct?: boolean }) | undefined,
     resource: object,
     donor: unknown,
     authoredSource?: string,
   ): AssetReferenceLookup | null {
+    if (fallback?.direct === true) {
+      return { kind: 'error', message: 'A resource built from a non-locator source cannot be referenced by a saved document.' };
+    }
+
     const candidates = [...(this._requests.get(key)?.values() ?? [])];
     const matching = authoredSource === undefined ? candidates : candidates.filter(candidate => candidate.source === authoredSource);
     const requests = matching.length === 0 ? candidates : matching;
