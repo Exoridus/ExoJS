@@ -1,15 +1,6 @@
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from '@codexo/exojs';
-import type {
-  RenderTexture,
-  WebGpuActiveRenderPass,
-  WebGpuRetainedBatchPayload,
-  WebGpuRetainedBatchReplayer,
-  WebGpuRetainedNodeIndexRange,
-} from '@codexo/exojs/renderer-sdk';
-import type { View, WebGpuBackend } from '@codexo/exojs/renderer-sdk';
-import { isSampleableTexture } from '@codexo/exojs/renderer-sdk';
 import {
   AbstractWebGpuRenderer,
   type BlendModes,
@@ -17,12 +8,20 @@ import {
   DataTexture,
   fillShaderSource,
   getWebGpuBlendState,
+  isSampleableTexture,
   packAffineMat4,
   packedGroupChanged,
   packSnapViewport,
+  type RenderTexture,
   retainedGroupUniformBytes,
   stencilContentDepthStencilState,
   Texture,
+  type View,
+  type WebGpuActiveRenderPass,
+  type WebGpuBackend,
+  type WebGpuRetainedBatchPayload,
+  type WebGpuRetainedBatchReplayer,
+  type WebGpuRetainedNodeIndexRange,
   WebGpuStencilMode,
 } from '@codexo/exojs/renderer-sdk';
 
@@ -531,6 +530,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       for (let slot = 0; slot < textures.length; slot++) {
         this._recordTextures[slot] = textures[slot]!;
       }
+
       backend.recordRetainedBatch(
         this,
         this._instanceData,
@@ -641,8 +641,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const cached = this._textureBindGroups.get(key);
 
     if (
-      cached !== undefined &&
-      cached.mask === mask &&
+      cached?.mask === mask &&
       views.every((view, slot) => view === cached.views[slot] && samplers[slot] === cached.samplers[slot])
     ) {
       // LRU: move to the back without allocating a new bind group.
