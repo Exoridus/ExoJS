@@ -237,9 +237,11 @@ describe('WebGPU tilemap — multi-texture batching', () => {
         element: backend.context.canvas as HTMLCanvasElement,
         path: `../../../.workspace/visual-review/current/tile-alpha-reference-webgpu-${server.browser}.png`,
       });
+
       if (!(await renderScene(ctx, backend, optimized, Color.transparentBlack))) {
         return;
       }
+
       await page.screenshot({
         element: backend.context.canvas as HTMLCanvasElement,
         path: `../../../.workspace/visual-review/current/tile-alpha-multitexture-webgpu-${server.browser}.png`,
