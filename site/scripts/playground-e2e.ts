@@ -1542,8 +1542,11 @@ const exampleLifecycleChecks = async (browser: Browser, origin: string, base: st
               page.evaluate<Record<string, unknown>>(`(() => {
                 const app = globalThis.__acceptanceApp, scene = app.scenes.currentScene;
                 return { finished: scene.finished, started: scene.started, state: scene.state, locked: app.audio.locked,
-                  keys: globalThis.__featuredKeys, focus: document.activeElement?.tagName, errors: globalThis.__featuredErrors };
+                  keys: globalThis.__featuredKeys, focus: document.activeElement?.tagName, pageFocus: document.hasFocus(), errors: globalThis.__featuredErrors };
               })()`);
+            // Restore page focus before synthesizing keys: after a touch tap,
+            // headless Chromium on Linux can otherwise deliver none to the document.
+            await page.bringToFront();
             await page.keyboard.press('r', { delay: 50 });
             await waitFor(sequence, value => !value.finished, 'keyboard replay to restart the sequence', 30_000);
             await waitFor(sequence, value => Boolean(value.finished), 'keyboard replay to finish', 30_000);
