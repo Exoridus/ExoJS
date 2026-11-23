@@ -5,6 +5,9 @@ let source = readFileSync(file, 'utf8');
 
 const browserTrace = `(() => {
   const trace = scope => event => {
+    if (event.type === 'keydown' && event.code === 'KeyR' && event.isTrusted) {
+      globalThis.__keyDeliveryReceived = true;
+    }
     console.info('[key-delivery]', JSON.stringify({
       scope,
       event: event.type,
@@ -76,11 +79,22 @@ insertAfter(
 `,
 );
 
-insertAfter(
-  "            await page.keyboard.press('r', { delay: 50 });",
-  `
-            console.log('[key-delivery] after dispatch', width, JSON.stringify(await sequence()));
-`,
+const replayOnRelease = `            await page.keyboard.press('r', { delay: 50 });
+            await waitFor(sequence, value => !value.finished, 'keyboard replay to restart the sequence', 30_000);`;
+
+if (source.split(replayOnRelease).length !== 2) {
+  throw new Error('Expected exactly one keyboard replay check');
+}
+
+source = source.replace(
+  replayOnRelease,
+  `            await page.keyboard.down('r');
+            try {
+              await waitFor(sequence, value => !value.finished, 'keyboard replay on keydown', 30_000);
+              assert(await page.evaluate('globalThis.__keyDeliveryReceived === true'), 'replay requires trusted KeyR');
+            } finally {
+              await page.keyboard.up('r');
+            }`,
 );
 
 writeFileSync(file, source);

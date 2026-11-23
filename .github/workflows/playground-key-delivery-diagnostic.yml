@@ -27,44 +27,23 @@ jobs:
           github-token: ${{ github.token }}
           run-id: 45215140919
           name: site-next-85db7814b63f7de9e9611ef8ff6758d6e8c7566c-1
-          path: .workspace/key-delivery/next
-      - uses: actions/download-artifact@v8
-        with:
-          github-token: ${{ github.token }}
-          run-id: 45234618398
-          name: site-next-9872a86cf38795e0f1692ac7384b99f04f2208fc-1
-          path: .workspace/key-delivery/assets
-      - uses: actions/download-artifact@v8
-        with:
-          github-token: ${{ github.token }}
-          run-id: 45277016699
-          name: site-next-3522d24e96fefb0f9a178bde87ca014a56613f71-1
-          path: .workspace/key-delivery/lighting
-      - name: Compare the same touch and keyboard sequence on one runner
+          path: site/dist
+      - name: Prove replay on a trusted keydown
         run: |
           node scripts/ci/diagnose-playground-key-delivery.ts
-          status=0
-          for candidate in next assets lighting; do
-            echo "::group::$candidate"
-            artifact=".workspace/key-delivery/$candidate"
-            mv "$artifact" site/dist
-            node --input-type=commonjs -e 'const build = require("./site/dist/site-build.json"); console.log(build.sourceSha, build.basePath)'
-            if ! DEBUG=pw:protocol DEBUG_COLORS=0 pnpm test:playground:e2e --suite lifecycle 2>&1 | awk '
-              !/pw:protocol/ { print; next }
-              match($0, /"id":[0-9]+/) {
-                id = substr($0, RSTART, RLENGTH)
-                if ($0 ~ /"method":"(Input.dispatchKeyEvent|Input.dispatchTouchEvent|Page.bringToFront|Target.activateTarget|Emulation.setFocusEmulationEnabled)"/) {
-                  pending[id] = 1
-                  print
-                } else if (id in pending) {
-                  delete pending[id]
-                  print
-                }
-              }
-            '; then
-              status=1
-            fi
-            mv site/dist "$artifact"
-            echo '::endgroup::'
-          done
-          exit "$status"
+          if pnpm test:playground:e2e --suite lifecycle --only 'boss-intro-cinematic at 320px' 2>&1 | tee "$RUNNER_TEMP/replay-red.log"; then
+            echo 'The original example unexpectedly replayed before keyup' >&2
+            exit 1
+          fi
+          grep -F 'Timed out waiting for keyboard replay on keydown' "$RUNNER_TEMP/replay-red.log"
+          grep -F '"scope":"engine","event":"keydown","channel":82' "$RUNNER_TEMP/replay-red.log"
+
+          node --input-type=module <<'JS'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const file = 'site/dist/examples/showcase/boss-intro-cinematic.js';
+          const source = readFileSync(file, 'utf8');
+          const release = 'this.inputs.onTrigger(Keyboard.R, () => this.replay());';
+          if (source.split(release).length !== 2) throw new Error('Expected exactly one replay binding');
+          writeFileSync(file, source.replace(release, 'this.inputs.onStart(Keyboard.R, () => this.replay());'));
+          JS
+          pnpm test:playground:e2e --suite lifecycle --only 'boss-intro-cinematic at'
