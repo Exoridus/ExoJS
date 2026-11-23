@@ -38,19 +38,22 @@ import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasSize = 64;
 
-const makeApp = (canvas: HTMLCanvasElement): Application =>
+const makeApp = (canvas: HTMLCanvasElement, alphaMode: 'opaque' | 'premultiplied' = 'opaque'): Application =>
   ({
     canvas,
-    options: { canvas: { width: canvasSize, height: canvasSize }, clearColor: Color.black },
+    options: { canvas: { width: canvasSize, height: canvasSize }, clearColor: Color.black, rendering: { alphaMode } },
   }) as unknown as Application;
 
-const setupBackend = async (wire: (backend: WebGpuBackend) => void = wireTilemapRenderers): Promise<WebGpuBackend> => {
+const setupBackend = async (
+  wire: (backend: WebGpuBackend) => void = wireTilemapRenderers,
+  alphaMode: 'opaque' | 'premultiplied' = 'opaque',
+): Promise<WebGpuBackend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
   canvas.height = canvasSize;
 
-  const backend = new WebGpuBackend(makeApp(canvas));
+  const backend = new WebGpuBackend(makeApp(canvas, alphaMode));
 
   wire(backend);
   await backend.initialize();
@@ -188,7 +191,8 @@ describe('WebGPU tilemap — multi-texture batching', () => {
   });
 
   test('matches a single-atlas RGBA oracle for actually overlapping translucent A-B-A-B tiles', async ctx => {
-    const backend = await setupBackend();
+    // Preserve framebuffer alpha here; opaque presentation forces every readback alpha to 255.
+    const backend = await setupBackend(wireTilemapRenderers, 'premultiplied');
     const pair = overlappingTextureRunPair(['rgba(255, 0, 0, 0.5)', 'rgba(0, 0, 255, 0.5)'], [0, 1, 0, 1]);
     const optimized = new TileMapNode(pair.optimized);
     const reference = new TileMapNode(pair.reference);
