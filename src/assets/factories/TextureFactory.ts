@@ -90,8 +90,14 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
    */
   public dispose(texture: Texture): void {
     const source = texture.source;
+    const frames = texture._getFrameSource();
 
+    // Residency may have filled several existing handles from one decoder and
+    // kept a handle (not the factory donor) as its canonical stored resource.
+    // The factory's eviction is the one authoritative lifetime boundary:
+    // borrowed handles must not individually destroy this shared decoder.
     texture._attachFrameSource(null);
+    frames?.destroy();
 
     if (this._decoded.delete(source as ImageBitmap)) {
       (source as ImageBitmap).close();
