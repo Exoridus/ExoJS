@@ -1,9 +1,9 @@
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import { determineMimeType } from '#assets/utils';
+import { animatedImageMime } from '#rendering/texture/animatedImageMime';
 import { CompressedTexture } from '#rendering/texture/CompressedTexture';
 import { ImageSequenceSource } from '#rendering/texture/ImageSequenceSource';
-import { animatedImageMime } from '#rendering/texture/animatedImageMime';
 import { Texture } from '#rendering/texture/Texture';
 import type { SamplerOptions, TextureAlphaMode, TextureColorSpace, TextureOptions } from '#rendering/texture/TextureOptions';
 
@@ -61,7 +61,22 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
         throw new TypeError('Animated images are colour images; numeric decoding cannot preserve animation.');
       }
 
-      const sequence = await ImageSequenceSource.open(source, context.signal);
+      let sequence: ImageSequenceSource;
+
+      try {
+        sequence = await ImageSequenceSource.open(source, context.signal);
+      } catch (error) {
+        if (context.signal?.aborted === true) {
+          throw error;
+        }
+
+        throw new AssetDecodeError({
+          message: `Animated ${animated} image could not be decoded: ${error instanceof Error ? error.message : String(error)}`,
+          assetType: 'texture',
+          cause: error,
+        });
+      }
+
       const texture = new Texture(null, textureOptions);
 
       texture._attachFrameSource(sequence, true);

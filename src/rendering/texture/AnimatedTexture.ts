@@ -25,10 +25,16 @@ export class AnimatedTexture extends Texture {
     return source instanceof ImageSequenceSource ? source : null;
   }
 
+  /** Whether the shared animation is currently advancing. `false` before it has loaded. */
   public get playing(): boolean {
     return this._sequence?.playing ?? false;
   }
 
+  /**
+   * Resumes playback, restarting from the first frame when a non-looping animation had finished.
+   * Playback state belongs to the loaded animation: every handle sharing the same loaded asset
+   * advances, pauses and changes rate together, while separately loaded assets are independent.
+   */
   public play(): this {
     this._requestedPlaying = true;
     this._sequence?.play();
@@ -36,6 +42,7 @@ export class AnimatedTexture extends Texture {
     return this;
   }
 
+  /** Freezes the animation on its current frame; resuming continues the unplayed part of that frame. */
   public pause(): this {
     this._requestedPlaying = false;
     this._sequence?.pause();
@@ -43,6 +50,7 @@ export class AnimatedTexture extends Texture {
     return this;
   }
 
+  /** Speed multiplier applied to every authored frame duration. Must be positive and finite. */
   public get playbackRate(): number {
     return this._requestedRate;
   }
@@ -59,6 +67,7 @@ export class AnimatedTexture extends Texture {
     }
   }
 
+  /** `true` (default) repeats as often as the file authors; `false` plays the sequence once. */
   public get loop(): boolean {
     return this._requestedLoop;
   }

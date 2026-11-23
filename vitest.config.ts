@@ -937,7 +937,7 @@ export default defineConfig({
         test: {
           name: 'browser-animated-images-webkit',
           globals: true,
-          include: ['test/assets/browser/animated-image-decoding.test.ts'],
+          include: ['test/assets/browser/animated-image-decoding.test.ts', 'test/rendering/browser/webgl2-animated-image.test.ts'],
           setupFiles: browserSetupFiles,
           browser: {
             ...browserDefaults,

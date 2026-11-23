@@ -8,7 +8,7 @@
  */
 export type AnimatedImageMime = 'image/gif' | 'image/png' | 'image/webp';
 
-const fourCC = (bytes: Uint8Array, pos: number, text: string): boolean =>
+const matchesTag = (bytes: Uint8Array, pos: number, text: string): boolean =>
   pos >= 0 && pos + text.length <= bytes.length && [...text].every((char, offset) => bytes[pos + offset] === char.charCodeAt(0));
 
 const read32 = (bytes: Uint8Array, pos: number, littleEndian: boolean): number | null => {
@@ -40,7 +40,7 @@ const skipGifSubblocks = (bytes: Uint8Array, position: number): number => {
 };
 
 const isAnimatedGif = (bytes: Uint8Array): boolean => {
-  if (!(fourCC(bytes, 0, 'GIF87a') || fourCC(bytes, 0, 'GIF89a')) || bytes.length < 13) {
+  if (!(matchesTag(bytes, 0, 'GIF87a') || matchesTag(bytes, 0, 'GIF89a')) || bytes.length < 13) {
     return false;
   }
 
@@ -108,11 +108,11 @@ const isAnimatedPng = (bytes: Uint8Array): boolean => {
       return false;
     }
 
-    if (fourCC(bytes, position + 4, 'acTL')) {
+    if (matchesTag(bytes, position + 4, 'acTL')) {
       return length === 8 && (read32(bytes, position + 8, false) ?? 0) > 1;
     }
 
-    if (fourCC(bytes, position + 4, 'IDAT') || fourCC(bytes, position + 4, 'IEND')) {
+    if (matchesTag(bytes, position + 4, 'IDAT') || matchesTag(bytes, position + 4, 'IEND')) {
       return false;
     }
 
@@ -123,7 +123,7 @@ const isAnimatedPng = (bytes: Uint8Array): boolean => {
 };
 
 const isAnimatedWebp = (bytes: Uint8Array): boolean => {
-  if (bytes.length < 20 || !fourCC(bytes, 0, 'RIFF') || !fourCC(bytes, 8, 'WEBP')) {
+  if (bytes.length < 20 || !matchesTag(bytes, 0, 'RIFF') || !matchesTag(bytes, 8, 'WEBP')) {
     return false;
   }
 
@@ -134,7 +134,7 @@ const isAnimatedWebp = (bytes: Uint8Array): boolean => {
   }
 
   // The VP8X feature byte's animation flag announces ANIM/ANMF chunks.
-  if (fourCC(bytes, 12, 'VP8X') && (bytes[20]! & 0x02) !== 0) {
+  if (matchesTag(bytes, 12, 'VP8X') && (bytes[20]! & 0x02) !== 0) {
     return true;
   }
 
@@ -148,7 +148,7 @@ const isAnimatedWebp = (bytes: Uint8Array): boolean => {
       return false;
     }
 
-    if (fourCC(bytes, position, 'ANIM') || fourCC(bytes, position, 'ANMF')) {
+    if (matchesTag(bytes, position, 'ANIM') || matchesTag(bytes, position, 'ANMF')) {
       return true;
     }
 

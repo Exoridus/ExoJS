@@ -1,3 +1,4 @@
+import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
 import type { TextureSource } from '#core/types';
 
@@ -364,8 +365,11 @@ export class ImageSequenceSource implements FrameSource {
       this._arm(due > now ? due - now : wall, now);
     } catch (error) {
       if (!this._destroyed) {
+        const failure = error instanceof Error ? error : new Error(String(error));
+
         this.pause();
-        this.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
+        logger.error('Animated image playback stopped: a frame could not be decoded.', { source: 'texture', error: failure });
+        this.onError.dispatch(failure);
       }
     }
   }

@@ -1,0 +1,227 @@
+import type { AssetFactoryContext } from '#assets/AssetFactory';
+import { TextureFactory } from '#assets/factories/TextureFactory';
+import { Container } from '#rendering/Container';
+import type { RenderNode } from '#rendering/RenderNode';
+import { RetainedContainer } from '#rendering/RetainedContainer';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { Texture } from '#rendering/texture/Texture';
+
+import { createResourceTracker } from './_animatedResourceTracker';
+import type { RgbaTuple } from './_pixels';
+import { expectPixelNear } from './_pixels';
+
+const urls = import.meta.glob('../../fixtures/animated/*', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
+
+export const loadFixture = async (name: string): Promise<ArrayBuffer> =>
+  (await fetch(urls[`../../fixtures/animated/${name}`]!)).arrayBuffer();
+
+/** One backend under test: a render function, a pixel reader and an upload counter. */
+export interface AnimatedImageHarness {
+  readonly name: string;
+  create(): Promise<{
+    render(ctx: { skip: (reason: string) => void }, root: RenderNode): Promise<boolean>;
+    pixel(x: number, y: number): RgbaTuple;
+    uploads(): number;
+    destroy(): void;
+  }>;
+}
+
+const factory = new TextureFactory();
+
+const open = async (name: string): Promise<Texture> => factory.create(await loadFixture(name), {} as AssetFactoryContext<never>);
+
+const release = (texture: Texture): void => {
+  factory.dispose(texture);
+  texture.destroy();
+};
+
+const nextFrame = (texture: Texture, timeoutMs = 3000): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      texture._removeUpdateListener(listener);
+      reject(new Error('timed out waiting for the next animation frame'));
+    }, timeoutMs);
+
+    const listener = (): void => {
+      clearTimeout(timer);
+      texture._removeUpdateListener(listener);
+      resolve();
+    };
+
+    texture._addUpdateListener(listener);
+  });
+
+const black: RgbaTuple = [0, 0, 0, 255];
+const blue: RgbaTuple = [0, 0, 255, 255];
+const red: RgbaTuple = [255, 0, 0, 255];
+const green: RgbaTuple = [0, 255, 0, 255];
+
+// Over a black clear, per frame of animated.png: top-left (4,4) and middle (12,12).
+const topLeft: readonly RgbaTuple[] = [blue, blue, green, black, black];
+const middle: readonly RgbaTuple[] = [blue, red, blue, blue, blue];
+
+export const describeAnimatedImageRendering = (harness: AnimatedImageHarness): void => {
+  for (const mode of ['ImageDecoder', 'software compositor'] as const) {
+    describeAnimatedImageCells(harness, mode);
+  }
+};
+
+const describeAnimatedImageCells = (harness: AnimatedImageHarness, mode: 'ImageDecoder' | 'software compositor'): void => {
+  describe(`${harness.name} (${mode}): animated image textures`, () => {
+    const holder = globalThis as { ImageDecoder?: unknown };
+    const original = holder.ImageDecoder;
+
+    beforeEach(() => {
+      if (mode === 'software compositor') {
+        holder.ImageDecoder = undefined;
+      }
+    });
+
+    afterEach(() => {
+      holder.ImageDecoder = original;
+    });
+
+    test('every frame reaches the screen with its authored disposal and blend', async ctx => {
+      const gpu = await harness.create();
+      const texture = await open('animated.png');
+      const sprite = new Sprite(texture);
+
+      try {
+        let index = 0;
+
+        for (let step = 0; step < 6; step++) {
+          if (!(await gpu.render(ctx, sprite))) {
+            return;
+          }
+
+          expectPixelNear(gpu.pixel(4, 4), topLeft[index]!, 4);
+          expectPixelNear(gpu.pixel(12, 12), middle[index]!, 4);
+
+          await nextFrame(texture);
+          index = (index + 1) % 5;
+        }
+      } finally {
+        sprite.destroy();
+        release(texture);
+        gpu.destroy();
+      }
+    });
+
+    test('several sprites and a second handle upload once per frame per handle, never per draw', async ctx => {
+      const gpu = await harness.create();
+      const texture = await open('animated.png');
+      const second = new Texture();
+
+      second._copyPayloadFrom(texture);
+
+      const root = new Container();
+      const sprites = [new Sprite(texture), new Sprite(texture), new Sprite(second)];
+
+      sprites.forEach(sprite => root.addChild(sprite));
+
+      try {
+        if (!(await gpu.render(ctx, root))) {
+          return;
+        }
+
+        const before = gpu.uploads();
+        const frames = 4;
+
+        for (let frame = 0; frame < frames; frame++) {
+          await nextFrame(texture);
+
+          for (let draw = 0; draw < 3; draw++) {
+            if (!(await gpu.render(ctx, root))) {
+              return;
+            }
+          }
+        }
+
+        expect(gpu.uploads() - before).toBe(frames * 2);
+      } finally {
+        root.destroy();
+        second.destroy();
+        release(texture);
+        gpu.destroy();
+      }
+    });
+
+    for (const [label, wrap] of [
+      ['a RetainedContainer', (): Container => new RetainedContainer()],
+      [
+        'a cacheAsTexture subtree',
+        (): Container => {
+          const container = new Container();
+
+          container.cacheAsTexture = true;
+
+          return container;
+        },
+      ],
+    ] as const) {
+      test(`${label} picks up new animation frames`, async ctx => {
+        const gpu = await harness.create();
+        const texture = await open('animated.png');
+        const sprite = new Sprite(texture);
+        const group = wrap();
+
+        group.addChild(sprite);
+
+        try {
+          if (!(await gpu.render(ctx, group))) {
+            return;
+          }
+
+          expectPixelNear(gpu.pixel(12, 12), blue, 4);
+
+          // Idle replays must not change anything.
+          await gpu.render(ctx, group);
+          expectPixelNear(gpu.pixel(12, 12), blue, 4);
+
+          await nextFrame(texture);
+
+          if (!(await gpu.render(ctx, group))) {
+            return;
+          }
+
+          expectPixelNear(gpu.pixel(12, 12), red, 4);
+        } finally {
+          group.destroy();
+          release(texture);
+          gpu.destroy();
+        }
+      });
+    }
+
+    test('repeated load, switch and destroy leaves no decoder or frame open', async ctx => {
+      const gpu = await harness.create();
+      const tracker = createResourceTracker();
+
+      try {
+        for (let round = 0; round < 8; round++) {
+          const texture = await open(round % 2 === 0 ? 'animated.png' : 'animated.gif');
+          const sprite = new Sprite(texture);
+
+          if (!(await gpu.render(ctx, sprite))) {
+            return;
+          }
+
+          await nextFrame(texture);
+          await gpu.render(ctx, sprite);
+
+          // Switching away must not leave the animation drawing into the sprite.
+          sprite.setTexture(null);
+          release(texture);
+          sprite.destroy();
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 150));
+        expect(tracker.leaked()).toEqual({ decoders: 0, frames: 0, bitmaps: 0 });
+        expect(tracker.opened().decoders + tracker.opened().bitmaps).toBeGreaterThan(0);
+      } finally {
+        tracker.restore();
+        gpu.destroy();
+      }
+    });
+  });
+};

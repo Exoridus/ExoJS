@@ -89,4 +89,81 @@ describe('ImageSequenceSource', () => {
     await expect(ImageSequenceSource.open(new Uint8Array([1, 2, 3]).buffer)).rejects.toThrow(/requires an animated/);
     expect(closeDecoder).not.toHaveBeenCalled();
   });
+
+  describe('repeat count, restart and failure reporting', () => {
+    const fakeWith = (repetitionCount: number | undefined, decode?: () => Promise<{ image: VideoFrame }>): void => {
+      class Counted extends FakeImageDecoder {
+        public override readonly tracks = { ready: Promise.resolve(), selectedTrack: { frameCount: 2, repetitionCount } };
+
+        public override async decode(options: { frameIndex: number }): Promise<{ image: VideoFrame }> {
+          return decode === undefined ? super.decode(options) : decode();
+        }
+      }
+
+      vi.stubGlobal('ImageDecoder', Counted);
+    };
+
+    test('plays the authored repeat count from the file, ignoring what the decoder reports, then stops on the last frame', async () => {
+      // The fixture GIF has no loop extension, so it plays once however the engine counts repeats.
+      fakeWith(Number.POSITIVE_INFINITY);
+
+      const source = await ImageSequenceSource.open(gif());
+
+      await vi.advanceTimersByTimeAsync(200);
+
+      expect(source.playing).toBe(false);
+      expect(source.revision).toBe(2);
+
+      source.destroy();
+    });
+
+    test('play() after the sequence finished restarts it from the first frame', async () => {
+      fakeWith(0);
+
+      const source = await ImageSequenceSource.open(gif());
+
+      await vi.advanceTimersByTimeAsync(200);
+      expect(source.playing).toBe(false);
+
+      source.play();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(source.playing).toBe(true);
+      expect(source.revision).toBe(3);
+
+      source.destroy();
+    });
+
+    test('reports a failing frame decode through onError instead of freezing silently', async () => {
+      let calls = 0;
+
+      fakeWith(undefined, async () => {
+        calls++;
+
+        if (calls > 1) {
+          throw new Error('decode failed');
+        }
+
+        return { image: { displayWidth: 16, displayHeight: 8, duration: 20_000, close: vi.fn() } as unknown as VideoFrame };
+      });
+
+      const source = await ImageSequenceSource.open(gif());
+      const failed = vi.fn();
+
+      source.onError.add(failed);
+      await vi.advanceTimersByTimeAsync(40);
+
+      expect(failed).toHaveBeenCalledTimes(1);
+      expect(source.playing).toBe(false);
+
+      source.destroy();
+    });
+
+    test('opening fails loudly when neither ImageDecoder nor createImageBitmap exists', async () => {
+      vi.stubGlobal('ImageDecoder', undefined);
+      vi.stubGlobal('createImageBitmap', undefined);
+
+      await expect(ImageSequenceSource.open(gif())).rejects.toThrow(/ImageDecoder API or createImageBitmap/);
+    });
+  });
 });
