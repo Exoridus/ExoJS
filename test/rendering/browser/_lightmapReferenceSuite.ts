@@ -21,6 +21,9 @@ import { View } from '#rendering/View';
 import type { LightmapBackend } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
 import { type ContactBackend, contactCanvasSize, type ContactHost, createContactHost } from './_lightmapContact';
 
+/** Set by `EXOJS_CAPTURE_LIGHTMAP_REFERENCES=1`: also capture the finite-line framebuffer readbacks for visual review. */
+declare const __EXOJS_CAPTURE_LIGHTMAP_REFERENCES__: boolean;
+
 type Polygon = ReadonlyArray<readonly [number, number]>;
 
 interface ReferenceScene {
@@ -369,7 +372,7 @@ const lineShadowError = async (backend: ContactBackend, scene: LineScene, filler
     }
 
     // Never label a CPU fallback as a GPU capture.
-    if (frameBackend.shadowFiller === filler) {
+    if (__EXOJS_CAPTURE_LIGHTMAP_REFERENCES__ && frameBackend.shadowFiller === filler) {
       await captureLineSource(backend, scene, filler, open, walled);
     }
 

@@ -129,7 +129,14 @@ const sharedViteOptions = {
   resolve: { alias: aliasConfig, conditions: srcConditions },
   ssr: { resolve: { conditions: srcConditions } },
   plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin, fileProgressReporterPlugin()],
-  define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
+  define: {
+    __DEV__: JSON.stringify(true),
+    __VERSION__: JSON.stringify('0.0.0'),
+    __REVISION__: JSON.stringify('test'),
+    // Visual-review captures of the lightmap reference scenes are opt-in, so a
+    // normal or CI run records nothing; see CONTRIBUTING, "Visual evidence".
+    __EXOJS_CAPTURE_LIGHTMAP_REFERENCES__: JSON.stringify(process.env['EXOJS_CAPTURE_LIGHTMAP_REFERENCES'] === '1'),
+  },
 };
 
 // A project that must not inherit the shared Vite options (it tests the transforms
