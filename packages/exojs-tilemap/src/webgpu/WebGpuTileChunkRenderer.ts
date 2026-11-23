@@ -27,7 +27,7 @@ import {
 
 import type { TileQuad } from '../chunkGeometry';
 import type { TileChunkNode } from '../TileChunkNode';
-import { TILE_DIAGONAL_BIT, TILE_ROW_MASK, TILE_TEXTURE_SLOTS, TILE_TEXTURE_SLOT_SHIFT } from '../tileWord';
+import { TILE_DIAGONAL_BIT, TILE_ROW_MASK, TILE_TEXTURE_SLOT_SHIFT, TILE_TEXTURE_SLOTS } from '../tileWord';
 import tileShaderTemplate from './shaders/tile-chunk.wgsl';
 
 const instanceStrideBytes = 32;
