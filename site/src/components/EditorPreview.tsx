@@ -439,7 +439,10 @@ export const EditorPreview = ({
 
         if (
           ((event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey)) || event.key === '/') &&
-          !target?.closest?.('input, textarea, [contenteditable="true"]')
+          !event.defaultPrevented &&
+          !event.isComposing &&
+          !event.altKey &&
+          !target?.closest?.('input, textarea, select, [role="textbox"], [contenteditable]:not([contenteditable="false"])')
         ) {
           event.preventDefault();
           document.dispatchEvent(new KeyboardEvent('keydown', { key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey }));
