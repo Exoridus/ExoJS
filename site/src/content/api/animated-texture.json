@@ -233,7 +233,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": ""
+          "description": "Freezes the animation on its current frame; resuming continues the unplayed part of that frame."
         },
         {
           "name": "play",
@@ -262,7 +262,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": ""
+          "description": "Resumes playback, restarting from the first frame when a non-looping animation had finished. Playback state belongs to the loaded animation: every handle sharing the same loaded asset advances, pauses and changes rate together, while separately loaded assets are independent."
         },
         {
           "name": "removeDestroyListener",
@@ -1418,7 +1418,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "true (default) repeats as often as the file authors; false plays the sequence once."
         },
         {
           "name": "mipLevelCount",
@@ -1489,7 +1489,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Speed multiplier applied to every authored frame duration. Must be positive and finite."
         },
         {
           "name": "playing",
@@ -1510,7 +1510,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Whether the shared animation is currently advancing. false before it has loaded."
         },
         {
           "name": "powerOfTwo",

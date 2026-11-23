@@ -927,12 +927,11 @@ export default defineConfig({
         },
       },
 
-      // ── browser-animated-images-webkit / -firefox - decoder specs on the other engines ──
-      // The animated-image decoding spec runs in browser-assets-chromium for the
-      // required lane; these projects run the same file on WebKit and Firefox,
-      // where ImageDecoder support differs and the software compositor is the
-      // path under test. Real Safari is covered by driving the same spec by hand
-      // (see the pull request evidence).
+      // ── browser-animated-images-webkit - the animated image specs on WebKit ──
+      // The decoding spec also runs in browser-assets-chromium (the required
+      // lane). WebKit ships an ImageDecoder that composes disposal and blend
+      // incorrectly, so these specs are the ones that exercise the software
+      // compositor as the selected decoder. Not part of the CI lanes.
       {
         test: {
           name: 'browser-animated-images-webkit',
@@ -948,18 +947,21 @@ export default defineConfig({
           },
         },
       },
+
+      // Real Safari through safaridriver (macOS, optional diagnostic): the engine
+      // whose ImageDecoder composition the other two projects can only approximate.
       {
         test: {
-          name: 'browser-animated-images-firefox',
+          name: 'browser-animated-images-safari',
           globals: true,
-          include: ['test/assets/browser/animated-image-decoding.test.ts'],
+          include: ['test/assets/browser/animated-image-decoding.test.ts', 'test/rendering/browser/webgl2-animated-image.test.ts'],
           setupFiles: browserSetupFiles,
           browser: {
             ...browserDefaults,
             enabled: true,
-            headless: true,
-            provider: playwright(),
-            instances: [{ browser: 'firefox' }],
+            headless: false,
+            provider: webdriverio(),
+            instances: [{ browser: 'safari' }],
           },
         },
       },
