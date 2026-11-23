@@ -2,6 +2,8 @@ import { AssetDecodeError } from '#assets/AssetDecodeError';
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import { determineMimeType } from '#assets/utils';
 import { CompressedTexture } from '#rendering/texture/CompressedTexture';
+import { ImageSequenceSource } from '#rendering/texture/ImageSequenceSource';
+import { animatedImageMime } from '#rendering/texture/animatedImageMime';
 import { Texture } from '#rendering/texture/Texture';
 import type { SamplerOptions, TextureAlphaMode, TextureColorSpace, TextureOptions } from '#rendering/texture/TextureOptions';
 
@@ -50,6 +52,23 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
       return this._createFromKtx2(source, context, textureOptions);
     }
 
+    // Detect animation from bytes: .webp and .png can be either static or
+    // animated, and a file extension or MIME alone never settles that.
+    const animated = animatedImageMime(source);
+
+    if (animated !== null) {
+      if (textureOptions?.colorSpace === 'none') {
+        throw new TypeError('Animated images are colour images; numeric decoding cannot preserve animation.');
+      }
+
+      const sequence = await ImageSequenceSource.open(source, context.signal);
+      const texture = new Texture(null, textureOptions);
+
+      texture._attachFrameSource(sequence, true);
+
+      return texture;
+    }
+
     const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
 
     const mode = textureOptions?.colorSpace === 'none' ? 'data' : 'color';
@@ -71,6 +90,8 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
    */
   public dispose(texture: Texture): void {
     const source = texture.source;
+
+    texture._attachFrameSource(null);
 
     if (this._decoded.delete(source as ImageBitmap)) {
       (source as ImageBitmap).close();
