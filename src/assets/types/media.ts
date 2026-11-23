@@ -128,7 +128,17 @@ export class AudioStreamAssetType extends AssetType<MediaAssetSource, AudioStrea
   }
 
   public override resourceIdentity(request: AssetRequest<AudioStreamAssetOptions>): string {
-    return mediaIdentity(request);
+    const reconnect = request.options?.reconnect;
+
+    // Unlike the transport, reconnect policy changes observable runtime
+    // behaviour. Two callers with incompatible policies must not share one
+    // resident AudioStream under a first-wins choice.
+    return JSON.stringify([
+      mediaIdentity(request),
+      reconnect === false ? 'disabled' : 'enabled',
+      reconnect === false ? 0 : Math.max(0, reconnect?.attempts ?? 5),
+      reconnect === false ? 0 : Math.max(0, reconnect?.delay ?? 1000),
+    ]);
   }
 
   public createFactory(): AssetFactory<MediaAssetSource, AudioStream, AudioStreamAssetOptions> {
