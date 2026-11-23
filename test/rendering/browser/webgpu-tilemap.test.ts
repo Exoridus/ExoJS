@@ -29,6 +29,7 @@ import {
   makeTileset,
   orderedTextureRunMap,
   orthogonalOverhangLayer,
+  overlappingTextureRunPair,
   singleTileMap,
   wireTilemapRenderers,
   wireViaTiledExtension,
@@ -60,7 +61,12 @@ const setupBackend = async (wire: (backend: WebGpuBackend) => void = wireTilemap
 const isDeviceLoss = (error: unknown): boolean =>
   error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
-const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
+const renderScene = async (
+  ctx: { skip: (reason: string) => void },
+  backend: WebGpuBackend,
+  root: RenderNode,
+  clear: Color = Color.black,
+): Promise<boolean> => {
   const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
@@ -69,7 +75,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 
   try {
     backend.resetStats();
-    backend.clear(Color.black);
+    backend.clear(clear);
     root.render(backend);
     backend.flush();
     validationError = await device.popErrorScope();
@@ -174,6 +180,52 @@ describe('WebGPU tilemap — multi-texture batching', () => {
       node.destroy();
 
       for (const texture of textures) {
+        texture.destroy();
+      }
+
+      backend.destroy();
+    }
+  });
+
+  test('matches a single-atlas RGBA oracle for actually overlapping translucent A-B-A-B tiles', async ctx => {
+    const backend = await setupBackend();
+    const pair = overlappingTextureRunPair(['rgba(255, 0, 0, 0.5)', 'rgba(0, 0, 255, 0.5)'], [0, 1, 0, 1]);
+    const optimized = new TileMapNode(pair.optimized);
+    const reference = new TileMapNode(pair.reference);
+    const sampleY = [8, 20, 32, 44, 56];
+
+    try {
+      optimized.setPosition(24, 12);
+      reference.setPosition(24, 12);
+
+      if (!(await renderScene(ctx, backend, optimized, Color.transparentBlack))) {
+        return;
+      }
+
+      const actualPixels = readWebGpuPixels(backend, canvasSize);
+      const actual = sampleY.map(y => actualPixels(30, y));
+
+      expect(backend.stats.drawCalls).toBe(1);
+
+      if (!(await renderScene(ctx, backend, reference, Color.transparentBlack))) {
+        return;
+      }
+
+      const expectedPixels = readWebGpuPixels(backend, canvasSize);
+      const expected = sampleY.map(y => expectedPixels(30, y));
+
+      for (let index = 0; index < sampleY.length; index++) {
+        expectPixelNear(actual[index]!, expected[index]!);
+      }
+
+      expect(actual[1]![2]).toBeGreaterThan(actual[1]![0]);
+      expect(actual[1]![3]).toBeGreaterThan(actual[0]![3]);
+      expect(actual[1]![3]).toBeLessThan(255);
+    } finally {
+      optimized.destroy();
+      reference.destroy();
+
+      for (const texture of pair.textures) {
         texture.destroy();
       }
 

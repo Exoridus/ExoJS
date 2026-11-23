@@ -32,6 +32,7 @@ import {
   makeTileset,
   orderedTextureRunMap,
   orthogonalOverhangLayer,
+  overlappingTextureRunPair,
   singleTileMap,
   wireTilemapRenderers,
   wireViaTiledExtension,
@@ -151,6 +152,54 @@ describe('WebGL2 tilemap — multi-texture batching', () => {
       node.destroy();
 
       for (const texture of textures) {
+        texture.destroy();
+      }
+
+      backend.destroy();
+    }
+  });
+
+  test('matches a single-atlas RGBA oracle for actually overlapping translucent A-B-A-B tiles', async () => {
+    const backend = await createBackend();
+    const pair = overlappingTextureRunPair(['rgba(255, 0, 0, 0.5)', 'rgba(0, 0, 255, 0.5)'], [0, 1, 0, 1]);
+    const optimized = new TileMapNode(pair.optimized);
+    const reference = new TileMapNode(pair.reference);
+    const sampleY = [8, 20, 32, 44, 56];
+
+    try {
+      optimized.setPosition(24, 12);
+      reference.setPosition(24, 12);
+
+      backend.resetStats();
+      backend.clear(Color.transparentBlack);
+      optimized.render(backend);
+      backend.flush();
+
+      const actual = sampleY.map(y => readWebGl2Pixel(backend, 30, y));
+
+      expect(backend.stats.drawCalls).toBe(1);
+
+      backend.resetStats();
+      backend.clear(Color.transparentBlack);
+      reference.render(backend);
+      backend.flush();
+
+      const expected = sampleY.map(y => readWebGl2Pixel(backend, 30, y));
+
+      for (let index = 0; index < sampleY.length; index++) {
+        expectPixelNear(actual[index]!, expected[index]!);
+      }
+
+      // The later blue tile must be visibly in front at the first overlap.
+      // Unlike the original opaque adjacent-row test, alpha is not always 255.
+      expect(actual[1]![2]).toBeGreaterThan(actual[1]![0]);
+      expect(actual[1]![3]).toBeGreaterThan(actual[0]![3]);
+      expect(actual[1]![3]).toBeLessThan(255);
+    } finally {
+      optimized.destroy();
+      reference.destroy();
+
+      for (const texture of pair.textures) {
         texture.destroy();
       }
 
