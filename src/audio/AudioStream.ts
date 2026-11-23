@@ -175,7 +175,10 @@ export class AudioStream extends MediaAudio {
     this._connectionLost(error);
   }
 
-  /** Recoverable live EOF must not finish the only voice before reconnect. @internal */
+  /**
+   * Recoverable live EOF must not finish the only voice before reconnect.
+   * @internal
+   */
   protected override _endVoiceOnMediaEnded(): boolean {
     return this._connection !== 'reconnecting';
   }
