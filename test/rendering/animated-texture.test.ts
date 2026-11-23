@@ -1,5 +1,6 @@
 import { Signal } from '#core/Signal';
 import type { TextureSource } from '#core/types';
+import { Sprite } from '#rendering/sprite/Sprite';
 import { AnimatedTexture } from '#rendering/texture/AnimatedTexture';
 import type { FrameSource } from '#rendering/texture/FrameSource';
 import { Texture } from '#rendering/texture/Texture';
@@ -47,6 +48,20 @@ describe('dynamic frames in normal Texture', () => {
 
     texture.destroy();
     expect(source.destroyed).toBe(true);
+  });
+
+  test('a retained Sprite invalidates its content when a source presents a new frame', () => {
+    const frames = new ManualFrames();
+    const texture = new Texture();
+    const sprite = new Sprite(texture);
+    const before = sprite._contentRevision;
+
+    texture._attachFrameSource(frames, true);
+    frames.present();
+
+    expect(sprite._contentRevision).not.toBe(before);
+    sprite.destroy();
+    texture.destroy();
   });
 
   test('copying a donor shares the provider but only the donor owns its lifetime', () => {
