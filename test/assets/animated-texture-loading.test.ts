@@ -44,7 +44,7 @@ describe('animated images through normal texture assets', () => {
     closeDecoder.mockClear();
     createDecoder.mockClear();
     vi.stubGlobal('ImageDecoder', FakeImageDecoder);
-    global.fetch = vi.fn(async (): Promise<Response> => ({
+    global.fetch = vi.fn(async () => ({
       ok: true,
       arrayBuffer: async () => animatedGif(),
     })) as unknown as typeof fetch;
