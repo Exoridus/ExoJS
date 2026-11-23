@@ -292,9 +292,7 @@ describe('asset owners', () => {
     }
 
     const loader = createLoader();
-    const decode = vi.fn((_source: ArrayBuffer, context: { options?: unknown }) =>
-      new Noise((context.options as { seed: number }).seed),
-    );
+    const decode = vi.fn((_source: ArrayBuffer, context: { options?: unknown }) => new Noise((context.options as { seed: number }).seed));
 
     loader._assetTypes.define(Noise, { type: 'noise', decode });
     const scope = loader.createScope();
