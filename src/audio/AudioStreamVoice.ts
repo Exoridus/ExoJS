@@ -14,6 +14,8 @@ export interface AudioStreamVoiceInit extends BaseVoiceInit {
   playbackRate: number;
   /** Whether the source currently allows moving the playhead. */
   canSeek?: () => boolean;
+  /** Decide whether an ended media element is terminal or a recoverable live EOF. */
+  endOnEnded?: () => boolean;
   /** Seek offset (seconds) to start at. */
   startTime?: number;
   /** @internal Start silently until the scene finishes configuring and holding the voice. */
@@ -44,6 +46,7 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   private readonly _element: HTMLMediaElement;
   private readonly _sourceNode: MediaElementAudioSourceNode;
   private readonly _canSeek: () => boolean;
+  private readonly _endOnEnded: () => boolean;
   private _detune = 0;
   /**
    * User-facing base playback rate, cached independently of what's actually
@@ -53,7 +56,11 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
    * already-modulated rate (mirrors {@link SoundVoice}'s `_playbackRate` cache).
    */
   private _basePlaybackRate: number;
-  private readonly _onEnded = (): void => this._finish();
+  private readonly _onEnded = (): void => {
+    if (this._endOnEnded()) {
+      this._finish();
+    }
+  };
   private _unlockHandler: ((audioContext: AudioContext) => void) | null = null;
 
   public constructor(init: AudioStreamVoiceInit) {
@@ -62,6 +69,7 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
     this._element = init.element;
     this._sourceNode = init.sourceNode;
     this._canSeek = init.canSeek ?? ((): boolean => true);
+    this._endOnEnded = init.endOnEnded ?? ((): boolean => true);
     this._sourceNode.connect(this._output);
 
     this._element.loop = init.loop;
@@ -137,6 +145,11 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
     }
 
     this._startPlayback();
+  }
+
+  /** Whether the caller still wants this voice to play once media reconnects. @internal */
+  public get _canAutoResume(): boolean {
+    return !this._ended && !this._held && !this._pauseRequested;
   }
 
   /** While held, the caller's own pause; otherwise whether the element is paused, which includes a start still waiting for the autoplay unlock. */
