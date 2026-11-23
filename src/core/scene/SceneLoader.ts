@@ -13,11 +13,6 @@ import type { Application } from '#core/Application';
  * which holds them for the application's lifetime. Access via {@link Scene.loader}.
  */
 export class SceneLoader extends LoaderScope {
-  public readonly assets = {
-    load: this.loadGroup.bind(this),
-    createScope: this.createScope.bind(this),
-  };
-
   public constructor(app: Application) {
     super(app.loader, 'scene');
   }

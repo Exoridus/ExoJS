@@ -26,7 +26,7 @@ The maintained starter's scene contains one graphics object:
 
 The constructor only creates local objects. Application-bound services such as `this.app`, `this.loader`, and `this.inputs` are not available there. Use `init()` for setup that needs those services; use the awaitable `load()` hook for asynchronous prerequisites. The [lifecycle chapter](/ExoJS/en/guide/runtime/scenes-and-lifecycle/) explains their order and cleanup.
 
-When you add an image later, give a `Sprite` its path and add it the same way: `this.root.addChild(new Sprite('hero.png'))`. The texture loads when the scene first needs it and is released with the scene. [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/) covers preloading with `app.load()` and the cases that still use the loader.
+When you add an image later, give a `Sprite` its path and add it the same way: `this.root.addChild(new Sprite('hero.png'))`. The texture loads when the scene first needs it and is released with the scene. [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/) covers preloading with `assets.load()` and the cases that still use the loader.
 
 ## Update state, then draw it
 

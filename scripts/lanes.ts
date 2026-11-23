@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 
 import { laneTimeoutMinutes } from './ci/lanes.ts';
 import { DIST_PREFLIGHT, needsDist, parseLocalLaneOptions, planLocalLanes } from './ci/local-lanes.ts';
+import { changedFilesBetween } from './ci/local-policy.ts';
 import { effectiveLanes, type LaneAreas, selectAreas } from './ci/select-lanes.ts';
 import { atLeastOutputMode, readOutputOptions } from './lib/output.ts';
 import { runCommand, type RunCommandResult } from './lib/run-command.ts';
@@ -59,7 +60,29 @@ const ALL_AREAS: LaneAreas = {
 const main = async (): Promise<void> => {
   const outputOptions = readOutputOptions(process.argv.slice(2));
   const options = parseLocalLaneOptions(outputOptions.argv);
-  const files = options.all || options.only ? [] : changedFiles(options.base);
+  // Pre-push validates only what the remote will receive. The ordinary
+  // diagnostic command deliberately includes local edits and untracked files.
+  const files =
+    options.all || options.only
+      ? []
+      : options.prePush && options.head !== undefined
+        ? changedFilesBetween(options.base, options.head)
+        : changedFiles(options.base);
+
+  // A resolved empty diff needs no tests. Manual diagnostics deliberately
+  // include dirty and untracked files; pre-push compares committed inputs only.
+  // An unresolvable Git range throws rather than being treated as empty, while
+  // explicit --all and --only commands are never skipped.
+  if (!options.all && options.only === undefined && files.length === 0) {
+    process.stdout.write(
+      options.prePush && options.head !== undefined
+        ? 'lanes: no committed files changed in pushed range; no test lanes needed.\n'
+        : 'lanes: no files changed in the selected range; no test lanes needed.\n',
+    );
+
+    return;
+  }
+
   const areas = options.all || options.only ? ALL_AREAS : selectAreas(files);
   const { selected, deferred } = planLocalLanes(effectiveLanes(areas), options, files);
   const distPreflight = needsDist(selected);
@@ -94,6 +117,16 @@ const main = async (): Promise<void> => {
     process.stdout.write('\nlanes: pass --run to execute these.\n');
 
     return;
+  }
+
+  if (options.prePush && options.head !== undefined) {
+    // The affected graph runs against the checked-out HEAD. If the user
+    // pushes another commit, never silently certify a different tree.
+    const checkedOutHead = git(process.cwd(), 'rev-parse', 'HEAD').trim();
+
+    if (checkedOutHead !== options.head) {
+      throw new Error('Full pre-push test selection requires the pushed commit to equal checkout HEAD. Use CI for another ref.');
+    }
   }
 
   if (selected.length === 0) {

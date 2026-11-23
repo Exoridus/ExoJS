@@ -1837,28 +1837,24 @@ describe('bare-path descriptor normalization', () => {
     expect(loader._peekResource(TextAsset, 'plain.json')).toBeNull();
   });
 
-  test('rejects the removed load(path, options) call shape instead of silently dropping options', () => {
+  test('rejects per-asset options passed as load options instead of silently dropping them', () => {
     const loader = new Loader({ basePath: '/' });
     bindTextType(loader);
     loader.registerType('txt', 'text');
 
-    const legacyLoad = loader.load as unknown as (path: string, options: object) => unknown;
+    const looseLoad = loader.load as unknown as (input: unknown, options: object) => unknown;
 
-    expect(() => legacyLoad.call(loader, 'notes.txt', { priority: LoadPriority.Background })).toThrow(
-      /load\(path, options\) is not supported/,
+    expect(() => looseLoad.call(loader, 'notes.txt', { textureOptions: {} })).toThrow(/only takes LoadOptions/);
+    expect(() => looseLoad.call(loader, Asset.type('text', 'notes.txt'), { delimiter: ',' })).toThrow(
+      /Per-asset options belong in the request/,
     );
-    expect(() => legacyLoad.call(loader, 'notes.txt', { priority: LoadPriority.Background })).toThrow(/Asset\.type\(type, path, options\)/);
   });
 
-  test('rejects second-argument options for Asset.type() descriptors instead of silently dropping them', () => {
+  test('rejects second-argument options for Asset.type() descriptors on get()', () => {
     const loader = new Loader();
     const descriptor = Asset.type('json', 'config.json');
-    const descriptorLoad = loader.load as unknown as (asset: typeof descriptor, options: object) => unknown;
     const descriptorGet = loader.get as unknown as (asset: typeof descriptor, options: object) => unknown;
 
-    expect(() => descriptorLoad.call(loader, descriptor, { priority: LoadPriority.Background })).toThrow(
-      /load\(Asset\.type\(\.\.\.\), options\) is not supported/,
-    );
     expect(() => descriptorGet.call(loader, descriptor, { delimiter: ',' })).toThrow(
       /get\(Asset\.type\(\.\.\.\), options\) is not supported/,
     );

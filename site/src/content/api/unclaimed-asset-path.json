@@ -1,0 +1,63 @@
+{
+  "title": "UnclaimedAssetPath",
+  "description": "The diagnostic a literal path with an unclaimed suffix turns into. The offending string is not assignable to it, so the error names the path and the way out.",
+  "symbol": "UnclaimedAssetPath",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The diagnostic a literal path with an unclaimed suffix turns into. The offending string is not assignable to it, so the error names the path and the way out."
+      ],
+      "importLine": "import { UnclaimedAssetPath } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "UnclaimedAssetPath",
+          "signature": "templateLiteral",
+          "signatureTokens": [
+            {
+              "text": "templateLiteral",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/assetLoadGroup.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/assetLoadGroup.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
+}

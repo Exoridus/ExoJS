@@ -1,3 +1,5 @@
+export type { AssetOwner } from './ApplicationAssets';
+export { ApplicationAssets } from './ApplicationAssets';
 export type { AssetForKind, LeaflessAsset, ResourceAsset, ValueAsset } from './Asset';
 export { Asset } from './Asset';
 export type { AssetConstructor } from './AssetConstructor';
@@ -19,7 +21,16 @@ export type {
   ValueAssetKind,
 } from './AssetDefinitions';
 export type { AssetDependencyScope, AssetFactory, AssetFactoryContext } from './AssetFactory';
-export type { AssetLoadGroup, AssetLoadHandle, LoadedAssetGroup } from './assetLoadGroup';
+export type {
+  AssetLoadEntry,
+  AssetLoadHandle,
+  AssetLoadInput,
+  AssetTypeRequest,
+  LoadedAssetEntry,
+  LoadedAssets,
+  UnclaimedAssetPath,
+  ValidatedAssetLoadInput,
+} from './assetLoadGroup';
 export type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 export type { AssetNetworkErrorOptions } from './AssetNetworkError';
 export { AssetNetworkError } from './AssetNetworkError';
@@ -29,11 +40,19 @@ export type { AssetInspection, AssetOwnerInspection, AssetSizeStats, AssetStats,
 export type { AnyAssets, InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
 export type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';
-export { binarySourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSourceCodec';
+export { binarySourceCodec, blobSourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSourceCodec';
 export type { AssetStatus } from './AssetStatus';
 export type { AnyAssetType, AssetDescriptor, AssetLeaf, AssetOptionsArgument, AssetRequest } from './AssetType';
 export { AssetType } from './AssetType';
-export type { AssetTypeDefinition, AssetTypeDefinitionEntry, DocumentAssetTypeDefinition } from './AssetTypes';
+export type {
+  AssetDecode,
+  AssetFactorySpec,
+  AssetReadKinds,
+  AssetTypeDefinition,
+  AssetTypeDefinitionEntry,
+  DocumentAssetTypeDefinition,
+  ReadAssetTypeDefinition,
+} from './AssetTypes';
 export { AssetTypes } from './AssetTypes';
 export type { AssetVariant, AssetVariantProfile } from './AssetVariantSet';
 export { AssetVariantSet } from './AssetVariantSet';

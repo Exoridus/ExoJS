@@ -5,17 +5,53 @@ import type { Migration } from '#core/document/Migration';
 import type { Serializer } from '#core/serialization/Serializer';
 
 import type { AssetConstructor } from './AssetConstructor';
-import type { AssetFactory } from './AssetFactory';
-import { type AssetSourceCodec, binarySourceCodec } from './AssetSourceCodec';
+import type { AssetFactory, AssetFactoryContext } from './AssetFactory';
+import { type AssetSourceCodec, binarySourceCodec, blobSourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSourceCodec';
 import { type AnyAssetType, type AssetLeaf, AssetType } from './AssetType';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { CacheLayout } from './cache/CacheLayout';
 import { DocumentCodec } from './DocumentCodec';
 
-/** An application-owned factory and the source representation it consumes. */
-export interface AssetTypeDefinition<Resource, Source = ArrayBuffer, Options = undefined, Stored = Source> {
+/**
+ * Builds a resource from decoded source data. It may be synchronous or return
+ * a promise; a throw or rejection fails the load with an `AssetDecodeError`.
+ * Honour `context.signal` in long-running work: it aborts once no owner needs
+ * the result any more.
+ */
+export type AssetDecode<Source, Resource, Options = undefined> = (
+  source: Source,
+  context: AssetFactoryContext<Options>,
+) => Resource | PromiseLike<Resource>;
+
+/**
+ * How a definition builds its resources: a `decode` function, with an optional
+ * `dispose` for resources that own something the garbage collector cannot
+ * reclaim, or a full {@link AssetFactory} when the type needs per-application
+ * state such as a worker.
+ */
+export type AssetFactorySpec<Resource, Source, Options = undefined> =
+  | {
+      readonly decode: AssetDecode<Source, Resource, Options>;
+      /** Releases one evicted resource. Must be synchronous and tolerate a resource already released. */
+      readonly dispose?: (resource: Resource) => void;
+      readonly loader?: never;
+    }
+  | { readonly loader: AssetFactory<Source, Resource, Options>; readonly decode?: never; readonly dispose?: never };
+
+/** How the raw response is read before `decode` runs, when no codec or document parser is given. */
+export interface AssetReadKinds {
+  /** Raw bytes, the default. */
+  readonly arrayBuffer: ArrayBuffer;
+  /** UTF-8 text. */
+  readonly text: string;
+  /** Parsed JSON. Validate it in `decode`, or use a document `parser`. */
+  readonly json: unknown;
+  /** A `Blob`, kept out of the JavaScript heap; suited to media and large binaries. */
+  readonly blob: Blob;
+}
+
+interface AssetTypeDefinitionBase<Resource, Source, Stored> {
   readonly type: string;
-  readonly loader: AssetFactory<Source, Resource, Options>;
   readonly extensions?: readonly string[];
   readonly codec?: AssetSourceCodec<NoInfer<Source>, Stored>;
   /** Increase its version if an updated codec changes the stored representation. */
@@ -24,24 +60,42 @@ export interface AssetTypeDefinition<Resource, Source = ArrayBuffer, Options = u
   readonly serializer?: Serializer<NoInfer<Resource>, NoInfer<Source> & object>;
 }
 
+/** An application-owned asset definition and the source representation it consumes. */
+export type AssetTypeDefinition<Resource, Source = ArrayBuffer, Options = undefined, Stored = Source> = AssetTypeDefinitionBase<
+  Resource,
+  Source,
+  Stored
+> & {
+  readonly read?: never;
+} & AssetFactorySpec<Resource, Source, Options>;
+
+/** A definition whose response is read as one of the {@link AssetReadKinds} before `decode` runs. */
+export type ReadAssetTypeDefinition<Resource, Read extends keyof AssetReadKinds, Options = undefined> = Omit<
+  AssetTypeDefinitionBase<Resource, AssetReadKinds[Read], AssetReadKinds[Read]>,
+  'codec'
+> & {
+  readonly read: Read;
+  readonly codec?: never;
+} & AssetFactorySpec<Resource, AssetReadKinds[Read], Options>;
+
 type AnyMigration = Migration<never, unknown>;
 
 /** An asset decoded from a versioned document before its factory runs. */
-export interface DocumentAssetTypeDefinition<
+export type DocumentAssetTypeDefinition<
   Resource,
   Document extends object,
   Options = undefined,
   Version extends number = 1,
   Min extends number = 1,
   Chain extends readonly AnyMigration[] = readonly [],
-> extends Omit<AssetTypeDefinition<Resource, Document, Options, string>, 'codec' | 'loader'> {
+> = Omit<AssetTypeDefinitionBase<Resource, Document, string>, 'codec'> & {
   readonly codec?: never;
-  readonly loader: AssetFactory<NoInfer<Document>, Resource, Options>;
+  readonly read?: never;
   readonly parser: DocumentParser<Document>;
   readonly version?: Version;
   readonly minVersion?: Min;
   readonly migrations?: Chain;
-}
+} & AssetFactorySpec<Resource, NoInfer<Document>, Options>;
 
 interface NonDocumentDefinition {
   readonly parser?: never;
@@ -54,6 +108,7 @@ interface NonDocumentDefinition {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type BinaryDefinition = AssetTypeDefinition<any, ArrayBuffer, any> & NonDocumentDefinition;
 type CodecDefinition = AssetTypeDefinition<any, any, any, any> & NonDocumentDefinition & { readonly codec: AssetSourceCodec<any, any> };
+type ReadDefinition = ReadAssetTypeDefinition<any, keyof AssetReadKinds, any> & NonDocumentDefinition;
 type DocumentDefinition = DocumentAssetTypeDefinition<any, any, any, number, number, readonly AnyMigration[]>;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -63,7 +118,10 @@ type DocumentDefinition = DocumentAssetTypeDefinition<any, any, any, number, num
  * registration. Use {@link AssetTypes.define} for per-definition type checking
  * of the constructor, factory, codec and migration chain.
  */
-export type AssetTypeDefinitionEntry = readonly [AssetConstructor, BinaryDefinition | CodecDefinition | DocumentDefinition];
+export type AssetTypeDefinitionEntry = readonly [
+  AssetConstructor,
+  BinaryDefinition | CodecDefinition | ReadDefinition | DocumentDefinition,
+];
 
 /** Asset type definitions on a single application. */
 export class AssetTypes {
@@ -76,12 +134,26 @@ export class AssetTypes {
   }
 
   /**
-   * Defines how the application loads a class. A parser enables migration
-   * and validation of versioned documents. Without a parser or codec the
-   * factory receives raw bytes. A type id is stable across releases and cannot
-   * be shared with another class. Define the same class and id again before its
-   * first request to replace its factory. Supply a separate factory instance
-   * for each application, which owns and destroys it.
+   * Defines how the application loads a class.
+   *
+   * `decode` receives the fetched data and returns the resource, synchronously
+   * or as a promise; fetching, caching, deduplication and ownership stay with
+   * the loader. `read` chooses whether `decode` gets bytes (the default),
+   * text, parsed JSON or a `Blob`. A document `parser` validates and migrates
+   * versioned documents before `decode` runs, and a `codec` takes full control
+   * of how the response is read. A `loader` factory replaces `decode` when the
+   * type needs per-application state; supply a separate instance for each
+   * application, which owns and destroys it.
+   *
+   * The `type` id names the type in caches and saved documents, so keep it
+   * stable across releases; it cannot be shared with another class. Define the
+   * same class and id again before its first request to replace its factory.
+   *
+   * @example
+   * ```ts
+   * app.assets.define(Level, { type: 'level', extensions: ['level'], decode: bytes => Level.parse(bytes) });
+   * const level = await scene.assets.load('maps/intro.level');
+   * ```
    */
   public define<
     Resource,
@@ -94,6 +166,10 @@ export class AssetTypes {
     target: AssetConstructor<Resource>,
     definition: DocumentAssetTypeDefinition<NoInfer<Resource>, Document, Options, Version, Min, Chain> &
       CheckedHistory<NoInfer<Document>, Version, Min, Chain>,
+  ): void;
+  public define<Resource, const Read extends keyof AssetReadKinds, Options = undefined>(
+    target: AssetConstructor<Resource>,
+    definition: ReadAssetTypeDefinition<NoInfer<Resource>, Read, Options> & NonDocumentDefinition,
   ): void;
   public define<Resource, Options = undefined>(
     target: AssetConstructor<Resource>,
@@ -116,8 +192,10 @@ export class AssetTypes {
       throw new Error('Asset types cannot be defined after the application is destroyed.');
     }
 
-    if (typeof target !== 'function' || typeof definition.loader.create !== 'function') {
-      throw new TypeError('An asset definition requires a constructor and a loader with a create method.');
+    const { loader, decode } = definition as { loader?: { create?: unknown }; decode?: unknown };
+
+    if (typeof target !== 'function' || (typeof decode === 'function') === (typeof loader?.create === 'function')) {
+      throw new TypeError('An asset definition requires a constructor and either a decode function or a loader with a create method.');
     }
 
     this._registry.define(new DefinedAssetType(target, definition, this._registry.getInstalled(target)?.type));
@@ -161,7 +239,7 @@ class DefinedAssetType extends AssetType<unknown, unknown, unknown, unknown> {
       this.layout = layout;
     }
 
-    this._factory = definition.loader as AssetFactory<unknown, unknown, unknown>;
+    this._factory = factoryFor(definition);
 
     if (previous?.resourceIdentity !== undefined) {
       this.resourceIdentity = previous.resourceIdentity.bind(previous);
@@ -185,20 +263,55 @@ class DefinedAssetType extends AssetType<unknown, unknown, unknown, unknown> {
   }
 }
 
+const factoryFor = (definition: AssetTypeDefinitionEntry[1]): AssetFactory<unknown, unknown, unknown> => {
+  if (definition.loader !== undefined) {
+    return definition.loader as AssetFactory<unknown, unknown, unknown>;
+  }
+
+  const decode = definition.decode as AssetDecode<unknown, unknown, unknown>;
+  const dispose = definition.dispose as ((resource: unknown) => void) | undefined;
+
+  return {
+    // Deferred so a synchronous throw becomes a rejection the loader reports as a decode failure.
+    create: (source, context) => Promise.resolve().then(() => decode(source, context)),
+    ...(dispose !== undefined && { dispose }),
+  };
+};
+
+const readCodecs: { readonly [Read in keyof AssetReadKinds]: AssetSourceCodec<AssetReadKinds[Read], unknown> } = {
+  arrayBuffer: binarySourceCodec,
+  text: textSourceCodec,
+  json: jsonSourceCodec,
+  blob: blobSourceCodec,
+};
+
 type DefinitionSource = Partial<Omit<DocumentHistoryOptions<object>, 'id'>> & {
   readonly codec?: AssetSourceCodec<unknown, unknown>;
+  readonly read?: keyof AssetReadKinds;
 };
 
 const definitionCodec = (
   id: string,
-  { codec, parser, version, minVersion, migrations }: DefinitionSource,
+  { codec, read, parser, version, minVersion, migrations }: DefinitionSource,
 ): AssetSourceCodec<unknown, unknown> => {
+  if (read !== undefined && !Object.hasOwn(readCodecs, read)) {
+    throw new TypeError(`Asset type "${id}" has an unknown read kind "${String(read)}"; use one of ${Object.keys(readCodecs).join(', ')}.`);
+  }
+
   if (parser === undefined && version === undefined && minVersion === undefined && migrations === undefined) {
-    return codec ?? binarySourceCodec;
+    if (codec !== undefined && read !== undefined) {
+      throw new TypeError(`Asset type "${id}" cannot specify both a codec and a read kind.`);
+    }
+
+    return codec ?? (read === undefined ? binarySourceCodec : readCodecs[read]);
   }
 
   if (codec !== undefined) {
     throw new TypeError(`Asset type "${id}" cannot specify both a codec and a document history.`);
+  }
+
+  if (read !== undefined) {
+    throw new TypeError(`Asset type "${id}" cannot specify both a read kind and a document history.`);
   }
 
   if (typeof parser?.parse !== 'function') {

@@ -1,8 +1,9 @@
+import type { AssetLoadHandle } from '#assets/assetLoadGroup';
 import { _readMeta } from '#assets/assetMeta';
 import { type AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
-import { Loader } from '#assets/Loader';
+import { Loader, LoadPriority } from '#assets/Loader';
 import type { LoaderScope } from '#assets/LoaderScope';
 import type { LoadingQueue } from '#assets/LoadingQueue';
 import { Json } from '#assets/tokens';
@@ -198,12 +199,12 @@ describe('Loader._adopt', () => {
     const b = createBuiltinLeaf('texture', 'hero.png') as Texture;
 
     try {
-      const queue = loader._loadHandleGroup([a, b]);
+      const queue = loader._applicationScope.load([a, b]);
       expect(queue.progress.total).toBe(2);
       await expect(queue).resolves.toEqual([a, b]);
       const key = Symbol('a');
-      await expect(loader._loadHandleGroup({ a, [key]: b })).resolves.toEqual({ a, [key]: b });
-      await expect(loader._loadHandleGroup(a)).resolves.toBe(a);
+      await expect(loader._applicationScope.load({ a, [key]: b })).resolves.toEqual({ a, [key]: b });
+      await expect(loader._applicationScope.load(a)).resolves.toBe(a);
       expect(queue.progress).toEqual({ total: 2, loaded: 2, pending: 0, failed: 0 });
       expect(global.fetch).toHaveBeenCalledTimes(1);
     } finally {
@@ -219,7 +220,7 @@ describe('Loader._adopt', () => {
     let payload: Texture['source'];
 
     try {
-      await expect(app.load(a, b)).resolves.toEqual([a, b]);
+      await expect(app.assets.load([a, b])).resolves.toEqual([a, b]);
       payload = a.source;
       expect(payload).not.toBeNull();
       expect(b.source).toBe(payload);
@@ -242,7 +243,7 @@ describe('Loader._adopt', () => {
     const sprite = new Sprite(logical);
 
     try {
-      await loader._loadHandleGroup([physical, logical]);
+      await loader._applicationScope.load([physical, logical]);
       expect(global.fetch).toHaveBeenCalledTimes(1);
       expect(logical.source).toBe(physical.source);
       expect(logical.width).toBe(4);
@@ -269,8 +270,8 @@ describe('Loader._adopt', () => {
     );
 
     try {
-      const abandoned = loader._loadHandleGroup([a]);
-      const wanted = loader._loadHandleGroup([a]);
+      const abandoned = loader._applicationScope.load([a]);
+      const wanted = loader._applicationScope.load([a]);
       abandoned.cancel();
       await expect(abandoned).rejects.toMatchObject({ name: 'AbortError' });
       await vi.waitFor(() => expect(complete).toBeDefined());
@@ -296,10 +297,10 @@ describe('Loader._adopt', () => {
     scope.onLoadStart.add(foreground);
 
     try {
-      const background = loader._loadHandleGroup([asset], scope, true);
+      const background = scope.load([asset as AssetLoadHandle], { priority: LoadPriority.Background });
       const startsBeforeDemand = foreground.mock.calls.length;
       expect(global.fetch).not.toHaveBeenCalled();
-      const demand = loader._loadHandleGroup([asset], scope);
+      const demand = scope.load([asset as AssetLoadHandle]);
       const finished = Promise.all([background, demand]);
       void finished.catch(() => undefined);
       await vi.waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1), { timeout: 500 });
@@ -322,8 +323,8 @@ describe('Loader._adopt', () => {
     const asset = createBuiltinLeaf('texture', 'hero.png') as Texture;
 
     try {
-      await loader._loadHandleGroup([asset], owner);
-      const queued = loader._loadHandleGroup([asset], other);
+      await owner.load([asset]);
+      const queued = other.load([asset]);
       queued.cancel();
       await expect(queued).rejects.toMatchObject({ name: 'AbortError' });
       expect(queued.progress.loaded).toBe(0);
