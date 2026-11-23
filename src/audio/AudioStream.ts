@@ -82,7 +82,12 @@ export class AudioStream extends MediaAudio {
 
     // Reloading the element can itself make `paused` true, so consult the
     // voice's user pause/hold intent, not the browser's transient element state.
-    if (this._connection !== 'disconnected' && resumeVoice !== null && resumeVoice === this._voice && resumeVoice._canAutoResume) {
+    if (
+      this._connection !== 'disconnected' &&
+      resumeVoice !== null &&
+      resumeVoice === this._voice &&
+      resumeVoice._canAutoResume
+    ) {
       resumeVoice.resume();
     }
   };
