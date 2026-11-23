@@ -125,6 +125,41 @@ describe('AudioStream', () => {
     finiteStream.destroy();
   });
 
+  test('a live EOF preserves the playing voice until the stream reconnects', () => {
+    const el = createLiveElement();
+    const stream = new AudioStream(el, { reconnect: { attempts: 2, delay: 10 } });
+    const voice = new AudioSystem().play(stream) as AudioStreamVoice;
+    const resume = vi.spyOn(voice, 'resume');
+
+    fire(el, 'ended');
+
+    expect(stream.connection).toBe('reconnecting');
+    expect(voice.ended).toBe(false);
+
+    vi.advanceTimersByTime(10);
+    expect(el.load).toHaveBeenCalledTimes(1);
+    fire(el, 'canplay');
+
+    expect(stream.connection).toBe('connected');
+    expect(voice.ended).toBe(false);
+    expect(resume).toHaveBeenCalledTimes(1);
+    stream.destroy();
+  });
+
+  test('a finite AudioStream ended event still finishes its voice', () => {
+    const el = createLiveElement('https://radio.example/recording.mp3');
+
+    Object.defineProperty(el, 'duration', { configurable: true, value: 120 });
+    const stream = new AudioStream(el);
+    const voice = new AudioSystem().play(stream) as AudioStreamVoice;
+
+    fire(el, 'ended');
+
+    expect(stream.connection).toBe('connected');
+    expect(voice.ended).toBe(true);
+    stream.destroy();
+  });
+
   test('a stream built from local data never reconnects', () => {
     const el = createLiveElement('blob:https://app.example/1234');
     const stream = new AudioStream(el);
@@ -161,6 +196,26 @@ describe('AudioStream', () => {
 
     expect(el.load).not.toHaveBeenCalled();
     expect(stream.destroyed).toBe(true);
+  });
+
+  test('pausing after reopen but before canplay prevents automatic playback', () => {
+    const el = createLiveElement();
+    const stream = new AudioStream(el, { reconnect: { attempts: 2, delay: 10 } });
+    const voice = new AudioSystem().play(stream) as AudioStreamVoice;
+    const resume = vi.spyOn(voice, 'resume');
+
+    fire(el, 'error');
+    vi.advanceTimersByTime(10);
+    expect(el.load).toHaveBeenCalledTimes(1);
+
+    voice.pause();
+    Object.defineProperty(el, 'paused', { configurable: true, value: true });
+    fire(el, 'canplay');
+
+    expect(stream.connection).toBe('connected');
+    expect(resume).not.toHaveBeenCalled();
+    expect(voice.ended).toBe(false);
+    stream.destroy();
   });
 
   test('a paused voice is not resumed by a reconnect', () => {
