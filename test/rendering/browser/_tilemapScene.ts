@@ -162,6 +162,7 @@ export const overlappingTextureRunPair = (
     tileHeight: height,
     tileCount: colors.length,
   });
+
   const build = (tilesets: TileSet[], select: (index: number) => { tileset: TileSet; localTileId: number }): TileMap => {
     const layer = new TileLayer({
       id: 1,
