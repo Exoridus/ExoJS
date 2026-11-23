@@ -543,7 +543,7 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
     await page.evaluate('window.__layoutResizeProbe.hold = true');
 
     try {
-      await page.locator('[data-example-header] summary').click();
+      await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
       await page.getByRole('button', { name: 'Swap panes', exact: true }).click();
       await page.waitForFunction('window.__layoutResizeProbe.pending.length > 0');
       const snapshots = [await panelLayout(page)];
@@ -560,19 +560,19 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
       await releaseResize();
     }
 
-    await page.locator('[data-example-header] summary').click();
+    await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
     await page.getByRole('button', { name: 'Swap panes', exact: true }).click();
   });
 
   await check('the panel sits between preview and editor in the stacked layout', async () => {
-    await page.locator('[data-example-header] summary').click();
+    await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
     await page.getByRole('button', { name: 'Demo above code', exact: true }).click();
 
     const { preview, output, editor } = await panelLayout(page);
 
     assert(output.y >= preview.y + preview.height - 1, 'the panel overlaps the preview');
     assert(editor.y >= output.y + output.height - 1, 'the editor is not below the panel');
-    await page.locator('[data-example-header] summary').click();
+    await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
     await page.getByRole('button', { name: 'Split view', exact: true }).click();
   });
 
@@ -1426,7 +1426,7 @@ const workerChecks = async (browser: Browser, origin: string, base: string): Pro
         const frame = await previewFrame(page);
         await frame.waitForFunction(value => document.body.dataset.editedTerrain === value, String(cycle));
         await verifyTerrain(frame);
-        await page.locator('[data-example-header] summary').click();
+        await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
         const popupPromise = page.waitForEvent('popup');
         await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
         const popup = await popupPromise;
@@ -1481,7 +1481,7 @@ const newTabChecks = async (browser: Browser, origin: string, base: string): Pro
           'unchanged edited reload',
         );
         await (await previewFrame(page)).waitForFunction(value => document.body.dataset.editedExample === value, String(cycle));
-        await page.locator('[data-example-header] summary').click();
+        await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
         const popupPromise = page.waitForEvent('popup');
         await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
         const popup = await popupPromise;
@@ -2891,7 +2891,7 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       await page.waitForFunction(
         "document.querySelector('iframe')?.contentWindow?.__fileTabRun === 'entry' && document.querySelector('iframe')?.contentWindow?.__helperRun === 'edited'",
       );
-      await page.locator('[data-example-header] summary').click();
+      await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
       const popupPromise = page.context().waitForEvent('page');
       await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
       const standalone = await popupPromise;
