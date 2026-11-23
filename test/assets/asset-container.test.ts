@@ -638,7 +638,7 @@ describe('Loader.loadContainer', () => {
 
     // The container is parsed and the entry is being built, but nothing is
     // stored yet - the window in which the key used to look completely unknown.
-    const joined = loader.load({ type: 'gated' as never, source: 'level.gated' });
+    const joined = loader.load({ type: 'gated', source: 'level.gated' });
 
     release();
     await unpacking;
@@ -647,7 +647,7 @@ describe('Loader.loadContainer', () => {
     // than starting a competing acquisition whose payload would overwrite it.
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     await expect(joined).resolves.toEqual({ body: 'from-container' });
-    expect(loader.peek({ type: 'gated' as never, source: 'level.gated' })).toEqual({ body: 'from-container' });
+    expect(loader.peek({ type: 'gated', source: 'level.gated' })).toEqual({ body: 'from-container' });
   });
 
   test.each([false, true])('a queued texture joins a container without fetching again (unpacked: %s)', async unpacked => {

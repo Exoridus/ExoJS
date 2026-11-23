@@ -92,7 +92,7 @@ describe('Loader.cacheSource', () => {
     loader._installAssetTypes([testAssetType<string, string>({ id: 'probe', token: Probe, extensions: ['probe'], create })]);
     mockFetch();
 
-    await loader.cacheSource({ type: 'probe' as never, source: 'thing.probe' });
+    await loader.cacheSource({ type: 'probe', source: 'thing.probe' });
 
     expect(create).not.toHaveBeenCalled();
     expect(store.set).toHaveBeenCalledWith(recordKey('probe', '/thing.probe'), 'payload');
