@@ -1,4 +1,4 @@
-import { Asset, Texture } from '@codexo/exojs';
+import { Texture } from '@codexo/exojs';
 import { TileMap } from '@codexo/exojs/tilemap';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -89,7 +89,7 @@ describe('tileMapType - with atlas tileset image', () => {
 
     expect(result.tilesets).toHaveLength(1);
     // The texture is loaded transitively, through the tiledSource dependency.
-    expect(load).toHaveBeenCalledWith(Asset.type('texture', 'tiles.png'));
+    expect(load).toHaveBeenCalledWith({ type: 'texture', source: 'tiles.png' });
   });
 });
 
@@ -110,7 +110,7 @@ describe('tileMapType - external tileset (.tsj)', () => {
   it('loads the external tileset texture', async () => {
     await loadRuntime('external-tileset.tmj');
 
-    expect(load).toHaveBeenCalledWith(Asset.type('texture', 'external-tileset.png'));
+    expect(load).toHaveBeenCalledWith({ type: 'texture', source: 'external-tileset.png' });
   });
 });
 

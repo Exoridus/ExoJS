@@ -6,7 +6,7 @@ import { asepriteType } from './asepriteType';
  * Default immutable Aseprite extension descriptor.
  *
  * Installs one asset type:
- * - {@link asepriteType} - `loader.load(asepriteType.asset('hero.aseprite.json'))`
+ * - {@link asepriteType} - `loader.load({ type: asepriteType, source: 'hero.aseprite.json' })`
  *   fetches the Aseprite JSON, resolves and loads the packed texture, and
  *   returns a fully-parsed {@link AsepriteSheet} with all frame-tag clips.
  *

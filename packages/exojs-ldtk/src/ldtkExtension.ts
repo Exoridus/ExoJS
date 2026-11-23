@@ -7,11 +7,11 @@ import { ldtkMapType, ldtkProjectType } from './ldtkTypes';
  * Default immutable LDtk extension descriptor.
  *
  * Installs two asset types:
- * - {@link ldtkMapType} - `loader.load(ldtkMapType.asset('world.ldtk'))` reads
+ * - {@link ldtkMapType} - `loader.load({ type: ldtkMapType, source: 'world.ldtk' })` reads
  *   the `.ldtk` document, loads all referenced tileset images, and returns a
  *   fully assembled {@link LdtkMap} with one runtime
  *   {@link import('@codexo/exojs-tilemap').TileMap} per level.
- * - {@link ldtkProjectType} - `loader.load(ldtkProjectType.asset('world.ldtk'))`
+ * - {@link ldtkProjectType} - `loader.load({ type: ldtkProjectType, source: 'world.ldtk' })`
  *   returns the world layout and tileset atlases only, for games that load
  *   levels on demand.
  *
