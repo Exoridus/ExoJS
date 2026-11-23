@@ -1,10 +1,10 @@
 import {
   Application,
   AudioBus,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
+  type Music,
   type RenderingContext,
   Scene,
   type Sound,
@@ -21,7 +21,7 @@ const THRESHOLD = -30 + 20 * Math.log10(VOICE_VOLUME);
 
 class DuckingScene extends Scene {
   private speech!: Sound;
-  private music!: AudioStream;
+  private music!: Music;
   private speechVoice: Voice | null = null;
   private musicVoice: Voice | null = null;
   private voiceBus!: AudioBus;

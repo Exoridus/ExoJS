@@ -1,9 +1,9 @@
 import {
   Application,
-  type AudioStream,
   BlendModes,
   Color,
   Graphics,
+  type Music,
   type Pausable,
   ResponsiveCanvasSizing,
   Scene,
@@ -21,7 +21,7 @@ const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(13
 const controls = { muted: toggle('Mute', false), swapped: toggle('Swap band roles', false) };
 
 class AudioReactiveParticlesScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private musicVoice?: Voice & Pausable;
   private analyser!: AudioAnalyser;
   private detector!: BeatDetector;
@@ -38,7 +38,7 @@ class AudioReactiveParticlesScene extends Scene {
   private colorIndex = 0;
 
   override async load(): Promise<void> {
-    // Streams have no placeholder: finish loading before creating scene resources.
+    // Music has no placeholder: finish loading before creating scene resources.
     this.music = await this.loader.load(assets.musicActionSynthRock);
   }
 

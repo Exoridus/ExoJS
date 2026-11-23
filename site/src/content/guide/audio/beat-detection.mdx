@@ -15,14 +15,14 @@ This chapter covers what the detector does and the events it fires. The next cha
 
 ## Connecting a source
 
-The detector taps a live audio source — an `AudioBus`, a `Voice`, an `AudioNode`, or a `MediaStream` — as a parallel branch that does not affect the source's main signal chain. It does not accept a `Sound`/`AudioStream` descriptor; tap the bus the audio plays through (e.g. `app.audio.music`) or the individual `Voice` you got back from `play()`:
+The detector taps a live audio source — an `AudioBus`, a `Voice`, an `AudioNode`, or a `MediaStream` — as a parallel branch that does not affect the source's main signal chain. It does not accept a `Sound`, `Music` or `AudioStream` descriptor; tap the bus the audio plays through (e.g. `app.audio.music`) or the individual `Voice` you got back from `play()`:
 
 ```ts
-import { type Application, AudioStream } from '@codexo/exojs';
+import { type Application, Music } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
-declare const track: AudioStream;
+declare const track: Music;
 
 application.audio.play(track, { loop: true });
 
@@ -33,11 +33,11 @@ detector.source = application.audio.music; // the bus the track plays through
 You can also pass the source as a constructor option, or point it at a single voice:
 
 ```ts
-import { type Application, AudioStream } from '@codexo/exojs';
+import { type Application, Music } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
-declare const track: AudioStream;
+declare const track: Music;
 
 const voice = application.audio.play(track, { loop: true });
 const detector = new BeatDetector({ source: voice });

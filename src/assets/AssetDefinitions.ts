@@ -1,4 +1,5 @@
-import type { AudioStream } from '#audio/AudioStream';
+import type { AudioStream, AudioStreamReconnectOptions } from '#audio/AudioStream';
+import type { Music } from '#audio/Music';
 import type { AudioSpriteClip } from '#audio/Sound';
 import type { Sound } from '#audio/Sound';
 import type { MediaCrossOrigin, PlaybackOptions, StreamingLoadEvent } from '#core/types';
@@ -35,7 +36,7 @@ export interface AssetDefinitions {
     };
   };
   music: {
-    resource: AudioStream;
+    resource: Music;
     config: {
       source: string;
       mimeType?: string;
@@ -43,6 +44,17 @@ export interface AssetDefinitions {
       loadEvent?: StreamingLoadEvent;
       playbackOptions?: Partial<PlaybackOptions>;
       stallTimeout?: number;
+    };
+  };
+  audioStream: {
+    resource: AudioStream;
+    config: {
+      source: string;
+      crossOrigin?: MediaCrossOrigin;
+      loadEvent?: StreamingLoadEvent;
+      playbackOptions?: Partial<PlaybackOptions>;
+      stallTimeout?: number;
+      reconnect?: AudioStreamReconnectOptions | false;
     };
   };
   json: { resource: unknown; config: { source: string } };
@@ -104,7 +116,7 @@ export type CoreValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'subtitle' | 
  * directly (`loader.load(Asset.type('music', ...))`) but cannot be held by a
  * catalog, inferred from a bare path, or handed out by `get()`.
  */
-export type LeaflessAssetKind = 'bmFont' | 'font' | 'image' | 'svg' | 'music' | 'video';
+export type LeaflessAssetKind = 'bmFont' | 'font' | 'image' | 'svg' | 'music' | 'audioStream' | 'video';
 
 /**
  * Types that a declaration-merged {@link AssetDefinitions} entry marks as value

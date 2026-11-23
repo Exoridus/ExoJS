@@ -1,0 +1,100 @@
+{
+  "title": "AudioStreamReconnectOptions",
+  "description": "Automatic reconnection after a broken connection.",
+  "symbol": "AudioStreamReconnectOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Automatic reconnection after a broken connection."
+      ],
+      "importLine": "import { AudioStreamReconnectOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "attempts",
+          "signature": "attempts?: number",
+          "signatureTokens": [
+            {
+              "text": "attempts",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Attempts before the stream gives up and reports 'disconnected'. Default 5."
+        },
+        {
+          "name": "delay",
+          "signature": "delay?: number",
+          "signatureTokens": [
+            {
+              "text": "delay",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Delay before the first attempt in milliseconds; each further attempt doubles it. Default 1000."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioStream.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioStream.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioStream.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioStream.ts"
+}
