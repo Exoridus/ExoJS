@@ -17,6 +17,7 @@ import {
   type Voice,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { startExample } from '@examples/runtime';
 
 const titleText = 'VOID EMPEROR';
 
@@ -212,4 +213,4 @@ const app = new Application({
   clearColor: new Color(16, 16, 24),
 });
 
-await app.start(BossIntroCinematicScene);
+await startExample(app, () => app.start(BossIntroCinematicScene));

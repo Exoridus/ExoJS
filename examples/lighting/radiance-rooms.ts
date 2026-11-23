@@ -12,7 +12,7 @@ import {
   Texture,
 } from '@codexo/exojs';
 import { AlphaOccluder, type Lighting, LightmapLighting, PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs/lighting';
-import { choice, demoPanel, slider, toggle } from '@examples/runtime';
+import { choice, demoPanel, slider, startExample, toggle } from '@examples/runtime';
 
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
 // draws a light and the one that transports it.
@@ -324,4 +324,4 @@ const app = new Application({
   clearColor: new Color(3, 4, 7),
 });
 
-await app.start(RadianceRoomsScene);
+await startExample(app, () => app.start(RadianceRoomsScene));
