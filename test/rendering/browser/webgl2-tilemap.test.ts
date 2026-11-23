@@ -30,8 +30,8 @@ import {
   createSolidTexture,
   isometricOverlapMap,
   makeTileset,
-  orthogonalOverhangLayer,
   orderedTextureRunMap,
+  orthogonalOverhangLayer,
   singleTileMap,
   wireTilemapRenderers,
   wireViaTiledExtension,
@@ -149,9 +149,11 @@ describe('WebGL2 tilemap — multi-texture batching', () => {
       expectPixelNear(readWebGl2Pixel(backend, 42, 18), [0, 0, 255, 255]);
     } finally {
       node.destroy();
+
       for (const texture of textures) {
         texture.destroy();
       }
+
       backend.destroy();
     }
   });
@@ -173,9 +175,11 @@ describe('WebGL2 tilemap — multi-texture batching', () => {
       expectPixelNear(readWebGl2Pixel(backend, 54, 18), [0, 255, 255, 255]);
     } finally {
       node.destroy();
+
       for (const texture of textures) {
         texture.destroy();
       }
+
       backend.destroy();
     }
   });
