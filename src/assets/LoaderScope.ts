@@ -53,7 +53,7 @@ let nextScopeId = 1;
  * destroyed.
  *
  * A scope describes a lifetime, never a set of assets: what to acquire comes
- * from an {@link Assets} catalog or an {@link Asset} descriptor passed to
+ * from an {@link Assets} catalog or an {@link AssetDescriptor} passed to
  * {@link get} / {@link load}, and typed access stays on that catalog.
  *
  * @example

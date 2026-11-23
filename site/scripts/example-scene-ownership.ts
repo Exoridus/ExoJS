@@ -154,8 +154,7 @@ export const exampleSceneOwnershipChecks = async (
           // Claim an asset the scene genuinely uses, not an unrelated survivor.
           let shared = null;
           if (sharedAsset === 'tiledSource') {
-            const { Asset } = await import('@codexo/exojs');
-            await app.loader.load(Asset.type('tiledSource', assets.driftFieldsMap.source));
+            await app.loader.load({ type: 'tiledSource', source: assets.driftFieldsMap.source });
             shared = first.mapNode.map.tilesets[0].texture.texture;
           } else if (sharedAsset !== null) {
             shared = await app.loader.load(assets[sharedAsset]);

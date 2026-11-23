@@ -105,7 +105,6 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
    * Type-level record of this type's parameters, so a descriptor naming the
    * type (`{ type: worldType, source }`) infers its source, resource and
    * options. Never present at runtime.
-   * @hidden
    */
   declare public readonly _typeParameters?: { readonly source: Source; readonly resource: Resource; readonly options: Options };
 

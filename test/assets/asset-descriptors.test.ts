@@ -1,6 +1,6 @@
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import { Assets } from '#assets/Assets';
-import { type AssetRequest, AssetType } from '#assets/AssetType';
+import { type AnyAssetType, type AssetRequest, AssetType } from '#assets/AssetType';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
 import { Json } from '#assets/tokens';
@@ -57,7 +57,7 @@ class NoiseType extends AssetType<undefined, Field, { readonly seed: number }> {
 const originalFetch = global.fetch;
 let fetchMock: ReturnType<typeof vi.fn>;
 
-const createLoader = (...types: Array<AssetType<never, unknown, never>>): Loader => {
+const createLoader = (...types: AnyAssetType[]): Loader => {
   const loader = new Loader({ basePath: '/' });
 
   materializeAssetTypes(loader, coreAssetTypes);
@@ -67,7 +67,7 @@ const createLoader = (...types: Array<AssetType<never, unknown, never>>): Loader
 };
 
 const claims = (loader: Loader, resource: object): number => {
-  const key = (loader as unknown as { _residency: { _getDirectKey(resource: object): string | undefined } })._residency._getDirectKey(
+  const key = (loader as unknown as { _residency: { _getHandleKey(resource: object): string | undefined } })._residency._getHandleKey(
     resource,
   );
 
