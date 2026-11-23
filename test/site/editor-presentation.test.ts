@@ -96,3 +96,47 @@ describe('playground presentation', () => {
     expect(render()).toContain('/en/api/shader-filter/');
   });
 });
+
+it('explains an unknown example and offers explicit recovery', () => {
+  const html = renderToStaticMarkup(
+    createElement(Editor, {
+      activeExample: null,
+      catalogLoadError: null,
+      selectionError: 'The requested example does not exist.',
+      selectedVersionId: 'current',
+      showSidebarToggle: false,
+      sidebarOpen: true,
+      sidebarToggleRef: createRef(),
+      onToggleSidebar() {},
+      onSelectStartingExample() {},
+      onRecoverCurrent() {},
+    }),
+  );
+  expect(html).toContain('The requested example does not exist.');
+  expect(html).toContain('Open starting example');
+  expect(html).not.toContain('<iframe');
+});
+
+it('renders an empty loaded program as a ready preview rather than a spinner', () => {
+  const html = renderToStaticMarkup(createElement(EditorPreview, { sourceCode: '', exampleMeta: example, selectedVersionId: 'current' }));
+  expect(html).toContain('<iframe');
+});
+
+it('only offers current recovery when the requested version is invalid', () => {
+  const html = renderToStaticMarkup(
+    createElement(Editor, {
+      activeExample: null,
+      catalogLoadError: null,
+      selectionError: 'The requested version is not recognized.',
+      selectedVersionId: '',
+      showSidebarToggle: false,
+      sidebarOpen: true,
+      sidebarToggleRef: createRef(),
+      onToggleSidebar() {},
+      onSelectStartingExample() {},
+      onRecoverCurrent() {},
+    }),
+  );
+  expect(html).toContain('Open current Playground');
+  expect(html).not.toContain('Open starting example');
+});

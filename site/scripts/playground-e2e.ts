@@ -2724,6 +2724,605 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
   });
 };
 
+const typeEditorText = async (page: Page, text: string): Promise<void> => {
+  await page.locator('.monaco-editor .overflow-guard').scrollIntoViewIfNeeded();
+  await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
+  await page.keyboard.press(endOfDocumentKey);
+  await page.keyboard.type(text);
+};
+
+const captureReliability = async (page: Page, name: string): Promise<void> => {
+  if (options.shots) {
+    await mkdir(options.shots, { recursive: true });
+    await page.screenshot({ path: join(options.shots, `reliability-${name}.png`) });
+  }
+};
+
+const reliabilityChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('reliability: real slash, paths and regex stay in entry and helper editors', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+    watchPage(page);
+
+    try {
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      const text = '\n// slash /assets/ship.png /a+/g';
+      await typeEditorText(page, text);
+      assert(
+        await page.evaluate(`window.monaco.editor.getEditors()[0].getValue().includes(${JSON.stringify(text.trim())})`),
+        'Slash text stays in the entry model',
+      );
+      assert(await page.evaluate('window.monaco.editor.getEditors()[0].hasTextFocus()'), 'Entry keeps Monaco text focus');
+      await captureReliability(page, 'typed-entry');
+      await page.getByRole('group', { name: 'Example files' }).getByRole('button', { name: 'runtime.ts Editable' }).click();
+      await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/shared/runtime.ts')");
+      await typeEditorText(page, text);
+      assert(
+        await page.evaluate(`window.monaco.editor.getEditors()[0].getValue().includes(${JSON.stringify(text.trim())})`),
+        'Slash text stays in the helper model',
+      );
+
+      for (const width of [900, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.getByRole('button', { name: 'Run', exact: true }).focus();
+        await page.keyboard.press('/');
+        const search = page.getByRole('searchbox', { name: 'Filter examples and tools' });
+        await search.waitFor({ state: 'visible' });
+        await waitFor(
+          () => search.evaluate(node => document.activeElement === node),
+          focused => focused,
+          `visible ${width}px shortcut search focus`,
+        );
+        await page.keyboard.type('/typed/path');
+        assert((await search.inputValue()) === '/typed/path', 'Slash typing stays in search');
+        await captureReliability(page, `search-${width}`);
+        await page.keyboard.press('Escape');
+      }
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: entry and helper drafts survive Run, history, reload, export and Reset', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+    page.on('dialog', dialog => void dialog.accept());
+
+    try {
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      await typeEditorText(page, '\n// draft entry\n(window as any).__draftEntry = "kept";');
+      await page.getByRole('group', { name: 'Example files' }).getByRole('button', { name: 'runtime.ts Editable' }).click();
+      await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/shared/runtime.ts')");
+      await typeEditorText(page, '\n// draft helper\n(window as any).__draftHelper = "kept";');
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      await page.waitForFunction(
+        'document.querySelector("iframe")?.contentWindow?.__draftEntry === "kept" && document.querySelector("iframe")?.contentWindow?.__draftHelper === "kept"',
+      );
+      await page.locator('#playground-navigation a[href="#/current/scene-graph/nested-transforms"]').click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('nested-transforms')");
+      await page.goBack();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('__draftEntry')");
+      await page.goForward();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('nested-transforms')");
+      await page.goBack();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('__draftEntry')");
+      await page.reload();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('__draftEntry')");
+      assert((await page.locator('[data-draft-status]').textContent())?.includes('restored'), 'Reload reports a restored draft');
+      await captureReliability(page, 'draft-restored');
+      await page.getByRole('group', { name: 'Example files' }).getByRole('button', { name: 'runtime.ts Editable' }).click();
+      await page.waitForFunction("window.monaco.editor.getEditors()[0].getValue().includes('__draftHelper')");
+      const helper = await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()');
+      await page.getByRole('button', { name: 'File options', exact: true }).click();
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('menuitem', { name: 'Export this file', exact: true }).click();
+      const download = await downloadPromise;
+      assert((await readFile((await download.path())!, 'utf8')) === helper, 'Export contains the selected edited helper');
+      await page.getByRole('button', { name: 'Reset', exact: true }).click();
+      assert(
+        !(await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('__draftHelper'),
+        'Reset restores helper source',
+      );
+      await page.reload();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      assert(
+        !(await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('__draftEntry'),
+        'Reset clears the stored entry draft',
+      );
+      assert((await page.locator('iframe').count()) === 1, 'Recovery retains one preview iframe');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  for (const failure of [404, 500, 'network'] as const) {
+    await check(`reliability: source ${failure} is a transport error with retry`, async () => {
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      watchPage(page);
+      let broken = failure !== 404;
+      let requests = 0;
+      await page.route(/\/examples\/getting-started\/hello-world\.(?:ts|js)(?:\?.*)?$/, async route => {
+        requests++;
+
+        if (broken) {
+          if (failure === 'network') {
+            await route.abort('failed');
+          } else {
+            await route.fulfill({ status: failure, contentType: 'text/html', body: '<h1>TRANSPORT_ERROR_BODY</h1>' });
+          }
+        } else {
+          await route.continue();
+        }
+      });
+
+      try {
+        await page.goto(`${origin}${base}/en/playground/?version=current&example=getting-started/hello-world`);
+
+        if (failure === 404) {
+          await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+          await typeEditorText(page, '\n// draft survives source recovery');
+          broken = true;
+          await page.reload();
+        }
+
+        await page.getByRole('button', { name: 'Retry source', exact: true }).waitFor();
+        await captureReliability(page, `source-${failure}`);
+        assert((await page.locator('iframe').count()) === 0, 'A transport failure is not executed');
+        assert(
+          !(await page.evaluate<string>('window.monaco?.editor.getEditors()[0]?.getValue() ?? ""')).includes('TRANSPORT_ERROR_BODY'),
+          'An error body never reaches Monaco',
+        );
+        broken = false;
+        await page.getByRole('button', { name: 'Retry source', exact: true }).click();
+        await page.waitForFunction("document.querySelector('iframe')?.contentDocument?.querySelector('canvas')");
+        assert(requests === (failure === 404 ? 6 : 4), `Each TS/JS source loads once per attempt, got ${requests}`);
+
+        if (failure === 404) {
+          await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('draft survives source recovery')");
+        }
+
+        assert(
+          (await page.getByRole('button', { name: 'Retry source', exact: true }).count()) === 0,
+          'Successful retry clears transport error',
+        );
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await page.context().close();
+      }
+    });
+  }
+
+  await check('reliability: current starts while the registry is stalled and its timeout can retry', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    watchPage(page);
+    let broken = true;
+    await page.route('**/registry.npmjs.org/**', async route => {
+      if (!broken) {
+        await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ versions: {}, 'dist-tags': {} }) });
+      }
+    });
+
+    try {
+      const started = Date.now();
+      await page.goto(`${origin}${base}/en/playground/?version=current&example=getting-started/hello-world`);
+      await page.waitForFunction("document.querySelector('iframe')?.contentDocument?.querySelector('canvas')", undefined, {
+        timeout: 12000,
+      });
+      assert(Date.now() - started < 15000, 'Current runs before the registry timeout');
+      await page.getByRole('button', { name: 'Retry release list', exact: true }).waitFor({ timeout: 20000 });
+      broken = false;
+      await page.getByRole('button', { name: 'Retry release list', exact: true }).click();
+      await page.getByRole('button', { name: 'Retry release list', exact: true }).waitFor({ state: 'detached' });
+      assert((await page.locator('iframe').count()) === 1, 'Registry recovery preserves one demo');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  for (const { width, height, colorScheme } of [
+    { width: 320, height: 740, colorScheme: 'light' },
+    { width: 390, height: 844, colorScheme: 'dark' },
+  ] as const) {
+    await check(`reliability: compact registry recovery preserves mobile space at ${width}px`, async () => {
+      const page = await browser.newPage({ viewport: { width, height }, hasTouch: true, colorScheme });
+      watchPage(page);
+      let broken = true;
+      await page.route('**/registry.npmjs.org/**', async route => {
+        await route.fulfill({
+          status: broken ? 503 : 200,
+          contentType: 'application/json',
+          body: JSON.stringify(broken ? { error: 'Unavailable' } : { versions: {}, 'dist-tags': {} }),
+        });
+      });
+
+      try {
+        await page.goto(`${origin}${base}/de/playground/?version=current&example=getting-started/hello-world`);
+        const notice = page.locator('[data-release-notice]');
+        const retry = page.getByRole('button', { name: 'Retry release list', exact: true });
+        await retry.waitFor();
+        await page.waitForFunction("document.querySelector('iframe')?.contentDocument?.querySelector('canvas')");
+        await page.evaluate(() => document.fonts.ready);
+        const geometry = await notice.evaluate(element => {
+          const box = element.getBoundingClientRect();
+          const message = element.querySelector('span')!;
+          const messageBox = message.getBoundingClientRect();
+          const buttonBox = element.querySelector('button')!.getBoundingClientRect();
+
+          return {
+            text: message.textContent,
+            height: box.height,
+            messageHeight: messageBox.height,
+            lineHeight: Number.parseFloat(getComputedStyle(message).lineHeight),
+            buttonWidth: buttonBox.width,
+            buttonHeight: buttonBox.height,
+            sameRow: messageBox.top < buttonBox.bottom && buttonBox.top < messageBox.bottom,
+            fits: box.left >= 0 && box.right <= innerWidth && element.scrollWidth <= element.clientWidth,
+            windowScroll: scrollY,
+            mainScroll: element.parentElement!.scrollTop,
+          };
+        });
+        assert(geometry.text?.includes('Release list unavailable'), 'Notice explains the unavailable release list');
+        assert(geometry.text?.includes('Current Playground is available'), 'Notice confirms the current Playground remains usable');
+        assert(geometry.height <= 60, `Recovery notice leaves room for the editor: ${JSON.stringify(geometry)}`);
+        assert(geometry.messageHeight <= geometry.lineHeight * 2 + 1, 'The complete message uses at most two lines');
+        assert(geometry.sameRow && geometry.fits, 'Retry shares the message row without clipping');
+        assert(geometry.buttonWidth >= 44 && geometry.buttonHeight >= 44, 'Retry retains a 44px touch target');
+        assert(geometry.windowScroll === 0 && geometry.mainScroll === 0, 'The fresh notice is measured without outer or inner scrolling');
+        console.log('Mobile release notice:', JSON.stringify({ viewport: { width, height }, colorScheme, ...geometry }));
+        await captureReliability(page, `registry-${width}-${colorScheme}`);
+
+        const main = await notice.evaluateHandle(element => element.parentElement!);
+        const frame = page.frames().find(candidate => candidate.url().includes('preview.html'))!;
+        const frameUrl = frame.url();
+        broken = false;
+        await retry.click();
+        await notice.waitFor({ state: 'detached' });
+        assert(!frame.isDetached() && frame.url() === frameUrl, 'Registry recovery preserves the running preview frame');
+        assert((await frame.locator('canvas').count()) === 1, 'The current demo remains mounted after registry recovery');
+        assert(
+          (await page.evaluate(() => scrollY === 0)) && (await main.evaluate(element => element.scrollTop === 0)),
+          'Retry does not scroll the page or main content',
+        );
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await page.context().close();
+      }
+    });
+  }
+
+  await check('reliability: missing required types retry without losing source edits', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+    let broken = true;
+    await page.route('**/vendor/exojs-demo-assets/esm/index.d.ts', async route => {
+      if (broken) {
+        await route.abort('failed');
+      } else {
+        await route.continue();
+      }
+    });
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/?version=current&example=getting-started/hello-world`);
+      await page.getByRole('button', { name: 'Retry editor types', exact: true }).waitFor();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      await typeEditorText(page, '\n// retained through type retry');
+      broken = false;
+      await page.getByRole('button', { name: 'Retry editor types', exact: true }).click();
+      await page.locator('[data-typings-status]').waitFor({ state: 'detached' });
+      assert(
+        await page.evaluate("window.monaco.editor.getEditors()[0].getValue().includes('retained through type retry')"),
+        'Typing retry preserves edits',
+      );
+      const diagnostics = await page.evaluate<string[]>(`(async()=>{
+        const model=window.monaco.editor.getEditors()[0].getModel();
+        const factory=await window.monaco.languages.typescript.getTypeScriptWorker();
+        const worker=await factory(model.uri);
+        return (await worker.getSemanticDiagnostics(model.uri.toString())).map(item=>String(item.messageText));
+      })()`);
+      assert(diagnostics.length === 0, diagnostics.join('\n'));
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: storage denial keeps the newest draft across navigation', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+    await page.addInitScript(() => {
+      const setItem = Storage.prototype.setItem;
+
+      Storage.prototype.setItem = function (key, value): void {
+        if (key.includes('playground-drafts')) {
+          throw new DOMException('Quota exceeded', 'QuotaExceededError');
+        }
+
+        setItem.call(this, key, value);
+      };
+    });
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/?version=current&example=getting-started/hello-world`);
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      await typeEditorText(page, '\n// memory-only draft');
+      await page.waitForFunction("document.querySelector('[data-draft-status]')?.textContent?.includes('page only')");
+      assert(
+        (await page.locator('[data-draft-status]').textContent())?.includes('page only'),
+        'Storage failure reports limited durability',
+      );
+      await page.locator('#playground-navigation a[href="#/current/scene-graph/nested-transforms"]').click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('nested-transforms')");
+      await page.waitForFunction("document.querySelector('[data-draft-status]')?.textContent?.includes('Other drafts')");
+      assert(
+        (await page.locator('[data-draft-status]').textContent())?.includes('Other drafts'),
+        'A different example retains the warning for memory-only edits',
+      );
+      await page.goBack();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('memory-only draft')");
+      await page.waitForFunction("document.querySelector('[data-draft-status]')?.textContent?.includes('In-page draft restored')");
+      assert(
+        (await page.locator('[data-draft-status]').textContent())?.includes('In-page draft restored'),
+        'Restored memory draft does not claim session persistence',
+      );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: delayed source cannot replace a newer example selection', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'scene-graph/nested-transforms');
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let delayed = 0;
+    await page.route(/\/examples\/getting-started\/hello-world\.(?:ts|js)(?:\?.*)?$/, async route => {
+      delayed++;
+      await pending;
+      await route.continue();
+    });
+
+    try {
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('nested-transforms')");
+      await page.locator('#playground-navigation a[href="#/current/getting-started/hello-world"]').click();
+      await waitFor(
+        async () => delayed,
+        count => count === 2,
+        'both delayed source requests',
+      );
+      await page.locator('#playground-navigation a[href="#/current/scene-graph/nested-transforms"]').click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('nested-transforms')");
+      const response = page.waitForResponse(url => url.url().includes('/hello-world.ts'));
+      release();
+      await response;
+      await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      assert(page.url().includes('nested-transforms'), 'Late source leaves the current route unchanged');
+      assert(
+        await page.evaluate("window.monaco.editor.getEditors()[0].getModel().uri.path.includes('nested-transforms')"),
+        'Late source leaves the current model unchanged',
+      );
+      assert((await page.locator('iframe').count()) === 1, 'Only the current preview remains active');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      release();
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: delayed version work preserves invalid history', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let requested = false;
+    await page.route('**/examples/examples.json*', async route => {
+      requested = true;
+      await pending;
+      await route.continue();
+    });
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/#/unknown-version/getting-started/hello-world`);
+      await page.getByRole('button', { name: 'Open current Playground', exact: true }).click();
+      await waitFor(
+        async () => requested,
+        value => value,
+        'delayed current catalog',
+      );
+      await page.goBack();
+      await page.getByText('The requested version "unknown-version" is not recognized.', { exact: false }).waitFor();
+      const response = page.waitForResponse(url => url.url().includes('/examples/examples.json'));
+      release();
+      await (await response).finished();
+      await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      assert(page.url().includes('unknown-version'), 'Late catalog must not rewrite an invalid history entry');
+      assert((await page.locator('iframe').count()) === 0, 'Invalid version remains an error after the old catalog arrives');
+      assert(
+        (await page.getByRole('button', { name: 'Open starting example', exact: true }).count()) === 0,
+        'Invalid versions only offer usable current recovery',
+      );
+      await page.goForward();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('/current/')");
+      assert(page.url().includes('current'), 'Forward can recover into the now-loaded current catalog');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      release();
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: delayed version work cannot expose retired types', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let registryRequested = false;
+    let declarationsServed = 0;
+    const declarationCount = (JSON.parse(readFileSync(join(distDir, 'vendor/exojs/esm-typings.json'), 'utf8')) as string[]).length;
+    const pendingRequests = new Set<string>();
+    page.on('request', request => {
+      if (request.url().includes('/vendor/exojs/0.19.0/')) {
+        pendingRequests.add(request.url());
+      }
+    });
+    page.on('requestfinished', request => pendingRequests.delete(request.url()));
+    page.on('requestfailed', request => pendingRequests.delete(request.url()));
+    await page.route('**/raw.githubusercontent.com/**/v0.19.0/examples/**', route => {
+      const path = new URL(route.request().url()).pathname.split('/examples/')[1];
+
+      return route.fulfill({
+        contentType: path.endsWith('.json') ? 'application/json' : 'text/plain',
+        body: readFileSync(join(distDir, 'examples', path), 'utf8'),
+      });
+    });
+    await page.route('**/vendor/exojs/0.19.0/**', async route => {
+      const path = new URL(route.request().url()).pathname.split('/vendor/exojs/0.19.0/')[1];
+
+      if (path === 'monaco-registry.json') {
+        registryRequested = true;
+        await pending;
+      }
+
+      let body = readFileSync(join(distDir, 'vendor/exojs', path), 'utf8');
+
+      if (path === 'monaco-registry.json') {
+        const registry = JSON.parse(body) as { packageJson: string };
+        const packageJson = JSON.parse(registry.packageJson) as { version: string };
+        packageJson.version = '0.19.0';
+        registry.packageJson = JSON.stringify(packageJson);
+        body = JSON.stringify(registry);
+      }
+
+      await route.fulfill({ contentType: path.endsWith('.json') ? 'application/json' : 'text/plain', body });
+
+      if (path.endsWith('.d.ts')) {
+        declarationsServed++;
+      }
+    });
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/#/current/getting-started/hello-world`);
+      await page.waitForFunction(
+        "window.monaco?.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json']",
+      );
+      const currentVersion = await page.evaluate<string>(
+        "JSON.parse(window.monaco.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json'].content).version",
+      );
+      await page.evaluate(
+        "history.pushState(null, '', '#/0.19.0/getting-started/hello-world'); window.dispatchEvent(new PopStateEvent('popstate'));",
+      );
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('/0.19.0/')");
+      await waitFor(
+        async () => registryRequested,
+        value => value,
+        'delayed historical type registry',
+      );
+      const libraries = await page.evaluate<number[]>(
+        "['typescriptDefaults','javascriptDefaults'].map(name => Object.keys(window.monaco.languages.typescript[name].getExtraLibs()).length)",
+      );
+      assert(
+        libraries.every(count => count === 0),
+        `Previous version declarations must be unavailable while loading, got ${libraries.join('/')}`,
+      );
+      await page.goBack();
+      await page.waitForFunction(
+        "window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('/current/') && !!window.monaco.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json']",
+      );
+      release();
+      await waitFor(
+        async () => declarationsServed,
+        count => count === declarationCount,
+        'retired declaration downloads',
+      );
+      await waitFor(
+        async () => pendingRequests.size,
+        count => count === 0,
+        'retired type responses',
+      );
+      await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      const activeVersion = await page.evaluate<string>(
+        "JSON.parse(window.monaco.languages.typescript.typescriptDefaults.getExtraLibs()['file:///node_modules/@codexo/exojs/package.json'].content).version",
+      );
+      assert(activeVersion === currentVersion, 'A retired historical request cannot replace current declarations');
+      assert(page.url().includes('current'), 'A late typing response leaves the current route unchanged');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      release();
+      await page.context().close();
+    }
+  });
+
+  await check('reliability: unknown paths stay explicit and historical source failures recover to current', async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    watchPage(page);
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/?version=current&example=unknown/not-an-example`);
+      await page.getByRole('button', { name: 'Open starting example', exact: true }).waitFor();
+      assert(page.url().includes('unknown'), 'Unknown route remains visible in the URL');
+      assert((await page.locator('iframe').count()) === 0, 'Unknown route is not a silent default demo');
+      await page.route('**/raw.githubusercontent.com/**', route =>
+        route.fulfill({
+          status: route.request().url().endsWith('examples.json') ? 200 : 404,
+          contentType: 'application/json',
+          body: route.request().url().endsWith('examples.json')
+            ? readFileSync(resolve(repoRoot, 'examples/examples.json'), 'utf8')
+            : 'HISTORICAL_SOURCE_MISSING',
+        }),
+      );
+      await page.goto(`${origin}${base}/en/playground/?version=0.19.0&example=getting-started/hello-world`);
+      await page.getByRole('button', { name: 'Retry source', exact: true }).waitFor();
+      assert(page.url().includes('0.19.0'), 'Historical failure retains the requested version');
+      await page.getByRole('button', { name: 'Open current Playground', exact: true }).last().click();
+      await page.waitForFunction("document.querySelector('iframe')?.contentDocument?.querySelector('canvas')");
+      assert(page.url().includes('current'), 'Recovery explicitly selects current');
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+};
+
 /** The editor's go-to-end-of-document chord: macOS has no Control+End binding in the editor. */
 const endOfDocumentKey = process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End';
 
@@ -2745,6 +3344,7 @@ const main = async (): Promise<void> => {
   try {
     const groups: Record<PlaygroundGroup, () => Promise<void>> = {
       'file-tabs': () => fileTabChecks(browser, origin, base),
+      reliability: () => reliabilityChecks(browser, origin, base),
       header: () => headerChecks(browser, origin, base),
       'native-controls': () => nativeControlChecks(browser, origin, base),
       'responsive-preview': () => responsivePreviewChecks(browser, origin, base),

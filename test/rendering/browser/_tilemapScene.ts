@@ -69,6 +69,127 @@ export const createQuadrantTexture = (): Texture => {
   return new Texture(canvas);
 };
 
+/**
+ * Every cell overhangs upwards, so the chunk builder must preserve exact cell
+ * order rather than texture-sorting. The GPU can still merge distinct atlas
+ * runs into one draw via per-instance texture slots.
+ *
+ * Textures supplied by a test are 12x20 px. This helper never owns them.
+ */
+export const orderedTextureRunMap = (textures: readonly Texture[], order: readonly number[]): TileMap => {
+  const tilesets = textures.map(
+    (texture, index) =>
+      new TileSet({
+        name: `ordered-${index}`,
+        texture: new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }),
+        tileWidth: 12,
+        tileHeight: 20,
+        tileCount: 1,
+      }),
+  );
+  const layer = new TileLayer({
+    id: 1,
+    name: 'ordered-runs',
+    width: order.length,
+    height: 1,
+    tileWidth: 12,
+    tileHeight: 12,
+    chunkWidth: order.length,
+    chunkHeight: 1,
+    tilesets,
+  });
+
+  for (let x = 0; x < order.length; x++) {
+    const tileset = tilesets[order[x]!];
+
+    if (tileset === undefined) {
+      throw new Error('orderedTextureRunMap: invalid texture index.');
+    }
+
+    layer.setTileAt(x, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+  }
+
+  return new TileMap({
+    name: 'ordered-texture-runs',
+    width: order.length,
+    height: 1,
+    tileWidth: 12,
+    tileHeight: 12,
+    tilesets,
+    layers: [layer],
+  });
+};
+
+/**
+ * An A-B-A-B painter-order oracle with real 8px vertical overlap and alpha.
+ * The optimized map switches textures; the reference packs identical pixels
+ * into a single atlas. Their framebuffer RGBA must match for BOTH backends.
+ */
+export const overlappingTextureRunPair = (
+  colors: readonly string[],
+  order: readonly number[],
+): { optimized: TileMap; reference: TileMap; textures: Texture[] } => {
+  const width = 12;
+  const height = 20;
+  const textures = colors.map(color => createSolidRectTexture(color, width, height));
+  const atlasCanvas = document.createElement('canvas');
+
+  atlasCanvas.width = width * colors.length;
+  atlasCanvas.height = height;
+
+  const context = atlasCanvas.getContext('2d')!;
+
+  colors.forEach((color, index) => {
+    context.fillStyle = color;
+    context.fillRect(index * width, 0, width, height);
+  });
+
+  const atlas = new Texture(atlasCanvas);
+  const sets = textures.map(
+    (texture, index) =>
+      new TileSet({
+        name: `transparent-${index}`,
+        texture: new TextureRegion(texture, { x: 0, y: 0, width, height }),
+        tileWidth: width,
+        tileHeight: height,
+        tileCount: 1,
+      }),
+  );
+  const sharedSet = new TileSet({
+    name: 'single-atlas-reference',
+    texture: new TextureRegion(atlas, { x: 0, y: 0, width: atlasCanvas.width, height }),
+    tileWidth: width,
+    tileHeight: height,
+    tileCount: colors.length,
+  });
+
+  const build = (tilesets: TileSet[], select: (index: number) => { tileset: TileSet; localTileId: number }): TileMap => {
+    const layer = new TileLayer({
+      id: 1,
+      name: 'transparent-overlap',
+      width: 1,
+      height: order.length,
+      tileWidth: width,
+      tileHeight: 12,
+      chunkWidth: 1,
+      chunkHeight: order.length,
+      tilesets,
+    });
+
+    for (let row = 0; row < order.length; row++) {
+      layer.setTileAt(0, row, { ...select(order[row]!), transform: TILE_TRANSFORM_IDENTITY });
+    }
+
+    return new TileMap({ width: 1, height: order.length, tileWidth: width, tileHeight: 12, tilesets, layers: [layer] });
+  };
+
+  return {
+    optimized: build(sets, index => ({ tileset: sets[index]!, localTileId: 0 })),
+    reference: build([sharedSet], index => ({ tileset: sharedSet, localTileId: index })),
+    textures: [...textures, atlas],
+  };
+};
+
 /** A single 16×16 tile tileset over a texture (`tileCount` covering the grid). */
 export const makeTileset = (texture: Texture, name = 'tiles', tileCount = 1): TileSet =>
   new TileSet({

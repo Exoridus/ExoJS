@@ -80,6 +80,11 @@ const fixture = (readOnly = false) => {
   };
   const context = {
     readOnly,
+    selectedVersionId: 'current',
+    playgroundDraftKey: () => 'entry',
+    playgroundDrafts: { load: () => null, hasUnpersistedChanges: () => false },
+    setOtherUnpersistedDrafts() {},
+    draftDurableRef: { current: true },
     isEditableSharedFile,
     readOnlyRef: { current: readOnly },
     sourcePath: 'entry.ts',

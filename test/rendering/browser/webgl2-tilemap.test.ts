@@ -13,6 +13,7 @@
  */
 
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileLayerNode, TileMap, TileMapNode, TileSet } from '@codexo/exojs/tilemap';
+import { page, server } from 'vitest/browser';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -30,7 +31,9 @@ import {
   createSolidTexture,
   isometricOverlapMap,
   makeTileset,
+  orderedTextureRunMap,
   orthogonalOverhangLayer,
+  overlappingTextureRunPair,
   singleTileMap,
   wireTilemapRenderers,
   wireViaTiledExtension,
@@ -38,7 +41,10 @@ import {
 
 const canvasSize = 64;
 
-const createBackend = async (wire: (backend: WebGl2Backend) => void = wireTilemapRenderers): Promise<WebGl2Backend> => {
+const createBackend = async (
+  wire: (backend: WebGl2Backend) => void = wireTilemapRenderers,
+  alphaMode: 'opaque' | 'premultiplied' = 'opaque',
+): Promise<WebGl2Backend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -51,6 +57,7 @@ const createBackend = async (wire: (backend: WebGl2Backend) => void = wireTilema
       canvas: { width: canvasSize, height: canvasSize },
       rendering: {
         debug: false,
+        alphaMode,
         webglAttributes: {
           antialias: false,
           preserveDrawingBuffer: true,
@@ -124,6 +131,129 @@ describe('WebGL2 tilemap — multiple tilesets', () => {
       node.destroy();
       red.destroy();
       blue.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+// Multi-texture batching must reduce draw calls without defeating the ordered
+// overhang pages from PR #832, on BOTH GPU backends.
+describe('WebGL2 tilemap — multi-texture batching', () => {
+  test('batches alternating atlas runs without changing their painter order', async () => {
+    const backend = await createBackend();
+    const textures = ['#ff0000', '#0000ff'].map(color => createSolidRectTexture(color, 12, 20));
+    const map = orderedTextureRunMap(textures, [0, 1, 0, 1]);
+    const node = new TileMapNode(map);
+
+    try {
+      node.setPosition(0, 12);
+      render(backend, node);
+      expect(backend.stats.drawCalls).toBe(1);
+      expectPixelNear(readWebGl2Pixel(backend, 6, 18), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 18, 18), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 30, 18), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 42, 18), [0, 0, 255, 255]);
+    } finally {
+      node.destroy();
+
+      for (const texture of textures) {
+        texture.destroy();
+      }
+
+      backend.destroy();
+    }
+  });
+
+  test('matches a single-atlas RGBA oracle for actually overlapping translucent A-B-A-B tiles', async () => {
+    // The default opaque canvas clamps framebuffer alpha to 255, hiding the overlap contract.
+    const backend = await createBackend(wireTilemapRenderers, 'premultiplied');
+    const pair = overlappingTextureRunPair(['rgba(255, 0, 0, 0.5)', 'rgba(0, 0, 255, 0.5)'], [0, 1, 0, 1]);
+    const optimized = new TileMapNode(pair.optimized);
+    const reference = new TileMapNode(pair.reference);
+    const sampleY = [8, 20, 32, 44, 56];
+    const visualCanvas = backend.context.canvas as HTMLCanvasElement;
+
+    visualCanvas.style.width = '64px';
+    visualCanvas.style.height = '64px';
+    document.body.appendChild(visualCanvas);
+
+    try {
+      optimized.setPosition(24, 12);
+      reference.setPosition(24, 12);
+
+      backend.resetStats();
+      backend.clear(Color.transparentBlack);
+      optimized.render(backend);
+      backend.flush();
+
+      const actual = sampleY.map(y => readWebGl2Pixel(backend, 30, y));
+
+      expect(backend.stats.drawCalls).toBe(1);
+
+      backend.resetStats();
+      backend.clear(Color.transparentBlack);
+      reference.render(backend);
+      backend.flush();
+
+      const expected = sampleY.map(y => readWebGl2Pixel(backend, 30, y));
+
+      for (let index = 0; index < sampleY.length; index++) {
+        expectPixelNear(actual[index]!, expected[index]!);
+      }
+
+      // The later blue tile must be visibly in front at the first overlap.
+      // Unlike the original opaque adjacent-row test, alpha is not always 255.
+      expect(actual[1]![2]).toBeGreaterThan(actual[1]![0]);
+      expect(actual[1]![3]).toBeGreaterThan(actual[0]![3]);
+      expect(actual[1]![3]).toBeLessThan(255);
+
+      // CI retains both exact-head canvases as reviewable visual evidence.
+      await page.screenshot({
+        element: backend.context.canvas as HTMLCanvasElement,
+        path: `../../../.workspace/visual-review/current/tile-alpha-reference-webgl2-${server.browser}.png`,
+      });
+      backend.clear(Color.transparentBlack);
+      optimized.render(backend);
+      backend.flush();
+      await page.screenshot({
+        element: backend.context.canvas as HTMLCanvasElement,
+        path: `../../../.workspace/visual-review/current/tile-alpha-multitexture-webgl2-${server.browser}.png`,
+      });
+    } finally {
+      visualCanvas.remove();
+      optimized.destroy();
+      reference.destroy();
+
+      for (const texture of pair.textures) {
+        texture.destroy();
+      }
+
+      backend.destroy();
+    }
+  });
+
+  test('flushes safely on the fifth distinct atlas', async () => {
+    const backend = await createBackend();
+    const textures = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff'].map(color => createSolidRectTexture(color, 12, 20));
+    const map = orderedTextureRunMap(textures, [0, 1, 2, 3, 4]);
+    const node = new TileMapNode(map);
+
+    try {
+      node.setPosition(0, 12);
+      render(backend, node);
+      expect(backend.stats.drawCalls).toBe(2);
+      expectPixelNear(readWebGl2Pixel(backend, 6, 18), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 18, 18), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 30, 18), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 42, 18), [255, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 54, 18), [0, 255, 255, 255]);
+    } finally {
+      node.destroy();
+
+      for (const texture of textures) {
+        texture.destroy();
+      }
+
       backend.destroy();
     }
   });
