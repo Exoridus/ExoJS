@@ -132,6 +132,14 @@ const main = (): void => {
   console.log('\nComparing regenerated output against committed content...');
   const synced = compareDirectories(apiDir, generatedDir);
 
+  // Temporary diagnostic: print exact generated files for a remote-only
+  // authoring session. Remove before merge, after copying the generated docs.
+  for (const name of ['asset-load-entry.json', 'loaded-asset-entry.json']) {
+    console.log(`EXOJS_GENERATED_DOC_START:${name}`);
+    console.log(fs.readFileSync(path.join(generatedDir, name), 'utf8'));
+    console.log(`EXOJS_GENERATED_DOC_END:${name}`);
+  }
+
   // 5. Clean up
   fs.rmSync(tmpDir, { recursive: true, force: true });
 
