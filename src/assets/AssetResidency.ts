@@ -93,7 +93,7 @@ export class AssetResidency {
   // Reverse lookup: loaded resource object -> the (type, source) it was first
   // stored under. Backs Loader.keyFor for scene serialization. A WeakMap so
   // it never retains resources; only object resources participate.
-  private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string; key: ResourceKey }>();
+  private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string; key: ResourceKey; direct: boolean }>();
   private readonly _inFlight = new Map<ResourceKey, Promise<unknown>>();
   private readonly _acquisitionOptions = new Map<ResourceKey, unknown>();
   private readonly _preventStoreKeys = new Set<ResourceKey>();
@@ -1501,7 +1501,7 @@ export class AssetResidency {
 
     // Record the canonical reverse key (first source wins) for object resources.
     if (typeof resource === 'object' && resource !== null && !this._resourceKeys.has(resource)) {
-      this._resourceKeys.set(resource, { type: asset.type, source: asset.source, key });
+      this._resourceKeys.set(resource, { type: asset.type, source: asset.source, key, direct: Object.hasOwn(asset, 'directSource') });
     }
 
     // Register the stored seamless resource as its key's representative so a
@@ -1885,7 +1885,7 @@ export class AssetResidency {
   public _keyFor(resource: object): { readonly type: AssetConstructor; readonly source: string } | null {
     const entry = this._resourceKeys.get(resource);
 
-    return entry === undefined ? null : { type: entry.type, source: entry.source };
+    return entry === undefined || entry.direct ? null : { type: entry.type, source: entry.source };
   }
 
   /**
@@ -1905,6 +1905,10 @@ export class AssetResidency {
     const key = loaded?.key ?? this._handleKeys.get(resource);
     const meta = _readMeta(resource);
 
+    if (loaded?.direct === true) {
+      return { kind: 'error', message: 'A resource built from a non-locator source cannot be referenced by a saved document.' };
+    }
+
     if (key === undefined) {
       return meta?.live === true ? this._requestLog.declared(meta, resource) : null;
     }
@@ -1913,11 +1917,15 @@ export class AssetResidency {
   }
 
   /**
-   * The canonical key a deferred handle / value-ref is registered under, or
-   * `undefined`. Backs releasing a handle. @internal
+   * The canonical key a deferred handle / value-ref is registered under - or,
+   * for a resource built from a direct source, the key it is stored under, as
+   * such a resource is its own claim identity - or `undefined`. Backs releasing
+   * a handle. @internal
    */
   public _getHandleKey(handle: object): ResourceKey | undefined {
-    return this._handleKeys.get(handle);
+    const direct = this._resourceKeys.get(handle);
+
+    return this._handleKeys.get(handle) ?? (direct?.direct === true ? direct.key : undefined);
   }
 
   /**

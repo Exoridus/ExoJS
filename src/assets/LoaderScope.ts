@@ -2,9 +2,8 @@ import type { ManifestPack } from '#assets/container/AssetManifest';
 import { Signal } from '#core/Signal';
 import type { Destroyable } from '#core/types';
 
-import type { Asset, ResourceAsset, ValueAsset } from './Asset';
-import type { AssetConstructor } from './AssetConstructor';
 import type { CatalogEntry, KindByPath, LeafForPath } from './AssetDefinitions';
+import type { AssetDescriptorLeaf, LocatorAssetDescriptor, ValidatedLeafDescriptor } from './AssetDescriptor';
 import type { AssetLoadInput, LoadedAssets, ValidatedAssetLoadInput } from './assetLoadGroup';
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 import type { Assets, InferAssetsProperties } from './Assets';
@@ -167,9 +166,8 @@ export class LoaderScope implements Destroyable {
    *   form.
    */
   public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
-  // A value-kind descriptor (or a materialized value leaf) resolves to a value leaf.
-  public get<T>(asset: ValueAsset<T> | CatalogValueLeaf<T>): CatalogValueLeaf<T>;
-  public get<T>(asset: ResourceAsset<T>): CatalogResourceLeaf<T>;
+  public get<const D extends LocatorAssetDescriptor>(descriptor: D & ValidatedLeafDescriptor<D>): AssetDescriptorLeaf<D>;
+  public get<T>(leaf: CatalogValueLeaf<T>): CatalogValueLeaf<T>;
   public get<M extends Record<string, CatalogEntry>>(catalog: Assets<M>): InferAssetsProperties<M>;
   // Brand-matched: only a materialized catalog leaf, never a raw resource.
   public get<T extends object>(leaf: CatalogResourceLeaf<T>): CatalogResourceLeaf<T>;
@@ -195,9 +193,9 @@ export class LoaderScope implements Destroyable {
    * cancellation.
    *
    * Accepts a path whose suffix names its type, a handle (`new Texture(path)`,
-   * a catalog leaf), a descriptor, an explicitly typed request
-   * (`[Video, 'intro.mp4']`, `[Palette, 'sunset.json']`), or an array, tuple or
-   * named object of those. A group resolves to the same shape with every entry
+   * a catalog leaf), an asset descriptor (`{ type: Video, source: 'intro.mp4' }`,
+   * `{ type: paletteType, source: 'sunset.json' }`), or an array, tuple or named
+   * object of those. A group resolves to the same shape with every entry
    * replaced by its loaded value, and handles heal in place as well. An
    * {@link Assets} catalog resolves to a new map of its finished values.
    *
@@ -215,7 +213,7 @@ export class LoaderScope implements Destroyable {
    * @example
    * ```ts
    * const hero = await scope.load('hero.png');
-   * const { tiles, music } = await scope.load({ tiles: 'tiles.png', music: [Music, 'theme.ogg'] });
+   * const { tiles, music } = await scope.load({ tiles: 'tiles.png', music: { type: Music, source: 'theme.ogg' } });
    * ```
    */
   public load<M extends Record<string, CatalogEntry>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
@@ -251,20 +249,22 @@ export class LoaderScope implements Destroyable {
    * Drops this scope's claim on one asset. The payload is freed only when no
    * other scope still holds it; a scope can never release another owner's claim.
    *
-   * Accepts anything {@link load} accepts - a path, a handle, a descriptor, a
-   * `[Type, source]` request, or a group of those - plus a whole {@link Assets}
-   * catalog and a `(type, source)` pair. Releasing something this scope never
-   * claimed is a no-op, and releasing twice is idempotent.
+   * Accepts anything {@link load} accepts - a path, a handle, a descriptor, or a
+   * group of those - plus a whole {@link Assets} catalog, and a resource built
+   * from a descriptor without a string source. Releasing something this scope
+   * never claimed is a no-op, and releasing twice is idempotent. A descriptor
+   * without a string source matches only the claim its own object (or its type's
+   * resource identity) made, so release such a resource by the resource itself
+   * when the descriptor is not kept.
    *
    * Throws only for an object that has no claim identity at all - a resolved
-   * non-leaf resource, or an object this loader has never issued. Release such a
-   * resource through its descriptor or its `(type, source)` pair instead.
+   * resource loaded from a path, or an object this loader has never issued.
+   * Release such a resource through its path or descriptor instead.
    */
   public release(input: AssetLoadInput | object): void;
   public release<M extends Record<string, CatalogEntry>>(assets: Assets<M>): void;
-  public release(type: AssetConstructor, source: string): void;
-  public release(handleOrType: unknown, source?: string): void {
-    this._loader._releaseFrom(this, handleOrType, source);
+  public release(input: unknown): void {
+    this._loader._releaseFrom(this, input);
   }
 
   /**

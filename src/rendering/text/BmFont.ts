@@ -81,7 +81,7 @@ export interface BmFontData {
  * Pass directly to {@link BitmapText}.
  *
  * ```ts
- * const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt'));
+ * const font = await loader.load({ type: 'bmFont', source: 'fonts/ui.fnt' });
  * const label = new BitmapText('Score: 0', font);
  * ```
  * @stable

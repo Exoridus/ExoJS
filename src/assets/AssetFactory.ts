@@ -46,6 +46,8 @@ export interface AssetFactoryContext<Options = undefined> {
    * A reference the asset itself carries - a font's page image, an atlas's
    * sheet - is relative to this, not to the resolved URL: resolving it here and
    * loading the result would apply the loader's base path to it a second time.
+   * Empty for a descriptor whose source is not a string: such a source is the
+   * factory's first argument, and there is no locator to resolve against.
    */
   readonly source: string;
   /** The canonical locator the source data was acquired from. */

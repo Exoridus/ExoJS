@@ -1,31 +1,37 @@
 export type { AssetOwner } from './ApplicationAssets';
 export { ApplicationAssets } from './ApplicationAssets';
-export type { AssetForKind, LeaflessAsset, ResourceAsset, ValueAsset } from './Asset';
-export { Asset } from './Asset';
 export type { AssetConstructor } from './AssetConstructor';
 export type { AssetDecodeErrorOptions } from './AssetDecodeError';
 export { AssetDecodeError } from './AssetDecodeError';
 export type {
   AnyAssetConfig,
   AssetDefinitions,
-  AssetInput,
   AssetTypeName,
   CatalogEntry,
   CoreValueAssetKind,
   ExtensionKindMap,
-  InferAssetResource,
   InferLoadedEntry,
   KindByPath,
   LeaflessAssetKind,
   LeaflessCatalogEntry,
   ValueAssetKind,
 } from './AssetDefinitions';
+export type {
+  AssetDescriptor,
+  AssetDescriptorLeaf,
+  AssetDescriptorLeafPolicy,
+  AssetDescriptorResource,
+  AssetTypeReference,
+  KindForResource,
+  LocatorAssetDescriptor,
+  ValidatedAssetDescriptor,
+  ValidatedLeafDescriptor,
+} from './AssetDescriptor';
 export type { AssetDependencyScope, AssetFactory, AssetFactoryContext } from './AssetFactory';
 export type {
   AssetLoadEntry,
   AssetLoadHandle,
   AssetLoadInput,
-  AssetTypeRequest,
   LoadedAssetEntry,
   LoadedAssets,
   UnclaimedAssetPath,
@@ -42,7 +48,7 @@ export { Assets } from './Assets';
 export type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';
 export { binarySourceCodec, blobSourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSourceCodec';
 export type { AssetStatus } from './AssetStatus';
-export type { AnyAssetType, AssetDescriptor, AssetLeaf, AssetOptionsArgument, AssetRequest } from './AssetType';
+export type { AnyAssetType, AssetLeaf, AssetRequest } from './AssetType';
 export { AssetType } from './AssetType';
 export type {
   AssetDecode,

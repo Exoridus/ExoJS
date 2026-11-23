@@ -7,7 +7,7 @@ import { MediaAudio } from './MediaAudio';
  * `canplay` long before the whole file has arrived. Its duration is known once
  * metadata has loaded, and voices can seek and loop.
  *
- * Load it with `assets.load([Music, 'theme.ogg'])` and play it with
+ * Load it with `assets.load({ type: Music, source: 'theme.ogg' })` and play it with
  * `audio.play(music, { loop: true })`. Use {@link AudioStream} for a live or
  * unbounded source such as internet radio, and {@link Sound} for short clips.
  */

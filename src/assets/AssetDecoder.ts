@@ -328,7 +328,8 @@ export class AssetDecoder {
     return {
       ...(options !== undefined && options !== null && { options }),
       signal,
-      source: asset.source,
+      // A direct source has no locator for a factory to resolve references against.
+      source: Object.hasOwn(asset, 'directSource') ? '' : asset.source,
       textureFormats: this._loader.variants.profile.textureFormats,
       locator: asset.locator,
       resourceKey: asset.key,

@@ -51,7 +51,7 @@ const DEFAULT_DELAY = 1000;
  * After the configured attempts it reports `'disconnected'` and dispatches
  * {@link onError}. {@link reconnect} starts a new round manually.
  *
- * Load it with `assets.load([AudioStream, 'https://radio.example/stream'])`.
+ * Load it with `assets.load({ type: AudioStream, source: 'https://radio.example/stream' })`.
  * Use {@link Music} for a finite track.
  */
 export class AudioStream extends MediaAudio {

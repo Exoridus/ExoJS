@@ -75,9 +75,10 @@ export interface CanonicalAsset {
   /** The option bag of the request, as the caller passed it. */
   readonly options?: unknown;
   /**
-   * An inline input that bypasses fetching, decoding and persistent caching.
-   * This property is present even if the caller omitted source (undefined).
-   * The canonical source string remains a private request identity, not a URL.
+   * The factory source of a descriptor without a string source, handed over
+   * without fetching, decoding or caching. Present - possibly `undefined` - for
+   * every such descriptor, whose `source` and `locator` are then a `direct:`
+   * claim name rather than a URL.
    */
   readonly directSource?: unknown;
 }

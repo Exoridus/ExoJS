@@ -1,6 +1,5 @@
 import { logger } from '#core/Logger';
 
-import { AssetImpl } from './Asset';
 import type {
   AnyAssetConfig,
   AssetDefinitions,
@@ -9,8 +8,11 @@ import type {
   OptionsForKind,
   ValidatedCatalog,
 } from './AssetDefinitions';
+import { _describeTypeReference, _isAssetDescriptor, type AssetDescriptor } from './AssetDescriptor';
+import type { AssetLeaf } from './AssetType';
+import { AssetType } from './AssetType';
 import { createLeaf } from './catalogLeaf';
-import { builtinLeaf, builtinTypeForPath } from './coreAssetTypes';
+import { builtinLeaf, builtinTypeForPath, builtinTypeForToken } from './coreAssetTypes';
 
 // ---------------------------------------------------------------------------
 // Helper types
@@ -168,45 +170,75 @@ export const _readProvenance = (catalog: AnyAssets): AssetsProvenance | undefine
 // ---------------------------------------------------------------------------
 
 /**
- * Normalize a single catalog entry to a plain `{ type, source, ...opts }`
- * config. A bare path string is resolved to its asset type by file suffix,
- * against the built-in table alone - a catalog is built with no application, so
- * a type an application installs of its own is unknown here, and a suffix no
- * built-in claims throws a guiding error. An already-constructed `Asset`
- * contributes its `_config`; a plain config passes through unchanged.
+ * The id and leaf policy a catalog entry's type reference names. A catalog is
+ * built with no application, so a type is known here only when it is built in
+ * or the entry names its {@link AssetType} instance.
  */
-export const _normalizeEntry = (value: CatalogEntry): AnyAssetConfig => {
+const catalogType = (type: unknown): { readonly id: string; readonly leaf: AssetLeaf<unknown> | undefined } => {
+  if (typeof type === 'string') {
+    return { id: type, leaf: builtinLeaf(type) };
+  }
+
+  if (type instanceof AssetType) {
+    return { id: type.id, leaf: type.leaf as AssetLeaf<unknown> };
+  }
+
+  const builtin = builtinTypeForToken(type);
+
+  if (builtin === undefined) {
+    throw new Error(
+      `Assets: a catalog is built without an application, so it cannot resolve the class ${_describeTypeReference(type)}. ` +
+        'Name a custom asset type by its AssetType instance instead.',
+    );
+  }
+
+  return { id: builtin.id, leaf: builtin.leaf as AssetLeaf<unknown> };
+};
+
+/**
+ * Normalize a single catalog entry to its type id, locator, leaf policy and
+ * options. A bare path string is resolved to its asset type by file suffix,
+ * against the built-in table alone, and a suffix no built-in claims throws a
+ * guiding error.
+ * @internal
+ */
+export const _normalizeEntry = (
+  value: CatalogEntry,
+): { readonly type: string; readonly source: string; readonly leaf: AssetLeaf<unknown> | undefined; readonly options?: object } => {
   if (typeof value === 'string') {
     const type = builtinTypeForPath(value);
 
     if (type === undefined) {
       throw new Error(
         `Assets: no built-in asset type claims the extension of "${value}". ` +
-          `Name it with Asset.type(...) or with the type's own asset(...), or use a compound suffix.`,
+          'Name its type with a descriptor ({ type, source }), or use a compound suffix.',
       );
     }
 
-    const config = { type, source: value };
-
-    return config as AnyAssetConfig;
+    return { type, source: value, leaf: builtinLeaf(type) };
   }
 
-  return value instanceof AssetImpl ? value._config : (value as AnyAssetConfig);
+  const descriptor: unknown = value;
+
+  if (!_isAssetDescriptor(descriptor)) {
+    throw new TypeError('Assets: a catalog entry must be a path string or an asset descriptor ({ type, source, ...options }).');
+  }
+
+  const { type: reference, source, ...rest } = descriptor as AssetDescriptor & Readonly<Record<string, unknown>>;
+  const { id, leaf } = catalogType(reference);
+
+  if (typeof source !== 'string') {
+    throw new TypeError(`Assets: catalog entry "${id}" needs a string source; a catalog holds placeholders keyed by locator.`);
+  }
+
+  return Object.keys(rest).length > 0 ? { type: id, source, leaf, options: rest } : { type: id, source, leaf };
 };
 
-/**
- * Materialize one catalog entry into its meta-stamped handle-hybrid leaf.
- *
- * A catalog is built without an application, so only the built-in types are
- * resolvable by name here. A type an application installs of its own is reached
- * through the descriptor its own `asset(...)` minted, which carries it.
- */
+/** Materialize one catalog entry into its meta-stamped handle-hybrid leaf. */
 const createEntryLeaf = (value: CatalogEntry): object => {
-  const { type, source, ...rest } = _normalizeEntry(value);
-  const opts = Object.keys(rest).length > 0 ? rest : undefined;
-  const leaf = value instanceof AssetImpl ? (value._assetType?.leaf ?? builtinLeaf(type)) : builtinLeaf(type);
+  const { type, source, leaf, options } = _normalizeEntry(value);
 
-  return createLeaf(leaf, type, source, opts);
+  return createLeaf(leaf, type, source, options);
 };
 
 /**
@@ -407,9 +439,9 @@ type AssetsConstructorFn = new <const M extends Record<string, CatalogEntry>>(de
 type AssetsFacade = AssetsConstructorFn & {
   /**
    * Build a typed catalog. Each field may be a bare path string (type inferred
-   * from its suffix), an `Asset.type(...)` descriptor, or an explicit config. Bare
+   * from its suffix), a descriptor, or an explicit config. Bare
    * strings only resolve for leaf-capable types; ambiguous/unregistered
-   * suffixes need `Asset.type(...)`.
+   * suffixes need a `{ type, source }` descriptor.
    *
    * @remarks The `const` type parameter preserves each field's string LITERAL
    * (e.g. `'ship.png'`) so the file suffix can be classified. Without it, under
@@ -441,7 +473,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * Build a single meta-stamped leaf (a usable placeholder resource or an
    * `AssetRef`) from ONE descriptor - the explicit single-asset alternative to
    * wrapping it in a one-field {@link from} catalog. Accepts
-   * the same descriptor set as a catalog field: a bare path, an `Asset.type(...)`
+   * the same descriptor set as a catalog field: a bare path, an a `{ type, source }` descriptor
    * descriptor, or an explicit `{ type, source, ...opts }` config. The leaf
    * starts `'idle'` until a loader adopts it.
    *
@@ -519,7 +551,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * ```ts
    * const CustomizedAssets = Assets.extend(SharedAssets, {
    *   theme: 'audio/forest.ogg',                                    // overrides the shared theme
-   *   tree:  Asset.type('texture', 'sprites/tree.png', { mimeType: 'image/png' }),
+   *   tree:  { type: 'texture', source: 'sprites/tree.png', mimeType: 'image/png' },
    * });
    * ```
    */
