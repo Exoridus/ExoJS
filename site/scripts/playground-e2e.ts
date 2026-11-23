@@ -1534,9 +1534,22 @@ const exampleLifecycleChecks = async (browser: Browser, origin: string, base: st
             await readable('replay');
             assert((await prompt()).text.toLowerCase().includes('replay'), 'Finished sequence must explain replay');
             await shot('finished');
+            // Report what the scene saw when a replay does not start, not only a timeout.
+            await page.evaluate(
+              "globalThis.__featuredKeys = 0; addEventListener('keydown', () => globalThis.__featuredKeys++, { capture: true })",
+            );
+            const sequence = () =>
+              page.evaluate<Record<string, unknown>>(`(() => {
+                const app = globalThis.__acceptanceApp, scene = app.scenes.currentScene;
+                return { finished: scene.finished, started: scene.started, state: scene.state, locked: app.audio.locked,
+                  keys: globalThis.__featuredKeys, focus: document.activeElement?.tagName, pageFocus: document.hasFocus(), errors: globalThis.__featuredErrors };
+              })()`);
+            // Restore page focus before synthesizing keys: after a touch tap,
+            // headless Chromium on Linux can otherwise deliver none to the document.
+            await page.bringToFront();
             await page.keyboard.press('r', { delay: 50 });
-            await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.finished');
-            await page.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene.finished');
+            await waitFor(sequence, value => !value.finished, 'keyboard replay to restart the sequence', 30_000);
+            await waitFor(sequence, value => Boolean(value.finished), 'keyboard replay to finish', 30_000);
             await frames();
             await readable('keyboard replay');
 
