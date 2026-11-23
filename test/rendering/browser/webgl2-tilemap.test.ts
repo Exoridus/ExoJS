@@ -171,6 +171,11 @@ describe('WebGL2 tilemap — multi-texture batching', () => {
     const optimized = new TileMapNode(pair.optimized);
     const reference = new TileMapNode(pair.reference);
     const sampleY = [8, 20, 32, 44, 56];
+    const visualCanvas = backend.context.canvas as HTMLCanvasElement;
+
+    visualCanvas.style.width = '64px';
+    visualCanvas.style.height = '64px';
+    document.body.appendChild(visualCanvas);
 
     try {
       optimized.setPosition(24, 12);
@@ -215,6 +220,7 @@ describe('WebGL2 tilemap — multi-texture batching', () => {
         path: `../../../.workspace/visual-review/current/tile-alpha-multitexture-webgl2-${server.browser}.png`,
       });
     } finally {
+      visualCanvas.remove();
       optimized.destroy();
       reference.destroy();
 
