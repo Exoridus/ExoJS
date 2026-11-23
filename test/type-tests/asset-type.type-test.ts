@@ -106,12 +106,25 @@ loader.identify({ type: worldType, source: 'level.world', mimeType: 'application
 // over unfetched; a source-free descriptor builds from options alone.
 const inline = loader.load({ type: worldType, source: { name: 'inline' } });
 type _InlineResolvesToWorld = Expect<Equal<typeof inline, LoadingQueue<World>>>;
-const sourceFree = loader.load({ type: worldType, palette: 'dawn' });
-type _SourceFreeResolvesToWorld = Expect<Equal<typeof sourceFree, LoadingQueue<World>>>;
 // @ts-expect-error - a source must be a locator or the type's own source shape.
 loader.load({ type: worldType, source: 42 });
 // @ts-expect-error - get() hands out a placeholder keyed by locator.
 loader.get({ type: worldType, source: { name: 'inline' } });
+
+// (6c) A type whose source admits undefined is source-free, and a value type takes a parse transform.
+class SeedAssetType extends AssetType<undefined, World, { readonly seed: number }> {
+  public readonly id = 'com.example.seed';
+
+  public createFactory(): AssetFactory<undefined, World, { readonly seed: number }> {
+    return { create: () => Promise.resolve({} as World) };
+  }
+}
+
+const seedType = new SeedAssetType();
+const seeded = loader.load({ type: seedType, seed: 1 });
+type _SeededResolvesToWorld = Expect<Equal<typeof seeded, LoadingQueue<World>>>;
+const named = loader.load({ type: seedType, seed: 1, parse: (world: World) => world.data.name });
+type _ParsedResolvesToName = Expect<Equal<typeof named, LoadingQueue<string>>>;
 
 // (7) A type that takes no options accepts none.
 class NoteAssetType extends AssetType<string, string[]> {

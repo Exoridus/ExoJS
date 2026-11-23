@@ -256,6 +256,48 @@ describe('direct resource lifecycle', () => {
     loader.destroy();
   });
 
+  test('a plain-object direct resource is released as itself, not read as a group or descriptor', async () => {
+    class RecordType extends AssetType<undefined, { readonly type: string; readonly width: number }, { readonly width: number }> {
+      public readonly id = 'test.record';
+
+      public createFactory(): AssetFactory<undefined, { readonly type: string; readonly width: number }, { readonly width: number }> {
+        return { create: async (_source, context) => ({ type: 'record', width: context.options?.width ?? 0 }) };
+      }
+    }
+
+    const records = new RecordType();
+    const loader = createLoader(records);
+    const scope = loader.createScope();
+    const record = await scope.load({ type: records, width: 3 });
+
+    expect(claims(loader, record)).toBe(1);
+    expect(() => scope.release(record)).not.toThrow();
+    expect(claims(loader, record)).toBe(0);
+    scope.destroy();
+    loader.destroy();
+  });
+
+  test('releasing a stale direct resource leaves its rebuilt successor alone', async () => {
+    const fields = new FieldType();
+    const loader = createLoader(fields);
+    const scope = loader.createScope();
+    const samples = [1];
+
+    const first = await scope.load({ type: fields, source: samples });
+
+    scope.release(first);
+    expect(first.disposed).toBe(true);
+
+    const second = await scope.load({ type: fields, source: samples });
+
+    expect(second).not.toBe(first);
+    expect(() => scope.release(first)).not.toThrow();
+    expect(second.disposed).toBe(false);
+    expect(claims(loader, second)).toBe(1);
+    scope.destroy();
+    loader.destroy();
+  });
+
   test('a direct resource has no portable key or saved reference', async () => {
     const fields = new FieldType();
     const loader = createLoader(fields);
@@ -296,6 +338,21 @@ describe('descriptor validation', () => {
     expect(() => loader.load({ type: Texture, source: 'a.png', parse: (raw: unknown) => raw } as never)).toThrow(
       /"parse" is a synchronous function for value asset types/,
     );
+    loader.destroy();
+  });
+
+  test('parse never takes part in identity: load, peek and release agree with and without it', async () => {
+    const loader = createLoader();
+    const scope = loader.createScope();
+    const claimsOnConfig = (): number => loader.inspect().find(row => row.locator.endsWith('config.json'))?.claims ?? 0;
+
+    await expect(scope.load({ type: 'json', source: 'config.json', parse: raw => (raw as { hp: number }).hp })).resolves.toBe(3);
+    expect(loader.peek({ type: 'json', source: 'config.json' })).toEqual({ hp: 3 });
+    expect(claimsOnConfig()).toBe(1);
+
+    scope.release({ type: 'json', source: 'config.json' });
+    expect(claimsOnConfig()).toBe(0);
+    scope.destroy();
     loader.destroy();
   });
 

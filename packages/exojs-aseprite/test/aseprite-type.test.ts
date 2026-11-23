@@ -21,7 +21,7 @@ const loadFixture = (name: string): unknown => JSON.parse(readFileSync(join(FIXT
 /** Drives the type end to end - codec then factory - against in-memory fixtures. */
 const makeContext = (fixtures: Record<string, unknown>) => {
   const loaderLoad = vi.fn(async (asset: unknown): Promise<unknown> => {
-    const { type } = (asset as { _config: { type: string } })._config;
+    const { type } = asset as { type: string };
 
     if (type !== 'texture') {
       throw new Error(`aseprite-type.test: unexpected dependency "${type}"`);

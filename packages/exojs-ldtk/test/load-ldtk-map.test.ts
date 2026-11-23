@@ -48,7 +48,7 @@ const makeContext = (fixtures: Record<string, unknown>) => {
   });
 
   const load = vi.fn(async (asset: unknown): Promise<unknown> => {
-    const { type, source } = (asset as { _config: { type: string; source: string } })._config;
+    const { type, source } = asset as { type: string; source: string };
 
     return type === 'json' ? jsonLoad(source) : textureLoad(asset);
   });

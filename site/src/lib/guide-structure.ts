@@ -254,7 +254,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
         prerequisites: ['assets/loading-and-resources'],
         examples: ['sprites-textures/asset-catalogs'],
-        apiLinks: ['assets', 'asset', 'loader-scope', 'asset-ref'],
+        apiLinks: ['assets', 'asset-descriptor', 'loader-scope', 'asset-ref'],
       },
       {
         path: 'assets/device-variants',

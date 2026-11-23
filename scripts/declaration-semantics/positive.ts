@@ -20,7 +20,7 @@ import {
   Texture as TextureClass,
 } from '@codexo/exojs';
 
-import { Armor, BareScene, DataScene, Health, LocalizedAssetType, MetaAssetType, type PlayerData, Spin } from './fixtures';
+import { Armor, BareScene, DataScene, Health, LocalizedAssetType, MetaAssetType, NotesAssetType, type PlayerData, Spin } from './fixtures';
 
 const app = new Application({ scenes: { BareScene, DataScene } });
 
@@ -61,6 +61,7 @@ export const localized = (): PromiseLike<unknown> => loader.load({ type: new Loc
 
 /** A non-locator source is the type's own factory input; a source-free descriptor builds from options alone. */
 export const inlineMeta = (): PromiseLike<{ readonly hp: number }> => loader.load({ type: new MetaAssetType(), source: { hp: 1 } });
+export const notesFromText = (): PromiseLike<readonly string[]> => loader.load({ type: new NotesAssetType(), source: 'a.txt' });
 export const sourceFreeMeta = (): PromiseLike<{ readonly hp: number }> => loader.load({ type: new MetaAssetType() });
 
 /** A type without a catalog leaf still loads directly. */

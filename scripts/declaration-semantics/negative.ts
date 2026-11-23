@@ -8,7 +8,7 @@
  */
 import { Application, Assets, Container, type DecodedImage, fontType, type Loader, musicType, type Scene } from '@codexo/exojs';
 
-import { type Armor, DataScene, Health, LocalizedAssetType, MetaAssetType, Spin } from './fixtures';
+import { type Armor, DataScene, Health, LocalizedAssetType, MetaAssetType, NotesAssetType, Spin } from './fixtures';
 
 const app = new Application({ scenes: { DataScene } });
 
@@ -40,6 +40,9 @@ export const localizedWithoutOptions = (): PromiseLike<unknown> => loader.load({
 
 // @ts-expect-error an option the type does not declare is rejected
 export const unknownOption = (): PromiseLike<unknown> => loader.load({ type: 'texture', source: 'hero.png', delimiter: ',' });
+
+// @ts-expect-error a type whose source cannot be undefined needs a source
+export const notesWithoutSource = (): PromiseLike<unknown> => loader.load({ type: new NotesAssetType() });
 
 // @ts-expect-error a catalog holds locators, not factory sources
 export const directCatalog = Assets.from({ meta: { type: new MetaAssetType(), source: { hp: 1 } } });

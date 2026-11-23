@@ -2,6 +2,7 @@ import { Texture } from '@codexo/exojs';
 import { TileMap } from '@codexo/exojs/tilemap';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { tiledSourceType } from '../src/tiledSourceType';
 import { tileMapType } from '../src/tileMapType';
 import { loadFixture, makeTiledContext } from './type-context';
 
@@ -63,7 +64,7 @@ describe('tileMapType - minimal map', () => {
   it('reaches the document through a tiledSource dependency', async () => {
     await loadRuntime('minimal.tmj');
 
-    expect(load).toHaveBeenCalledWith(expect.objectContaining({ _config: { type: 'tiledSource', source: 'minimal.tmj' } }));
+    expect(load).toHaveBeenCalledWith({ type: tiledSourceType, source: 'minimal.tmj' });
   });
 
   it('rejects a map whose tileset carries no image', async () => {
@@ -126,7 +127,7 @@ describe('tileMapType - options passthrough', () => {
 
     await loadRuntime('world.tmj', options);
 
-    expect(load).toHaveBeenCalledWith(expect.objectContaining({ _config: { type: 'tiledSource', source: 'world.tmj', format: 'tiled' } }));
+    expect(load).toHaveBeenCalledWith({ type: tiledSourceType, source: 'world.tmj', format: 'tiled' });
   });
 });
 
