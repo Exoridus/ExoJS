@@ -3272,18 +3272,21 @@ const reliabilityChecks = async (browser: Browser, origin: string, base: string)
       await page.goto(`${origin}${base}/en/playground/?version=current&example=getting-started/hello-world`);
       await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
       await typeEditorText(page, '\n// memory-only draft');
+      await page.waitForFunction("document.querySelector('[data-draft-status]')?.textContent?.includes('page only')");
       assert(
         (await page.locator('[data-draft-status]').textContent())?.includes('page only'),
         'Storage failure reports limited durability',
       );
       await page.locator('#playground-navigation a[href="#/current/scene-graph/nested-transforms"]').click();
       await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel().uri.path.includes('nested-transforms')");
+      await page.waitForFunction("document.querySelector('[data-draft-status]')?.textContent?.includes('Other drafts')");
       assert(
         (await page.locator('[data-draft-status]').textContent())?.includes('Other drafts'),
         'A different example retains the warning for memory-only edits',
       );
       await page.goBack();
       await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('memory-only draft')");
+      await page.waitForFunction("document.querySelector('[data-draft-status]')?.textContent?.includes('In-page draft restored')");
       assert(
         (await page.locator('[data-draft-status]').textContent())?.includes('In-page draft restored'),
         'Restored memory draft does not claim session persistence',
