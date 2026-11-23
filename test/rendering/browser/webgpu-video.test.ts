@@ -45,6 +45,7 @@ import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -52,6 +53,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
+import { VideoTexture } from '#rendering/video/VideoTexture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
@@ -661,4 +663,99 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     fixture.dispose();
     backend.destroy();
   }
+});
+
+describe('WebGPU VideoTexture', { timeout: 30_000 }, () => {
+  test('a VideoTexture draws in an ordinary Sprite and in a Mesh', async ctx => {
+    const fixture = await createSolidColorVideo('#00ff00', 16);
+    const backend = await setupBackend();
+    const texture = new VideoTexture(fixture.video);
+    const root = new Container();
+    const sprite = new Sprite(texture);
+    const mesh = new Mesh({
+      vertices: new Float32Array([32, 32, 56, 32, 56, 56, 32, 32, 56, 56, 32, 56]),
+      uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]),
+      texture,
+    });
+
+    try {
+      sprite.setPosition(4, 4);
+      root.addChild(sprite, mesh);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(10, 10), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(44, 44), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(60, 4), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      sprite.destroy();
+      mesh.destroy();
+      texture.destroy();
+      fixture.dispose();
+      backend.destroy();
+    }
+  });
+
+  test('two consumers of one VideoTexture copy the frame once, and an unchanged frame not again', async ctx => {
+    const fixture = await createSolidColorVideo('#0000ff', 16);
+    const backend = await setupBackend();
+    const texture = new VideoTexture(fixture.video);
+    const single = new VideoTexture(fixture.video);
+    const root = new Container();
+    const lone = new Sprite(single);
+    const a = new Sprite(texture);
+    const b = new Sprite(texture);
+    const queue = getBackendDevice(backend).queue;
+    const copy = vi.spyOn(queue, 'copyExternalImageToTexture');
+    const uploads = (): number => copy.mock.calls.filter(([source]) => source.source === fixture.video).length;
+
+    try {
+      fixture.video.pause();
+
+      // One upload may take more than one copy (colour normalization); measure it with one consumer first.
+      if (!(await renderScene(ctx, backend, lone))) {
+        return;
+      }
+
+      const perUpload = uploads();
+
+      expect(perUpload).toBeGreaterThan(0);
+      copy.mockClear();
+
+      b.setPosition(32, 32);
+      root.addChild(a, b);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      expect(uploads()).toBe(perUpload);
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(8, 8), [0, 0, 255, 255]);
+      expectPixelNear(readPixel(40, 40), [0, 0, 255, 255]);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      expect(uploads()).toBe(perUpload);
+    } finally {
+      copy.mockRestore();
+      root.destroy();
+      lone.destroy();
+      a.destroy();
+      b.destroy();
+      single.destroy();
+      texture.destroy();
+      fixture.dispose();
+      backend.destroy();
+    }
+  });
 });
