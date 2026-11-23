@@ -1,0 +1,70 @@
+name: Playground key delivery diagnostic
+
+on:
+  push:
+    branches: [test/playground-linux-key-delivery]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: true
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          browser: chromium
+      - uses: actions/download-artifact@v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45215140919
+          name: site-next-85db7814b63f7de9e9611ef8ff6758d6e8c7566c-1
+          path: .workspace/key-delivery/next
+      - uses: actions/download-artifact@v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45234618398
+          name: site-next-9872a86cf38795e0f1692ac7384b99f04f2208fc-1
+          path: .workspace/key-delivery/assets
+      - uses: actions/download-artifact@v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45277016699
+          name: site-next-3522d24e96fefb0f9a178bde87ca014a56613f71-1
+          path: .workspace/key-delivery/lighting
+      - name: Compare the same touch and keyboard sequence on one runner
+        run: |
+          node scripts/ci/diagnose-playground-key-delivery.mjs
+          status=0
+          for candidate in next assets lighting; do
+            echo "::group::$candidate"
+            artifact=".workspace/key-delivery/$candidate"
+            mv "$artifact" site/dist
+            node --input-type=commonjs -e 'const build = require("./site/dist/site-build.json"); console.log(build.sourceSha, build.basePath)'
+            if ! DEBUG=pw:protocol DEBUG_COLORS=0 pnpm test:playground:e2e --suite lifecycle 2>&1 | awk '
+              !/pw:protocol/ { print; next }
+              match($0, /"id":[0-9]+/) {
+                id = substr($0, RSTART, RLENGTH)
+                if ($0 ~ /"method":"(Input.dispatchKeyEvent|Input.dispatchTouchEvent|Page.bringToFront|Target.activateTarget|Emulation.setFocusEmulationEnabled)"/) {
+                  pending[id] = 1
+                  print
+                } else if (id in pending) {
+                  delete pending[id]
+                  print
+                }
+              }
+            '; then
+              status=1
+            fi
+            mv site/dist "$artifact"
+            echo '::endgroup::'
+          done
+          exit "$status"
