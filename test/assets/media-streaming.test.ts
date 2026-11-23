@@ -194,6 +194,33 @@ describe('music and live audio streams', () => {
     connectivity.destroy();
   });
 
+  test('different reconnect policies do not accidentally share one live stream', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const scope = loader.createScope();
+    const url = 'https://radio.example/live';
+    const firstRequest = Asset.type('audioStream', url, { reconnect: false });
+    const secondRequest = Asset.type('audioStream', url, { reconnect: { attempts: 2, delay: 100 } });
+    const defaultRequest = Asset.type('audioStream', url);
+    const explicitDefault = Asset.type('audioStream', url, { reconnect: { attempts: 5, delay: 1000 } });
+
+    expect(loader.identify(defaultRequest).resourceKey).toBe(loader.identify(explicitDefault).resourceKey);
+    expect(loader.identify(firstRequest).resourceKey).not.toBe(loader.identify(secondRequest).resourceKey);
+
+    const firstLoad = scope.load(firstRequest);
+    await reachReadiness();
+    const first = await firstLoad;
+    const secondLoad = scope.load(secondRequest);
+    await reachReadiness();
+    const second = await secondLoad;
+
+    expect(first).toBeInstanceOf(AudioStream);
+    expect(second).toBeInstanceOf(AudioStream);
+    expect(first).not.toBe(second);
+    expect(loader.inspect().filter(row => row.locator.endsWith('/live'))).toHaveLength(2);
+    scope.destroy();
+  });
+
   test('releasing the last owner of a live stream destroys it and ends the transfer', async () => {
     mockFetch();
     const loader = createCoreLoader();
