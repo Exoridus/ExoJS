@@ -27,8 +27,8 @@ import {
   createSolidTexture,
   isometricOverlapMap,
   makeTileset,
-  orthogonalOverhangLayer,
   orderedTextureRunMap,
+  orthogonalOverhangLayer,
   singleTileMap,
   wireTilemapRenderers,
   wireViaTiledExtension,
@@ -159,6 +159,7 @@ describe('WebGPU tilemap — multi-texture batching', () => {
 
     try {
       node.setPosition(0, 12);
+
       if (!(await renderScene(ctx, backend, node))) {
         return;
       }
@@ -171,9 +172,11 @@ describe('WebGPU tilemap — multi-texture batching', () => {
       expectPixelNear(read(42, 18), [0, 0, 255, 255]);
     } finally {
       node.destroy();
+
       for (const texture of textures) {
         texture.destroy();
       }
+
       backend.destroy();
     }
   });
@@ -186,6 +189,7 @@ describe('WebGPU tilemap — multi-texture batching', () => {
 
     try {
       node.setPosition(0, 12);
+
       if (!(await renderScene(ctx, backend, node))) {
         return;
       }
@@ -199,9 +203,11 @@ describe('WebGPU tilemap — multi-texture batching', () => {
       expectPixelNear(read(54, 18), [0, 255, 255, 255]);
     } finally {
       node.destroy();
+
       for (const texture of textures) {
         texture.destroy();
       }
+
       backend.destroy();
     }
   });
