@@ -139,6 +139,7 @@ describe('load cancellation never revokes a claim another operation earned', () 
 
     cancelled.cancel();
     expect(calls[0]?.signal?.aborted).toBe(false);
+    await expect(cancelled).rejects.toMatchObject({ name: 'AbortError' });
 
     calls[0]?.settle();
 

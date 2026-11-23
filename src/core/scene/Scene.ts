@@ -1,3 +1,4 @@
+import type { AssetOwner } from '#assets/ApplicationAssets';
 import type { Application } from '#core/Application';
 import type { ComponentClass } from '#core/Component';
 import type { ComponentQuery } from '#core/ComponentQuery';
@@ -222,9 +223,19 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
     return this._requireScope('loader').loader;
   }
 
-  /** The assets owned by this scene, released when the scene ends. */
-  public get assets(): SceneLoader['assets'] {
-    return this.loader.assets;
+  /**
+   * Loads assets this scene owns. They are released when the scene ends
+   * permanently, unless another owner still holds them.
+   *
+   * @example
+   * ```ts
+   * override async load(): Promise<void> {
+   *   const { hero, theme } = await this.assets.load({ hero: 'hero.png', theme: 'theme.ogg' });
+   * }
+   * ```
+   */
+  public get assets(): AssetOwner {
+    return this.loader;
   }
 
   /**
