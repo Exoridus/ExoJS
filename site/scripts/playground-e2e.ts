@@ -2661,6 +2661,11 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
           assert(await dialog.evaluate(node => node.contains(document.activeElement)), 'search shortcut broke modal Tab ownership');
         }
 
+        await dialog.getByRole('button').first().focus();
+        await page.keyboard.press('/');
+        const filter = dialog.getByRole('searchbox', { name: 'Filter examples and tools' });
+        await waitFor(() => filter.evaluate(node => node === document.activeElement), Boolean, 'slash in Examples');
+
         await page.keyboard.press('Escape');
         await waitFor(() => opener.evaluate(node => node === document.activeElement), Boolean, 'dialog return focus');
         await page.keyboard.press('Enter');
@@ -2693,8 +2698,35 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
           await globalSearch.evaluate(node => !node.closest('[inert], [aria-hidden="true"]')),
           'global search remained inside a hidden background',
         );
+
+        if (width === 900) {
+          await globalSearch.getByRole('combobox', { name: 'Search docs' }).fill('Application');
+          await globalSearch.getByRole('link').first().focus();
+          await page.keyboard.press('/');
+          await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+          assert((await page.locator('#playground-navigation[aria-modal="true"]').count()) === 0, 'Examples opened behind docs search');
+        }
+
         await page.keyboard.press('Escape');
         await globalSearch.waitFor({ state: 'hidden' });
+
+        if (width === 390) {
+          const menuOpener = page.getByRole('button', { name: 'Open menu' });
+          await menuOpener.click();
+          const menu = page.getByRole('dialog', { name: 'Menu', exact: true });
+          await waitFor(() => menu.evaluate(node => node.contains(document.activeElement)), Boolean, 'header menu focus');
+          await page.keyboard.press('/');
+          await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+          assert(
+            await page
+              .getByRole('dialog', { name: 'Menu', exact: true, includeHidden: true })
+              .evaluate(node => !node.closest('[inert]') && node.contains(document.activeElement)),
+            'the Examples shortcut disabled the open header menu',
+          );
+          await page.keyboard.press('Escape');
+          await menu.waitFor({ state: 'hidden' });
+          assert(await menuOpener.evaluate(node => node === document.activeElement), 'header menu did not restore focus');
+        }
       } catch (error) {
         await reportFailure(page, error);
 

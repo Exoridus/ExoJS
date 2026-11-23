@@ -56,6 +56,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
   const [examplesSheetOpener, setExamplesSheetOpener] = useState<HTMLElement | null>(null);
   const rootRef = useRef<HTMLElement | null>(null);
   const navigationRef = useRef<HTMLElement | null>(null);
+  const sheetNavigationRef = useRef<HTMLDivElement | null>(null);
   const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
   const mobileExamplesButtonRef = useRef<HTMLButtonElement | null>(null);
   const selectedVersionRef = useRef<VersionInfo | null>(null);
@@ -366,7 +367,19 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
           'input, textarea, select, [role="textbox"], [role="searchbox"], [contenteditable]:not([contenteditable="false"]), .monaco-editor',
         )
       ) {
+        const modal = target?.closest?.('dialog[open], [aria-modal="true"]');
+
+        if (modal && modal !== navigationRef.current && !modal.contains(sheetNavigationRef.current)) {
+          return;
+        }
+
         event.preventDefault();
+        setSearchRequest(request => request + 1);
+
+        if (modal) {
+          return;
+        }
+
         const compact = window.matchMedia('(max-width: 760px)').matches;
         // A queued media-query event must not close the navigation immediately
         // after this shortcut opens it for the live viewport.
@@ -381,8 +394,6 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
         } else {
           setSidebarOpen(true);
         }
-
-        setSearchRequest(request => request + 1);
       }
     };
 
@@ -530,7 +541,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       )}
       {isCompactMobile && (
         <BottomSheet open={examplesSheetOpen} title="Examples" opener={examplesSheetOpener} onOpenChange={setExamplesSheetOpen}>
-          <div className={css(styles, 'sheet-navigation')}>
+          <div ref={sheetNavigationRef} className={css(styles, 'sheet-navigation')}>
             <Navigation
               focusSearchRequest={searchRequest}
               locale={locale}
