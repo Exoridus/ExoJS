@@ -91,7 +91,7 @@ export abstract class MediaAudio implements Playable {
     return this._activeVoice;
   }
 
-  /** Whether an `ended` event should retire the active voice. Live streams can recover. */
+  /** Whether an `ended` event should retire the active voice. Live streams can recover. @internal */
   protected _endVoiceOnMediaEnded(): boolean {
     return true;
   }
