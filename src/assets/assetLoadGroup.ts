@@ -34,13 +34,7 @@ export type AssetTypeRequest<T = unknown> = readonly [type: AssetConstructor<T>,
 export type AssetObjectRequest<T = unknown> = Readonly<{ type: AssetConstructor<T> | string; source?: unknown } & Record<string, unknown>>;
 
 /** One entry of a load: a path, a handle, descriptor, typed object or legacy tuple request. */
-export type AssetLoadEntry =
-  | string
-  | AssetLoadHandle
-  | CatalogLeafBrand<unknown>
-  | Asset<unknown>
-  | AssetTypeRequest
-  | AssetObjectRequest;
+export type AssetLoadEntry = string | AssetLoadHandle | CatalogLeafBrand<unknown> | Asset<unknown> | AssetTypeRequest | AssetObjectRequest;
 
 /** A single entry, or an array, tuple or named object of entries whose shape a load preserves. */
 export type AssetLoadInput = AssetLoadEntry | readonly AssetLoadEntry[] | Readonly<Record<string, AssetLoadEntry>>;

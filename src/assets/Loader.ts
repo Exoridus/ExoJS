@@ -1017,8 +1017,7 @@ export class Loader {
     const type: unknown = (input as { type?: unknown }).type;
 
     return (
-      typeof type === 'function' ||
-      (typeof type === 'string' && (Object.hasOwn(input, 'source') || this._typeRegistry.hasAssetType(type)))
+      typeof type === 'function' || (typeof type === 'string' && (Object.hasOwn(input, 'source') || this._typeRegistry.hasAssetType(type)))
     );
   }
 

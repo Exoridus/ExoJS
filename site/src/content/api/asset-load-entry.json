@@ -1,6 +1,6 @@
 {
   "title": "AssetLoadEntry",
-  "description": "One entry of a load: a path, a handle, a catalog leaf, a descriptor or an explicitly typed request.",
+  "description": "One entry of a load: a path, a handle, descriptor, typed object or legacy tuple request.",
   "symbol": "AssetLoadEntry",
   "kind": "type",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One entry of a load: a path, a handle, a catalog leaf, a descriptor or an explicitly typed request."
+        "One entry of a load: a path, a handle, descriptor, typed object or legacy tuple request."
       ],
       "importLine": "import { AssetLoadEntry } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "AssetLoadEntry",
-          "signature": "Asset<unknown> | AssetLoadHandle | AssetTypeRequest | CatalogLeafBrand<unknown> | string",
+          "signature": "Asset<unknown> | AssetLoadHandle | AssetObjectRequest | AssetTypeRequest | CatalogLeafBrand<unknown> | string",
           "signatureTokens": [
             {
               "text": "Asset",
@@ -54,6 +54,14 @@
             },
             {
               "text": "AssetLoadHandle",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetObjectRequest",
               "kind": "type"
             },
             {
