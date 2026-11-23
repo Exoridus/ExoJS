@@ -74,6 +74,12 @@ export interface CanonicalAsset {
   readonly variantResolution?: number;
   /** The option bag of the request, as the caller passed it. */
   readonly options?: unknown;
+  /**
+   * An inline input that bypasses fetching, decoding and persistent caching.
+   * This property is present even if the caller omitted source (undefined).
+   * The canonical source string remains a private request identity, not a URL.
+   */
+  readonly directSource?: unknown;
 }
 
 /** Sources that already carry their own absolute, opaque identity and must never be joined onto a base path or normalized. */

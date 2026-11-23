@@ -252,6 +252,9 @@ export class Loader {
   private readonly _decoder: AssetDecoder;
   private readonly _residency: AssetResidency;
   private _destroyed = false;
+  /** Object identity rather than JSON serialization keeps opaque sources safe. */
+  private readonly _inlineRequestIds = new WeakMap<object, number>();
+  private _nextInlineRequestId = 0;
 
   /**
    * Resolve a bare path once for both `get()` and `load()`: normalize it to the
@@ -334,6 +337,25 @@ export class Loader {
       ...(variant?.resolution !== undefined && { variantResolution: variant.resolution }),
       ...(options !== undefined && { options }),
     };
+  }
+
+  /**
+   * Give a non-path input a stable identity for this exact request object,
+   * without pretending the caller supplied a URL or serializable source.
+   * The same object reused by two scopes shares one claim; a new object is an
+   * independent runtime resource even if it contains identical fields.
+   */
+  private _canonicalizeInline(type: AssetConstructor, request: object, value: unknown, options?: unknown): CanonicalAsset {
+    let id = this._inlineRequestIds.get(request);
+
+    if (id === undefined) {
+      id = ++this._nextInlineRequestId;
+      this._inlineRequestIds.set(request, id);
+    }
+
+    const canonical = this._canonicalize(type, `data:application/x-exojs-inline,${id}`, options);
+
+    return { ...canonical, directSource: value };
   }
 
   /**
@@ -980,11 +1002,32 @@ export class Loader {
     );
   }
 
+  /** A class token is unambiguous; string IDs are recognized if registered or paired with source. */
+  private _isObjectRequest(input: unknown): input is Readonly<{ type: AssetConstructor | string; source?: unknown }> {
+    if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+      return false;
+    }
+
+    const prototype: unknown = Object.getPrototypeOf(input);
+
+    if (prototype !== Object.prototype && prototype !== null) {
+      return false;
+    }
+
+    const type: unknown = (input as { type?: unknown }).type;
+
+    return (
+      typeof type === 'function' ||
+      (typeof type === 'string' && (Object.hasOwn(input, 'source') || this._typeRegistry.hasAssetType(type)))
+    );
+  }
+
   private _isLoadEntry(input: unknown): boolean {
     return (
       typeof input === 'string' ||
       input instanceof AssetImpl ||
       _readMeta(input) !== undefined ||
+      this._isObjectRequest(input) ||
       (Array.isArray(input) && typeof input[0] === 'function')
     );
   }
@@ -1034,6 +1077,38 @@ export class Loader {
       ctor = type;
       logical = source;
       options = Object.keys(rest).length > 0 ? rest : undefined;
+    } else if (this._isObjectRequest(entry)) {
+      const request = entry as { type: AssetConstructor | string; source?: unknown } & Record<string, unknown>;
+      const installedToken =
+        typeof request.type === 'string' ? this._typeRegistry.resolveTypeName(request.type) : request.type;
+
+      if (installedToken === undefined || this._typeRegistry.getInstalled(installedToken) === undefined) {
+        throw new Error(`No asset type for request ${String(request.type)} is installed on this application.`);
+      }
+
+      const { type: _requestedType, source: requestSource, ...rest } = request;
+      const requestOptions = Object.keys(rest).length > 0 ? rest : undefined;
+      const installed = this._typeRegistry.getInstalled(installedToken)!;
+
+      if (background) {
+        if (typeof requestSource !== 'string' || installed.type.leaf === 'none') {
+          throw new TypeError('Background asset loads require a path and an asset type with a placeholder.');
+        }
+
+        return {
+          alias,
+          key: batchKey(requestSource),
+          src: requestSource,
+          leaf: createLeaf(installed.type.leaf, installed.type.id, requestSource, requestOptions),
+        };
+      }
+
+      const canonical =
+        typeof requestSource === 'string'
+          ? this._canonicalize(installedToken, requestSource, requestOptions)
+          : this._canonicalizeInline(installedToken, request, requestSource, requestOptions);
+
+      return { alias, key: batchKey(canonical.source), src: canonical.source, canonical, options: requestOptions };
     } else if (
       entry instanceof AssetImpl ||
       (typeof entry === 'object' && entry !== null && typeof (entry as { type?: unknown }).type === 'string')
@@ -1453,8 +1528,28 @@ export class Loader {
     }
   }
 
-  /** Release a `[Type, source]` request, an array or a plain record; `false` for any other object. */
+  /** Release an object request, a legacy tuple, array or plain group. */
   private _releaseGroup(claimer: LoaderScope, input: object): boolean {
+    if (this._isObjectRequest(input)) {
+      const request = input as { type: AssetConstructor | string; source?: unknown } & Record<string, unknown>;
+      const token = typeof request.type === 'string' ? this._typeRegistry.resolveTypeName(request.type) : request.type;
+
+      if (token === undefined || this._typeRegistry.getInstalled(token) === undefined) {
+        throw new Error(`Cannot release unregistered asset type ${String(request.type)}.`);
+      }
+
+      const { type: _type, source: directSource, ...rest } = request;
+      const options = Object.keys(rest).length > 0 ? rest : undefined;
+      const canonical =
+        typeof directSource === 'string'
+          ? this._canonicalize(token, directSource, options)
+          : this._canonicalizeInline(token, request, directSource, options);
+
+      this._release(canonical.key, claimer);
+
+      return true;
+    }
+
     if (Array.isArray(input)) {
       if (typeof input[0] === 'function') {
         const [type, source, options] = input as [AssetConstructor, string, unknown];

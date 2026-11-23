@@ -439,10 +439,19 @@ export class AssetDecoder {
     const { type, factory } = installed;
 
     try {
-      const unacquired = type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source), this._network()) as
-        | { source: unknown }
-        | undefined;
-      const source = unacquired === undefined ? await this._acquireSource(asset, type, signal) : unacquired.source;
+      // Direct object requests are already decoded input. Never fetch, inspect
+      // cache policy or ask a URL-based hook to reinterpret their value.
+      const direct = Object.hasOwn(asset, 'directSource');
+      const unacquired = direct
+        ? undefined
+        : (type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source), this._network()) as
+            | { source: unknown }
+            | undefined);
+      const source = direct
+        ? asset.directSource
+        : unacquired === undefined
+          ? await this._acquireSource(asset, type, signal)
+          : unacquired.source;
 
       const resource = await factory.create(source, this._factoryContext(asset, scope, options, signal));
 

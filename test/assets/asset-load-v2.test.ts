@@ -257,6 +257,57 @@ describe('asset owners', () => {
     loader.destroy();
   });
 
+  test('direct object request passes a structured source and extra properties to a custom decoder without fetching', async () => {
+    class Generated {
+      public constructor(public readonly value: number) {}
+    }
+
+    const loader = createLoader();
+    const decode = vi.fn((source: ArrayBuffer, context: { options?: unknown }) => {
+      const input = source as unknown as { value: number };
+      const options = context.options as { scale: number };
+
+      return new Generated(input.value * options.scale);
+    });
+
+    loader._assetTypes.define(Generated, { type: 'generated', decode });
+    const scope = loader.createScope();
+    const request = { type: Generated, source: { value: 7 }, scale: 3 };
+    const first = await scope.load(request);
+    const second = await scope.load(request);
+
+    expect(first).toBeInstanceOf(Generated);
+    expect(first.value).toBe(21);
+    expect(second).toBe(first);
+    expect(decode).toHaveBeenCalledTimes(1);
+    expect(global.fetch).not.toHaveBeenCalled();
+    scope.release(request);
+    scope.destroy();
+    loader.destroy();
+  });
+
+  test('a source-free request reaches a registered custom factory as undefined', async () => {
+    class Noise {
+      public constructor(public readonly seed: number) {}
+    }
+
+    const loader = createLoader();
+    const decode = vi.fn((_source: ArrayBuffer, context: { options?: unknown }) =>
+      new Noise((context.options as { seed: number }).seed),
+    );
+
+    loader._assetTypes.define(Noise, { type: 'noise', decode });
+    const scope = loader.createScope();
+    const noise = await scope.load({ type: Noise, seed: 42 });
+
+    expect(noise).toBeInstanceOf(Noise);
+    expect(noise.seed).toBe(42);
+    expect(decode.mock.calls[0]?.[0]).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
+    scope.destroy();
+    loader.destroy();
+  });
+
   test('two applications load the same path independently', async () => {
     const first = createLoader();
     const second = createLoader();
