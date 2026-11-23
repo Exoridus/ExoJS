@@ -927,6 +927,43 @@ export default defineConfig({
         },
       },
 
+      // ── browser-animated-images-webkit / -firefox - decoder specs on the other engines ──
+      // The animated-image decoding spec runs in browser-assets-chromium for the
+      // required lane; these projects run the same file on WebKit and Firefox,
+      // where ImageDecoder support differs and the software compositor is the
+      // path under test. Real Safari is covered by driving the same spec by hand
+      // (see the pull request evidence).
+      {
+        test: {
+          name: 'browser-animated-images-webkit',
+          globals: true,
+          include: ['test/assets/browser/animated-image-decoding.test.ts'],
+          setupFiles: browserSetupFiles,
+          browser: {
+            ...browserDefaults,
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'webkit' }],
+          },
+        },
+      },
+      {
+        test: {
+          name: 'browser-animated-images-firefox',
+          globals: true,
+          include: ['test/assets/browser/animated-image-decoding.test.ts'],
+          setupFiles: browserSetupFiles,
+          browser: {
+            ...browserDefaults,
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'firefox' }],
+          },
+        },
+      },
+
       // ── browser-core-chromium - core surfaces jsdom cannot host ──────────
       // `InlineWorker` owns a Blob URL and a real `Worker`, and jsdom provides
       // neither. The node lane stubs both to pin the lifetime and error
