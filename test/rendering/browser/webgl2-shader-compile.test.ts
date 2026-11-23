@@ -42,7 +42,7 @@ import {
 } from '../../../packages/exojs-lighting/src/backends/transportShaders';
 import { litSpriteShader } from '../../../packages/exojs-lighting/src/LitMaterial';
 import { composeParticleGlSource } from '../../../packages/exojs-particles/src/gpu/particleGlSource';
-import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
+import { TILE_DIAGONAL_BIT, TILE_ROW_MASK, TILE_TEXTURE_SLOT_SHIFT } from '../../../packages/exojs-tilemap/src/tileWord';
 
 // Core shaders plus the extension packages' own - the particle stage ships
 // from `@codexo/exojs-particles`, so a glob over `src/` alone would leave the
@@ -84,7 +84,7 @@ interface ShaderEntry {
 // keyed by file. Imported from the module that owns each value rather than
 // restated here, so a changed constant cannot leave the two out of step.
 const placeholderValues: Readonly<Record<string, Readonly<Record<string, number>>>> = {
-  'tile-chunk.vert': { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT },
+  'tile-chunk.vert': { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT, tileTextureSlotShift: TILE_TEXTURE_SLOT_SHIFT },
 };
 
 /**
