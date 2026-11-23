@@ -216,7 +216,7 @@ export class AudioStream extends MediaAudio {
 
     // Preserve playback intent, not HTMLMediaElement.paused: browsers may
     // pause the element automatically when its connection breaks.
-    this._resumeAfterReconnect = voice !== null && voice._canAutoResume ? voice : null;
+    this._resumeAfterReconnect = voice?._canAutoResume ? voice : null;
     this._setConnection('reconnecting');
     this._audioElement.src = this._source!;
     this._audioElement.load();
