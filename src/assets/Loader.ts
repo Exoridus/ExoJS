@@ -1079,8 +1079,7 @@ export class Loader {
       options = Object.keys(rest).length > 0 ? rest : undefined;
     } else if (this._isObjectRequest(entry)) {
       const request = entry as { type: AssetConstructor | string; source?: unknown } & Record<string, unknown>;
-      const installedToken =
-        typeof request.type === 'string' ? this._typeRegistry.resolveTypeName(request.type) : request.type;
+      const installedToken = typeof request.type === 'string' ? this._typeRegistry.resolveTypeName(request.type) : request.type;
 
       if (installedToken === undefined || this._typeRegistry.getInstalled(installedToken) === undefined) {
         throw new Error(`No asset type for request ${String(request.type)} is installed on this application.`);
