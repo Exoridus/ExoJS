@@ -572,7 +572,7 @@ export class Texture {
     this._seenFrameRevision = Number.NaN;
 
     if (source !== null) {
-      const provider = source as FrameSource & { onFrame?: Signal<[]> };
+      const provider = source as FrameSource & { onFrame?: Signal };
 
       provider.onFrame?.add(this._onProviderFrame);
       this._syncFrameProvider();
@@ -593,7 +593,7 @@ export class Texture {
       return;
     }
 
-    (source as FrameSource & { onFrame?: Signal<[]> }).onFrame?.remove(this._onProviderFrame);
+    (source as FrameSource & { onFrame?: Signal }).onFrame?.remove(this._onProviderFrame);
     this._frameProvider = null;
     this._seenFrameRevision = Number.NaN;
 

@@ -136,7 +136,7 @@ const main = (): void => {
   const generated = path.join(generatedDir, 'animated-texture.json');
   if (fs.existsSync(generated)) {
     console.log('EXOJS_GENERATED_DOC_START:animated-texture.json');
-    console.log(fs.readFileSync(generated, 'utf8'));
+    console.log('EXOJS_DOC_JSON:animated-texture.json:' + JSON.stringify(JSON.parse(fs.readFileSync(generated, 'utf8'))));
     console.log('EXOJS_GENERATED_DOC_END:animated-texture.json');
   }
 

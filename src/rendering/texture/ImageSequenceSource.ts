@@ -14,9 +14,7 @@ interface BrowserImageDecoder {
   close(): void;
 }
 
-interface BrowserImageDecoderConstructor {
-  new (options: { data: Uint8Array; type: string }): BrowserImageDecoder;
-}
+type BrowserImageDecoderConstructor = new (options: { data: Uint8Array; type: string }) => BrowserImageDecoder;
 
 /**
  * Playback source for encoded GIF/APNG/animated WebP. The browser decoder
@@ -36,6 +34,7 @@ export class ImageSequenceSource implements FrameSource {
   private _index = 0;
   private _revision = 0;
   private _playing = false;
+  private _generation = 0;
   private _loop = true;
   private _rate = 1;
   private _destroyed = false;
@@ -147,6 +146,8 @@ export class ImageSequenceSource implements FrameSource {
 
   public pause(): void {
     this._playing = false;
+    // A decode already running must not present a frame after pause.
+    this._generation++;
     this._clearTimer();
   }
 
@@ -195,10 +196,12 @@ export class ImageSequenceSource implements FrameSource {
       next = 0;
     }
 
+    const generation = this._generation;
+
     try {
       const decoded = await this._decoder.decode({ frameIndex: next });
 
-      if (this._destroyed) {
+      if (this._destroyed || !this._playing || generation !== this._generation) {
         decoded.image.close();
         return;
       }
