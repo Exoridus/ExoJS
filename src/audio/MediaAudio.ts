@@ -91,6 +91,11 @@ export abstract class MediaAudio implements Playable {
     return this._activeVoice;
   }
 
+  /** Whether an `ended` event should retire the active voice. Live streams can recover. */
+  protected _endVoiceOnMediaEnded(): boolean {
+    return true;
+  }
+
   /** Reports a media failure after the asset became usable. */
   protected _onMediaError(error: Error): void {
     this.onError.dispatch(error);
@@ -146,6 +151,7 @@ export abstract class MediaAudio implements Playable {
       loop,
       playbackRate,
       canSeek: () => this.seekable,
+      endOnEnded: () => this._endVoiceOnMediaEnded(),
       ...(options._startHeld !== undefined && { startHeld: options._startHeld }),
       ...(options.time !== undefined && { startTime: options.time }),
     });
