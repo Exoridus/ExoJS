@@ -65,6 +65,28 @@ const advance = (texture: Texture, timeoutMs = 3000): Promise<void> =>
     source.play();
   });
 
+const expectPixelAt = (
+  gpu: { pixel(x: number, y: number): RgbaTuple },
+  texture: Texture,
+  x: number,
+  y: number,
+  expected: RgbaTuple,
+  step: number,
+): void => {
+  const actual = gpu.pixel(x, y);
+
+  try {
+    expectPixelNear(actual, expected, 4);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+
+    throw new Error(
+      `step ${step} (${sourceOf(texture).decoderKind} decoder) at (${x}, ${y}): got [${actual.join(', ')}], expected [${expected.join(', ')}]: ${reason}`,
+      { cause: error },
+    );
+  }
+};
+
 const black: RgbaTuple = [0, 0, 0, 255];
 const blue: RgbaTuple = [0, 0, 255, 255];
 const red: RgbaTuple = [255, 0, 0, 255];
@@ -108,8 +130,8 @@ const describeAnimatedImageCells = (harness: AnimatedImageHarness, mode: 'ImageD
             return;
           }
 
-          expectPixelNear(gpu.pixel(4, 4), topLeft[index]!, 4);
-          expectPixelNear(gpu.pixel(12, 12), middle[index]!, 4);
+          expectPixelAt(gpu, texture, 4, 4, topLeft[index]!, step);
+          expectPixelAt(gpu, texture, 12, 12, middle[index]!, step);
 
           await advance(texture);
           index = (index + 1) % 5;
