@@ -1,0 +1,134 @@
+{
+  "title": "AssetReadKinds",
+  "description": "How the raw response is read before `decode` runs, when no codec or document parser is given.",
+  "symbol": "AssetReadKinds",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How the raw response is read before `decode` runs, when no codec or document parser is given."
+      ],
+      "importLine": "import { AssetReadKinds } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "arrayBuffer",
+          "signature": "arrayBuffer: ArrayBuffer",
+          "signatureTokens": [
+            {
+              "text": "arrayBuffer",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Raw bytes, the default."
+        },
+        {
+          "name": "blob",
+          "signature": "blob: Blob",
+          "signatureTokens": [
+            {
+              "text": "blob",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Blob",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "A Blob, kept out of the JavaScript heap; suited to media and large binaries."
+        },
+        {
+          "name": "json",
+          "signature": "json: unknown",
+          "signatureTokens": [
+            {
+              "text": "json",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Parsed JSON. Validate it in decode, or use a document parser."
+        },
+        {
+          "name": "text",
+          "signature": "text: string",
+          "signatureTokens": [
+            {
+              "text": "text",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "UTF-8 text."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetTypes.ts"
+}

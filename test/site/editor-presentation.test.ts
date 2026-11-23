@@ -1,6 +1,9 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { runInNewContext } from 'node:vm';
 
+import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Example } from '../../site/src/lib/types';
@@ -96,6 +99,14 @@ describe('playground presentation', () => {
     expect(header).toContain('aria-label="Example view"');
   });
 
+  it('keeps one full context block open for the demo with a named disclosure for mobile code', () => {
+    const html = render();
+
+    expect(html).toMatch(/<details[^>]*data-example-context[^>]*open=""/);
+    expect(html).toMatch(/<summary[^>]*hidden=""[^>]*>Example context<\/summary>/);
+    expect(html.split(example.description)).toHaveLength(3); // visible text and its existing title attribute
+  });
+
   it('keeps unknown renderer diagnostics out of the presentation', () => {
     expect(render()).not.toContain('Renderer not reported');
   });
@@ -151,4 +162,47 @@ it('only offers current recovery when the requested version is invalid', () => {
   );
   expect(html).toContain('Open current Playground');
   expect(html).not.toContain('Open starting example');
+});
+
+describe('source and execution feedback', () => {
+  const file = ts.createSourceFile('Editor.tsx', readFileSync('site/src/components/Editor.tsx', 'utf8'), ts.ScriptTarget.Latest, true);
+  const declarations: string[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ['getRunFeedback', 'getRunMessage'].includes(node.name.getText(file))) {
+      declarations.push(`const ${node.getText(file)};`);
+    }
+
+    ts.forEachChild(node, visit);
+  };
+
+  visit(file);
+
+  const feedback = (
+    status: string,
+    sourceError: { summary: string } | null,
+    renderer: { phase: string; actual?: string } | null = null,
+  ) => {
+    const code = ts.transpileModule(declarations.join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+
+    return runInNewContext(`${code}\ngetRunFeedback(status, false, renderer, sourceError);`, { status, renderer, sourceError });
+  };
+
+  it('reports a settled source failure even if execution had been loading or compiling', () => {
+    for (const status of ['idle', 'compiling', 'running']) {
+      expect(feedback(status, { summary: 'Failed to load example source' })).toEqual({
+        status: 'error',
+        message: 'Example source could not be loaded.',
+      });
+    }
+  });
+
+  it('clears only derived source feedback when loading recovers', () => {
+    expect(feedback('idle', null, { phase: 'active', actual: 'webgl2' })).toEqual({ status: 'idle', message: 'Ready to play' });
+    expect(feedback('error', null, { phase: 'active', actual: 'webgl2' })).toEqual({
+      status: 'error',
+      message: 'Run failed. Check the editor and Output.',
+    });
+    expect(feedback('compiling', null)).toEqual({ status: 'compiling', message: 'Compiling changes…' });
+  });
 });

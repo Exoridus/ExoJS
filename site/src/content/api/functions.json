@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 89,
+  "memberCount": 90,
   "counts": {
     "constructors": 0,
     "methods": 53,
-    "properties": 36,
+    "properties": 37,
     "events": 0
   },
   "sections": [
@@ -3459,6 +3459,39 @@
           "params": [],
           "returnType": null,
           "description": "The built-in binary asset type."
+        },
+        {
+          "name": "blobSourceCodec",
+          "signature": "blobSourceCodec: AssetSourceCodec<Blob>",
+          "signatureTokens": [
+            {
+              "text": "blobSourceCodec",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetSourceCodec",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Blob",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "A Blob, kept and handed on unchanged. The browser may hold its data out of the JavaScript heap, which suits media and other large payloads."
         },
         {
           "name": "bmFontType",

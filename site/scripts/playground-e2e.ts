@@ -544,7 +544,7 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
     await page.evaluate('window.__layoutResizeProbe.hold = true');
 
     try {
-      await page.locator('[data-example-header] summary').click();
+      await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
       await page.getByRole('button', { name: 'Swap panes', exact: true }).click();
       await page.waitForFunction('window.__layoutResizeProbe.pending.length > 0');
       const snapshots = [await panelLayout(page)];
@@ -561,19 +561,19 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
       await releaseResize();
     }
 
-    await page.locator('[data-example-header] summary').click();
+    await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
     await page.getByRole('button', { name: 'Swap panes', exact: true }).click();
   });
 
   await check('the panel sits between preview and editor in the stacked layout', async () => {
-    await page.locator('[data-example-header] summary').click();
+    await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
     await page.getByRole('button', { name: 'Demo above code', exact: true }).click();
 
     const { preview, output, editor } = await panelLayout(page);
 
     assert(output.y >= preview.y + preview.height - 1, 'the panel overlaps the preview');
     assert(editor.y >= output.y + output.height - 1, 'the editor is not below the panel');
-    await page.locator('[data-example-header] summary').click();
+    await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
     await page.getByRole('button', { name: 'Split view', exact: true }).click();
   });
 
@@ -1252,6 +1252,330 @@ const typecheckSnippets = async (snippets: string[]): Promise<void> => {
 };
 
 const exampleLifecycleChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  for (const width of [320, 390, 1280]) {
+    for (const example of ['tweens-animation/tween-basics', 'showcase/boss-intro-cinematic']) {
+      await check(`featured example layout: ${example} at ${width}px`, async () => {
+        const phone = width < 720;
+        const context = await browser.newContext({
+          viewport: { width, height: phone ? 844 : 720 },
+          deviceScaleFactor: phone ? 2 : 1,
+          hasTouch: phone,
+          ...(options.shots ? { recordVideo: { dir: options.shots, size: { width, height: phone ? 440 : 720 } } } : {}),
+        });
+        const page = await context.newPage();
+        watchPage(page);
+        const pageErrors: string[] = [];
+        const observations: Array<Record<string, unknown>> = [];
+        page.on('pageerror', error => pageErrors.push(error.message));
+
+        const shot = async (state: string): Promise<void> => {
+          if (options.shots) {
+            await mkdir(options.shots, { recursive: true });
+            await page.locator('canvas').screenshot({ path: join(options.shots, `${example.split('/').at(-1)}-${width}-${state}.png`) });
+          }
+        };
+
+        try {
+          await page.goto(`${origin}${base}/preview.html?v=current`, { waitUntil: 'domcontentloaded' });
+
+          // Match the phone preview's available host height without depending
+          // on shell scaling. Fixed-world examples retain their own aspect.
+          if (phone) {
+            await page.evaluate('document.body.style.height = "440px"');
+          }
+
+          const response = await page.request.get(`${origin}${base}/examples/${example}.js`);
+          assert(response.ok(), `Cannot load served example ${example}: HTTP ${response.status()}`);
+          const source = (await response.text()).replace(
+            '\nawait startExample',
+            '\nglobalThis.__acceptanceApp = app; globalThis.__featuredErrors = []; app.onError.add(error => globalThis.__featuredErrors.push(error.message));\nawait startExample',
+          );
+          await page.evaluate(async source => {
+            const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+
+            try {
+              await import(url);
+            } finally {
+              URL.revokeObjectURL(url);
+            }
+          }, source);
+          await page.waitForFunction('globalThis.__acceptanceApp?.scenes.currentScene?.state === "active"');
+          const frames = () => page.evaluate('new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))');
+          await frames();
+          await shot('initial');
+
+          if (example.startsWith('tweens')) {
+            const geometry = () =>
+              page.evaluate<{
+                sprite: { x: number; y: number; right: number; bottom: number };
+                width: number;
+                panelTop: number;
+                pauseVisible: boolean;
+                paused: boolean;
+                position: { x: number; y: number };
+              }>(`(() => {
+              const app = globalThis.__acceptanceApp, scene = app.scenes.currentScene;
+              const scale = app.canvas.getBoundingClientRect().width / app.width;
+              const sprite = scene.sprite.getBounds(), panel = scene.panel.element.getBounds();
+              const pause = scene.panel.actions['Pause / Resume'].getBounds();
+              const scroll = scene.panel.element.children.find(node => node.constructor.name === 'ScrollContainer');
+              const viewport = scroll.getBounds();
+              return { width: app.canvas.getBoundingClientRect().width, sprite: { x: sprite.x * scale, y: sprite.y * scale,
+                right: (sprite.x + sprite.width) * scale, bottom: (sprite.y + sprite.height) * scale },
+                panelTop: panel.y * scale, paused: scene.motionPaused, position: { ...scene.position },
+                pauseVisible: !scroll.clip && pause.y >= viewport.y && pause.y + pause.height <= viewport.y + viewport.height + 1 };
+            })()`);
+
+            const contained = async (state: string): Promise<void> => {
+              const layout = await geometry();
+              observations.push({ state, ...layout });
+              assert(layout.pauseVisible, `${state}: Pause must be visible without panel scrolling: ${JSON.stringify(layout)}`);
+              assert(
+                layout.sprite.x >= 8 &&
+                  layout.sprite.right <= layout.width * 0.6 &&
+                  layout.sprite.y >= 32 &&
+                  layout.sprite.bottom <= layout.panelTop - 8,
+                `${state}: full actor must remain inside its column above the panel: ${JSON.stringify(layout)}`,
+              );
+            };
+
+            const clickTarget = async (x: number, y: number): Promise<void> => {
+              const point = await page.evaluate<{ x: number; y: number }>(`(() => {
+                const app = globalThis.__acceptanceApp, bounds = app.scenes.currentScene.bounds;
+                const canvas = app.canvas.getBoundingClientRect();
+                globalThis.__targetSteps = app.scenes.currentScene.steps;
+                return { x: canvas.x + (bounds.x + bounds.width * ${x}) * canvas.width / app.width,
+                  y: canvas.y + (bounds.y + bounds.height * ${y}) * canvas.height / app.height };
+              })()`);
+              await (phone ? page.touchscreen.tap(point.x, point.y) : page.mouse.click(point.x, point.y));
+              await page.waitForFunction(`(() => {
+                const scene = globalThis.__acceptanceApp.scenes.currentScene;
+                return scene.moving && scene.steps !== globalThis.__targetSteps;
+              })()`);
+            };
+
+            const pause = async (): Promise<void> => {
+              const point = await page.evaluate<{ x: number; y: number }>(`(() => {
+                const app = globalThis.__acceptanceApp, bounds = app.scenes.currentScene.panel.actions['Pause / Resume'].getBounds();
+                const canvas = app.canvas.getBoundingClientRect();
+                return { x: canvas.x + (bounds.x + bounds.width / 2) * canvas.width / app.width,
+                  y: canvas.y + (bounds.y + bounds.height / 2) * canvas.height / app.height };
+              })()`);
+              await (phone ? page.touchscreen.tap(point.x, point.y) : page.mouse.click(point.x, point.y));
+              await frames();
+            };
+
+            await contained('initial');
+
+            for (const [x, y] of [
+              [0.01, 0.01],
+              [0.99, 0.01],
+              [0.99, 0.99],
+              [0.01, 0.99],
+            ]) {
+              await clickTarget(x!, y!);
+              await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.moving');
+              await frames();
+              const position = (await geometry()).position;
+              assert(
+                Math.abs(position.x - x!) < 0.02 && Math.abs(position.y - y!) < 0.02,
+                `A real corner click must select ${x}, ${y}; got ${JSON.stringify(position)}`,
+              );
+              await contained(`target ${x}, ${y}`);
+            }
+
+            await shot('corner');
+            await clickTarget(0.99, 0.01);
+            await pause();
+            const held = await geometry();
+            assert(held.paused, 'Visible Pause must pause the tween');
+            await page.waitForTimeout(150);
+            assert(JSON.stringify((await geometry()).position) === JSON.stringify(held.position), 'Pause must hold the actor position');
+            await pause();
+            assert(!(await geometry()).paused, 'Visible Pause must resume the tween');
+            await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.moving');
+
+            // Easing uses the native stepper when the complete list cannot fit.
+            const easeButton = await page.evaluate<{ x: number; y: number }>(`(() => {
+              const app = globalThis.__acceptanceApp;
+              let row;
+              const visit = node => { if (node.constructor.name === 'Label' && node.text === 'Ease') row = node.parent;
+                for (const child of node.children ?? []) visit(child); };
+              visit(app.scenes.currentScene._peekUI());
+              const button = row.children.find(node => node.visible && node.labelNode?.text === '>');
+              const bounds = button.getBounds(), canvas = app.canvas.getBoundingClientRect();
+              return { x: canvas.x + (bounds.x + bounds.width / 2) * canvas.width / app.width,
+                y: canvas.y + (bounds.y + bounds.height / 2) * canvas.height / app.height };
+            })()`);
+            const previousEase = await page.evaluate<string>('globalThis.__acceptanceApp.scenes.currentScene.panel.values.easing');
+            await (phone ? page.touchscreen.tap(easeButton.x, easeButton.y) : page.mouse.click(easeButton.x, easeButton.y));
+            await frames();
+            assert(
+              (await page.evaluate<string>('globalThis.__acceptanceApp.scenes.currentScene.panel.values.easing')) !== previousEase,
+              'Clicking Ease must change the curve',
+            );
+            await clickNativeControl(page.mainFrame(), 'Mode', 'DemoDropdown');
+            await page.keyboard.press('ArrowDown');
+            await frames();
+            await page.keyboard.press('ArrowDown');
+            await frames();
+            await page.keyboard.press('Enter');
+            await page.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene.panel.values.mode === "Route"');
+            await clickTarget(0.01, 0.99);
+            await page.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene.leg === 4');
+            await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.moving');
+            await contained('completed route');
+            await shot('route');
+
+            // Sample a curve that leaves [0, 1] throughout the real move.
+            await page.evaluate(
+              'globalThis.__acceptanceApp.scenes.currentScene.panel.set("mode", "One-way"); globalThis.__acceptanceApp.scenes.currentScene.panel.set("easing", "elasticOut")',
+            );
+            await frames();
+            await clickTarget(0.01, 0.99);
+            await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.moving');
+            await clickTarget(0.99, 0.01);
+            const escaped = await page.evaluate<boolean>(`(async () => {
+              const app = globalThis.__acceptanceApp, scene = app.scenes.currentScene;
+              let escaped = false;
+              do {
+                await new Promise(requestAnimationFrame);
+                const scale = app.canvas.getBoundingClientRect().width / app.width;
+                const bounds = scene.sprite.getBounds(), panel = scene.panel.element.getBounds();
+                escaped ||= bounds.x * scale < 8 || (bounds.x + bounds.width) * scale > app.width * scale * 0.6 ||
+                  bounds.y * scale < 32 || bounds.y + bounds.height > panel.y - 8 / scale;
+              } while (scene.moving);
+              return escaped;
+            })()`);
+            assert(!escaped, 'Elastic overshoot must keep the complete actor above the panel and inside its column');
+
+            const holdOvershoot = async (): Promise<void> => {
+              // Native Pause is tested above. Hold a real rendered overshoot
+              // on its observed frame, so input latency cannot miss the peak.
+              await page.evaluate(`(() => {
+                const app = globalThis.__acceptanceApp, scene = app.scenes.currentScene;
+                const hold = () => {
+                  if (scene.moving && scene.position.y > 1.15) {
+                    app.onFrame.remove(hold);
+                    scene.pause();
+                  }
+                };
+                app.onFrame.add(hold);
+              })()`);
+              await clickTarget(0.01, 0.99);
+              await page.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene.motionPaused');
+              const overshot = await geometry();
+              observations.push({ state: 'frame-observed overshoot hold', ...overshot });
+              assert(overshot.position.y > 1.15, `The regression must hold real overshoot: ${JSON.stringify(overshot)}`);
+            };
+
+            await holdOvershoot();
+            await (phone ? page.touchscreen.tap(easeButton.x, easeButton.y) : page.mouse.click(easeButton.x, easeButton.y));
+            await frames();
+            await contained('curve changed during paused overshoot');
+            await pause();
+            await page.evaluate('globalThis.__acceptanceApp.scenes.currentScene.panel.set("easing", "elasticOut")');
+            await frames();
+            await clickTarget(0.99, 0.01);
+            await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.moving');
+            await holdOvershoot();
+            await clickTarget(0.99, 0.01);
+            await pause();
+
+            while (await page.evaluate<boolean>('globalThis.__acceptanceApp.scenes.currentScene.moving')) {
+              await contained('target replaced during overshoot');
+              await frames();
+            }
+
+            await contained('interrupted motion settled');
+
+            if (!phone) {
+              await page.evaluate('document.body.style.height = "440px"');
+              await page.setViewportSize({ width: 390, height: 844 });
+              await frames();
+              await contained('desktop resized to phone');
+              await shot('resized');
+            }
+          } else {
+            const prompt = () =>
+              page.evaluate<{
+                fontSize: number;
+                x: number;
+                right: number;
+                y: number;
+                bottom: number;
+                height: number;
+                width: number;
+                text: string;
+              }>(`(() => {
+              const app = globalThis.__acceptanceApp, text = app.scenes.currentScene.tapPrompt;
+              const canvas = app.canvas.getBoundingClientRect(), scale = canvas.width / app.width, bounds = text.getBounds();
+              return { fontSize: text.style.fontSize * text.scale.y * scale, x: bounds.x * scale,
+                right: (bounds.x + bounds.width) * scale, y: bounds.y * scale,
+                bottom: (bounds.y + bounds.height) * scale, height: canvas.height, width: canvas.width, text: text.text };
+            })()`);
+
+            const readable = async (state: string): Promise<void> => {
+              const text = await prompt();
+              observations.push({ state, ...text });
+              assert(text.fontSize >= 14, `${state}: prompt must be at least 14 CSS px: ${JSON.stringify(text)}`);
+              assert(
+                text.x >= 8 && text.right <= text.width - 8 && text.y >= 8 && text.bottom <= text.height - 8,
+                `${state}: prompt must fit safe insets: ${JSON.stringify(text)}`,
+              );
+            };
+
+            assert(await page.evaluate<boolean>('globalThis.__acceptanceApp.audio.locked'), 'Start prompt must precede gesture unlock');
+            await readable('start');
+            const canvas = page.locator('canvas');
+            await (phone ? canvas.tap({ position: { x: width / 2, y: 50 } }) : canvas.click({ position: { x: width / 2, y: 50 } }));
+            await page.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene.finished');
+            await frames();
+            await readable('replay');
+            assert((await prompt()).text.toLowerCase().includes('replay'), 'Finished sequence must explain replay');
+            await shot('finished');
+            await page.keyboard.press('r', { delay: 50 });
+            await page.waitForFunction('!globalThis.__acceptanceApp.scenes.currentScene.finished');
+            await page.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene.finished');
+            await frames();
+            await readable('keyboard replay');
+
+            if (!phone) {
+              await page.setViewportSize({ width: 320, height: 844 });
+              await frames();
+              await readable('desktop resized to phone');
+              await shot('resized');
+            }
+          }
+
+          const applicationErrors = await page.evaluate<string[]>('globalThis.__featuredErrors');
+          assert(applicationErrors.length === 0, applicationErrors.join('\n'));
+          assert(pageErrors.length === 0, pageErrors.join('\n'));
+        } finally {
+          await context.close();
+
+          if (options.shots) {
+            await writeFile(
+              join(options.shots, `${example.split('/').at(-1)}-${width}-measurements.json`),
+              JSON.stringify(
+                {
+                  example,
+                  width,
+                  deviceScaleFactor: phone ? 2 : 1,
+                  hostHeight: phone ? 440 : 720,
+                  observations,
+                  video: await page.video()?.path(),
+                },
+                null,
+                2,
+              ),
+            );
+          }
+        }
+      });
+    }
+  }
+
   await exampleSceneOwnershipChecks(browser, origin, base, check);
   await check('video controls: real shortcuts, playback, resize and end', async () => {
     const session = await openPlayground(browser, origin, base, 'sprites-textures/video-drawable', { width: 1000, height: 700 });
@@ -1527,7 +1851,7 @@ const workerChecks = async (browser: Browser, origin: string, base: string): Pro
         const frame = await previewFrame(page);
         await frame.waitForFunction(value => document.body.dataset.editedTerrain === value, String(cycle));
         await verifyTerrain(frame);
-        await page.locator('[data-example-header] summary').click();
+        await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
         const popupPromise = page.waitForEvent('popup');
         await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
         const popup = await popupPromise;
@@ -1582,7 +1906,7 @@ const newTabChecks = async (browser: Browser, origin: string, base: string): Pro
           'unchanged edited reload',
         );
         await (await previewFrame(page)).waitForFunction(value => document.body.dataset.editedExample === value, String(cycle));
-        await page.locator('[data-example-header] summary').click();
+        await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
         const popupPromise = page.waitForEvent('popup');
         await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
         const popup = await popupPromise;
@@ -2536,6 +2860,161 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
     }
   });
 
+  await check('experience: mobile Code context preserves editing space and view state', async () => {
+    for (const fixture of [
+      { width: 320, height: 740, locale: 'en', theme: 'light', dpr: 1 },
+      { width: 390, height: 844, locale: 'de', theme: 'dark', dpr: 2 },
+    ]) {
+      const viewport = { width: fixture.width, height: fixture.height };
+      const context = await browser.newContext({ viewport, hasTouch: true, deviceScaleFactor: fixture.dpr });
+      await context.addInitScript(`localStorage.setItem('exo-theme', ${JSON.stringify(fixture.theme)});`);
+      const page = await context.newPage();
+      watchPage(page);
+      await page.route('https://registry.npmjs.org/**', route => route.fulfill({ status: 500, body: 'Controlled registry failure' }));
+
+      try {
+        await page.goto(`${origin}${base}/${fixture.locale}/playground/`, { waitUntil: 'domcontentloaded' });
+        const frame = await previewFrame(page);
+        await frame.locator('canvas').waitFor({ state: 'visible' });
+        const generation = frame.url();
+        await frame.evaluate('window.__contextCanvas = document.querySelector("canvas");');
+        const disclosure = page.locator('[data-example-context]');
+        const summary = disclosure.locator('summary');
+        const description = disclosure.locator('[data-header-row="context"] > p');
+        const demo = page.getByRole('tab', { name: 'Demo', exact: true });
+        const code = page.getByRole('tab', { name: 'Code', exact: true });
+        assert(await description.isVisible(), 'Demo hides its complete instructions');
+        assert(!(await summary.isVisible()), 'Demo adds an unnecessary context disclosure');
+        await code.click();
+        await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('startExample')");
+        await page.evaluate(() => document.fonts.ready);
+        assert((await disclosure.getAttribute('open')) === null, 'mobile Code context does not start collapsed');
+        assert(!(await description.isVisible()), 'collapsed context still consumes editor space');
+        const visibleCodeHeight = await page.evaluate(() => {
+          const host = document.querySelector('[data-editor-host]')!.getBoundingClientRect();
+          const actions = document.querySelector('[aria-label="Playground actions"]')!.getBoundingClientRect();
+
+          return Math.min(innerHeight, actions.top, host.bottom) - Math.max(host.top, 0);
+        });
+        assert(visibleCodeHeight >= 120, `${fixture.width}px Code exposes only ${visibleCodeHeight}px of source`);
+
+        for (const action of [demo, code, summary, page.getByRole('button', { name: 'Run', exact: true })]) {
+          const bounds = await action.boundingBox();
+          assert(bounds && bounds.y >= 0 && bounds.y + bounds.height <= fixture.height, 'Code action is outside the initial viewport');
+        }
+
+        await page.getByRole('group', { name: 'Example files' }).getByRole('button', { name: 'runtime.ts Editable' }).click();
+        await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/shared/runtime.ts')");
+        await page.locator('.monaco-editor [role="textbox"]').focus();
+        await page.keyboard.press(endOfDocumentKey);
+        await page.keyboard.type('\n// preserved while reading example context');
+        const snapshot = () =>
+          page.evaluate<string>(`JSON.stringify((() => {
+          const editor = window.monaco.editor.getEditors()[0];
+          return {uri:editor.getModel().uri.toString(), source:editor.getValue(), cursor:editor.getPosition()};
+        })())`);
+        const before = await snapshot();
+        await page.evaluate('window.__contextModel = window.monaco.editor.getEditors()[0].getModel();');
+        await summary.focus();
+        await page.keyboard.press('Enter');
+        assert((await disclosure.getAttribute('open')) !== null && (await description.isVisible()), 'keyboard did not reveal full context');
+        assert(await summary.evaluate(node => node === document.activeElement), 'opening context moved keyboard focus');
+        await page.keyboard.press('Tab');
+        assert(
+          await disclosure
+            .getByRole('link')
+            .first()
+            .evaluate(node => node === document.activeElement),
+          'Tab did not reach the context links',
+        );
+        await page.keyboard.press('Shift+Tab');
+        assert(await summary.evaluate(node => node === document.activeElement), 'Shift+Tab did not return to the context summary');
+        assert(
+          await description.evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight),
+          'expanded instructions are clipped',
+        );
+        assert(
+          (await disclosure.getByRole('link', { name: /^Next experiment/ }).count()) === 1,
+          'the next experiment is not discoverable in context',
+        );
+
+        for (const link of await disclosure.getByRole('navigation', { name: 'Learn about this example' }).getByRole('link').all()) {
+          assert((await link.getAttribute('href'))?.includes(`/${fixture.locale}/`), 'context learning link lost its locale');
+        }
+
+        await demo.click();
+        assert(await description.isVisible(), 'switching to Demo hides instructions');
+        await code.click();
+        assert((await disclosure.getAttribute('open')) !== null, 'view switching forgot the open context preference');
+        await page.setViewportSize({ width: 900, height: fixture.height });
+        await summary.waitFor({ state: 'hidden' });
+        assert(await description.isVisible(), 'tablet context is not visible');
+        await page.setViewportSize(viewport);
+        await summary.waitFor({ state: 'visible' });
+        assert((await disclosure.getAttribute('open')) !== null, 'resizing forgot the open context preference');
+        await summary.focus();
+        await page.keyboard.press('Space');
+        assert((await disclosure.getAttribute('open')) === null, 'Space did not close context');
+        assert(await summary.evaluate(node => node === document.activeElement), 'closing context moved keyboard focus');
+        await demo.click();
+        await code.click();
+        assert((await disclosure.getAttribute('open')) === null, 'view switching forgot the closed context preference');
+        assert((await snapshot()) === before, 'context changed the active file, draft or cursor');
+        assert(
+          await page.evaluate('window.__contextModel === window.monaco.editor.getEditors()[0].getModel()'),
+          'context replaced the model',
+        );
+        assert(
+          frame.url() === generation && (await frame.evaluate('window.__contextCanvas === document.querySelector("canvas")')),
+          'context restarted the preview',
+        );
+        assert((await page.getByRole('button', { name: 'Run', exact: true }).count()) === 1, 'context duplicated Run');
+        assert(!(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)), 'context overflows the viewport');
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await context.close();
+      }
+    }
+  });
+
+  await check('experience: source failure feedback clears after source recovery', async () => {
+    for (const theme of ['light', 'dark']) {
+      const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+      await context.addInitScript(`localStorage.setItem('exo-theme', ${JSON.stringify(theme)});`);
+      const page = await context.newPage();
+      watchPage(page);
+      let failSource = true;
+      await page.route(/\/examples\/getting-started\/hello-world\.(?:ts|js)(?:\?.*)?$/, route =>
+        failSource ? route.abort('failed') : route.continue(),
+      );
+
+      try {
+        await page.goto(`${origin}${base}/en/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
+        await page.getByText('Failed to load example source', { exact: true }).first().waitFor();
+        const feedback = page.locator('[data-run-status]');
+        await page.getByText('Example source could not be loaded.', { exact: true }).waitFor();
+        assert((await feedback.getAttribute('data-run-status')) === 'error', 'settled source failure still claims an active run');
+        failSource = false;
+        await page.getByRole('link', { name: /^Next experiment Drag and Throw Physics/ }).click();
+        await (await previewFrame(page)).locator('canvas').waitFor({ state: 'visible' });
+        await page.goBack();
+        await page.getByRole('heading', { name: 'First Animated Sprite', exact: true }).waitFor();
+        await page.getByText('Ready to play', { exact: true }).waitFor();
+        assert((await feedback.getAttribute('data-run-status')) === 'idle', 'source recovery retained derived failure status');
+        assert(!(await feedback.textContent())?.includes('could not be loaded'), 'source recovery retained its failure message');
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
+      } finally {
+        await context.close();
+      }
+    }
+  });
+
   await check('header stays stable and navigation remains compact', async () => {
     for (const width of [1440, 1024, 390, 320]) {
       const { page } = await openPlayground(browser, origin, base, 'filters/bloom-filter', { width, height: 1000 });
@@ -2548,10 +3027,11 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
           'Example instructions must remain visible on narrow screens',
         );
         assert((await header.getByText('Info', { exact: true }).count()) === 0, 'duplicate information panel remains');
-        await header.locator('summary').click();
-        assert((await header.locator('details').getAttribute('open')) !== null, 'view options are inaccessible');
-        await header.locator('summary').press('Escape');
-        assert((await header.locator('details').getAttribute('open')) === null, 'Escape did not close view options');
+        const viewOptions = header.locator('details:not([data-example-context])');
+        await viewOptions.locator('summary').click();
+        assert((await viewOptions.getAttribute('open')) !== null, 'view options are inaccessible');
+        await viewOptions.locator('summary').press('Escape');
+        assert((await viewOptions.getAttribute('open')) === null, 'Escape did not close view options');
 
         if (width >= 1120) {
           await page.evaluate(() => document.fonts.ready);
@@ -2836,7 +3316,7 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       await page.waitForFunction(
         "document.querySelector('iframe')?.contentWindow?.__fileTabRun === 'entry' && document.querySelector('iframe')?.contentWindow?.__helperRun === 'edited'",
       );
-      await page.locator('[data-example-header] summary').click();
+      await page.locator('[data-example-header] details:not([data-example-context]) > summary').click();
       const popupPromise = page.context().waitForEvent('page');
       await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
       const standalone = await popupPromise;

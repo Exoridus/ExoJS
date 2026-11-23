@@ -58,11 +58,11 @@ Asset.type('texture', 'p.png', { delimiter: ',' });
 
 const loader = new Loader();
 
-// @ts-expect-error - per-asset options belong on Asset.type(), not load(path, options).
+// Load options (priority) apply to every input; per-asset options stay in the request.
 loader.load('l.json', { priority: LoadPriority.Background });
-
-// @ts-expect-error - descriptor options belong inside Asset.type(), not a second load() argument.
 loader.load(levelDesc, { priority: LoadPriority.Background });
+// @ts-expect-error - per-asset options are not load options.
+loader.load('l.png', { textureOptions: {} });
 
 // @ts-expect-error - descriptor options belong inside Asset.type(), not a second get() argument.
 loader.get(levelDesc, { delimiter: ',' });

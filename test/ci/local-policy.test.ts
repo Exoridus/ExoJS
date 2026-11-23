@@ -78,6 +78,24 @@ describe('local validation policy', () => {
     expect(() => parseLocalLaneOptions(['--pre-push', '--quick'])).toThrow(/cannot combine/);
   });
 
+  it('limits pre-push dependency discovery to the exact committed range', () => {
+    const base = 'a'.repeat(40);
+    const head = 'b'.repeat(40);
+    const options = parseLocalLaneOptions(['--pre-push', '--tests-only', '--base', base, '--head', head]);
+    const effective = effectiveLanes(selectAreas(['src/math/Vector.ts']));
+    const selected = selectLocalLanes(effective, options, ['src/math/Vector.ts']);
+    const unit = selected.find(lane => lane.id === 'unit');
+
+    expect(selected.map(lane => lane.id)).toEqual(['unit']);
+    expect(unit?.run).toContain(`--base ${base} --committed`);
+    expect(unit?.run).not.toContain('--full');
+  });
+
+  it('rejects unverified pushed heads and head flags outside pre-push mode', () => {
+    expect(() => parseLocalLaneOptions(['--pre-push', '--head', 'not-a-commit'])).toThrow(/exact/);
+    expect(() => parseLocalLaneOptions(['--head', 'a'.repeat(40)])).toThrow(/pre-push/);
+  });
+
   it('uses one graph selection for the normal workspace unit inventory', () => {
     const lanes = lanesFor('src/math/Vector.ts');
     const command = lanes.find(lane => lane.id === 'unit')!.run;

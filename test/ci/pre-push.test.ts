@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -20,7 +20,7 @@ describe.skipIf(process.platform === 'win32')('pre-push command dispatch', () =>
       encoding: 'utf8',
     }).trim();
 
-  const runHook = (remote: string) => {
+  const runHook = (remote: string, mode: 'fast' | 'full' = 'fast', remoteRef = 'refs/heads/topic') => {
     const log = join(root, 'commands.log');
     // Keep the real hook, Git range and policy. Only expensive gate/lane/build
     // processes are replaced at their command boundary.
@@ -40,8 +40,13 @@ node() {
       ],
       {
         cwd: root,
-        env: { ...environment, PRE_PUSH_HOOK: join(repository, '.husky/pre-push'), PRE_PUSH_CALL_LOG: log },
-        input: `refs/heads/topic ${head} refs/heads/topic ${remote}\n`,
+        env: {
+          ...environment,
+          EXOJS_PRE_PUSH_MODE: mode,
+          PRE_PUSH_HOOK: join(repository, '.husky/pre-push'),
+          PRE_PUSH_CALL_LOG: log,
+        },
+        input: `refs/heads/topic ${head} ${remoteRef} ${remote}\n`,
         encoding: 'utf8',
         timeout: 15_000,
       },
@@ -52,10 +57,12 @@ node() {
 
     return {
       output: result.stdout,
-      calls: readFileSync(log, 'utf8')
-        .trim()
-        .split('\n')
-        .map(line => line.split('\t')),
+      calls: existsSync(log)
+        ? readFileSync(log, 'utf8')
+            .trim()
+            .split('\n')
+            .map(line => line.split('\t'))
+        : [],
     };
   };
 
@@ -79,18 +86,49 @@ node() {
     rmSync(root, { recursive: true, force: true });
   });
 
-  it('runs both static phases and explicitly selects pre-push lanes for the verified range', () => {
-    const { calls } = runHook(base);
+  it('runs only quick tracked-file gates on a feature branch', () => {
+    const { calls, output } = runHook(base);
+
+    expect(calls).toEqual([['npm', 'run', 'gates', '--', 'affected-fast', base, head]]);
+    expect(output).toContain('CI-first');
+  });
+
+  it('runs no hook commands when there are no new committed files', () => {
+    writeFileSync(join(root, 'src/math/Random.ts'), 'uncommitted working tree edit;\n');
+    const { calls, output } = runHook(head);
+
+    expect(calls).toEqual([]);
+    expect(output).toContain('nothing to verify');
+  });
+
+  it('keeps the complete local checks under the explicit full mode', () => {
+    const { calls } = runHook(base, 'full');
 
     expect(calls).toEqual([
       ['npm', 'run', 'gates', '--', 'affected-fast', base, head],
       ['npm', 'run', 'gates', '--', 'affected-rest', base, head],
-      ['npm', 'run', 'lanes', '--', '--run', '--tests-only', '--pre-push', '--base', base],
+      ['npm', 'run', 'lanes', '--', '--run', '--tests-only', '--pre-push', '--base', base, '--head', head],
     ]);
   });
 
-  it('retains the build preflight and all lanes when no initial range resolves', () => {
+  it('runs full checks when a feature commit is pushed directly to next', () => {
+    const { calls } = runHook(base, 'fast', 'refs/heads/next');
+
+    expect(calls).toEqual([
+      ['npm', 'run', 'gates', '--', 'affected-fast', base, head],
+      ['npm', 'run', 'gates', '--', 'affected-rest', base, head],
+      ['npm', 'run', 'lanes', '--', '--run', '--tests-only', '--pre-push', '--base', base, '--head', head],
+    ]);
+  });
+
+  it('uses quick gates even if a new branch has no resolvable base', () => {
     const { calls } = runHook('0'.repeat(40));
+
+    expect(calls).toEqual([['npm', 'run', 'gates', '--', 'affected-fast', '', head]]);
+  });
+
+  it('retains full fail-closed fallback for a new branch under explicit full mode', () => {
+    const { calls } = runHook('0'.repeat(40), 'full');
 
     expect(calls).toEqual([
       ['npm', 'run', 'gates', '--', 'affected-fast', '', head],
@@ -98,6 +136,22 @@ node() {
       ['npm', 'run', 'gates', '--', 'affected-rest', '', head],
       ['npm', 'run', 'lanes', '--', '--run', '--tests-only', '--pre-push', '--all'],
     ]);
+  });
+
+  it('treats an unchanged committed range as empty even with unrelated local edits', () => {
+    mkdirSync(join(root, 'src/assets'), { recursive: true });
+    writeFileSync(join(root, 'src/assets/WorkInProgress.ts'), 'export const localOnly = true;\n');
+    const result = spawnSync(process.execPath, ['scripts/lanes.ts', '--pre-push', '--base', head, '--head', head, '--run'], {
+      cwd: root,
+      env: environment,
+      encoding: 'utf8',
+      timeout: 15_000,
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('no committed files changed');
+    expect(result.stdout).not.toContain('  unit:');
   });
 
   it('prints the deferred lane identities and CI obligation even with silent output', () => {

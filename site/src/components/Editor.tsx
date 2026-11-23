@@ -98,6 +98,7 @@ export const Editor = ({
   const [order, setOrder] = useState<EditorOrder>('preview-first');
   const [splitPercent, setSplitPercent] = useState(55);
   const [activeView, setActiveView] = useState<'demo' | 'code'>('demo');
+  const [codeContextOpen, setCodeContextOpen] = useState(false);
   const [toolbarTarget, setToolbarTarget] = useState<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLElement | null>(null);
   const codeEditorRef = useRef<EditorCodeHandle | null>(null);
@@ -402,9 +403,22 @@ export const Editor = ({
   const availability = getExampleAvailability(activeExample);
   const editorLanguage = activeExample?.language === 'typescript' ? 'typescript' : 'javascript';
   const displayPath = getDisplayPath(activeExample);
-  // Renderer recovery is independent of the stored compile/module outcome.
-  const feedbackStatus = rendererStatus?.phase === 'failed' && runStatus !== 'compiling' ? 'error' : runStatus;
-  const runMessage = getRunMessage(feedbackStatus, dirty, Boolean(rendererStatus?.actual));
+  const { status: feedbackStatus, message: runMessage } = getRunFeedback(runStatus, dirty, rendererStatus, sourceLoadError);
+  const contextCollapsible = compact && activeView === 'code';
+  const nextExampleLink = nextExample && onSelectExample && (
+    <a
+      className={css(styles, 'next-example')}
+      href={buildExampleHref(nextExample.path, selectedVersionId)}
+      onClick={event => {
+        if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+          event.preventDefault();
+          onSelectExample(nextExample.path);
+        }
+      }}
+    >
+      <span>Next experiment</span> {nextExample.title} <span aria-hidden="true">→</span>
+    </a>
+  );
 
   const sidebarToggle =
     showSidebarToggle && !sidebarOpen ? <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} /> : null;
@@ -439,12 +453,25 @@ export const Editor = ({
               <PreviewToolbar actionsRef={setToolbarTarget} />
             </div>
           </div>
-          <div className={css(styles, 'example-context')} data-header-row="context">
-            <p className={css(styles, 'example-description')} title={activeExample.description}>
-              {activeExample.description}
-            </p>
-            {renderLearningLinks(activeExample, 1)}
-          </div>
+          <details className={css(styles, 'example-details')} data-example-context open={!contextCollapsible || codeContextOpen}>
+            <summary
+              className={css(styles, 'context-summary')}
+              hidden={!contextCollapsible}
+              onClick={event => {
+                event.preventDefault();
+                setCodeContextOpen(open => !open);
+              }}
+            >
+              Example context
+            </summary>
+            <div className={css(styles, 'example-context')} data-header-row="context">
+              <p className={css(styles, 'example-description')} title={activeExample.description}>
+                {activeExample.description}
+              </p>
+              {renderLearningLinks(activeExample, 1)}
+            </div>
+            {contextCollapsible && nextExampleLink && <div className={css(styles, 'context-next')}>{nextExampleLink}</div>}
+          </details>
           <div className={css(styles, 'example-actions')}>
             <div
               className={css(styles, 'view-tabs')}
@@ -489,20 +516,7 @@ export const Editor = ({
                 Code
               </button>
             </div>
-            {nextExample && onSelectExample && (
-              <a
-                className={css(styles, 'next-example')}
-                href={buildExampleHref(nextExample.path, selectedVersionId)}
-                onClick={event => {
-                  if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
-                    event.preventDefault();
-                    onSelectExample(nextExample.path);
-                  }
-                }}
-              >
-                <span>Next experiment</span> {nextExample.title} <span aria-hidden="true">→</span>
-              </a>
-            )}
+            {!contextCollapsible && nextExampleLink}
           </div>
           <div className={css(styles, 'run-feedback')} data-run-status={feedbackStatus}>
             <p role="status" aria-live="polite">
@@ -698,6 +712,21 @@ export const Editor = ({
       </section>
     </section>
   );
+};
+
+const getRunFeedback = (
+  runStatus: EditorRunStatus,
+  dirty: boolean,
+  rendererStatus: ExampleRendererStatus | null,
+  sourceLoadError: PreviewErrorEntry | null,
+): { status: EditorRunStatus; message: string } => {
+  // Source and renderer recovery never overwrite the stored compile/module outcome.
+  const status = sourceLoadError || (rendererStatus?.phase === 'failed' && runStatus !== 'compiling') ? 'error' : runStatus;
+
+  return {
+    status,
+    message: sourceLoadError ? 'Example source could not be loaded.' : getRunMessage(status, dirty, Boolean(rendererStatus?.actual)),
+  };
 };
 
 const getRunMessage = (status: EditorRunStatus, dirty: boolean, ready: boolean): string => {

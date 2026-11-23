@@ -17,7 +17,7 @@ import {
   type Voice,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { startExample } from '@examples/runtime';
+import { startExample, unitsPerCssPixel } from '@examples/runtime';
 
 const titleText = 'VOID EMPEROR';
 
@@ -79,11 +79,7 @@ class BossIntroCinematicScene extends Scene {
 
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the sting + cinematic start.
-    this.tapPrompt = this.track(
-      new Text('Click or press any key to start the cinematic', { fillColor: Color.white, fontSize: 22, align: 'center' }),
-    )
-      .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, height - 64);
+    this.tapPrompt = this.track(new Text('', { fillColor: Color.white, fontSize: 16, align: 'center' })).setAnchor(0.5, 1);
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture; start the cinematic in lockstep with the sting on unlock.
@@ -191,7 +187,15 @@ class BossIntroCinematicScene extends Scene {
     // The replay hint appears only once the sequence has played out, so it
     // never competes with the cinematic itself.
     if (app.audio.locked || this.finished) {
-      this.tapPrompt.text = app.audio.locked ? 'Click or press any key to start the cinematic' : 'Press R or click to replay';
+      const k = unitsPerCssPixel(app, app.canvas as HTMLCanvasElement);
+      const maxWidth = width / k - 32;
+      this.tapPrompt.text = app.audio.locked ? 'Tap or press a key to start' : 'Tap or press R to replay';
+
+      if (this.tapPrompt.layout.maxWidth !== maxWidth) {
+        this.tapPrompt.layout = { maxWidth };
+      }
+
+      this.tapPrompt.setScale(k).setPosition(width / 2, height - 16 * k);
       context.render(this.tapPrompt, { view: context.screenView });
     }
   }
