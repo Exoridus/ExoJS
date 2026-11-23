@@ -2708,15 +2708,32 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
       const responsive = await previewFrame(page);
       const instance = await responsive.locator('body').getAttribute('data-sizing-instance');
       const generation = responsive.url();
+      const layout = () =>
+        page.locator('iframe[title^="Live demo:"]').evaluate(iframe => {
+          const frame = iframe as HTMLIFrameElement;
+          const canvas = frame.contentDocument?.querySelector('canvas');
+          const box = frame.getBoundingClientRect();
+
+          return {
+            availableWidth: frame.closest('[data-preview-surface]')!.clientWidth,
+            frameWidth: frame.contentWindow?.innerWidth,
+            canvasHeight: canvas?.clientHeight ?? 0,
+            visibleWidth: box.width,
+            visibleHeight: box.height,
+          };
+        });
 
       for (const width of [390, 320]) {
         await page.setViewportSize({ width, height: width === 390 ? 844 : 740 });
-        await responsive.waitForFunction(
-          width => window.innerWidth === width && Math.abs((document.querySelector('canvas')?.clientHeight ?? 0) - 440) <= 1,
-          width,
+        await waitFor(
+          layout,
+          size =>
+            size.frameWidth === size.availableWidth &&
+            Math.abs(size.visibleWidth - size.availableWidth) <= 1 &&
+            Math.abs(size.canvasHeight - 440) <= 1 &&
+            Math.abs(size.visibleHeight - 440) <= 2,
+          `responsive preview at ${width}px viewport width`,
         );
-        const box = await page.locator('iframe[title^="Live demo:"]').boundingBox();
-        assert(box !== null && Math.abs(box.height - 440) <= 2, `responsive preview height was ${box?.height}`);
         assert(responsive.url() === generation, 'resizing restarted the responsive preview');
         assert((await responsive.locator('body').getAttribute('data-sizing-instance')) === instance, 'resizing replaced the running app');
       }
@@ -2732,8 +2749,12 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
       await page.setViewportSize({ width: 390, height: 844 });
       const fixed = await previewFrame(page);
       await fixed.waitForFunction(() => Math.abs(window.innerWidth / window.innerHeight - 16 / 9) < 0.02);
-      const fixedBox = await page.locator('iframe[title^="Live demo:"]').boundingBox();
-      assert(fixedBox !== null && Math.abs(fixedBox.height - 390 * (9 / 16)) <= 2, 'fixed world did not keep its original aspect ratio');
+      await waitFor(
+        layout,
+        size =>
+          Math.abs(size.visibleWidth - size.availableWidth) <= 1 && Math.abs(size.visibleHeight - size.availableWidth * (9 / 16)) <= 2,
+        'fixed preview fills the available width at its original aspect ratio',
+      );
     } catch (error) {
       await reportFailure(page, error);
 
