@@ -1,5 +1,4 @@
 import {
-  Asset,
   Color,
   Graphics,
   type Music,
@@ -29,12 +28,12 @@ class CinematicScene extends Scene {
   private titleText!: Text;
 
   override async load(): Promise<void> {
-    // Music has no bare-path form, so use `Asset.type(...)` - and since
-    // `get(Asset.type('music', ...))` isn't supported, keep the loaded
+    // Music has no bare-path form, so use a `{ type, source }` descriptor - and since
+    // `get({ type: 'music', source })` isn't supported, keep the loaded
     // instances as direct references instead of looking them up later.
     [this.bossTexture, this.trackStream] = await Promise.all([
       this.loader.load('image/boss.png'),
-      this.loader.load(Asset.type('music', 'audio/track.ogg')),
+      this.loader.load({ type: 'music', source: 'audio/track.ogg' }),
     ]);
   }
 

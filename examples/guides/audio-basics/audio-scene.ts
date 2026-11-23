@@ -6,7 +6,7 @@ class AudioScene extends Scene {
   private theme!: Music;
 
   override async load(): Promise<void> {
-    const { laser, theme } = await this.assets.load({ laser: 'audio/laser.ogg', theme: [Music, 'audio/theme.ogg'] });
+    const { laser, theme } = await this.assets.load({ laser: 'audio/laser.ogg', theme: { type: Music, source: 'audio/theme.ogg' } });
 
     this.laser = laser;
     this.theme = theme;

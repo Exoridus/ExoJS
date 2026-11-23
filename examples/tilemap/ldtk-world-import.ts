@@ -1,14 +1,4 @@
-import {
-  Application,
-  Asset,
-  Color,
-  Container,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  type RenderingContext,
-  Scene,
-  Text,
-} from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { TileMapNode } from '@codexo/exojs/tilemap';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { getLdtkIntGridValueAt, ldtkExtension, type LdtkMap } from '@codexo/exojs-ldtk';
@@ -16,7 +6,7 @@ import { choice, demoPanel, toggle } from '@examples/runtime';
 
 // Loading an LDtk world (`.ldtk`) through @codexo/exojs-ldtk.
 //
-//   - `loader.load(Asset.type('ldtkMap', url))` fetches the world, loads every referenced
+//   - `loader.load({ type: 'ldtkMap', source: url })` fetches the world, loads every referenced
 //     tileset image, and converts *every* level to its own runtime `TileMap`
 //     in one pass - `world.levels` (document order) or
 //     `world.getLevelByName(identifier)`.
@@ -50,7 +40,7 @@ class LdtkWorldImportScene extends Scene {
   override async load(): Promise<void> {
     // The LDtk adapter resolves tileset paths with `new URL(relPath, source)`,
     // so the world needs an absolute source; the demo catalog's URLs are.
-    this.world = await this.loader.load(Asset.type('ldtkMap', assets.harborWorldProject.source));
+    this.world = await this.loader.load({ type: 'ldtkMap', source: assets.harborWorldProject.source });
 
     this.panel = demoPanel({
       scene: this,

@@ -23,7 +23,7 @@ const dialogueParser: DocumentParser<DialogueDocument> = {
 
 class IntroScene extends Scene {
   override async load(): Promise<void> {
-    const intro = await this.assets.load([Dialogue, 'intro.dialogue.json']);
+    const intro = await this.assets.load({ type: Dialogue, source: 'intro.dialogue.json' });
 
     console.log(intro.lines);
   }
@@ -73,6 +73,6 @@ export const loadTerrain = async (target: Application, scene: Scene): Promise<He
     },
   });
 
-  return scene.assets.load([HeightField, 'terrain/valley.hf']);
+  return scene.assets.load({ type: HeightField, source: 'terrain/valley.hf' });
 };
 // #endregion guide:custom-binary
