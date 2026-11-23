@@ -1,14 +1,3 @@
-import type {
-  RenderTexture,
-  Texture,
-  View,
-  WebGl2Backend,
-  WebGl2RenderBufferRuntime,
-  WebGl2RetainedBatchPayload,
-  WebGl2RetainedBatchReplayer,
-  WebGl2RetainedNodeIndexRange,
-  WebGl2VertexArrayObjectRuntime,
-} from '@codexo/exojs/renderer-sdk';
 import {
   AbstractWebGl2Renderer,
   BlendModes,
@@ -18,13 +7,22 @@ import {
   createWebGl2ShaderProgram,
   fillShaderSource,
   packedGroupChanged,
+  type RenderTexture,
   RenderingPrimitives,
   spliceGlslPrologue,
+  type Texture,
   uploadBufferRange,
   uploadBufferStore,
+  type View,
+  type WebGl2Backend,
   WebGl2RenderBuffer,
+  type WebGl2RenderBufferRuntime,
+  type WebGl2RetainedBatchPayload,
+  type WebGl2RetainedBatchReplayer,
+  type WebGl2RetainedNodeIndexRange,
   WebGl2Shader,
   WebGl2VertexArrayObject,
+  type WebGl2VertexArrayObjectRuntime,
 } from '@codexo/exojs/renderer-sdk';
 
 import type { TileQuad } from '../chunkGeometry';
@@ -295,6 +293,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       for (let slot = 0; slot < this._textures.length; slot++) {
         this._recordTextures[slot] = this._textures[slot]!;
       }
+
       backend.recordRetainedBatch(
         this,
         this._instanceUint32.subarray(0, this._quadIndex * wordsPerInstance),
