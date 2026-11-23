@@ -276,6 +276,12 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
 
       lighting.add(new LineLight({ length: 80, radius: 300, softness: 0 })).setPosition(sourceX, sourceY);
 
+      const visualCanvas = host.app.canvas as HTMLCanvasElement;
+
+      visualCanvas.style.width = `${contactCanvasSize}px`;
+      visualCanvas.style.height = `${contactCanvasSize}px`;
+      document.body.appendChild(visualCanvas);
+
       try {
         const open = await host.render(lighting);
 
@@ -363,6 +369,7 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
           }
         }
       } finally {
+        visualCanvas.remove();
         lighting.destroy();
         host.destroy();
       }
