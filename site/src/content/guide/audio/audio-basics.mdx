@@ -28,7 +28,7 @@ Use `Sound` when you need many overlapping instances of the same short clip. Use
 
 ## Loading and playing
 
-Preload both sources with `this.assets.load()`, then start scene-owned playback through `this.audio`. A `.ogg` path alone loads as a `Sound`; name a track `[Music, path]` to stream it instead. Music and streams are ready at `canplay`: playback can start before the whole file has arrived. A path-backed `Sound` still needs an explicit load: neither `app.audio.play` nor `scene.audio.play` acquires its payload. Asset readiness and browser audio unlock are separate prerequisites:
+Preload both sources with `this.assets.load()`, then start scene-owned playback through `this.audio`. A `.ogg` path alone loads as a `Sound`; name a track `{ type: Music, source }` to stream it instead. Music and streams are ready at `canplay`: playback can start before the whole file has arrived. A path-backed `Sound` still needs an explicit load: neither `app.audio.play` nor `scene.audio.play` acquires its payload. Asset readiness and browser audio unlock are separate prerequisites:
 
 <SourceSnippet
   source="examples/guides/audio-basics/audio-scene.ts"

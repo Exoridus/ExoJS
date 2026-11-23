@@ -48,10 +48,9 @@ This is the same add-only model the [Tiled maps](/ExoJS/en/guide/assets/tiled-ma
 Once the extension is active, load a `.ldtk` file with an explicit descriptor or by path (the `.ldtk` extension is registered):
 
 ```ts
-import { Asset } from '@codexo/exojs';
 
 // Explicit type
-const world = await loader.load(Asset.type('ldtkMap', 'https://example.com/levels/world.ldtk'));
+const world = await loader.load({ type: 'ldtkMap', source: 'https://example.com/levels/world.ldtk' });
 
 // By path — the `.ldtk` extension is registered, so the type is inferred
 const sameWorld = await loader.load('https://example.com/levels/world.ldtk');

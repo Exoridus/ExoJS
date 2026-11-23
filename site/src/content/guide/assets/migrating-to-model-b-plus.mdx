@@ -26,7 +26,7 @@ Place `hero.png` in `public/assets/`. The canvas is mounted explicitly and is re
 
 ## Preload what you need
 
-Layout or gameplay that needs real dimensions or a decoded value should wait for it. `this.assets.load(input, options?)` in a scene and `app.assets.load(input, options?)` on the application take the same input: a path whose suffix names its type, a handle such as `new Texture(path)`, a `[Type, source, options?]` request for a type the suffix does not name, or an array, tuple or named object of those. A group resolves to the same shape with every entry loaded. The scene form gives the scene ownership; the application form keeps the assets resident until the application is destroyed:
+Layout or gameplay that needs real dimensions or a decoded value should wait for it. `this.assets.load(input, options?)` in a scene and `app.assets.load(input, options?)` on the application take the same input: a path whose suffix names its type, a handle such as `new Texture(path)`, a `{ type, source, ...options }` request for a type the suffix does not name, or an array, tuple or named object of those. A group resolves to the same shape with every entry loaded. The scene form gives the scene ownership; the application form keeps the assets resident until the application is destroyed:
 
 <SourceSnippet source="examples/guides/model-b-plus/preload.ts" region="preload" language="ts" title="Preload in the scene's load hook" />
 
@@ -56,7 +56,7 @@ Do not call `texture.destroy()` on a path-backed texture that a scene owns; let 
 
 ## Your own asset types
 
-Register a type per application, either at construction or later with `app.assets.define()`. The `type` string is the stable name stored in caches and saved scenes. `decode` receives the fetched data and returns the resource, synchronously or as a promise; the loader keeps fetching, caching, deduplication and ownership. `read` chooses whether `decode` gets bytes (the default), `'text'`, `'json'` or a `'blob'`, and a document `parser` validates the data before `decode` runs. Load a custom type with a `[Type, source]` request so the result is typed without declaring anything else.
+Register a type per application, either at construction or later with `app.assets.define()`. The `type` string is the stable name stored in caches and saved scenes. `decode` receives the fetched data and returns the resource, synchronously or as a promise; the loader keeps fetching, caching, deduplication and ownership. `read` chooses whether `decode` gets bytes (the default), `'text'`, `'json'` or a `'blob'`, and a document `parser` validates the data before `decode` runs. Load a custom type with a descriptor naming its class, `{ type: Palette, source }`, so the result is typed without declaring anything else.
 
 <SourceSnippet source="examples/guides/model-b-plus/custom-type.ts" region="custom-type" language="ts" title="Register a type at startup" />
 
@@ -67,6 +67,21 @@ A binary format needs only `decode`:
 <SourceSnippet source="examples/guides/model-b-plus/custom-type.ts" region="custom-binary" language="ts" title="A custom binary format" />
 
 A type id belongs to one class, and a class has one active definition. Defining the same class and id again before its first request replaces it. A `decode` that throws or rejects fails the load, and the next load retries. Use `context.signal` in long-running decoding; it aborts once no owner needs the result. Add `dispose` when a resource holds something the garbage collector cannot reclaim. A type that needs per-application state, such as a worker, supplies a `loader` factory instead of `decode`. A versioned, migrating document type adds `version` and `migrations` to its `parser`; see [Authoring extensions](/ExoJS/en/guide/debugging/authoring-extensions/).
+
+## From `Asset.type()` and typed tuples
+
+Every asset is now described by one plain object, `{ type, source, ...options }`, accepted by `load`, `get`, `peek`, `release`, `identify`, `cacheSource` and catalogs alike. The builder functions and tuple forms are gone:
+
+| Before | After |
+| --- | --- |
+| `Asset.type('font', 'ui.woff2', { family: 'UI' })` | `{ type: 'font', source: 'ui.woff2', family: 'UI' }` |
+| `Asset.type<Settings>('json', 'settings.json')` | `{ type: 'json', source: 'settings.json', parse: readSettings }` |
+| `[Video, 'intro.mp4']` | `{ type: Video, source: 'intro.mp4' }` |
+| `worldType.asset('level.world', { locale: 'de' })` | `{ type: worldType, source: 'level.world', locale: 'de' }` |
+| `new Asset({ type: 'json', source: 'a.json' })` | `{ type: 'json', source: 'a.json' }` |
+| `scope.release(Texture, 'hero.png')` | `scope.release({ type: Texture, source: 'hero.png' })` |
+
+A typed JSON value comes from a `parse` transform rather than a type argument, which keeps the place where a document is validated visible. A plain object with an own `type` property is always read as a descriptor, so a named load group cannot use `type` as a key.
 
 ## Scenes and prefabs: format 4
 
@@ -92,7 +107,7 @@ A path may name its candidates: `'hero@{1,2,3}x.{webp,png}'` expands to concrete
 
 ## When to keep the loader APIs
 
-Prefer paths and handles with `assets.load()` for everything you load. Streamed media and other types without a placeholder load the same way with a typed request, `await this.assets.load([Video, 'intro.mp4'])`, and per-asset options ride on it: `[Texture, path, { textureOptions }]`. Keep the lower-level APIs for:
+Prefer paths and handles with `assets.load()` for everything you load. Streamed media and other types without a placeholder load the same way with a typed request, `await this.assets.load({ type: Video, source: 'intro.mp4' })`, and per-asset options ride on it: `[Texture, path, { textureOptions }]`. Keep the lower-level APIs for:
 
 - **Shared leaves.** An `Assets.from()` catalog whose properties several scenes hold before they load.
 - **Synchronous placeholders.** `scope.get(path)` returns a handle that fills in place.

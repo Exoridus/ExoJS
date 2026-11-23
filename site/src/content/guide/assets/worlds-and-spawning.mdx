@@ -28,11 +28,11 @@ Everything below lives in `@codexo/exojs/tilemap` and is format-neutral. The LDt
 A [`MapWorld`](/ExoJS/en/api/map-world/) is metadata about *where* levels are — never their contents. Each `MapLevel` in it carries a stable id, world-space bounds, whether its payload is stored externally, and the levels the editor recorded as adjacent.
 
 ```ts
-import { Asset, type LoaderScope } from '@codexo/exojs';
+import { type LoaderScope } from '@codexo/exojs';
 import type { MapBounds, MapWorld } from '@codexo/exojs/tilemap';
 
 export async function readWorld(scope: LoaderScope, cameraBounds: MapBounds): Promise<MapWorld> {
-    const project = await scope.load(Asset.type('ldtkProject', 'https://example.com/world.ldtk'));
+    const project = await scope.load({ type: 'ldtkProject', source: 'https://example.com/world.ldtk' });
     const world = project.world;
 
     world.levels.length;                     // every level in the world, in document order
@@ -56,10 +56,10 @@ LDtk worlds have independent coordinate spaces, so a multi-world project yields 
 `ldtkProject` is the streaming entry point. It loads the document and every tileset atlas, and **no** level payload — external `.ldtkl` files are fetched only when the level they belong to is loaded.
 
 ```ts
-import { Asset, type Container, type LoaderScope } from '@codexo/exojs';
+import { type Container, type LoaderScope } from '@codexo/exojs';
 
 export async function enterForest(root: Container, scope: LoaderScope): Promise<void> {
-    const project = await scope.load(Asset.type('ldtkProject', 'https://example.com/world.ldtk'));
+    const project = await scope.load({ type: 'ldtkProject', source: 'https://example.com/world.ldtk' });
     const runtime = project.createRuntime({ scope });
 
     const forest = await runtime.loadLevel('level-forest');
