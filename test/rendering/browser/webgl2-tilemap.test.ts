@@ -40,7 +40,10 @@ import {
 
 const canvasSize = 64;
 
-const createBackend = async (wire: (backend: WebGl2Backend) => void = wireTilemapRenderers): Promise<WebGl2Backend> => {
+const createBackend = async (
+  wire: (backend: WebGl2Backend) => void = wireTilemapRenderers,
+  alphaMode: 'opaque' | 'premultiplied' = 'opaque',
+): Promise<WebGl2Backend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -53,6 +56,7 @@ const createBackend = async (wire: (backend: WebGl2Backend) => void = wireTilema
       canvas: { width: canvasSize, height: canvasSize },
       rendering: {
         debug: false,
+        alphaMode,
         webglAttributes: {
           antialias: false,
           preserveDrawingBuffer: true,
@@ -160,7 +164,8 @@ describe('WebGL2 tilemap — multi-texture batching', () => {
   });
 
   test('matches a single-atlas RGBA oracle for actually overlapping translucent A-B-A-B tiles', async () => {
-    const backend = await createBackend();
+    // The default opaque canvas clamps framebuffer alpha to 255, hiding the overlap contract.
+    const backend = await createBackend(wireTilemapRenderers, 'premultiplied');
     const pair = overlappingTextureRunPair(['rgba(255, 0, 0, 0.5)', 'rgba(0, 0, 255, 0.5)'], [0, 1, 0, 1]);
     const optimized = new TileMapNode(pair.optimized);
     const reference = new TileMapNode(pair.reference);
