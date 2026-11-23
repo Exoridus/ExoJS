@@ -13,10 +13,12 @@
 
 import { type Light, LightmapLighting, LineLight, PointLight, PolygonOccluder, SpotLight } from '@codexo/exojs/lighting';
 import { describe, expect, test } from 'vitest';
+import { page, server } from 'vitest/browser';
 
 import { Color } from '#core/Color';
 import { View } from '#rendering/View';
 
+import type { LightmapBackend } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
 import { type ContactBackend, contactCanvasSize, type ContactHost, createContactHost } from './_lightmapContact';
 
 type Polygon = ReadonlyArray<readonly [number, number]>;
@@ -277,6 +279,13 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
       try {
         const open = await host.render(lighting);
 
+        if (open !== null) {
+          await page.screenshot({
+            element: host.app.canvas as HTMLCanvasElement,
+            path: `../../../.workspace/visual-review/current/line-source-open-${backend}-${server.browser}.png`,
+          });
+        }
+
         lighting.occludeFrom(
           new PolygonOccluder(
             [
@@ -292,6 +301,11 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
         if (open === null || walled === null) {
           return;
         }
+
+        await page.screenshot({
+          element: host.app.canvas as HTMLCanvasElement,
+          path: `../../../.workspace/visual-review/current/line-source-cpu-${backend}-${server.browser}.png`,
+        });
 
         const pixel = (probeY * contactCanvasSize + probeX) * 4;
         const baseline = open[pixel]!;
@@ -326,6 +340,28 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
         expect(expected).toBeLessThan(0.95);
         expect(measured).toBeGreaterThan(0.35);
         expect(Math.abs(measured - expected)).toBeLessThan(0.3);
+
+        // Force the GPU marcher independently; do not present a CPU fallback as a GPU capture.
+        const frameBackend = lighting.backend as LightmapBackend;
+
+        frameBackend.shadowFiller = 'gpu';
+
+        if (frameBackend.shadowFiller === 'gpu') {
+          const gpuWalled = await host.render(lighting);
+
+          if (gpuWalled !== null) {
+            await page.screenshot({
+              element: host.app.canvas as HTMLCanvasElement,
+              path: `../../../.workspace/visual-review/current/line-source-gpu-${backend}-${server.browser}.png`,
+            });
+            console.info('line-source GPU/CPU visibility at independent ray probe', {
+              backend,
+              cpu: measured,
+              gpu: gpuWalled[pixel]! / baseline,
+              expected,
+            });
+          }
+        }
       } finally {
         lighting.destroy();
         host.destroy();
