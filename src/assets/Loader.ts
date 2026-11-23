@@ -1032,6 +1032,46 @@ export class Loader {
     );
   }
 
+  /** Pathless and structured custom requests use factory data, not a URL fetch. */
+  private _loadObjectUnit(
+    alias: string,
+    key: string,
+    request: Readonly<{ type: AssetConstructor | string; source?: unknown }> & Record<string, unknown>,
+    background: boolean,
+    keyed: boolean,
+  ): LoadUnit {
+    const token = typeof request.type === 'string' ? this._typeRegistry.resolveTypeName(request.type) : request.type;
+    const installed = token === undefined ? undefined : this._typeRegistry.getInstalled(token);
+
+    if (token === undefined || installed === undefined) {
+      throw new Error(`No asset type for request ${String(request.type)} is installed on this application.`);
+    }
+
+    const { type: _requestedType, source: requestSource, ...rest } = request;
+    const requestOptions = Object.keys(rest).length > 0 ? rest : undefined;
+    const batchKey = (src: string): string => (keyed ? key : src);
+
+    if (background) {
+      if (typeof requestSource !== 'string' || installed.type.leaf === 'none') {
+        throw new TypeError('Background asset loads require a path and an asset type with a placeholder.');
+      }
+
+      return {
+        alias,
+        key: batchKey(requestSource),
+        src: requestSource,
+        leaf: createLeaf(installed.type.leaf, installed.type.id, requestSource, requestOptions),
+      };
+    }
+
+    const canonical =
+      typeof requestSource === 'string'
+        ? this._canonicalize(token, requestSource, requestOptions)
+        : this._canonicalizeInline(token, request, requestSource, requestOptions);
+
+    return { alias, key: batchKey(canonical.source), src: canonical.source, canonical, options: requestOptions };
+  }
+
   /** Normalize one load entry to a leaf to adopt or a canonical request to load. */
   private _loadUnit(alias: string, key: string, entry: unknown, background: boolean, keyed: boolean): LoadUnit {
     const batchKey = (src: string): string => (keyed ? key : src);
@@ -1078,36 +1118,7 @@ export class Loader {
       logical = source;
       options = Object.keys(rest).length > 0 ? rest : undefined;
     } else if (this._isObjectRequest(entry)) {
-      const request = entry as { type: AssetConstructor | string; source?: unknown } & Record<string, unknown>;
-      const installedToken = typeof request.type === 'string' ? this._typeRegistry.resolveTypeName(request.type) : request.type;
-
-      if (installedToken === undefined || this._typeRegistry.getInstalled(installedToken) === undefined) {
-        throw new Error(`No asset type for request ${String(request.type)} is installed on this application.`);
-      }
-
-      const { type: _requestedType, source: requestSource, ...rest } = request;
-      const requestOptions = Object.keys(rest).length > 0 ? rest : undefined;
-      const installed = this._typeRegistry.getInstalled(installedToken)!;
-
-      if (background) {
-        if (typeof requestSource !== 'string' || installed.type.leaf === 'none') {
-          throw new TypeError('Background asset loads require a path and an asset type with a placeholder.');
-        }
-
-        return {
-          alias,
-          key: batchKey(requestSource),
-          src: requestSource,
-          leaf: createLeaf(installed.type.leaf, installed.type.id, requestSource, requestOptions),
-        };
-      }
-
-      const canonical =
-        typeof requestSource === 'string'
-          ? this._canonicalize(installedToken, requestSource, requestOptions)
-          : this._canonicalizeInline(installedToken, request, requestSource, requestOptions);
-
-      return { alias, key: batchKey(canonical.source), src: canonical.source, canonical, options: requestOptions };
+      return this._loadObjectUnit(alias, key, entry, background, keyed);
     } else if (
       entry instanceof AssetImpl ||
       (typeof entry === 'object' && entry !== null && typeof (entry as { type?: unknown }).type === 'string')

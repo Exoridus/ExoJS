@@ -447,11 +447,15 @@ export class AssetDecoder {
         : (type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source), this._network()) as
             | { source: unknown }
             | undefined);
-      const source = direct
-        ? asset.directSource
-        : unacquired === undefined
-          ? await this._acquireSource(asset, type, signal)
-          : unacquired.source;
+      let source: unknown;
+
+      if (direct) {
+        source = asset.directSource;
+      } else if (unacquired !== undefined) {
+        source = unacquired.source;
+      } else {
+        source = await this._acquireSource(asset, type, signal);
+      }
 
       const resource = await factory.create(source, this._factoryContext(asset, scope, options, signal));
 

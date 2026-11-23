@@ -136,7 +136,7 @@ const main = (): void => {
   // authoring session. Remove before merge, after copying the generated docs.
   for (const name of ['asset-load-entry.json', 'loaded-asset-entry.json']) {
     console.log(`EXOJS_GENERATED_DOC_START:${name}`);
-    console.log(fs.readFileSync(path.join(generatedDir, name), 'utf8'));
+    console.log('EXOJS_DOC_JSON:' + name + ':' + JSON.stringify(JSON.parse(fs.readFileSync(path.join(generatedDir, name), 'utf8'))));
     console.log(`EXOJS_GENERATED_DOC_END:${name}`);
   }
 
