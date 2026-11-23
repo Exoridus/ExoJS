@@ -67,7 +67,7 @@ loader.load('l.png', { textureOptions: {} });
 // @ts-expect-error - descriptor options belong inside Asset.type(), not a second get() argument.
 loader.get(levelDesc, { delimiter: ',' });
 
-// @ts-expect-error - inline record catalogs were removed; use Assets.from(...).
+// Inline records of typed requests are intentional; each field is loaded as an asset.
 loader.load({ config: { type: 'json', source: 'l.json' } });
 
 // @ts-expect-error - the removed two-argument constructor form must stay gone.
