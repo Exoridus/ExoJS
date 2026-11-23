@@ -1,8 +1,8 @@
-import { type AudioStream, crossFade, Scene, Time } from '@codexo/exojs';
+import { crossFade, type Music, Scene, Time } from '@codexo/exojs';
 
 class CrossFadeScene extends Scene {
-  private trackA!: AudioStream;
-  private trackB!: AudioStream;
+  private trackA!: Music;
+  private trackB!: Music;
 
   private async swapTracks(): Promise<void> {
     // #region guide:cross-fade

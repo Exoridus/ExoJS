@@ -3,12 +3,13 @@ import { type AssetFactory } from '#assets/AssetFactory';
 import { type AssetSourceCodec, binarySourceCodec } from '#assets/AssetSourceCodec';
 import { type AssetRequest, AssetType } from '#assets/AssetType';
 import { type MediaAssetOptions, type MediaAssetSource } from '#assets/factories/mediaSource';
-import { type MusicAssetOptions, MusicFactory } from '#assets/factories/MusicFactory';
+import { type AudioStreamAssetOptions, AudioStreamFactory, type MusicAssetOptions, MusicFactory } from '#assets/factories/MusicFactory';
 import { type SoundAssetOptions, SoundFactory } from '#assets/factories/SoundFactory';
 import { type VideoAssetOptions, VideoFactory } from '#assets/factories/VideoFactory';
 import { stableJson } from '#assets/portableData';
 import { soundSeamlessAdapter } from '#assets/seamless';
 import { AudioStream } from '#audio/AudioStream';
+import { Music } from '#audio/Music';
 import { Sound } from '#audio/Sound';
 import { type NetworkSnapshot } from '#core/Connectivity';
 import { Texture } from '#rendering/texture/Texture';
@@ -78,11 +79,11 @@ const mediaIdentity = ({ options }: AssetRequest<MediaAssetOptions & { mimeType?
   return parts.join(',');
 };
 
-/** Streaming audio backed by an `<audio>` element. */
-export class MusicAssetType extends AssetType<MediaAssetSource, AudioStream, MusicAssetOptions, Blob> {
+/** A finite music track streamed through an `<audio>` element. */
+export class MusicAssetType extends AssetType<MediaAssetSource, Music, MusicAssetOptions, Blob> {
   public readonly id = 'music';
   public override readonly leaf = 'none';
-  public override readonly _token: AssetConstructor = AudioStream;
+  public override readonly _token: AssetConstructor = Music;
   public override readonly codec = mediaSourceCodec;
 
   public override unacquiredSource(
@@ -97,8 +98,51 @@ export class MusicAssetType extends AssetType<MediaAssetSource, AudioStream, Mus
     return mediaIdentity(request);
   }
 
-  public createFactory(): AssetFactory<MediaAssetSource, AudioStream, MusicAssetOptions> {
+  public createFactory(): AssetFactory<MediaAssetSource, Music, MusicAssetOptions> {
     return new MusicFactory();
+  }
+}
+
+/**
+ * A live or unbounded audio source played through an `<audio>` element.
+ *
+ * Always streamed from its URL: an unbounded response can neither be acquired
+ * whole nor cached, so with the network disallowed the load fails instead of
+ * consulting a cache.
+ */
+export class AudioStreamAssetType extends AssetType<MediaAssetSource, AudioStream, AudioStreamAssetOptions> {
+  public readonly id = 'audioStream';
+  public override readonly leaf = 'none';
+  public override readonly _token: AssetConstructor = AudioStream;
+
+  public override unacquiredSource(
+    _request: AssetRequest<AudioStreamAssetOptions>,
+    url: string,
+    network: NetworkSnapshot,
+  ): { source: MediaAssetSource } | undefined {
+    if (!streamsFromUrl(network)) {
+      throw new Error(`The audio stream "${url}" needs the network, which the application does not allow right now.`);
+    }
+
+    return { source: { url } };
+  }
+
+  public override resourceIdentity(request: AssetRequest<AudioStreamAssetOptions>): string {
+    const reconnect = request.options?.reconnect;
+
+    // Unlike the transport, reconnect policy changes observable runtime
+    // behaviour. Two callers with incompatible policies must not share one
+    // resident AudioStream under a first-wins choice.
+    return JSON.stringify([
+      mediaIdentity(request),
+      reconnect === false ? 'disabled' : 'enabled',
+      reconnect === false ? 0 : Math.max(0, reconnect?.attempts ?? 5),
+      reconnect === false ? 0 : Math.max(0, reconnect?.delay ?? 1000),
+    ]);
+  }
+
+  public createFactory(): AssetFactory<MediaAssetSource, AudioStream, AudioStreamAssetOptions> {
+    return new AudioStreamFactory();
   }
 }
 
@@ -140,6 +184,8 @@ export class VideoAssetType extends AssetType<MediaAssetSource, Video, VideoAsse
 
 /** The built-in `music` asset type. */
 export const musicType = new MusicAssetType();
+/** The built-in `audioStream` asset type. */
+export const audioStreamType = new AudioStreamAssetType();
 /** The built-in `video` asset type. */
 export const videoType = new VideoAssetType();
 

@@ -1,4 +1,4 @@
-import { Asset, Assets, type AudioStream, LoadPriority, Scene, type Sound, Sprite, type Texture } from '@codexo/exojs';
+import { Asset, Assets, LoadPriority, type Music, Scene, type Sound, Sprite, type Texture } from '@codexo/exojs';
 
 import { Level1Assets, Level2Assets, MenuAssets } from './level-catalogs';
 import { TitleAssets } from './title-catalog';
@@ -43,7 +43,7 @@ class ParallelScene extends Scene {
 class MixedTypeScene extends Scene {
   private skyTexture!: Texture;
   private sky!: Sprite;
-  private ambient!: AudioStream;
+  private ambient!: Music;
   private coin!: Sound;
   private jump!: Sound;
   private levels!: unknown;

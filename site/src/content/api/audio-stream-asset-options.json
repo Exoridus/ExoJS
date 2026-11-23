@@ -1,0 +1,195 @@
+{
+  "title": "AudioStreamAssetOptions",
+  "description": "Options accepted by an asset of the built-in `audioStream` type.",
+  "symbol": "AudioStreamAssetOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options accepted by an asset of the built-in `audioStream` type."
+      ],
+      "importLine": "import { AudioStreamAssetOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "crossOrigin",
+          "signature": "crossOrigin?: MediaCrossOrigin",
+          "signatureTokens": [
+            {
+              "text": "crossOrigin",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MediaCrossOrigin",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Defaults to 'anonymous'. Ignored for media built from data the application already owns, whose object URL is same-origin by construction. Unlike the transport, a non-default CORS mode IS part of asset identity: it is baked into the element, so a null and an 'anonymous' media resource for one URL are two assets, and a consumer never receives an element whose CORS mode it did not ask for."
+        },
+        {
+          "name": "loadEvent",
+          "signature": "loadEvent?: StreamingLoadEvent",
+          "signatureTokens": [
+            {
+              "text": "loadEvent",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StreamingLoadEvent",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The media event that marks the asset ready. Defaults to 'canplay': playback can start, which for streamed media deliberately does not mean the resource has fully arrived. 'loadedmetadata' resolves earlier (duration and dimensions only, nothing playable yet), 'canplaythrough' waits for the browser to predict uninterrupted playback."
+        },
+        {
+          "name": "playbackOptions",
+          "signature": "playbackOptions?: Partial<PlaybackOptions>",
+          "signatureTokens": [
+            {
+              "text": "playbackOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlaybackOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial playback settings forwarded to the AudioStream instance."
+        },
+        {
+          "name": "reconnect",
+          "signature": "reconnect?: AudioStreamReconnectOptions | false",
+          "signatureTokens": [
+            {
+              "text": "reconnect",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioStreamReconnectOptions",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "false",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Reconnect policy after the connection breaks; false disables it. See AudioStream."
+        },
+        {
+          "name": "stallTimeout",
+          "signature": "stallTimeout?: number",
+          "signatureTokens": [
+            {
+              "text": "stallTimeout",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Milliseconds to wait after a stalled event before failing the load. When omitted a stalled load waits indefinitely. Each further stalled event restarts the timer."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/factories/MusicFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/MusicFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/factories/MusicFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/MusicFactory.ts"
+}

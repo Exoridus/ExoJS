@@ -1,0 +1,88 @@
+{
+  "title": "AudioStreamConnection",
+  "description": "Connection health of an AudioStream, independent of whether a voice is playing. - `'connected'`: media data arrives. - `'buffering'`: the source is slow; playback waits for data. - `'reconnecting'`: the connection broke and the stream is reopening it. - `'disconnected'`: the connection is gone and no reconnect is pending.",
+  "symbol": "AudioStreamConnection",
+  "kind": "type",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Connection health of an AudioStream, independent of whether a voice is playing.",
+        "- `'connected'`: media data arrives. - `'buffering'`: the source is slow; playback waits for data. - `'reconnecting'`: the connection broke and the stream is reopening it. - `'disconnected'`: the connection is gone and no reconnect is pending."
+      ],
+      "importLine": "import { AudioStreamConnection } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AudioStreamConnection",
+          "signature": "\"buffering\" | \"connected\" | \"disconnected\" | \"reconnecting\"",
+          "signatureTokens": [
+            {
+              "text": "\"buffering\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"connected\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"disconnected\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"reconnecting\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioStream.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioStream.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioStream.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioStream.ts"
+}

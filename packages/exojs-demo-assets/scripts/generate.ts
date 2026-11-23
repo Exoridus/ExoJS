@@ -32,7 +32,7 @@ const RESOURCE_TYPES: Readonly<Record<string, { readonly wrapper: string; readon
   texture: { wrapper: 'ResourceAsset', resource: 'Texture' },
   sound: { wrapper: 'ResourceAsset', resource: 'Sound' },
   json: { wrapper: 'ValueAsset', resource: 'unknown' },
-  music: { wrapper: 'LeaflessAsset', resource: 'AudioStream' },
+  music: { wrapper: 'LeaflessAsset', resource: 'Music' },
   video: { wrapper: 'LeaflessAsset', resource: 'Video' },
   font: { wrapper: 'LeaflessAsset', resource: 'FontFace' },
   bmFont: { wrapper: 'LeaflessAsset', resource: 'BmFont' },

@@ -1,6 +1,6 @@
 {
   "title": "MusicAssetType",
-  "description": "Streaming audio backed by an `<audio>` element.",
+  "description": "A finite music track streamed through an `<audio>` element.",
   "symbol": "MusicAssetType",
   "kind": "class",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Streaming audio backed by an `<audio>` element."
+        "A finite music track streamed through an `<audio>` element."
       ],
       "importLine": "import { MusicAssetType } from '@codexo/exojs'",
       "sourceLink": null
@@ -68,7 +68,7 @@
       "members": [
         {
           "name": "asset",
-          "signature": "asset(source: string, options: [options]): LeaflessAsset<AudioStream>",
+          "signature": "asset(source: string, options: [options]): LeaflessAsset<Music>",
           "signatureTokens": [
             {
               "text": "asset",
@@ -131,7 +131,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioStream",
+              "text": "Music",
               "kind": "type"
             },
             {
@@ -151,12 +151,12 @@
               "optional": false
             }
           ],
-          "returnType": "LeaflessAsset<AudioStream>",
+          "returnType": "LeaflessAsset<Music>",
           "description": "A typed, loadable descriptor for one asset of this type. The resource and option types come from the type instance, so a custom type is fully typed at every call site without declaring anything to the module system: ts const world = await loader.load(worldType.asset('level.world'));  The descriptor is branded with this type's leaf policy, so a catalog types its entry as the leaf the runtime hands out. options is required when the option bag has a required field. type and source are reserved for the request: an option bag carrying either throws."
         },
         {
           "name": "createFactory",
-          "signature": "createFactory(): AssetFactory<MediaAssetSource, AudioStream, MusicAssetOptions>",
+          "signature": "createFactory(): AssetFactory<MediaAssetSource, Music, MusicAssetOptions>",
           "signatureTokens": [
             {
               "text": "createFactory",
@@ -191,7 +191,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioStream",
+              "text": "Music",
               "kind": "type"
             },
             {
@@ -208,12 +208,12 @@
             }
           ],
           "params": [],
-          "returnType": "AssetFactory<MediaAssetSource, AudioStream, MusicAssetOptions>",
+          "returnType": "AssetFactory<MediaAssetSource, Music, MusicAssetOptions>",
           "description": "Creates the factory for one application, at install time. Called once per Loader, never per request and never at module import, so loader-local state a factory needs - a worker, a compiled module, a lookup shared across every resource of this type - can be built here and torn down with the loader."
         },
         {
           "name": "persistedOptions",
-          "signature": "persistedOptions?(resource: AudioStream | undefined, options: Readonly<Record<string, unknown>> | undefined, donor?: AudioStream): Readonly<Record<string, unknown>> | undefined",
+          "signature": "persistedOptions?(resource: Music | undefined, options: Readonly<Record<string, unknown>> | undefined, donor?: Music): Readonly<Record<string, unknown>> | undefined",
           "signatureTokens": [
             {
               "text": "persistedOptions",
@@ -236,7 +236,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioStream",
+              "text": "Music",
               "kind": "type"
             },
             {
@@ -320,7 +320,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioStream",
+              "text": "Music",
               "kind": "type"
             },
             {
@@ -379,7 +379,7 @@
           "params": [
             {
               "name": "resource",
-              "type": "AudioStream | undefined",
+              "type": "Music | undefined",
               "optional": false
             },
             {
@@ -389,7 +389,7 @@
             },
             {
               "name": "donor",
-              "type": "AudioStream",
+              "type": "Music",
               "optional": true
             }
           ],

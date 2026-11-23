@@ -1,8 +1,8 @@
 import {
   Asset,
-  type AudioStream,
   Color,
   Graphics,
+  type Music,
   type RenderingContext,
   Scene,
   Sprite,
@@ -18,7 +18,7 @@ const TITLE = 'VOID EMPEROR';
 
 class CinematicScene extends Scene {
   private bossTexture!: Texture;
-  private trackStream!: AudioStream;
+  private trackStream!: Music;
   private view!: View;
   private boss!: Sprite;
   private musicVoice!: Voice;
@@ -29,7 +29,7 @@ class CinematicScene extends Scene {
   private titleText!: Text;
 
   override async load(): Promise<void> {
-    // AudioStream has no bare-path form, so use `Asset.type(...)` - and since
+    // Music has no bare-path form, so use `Asset.type(...)` - and since
     // `get(Asset.type('music', ...))` isn't supported, keep the loaded
     // instances as direct references instead of looking them up later.
     [this.bossTexture, this.trackStream] = await Promise.all([

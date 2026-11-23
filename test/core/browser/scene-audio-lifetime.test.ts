@@ -4,8 +4,8 @@ import { userEvent } from 'vitest/browser';
 import { getAudioContext, isAudioContextReady } from '#audio/audioContext';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import { AudioSend } from '#audio/AudioSend';
-import { AudioStream } from '#audio/AudioStream';
 import { AudioSystem } from '#audio/AudioSystem';
+import { Music } from '#audio/Music';
 import type { Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
@@ -106,7 +106,7 @@ describe('SceneAudio native graph ownership', { concurrent: false }, () => {
     const url = URL.createObjectURL(new Blob([silentWav()], { type: 'audio/wav' }));
     const element = document.createElement('audio');
     const mediaPlay = vi.spyOn(element, 'play');
-    const stream = new AudioStream(element);
+    const stream = new Music(element);
     let state: SceneState = SceneState.Preparing;
     const audio = new SceneAudio({ audio: system } as unknown as Application, () => state);
     const play = vi.spyOn(system, 'play');
