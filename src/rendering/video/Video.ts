@@ -49,6 +49,8 @@ export class Video extends Sprite {
   public readonly onError = new Signal<[error: Error]>();
 
   private readonly _videoElement: HTMLVideoElement;
+  /** Texture allocated by this Video; the caller may later replace Sprite.texture. */
+  private readonly _ownedTexture: VideoTexture;
   private _volume = 1;
   private _playbackRate = 1;
   private _loop = false;
@@ -78,6 +80,8 @@ export class Video extends Sprite {
   public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, textureOptions?: Partial<TextureOptions>) {
     super(new VideoTexture(videoElement, textureOptions));
 
+    this._ownedTexture = this.texture as VideoTexture;
+
     const { volume, playbackRate, loop, muted } = videoElement;
 
     this._videoElement = videoElement;
@@ -86,7 +90,7 @@ export class Video extends Sprite {
     this._loop = loop;
     this._muted = muted;
     this._onErrorHandler = this._onMediaError.bind(this);
-    (this.texture as VideoTexture).frameSource.onFrame.add(this._onFrameHandler);
+    this._ownedTexture.frameSource.onFrame.add(this._onFrameHandler);
     this._videoElement.addEventListener('error', this._onErrorHandler);
 
     if (playbackOptions) {
@@ -406,16 +410,18 @@ export class Video extends Sprite {
   }
 
   public override destroy(): void {
-    const texture = this.texture;
+    if (this.destroyed) {
+      return;
+    }
 
     super.destroy();
     this.stop();
     this._videoElement.removeEventListener('error', this._onErrorHandler);
 
-    // The video owns the texture it created; a texture swapped in later belongs to the caller.
-    if (texture instanceof VideoTexture && texture.videoElement === this._videoElement) {
-      texture.destroy();
-    }
+    // Always release the texture allocated by this Video, even if a caller
+    // replaced Sprite.texture. A replacement remains caller-owned.
+    this._ownedTexture.frameSource.onFrame.remove(this._onFrameHandler);
+    this._ownedTexture.destroy();
 
     onAudioContextReady.remove(this._onAudioContextReady);
 
