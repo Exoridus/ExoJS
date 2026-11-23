@@ -1,7 +1,6 @@
 import type { Asset } from './Asset';
 import type { AssetConstructor } from './AssetConstructor';
-import type { AssetDefinitions } from './AssetDefinitions';
-import type { KindByPath, ResourceForKind } from './AssetDefinitions';
+import type { AssetDefinitions, KindByPath, ResourceForKind } from './AssetDefinitions';
 import type { CatalogLeafBrand } from './assetMeta';
 
 /** A path-backed asset handle or a catalog leaf with a loader-owned readiness promise. */
@@ -32,12 +31,16 @@ export type AssetTypeRequest<T = unknown> = readonly [type: AssetConstructor<T>,
  * Every other property becomes a factory option. The object identity scopes
  * pathless/non-string requests until it is released.
  */
-export type AssetObjectRequest<T = unknown> = Readonly<
-  { type: AssetConstructor<T> | string; source?: unknown } & Record<string, unknown>
->;
+export type AssetObjectRequest<T = unknown> = Readonly<{ type: AssetConstructor<T> | string; source?: unknown } & Record<string, unknown>>;
 
 /** One entry of a load: a path, a handle, descriptor, typed object or legacy tuple request. */
-export type AssetLoadEntry = string | AssetLoadHandle | CatalogLeafBrand<unknown> | Asset<unknown> | AssetTypeRequest | AssetObjectRequest;
+export type AssetLoadEntry =
+  | string
+  | AssetLoadHandle
+  | CatalogLeafBrand<unknown>
+  | Asset<unknown>
+  | AssetTypeRequest
+  | AssetObjectRequest;
 
 /** A single entry, or an array, tuple or named object of entries whose shape a load preserves. */
 export type AssetLoadInput = AssetLoadEntry | readonly AssetLoadEntry[] | Readonly<Record<string, AssetLoadEntry>>;
@@ -54,12 +57,12 @@ export type LoadedAssetEntry<E> = E extends string
       : E extends { readonly type: infer Kind extends keyof AssetDefinitions }
         ? AssetDefinitions[Kind]['resource']
         : E extends Asset<infer T>
-      ? T
-      : E extends CatalogLeafBrand<infer T>
-        ? T
-        : E extends AssetLoadHandle
-          ? Awaited<E['loaded']>
-          : never;
+          ? T
+          : E extends CatalogLeafBrand<infer T>
+            ? T
+            : E extends AssetLoadHandle
+              ? Awaited<E['loaded']>
+              : never;
 
 /** Replaces each entry of an {@link AssetLoadInput} with the value loading it produces. */
 export type LoadedAssets<Input> = Input extends AssetLoadEntry
