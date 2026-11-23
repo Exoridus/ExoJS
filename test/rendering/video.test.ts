@@ -4,6 +4,7 @@ import { AudioBus } from '#audio/AudioBus';
 import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import type { Rectangle } from '#math/Rectangle';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
+import { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 import { VideoTexture } from '#rendering/video/VideoTexture';
 import { View } from '#rendering/View';
@@ -914,6 +915,22 @@ describe('Video', () => {
   });
 
   describe('destroy', () => {
+    test('destroys its original VideoTexture when Sprite.texture is replaced, without owning the replacement', () => {
+      const mock = createMockVideoElement({ withFrameCallback: true });
+      const video = new Video(mock.element);
+      const original = video.texture as VideoTexture;
+      const other = new Texture();
+
+      video.texture = other;
+      video.destroy();
+
+      expect(original.destroyed).toBe(true);
+      expect(other.destroyed).toBe(false);
+      expect(mock.cancelVideoFrameCallback).toHaveBeenCalledTimes(1);
+
+      other.destroy();
+    });
+
     test('tears down audio nodes, listeners, and signals without throwing', () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);
