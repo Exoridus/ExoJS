@@ -273,6 +273,12 @@ describe('direct resource lifecycle', () => {
     expect(claims(loader, record)).toBe(1);
     expect(() => scope.release(record)).not.toThrow();
     expect(claims(loader, record)).toBe(0);
+
+    // Released again after eviction, it is still the resource - not a group of its fields.
+    const successor = await scope.load({ type: records, width: 3 });
+
+    expect(() => scope.release(record)).not.toThrow();
+    expect(claims(loader, successor)).toBe(1);
     scope.destroy();
     loader.destroy();
   });

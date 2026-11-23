@@ -1541,6 +1541,12 @@ export class Loader {
       return;
     }
 
+    // An issued handle or direct resource whose key is gone (an evicted direct
+    // resource, possibly rebuilt since) is a no-op, never a group to walk.
+    if (this._residency._wasEverRegisteredHandle(handleOrType)) {
+      return;
+    }
+
     if (this._releaseGroup(claimer, handleOrType)) {
       return;
     }
