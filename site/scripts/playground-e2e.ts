@@ -2268,7 +2268,21 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
   });
 
   await check('experience: responsive previews use phone height and preserve fixed worlds across resizing', async () => {
-    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world', { width: 1366, height: 768 });
+    // Headless Chromium hides scrollbars by default. A classic scrollbar takes
+    // layout width, as it does for desktop visitors on Windows and Linux.
+    const scrollbarBrowser =
+      options.browser === 'chromium'
+        ? await chromium.launch({
+            channel: 'chromium',
+            headless: !options.headed,
+            ignoreDefaultArgs: ['--hide-scrollbars'],
+            args: ['--enable-webgl', '--ignore-gpu-blocklist'],
+          })
+        : null;
+    const { page } = await openPlayground(scrollbarBrowser ?? browser, origin, base, 'getting-started/hello-world', {
+      width: 1366,
+      height: 768,
+    });
 
     try {
       await page.getByRole('button', { name: 'View code', exact: true }).click();
@@ -2292,11 +2306,24 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
           return {
             availableWidth: frame.closest('[data-preview-surface]')!.clientWidth,
             frameWidth: frame.contentWindow?.innerWidth,
+            frameHeight: frame.contentWindow?.innerHeight,
             canvasHeight: canvas?.clientHeight ?? 0,
             visibleWidth: box.width,
             visibleHeight: box.height,
           };
         });
+
+      // A settled preview keeps one geometry; a host that keeps changing the
+      // width it measures alternates between layouts instead.
+      const assertSettled = async (what: string): Promise<void> => {
+        const first = JSON.stringify(await layout());
+
+        for (let sample = 0; sample < 5; sample++) {
+          await page.waitForTimeout(100);
+          const next = JSON.stringify(await layout());
+          assert(next === first, `${what} kept resizing: ${first} became ${next}`);
+        }
+      };
 
       for (const width of [390, 320]) {
         await page.setViewportSize({ width, height: width === 390 ? 844 : 740 });
@@ -2309,6 +2336,7 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
             Math.abs(size.visibleHeight - 440) <= 2,
           `responsive preview at ${width}px viewport width`,
         );
+        await assertSettled(`responsive preview at ${width}px`);
         assert(responsive.url() === generation, 'resizing restarted the responsive preview');
         assert((await responsive.locator('body').getAttribute('data-sizing-instance')) === instance, 'resizing replaced the running app');
       }
@@ -2321,21 +2349,29 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
       );
       await runSource(page, sizingSource('FixedResolutionCanvasSizing'));
       await page.locator('[data-run-status="updated"]').waitFor();
-      await page.setViewportSize({ width: 390, height: 844 });
       const fixed = await previewFrame(page);
-      await fixed.waitForFunction(() => Math.abs(window.innerWidth / window.innerHeight - 16 / 9) < 0.02);
-      await waitFor(
-        layout,
-        size =>
-          Math.abs(size.visibleWidth - size.availableWidth) <= 1 && Math.abs(size.visibleHeight - size.availableWidth * (9 / 16)) <= 2,
-        'fixed preview fills the available width at its original aspect ratio',
-      );
+
+      for (const width of [390, 320]) {
+        await page.setViewportSize({ width, height: width === 390 ? 844 : 740 });
+        await fixed.waitForFunction(() => Math.abs(window.innerWidth / window.innerHeight - 16 / 9) < 0.02);
+        // The host matches the fitted canvas: no hidden letterbox inside the iframe.
+        await waitFor(
+          layout,
+          size =>
+            Math.abs(size.visibleWidth - size.availableWidth) <= 1 &&
+            Math.abs(size.visibleHeight - size.availableWidth * (9 / 16)) <= 2 &&
+            Math.abs(size.canvasHeight - (size.frameHeight ?? 0)) <= 1,
+          `fixed preview fills the available width at its original aspect ratio at ${width}px`,
+        );
+        await assertSettled(`fixed preview at ${width}px`);
+      }
     } catch (error) {
       await reportFailure(page, error);
 
       throw error;
     } finally {
       await page.context().close();
+      await scrollbarBrowser?.close();
     }
   });
 
