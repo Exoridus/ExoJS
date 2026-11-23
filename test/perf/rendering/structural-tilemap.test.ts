@@ -78,7 +78,7 @@ describe('structural — Tilemap', () => {
     });
   });
 
-  it('four interleaved tilesets in one chunk → one page (draw) per tileset', () => {
+  it('four interleaved tilesets in one chunk → one ordered multi-atlas draw', () => {
     withTilemapHarness(harness => {
       const tilesets = makeTilesets(4);
       const scene = buildTilemapScene({
@@ -92,7 +92,7 @@ describe('structural — Tilemap', () => {
 
       const result = measureWithRebuilds(harness, scene);
 
-      expect(result.drawCalls).toBe(4);
+      expect(result.drawCalls).toBe(1);
 
       scene.node.destroy();
     });
@@ -147,7 +147,7 @@ describe('structural — Tilemap', () => {
       scene.node.destroy();
     });
   });
-  it('ground under tall-only collection trees → one draw for the ground, one for the trees', () => {
+  it('ground under tall-only collection trees → one ordered two-atlas draw', () => {
     withTilemapHarness(harness => {
       const treeTexture = new Texture();
 
@@ -169,7 +169,7 @@ describe('structural — Tilemap', () => {
       });
       fitView(harness, scene);
 
-      expect(measureWithRebuilds(harness, scene).drawCalls).toBe(2);
+      expect(measureWithRebuilds(harness, scene).drawCalls).toBe(1);
 
       scene.node.destroy();
     });

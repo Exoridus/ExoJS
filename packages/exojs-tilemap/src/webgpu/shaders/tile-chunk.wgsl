@@ -14,24 +14,28 @@ var<uniform> projection: ProjectionUniforms;
 @group(0) @binding(1)
 var<storage, read> transforms: array<TransformSlot>;
 
-@group(1) @binding(0)
-var tileTexture: texture_2d<f32>;
-@group(1) @binding(1)
-var tileSampler: sampler;
-@group(1) @binding(2)
-var<uniform> sampleAlpha: vec4<f32>;
+@group(1) @binding(0) var tileTexture0: texture_2d<f32>;
+@group(1) @binding(1) var tileTexture1: texture_2d<f32>;
+@group(1) @binding(2) var tileTexture2: texture_2d<f32>;
+@group(1) @binding(3) var tileTexture3: texture_2d<f32>;
+@group(1) @binding(4) var tileSampler0: sampler;
+@group(1) @binding(5) var tileSampler1: sampler;
+@group(1) @binding(6) var tileSampler2: sampler;
+@group(1) @binding(7) var tileSampler3: sampler;
+@group(1) @binding(8) var<uniform> sampleAlpha: vec4<f32>;
 
 struct VertexInput {
     @location(0) quadBounds: vec4<f32>,   // x0, y0, x1, y1
     @location(1) uvBounds: vec4<f32>,     // uMin, vMin, uMax, vMax (flipX/Y + texture flipY baked)
     @location(2) color: vec4<f32>,        // RGBA tint (layer opacity in alpha)
-    @location(3) tileWord: u32,           // transform row (bits 0..28) | diagonal (bit 29)
+    @location(3) tileWord: u32,           // transform row (0..28) | diagonal (29) | texture slot (30..31)
 };
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) texcoord: vec2<f32>,
     @location(1) color: vec4<f32>,
+    @location(2) @interpolate(flat) textureSlot: u32,
 };
 
 @vertex
@@ -47,6 +51,7 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
 
     let row = input.tileWord & {{tileRowMask}}u;
     let diagonal = (input.tileWord & {{tileDiagonalBit}}u) != 0u;
+    output.textureSlot = input.tileWord >> {{tileTextureSlotShift}}u;
 
     let slot = transforms[row];
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
@@ -91,7 +96,17 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-    let sample = textureSample(tileTexture, tileSampler, input.texcoord);
-    let rgb = select(sample.rgb, sample.rgb * sample.a, sampleAlpha.x != 0.0);
+    // Evaluate derivatives before divergent slot selection; textureSampleGrad
+    // then retains mip/filter behavior for every tileset with valid WGSL flow.
+    let gradX = dpdx(input.texcoord);
+    let gradY = dpdy(input.texcoord);
+    var sample: vec4<f32>;
+    switch input.textureSlot {
+        case 0u: { sample = textureSampleGrad(tileTexture0, tileSampler0, input.texcoord, gradX, gradY); }
+        case 1u: { sample = textureSampleGrad(tileTexture1, tileSampler1, input.texcoord, gradX, gradY); }
+        case 2u: { sample = textureSampleGrad(tileTexture2, tileSampler2, input.texcoord, gradX, gradY); }
+        default: { sample = textureSampleGrad(tileTexture3, tileSampler3, input.texcoord, gradX, gradY); }
+    }
+    let rgb = select(sample.rgb, sample.rgb * sample.a, sampleAlpha[input.textureSlot] != 0.0);
     return vec4<f32>(rgb, sample.a) * input.color;
 }

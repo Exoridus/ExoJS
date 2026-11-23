@@ -29,9 +29,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { readWebGpuFrame, readWebGpuPixels } from './_backendSetup';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
-import { wireTilemapRenderers } from './_tilemapScene';
+import { overlappingTextureRunPair, singleTileMap, wireTilemapRenderers } from './_tilemapScene';
 import { getBackendDevice } from './webgpu-test-helpers';
 
 const canvasSize = 64;
@@ -241,6 +241,80 @@ describe('WebGPU renderer matrix: TileChunkNode retained instruction replay cell
       expectPixelNear(readPixel(4, 60), [0, 0, 0, 255]); // background stays clear
     } finally {
       scene.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('multi-atlas retained replay preserves all RGBA bytes and re-captures after a tile edit', async ctx => {
+    const backend = await setupBackend();
+    const outsideTexture = createSolidTexture('#00ff00');
+    const pair = overlappingTextureRunPair(['rgba(255, 0, 0, 0.5)', 'rgba(0, 0, 255, 0.5)'], [0, 1, 0, 1]);
+    const root = new Container();
+    const group = new RetainedContainer();
+    const outside = new TileMapNode(singleTileMap(outsideTexture));
+    const mixed = new TileMapNode(pair.optimized);
+
+    outside.setPosition(48, 0);
+    group.setPosition(24, 12);
+    group.addChild(mixed);
+    root.addChild(outside);
+    root.addChild(group);
+
+    try {
+      if (!(await renderScene(ctx, backend, root))) {
+        return; // collect
+      }
+
+      const collect = new Uint8Array(readWebGpuFrame(backend, canvasSize));
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return; // record
+      }
+
+      const recorded = new Uint8Array(readWebGpuFrame(backend, canvasSize));
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return; // replay
+      }
+
+      const replayed = new Uint8Array(readWebGpuFrame(backend, canvasSize));
+
+      expect(recorded).toEqual(collect);
+      expect(replayed).toEqual(recorded);
+
+      const initial = readWebGpuPixels(backend, canvasSize)(30, 20);
+
+      expect(initial[2]).toBeGreaterThan(initial[0]);
+
+      pair.optimized.layers[0]!.clearTileAt(0, 1);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return; // content-dirty invalidation
+      }
+
+      const edited = new Uint8Array(readWebGpuFrame(backend, canvasSize));
+      const changed = readWebGpuPixels(backend, canvasSize)(30, 20);
+
+      expect(edited).not.toEqual(recorded);
+      expect(changed[0]).toBeGreaterThan(changed[2]);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return; // re-record
+      }
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return; // replay new payload
+      }
+
+      expect(new Uint8Array(readWebGpuFrame(backend, canvasSize))).toEqual(edited);
+    } finally {
+      root.destroy();
+      outsideTexture.destroy();
+
+      for (const texture of pair.textures) {
+        texture.destroy();
+      }
+
       backend.destroy();
     }
   });
