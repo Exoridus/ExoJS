@@ -1,6 +1,6 @@
 {
   "title": "CatalogEntry",
-  "description": "A single catalog field input: a bare path string, an `Asset.type(...)` descriptor, or an explicit config.",
+  "description": "A single catalog field input: a bare path string or a descriptor with a string source. The built-in descriptor shapes are listed so a literal's options - and a `parse` transform's parameter - are contextually typed.",
   "symbol": "CatalogEntry",
   "kind": "type",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A single catalog field input: a bare path string, an `Asset.type(...)` descriptor, or an explicit config."
+        "A single catalog field input: a bare path string or a descriptor with a string source. The built-in descriptor shapes are listed so a literal's options - and a `parse` transform's parameter - are contextually typed."
       ],
       "importLine": "import { CatalogEntry } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "CatalogEntry",
-          "signature": "AnyAssetConfig | Asset<unknown> | string",
+          "signature": "AnyAssetConfig | LocatorAssetDescriptor | string",
           "signatureTokens": [
             {
               "text": "AnyAssetConfig",
@@ -41,20 +41,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Asset",
+              "text": "LocatorAssetDescriptor",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "unknown",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": " | ",

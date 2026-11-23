@@ -103,7 +103,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Default immutable Aseprite extension descriptor. Installs one asset type: - asepriteType - loader.load(asepriteType.asset('hero.aseprite.json')) fetches the Aseprite JSON, resolves and loads the packed texture, and returns a fully-parsed AsepriteSheet with all frame-tag clips. Pass it to the application that should have it via ApplicationOptions.extensions."
+          "description": "Default immutable Aseprite extension descriptor. Installs one asset type: - asepriteType - loader.load({ type: asepriteType, source: 'hero.aseprite.json' }) fetches the Aseprite JSON, resolves and loads the packed texture, and returns a fully-parsed AsepriteSheet with all frame-tag clips. Pass it to the application that should have it via ApplicationOptions.extensions."
         },
         {
           "name": "asepriteType",
