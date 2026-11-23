@@ -2,12 +2,12 @@ import {
   Application,
   Asset,
   type AudioEffect,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
   HighpassFilter,
   LowpassFilter,
+  type Music,
   type RenderingContext,
   Scene,
   type Sound,
@@ -70,7 +70,7 @@ const CHAINS: Chain[] = [
 ];
 
 class EffectChainsScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private impact!: Sound;
   private musicVoice!: Voice;
   private analyser!: AudioAnalyser;

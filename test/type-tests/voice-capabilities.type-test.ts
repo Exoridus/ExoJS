@@ -1,8 +1,8 @@
 import type { AudioBus } from '#audio/AudioBus';
 import type { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioSend } from '#audio/AudioSend';
-import type { AudioStream } from '#audio/AudioStream';
 import type { AudioSystem } from '#audio/AudioSystem';
+import type { Music } from '#audio/Music';
 import type { Loopable, Pausable, Playable, RatePitched, Seekable, Voice } from '#audio/Playable';
 import type { Sound } from '#audio/Sound';
 import type { SceneAudio } from '#core/scene/SceneAudio';
@@ -11,7 +11,7 @@ import { SceneAvailability } from '#core/scene/SceneAvailability';
 declare const sceneAudio: SceneAudio;
 declare const system: AudioSystem;
 declare const sound: Sound;
-declare const stream: AudioStream;
+declare const stream: Music;
 declare const generator: AudioGenerator;
 declare const custom: Playable;
 
@@ -138,7 +138,7 @@ if ('pause' in systemGenerator) {
   systemGenerator.seek(1);
 }
 
-// An AudioStream always yields a stream voice, so it needs no capability check.
+// An Music always yields a stream voice, so it needs no capability check.
 const systemStream: FullVoice = system.play(stream);
 
 systemStream.seek(1);

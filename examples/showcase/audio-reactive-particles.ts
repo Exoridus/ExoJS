@@ -1,8 +1,8 @@
 import {
   Application,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
+  type Music,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -17,7 +17,7 @@ import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(130, 255, 170), new Color(255, 220, 120)];
 
 class AudioReactiveParticlesScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private musicVoice!: Voice;
   private analyser!: AudioAnalyser;
   private detector!: BeatDetector;
@@ -31,7 +31,7 @@ class AudioReactiveParticlesScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
+    // Music is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than fetched synchronously via `get()`.
     this.music = await this.loader.load(assets.musicActionSynthRock);

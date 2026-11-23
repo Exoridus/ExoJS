@@ -1,7 +1,7 @@
 import {
   Application,
   Asset,
-  type AudioStream,
+  type Music,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -17,7 +17,7 @@ import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesEx
 const app = new Application({ extensions: [particlesExtension] });
 
 class AudioReactiveScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private particleTexture!: Texture;
   private analyser!: AudioAnalyser;
   private detector!: BeatDetector;

@@ -468,7 +468,7 @@ Object.defineProperty(globalThis, 'AudioWorkletNode', {
 });
 
 // jsdom does not implement HTMLMediaElement playback - stub play/pause/load so
-// AudioStream / Video voices can drive an <audio>/<video> element in tests.
+// Music / Video voices can drive an <audio>/<video> element in tests.
 if (typeof HTMLMediaElement !== 'undefined') {
   Object.defineProperty(HTMLMediaElement.prototype, 'play', {
     configurable: true,
