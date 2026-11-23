@@ -283,7 +283,8 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
       document.body.appendChild(visualCanvas);
 
       try {
-        const open = await host.render(lighting);
+        // WebGPU readback can reuse a backing buffer across frames. Preserve the unoccluded reference.
+        const open = (await host.render(lighting))?.slice() ?? null;
 
         if (open !== null) {
           await page.screenshot({
