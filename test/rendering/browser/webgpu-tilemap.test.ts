@@ -20,7 +20,7 @@ import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { readWebGpuFrame, readWebGpuPixels } from './_backendSetup';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import {
   createQuadrantTexture,
@@ -198,11 +198,13 @@ describe('WebGPU tilemap — multi-texture batching', () => {
     const optimized = new TileMapNode(pair.optimized);
     const reference = new TileMapNode(pair.reference);
     const sampleY = [8, 20, 32, 44, 56];
-    const visualCanvas = backend.context.canvas as HTMLCanvasElement;
+    const visualCanvas = document.createElement('canvas');
 
-    visualCanvas.style.width = '64px';
-    visualCanvas.style.height = '64px';
+    visualCanvas.width = canvasSize;
+    visualCanvas.height = canvasSize;
     document.body.appendChild(visualCanvas);
+
+    const captureContext = visualCanvas.getContext('2d')!;
 
     try {
       optimized.setPosition(24, 12);
@@ -232,9 +234,11 @@ describe('WebGPU tilemap — multi-texture batching', () => {
       expect(actual[1]![3]).toBeGreaterThan(actual[0]![3]);
       expect(actual[1]![3]).toBeLessThan(255);
 
-      // Capture the visible reference and optimized canvases after all assertions.
+      // Read the actual GPU framebuffer into a separate 2D canvas; attaching the
+      // native WebGPU surface to the document can change its readback lifecycle.
+      captureContext.putImageData(new ImageData(new Uint8ClampedArray(readWebGpuFrame(backend, canvasSize)), canvasSize), 0, 0);
       await page.screenshot({
-        element: backend.context.canvas as HTMLCanvasElement,
+        element: visualCanvas,
         path: `../../../.workspace/visual-review/current/tile-alpha-reference-webgpu-${server.browser}.png`,
       });
 
@@ -242,8 +246,9 @@ describe('WebGPU tilemap — multi-texture batching', () => {
         return;
       }
 
+      captureContext.putImageData(new ImageData(new Uint8ClampedArray(readWebGpuFrame(backend, canvasSize)), canvasSize), 0, 0);
       await page.screenshot({
-        element: backend.context.canvas as HTMLCanvasElement,
+        element: visualCanvas,
         path: `../../../.workspace/visual-review/current/tile-alpha-multitexture-webgpu-${server.browser}.png`,
       });
     } finally {
