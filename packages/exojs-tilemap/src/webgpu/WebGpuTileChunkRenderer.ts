@@ -640,10 +640,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const key = ids.join(',');
     const cached = this._textureBindGroups.get(key);
 
-    if (
-      cached?.mask === mask &&
-      views.every((view, slot) => view === cached.views[slot] && samplers[slot] === cached.samplers[slot])
-    ) {
+    if (cached?.mask === mask && views.every((view, slot) => view === cached.views[slot] && samplers[slot] === cached.samplers[slot])) {
       // LRU: move to the back without allocating a new bind group.
       this._textureBindGroups.delete(key);
       this._textureBindGroups.set(key, cached);
