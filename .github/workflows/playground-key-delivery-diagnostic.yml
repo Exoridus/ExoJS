@@ -42,7 +42,7 @@ jobs:
           path: .workspace/key-delivery/lighting
       - name: Compare the same touch and keyboard sequence on one runner
         run: |
-          node scripts/ci/diagnose-playground-key-delivery.mjs
+          node scripts/ci/diagnose-playground-key-delivery.ts
           status=0
           for candidate in next assets lighting; do
             echo "::group::$candidate"

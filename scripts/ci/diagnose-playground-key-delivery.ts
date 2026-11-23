@@ -38,7 +38,7 @@ const engineTrace = `(() => {
   }
 })()`;
 
-const insertAfter = (anchor, addition) => {
+const insertAfter = (anchor: string, addition: string): void => {
   if (source.split(anchor).length !== 2) {
     throw new Error(`Expected exactly one diagnostic source anchor: ${anchor}`);
   }
