@@ -1,6 +1,7 @@
 import { Signal } from '#core/Signal';
 import type { PlaybackOptions } from '#core/types';
 
+import type { AudioStreamVoice } from './AudioStreamVoice';
 import { MediaAudio } from './MediaAudio';
 
 /**
@@ -63,7 +64,7 @@ export class AudioStream extends MediaAudio {
   private readonly _delay: number;
   private _attempt = 0;
   private _timer: ReturnType<typeof setTimeout> | undefined;
-  private _resumeAfterReconnect = false;
+  private _resumeAfterReconnect: AudioStreamVoice | null = null;
 
   private readonly _onPlaying = (): void => {
     this._attempt = 0;
@@ -76,9 +77,13 @@ export class AudioStream extends MediaAudio {
       this._setConnection('connected');
     }
 
-    if (this._resumeAfterReconnect) {
-      this._resumeAfterReconnect = false;
-      this._voice?.resume();
+    const resumeVoice = this._resumeAfterReconnect;
+    this._resumeAfterReconnect = null;
+
+    // Reloading the element can itself make `paused` true, so consult the
+    // voice's user pause/hold intent, not the browser's transient element state.
+    if (this._connection !== 'disconnected' && resumeVoice !== null && resumeVoice === this._voice && resumeVoice._canAutoResume) {
+      resumeVoice.resume();
     }
   };
 
@@ -153,6 +158,7 @@ export class AudioStream extends MediaAudio {
     }
 
     this._clearTimer();
+    this._resumeAfterReconnect = null;
 
     const element = this._audioElement;
 
@@ -169,6 +175,11 @@ export class AudioStream extends MediaAudio {
     this._connectionLost(error);
   }
 
+  /** Recoverable live EOF must not finish the only voice before reconnect. */
+  protected override _endVoiceOnMediaEnded(): boolean {
+    return this._connection !== 'reconnecting';
+  }
+
   private _connectionLost(error: Error): void {
     if (this.destroyed) {
       return;
@@ -176,6 +187,7 @@ export class AudioStream extends MediaAudio {
 
     if (this._source === undefined || this._attempt >= this._attempts) {
       this._clearTimer();
+      this._resumeAfterReconnect = null;
       this._setConnection('disconnected');
       super._onMediaError(error);
 
@@ -199,7 +211,8 @@ export class AudioStream extends MediaAudio {
   private _reopen(): void {
     const voice = this._voice;
 
-    this._resumeAfterReconnect = voice !== null && !voice.ended && !voice.paused;
+    this._resumeAfterReconnect =
+      voice !== null && !voice.ended && (this._resumeAfterReconnect === voice || !voice.paused) ? voice : null;
     this._setConnection('reconnecting');
     this._audioElement.src = this._source!;
     this._audioElement.load();
