@@ -39,6 +39,31 @@
   min-width: 0;
 }
 
+.example-details {
+  min-width: 0;
+}
+
+.context-summary {
+  min-height: 44px;
+  padding: var(--s-2);
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  color: var(--fg);
+  font-size: var(--text-xs);
+  line-height: 26px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+  }
+}
+
+.context-next {
+  margin-top: var(--s-2);
+}
+
 .example-actions {
   display: flex;
   align-items: center;
@@ -520,6 +545,41 @@
 
     h1 {
       flex-basis: 100%;
+    }
+  }
+
+  .root[data-active-view='code'] .example-header {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--s-2);
+
+    .example-heading,
+    .run-feedback {
+      grid-column: 1 / -1;
+    }
+
+    .example-actions {
+      grid-row: 2;
+      grid-column: 1;
+      margin-top: 0;
+    }
+
+    .example-details {
+      grid-row: 2;
+      grid-column: 2;
+
+      &[open] {
+        grid-row: 3;
+        grid-column: 1 / -1;
+
+        .example-context {
+          margin-top: var(--s-2);
+        }
+      }
+    }
+
+    .run-feedback {
+      margin-top: 0;
     }
   }
 
