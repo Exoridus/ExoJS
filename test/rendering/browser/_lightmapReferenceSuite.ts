@@ -13,6 +13,7 @@
 
 import { type Light, LightmapLighting, LineLight, PointLight, PolygonOccluder, SpotLight } from '@codexo/exojs/lighting';
 import { describe, expect, test } from 'vitest';
+import { page, server } from 'vitest/browser';
 
 import { Color } from '#core/Color';
 import { View } from '#rendering/View';
@@ -306,6 +307,38 @@ const quantile = (values: number[], q: number): number => {
 
 const mean = (values: readonly number[]): number => values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length);
 
+/** Capture the exact readback used by the reference, not the live GPU canvas. */
+const captureLineSource = async (
+  backend: ContactBackend,
+  scene: LineScene,
+  filler: ShadowFiller,
+  open: Uint8Array | Uint8ClampedArray,
+  walled: Uint8Array | Uint8ClampedArray,
+): Promise<void> => {
+  const canvas = document.createElement('canvas');
+
+  canvas.width = contactCanvasSize;
+  canvas.height = contactCanvasSize;
+  document.body.appendChild(canvas);
+
+  try {
+    const context = canvas.getContext('2d')!;
+
+    for (const [kind, pixels] of [
+      [`open-${filler}`, open],
+      [filler, walled],
+    ] as const) {
+      context.putImageData(new ImageData(new Uint8ClampedArray(pixels), contactCanvasSize), 0, 0);
+      await page.screenshot({
+        element: canvas,
+        path: `../../../.workspace/visual-review/current/line-source-${kind}-${scene.rotation}-${backend}-${server.browser}.png`,
+      });
+    }
+  } finally {
+    canvas.remove();
+  }
+};
+
 /** `null` when the device was dropped. */
 const lineShadowError = async (backend: ContactBackend, scene: LineScene, filler: ShadowFiller): Promise<LineShadowResult | null> => {
   const host = await createContactHost(backend);
@@ -333,6 +366,11 @@ const lineShadowError = async (backend: ContactBackend, scene: LineScene, filler
 
     if (open === null || walled === null) {
       return null;
+    }
+
+    // Never label a CPU fallback as a GPU capture.
+    if (frameBackend.shadowFiller === filler) {
+      await captureLineSource(backend, scene, filler, open, walled);
     }
 
     const axis = { x: 0, y: 0 };
