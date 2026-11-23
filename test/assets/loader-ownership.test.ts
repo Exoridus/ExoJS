@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
@@ -80,7 +79,7 @@ describe('multi-consumer ownership', () => {
     const scope = loader.createScope();
 
     const handle = scope.get('hero.png');
-    const queued = scope.load(Asset.type('texture', 'hero.png'));
+    const queued = scope.load({ type: 'texture', source: 'hero.png' });
 
     await Promise.all([handle.loaded, queued]);
 
@@ -186,7 +185,10 @@ describe('dependent asset ownership', () => {
     const second = loader.createScope({ name: 'second' });
 
     // `first` starts the font load; `second` joins the very same request.
-    const [font] = await Promise.all([first.load(Asset.type('bmFont', 'fonts/ui.fnt')), second.load(Asset.type('bmFont', 'fonts/ui.fnt'))]);
+    const [font] = await Promise.all([
+      first.load({ type: 'bmFont', source: 'fonts/ui.fnt' }),
+      second.load({ type: 'bmFont', source: 'fonts/ui.fnt' }),
+    ]);
 
     expect(font).toBeInstanceOf(BmFont);
     expect(font.textures[0]?.loadState).toBe('ready');
@@ -195,7 +197,7 @@ describe('dependent asset ownership', () => {
     first.destroy();
 
     expect(font.textures[0]?.loadState).toBe('ready');
-    expect(loader.peek(Asset.type('texture', 'fonts/page0.png'))).not.toBeUndefined();
+    expect(loader.peek({ type: 'texture', source: 'fonts/page0.png' })).not.toBeUndefined();
   });
 
   test('a sub-asset is released once the asset that pulled it in loses its last owner', async () => {
@@ -203,7 +205,7 @@ describe('dependent asset ownership', () => {
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'only' });
 
-    const font = await scope.load(Asset.type('bmFont', 'fonts/ui.fnt'));
+    const font = await scope.load({ type: 'bmFont', source: 'fonts/ui.fnt' });
     const page = font.textures[0]!;
 
     expect(page.loadState).toBe('ready');
@@ -211,7 +213,7 @@ describe('dependent asset ownership', () => {
     scope.destroy();
 
     expect(page.loadState).toBe('loading');
-    expect(loader.peek(Asset.type('texture', 'fonts/page0.png'))).toBeUndefined();
+    expect(loader.peek({ type: 'texture', source: 'fonts/page0.png' })).toBeUndefined();
     expect(loader.inspect()).toHaveLength(0);
   });
 
@@ -221,7 +223,7 @@ describe('dependent asset ownership', () => {
     const scope = loader.createScope({ name: 'font-owner' });
     const pageOwner = loader.createScope({ name: 'page-owner' });
 
-    const font = await scope.load(Asset.type('bmFont', 'fonts/ui.fnt'));
+    const font = await scope.load({ type: 'bmFont', source: 'fonts/ui.fnt' });
     const page = pageOwner.get('fonts/page0.png') as Texture;
 
     expect(page).toBe(font.textures[0]);
@@ -340,7 +342,7 @@ describe('per-scope load progress', () => {
 
     scope.onLoadError.add(key => errors.push(key));
 
-    await scope.load(Asset.type('texture', 'gone.png')).catch(() => {});
+    await scope.load({ type: 'texture', source: 'gone.png' }).catch(() => {});
 
     expect(errors).toEqual(['gone.png']);
   });

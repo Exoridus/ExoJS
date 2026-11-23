@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import type { AssetSourceCodec } from '#assets/AssetSourceCodec';
 import type { AnyAssetType } from '#assets/AssetType';
@@ -165,7 +164,7 @@ describe('materializeAssetTypes', () => {
 
     materializeAssetTypes(loader, [spied.type]);
 
-    await loader.load(new Asset({ type: 'withOpts', source: 'x.dat', family: 'Inter', size: 12 }));
+    await loader.load({ type: 'withOpts', source: 'x.dat', family: 'Inter', size: 12 });
 
     expect(spied.create).toHaveBeenCalledWith('', expect.objectContaining({ source: 'x.dat', options: { family: 'Inter', size: 12 } }));
     loader.destroy();
@@ -177,7 +176,7 @@ describe('materializeAssetTypes', () => {
 
     materializeAssetTypes(loader, [spied.type]);
 
-    await loader.load(new Asset({ type: 'noOpts', source: 'x.dat' }));
+    await loader.load({ type: 'noOpts', source: 'x.dat' });
 
     const context = spied.create.mock.calls[0]![1] as AssetFactoryContext<Record<string, unknown>>;
 

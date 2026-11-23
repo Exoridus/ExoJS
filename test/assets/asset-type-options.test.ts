@@ -5,7 +5,6 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import type { AssetSourceCodec } from '#assets/AssetSourceCodec';
 import { type AssetRequest, AssetType } from '#assets/AssetType';
@@ -192,8 +191,8 @@ describe('option-driven identity', () => {
 
     materializeAssetTypes(loader, [exampleType('example', () => loadCount++)]);
 
-    const a1 = new Asset({ type: 'example', source: 'file.dat', format: 'example', strict: true });
-    const a2 = new Asset({ type: 'example', source: 'file.dat', format: 'example', strict: true });
+    const a1 = { type: 'example', source: 'file.dat', format: 'example', strict: true } as const;
+    const a2 = { type: 'example', source: 'file.dat', format: 'example', strict: true } as const;
 
     await Promise.all([loader.load(a1), loader.load(a2)]);
 
@@ -206,8 +205,8 @@ describe('option-driven identity', () => {
 
     materializeAssetTypes(loader, [exampleType('example', options => calls.push(options))]);
 
-    const a1 = new Asset({ type: 'example', source: 'world.dat', format: 'example', strict: true });
-    const a2 = new Asset({ type: 'example', source: 'world.dat', format: 'example', strict: true });
+    const a1 = { type: 'example', source: 'world.dat', format: 'example', strict: true } as const;
+    const a2 = { type: 'example', source: 'world.dat', format: 'example', strict: true } as const;
 
     const [r1, r2] = await Promise.all([loader.load(a1), loader.load(a2)]);
 
@@ -221,8 +220,8 @@ describe('option-driven identity', () => {
 
     materializeAssetTypes(loader, [exampleType('example', options => calls.push(options.strict))]);
 
-    const strict = new Asset({ type: 'example', source: 'data.dat', strict: true });
-    const lenient = new Asset({ type: 'example', source: 'data.dat', strict: false });
+    const strict = { type: 'example', source: 'data.dat', strict: true } as const;
+    const lenient = { type: 'example', source: 'data.dat', strict: false } as const;
 
     const [r1, r2] = await Promise.all([loader.load(strict), loader.load(lenient)]);
 
@@ -236,8 +235,8 @@ describe('option-driven identity', () => {
 
     materializeAssetTypes(loader, [exampleType('example', () => loadCount++)]);
 
-    const noOpts = new Asset({ type: 'example', source: 'map.dat' });
-    const explicitDefaults = new Asset({ type: 'example', source: 'map.dat', format: 'example', strict: true });
+    const noOpts = { type: 'example', source: 'map.dat' } as const;
+    const explicitDefaults = { type: 'example', source: 'map.dat', format: 'example', strict: true } as const;
 
     await Promise.all([loader.load(noOpts), loader.load(explicitDefaults)]);
 
@@ -250,8 +249,8 @@ describe('option-driven identity', () => {
 
     materializeAssetTypes(loader, [exampleType('traceExample', () => loadCount++)]);
 
-    const withTrace = new Asset({ type: 'traceExample', source: 'asset.dat', trace: true });
-    const withoutTrace = new Asset({ type: 'traceExample', source: 'asset.dat', trace: false });
+    const withTrace = { type: 'traceExample', source: 'asset.dat', trace: true } as const;
+    const withoutTrace = { type: 'traceExample', source: 'asset.dat', trace: false } as const;
 
     await Promise.all([loader.load(withTrace), loader.load(withoutTrace)]);
 
@@ -279,8 +278,8 @@ describe('option-driven identity', () => {
 
     materializeAssetTypes(loader, [new Simple()]);
 
-    const a1 = new Asset({ type: 'simpleExample', source: 'shared.dat' });
-    const a2 = new Asset({ type: 'simpleExample', source: 'shared.dat' });
+    const a1 = { type: 'simpleExample', source: 'shared.dat' } as const;
+    const a2 = { type: 'simpleExample', source: 'shared.dat' } as const;
 
     await Promise.all([loader.load(a1), loader.load(a2)]);
 
@@ -316,9 +315,9 @@ describe('option-driven identity', () => {
 
     materializeAssetTypes(loader, [exampleType('captureExample', (_options, context) => void (seen = context))]);
 
-    await expect(
-      loader.load(new Asset({ type: 'captureExample', source: 'thing.dat', format: 'alt', strict: false })),
-    ).resolves.toBeInstanceOf(ExampleAsset);
+    await expect(loader.load({ type: 'captureExample', source: 'thing.dat', format: 'alt', strict: false })).resolves.toBeInstanceOf(
+      ExampleAsset,
+    );
 
     expect(seen?.source).toBe('thing.dat');
     expect(seen?.options).toEqual({ format: 'alt', strict: false });
@@ -330,7 +329,7 @@ describe('option-driven identity', () => {
 
     materializeAssetTypes(loader, [exampleType('captureNoOpts', (_options, context) => void (seen = context))]);
 
-    await expect(loader.load(new Asset({ type: 'captureNoOpts', source: 'thing.dat' }))).resolves.toBeInstanceOf(ExampleAsset);
+    await expect(loader.load({ type: 'captureNoOpts', source: 'thing.dat' })).resolves.toBeInstanceOf(ExampleAsset);
 
     expect(seen?.source).toBe('thing.dat');
     expect(seen?.options).toBeUndefined();

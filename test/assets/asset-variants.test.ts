@@ -10,7 +10,6 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { AssetVariantSet } from '#assets/AssetVariantSet';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
@@ -189,8 +188,8 @@ describe('Loader variant wiring', () => {
     const loader = createCoreLoader();
     loader.variants.profile = { textureFormats: [], imageFormats: ['webp', 'png'], resolution: 2 };
 
-    const inline = loader.identify(Asset.type('texture', 'hero@{1,2}x.{webp,png}'));
-    const physical = loader.identify(Asset.type('texture', 'hero@2x.webp'));
+    const inline = loader.identify({ type: 'texture', source: 'hero@{1,2}x.{webp,png}' });
+    const physical = loader.identify({ type: 'texture', source: 'hero@2x.webp' });
 
     expect(inline.locator).toBe(physical.locator);
     expect(inline.sourceKey).toBe(physical.sourceKey);
@@ -202,11 +201,11 @@ describe('Loader variant wiring', () => {
 
     loader.variants.define('terrain.png', terrainVariants);
 
-    const logical = loader.identify(Asset.type('texture', 'terrain.png'));
+    const logical = loader.identify({ type: 'texture', source: 'terrain.png' });
 
     loader.variants.profile = { textureFormats: [CompressedTextureFormat.Bc7RgbaUnorm], resolution: 1 };
 
-    const chosen = loader.identify(Asset.type('texture', 'terrain.png'));
+    const chosen = loader.identify({ type: 'texture', source: 'terrain.png' });
 
     expect(chosen.locator).not.toBe(logical.locator);
     expect(chosen.locator).toContain('terrain.bc7.ktx2');
@@ -220,11 +219,11 @@ describe('Loader variant wiring', () => {
     loader.variants.define('terrain.png', terrainVariants);
     loader.variants.profile = { textureFormats: [CompressedTextureFormat.Bc7RgbaUnorm], resolution: 1 };
 
-    const bc7 = loader.identify(Asset.type('texture', 'terrain.png'));
+    const bc7 = loader.identify({ type: 'texture', source: 'terrain.png' });
 
     loader.variants.profile = { textureFormats: [CompressedTextureFormat.Astc4x4Unorm], resolution: 1 };
 
-    expect(loader.identify(Asset.type('texture', 'terrain.png')).sourceKey).not.toBe(bc7.sourceKey);
+    expect(loader.identify({ type: 'texture', source: 'terrain.png' }).sourceKey).not.toBe(bc7.sourceKey);
   });
 
   test('a bare path infers its type from the chosen variant', () => {

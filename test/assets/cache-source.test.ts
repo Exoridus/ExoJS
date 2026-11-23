@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import type { AssetFactory } from '#assets/AssetFactory';
 import { AssetType } from '#assets/AssetType';
 import { AssetCache } from '#assets/cache/AssetCache';
@@ -62,7 +61,7 @@ describe('Loader.cacheSource', () => {
 
     mockFetch('cached body');
 
-    await loader.cacheSource(Asset.type('text', 'notes.txt'));
+    await loader.cacheSource({ type: 'text', source: 'notes.txt' });
 
     expect(store.set).toHaveBeenCalledWith(recordKey('text', '/notes.txt'), 'cached body');
 
@@ -75,7 +74,7 @@ describe('Loader.cacheSource', () => {
 
     mockFetch();
 
-    await loader.cacheSource(Asset.type('text', 'notes.txt'));
+    await loader.cacheSource({ type: 'text', source: 'notes.txt' });
 
     expect(loader.inspect()).toHaveLength(0);
     expect(loader._peekResource(TextAsset, 'notes.txt')).toBeNull();
@@ -93,7 +92,7 @@ describe('Loader.cacheSource', () => {
     loader._installAssetTypes([testAssetType<string, string>({ id: 'probe', token: Probe, extensions: ['probe'], create })]);
     mockFetch();
 
-    await loader.cacheSource(Asset.type('probe' as never, 'thing.probe'));
+    await loader.cacheSource({ type: 'probe' as never, source: 'thing.probe' });
 
     expect(create).not.toHaveBeenCalled();
     expect(store.set).toHaveBeenCalledWith(recordKey('probe', '/thing.probe'), 'payload');
@@ -107,7 +106,7 @@ describe('Loader.cacheSource', () => {
 
     const fetchSpy = mockFetch('warmed');
 
-    await warmer.cacheSource(Asset.type('text', 'notes.txt'));
+    await warmer.cacheSource({ type: 'text', source: 'notes.txt' });
     warmer.destroy();
 
     // A second loader shares the store but holds nothing resident, so this is a
@@ -116,7 +115,7 @@ describe('Loader.cacheSource', () => {
 
     const reader = createLoader(store);
 
-    await expect(reader.load(Asset.type('text', 'notes.txt'))).resolves.toBe('warmed');
+    await expect(reader.load({ type: 'text', source: 'notes.txt' })).resolves.toBe('warmed');
     expect(fetchSpy).not.toHaveBeenCalled();
 
     reader.destroy();
@@ -127,8 +126,8 @@ describe('Loader.cacheSource', () => {
     const loader = createLoader(store);
     const fetchSpy = mockFetch();
 
-    await loader.cacheSource(Asset.type('text', 'notes.txt'));
-    await loader.cacheSource(Asset.type('text', 'notes.txt'));
+    await loader.cacheSource({ type: 'text', source: 'notes.txt' });
+    await loader.cacheSource({ type: 'text', source: 'notes.txt' });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
@@ -142,7 +141,7 @@ describe('Loader.cacheSource', () => {
 
     materializeAssetTypes(loader, coreAssetTypes);
 
-    await expect(loader.cacheSource(Asset.type('text', 'notes.txt'))).rejects.toBeInstanceOf(AssetCacheMissError);
+    await expect(loader.cacheSource({ type: 'text', source: 'notes.txt' })).rejects.toBeInstanceOf(AssetCacheMissError);
     expect(fetchSpy).not.toHaveBeenCalled();
 
     loader.destroy();
@@ -169,7 +168,7 @@ describe('Loader.cacheSource', () => {
         }),
     ) as unknown as typeof fetch;
 
-    const pending = loader.cacheSource(Asset.type('text', 'notes.txt'), { signal: controller.signal });
+    const pending = loader.cacheSource({ type: 'text', source: 'notes.txt' }, { signal: controller.signal });
 
     controller.abort();
 
@@ -182,7 +181,7 @@ describe('Loader.cacheSource', () => {
     const store = createCacheStoreDouble();
     const loader = new Loader({ basePath: '/', cache: store });
 
-    expect(() => loader.cacheSource(Asset.type('text', 'notes.txt'))).toThrow(/no asset type "text" is installed/);
+    expect(() => loader.cacheSource({ type: 'text', source: 'notes.txt' })).toThrow(/no asset type "text" is installed/);
 
     loader.destroy();
   });
@@ -209,7 +208,7 @@ describe('Loader.cacheSource', () => {
 
     loader._installAssetTypes([compositeType]);
 
-    await expect(loader.cacheSource(compositeType.asset('world.map'))).rejects.toThrow(/declares no source codec/);
+    await expect(loader.cacheSource({ type: compositeType, source: 'world.map' })).rejects.toThrow(/declares no source codec/);
     expect(store.set).not.toHaveBeenCalled();
 
     loader.destroy();
@@ -224,7 +223,7 @@ describe('Loader.cacheSource', () => {
     // An ordinary load of this same descriptor streams from the URL and
     // acquires nothing. Asking for the acquisition by name is what this
     // operation is, so it does not consult that shortcut.
-    await loader.cacheSource(Asset.type('music', 'theme.mp3'));
+    await loader.cacheSource({ type: 'music', source: 'theme.mp3' });
 
     const stored = store.records.get([...store.records.keys()][0]!);
 

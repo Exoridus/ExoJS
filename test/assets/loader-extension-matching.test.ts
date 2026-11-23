@@ -16,7 +16,6 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   }),
 }));
 
-import { Asset } from '#assets/Asset';
 import type { KindByPath, LeafForPath } from '#assets/AssetDefinitions';
 import type { AssetRef } from '#assets/AssetRef';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
@@ -80,7 +79,7 @@ describe('compound extension matching', () => {
     expectTypeOf<KindByPath<'assets/v1.2/ship.png'>>().toEqualTypeOf<'texture'>();
     // Compound key wins over its shorter suffix.
     expectTypeOf<KindByPath<'hero.mock.json'>>().toEqualTypeOf<'json'>();
-    // A non-leaf resource type has no bare-path inference - name it with Asset.type().
+    // A non-leaf resource type has no bare-path inference - name it with a descriptor.
     expectTypeOf<KindByPath<'fonts/ui.fnt'>>().toEqualTypeOf<never>();
     // Unregistered suffix resolves to never → LeafForPath falls back to unknown.
     expectTypeOf<KindByPath<'theme.custom'>>().toEqualTypeOf<never>();
@@ -199,13 +198,15 @@ describe('registerType() on a loader that already has bindings', () => {
     await expect(defaults.load('same.json')).resolves.toEqual({ marker: true });
   });
 
-  test('Asset.type() is a one-off type choice and does not mutate the app-local or global defaults', async () => {
+  test('a descriptor is a one-off type choice and does not mutate the app-local or global defaults', async () => {
     const loader = createCoreLoader();
     mockTextAndJsonResponse();
 
     loader.registerType('json', 'text');
 
-    await expect(loader.load(Asset.type<{ marker: boolean }>('json', 'one-off.json'))).resolves.toEqual({ marker: true });
+    await expect(
+      loader.load({ type: 'json', source: 'one-off.json', parse: (raw: unknown) => raw as { marker: boolean } }),
+    ).resolves.toEqual({ marker: true });
     expect(loader['_typeRegistry'].resolveExtensionType('json')).toBe('text');
     await expect(loader.load('after-one-off.json' as never)).resolves.toBe(JSON_BODY);
 

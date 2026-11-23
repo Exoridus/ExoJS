@@ -1,6 +1,5 @@
 import { expectTypeOf } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { AssetNetworkError } from '#assets/AssetNetworkError';
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
@@ -185,13 +184,13 @@ describe('Loader seamless get (Texture)', () => {
       }),
     ]);
 
-    await expect(loader.load(new Asset({ type: 'nullable', source: 'null' }))).resolves.toBeNull();
-    await expect(loader.load(new Asset({ type: 'nullable', source: 'undef' }))).resolves.toBeUndefined();
+    await expect(loader.load({ type: 'nullable', source: 'null' })).resolves.toBeNull();
+    await expect(loader.load({ type: 'nullable', source: 'undef' })).resolves.toBeUndefined();
     expect(calls).toBe(2);
 
     // Re-loading either source reads the stored nullish value instead of refetching.
-    await expect(loader.load(new Asset({ type: 'nullable', source: 'null' }))).resolves.toBeNull();
-    await expect(loader.load(new Asset({ type: 'nullable', source: 'undef' }))).resolves.toBeUndefined();
+    await expect(loader.load({ type: 'nullable', source: 'null' })).resolves.toBeNull();
+    await expect(loader.load({ type: 'nullable', source: 'undef' })).resolves.toBeUndefined();
     expect(calls).toBe(2);
   });
 
@@ -477,7 +476,7 @@ describe('Loader seamless get (Texture)', () => {
     expect(errors).toEqual([{ alias: 'gone.png', error: rejected }]);
   });
 
-  test('an explicit Asset.type() load rejects and also dispatches onError', async () => {
+  test('an explicit a descriptor load rejects and also dispatches onError', async () => {
     mockFetch404();
     const loader = createCoreLoader();
     const errors: Array<{ alias: string; error: Error }> = [];
@@ -485,7 +484,7 @@ describe('Loader seamless get (Texture)', () => {
     loader.onError.add((_type, alias, error) => errors.push({ alias, error }));
 
     let rejected: unknown;
-    await loader.load(Asset.type('texture', 'explicit-gone.png')).catch(error => {
+    await loader.load({ type: 'texture', source: 'explicit-gone.png' }).catch(error => {
       rejected = error;
     });
 

@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import type { Application } from '#core/Application';
@@ -269,7 +268,7 @@ describe('dependency scopes', () => {
     const parent = loader.createScope({ name: 'world' });
     const child = parent.createScope({ name: 'chunk' });
 
-    const font = await child.load(Asset.type('bmFont', 'fonts/ui.fnt'));
+    const font = await child.load({ type: 'bmFont', source: 'fonts/ui.fnt' });
     const page = font.textures[0]!;
 
     const pageOwners = loader.inspect().find(row => row.locator.endsWith('fonts/page0.png'))?.owners ?? [];

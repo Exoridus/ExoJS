@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
 import { Loader, LoadPriority } from '#assets/Loader';
 
@@ -30,7 +29,7 @@ describe('Loader observer failure isolation', () => {
     loader.onLoaded.add(later);
 
     try {
-      await expect(loader.load(Asset.type('observerIsolation', 'ready.dat'))).resolves.toBe('ready');
+      await expect(loader.load({ type: 'observerIsolation', source: 'ready.dat' })).resolves.toBe('ready');
       expect(later).toHaveBeenCalledTimes(1);
       expect(loader.stats().ready).toBe(1);
     } finally {
@@ -47,7 +46,7 @@ describe('Loader observer failure isolation', () => {
     });
     loader.onProgress.add(later);
 
-    const catalog = Assets.from({ file: type.asset('background.dat') });
+    const catalog = Assets.from({ file: { type, source: 'background.dat' } });
     const queue = loader.load(catalog, { priority: LoadPriority.Background });
     let settled = false;
     const idle = loader.awaitBackground().then(() => {
@@ -79,7 +78,7 @@ describe('Loader observer failure isolation', () => {
     loader.onError.add(later);
 
     try {
-      const load = loader.load(Asset.type('observerIsolation', 'failed.dat'));
+      const load = loader.load({ type: 'observerIsolation', source: 'failed.dat' });
 
       await expect(load).rejects.toThrow('factory failed');
       await expect(load).rejects.toMatchObject({ cause: failure });

@@ -8,7 +8,6 @@
  * only the fetched source dropped the spelling the caller used, so diagnostics
  * and tooling listed the variant path and never the logical name.
  */
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
@@ -49,7 +48,7 @@ describe('AssetRequestLog aliases', () => {
     loader.variants.define('notes.txt', [{ source: 'notes.en.txt' }]);
     mockFetch();
 
-    await loader.load(Asset.type('text', 'notes.txt'));
+    await loader.load({ type: 'text', source: 'notes.txt' });
 
     const [row] = loader.inspect();
 
@@ -63,7 +62,7 @@ describe('AssetRequestLog aliases', () => {
 
     mockFetch();
 
-    await loader.load(Asset.type('text', 'notes.txt'));
+    await loader.load({ type: 'text', source: 'notes.txt' });
 
     const [row] = loader.inspect();
 

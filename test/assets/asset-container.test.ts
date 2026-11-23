@@ -1,6 +1,5 @@
 import { CONTAINER_DEFAULT_BLOCK_SIZE, type ContainerInput, encodeContainer } from '@codexo/exojs-build/asset-container';
 
-import { Asset } from '#assets/Asset';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { Assets } from '#assets/Assets';
 import {
@@ -515,9 +514,9 @@ describe('Loader.loadContainer', () => {
     await loader.loadContainer('assets/pack.exoa');
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(loader.get(Asset.type('json', 'data/level.json')).value).toEqual({ score: 42 });
-    expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'data/blob.bin')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(loader.get({ type: 'json', source: 'data/level.json' }).value).toEqual({ score: 42 });
+    expect(loader.get({ type: 'text', source: 'docs/readme.txt' }).value).toBe('hello world');
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'data/blob.bin' }).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 
   test('loads assets spread across several blocks', async () => {
@@ -536,8 +535,8 @@ describe('Loader.loadContainer', () => {
     const loader = createCoreLoader();
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Asset.type('json', 'data/level.json')).value).toMatchObject({ score: 42 });
-    expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
+    expect(loader.get({ type: 'json', source: 'data/level.json' }).value).toMatchObject({ score: 42 });
+    expect(loader.get({ type: 'text', source: 'docs/readme.txt' }).value).toBe('hello world');
   });
 
   test('container entries are ordinary claimed assets, visible and releasable', async () => {
@@ -558,7 +557,7 @@ describe('Loader.loadContainer', () => {
     pack.destroy();
 
     expect(loader.inspect()).toHaveLength(0);
-    expect(loader.peek(Asset.type('json', 'data/level.json'))).toBeUndefined();
+    expect(loader.peek({ type: 'json', source: 'data/level.json' })).toBeUndefined();
   });
 
   test('a container entry and a network load of the same source are one asset', async () => {
@@ -578,7 +577,7 @@ describe('Loader.loadContainer', () => {
     // The container going away must not strip an asset a live consumer holds.
     pack.destroy();
 
-    expect(loader.peek(Asset.type('json', 'data/level.json'))).toEqual({ score: 42 });
+    expect(loader.peek({ type: 'json', source: 'data/level.json' })).toEqual({ score: 42 });
     expect(loader.inspect()[0]?.claims).toBe(1);
   });
 
@@ -639,7 +638,7 @@ describe('Loader.loadContainer', () => {
 
     // The container is parsed and the entry is being built, but nothing is
     // stored yet - the window in which the key used to look completely unknown.
-    const joined = loader.load(Asset.type('gated' as never, 'level.gated'));
+    const joined = loader.load({ type: 'gated' as never, source: 'level.gated' });
 
     release();
     await unpacking;
@@ -648,7 +647,7 @@ describe('Loader.loadContainer', () => {
     // than starting a competing acquisition whose payload would overwrite it.
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     await expect(joined).resolves.toEqual({ body: 'from-container' });
-    expect(loader.peek(Asset.type('gated' as never, 'level.gated'))).toEqual({ body: 'from-container' });
+    expect(loader.peek({ type: 'gated' as never, source: 'level.gated' })).toEqual({ body: 'from-container' });
   });
 
   test.each([false, true])('a queued texture joins a container without fetching again (unpacked: %s)', async unpacked => {
@@ -813,7 +812,7 @@ describe('Loader.loadContainer', () => {
       expect(handle.scaleMode).toBe(ScaleModes.Nearest);
       expect(handle.width).toBe(16);
       expect(loader.peek('ship.png')).toBe(handle);
-      expect(await loader.load(Asset.type('texture', 'ship.png'))).toBe(handle);
+      expect(await loader.load({ type: 'texture', source: 'ship.png' })).toBe(handle);
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     } finally {
       release();
