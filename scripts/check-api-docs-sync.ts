@@ -132,14 +132,6 @@ const main = (): void => {
   console.log('\nComparing regenerated output against committed content...');
   const synced = compareDirectories(apiDir, generatedDir);
 
-  // Temporary diagnostic for generating exact TypeDoc output remotely.
-  const generated = path.join(generatedDir, 'animated-texture.json');
-  if (fs.existsSync(generated)) {
-    console.log('EXOJS_GENERATED_DOC_START:animated-texture.json');
-    console.log('EXOJS_DOC_JSON:animated-texture.json:' + JSON.stringify(JSON.parse(fs.readFileSync(generated, 'utf8'))));
-    console.log('EXOJS_GENERATED_DOC_END:animated-texture.json');
-  }
-
   // 5. Clean up
   fs.rmSync(tmpDir, { recursive: true, force: true });
 

@@ -2,9 +2,8 @@ import { ImageSequenceSource } from '#rendering/texture/ImageSequenceSource';
 
 const gif = (): ArrayBuffer =>
   Uint8Array.from([
-    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0, 0, 0, 0,
-    0x2c, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 0,
-    0x2c, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 0, 0x3b,
+    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0, 0, 0, 0, 0x2c, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 0, 0x2c, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 0,
+    0x3b,
   ]).buffer;
 
 const images: Array<{ close: ReturnType<typeof vi.fn> }> = [];
