@@ -372,6 +372,41 @@ describe('Lighting', () => {
     }
   });
 
+  test('a line that shrinks to a point and regrows rebuilds the rows another light reused meanwhile', () => {
+    const lighting = new LightmapLighting(fakeApp(false), { ambient: Color.black });
+    const backend = lighting.backend as FrameLightingBackend;
+
+    backend.shadowFiller = 'cpu';
+    lighting.occludeFrom(
+      new PolygonOccluder([
+        { x: 38, y: 25 },
+        { x: 40, y: 25 },
+        { x: 40, y: 45 },
+        { x: 38, y: 45 },
+      ]),
+    );
+    const line = lighting.add(new LineLight({ length: 32, radius: 24, softness: 0 })).setPosition(32, 32);
+
+    lighting.add(new PointLight({ radius: 24 })).setPosition(44, 32);
+
+    try {
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(5);
+
+      // The point light moves up into the line's second row.
+      line.length = 0;
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(2);
+
+      // Every line sample is rebuilt: rows 1-3 no longer hold what it traced there.
+      line.length = 32;
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(5);
+    } finally {
+      lighting.destroy();
+    }
+  });
+
   test('the GPU shadow marcher reserves four rows per finite line', () => {
     const lighting = new LightmapLighting(fakeApp(true), { ambient: Color.black });
     const backend = lighting.backend as FrameLightingBackend;

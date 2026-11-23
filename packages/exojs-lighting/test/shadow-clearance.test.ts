@@ -96,8 +96,12 @@ describe('lightmap shadow clearance', () => {
   });
 
   test('only the polar rows, which may be half floats, widen by their stored precision', () => {
-    expect(pointGlsl).toContain('(radial - clearance) / (1.0 + uniforms.u_shadowPrecision)');
-    expect(pointWgsl).toContain('(radial - clearance) / (1.0 + uniforms.u_shadowPrecision)');
+    for (const source of [pointGlsl, pointWgsl]) {
+      expect(source).toContain('rounding = 1.0 + uniforms.u_shadowPrecision;');
+      expect(source).toContain('(radial - clearance) / rounding');
+      expect(source).toContain('(rayLength / reach - rowClearance) / rounding');
+    }
+
     expect(sunGlsl).not.toContain('u_shadowPrecision');
     expect(sunWgsl).not.toContain('u_shadowPrecision');
   });
