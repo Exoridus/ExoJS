@@ -4,6 +4,7 @@ import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
+import type { ImageSequenceSource } from '#rendering/texture/ImageSequenceSource';
 import { Texture } from '#rendering/texture/Texture';
 
 import { createResourceTracker } from './_animatedResourceTracker';
@@ -28,27 +29,40 @@ export interface AnimatedImageHarness {
 
 const factory = new TextureFactory();
 
-const open = async (name: string): Promise<Texture> => factory.create(await loadFixture(name), {} as AssetFactoryContext<never>);
+const sourceOf = (texture: Texture): ImageSequenceSource => texture._getFrameSource() as ImageSequenceSource;
+
+// Playback is held on the displayed frame so a slow render cannot let the animation run ahead of the assertions; `advance` steps exactly one frame.
+const open = async (name: string): Promise<Texture> => {
+  const texture = await factory.create(await loadFixture(name), {} as AssetFactoryContext<never>);
+
+  sourceOf(texture).pause();
+
+  return texture;
+};
 
 const release = (texture: Texture): void => {
   factory.dispose(texture);
   texture.destroy();
 };
 
-const nextFrame = (texture: Texture, timeoutMs = 3000): Promise<void> =>
+const advance = (texture: Texture, timeoutMs = 3000): Promise<void> =>
   new Promise((resolve, reject) => {
+    const source = sourceOf(texture);
     const timer = setTimeout(() => {
       texture._removeUpdateListener(listener);
+      source.pause();
       reject(new Error('timed out waiting for the next animation frame'));
     }, timeoutMs);
 
     const listener = (): void => {
       clearTimeout(timer);
       texture._removeUpdateListener(listener);
+      source.pause();
       resolve();
     };
 
     texture._addUpdateListener(listener);
+    source.play();
   });
 
 const black: RgbaTuple = [0, 0, 0, 255];
@@ -97,7 +111,7 @@ const describeAnimatedImageCells = (harness: AnimatedImageHarness, mode: 'ImageD
           expectPixelNear(gpu.pixel(4, 4), topLeft[index]!, 4);
           expectPixelNear(gpu.pixel(12, 12), middle[index]!, 4);
 
-          await nextFrame(texture);
+          await advance(texture);
           index = (index + 1) % 5;
         }
       } finally {
@@ -128,7 +142,7 @@ const describeAnimatedImageCells = (harness: AnimatedImageHarness, mode: 'ImageD
         const frames = 4;
 
         for (let frame = 0; frame < frames; frame++) {
-          await nextFrame(texture);
+          await advance(texture);
 
           for (let draw = 0; draw < 3; draw++) {
             if (!(await gpu.render(ctx, root))) {
@@ -178,7 +192,7 @@ const describeAnimatedImageCells = (harness: AnimatedImageHarness, mode: 'ImageD
           await gpu.render(ctx, group);
           expectPixelNear(gpu.pixel(12, 12), blue, 4);
 
-          await nextFrame(texture);
+          await advance(texture);
 
           if (!(await gpu.render(ctx, group))) {
             return;
@@ -206,7 +220,7 @@ const describeAnimatedImageCells = (harness: AnimatedImageHarness, mode: 'ImageD
             return;
           }
 
-          await nextFrame(texture);
+          await advance(texture);
           await gpu.render(ctx, sprite);
 
           // Switching away must not leave the animation drawing into the sprite.
