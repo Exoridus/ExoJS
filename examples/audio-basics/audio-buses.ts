@@ -1,10 +1,10 @@
 import {
   Application,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
   Keyboard,
+  type Music,
   type Pausable,
   type RenderingContext,
   Scene,
@@ -23,7 +23,7 @@ const PADS = [
 
 class AudioBusesScene extends Scene {
   private sounds: Sound[] = [];
-  private music!: AudioStream;
+  private music!: Music;
   private musicVoice: (Voice & Pausable) | null = null;
   private voices: Voice[] = [];
   private readonly graphics = this.track(new Graphics());

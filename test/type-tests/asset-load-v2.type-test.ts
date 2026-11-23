@@ -1,4 +1,4 @@
-import { type Application, Asset, AudioStream, type LoadingQueue, type Scene, Sound, Texture, Video } from '@codexo/exojs';
+import { type Application, Asset, AudioStream, type LoadingQueue, Music, type Scene, Sound, Texture, Video } from '@codexo/exojs';
 
 declare const app: Application;
 declare const scene: Scene;
@@ -13,15 +13,23 @@ export const handle: LoadingQueue<Sound> = scene.assets.load(new Sound('click.wa
 export const typed: LoadingQueue<Palette> = scene.assets.load([Palette, 'sunset.palette']);
 export const descriptor: LoadingQueue<{ start: string }> = scene.assets.load(Asset.type<{ start: string }>('json', 'config.json'));
 
-export const record: LoadingQueue<{ hero: Texture; theme: Sound; config: unknown; intro: Video; music: AudioStream; palette: Palette }> =
-  app.assets.load({
-    hero: 'hero.png',
-    theme: new Sound('theme.ogg'),
-    config: 'config.json',
-    intro: [Video, 'intro.mp4'],
-    music: [AudioStream, 'music.ogg', { loadEvent: 'canplay' }],
-    palette: [Palette, 'sunset.palette'],
-  });
+export const record: LoadingQueue<{
+  hero: Texture;
+  theme: Sound;
+  config: unknown;
+  intro: Video;
+  music: Music;
+  radio: AudioStream;
+  palette: Palette;
+}> = app.assets.load({
+  hero: 'hero.png',
+  theme: new Sound('theme.ogg'),
+  config: 'config.json',
+  intro: [Video, 'intro.mp4'],
+  music: [Music, 'music.ogg', { loadEvent: 'canplay' }],
+  radio: [AudioStream, 'https://radio.example/live', { reconnect: false }],
+  palette: [Palette, 'sunset.palette'],
+});
 
 export const tuple: LoadingQueue<[Texture, Sound, unknown]> = scene.assets.load(['a.png', new Sound('b.wav'), 'c.json']);
 export const scoped: LoadingQueue<Texture> = scene.assets.createScope().load(new Texture('x.png'));

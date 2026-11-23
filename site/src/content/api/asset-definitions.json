@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 15,
+  "memberCount": 16,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 15,
+    "properties": 16,
     "events": 0
   },
   "sections": [
@@ -29,6 +29,195 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "audioStream",
+          "signature": "audioStream: { config: { crossOrigin?: MediaCrossOrigin; loadEvent?: StreamingLoadEvent; playbackOptions?: Partial<PlaybackOptions>; reconnect?: AudioStreamReconnectOptions | false; source: string; stallTimeout?: number }; resource: AudioStream }",
+          "signatureTokens": [
+            {
+              "text": "audioStream",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "config",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "crossOrigin",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MediaCrossOrigin",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "loadEvent",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StreamingLoadEvent",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "playbackOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlaybackOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "reconnect",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioStreamReconnectOptions",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "false",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "stallTimeout",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resource",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioStream",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
         {
           "name": "binary",
           "signature": "binary: { config: { source: string }; resource: ArrayBuffer }",
@@ -577,7 +766,7 @@
         },
         {
           "name": "music",
-          "signature": "music: { config: { crossOrigin?: MediaCrossOrigin; loadEvent?: StreamingLoadEvent; mimeType?: string; playbackOptions?: Partial<PlaybackOptions>; source: string; stallTimeout?: number }; resource: AudioStream }",
+          "signature": "music: { config: { crossOrigin?: MediaCrossOrigin; loadEvent?: StreamingLoadEvent; mimeType?: string; playbackOptions?: Partial<PlaybackOptions>; source: string; stallTimeout?: number }; resource: Music }",
           "signatureTokens": [
             {
               "text": "music",
@@ -744,7 +933,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioStream",
+              "text": "Music",
               "kind": "type"
             },
             {

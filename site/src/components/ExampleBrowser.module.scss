@@ -30,6 +30,11 @@
   min-height: 0;
   overflow: auto;
   overflow-x: hidden;
+
+  // The preview sizes its stage from this column's width, and the stage height
+  // decides whether the column overflows. A classic scrollbar that comes and
+  // goes with that overflow would change the width again and never settle.
+  scrollbar-gutter: stable;
   padding: 0.76rem 0.9rem 1rem;
 }
 

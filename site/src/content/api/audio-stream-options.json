@@ -1,0 +1,208 @@
+{
+  "title": "AudioStreamOptions",
+  "description": "Construction options for AudioStream.",
+  "symbol": "AudioStreamOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for AudioStream."
+      ],
+      "importLine": "import { AudioStreamOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "loop",
+          "signature": "loop?: boolean",
+          "signatureTokens": [
+            {
+              "text": "loop",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true the audio or video loops. Defaults to false."
+        },
+        {
+          "name": "muted",
+          "signature": "muted?: boolean",
+          "signatureTokens": [
+            {
+              "text": "muted",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true the audio or video is muted. Defaults to false."
+        },
+        {
+          "name": "playbackRate",
+          "signature": "playbackRate?: number",
+          "signatureTokens": [
+            {
+              "text": "playbackRate",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Playback speed multiplier, clamped to 0.1..20. 1 is normal speed. Defaults to 1."
+        },
+        {
+          "name": "reconnect",
+          "signature": "reconnect?: AudioStreamReconnectOptions | false",
+          "signatureTokens": [
+            {
+              "text": "reconnect",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioStreamReconnectOptions",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "false",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Reopens the source after the connection breaks. Only a source streamed from a URL can be reopened; a stream built from local data never reconnects. false disables it."
+        },
+        {
+          "name": "time",
+          "signature": "time?: number",
+          "signatureTokens": [
+            {
+              "text": "time",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Seek position in seconds from the start. Defaults to 0."
+        },
+        {
+          "name": "volume",
+          "signature": "volume?: number",
+          "signatureTokens": [
+            {
+              "text": "volume",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Volume level in 0..1. Defaults to 1."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioStream.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioStream.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioStream.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioStream.ts"
+}

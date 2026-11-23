@@ -1,13 +1,4 @@
-import {
-  Application,
-  type AudioStream,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  type RenderingContext,
-  Scene,
-  Text,
-} from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type Music, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
@@ -33,7 +24,7 @@ const BAND_COLORS = [
 ];
 
 class FrequencyBandsScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private analyser!: AudioAnalyser;
   private bars!: Graphics;
   private labels: Text[] = [];
@@ -44,7 +35,7 @@ class FrequencyBandsScene extends Scene {
 
   override async load(): Promise<void> {
     const app = this.app;
-    // AudioStream has no seamless adapter - await it explicitly.
+    // Music has no seamless adapter - await it explicitly.
     const track = await this.loader.load(assets.musicGlitchMachine);
     this.music = track;
 

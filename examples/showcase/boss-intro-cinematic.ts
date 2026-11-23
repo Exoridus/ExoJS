@@ -1,10 +1,10 @@
 import {
   Application,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
   Keyboard,
+  type Music,
   type Pausable,
   type RenderingContext,
   Scene,
@@ -30,7 +30,7 @@ class BossIntroCinematicScene extends Scene {
   private titleState!: { count: number };
   private boss!: Sprite;
   private escorts: Sprite[] = [];
-  private music!: AudioStream;
+  private music!: Music;
   private musicVoice!: Voice & Seekable & Pausable;
   private finished = false;
   private started = false;

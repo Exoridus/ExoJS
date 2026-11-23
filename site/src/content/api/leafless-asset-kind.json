@@ -30,8 +30,16 @@
       "members": [
         {
           "name": "LeaflessAssetKind",
-          "signature": "\"bmFont\" | \"font\" | \"image\" | \"music\" | \"svg\" | \"video\"",
+          "signature": "\"audioStream\" | \"bmFont\" | \"font\" | \"image\" | \"music\" | \"svg\" | \"video\"",
           "signatureTokens": [
+            {
+              "text": "\"audioStream\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
             {
               "text": "\"bmFont\"",
               "kind": "keyword"

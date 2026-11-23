@@ -9,7 +9,7 @@
 // accepted it happily.
 //
 // The replacement is not a hand-rolled union of object-ish resources: that would
-// wave through every raw `Texture`, plus non-leaf resources (`AudioStream`,
+// wave through every raw `Texture`, plus non-leaf resources (`Music`,
 // `Video`, `BmFont`, `FontFace`, `HTMLImageElement`) the runtime rejects. It
 // mirrors the runtime identity instead - the `_assetMeta` stamp `createLeaf`
 // puts on every materialized leaf - as a type-level brand, so the accepted set
@@ -23,10 +23,10 @@ import {
   Asset,
   AssetRef,
   Assets,
-  type AudioStream,
   type BmFont,
   type Loader,
   type LoadingQueue,
+  type Music,
   type Scene,
   type Sound,
   type Texture,
@@ -251,7 +251,7 @@ declare const rawRef: AssetRef<unknown>;
 declare const rawAtlas: SpriteAtlas;
 // Non-leaf resource types: these have no seamless adapter, so the runtime never
 // hands them out as a catalog leaf either.
-declare const audioStream: AudioStream;
+declare const audioStream: Music;
 declare const video: Video;
 declare const bmFont: BmFont;
 declare const image: HTMLImageElement;
@@ -264,7 +264,7 @@ export const negatives = (): void => {
   loader.load(rawAtlas);
 
   // Non-leaf resource types must not sneak in through the leaf overloads.
-  // @ts-expect-error - AudioStream is not a catalog leaf.
+  // @ts-expect-error - Music is not a catalog leaf.
   loader.load(audioStream);
   // @ts-expect-error - Video is not a catalog leaf.
   loader.load(video);

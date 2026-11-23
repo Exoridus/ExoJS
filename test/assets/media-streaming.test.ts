@@ -4,7 +4,9 @@ import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import type { MediaAssetOptions } from '#assets/factories/mediaSource';
 import { Loader } from '#assets/Loader';
-import type { AudioStream } from '#audio/AudioStream';
+import { AudioStream } from '#audio/AudioStream';
+import { Music } from '#audio/Music';
+import { Connectivity } from '#core/Connectivity';
 import type { MediaCrossOrigin, StreamingLoadEvent } from '#core/types';
 import { materializeAssetTypes } from '#extensions/materialize';
 import type { Video } from '#rendering/video/Video';
@@ -149,6 +151,88 @@ describe('URL-backed media', () => {
     await queued;
 
     expect(settled).toBe(true);
+  });
+});
+
+describe('music and live audio streams', () => {
+  test('a music track loads as Music from its URL and identical requests share one track', async () => {
+    const fetchSpy = mockFetch();
+    const loader = createCoreLoader();
+    const first = loader.createScope().load([Music, 'theme.ogg']);
+    const element = await reachReadiness();
+    const music = await first;
+    const again = await loader.createScope().load([Music, 'theme.ogg']);
+
+    expect(music).toBeInstanceOf(Music);
+    expect(again).toBe(music);
+    expect(music.audioElement).toBe(element);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test('a live stream loads as AudioStream at "canplay" without downloading anything', async () => {
+    const fetchSpy = mockFetch();
+    const loader = createCoreLoader();
+    const queued = loader.createScope().load([AudioStream, 'https://radio.example/live']);
+    const element = await reachReadiness();
+    const stream = await queued;
+
+    expect(stream).toBeInstanceOf(AudioStream);
+    expect(element.getAttribute('src')).toBe('https://radio.example/live');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test('a live stream fails instead of consulting a cache while the network is disallowed', async () => {
+    mockFetch();
+    const connectivity = new Connectivity({ networkHint: 'online', onNetworkHintChange: () => () => undefined });
+    const loader = new Loader({ basePath: '/', connectivity });
+
+    materializeAssetTypes(loader, coreAssetTypes);
+    connectivity.mode = 'offline';
+
+    await expect(loader.createScope().load([AudioStream, 'https://radio.example/live'])).rejects.toThrow(/needs the network/);
+    expect(capturedMedia).toHaveLength(0);
+    connectivity.destroy();
+  });
+
+  test('different reconnect policies do not accidentally share one live stream', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const scope = loader.createScope();
+    const url = 'https://radio.example/live';
+    const firstRequest = Asset.type('audioStream', url, { reconnect: false });
+    const secondRequest = Asset.type('audioStream', url, { reconnect: { attempts: 2, delay: 100 } });
+    const defaultRequest = Asset.type('audioStream', url);
+    const explicitDefault = Asset.type('audioStream', url, { reconnect: { attempts: 5, delay: 1000 } });
+
+    expect(loader.identify(defaultRequest).resourceKey).toBe(loader.identify(explicitDefault).resourceKey);
+    expect(loader.identify(firstRequest).resourceKey).not.toBe(loader.identify(secondRequest).resourceKey);
+
+    const firstLoad = scope.load(firstRequest);
+    await reachReadiness();
+    const first = await firstLoad;
+    const secondLoad = scope.load(secondRequest);
+    await reachReadiness();
+    const second = await secondLoad;
+
+    expect(first).toBeInstanceOf(AudioStream);
+    expect(second).toBeInstanceOf(AudioStream);
+    expect(first).not.toBe(second);
+    expect(loader.inspect().filter(row => row.locator.endsWith('/live'))).toHaveLength(2);
+    scope.destroy();
+  });
+
+  test('releasing the last owner of a live stream destroys it and ends the transfer', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const scope = loader.createScope();
+    const queued = scope.load([AudioStream, 'https://radio.example/live']);
+    const element = await reachReadiness();
+    const stream = await queued;
+
+    scope.destroy();
+
+    expect(stream.destroyed).toBe(true);
+    expect(element.hasAttribute('src')).toBe(false);
   });
 });
 
@@ -351,7 +435,7 @@ describe('failure timing', () => {
 
     const queued = scope.load(Asset.type('music', 'theme.ogg'));
     const element = await reachReadiness();
-    const stream = (await queued) as AudioStream;
+    const stream = (await queued) as Music;
 
     const runtimeErrors: Error[] = [];
 
