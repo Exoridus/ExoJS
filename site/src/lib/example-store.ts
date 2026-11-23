@@ -16,6 +16,7 @@ import { isCurrentVersion } from './versions';
 interface VersionEntry {
   response: ExamplesResponse | null;
   error: string | null;
+  pending?: Promise<void>;
 }
 
 const _entries = new Map<string, VersionEntry>();
@@ -118,79 +119,40 @@ export const getExampleByPath = (versionId: string, path: string): Example | nul
   return preserved ? { ...preserved, backend: 'core', section: 'guide-fixtures' } : null;
 };
 
-export const loadExampleSource = async (versionId: string, filePath: string): Promise<string> => {
-  const url = buildSourceUrl(versionId, filePath);
-  const request = createUniqueRequest(url);
-  const response = await request.getText();
+export const loadExampleSource = async (versionId: string, filePath: string): Promise<string> =>
+  createUniqueRequest(buildSourceUrl(versionId, filePath)).getText();
 
-  if (response !== null) {
-    return response;
-  }
-
-  // Fallback for release-tag sources that are unavailable: keep the playground
-  // usable by loading the local "current" source served from the site base path.
-  if (!isCurrentVersion(versionId)) {
-    const fallbackUrl = buildSourceUrl('current', filePath);
-    const fallbackRequest = createUniqueRequest(fallbackUrl);
-    const fallbackResponse = await fallbackRequest.getText();
-
-    if (fallbackResponse !== null) {
-      return fallbackResponse;
-    }
-
-    throw new Error(`Could not fetch example source at ${url} (fallback also failed at ${fallbackUrl}).`);
-  }
-
-  throw new Error(`Could not fetch example source at ${url}!`);
-};
-
-export const loadExamples = async (versionId: string): Promise<void> => {
+export const loadExamples = (versionId: string): Promise<void> => {
   const entry = getOrCreateEntry(versionId);
+
+  if (entry.pending) {
+    return entry.pending;
+  }
+
   entry.error = null;
-
   const url = buildSourceUrl(versionId, 'examples.json');
+  const pending = (async (): Promise<void> => {
+    try {
+      const data = await createUniqueRequest(url).getJson<ExamplesResponse>();
 
-  try {
-    const request = createUniqueRequest(url);
-    const data = await request.getJson<ExamplesResponse>();
+      if (!data || typeof data !== 'object' || Array.isArray(data) || !Object.values(data).every(Array.isArray)) {
+        throw new Error(`Invalid examples catalog at ${url}.`);
+      }
 
-    if (data !== null) {
       entry.response = data;
       entry.error = null;
+    } catch (error) {
+      entry.response = null;
+      entry.error = error instanceof Error ? error.message : String(error);
+    } finally {
+      entry.pending = undefined;
 
       for (const listener of _loadListeners) {
         listener(versionId);
       }
-
-      return;
     }
+  })();
+  entry.pending = pending;
 
-    if (!isCurrentVersion(versionId)) {
-      const fallbackUrl = buildSourceUrl('current', 'examples.json');
-      const fallbackRequest = createUniqueRequest(fallbackUrl);
-      const fallbackData = await fallbackRequest.getJson<ExamplesResponse>();
-
-      if (fallbackData !== null) {
-        entry.response = fallbackData;
-        entry.error = null;
-
-        for (const listener of _loadListeners) {
-          listener(versionId);
-        }
-
-        return;
-      }
-
-      throw new Error(`Could not load the examples catalog from ${url} (fallback also failed at ${fallbackUrl}).`);
-    }
-
-    throw new Error(`Could not load the examples catalog from ${url}.`);
-  } catch (error) {
-    entry.response = null;
-    entry.error = error instanceof Error ? error.message : String(error);
-  }
-
-  for (const listener of _loadListeners) {
-    listener(versionId);
-  }
+  return pending;
 };

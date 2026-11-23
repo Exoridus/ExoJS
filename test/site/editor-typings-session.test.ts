@@ -88,3 +88,67 @@ it('disposes materialized declarations removed by a version switch without touch
   expect(removed.dispose).toHaveBeenCalledOnce();
   expect(retained.dispose).not.toHaveBeenCalled();
 });
+
+it('clears old global declarations before the replacement request resolves and when retiring the editor', () => {
+  const file = ts.createSourceFile(
+    'EditorCode.tsx',
+    readFileSync('site/src/components/EditorCode.tsx', 'utf8'),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  let effect!: ts.Expression;
+  let clear!: ts.VariableStatement;
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.getText(file) === 'useEffect' &&
+      node.arguments[0]?.getText(file).includes('void ensureTypingsForVersion(')
+    ) {
+      effect = node.arguments[0];
+    }
+
+    if (ts.isVariableStatement(node) && node.declarationList.declarations.some(item => item.name.getText(file) === 'clearTypings')) {
+      clear = node;
+    }
+
+    ts.forEachChild(node, visit);
+  };
+
+  visit(file);
+  const declarationPath = 'file:///node_modules/@codexo/exojs/package.json';
+  let libraries: Record<string, unknown> = { [declarationPath]: { content: '{"version":"old"}' } };
+  const model = { dispose: vi.fn() };
+  const defaults = {
+    getExtraLibs: () => libraries,
+    setExtraLibs: (next: Array<{ filePath: string; content: string }>) => {
+      libraries = Object.fromEntries(next.map(lib => [lib.filePath, { content: lib.content }]));
+    },
+  };
+  const request = vi.fn(() => new Promise<void>(() => {}));
+  const code = ts.transpileModule(`${ts.createPrinter().printNode(ts.EmitHint.Unspecified, clear, file)}\n(${effect.getText(file)})();`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const retire = runInNewContext(code, {
+    selectedVersionId: '0.19.0',
+    selectedVersionRef: { current: '0.19.0' },
+    typingsAppliedVersionRef: { current: 'current' },
+    setTypingsLoading: vi.fn(),
+    setTypingsError: vi.fn(),
+    onDiagnostic: vi.fn(),
+    ensureTypingsForVersion: request,
+    monaco: {
+      Uri: { parse: (path: string) => path },
+      editor: { getModel: () => model },
+      languages: { typescript: { javascriptDefaults: defaults, typescriptDefaults: defaults } },
+    },
+  }) as () => void;
+  expect(request).toHaveBeenCalledOnce();
+  expect(libraries).toEqual({});
+  expect(model.dispose).toHaveBeenCalledOnce();
+  libraries = { [declarationPath]: { content: '{"version":"0.19.0"}' } };
+  retire();
+  expect(libraries).toEqual({});
+  expect(model.dispose).toHaveBeenCalledTimes(2);
+});

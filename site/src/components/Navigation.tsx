@@ -12,6 +12,7 @@ import { css } from './react-utils';
 
 export interface NavigationProps {
   locale?: 'en' | 'de';
+  focusSearchRequest?: number;
   headerAction?: ReactNode;
   activeExample: Example | null;
   examples: ExamplesMap;
@@ -23,6 +24,7 @@ export interface NavigationProps {
 
 export const Navigation = ({
   locale = 'en',
+  focusSearchRequest = 0,
   headerAction,
   activeExample,
   examples,
@@ -38,19 +40,27 @@ export const Navigation = ({
   const categories = useMemo(() => buildPlaygroundNavModel(allExamples, undefined, query), [allExamples, query]);
 
   useEffect(() => {
-    const focusFilter = (event: KeyboardEvent): void => {
-      const target = event.target as HTMLElement | null;
+    if (focusSearchRequest === 0) {
+      return;
+    }
 
-      if (event.key === '/' && !event.ctrlKey && !event.metaKey && !target?.closest?.('input, textarea, [contenteditable="true"]')) {
-        event.preventDefault();
-        filterRef.current?.focus();
+    const deadline = performance.now() + 1000;
+    let frame = 0;
+
+    const focusVisibleFilter = (): void => {
+      const filter = filterRef.current;
+
+      if (filter && getComputedStyle(filter).visibility !== 'hidden' && filter.getClientRects().length > 0) {
+        filter.focus();
+      } else if (performance.now() < deadline) {
+        frame = requestAnimationFrame(focusVisibleFilter);
       }
     };
 
-    document.addEventListener('keydown', focusFilter);
+    frame = requestAnimationFrame(focusVisibleFilter);
 
-    return () => document.removeEventListener('keydown', focusFilter);
-  }, []);
+    return () => cancelAnimationFrame(frame);
+  }, [focusSearchRequest]);
 
   useEffect(() => {
     const list = listRef.current;
