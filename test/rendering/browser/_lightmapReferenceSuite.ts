@@ -187,20 +187,21 @@ const worstDisagreement = async (
   }
 };
 
-/** Penumbra width, 10 to 90 percent, down the column `x`, in pixels. `null` when the device was dropped. */
-const penumbraWidth = async (host: ContactHost, lighting: LightmapLighting, x: number): Promise<number | null> => {
-  const frame = await host.render(lighting);
-
-  if (frame === null) {
-    return null;
-  }
-
+/** Penumbra width, 10 to 90 percent, down the column `x`, in pixels. */
+const framePenumbraWidth = (frame: Uint8Array | Uint8ClampedArray, x: number): number => {
   const column = Array.from({ length: contactCanvasSize }, (_, y) => frame[(y * contactCanvasSize + x) * 4]!);
   const lit = column[30]!;
   const top = column.findIndex((value, y) => y > 30 && value < lit * 0.9);
   const bottom = column.findIndex((value, y) => y > 30 && value < lit * 0.1);
 
   return bottom - top;
+};
+
+/** `null` when the device was dropped. */
+const penumbraWidth = async (host: ContactHost, lighting: LightmapLighting, x: number): Promise<number | null> => {
+  const frame = await host.render(lighting);
+
+  return frame === null ? null : framePenumbraWidth(frame, x);
 };
 
 type ShadowFiller = 'cpu' | 'gpu';
@@ -313,7 +314,7 @@ const mean = (values: readonly number[]): number => values.reduce((sum, value) =
 /** Capture the exact readback used by the reference, not the live GPU canvas. */
 const captureLineSource = async (
   backend: ContactBackend,
-  scene: LineScene,
+  rotation: number | string,
   filler: ShadowFiller,
   open: Uint8Array | Uint8ClampedArray,
   walled: Uint8Array | Uint8ClampedArray,
@@ -334,7 +335,7 @@ const captureLineSource = async (
       context.putImageData(new ImageData(new Uint8ClampedArray(pixels), contactCanvasSize), 0, 0);
       await page.screenshot({
         element: canvas,
-        path: `../../../.workspace/visual-review/current/line-source-${kind}-${scene.rotation}-${backend}-${server.browser}.png`,
+        path: `../../../.workspace/visual-review/current/line-source-${kind}-${rotation}-${backend}-${server.browser}.png`,
       });
     }
   } finally {
@@ -373,7 +374,7 @@ const lineShadowError = async (backend: ContactBackend, scene: LineScene, filler
 
     // Never label a CPU fallback as a GPU capture.
     if (__EXOJS_CAPTURE_LIGHTMAP_REFERENCES__ && frameBackend.shadowFiller === filler) {
-      await captureLineSource(backend, scene, filler, open, walled);
+      await captureLineSource(backend, scene.rotation, filler, open, walled);
     }
 
     const axis = { x: 0, y: 0 };
@@ -575,5 +576,81 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
         host.destroy();
       }
     });
+
+    test.for((['cpu', 'gpu'] as const).map(filler => ({ filler })))(
+      'finite LineLight softness widens the distant edge ($filler filler)',
+      async ({ filler }) => {
+        const host = await createContactHost(backend);
+        const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
+        const frameBackend = lighting.backend as LightmapBackend;
+        // All four emitters lie on the same horizontal edge ray: geometric
+        // segment penumbra cannot masquerade as the additional softness.
+        const light = lighting.add(new LineLight({ radius: 2000, length: 24, intensity: 1, softness: 0 }));
+
+        light.setPosition(40, 60);
+        frameBackend.shadowFiller = filler;
+
+        try {
+          const open = (await host.render(lighting))?.slice() ?? null;
+
+          lighting.occludeFrom(
+            new PolygonOccluder(
+              [
+                { x: 100, y: 60 },
+                { x: 100, y: 250 },
+              ],
+              { closed: false },
+            ),
+          );
+
+          const hard = (await host.render(lighting))?.slice() ?? null;
+
+          light.softness = 1;
+
+          const soft = await host.render(lighting);
+
+          if (open === null || hard === null || soft === null) {
+            throw new Error('Finite LineLight softness readback unavailable');
+          }
+
+          expect(frameBackend.shadowFiller).toBe(filler);
+
+          if (__EXOJS_CAPTURE_LIGHTMAP_REFERENCES__) {
+            await captureLineSource(backend, '0-penumbra-hard', filler, open, hard);
+            await captureLineSource(backend, '0-penumbra-soft', filler, open, soft);
+          }
+
+          // Require a genuinely lit and a genuinely shadowed region on both
+          // profiles, rather than accepting a width from an empty frame.
+          const lit = (30 * contactCanvasSize + 230) * 4;
+          const dark = (110 * contactCanvasSize + 230) * 4;
+
+          expect(open[lit]!).toBeGreaterThan(60);
+          expect(open[dark]!).toBeGreaterThan(60);
+
+          for (const frame of [hard, soft]) {
+            expect(frame[lit]!).toBeGreaterThan(open[lit]! * 0.8);
+            expect(frame[dark]!).toBeLessThan(open[dark]! * 0.1);
+          }
+
+          const hardFar = framePenumbraWidth(hard, 230);
+          const softNear = framePenumbraWidth(soft, 110);
+          const softFar = framePenumbraWidth(soft, 230);
+
+          console.info('finite line penumbra width', { backend, filler, hardFar, softNear, softFar });
+
+          expect(hardFar).toBeGreaterThanOrEqual(0);
+          expect(hardFar).toBeLessThanOrEqual(8);
+          expect(softNear).toBeGreaterThanOrEqual(0);
+          expect(softNear).toBeLessThanOrEqual(8);
+          expect(softFar).toBeGreaterThanOrEqual(12);
+          expect(softFar).toBeLessThanOrEqual(40);
+          expect(softFar).toBeGreaterThan(hardFar + 6);
+        } finally {
+          lighting.destroy();
+          host.destroy();
+        }
+      },
+    );
   });
 };
