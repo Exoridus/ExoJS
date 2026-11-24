@@ -11,9 +11,9 @@ import type { TextureOptions } from './TextureOptions';
  * or pass it to scene.assets.load(...) to claim its source.
  */
 export class AnimatedTexture extends Texture {
-  private _requestedPlaying = true;
-  private _requestedRate = 1;
-  private _requestedLoop = true;
+  private _pendingPlaying: boolean | undefined;
+  private _pendingRate: number | undefined;
+  private _pendingLoop: boolean | undefined;
 
   public constructor(path: string, options?: Partial<TextureOptions>) {
     super(path, options);
@@ -36,23 +36,33 @@ export class AnimatedTexture extends Texture {
    * advances, pauses and changes rate together, while separately loaded assets are independent.
    */
   public play(): this {
-    this._requestedPlaying = true;
-    this._sequence?.play();
+    const sequence = this._sequence;
+
+    if (sequence === null) {
+      this._pendingPlaying = true;
+    } else {
+      sequence.play();
+    }
 
     return this;
   }
 
   /** Freezes the animation on its current frame; resuming continues the unplayed part of that frame. */
   public pause(): this {
-    this._requestedPlaying = false;
-    this._sequence?.pause();
+    const sequence = this._sequence;
+
+    if (sequence === null) {
+      this._pendingPlaying = false;
+    } else {
+      sequence.pause();
+    }
 
     return this;
   }
 
   /** Speed multiplier applied to every authored frame duration. Must be positive and finite. */
   public get playbackRate(): number {
-    return this._requestedRate;
+    return this._sequence?.playbackRate ?? this._pendingRate ?? 1;
   }
 
   public set playbackRate(value: number) {
@@ -60,23 +70,27 @@ export class AnimatedTexture extends Texture {
       throw new RangeError('AnimatedTexture playbackRate must be positive and finite.');
     }
 
-    this._requestedRate = value;
+    const sequence = this._sequence;
 
-    if (this._sequence !== null) {
-      this._sequence.playbackRate = value;
+    if (sequence === null) {
+      this._pendingRate = value;
+    } else {
+      sequence.playbackRate = value;
     }
   }
 
   /** `true` (default) repeats as often as the file authors; `false` plays the sequence once. */
   public get loop(): boolean {
-    return this._requestedLoop;
+    return this._sequence?.loop ?? this._pendingLoop ?? true;
   }
 
   public set loop(value: boolean) {
-    this._requestedLoop = value;
+    const sequence = this._sequence;
 
-    if (this._sequence !== null) {
-      this._sequence.loop = value;
+    if (sequence === null) {
+      this._pendingLoop = value;
+    } else {
+      sequence.loop = value;
     }
   }
 
@@ -86,12 +100,25 @@ export class AnimatedTexture extends Texture {
     const sequence = this._sequence;
 
     if (sequence !== null) {
-      sequence.playbackRate = this._requestedRate;
-      sequence.loop = this._requestedLoop;
+      // Only explicit requests made while unloaded belong to this fill.
+      // An untouched handle must observe the existing shared playback state.
+      if (this._pendingRate !== undefined) {
+        sequence.playbackRate = this._pendingRate;
+      }
 
-      if (!this._requestedPlaying) {
+      if (this._pendingLoop !== undefined) {
+        sequence.loop = this._pendingLoop;
+      }
+
+      if (this._pendingPlaying === true) {
+        sequence.play();
+      } else if (this._pendingPlaying === false) {
         sequence.pause();
       }
+
+      this._pendingRate = undefined;
+      this._pendingLoop = undefined;
+      this._pendingPlaying = undefined;
     }
 
     return this;
