@@ -56,7 +56,7 @@ describe('animated images through normal texture assets', () => {
     vi.useRealTimers();
   });
 
-  test('two path handles reuse one decoder, observe changed frames, and release on final scope teardown', async () => {
+  test('path handles and typed B+ descriptors share one decoder, update frames, and release on final scope teardown', async () => {
     const loader = new Loader({ basePath: '/' });
 
     materializeAssetTypes(loader, coreAssetTypes);
@@ -67,17 +67,25 @@ describe('animated images through normal texture assets', () => {
 
     expect(await scope.load(a)).toBe(a);
     expect(await scope.load(b)).toBe(b);
+
+    // A typed B+ descriptor must reuse the same animated texture residency as
+    // directly constructed Texture handles, not open a second decoder.
+    const viaDescriptor = await scope.load({ type: Texture, source: 'fire.gif' });
+
+    expect(viaDescriptor).toBeInstanceOf(Texture);
     expect(createDecoder).toHaveBeenCalledTimes(1);
     expect(a.width).toBe(16);
     expect(b.width).toBe(16);
 
     const firstA = a.version;
     const firstB = b.version;
+    const firstDescriptor = viaDescriptor.version;
 
     await vi.advanceTimersByTimeAsync(20);
 
     expect(a.version).toBeGreaterThan(firstA);
     expect(b.version).toBeGreaterThan(firstB);
+    expect(viaDescriptor.version).toBeGreaterThan(firstDescriptor);
     const stable = a.version;
     expect(a.version).toBe(stable);
 
