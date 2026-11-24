@@ -1,7 +1,6 @@
 import {
   ActionMap,
   Application,
-  Asset,
   ButtonAction,
   Color,
   FixedResolutionCanvasSizing,
@@ -123,7 +122,7 @@ class TextLayoutScene extends Scene {
       this.fontStatus = 'Loading missing font file...';
 
       try {
-        await this.loader.load(Asset.type('font', `${assets.fontKenneyFuture.source}.missing`, { family: 'Missing Example Font' }));
+        await this.loader.load({ type: 'font', source: `${assets.fontKenneyFuture.source}.missing`, family: 'Missing Example Font' });
         this.fontStatus = 'Unexpectedly loaded missing file';
       } catch {
         if (this.disposed || request !== this.fontRequest) {

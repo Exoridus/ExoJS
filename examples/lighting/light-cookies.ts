@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   Color,
   Container,
   FixedResolutionCanvasSizing,
@@ -117,9 +116,9 @@ class LightCookiesScene extends Scene {
 
     this.world = this.track(new Container());
     this.masks = {
-      window: this.loader.get(Asset.type('texture', assets.lightCookieWindow.source, { textureOptions: { colorSpace: 'none' } })),
-      foliage: this.loader.get(Asset.type('texture', assets.lightCookieFoliage.source, { textureOptions: { colorSpace: 'none' } })),
-      caustics: this.loader.get(Asset.type('texture', assets.lightCookieCaustics.source, { textureOptions: { colorSpace: 'none' } })),
+      window: this.loader.get({ type: 'texture', source: assets.lightCookieWindow.source, textureOptions: { colorSpace: 'none' } }),
+      foliage: this.loader.get({ type: 'texture', source: assets.lightCookieFoliage.source, textureOptions: { colorSpace: 'none' } }),
+      caustics: this.loader.get({ type: 'texture', source: assets.lightCookieCaustics.source, textureOptions: { colorSpace: 'none' } }),
     };
     this.lighting = new LightmapLighting(this.app, { ambient: new Color(16, 18, 28), lightResolution: 1, scene: this });
     this.systems.add(this.lighting);

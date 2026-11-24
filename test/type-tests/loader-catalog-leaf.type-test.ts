@@ -20,7 +20,6 @@
 // `strictNullChecks: false`.
 
 import {
-  Asset,
   AssetRef,
   Assets,
   type BmFont,
@@ -74,8 +73,8 @@ const bag = Assets.from({
   jump: 'jump.wav',
   config: 'config.json',
   // Explicit configs - no file suffix involved for the custom types.
-  atlas: Asset.type('spriteAtlas', 'atlases/hero'),
-  metrics: Asset.type('atlasMetrics', 'atlases/hero.meta'),
+  atlas: { type: 'spriteAtlas', source: 'atlases/hero' },
+  metrics: { type: 'atlasMetrics', source: 'atlases/hero.meta' },
 });
 
 // A branded leaf stays ordinarily usable: the brand rides ON the resource, so
@@ -203,11 +202,11 @@ const sceneGetMetrics = () => scene.loader.get(bag.metrics);
 
 // --- get(descriptor) is branded too, and round-trips ------------------------
 //
-// The `Asset.type(...)` branch mints its leaf through `createLeaf`, so the
+// The a `{ type, source }` descriptor branch mints its leaf through `createLeaf`, so the
 // returned handle carries the very same `_assetMeta` stamp a catalog leaf does.
 
 export const descriptorLeaves = (): void => {
-  const descriptorTexture = loader.get(Asset.type('texture', 'player.png'));
+  const descriptorTexture = loader.get({ type: 'texture', source: 'player.png' });
   expectType<Equal<typeof descriptorTexture, CatalogResourceLeaf<Texture>>>();
 
   const plainTexture: Texture = descriptorTexture;
@@ -216,7 +215,7 @@ export const descriptorLeaves = (): void => {
   const descriptorQueue = loader.load(descriptorTexture);
   expectType<Equal<typeof descriptorQueue, LoadingQueue<Texture>>>();
 
-  const descriptorMetrics = loader.get(Asset.type('atlasMetrics', 'atlases/hero.meta'));
+  const descriptorMetrics = loader.get({ type: 'atlasMetrics', source: 'atlases/hero.meta' });
   expectType<Equal<typeof descriptorMetrics, CatalogValueLeaf<AtlasMetrics>>>();
 
   const plainRef: AssetRef<AtlasMetrics> = descriptorMetrics;
@@ -226,18 +225,18 @@ export const descriptorLeaves = (): void => {
   expectType<Equal<typeof descriptorValueQueue, LoadingQueue<AtlasMetrics>>>();
 
   // The scene-scoped mirror brands identically.
-  const sceneDescriptorTexture = scene.loader.get(Asset.type('texture', 'player.png'));
+  const sceneDescriptorTexture = scene.loader.get({ type: 'texture', source: 'player.png' });
   expectType<Equal<typeof sceneDescriptorTexture, CatalogResourceLeaf<Texture>>>();
   expectType<Equal<ReturnType<typeof sceneLoadDescriptorTexture>, LoadingQueue<Texture>>>();
 
-  const sceneDescriptorMetrics = scene.loader.get(Asset.type('atlasMetrics', 'atlases/hero.meta'));
+  const sceneDescriptorMetrics = scene.loader.get({ type: 'atlasMetrics', source: 'atlases/hero.meta' });
   expectType<Equal<typeof sceneDescriptorMetrics, CatalogValueLeaf<AtlasMetrics>>>();
   expectType<Equal<ReturnType<typeof sceneLoadDescriptorMetrics>, LoadingQueue<AtlasMetrics>>>();
 };
 
-const sceneLoadDescriptorTexture = () => scene.loader.load(scene.loader.get(Asset.type('texture', 'player.png')));
+const sceneLoadDescriptorTexture = () => scene.loader.load(scene.loader.get({ type: 'texture', source: 'player.png' }));
 
-const sceneLoadDescriptorMetrics = () => scene.loader.load(scene.loader.get(Asset.type('atlasMetrics', 'atlases/hero.meta')));
+const sceneLoadDescriptorMetrics = () => scene.loader.load(scene.loader.get({ type: 'atlasMetrics', source: 'atlases/hero.meta' }));
 
 // --- negative: only a MATERIALIZED leaf is a leaf ---------------------------
 //

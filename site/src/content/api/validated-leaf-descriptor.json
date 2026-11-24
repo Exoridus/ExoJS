@@ -1,7 +1,7 @@
 {
-  "title": "InferAssetResource",
-  "description": "",
-  "symbol": "InferAssetResource",
+  "title": "ValidatedLeafDescriptor",
+  "description": "ValidatedAssetDescriptor for an input that must hand out a catalog leaf - a catalog field or `get()`: a type without a placeholder becomes the LeaflessCatalogEntry diagnostic.",
+  "symbol": "ValidatedLeafDescriptor",
   "kind": "type",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
@@ -18,8 +18,10 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [],
-      "importLine": "import { InferAssetResource } from '@codexo/exojs'",
+      "paragraphs": [
+        "ValidatedAssetDescriptor for an input that must hand out a catalog leaf - a catalog field or `get()`: a type without a placeholder becomes the LeaflessCatalogEntry diagnostic."
+      ],
+      "importLine": "import { ValidatedLeafDescriptor } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -27,27 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "InferAssetResource",
-          "signature": "I extends Asset<T> ? T : I extends { parse: (raw: never) => R } ? R : I extends { type: K } ? AssetDefinitions[K][\"resource\"] : never",
+          "name": "ValidatedLeafDescriptor",
+          "signature": "AssetDescriptorLeafPolicy<D> extends \"none\" ? LeaflessCatalogEntry<D extends { type: K } ? K : string> : ValidatedAssetDescriptor<D>",
           "signatureTokens": [
             {
-              "text": "I",
-              "kind": "type"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Asset",
+              "text": "AssetDescriptorLeafPolicy",
               "kind": "type"
             },
             {
@@ -55,28 +41,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "T",
+              "text": "D",
               "kind": "type"
             },
             {
               "text": ">",
               "kind": "punctuation"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "I",
-              "kind": "type"
             },
             {
               "text": " ",
@@ -91,59 +61,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "parse",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "raw",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
+              "text": "\"none\"",
               "kind": "keyword"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "R",
-              "kind": "type"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
             },
             {
               "text": " ? ",
               "kind": "punctuation"
             },
             {
-              "text": "R",
+              "text": "LeaflessCatalogEntry",
               "kind": "type"
             },
             {
-              "text": " : ",
+              "text": "<",
               "kind": "punctuation"
             },
             {
-              "text": "I",
+              "text": "D",
               "kind": "type"
             },
             {
@@ -183,31 +117,19 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetDefinitions",
-              "kind": "type"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
               "text": "K",
               "kind": "type"
             },
             {
-              "text": "]",
+              "text": " : ",
               "kind": "punctuation"
             },
             {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"resource\"",
+              "text": "string",
               "kind": "keyword"
             },
             {
-              "text": "]",
+              "text": ">",
               "kind": "punctuation"
             },
             {
@@ -215,8 +137,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "never",
-              "kind": "keyword"
+              "text": "ValidatedAssetDescriptor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -235,11 +169,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/AssetDefinitions.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+        "label": "src/assets/AssetDescriptor.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/AssetDefinitions.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+  "sourcePath": "src/assets/AssetDescriptor.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
 }

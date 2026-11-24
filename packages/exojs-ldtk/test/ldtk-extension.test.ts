@@ -69,7 +69,7 @@ describe('@codexo/exojs-ldtk asset type - ldtkMapType', () => {
     };
     const source = 'https://example.com/world.ldtk';
     const load = vi.fn(async (asset: unknown) => {
-      const config = (asset as { _config: { type: string; source: string } })._config;
+      const config = asset as { type: string; source: string };
 
       expect(config).toEqual({ type: 'json', source });
 

@@ -29,7 +29,7 @@ class LowBandCameraShakeScene extends Scene {
     const { width, height } = app;
 
     // Music is a non-leaf resource kind (no seamless placeholder), so it
-    // is loaded directly through `Asset.type('music', ...)` and awaited rather
+    // is loaded directly through `{ type: 'music', source }` and awaited rather
     // than fetched synchronously via `get()`.
     this.music = await this.loader.load(assets.musicGlitchMachine);
     this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });

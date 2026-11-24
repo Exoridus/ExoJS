@@ -35,7 +35,7 @@ export class ApplicationAssets extends AssetTypes implements AssetOwner {
   public constructor(registry: AssetTypeRegistry, loader: Loader) {
     super(registry);
     this.load = (input: never, options?: never) => loader._applicationScope.load(input, options);
-    this.release = (input: never, source?: string) => loader._applicationScope.release(input, source as never);
+    this.release = (input: never) => loader._applicationScope.release(input);
     this.createScope = options => loader.createScope(options);
   }
 }

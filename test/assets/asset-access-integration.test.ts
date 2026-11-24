@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
@@ -34,7 +33,7 @@ const mockFetchMixed = (jsonPayload: unknown): void => {
 };
 
 // End-to-end acceptance gate for the S2 asset-access surface: bare-string
-// inference + Asset.type() descriptors in Assets.from, loader-free usable leaves, the
+// inference + a descriptor descriptors in Assets.from, loader-free usable leaves, the
 // status channel, heal-in-place on adopt+load, and bare-path get() for a value
 // kind - all together on one loader.
 describe('S2 asset-access surface (integration)', () => {
@@ -50,17 +49,17 @@ describe('S2 asset-access surface (integration)', () => {
     global.fetch = originalFetch;
   });
 
-  test('Assets.from rejects an Asset.type() entry whose type name is not an installed asset type', () => {
-    expect(() => Assets.from({ widget: Asset.type('not-an-installed-type' as unknown as 'json', 'widgets/a.bin') })).toThrow(
+  test('Assets.from rejects an a descriptor entry whose type name is not an installed asset type', () => {
+    expect(() => Assets.from({ widget: { type: 'not-an-installed-type' as unknown as 'json', source: 'widgets/a.bin' } })).toThrow(
       'No asset type "not-an-installed-type" is installed, so "widgets/a.bin" cannot be materialized.',
     );
   });
 
-  test('Assets.from mixes a bare path + a bare value path + an Asset.type() descriptor, all usable loader-free', () => {
+  test('Assets.from mixes a bare path + a bare value path + an a descriptor descriptor, all usable loader-free', () => {
     const assets = Assets.from({
       ship: 'sprites/ship.png', // bare → Texture (resource leaf)
       config: 'data/config.json', // bare → AssetRef (value leaf)
-      level: Asset.type<{ hp: number }>('json', 'levels/1.json'), // .of → AssetRef
+      level: { type: 'json', source: 'levels/1.json', parse: (raw: unknown) => raw as { hp: number } }, // .of → AssetRef
     });
 
     // Constructed in a field-initializer position - NO loader involved yet.
@@ -82,7 +81,7 @@ describe('S2 asset-access surface (integration)', () => {
 
     const assets = Assets.from({
       ship: 'sprites/ship.png',
-      level: Asset.type<{ hp: number }>('json', 'levels/1.json'),
+      level: { type: 'json', source: 'levels/1.json', parse: (raw: unknown) => raw as { hp: number } },
     });
     const ship = assets.ship; // capture identity to prove in-place heal
 

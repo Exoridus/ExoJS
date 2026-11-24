@@ -1,7 +1,6 @@
 import {
   ActionMap,
   Application,
-  Asset,
   Color,
   Container,
   GamepadAxis,
@@ -70,7 +69,7 @@ class TiledInfiniteMapScene extends Scene {
   private legend!: Container;
 
   override async load(): Promise<void> {
-    const source = await this.loader.load(Asset.type('tiledSource', assets.driftFieldsMap.source));
+    const source = await this.loader.load({ type: 'tiledSource', source: assets.driftFieldsMap.source });
 
     if (this.lifecycleSignal.aborted) {
       return;

@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
@@ -89,7 +88,7 @@ describe('load cancellation never revokes a claim another operation earned', () 
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const firstQueue = scope.load(Asset.type('texture', 'hero.png'));
+    const firstQueue = scope.load({ type: 'texture', source: 'hero.png' });
     await flush();
     calls[0]?.settle();
     const first = await firstQueue;
@@ -97,7 +96,7 @@ describe('load cancellation never revokes a claim another operation earned', () 
     expect(first.width).toBe(16);
     expect(claimsOf(loader, 'hero.png')).toBe(1);
 
-    const second = scope.load(Asset.type('texture', 'hero.png'));
+    const second = scope.load({ type: 'texture', source: 'hero.png' });
     second.cancel();
     await ignoreRejection(second);
 
@@ -131,8 +130,8 @@ describe('load cancellation never revokes a claim another operation earned', () 
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const cancelled = scope.load(Asset.type('texture', 'hero.png'));
-    const kept = scope.load(Asset.type('texture', 'hero.png'));
+    const cancelled = scope.load({ type: 'texture', source: 'hero.png' });
+    const kept = scope.load({ type: 'texture', source: 'hero.png' });
     await flush();
 
     expect(calls).toHaveLength(1);
@@ -154,7 +153,7 @@ describe('load cancellation never revokes a claim another operation earned', () 
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const queue = scope.load(Asset.type('texture', 'hero.png'));
+    const queue = scope.load({ type: 'texture', source: 'hero.png' });
     await flush();
 
     queue.cancel();
@@ -169,8 +168,8 @@ describe('load cancellation never revokes a claim another operation earned', () 
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const first = scope.load(Asset.type('texture', 'hero.png'));
-    const second = scope.load(Asset.type('texture', 'hero.png'));
+    const first = scope.load({ type: 'texture', source: 'hero.png' });
+    const second = scope.load({ type: 'texture', source: 'hero.png' });
     await flush();
 
     first.cancel();
@@ -190,12 +189,12 @@ describe('load cancellation never revokes a claim another operation earned', () 
     const owner = loader.createScope({ name: 'owner' });
     const other = loader.createScope({ name: 'other' });
 
-    const ownerQueue = owner.load(Asset.type('texture', 'hero.png'));
+    const ownerQueue = owner.load({ type: 'texture', source: 'hero.png' });
     await flush();
     calls[0]?.settle();
     const texture = await ownerQueue;
 
-    const otherQueue = other.load(Asset.type('texture', 'hero.png'));
+    const otherQueue = other.load({ type: 'texture', source: 'hero.png' });
     otherQueue.cancel();
     await ignoreRejection(otherQueue);
 
@@ -208,7 +207,7 @@ describe('load cancellation never revokes a claim another operation earned', () 
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const queue = scope.load(Asset.type('texture', 'hero.png'));
+    const queue = scope.load({ type: 'texture', source: 'hero.png' });
     await flush();
     calls[0]?.settle();
     const texture = await queue;
@@ -220,7 +219,7 @@ describe('load cancellation never revokes a claim another operation earned', () 
     expect(claimsOf(loader, 'hero.png')).toBe(1);
     expect(texture.width).toBe(16);
 
-    scope.release(Asset.type('texture', 'hero.png'));
+    scope.release({ type: 'texture', source: 'hero.png' });
 
     expect(loader.inspect()).toHaveLength(0);
   });
@@ -241,7 +240,7 @@ describe('load cancellation never revokes a claim another operation earned', () 
 
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
-    const queue = scope.load(Asset.type('texture', 'hero.png'));
+    const queue = scope.load({ type: 'texture', source: 'hero.png' });
     await flush();
 
     calls[0]?.settle();
@@ -262,11 +261,11 @@ describe('load cancellation never revokes a claim another operation earned', () 
     const scope = loader.createScope({ name: 'level' });
     const other = loader.createScope({ name: 'other' });
 
-    const keeper = other.load(Asset.type('texture', 'hero.png'));
-    const queue = scope.load(Asset.type('texture', 'hero.png'));
+    const keeper = other.load({ type: 'texture', source: 'hero.png' });
+    const queue = scope.load({ type: 'texture', source: 'hero.png' });
     await flush();
 
-    scope.release(Asset.type('texture', 'hero.png'));
+    scope.release({ type: 'texture', source: 'hero.png' });
     calls[0]?.settle();
     await keeper;
     await ignoreRejection(queue);
@@ -282,8 +281,8 @@ describe('load cancellation never revokes a claim another operation earned', () 
     const first = loader.createScope({ name: 'first' });
     const second = loader.createScope({ name: 'second' });
 
-    const firstQueue = first.load(Asset.type('bmFont', 'fonts/ui.fnt'));
-    const secondQueue = second.load(Asset.type('bmFont', 'fonts/ui.fnt'));
+    const firstQueue = first.load({ type: 'bmFont', source: 'fonts/ui.fnt' });
+    const secondQueue = second.load({ type: 'bmFont', source: 'fonts/ui.fnt' });
     await flush();
 
     // One shared font fetch; settle it so the page dependency is requested.

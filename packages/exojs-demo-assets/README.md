@@ -55,7 +55,7 @@ Each descriptor in `demoAssets` is a literal `new URL('../media/<file>', import.
 
 The Vite dev server serves the media straight from the installed package, relative references included.
 
-The Tiled and LDtk entries are typed as JSON descriptors. Load them as maps through the installed extension's loader type, for example `Asset.type('tileMap', assets.harborPlazaMap.source)` with `@codexo/exojs-tiled` or `Asset.type('ldtkMap', assets.harborWorldProject.source)` with `@codexo/exojs-ldtk`; that is what resolves and fetches their tileset images.
+The Tiled and LDtk entries are typed as JSON descriptors. Load them as maps through the installed extension's loader type, for example `{ type: 'tileMap', source: assets.harborPlazaMap.source }` with `@codexo/exojs-tiled` or `{ type: 'ldtkMap', source: assets.harborWorldProject.source }` with `@codexo/exojs-ldtk`; that is what resolves and fetches their tileset images.
 
 ## Hosting the media elsewhere
 

@@ -283,7 +283,7 @@ application.audio.master.addEffect(limiter);
 
 Convolves the signal with a real impulse response instead of `ReverbEffect`'s procedurally generated one — useful for captured spaces, cabinet/speaker simulation, or telephone-style filtering. Pass a decoded `AudioBuffer` or a loaded `Sound`; call `setImpulse()` to swap the IR later.
 
-An impulse response is just an audio file, so it loads like any other sound — there is no separate asset type for it. Load it with `Asset.type('sound', 'ir/concert-hall.wav')` (or as a catalog leaf) and hand the result straight to the effect:
+An impulse response is just an audio file, so it loads like any other sound — there is no separate asset type for it. Load it with `{ type: 'sound', source: 'ir/concert-hall.wav' }` (or as a catalog leaf) and hand the result straight to the effect:
 
 ```ts
 import { type Application, Sound } from '@codexo/exojs';

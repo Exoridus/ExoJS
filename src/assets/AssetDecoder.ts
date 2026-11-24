@@ -328,7 +328,8 @@ export class AssetDecoder {
     return {
       ...(options !== undefined && options !== null && { options }),
       signal,
-      source: asset.source,
+      // A direct source has no locator for a factory to resolve references against.
+      source: Object.hasOwn(asset, 'directSource') ? '' : asset.source,
       textureFormats: this._loader.variants.profile.textureFormats,
       locator: asset.locator,
       resourceKey: asset.key,
@@ -439,10 +440,23 @@ export class AssetDecoder {
     const { type, factory } = installed;
 
     try {
-      const unacquired = type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source), this._network()) as
-        | { source: unknown }
-        | undefined;
-      const source = unacquired === undefined ? await this._acquireSource(asset, type, signal) : unacquired.source;
+      // Direct object requests are already decoded input. Never fetch, inspect
+      // cache policy or ask a URL-based hook to reinterpret their value.
+      const direct = Object.hasOwn(asset, 'directSource');
+      const unacquired = direct
+        ? undefined
+        : (type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source), this._network()) as
+            | { source: unknown }
+            | undefined);
+      let source: unknown;
+
+      if (direct) {
+        source = asset.directSource;
+      } else if (unacquired !== undefined) {
+        source = unacquired.source;
+      } else {
+        source = await this._acquireSource(asset, type, signal);
+      }
 
       const resource = await factory.create(source, this._factoryContext(asset, scope, options, signal));
 

@@ -151,7 +151,7 @@ char id=90   x=70   y=57   width=13  height=18  xoffset=0  yoffset=9   xadvance=
 const recordingScope = (requested: string[]): AssetDependencyScope =>
   ({
     load: vi.fn(async (asset: unknown) => {
-      requested.push((asset as { _config: { source: string } })._config.source);
+      requested.push((asset as { source: string }).source);
 
       return new Texture(null);
     }),

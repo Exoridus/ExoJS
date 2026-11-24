@@ -20,7 +20,7 @@ const contextFor = (document: unknown): AssetFactoryContext =>
     locator: 'url:fidelity.ldtk',
     dependencies: {
       load: vi.fn(async (asset: unknown): Promise<unknown> =>
-        (asset as { _config: { type: string } })._config.type === 'json'
+        (asset as { type: string }).type === 'json'
           ? document
           : ({ width: 64, height: 32, uid: 0, destroy: () => {}, destroyed: false } as unknown as Texture),
       ),

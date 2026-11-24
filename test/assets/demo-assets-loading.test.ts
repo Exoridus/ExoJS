@@ -6,7 +6,6 @@
  */
 import { createDemoAssets, demoAssets } from '@codexo/exojs-demo-assets';
 
-import { Asset } from '#assets/Asset';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
@@ -162,7 +161,9 @@ describe('A01: importing and reading the catalog does no IO', () => {
 
   test('every value is a descriptor, never a placeholder resource', () => {
     for (const descriptor of Object.values(demoAssets)) {
-      expect(descriptor).toBeInstanceOf(Asset);
+      expect(Object.getPrototypeOf(descriptor)).toBe(Object.prototype);
+      expect(typeof descriptor.type).toBe('string');
+      expect(typeof descriptor.source).toBe('string');
       expect(descriptor).not.toBeInstanceOf(Texture);
       expect(descriptor).not.toBeInstanceOf(AssetRef);
     }

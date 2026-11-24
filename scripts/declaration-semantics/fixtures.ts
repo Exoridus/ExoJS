@@ -6,7 +6,7 @@
  * both, differing only in how much a subclass contributes. What the shipped
  * declarations must preserve is the activation-data type, so the fixtures exist
  * in both flavours - no data, and data. The asset types pin the descriptor
- * contracts: leaf-policy branding and required option bags. The components pin
+ * contracts: leaf-policy branding, required option bags and required sources. The components pin
  * exact-class lookup, the host constraint and typed query rows.
  */
 import { type AssetFactory, AssetType, BehaviorComponent, Component, Scene, type Seconds, type Sprite } from '@codexo/exojs';
@@ -37,6 +37,15 @@ export class LocalizedAssetType extends AssetType<unknown, string, { readonly lo
 
   public createFactory(): AssetFactory<unknown, string, { readonly locale: string }> {
     return { create: () => Promise.resolve('text') };
+  }
+}
+
+/** An asset type built from text it must be given: its descriptors need a source. */
+export class NotesAssetType extends AssetType<string, readonly string[]> {
+  public readonly id = 'com.example.notes';
+
+  public createFactory(): AssetFactory<string, readonly string[]> {
+    return { create: text => Promise.resolve(text.split('\n')) };
   }
 }
 

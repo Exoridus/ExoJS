@@ -9,9 +9,9 @@
  * colour" acceptance is a property of NOT overriding the asset's default
  * texture options, not of any importer-specific colour code.
  *
- * This suite locks that in at the source level: every `Asset.type('texture',
- * ...)` request an importer package makes passes no second (options)
- * argument, so it always takes `TextureFactory`'s default resolution -
+ * This suite locks that in at the source level: every `{ type: 'texture', ... }`
+ * descriptor an importer package loads carries no texture options, so it
+ * always takes `TextureFactory`'s default resolution -
  * `colorSpace: 'srgb'` - exactly as any other browser-sourced Texture does. An
  * importer that started passing `colorSpace: 'none'` or any other override
  * would silently opt its images out of that contract; this fails the moment
@@ -22,11 +22,11 @@ import { resolve } from 'node:path';
 
 const root = resolve(__dirname, '../..');
 
-/** Every `Asset.type('texture', ...)` call in `file`, as its full argument list text. */
+/** Every `{ type: 'texture', ... }` descriptor literal in `file`, as its full text. */
 const textureAssetCalls = (file: string): string[] => {
   const source = readFileSync(resolve(root, file), 'utf8');
 
-  return [...source.matchAll(/Asset\.type\(\s*'texture'\s*,[^)]*\)/g)].map(match => match[0]);
+  return [...source.matchAll(/\{\s*type:\s*'texture'\s*,[^}]*\}/g)].map(match => match[0]);
 };
 
 describe('importer texture colour contract', () => {

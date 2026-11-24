@@ -1,4 +1,4 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { MapLevelSide, MapWorld, MapWorldRuntime } from '@codexo/exojs/tilemap';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
@@ -71,7 +71,7 @@ class LevelOwnershipScene extends Scene {
       load: async ({ level, scope, signal }) => {
         await waitForTransition(signal);
 
-        return scope.load(Asset.type('tileMap', roomPath[level.id]!));
+        return scope.load({ type: 'tileMap', source: roomPath[level.id]! });
       },
     });
     this.panel = demoPanel({

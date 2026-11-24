@@ -5,7 +5,6 @@
  * exactly once through the failed-activation path, against a REAL
  * `Application` and `SceneDirector`.
  */
-import { Asset } from '#assets/Asset';
 import { Application } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
 import { SceneNavigationAbortedError } from '#core/scene/sceneErrors';
@@ -122,7 +121,7 @@ const createProbe = ({ cooperative = false } = {}): Probe => {
       this._data = data;
       events.push(`${data}:load`);
       this.systems.add({ update: () => {}, destroy: () => events.push(`${data}:system.destroy`) });
-      await this.loader.load(Asset.type('json', `${data}.json`));
+      await this.loader.load({ type: 'json', source: `${data}.json` });
       markStarted();
 
       if (cooperative) {

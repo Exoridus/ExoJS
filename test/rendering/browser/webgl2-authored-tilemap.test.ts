@@ -10,7 +10,6 @@
 import { type TileMap, TileMapNode } from '@codexo/exojs/tilemap';
 import { tiledExtension } from '@codexo/exojs-tiled';
 
-import { Asset } from '#assets/Asset';
 import { Loader } from '#assets/Loader';
 import { textureType } from '#assets/types/image';
 import type { Application } from '#core/Application';
@@ -64,7 +63,7 @@ describe('WebGL2 authored tile map', () => {
 
     loader._installAssetTypes([textureType, ...buildSnapshot([tiledExtension]).assets]);
 
-    const map = (await loader.load(Asset.type('tileMap', 'town-square.tmj'))) as TileMap;
+    const map = (await loader.load({ type: 'tileMap', source: 'town-square.tmj' })) as TileMap;
     const node = new TileMapNode(map);
     const walls = map.getTileLayer('Walls')!;
 

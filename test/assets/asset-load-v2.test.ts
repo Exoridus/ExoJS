@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
 import { Sound } from '#audio/Sound';
@@ -93,10 +92,15 @@ describe('unified asset loading', () => {
     expect(click).toBeInstanceOf(Sound);
   });
 
-  test('arrays mix paths, handles, descriptors and typed requests and keep their order', async () => {
+  test('arrays mix paths, handles and descriptors and keep their order', async () => {
     const loader = createLoader();
     const handle = new Texture('b.png');
-    const result = await loader.load(['a.png', handle, Asset.type<{ start: string }>('json', 'config.json'), [Texture, 'c.png']]);
+    const result = await loader.load([
+      'a.png',
+      handle,
+      { type: 'json', source: 'config.json', parse: (raw: unknown) => raw as { start: string } },
+      { type: Texture, source: 'c.png' },
+    ]);
 
     expect(result).toHaveLength(4);
     expect(result[0]).toBeInstanceOf(Texture);
@@ -115,11 +119,11 @@ describe('unified asset loading', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test('a typed request carries per-asset options into identity', async () => {
+  test('a class-typed descriptor carries per-asset options into identity', async () => {
     const loader = createLoader();
     const [srgb, data] = await loader.load([
-      [Texture, 'height.png'],
-      [Texture, 'height.png', { textureOptions: { colorSpace: 'none' } }],
+      { type: Texture, source: 'height.png' },
+      { type: Texture, source: 'height.png', textureOptions: { colorSpace: 'none' } },
     ]);
 
     expect(srgb).not.toBe(data);
@@ -153,7 +157,7 @@ describe('unified asset loading', () => {
 
     expect(hero).toBeInstanceOf(Texture);
     expect(hero.width).toBe(16);
-    expect(() => scope.load([Video, 'intro.mp4'], { priority: LoadPriority.Background })).toThrow(/no placeholder/);
+    expect(() => scope.load({ type: Video, source: 'intro.mp4' }, { priority: LoadPriority.Background })).toThrow(/no placeholder/);
   });
 
   test('cancelling a group withdraws its pending stakes and rejects with AbortError', async () => {
@@ -215,10 +219,10 @@ describe('asset owners', () => {
     const loader = createLoader();
     const scope = loader.createScope();
 
-    await scope.load({ hero: 'hero.png', data: [Texture, 'data.png'], config: 'config.json' });
+    await scope.load({ hero: 'hero.png', data: { type: Texture, source: 'data.png' }, config: 'config.json' });
     expect(claimsOf(loader, 'hero.png')).toBe(1);
 
-    scope.release({ hero: 'hero.png', data: [Texture, 'data.png'] });
+    scope.release({ hero: 'hero.png', data: { type: Texture, source: 'data.png' } });
     scope.release('config.json');
 
     expect(claimsOf(loader, 'hero.png')).toBe(0);
@@ -241,18 +245,87 @@ describe('asset owners', () => {
     loader.destroy();
   });
 
-  test('a named alias called type is not mistaken for an asset descriptor on release', async () => {
+  test('a plain object with an own type is always a descriptor, never a group with a "type" key', async () => {
     const loader = createLoader();
     const scope = loader.createScope();
-    const named = { type: 'hero.png', data: [Texture, 'data.png'] } as const;
+    const ambiguous = { type: 'hero.png', data: { type: Texture, source: 'data.png' } } as never;
 
-    await scope.load(named);
-    expect(claimsOf(loader, 'hero.png')).toBe(1);
-    expect(claimsOf(loader, 'data.png')).toBe(1);
-
-    scope.release(named);
+    await expect(scope.load(ambiguous)).rejects.toThrow(/no asset type "hero\.png" is installed.*cannot use "type" as a key/);
     expect(claimsOf(loader, 'hero.png')).toBe(0);
     expect(claimsOf(loader, 'data.png')).toBe(0);
+
+    const renamed = { hero: 'hero.png', data: { type: Texture, source: 'data.png' } } as const;
+
+    await scope.load(renamed);
+    expect(claimsOf(loader, 'hero.png')).toBe(1);
+    expect(claimsOf(loader, 'data.png')).toBe(1);
+    scope.release(renamed);
+    expect(claimsOf(loader, 'hero.png')).toBe(0);
+    expect(claimsOf(loader, 'data.png')).toBe(0);
+    scope.destroy();
+    loader.destroy();
+  });
+
+  test('type is reserved even when its value is an asset entry rather than a type reference', async () => {
+    const loader = createLoader();
+    const scope = loader.createScope();
+    const group = { type: { type: Texture, source: 'hero.png' }, data: 'data.png' } as const;
+
+    expect(() => scope.load(group as never)).toThrow(/cannot use "type" as a key/);
+    expect(loader.inspect()).toHaveLength(0);
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    await scope.load('data.png');
+    scope.release(group);
+    expect(claimsOf(loader, 'data.png')).toBe(1);
+    loader.destroy();
+  });
+
+  test('direct object request passes a structured source and extra properties to a custom decoder without fetching', async () => {
+    class Generated {
+      public constructor(public readonly value: number) {}
+    }
+
+    const loader = createLoader();
+    const decode = vi.fn((source: ArrayBuffer, context: { options?: unknown }) => {
+      const input = source as unknown as { value: number };
+      const options = context.options as { scale: number };
+
+      return new Generated(input.value * options.scale);
+    });
+
+    loader._assetTypes.define(Generated, { type: 'generated', decode });
+    const scope = loader.createScope();
+    const request = { type: Generated, source: { value: 7 }, scale: 3 };
+    const first = await scope.load(request);
+    const second = await scope.load(request);
+
+    expect(first).toBeInstanceOf(Generated);
+    expect(first.value).toBe(21);
+    expect(second).toBe(first);
+    expect(decode).toHaveBeenCalledTimes(1);
+    expect(global.fetch).not.toHaveBeenCalled();
+    scope.release(request);
+    scope.destroy();
+    loader.destroy();
+  });
+
+  test('a source-free request reaches a registered custom factory as undefined', async () => {
+    class Noise {
+      public constructor(public readonly seed: number) {}
+    }
+
+    const loader = createLoader();
+    const decode = vi.fn((_source: ArrayBuffer, context: { options?: unknown }) => new Noise((context.options as { seed: number }).seed));
+
+    loader._assetTypes.define(Noise, { type: 'noise', decode });
+    const scope = loader.createScope();
+    const noise = await scope.load({ type: Noise, seed: 42 });
+
+    expect(noise).toBeInstanceOf(Noise);
+    expect(noise.seed).toBe(42);
+    expect(decode.mock.calls[0]?.[0]).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
     scope.destroy();
     loader.destroy();
   });
@@ -278,13 +351,13 @@ describe('define() with decode', () => {
     global.fetch = originalFetch;
   });
 
-  test('a synchronous decode receives bytes and its type loads by suffix and by typed request', async () => {
+  test('a synchronous decode receives bytes and its type loads by suffix and by class-typed descriptor', async () => {
     const loader = createLoader();
 
     loader._assetTypes.define(Level, { type: 'level', extensions: ['level'], decode: bytes => new Level(bytes.byteLength) });
 
     const level = await loader.load('data.level' as string);
-    const typed = await loader.load([Level, 'data.level']);
+    const typed = await loader.load({ type: Level, source: 'data.level' });
 
     expect(level).toBeInstanceOf(Level);
     expect((level as Level).size).toBe(5);
@@ -298,8 +371,8 @@ describe('define() with decode', () => {
     loader._assetTypes.define(Level, { type: 'level', read: 'blob', decode: async blob => new Level(blob.size) });
 
     const [notes, level] = await loader.load([
-      [Notes, 'notes.notes'],
-      [Level, 'data.level'],
+      { type: Notes, source: 'notes.notes' },
+      { type: Level, source: 'data.level' },
     ]);
 
     expect(notes.text).toBe('hello');
@@ -321,11 +394,11 @@ describe('define() with decode', () => {
       },
     });
 
-    await expect(loader.load([Level, 'data.level'])).rejects.toThrow(/corrupt level/);
+    await expect(loader.load({ type: Level, source: 'data.level' })).rejects.toThrow(/corrupt level/);
 
     fail = false;
 
-    await expect(loader.load([Level, 'data.level'])).resolves.toBeInstanceOf(Level);
+    await expect(loader.load({ type: Level, source: 'data.level' })).resolves.toBeInstanceOf(Level);
   });
 
   test('a fetch failure rejects without calling decode', async () => {
@@ -334,7 +407,7 @@ describe('define() with decode', () => {
 
     loader._assetTypes.define(Level, { type: 'level', decode });
 
-    await expect(loader.load([Level, 'missing.level'])).rejects.toThrow();
+    await expect(loader.load({ type: Level, source: 'missing.level' })).rejects.toThrow();
     expect(decode).not.toHaveBeenCalled();
   });
 
@@ -356,7 +429,7 @@ describe('define() with decode', () => {
       },
     });
 
-    const queue = loader.createScope().load([Level, 'data.level']);
+    const queue = loader.createScope().load({ type: Level, source: 'data.level' });
 
     await vi.waitFor(() => expect(seen).toBeDefined());
     queue.cancel();
@@ -373,7 +446,7 @@ describe('define() with decode', () => {
     loader._assetTypes.define(Level, { type: 'level', decode: bytes => new Level(bytes.byteLength), dispose });
 
     const scope = loader.createScope();
-    const level = await scope.load([Level, 'data.level']);
+    const level = await scope.load({ type: Level, source: 'data.level' });
 
     scope.destroy();
 

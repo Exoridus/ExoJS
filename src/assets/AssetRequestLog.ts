@@ -16,6 +16,8 @@ interface LogicalRequest {
   readonly unportable?: string;
 }
 
+type LoadedAssetOrigin = Pick<CanonicalAsset, 'type' | 'source' | 'key'> & { readonly direct: boolean };
+
 /**
  * What a saved document can reference a resource by: the one logical request
  * it came from, or why there is no single honest answer.
@@ -27,20 +29,59 @@ export type AssetReferenceLookup = ({ readonly kind: 'request' } & AssetReferenc
  * The requests that resolved to each canonical key: every source string, for
  * diagnostics, and every distinct logical request (pre-variant source plus
  * identity-relevant options), which backs portable references in saved
- * documents. Neither participates in identity or ownership.
+ * documents. Also tracks issued resources weakly so handle releases can find
+ * their owner's current keys without keeping the payloads alive.
  * @internal
  */
 export class AssetRequestLog {
   private readonly _typeRegistry: AssetTypeRegistry;
   private readonly _aliases = new Map<ResourceKey, Set<string>>();
   private readonly _requests = new Map<ResourceKey, Map<string, LogicalRequest>>();
+  private readonly _origins = new WeakMap<object, LoadedAssetOrigin>();
+  private readonly _directResources = new WeakSet();
 
   public constructor(typeRegistry: AssetTypeRegistry) {
     this._typeRegistry = typeRegistry;
   }
 
+  public recordResource(asset: CanonicalAsset, resource: object, direct: boolean): void {
+    if (!this._origins.has(resource)) {
+      this._origins.set(resource, { type: asset.type, source: asset.source, key: asset.key, direct });
+    }
+
+    if (direct) {
+      this._directResources.add(resource);
+    }
+  }
+
+  /** The first recorded origin remains the one used by portable references. */
+  public origin(resource: object): LoadedAssetOrigin | undefined {
+    return this._origins.get(resource);
+  }
+
+  /** Find this owner's current claims, including when a factory returns the same object for different keys. */
+  public directKeys(
+    resource: object,
+    owned: ReadonlySet<ResourceKey> | undefined,
+    resident: ReadonlyMap<ResourceKey, { readonly asset: CanonicalAsset; readonly value: unknown }>,
+  ): ResourceKey[] | undefined {
+    if (!this._directResources.has(resource)) {
+      return undefined;
+    }
+
+    return [...(owned ?? [])].filter(key => {
+      const entry = resident.get(key);
+
+      return entry?.value === resource && Object.hasOwn(entry.asset, 'directSource');
+    });
+  }
+
   /** Record the source spellings - and, when known, the logical request - that resolved to `asset`'s key. */
   public record(asset: CanonicalAsset): void {
+    if (Object.hasOwn(asset, 'directSource')) {
+      return;
+    }
+
     let aliases = this._aliases.get(asset.key);
 
     if (aliases === undefined) {
@@ -84,11 +125,15 @@ export class AssetRequestLog {
    */
   public lookup(
     key: ResourceKey,
-    fallback: Pick<CanonicalAsset, 'type' | 'source'> | undefined,
+    fallback: (Pick<CanonicalAsset, 'type' | 'source'> & { readonly direct?: boolean }) | undefined,
     resource: object,
     donor: unknown,
     authoredSource?: string,
   ): AssetReferenceLookup | null {
+    if (fallback?.direct === true) {
+      return { kind: 'error', message: 'A resource built from a non-locator source cannot be referenced by a saved document.' };
+    }
+
     const candidates = [...(this._requests.get(key)?.values() ?? [])];
     const matching = authoredSource === undefined ? candidates : candidates.filter(candidate => candidate.source === authoredSource);
     const requests = matching.length === 0 ? candidates : matching;

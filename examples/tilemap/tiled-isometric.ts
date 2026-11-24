@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
 import { type TileMap, TileMapNode, TileProjection } from '@codexo/exojs/tilemap';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension } from '@codexo/exojs-tiled';
@@ -23,7 +23,7 @@ class IsometricScene extends Scene {
   private hud!: ReturnType<typeof demoPanel>;
 
   override async load(): Promise<void> {
-    this.map = await this.loader.load(Asset.type('tileMap', assets.isometricLandscape.source));
+    this.map = await this.loader.load({ type: 'tileMap', source: assets.isometricLandscape.source });
   }
 
   override init(): void {

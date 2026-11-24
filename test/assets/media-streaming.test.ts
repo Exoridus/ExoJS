@@ -1,6 +1,5 @@
 import { encodeContainer } from '@codexo/exojs-build/asset-container';
 
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import type { MediaAssetOptions } from '#assets/factories/mediaSource';
 import { Loader } from '#assets/Loader';
@@ -87,7 +86,7 @@ describe('URL-backed media', () => {
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const queued = scope.load(Asset.type('video', 'intro.mp4'));
+    const queued = scope.load({ type: 'video', source: 'intro.mp4' });
     const element = await reachReadiness();
     const video = (await queued) as Video;
 
@@ -101,7 +100,7 @@ describe('URL-backed media', () => {
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const queued = scope.load(Asset.type('video', 'intro.mp4'));
+    const queued = scope.load({ type: 'video', source: 'intro.mp4' });
     const element = await reachReadiness();
 
     await queued;
@@ -114,12 +113,12 @@ describe('URL-backed media', () => {
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const credentialed = scope.load(Asset.type('video', 'a.mp4', { crossOrigin: 'use-credentials' }));
+    const credentialed = scope.load({ type: 'video', source: 'a.mp4', crossOrigin: 'use-credentials' });
     const first = await reachReadiness();
 
     await credentialed;
 
-    const plain = scope.load(Asset.type('video', 'b.mp4', { crossOrigin: null }));
+    const plain = scope.load({ type: 'video', source: 'b.mp4', crossOrigin: null });
     const second = await reachReadiness();
 
     await plain;
@@ -134,7 +133,7 @@ describe('URL-backed media', () => {
     const scope = loader.createScope({ name: 'level' });
 
     let settled = false;
-    const queued = scope.load(Asset.type('music', 'theme.ogg')).then(stream => {
+    const queued = scope.load({ type: 'music', source: 'theme.ogg' }).then(stream => {
       settled = true;
 
       return stream;
@@ -158,10 +157,10 @@ describe('music and live audio streams', () => {
   test('a music track loads as Music from its URL and identical requests share one track', async () => {
     const fetchSpy = mockFetch();
     const loader = createCoreLoader();
-    const first = loader.createScope().load([Music, 'theme.ogg']);
+    const first = loader.createScope().load({ type: Music, source: 'theme.ogg' });
     const element = await reachReadiness();
     const music = await first;
-    const again = await loader.createScope().load([Music, 'theme.ogg']);
+    const again = await loader.createScope().load({ type: Music, source: 'theme.ogg' });
 
     expect(music).toBeInstanceOf(Music);
     expect(again).toBe(music);
@@ -172,7 +171,7 @@ describe('music and live audio streams', () => {
   test('a live stream loads as AudioStream at "canplay" without downloading anything', async () => {
     const fetchSpy = mockFetch();
     const loader = createCoreLoader();
-    const queued = loader.createScope().load([AudioStream, 'https://radio.example/live']);
+    const queued = loader.createScope().load({ type: AudioStream, source: 'https://radio.example/live' });
     const element = await reachReadiness();
     const stream = await queued;
 
@@ -189,7 +188,9 @@ describe('music and live audio streams', () => {
     materializeAssetTypes(loader, coreAssetTypes);
     connectivity.mode = 'offline';
 
-    await expect(loader.createScope().load([AudioStream, 'https://radio.example/live'])).rejects.toThrow(/needs the network/);
+    await expect(loader.createScope().load({ type: AudioStream, source: 'https://radio.example/live' })).rejects.toThrow(
+      /needs the network/,
+    );
     expect(capturedMedia).toHaveLength(0);
     connectivity.destroy();
   });
@@ -199,10 +200,10 @@ describe('music and live audio streams', () => {
     const loader = createCoreLoader();
     const scope = loader.createScope();
     const url = 'https://radio.example/live';
-    const firstRequest = Asset.type('audioStream', url, { reconnect: false });
-    const secondRequest = Asset.type('audioStream', url, { reconnect: { attempts: 2, delay: 100 } });
-    const defaultRequest = Asset.type('audioStream', url);
-    const explicitDefault = Asset.type('audioStream', url, { reconnect: { attempts: 5, delay: 1000 } });
+    const firstRequest = { type: 'audioStream', source: url, reconnect: false } as const;
+    const secondRequest = { type: 'audioStream', source: url, reconnect: { attempts: 2, delay: 100 } } as const;
+    const defaultRequest = { type: 'audioStream', source: url } as const;
+    const explicitDefault = { type: 'audioStream', source: url, reconnect: { attempts: 5, delay: 1000 } } as const;
 
     expect(loader.identify(defaultRequest).resourceKey).toBe(loader.identify(explicitDefault).resourceKey);
     expect(loader.identify(firstRequest).resourceKey).not.toBe(loader.identify(secondRequest).resourceKey);
@@ -225,7 +226,7 @@ describe('music and live audio streams', () => {
     mockFetch();
     const loader = createCoreLoader();
     const scope = loader.createScope();
-    const queued = scope.load([AudioStream, 'https://radio.example/live']);
+    const queued = scope.load({ type: AudioStream, source: 'https://radio.example/live' });
     const element = await reachReadiness();
     const stream = await queued;
 
@@ -242,7 +243,7 @@ describe('the online default', () => {
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const queued = scope.load(Asset.type('video', 'intro.mp4'));
+    const queued = scope.load({ type: 'video', source: 'intro.mp4' });
     const element = await reachReadiness();
 
     await queued;
@@ -255,7 +256,7 @@ describe('the online default', () => {
     const fetchSpy = mockFetch();
     const loader = createCoreLoader();
 
-    await loader.cacheSource(Asset.type('video', 'intro.mp4'));
+    await loader.cacheSource({ type: 'video', source: 'intro.mp4' });
 
     expect(fetchSpy).toHaveBeenCalledOnce();
     // No factory ran, so no element exists and nothing is resident: the point
@@ -266,9 +267,9 @@ describe('the online default', () => {
 
   test('cacheSource and load derive one source identity from one descriptor', async () => {
     const loader = createCoreLoader();
-    const asset = Asset.type('video', 'intro.mp4');
+    const asset = { type: 'video', source: 'intro.mp4' } as const;
 
-    expect(loader.identify(asset).sourceKey).toBe(loader.identify(Asset.type('video', 'intro.mp4')).sourceKey);
+    expect(loader.identify(asset).sourceKey).toBe(loader.identify({ type: 'video', source: 'intro.mp4' }).sourceKey);
     // The prewarm needs no descriptor of its own - which is the whole reason a
     // transport flag has no place on one.
     expect(loader.identify(asset).sourceKey).toBe('url:/assets/intro.mp4');
@@ -298,7 +299,7 @@ describe('container entries', () => {
     const streaming = loader.createScope({ name: 'streaming' });
     const packed = loader.createScope({ name: 'packed' });
 
-    const queued = streaming.load(Asset.type('video', 'intro.mp4'));
+    const queued = streaming.load({ type: 'video', source: 'intro.mp4' });
     const element = await reachReadiness();
     const streamed = (await queued) as Video;
 
@@ -310,7 +311,7 @@ describe('container entries', () => {
     // the streamed load already made resident, so no second payload is built.
     expect(fetchSpy).toHaveBeenCalledOnce();
     expect(loader.inspect().filter(row => row.locator.endsWith('intro.mp4'))).toHaveLength(1);
-    expect(loader.peek(Asset.type('video', 'intro.mp4'))).toBe(streamed);
+    expect(loader.peek({ type: 'video', source: 'intro.mp4' })).toBe(streamed);
     expect(capturedMedia.at(-1)).toBe(element);
   });
 
@@ -326,9 +327,9 @@ describe('container entries', () => {
 
     await unpacked;
 
-    const fromContainer = loader.peek(Asset.type('video', 'intro.mp4'));
+    const fromContainer = loader.peek({ type: 'video', source: 'intro.mp4' });
 
-    expect(await streaming.load(Asset.type('video', 'intro.mp4'))).toBe(fromContainer);
+    expect(await streaming.load({ type: 'video', source: 'intro.mp4' })).toBe(fromContainer);
     expect(fetchSpy).toHaveBeenCalledOnce();
     expect(capturedMedia.at(-1)).toBe(element);
   });
@@ -340,11 +341,11 @@ describe('transport and CORS identity', () => {
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const queued = scope.load(Asset.type('video', 'intro.mp4'));
+    const queued = scope.load({ type: 'video', source: 'intro.mp4' });
     const element = await reachReadiness();
     const first = await queued;
 
-    expect(await scope.load(Asset.type('video', 'intro.mp4', { crossOrigin: 'anonymous' }))).toBe(first);
+    expect(await scope.load({ type: 'video', source: 'intro.mp4', crossOrigin: 'anonymous' })).toBe(first);
     expect(capturedMedia.at(-1)).toBe(element);
     expect(loader.inspect()).toHaveLength(1);
   });
@@ -354,12 +355,12 @@ describe('transport and CORS identity', () => {
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const anonymous = scope.load(Asset.type('video', 'intro.mp4'));
+    const anonymous = scope.load({ type: 'video', source: 'intro.mp4' });
 
     await reachReadiness();
 
     const streamed = await anonymous;
-    const uncorsed = scope.load(Asset.type('video', 'intro.mp4', { crossOrigin: null }));
+    const uncorsed = scope.load({ type: 'video', source: 'intro.mp4', crossOrigin: null });
     const second = await reachReadiness();
 
     expect(await uncorsed).not.toBe(streamed);
@@ -372,12 +373,12 @@ describe('transport and CORS identity', () => {
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const anonymous = scope.load(Asset.type('video', 'intro.mp4'));
+    const anonymous = scope.load({ type: 'video', source: 'intro.mp4' });
 
     await reachReadiness();
     await anonymous;
 
-    const credentialed = scope.load(Asset.type('video', 'intro.mp4', { crossOrigin: 'use-credentials' }));
+    const credentialed = scope.load({ type: 'video', source: 'intro.mp4', crossOrigin: 'use-credentials' });
     const second = await reachReadiness();
 
     await credentialed;
@@ -391,10 +392,10 @@ describe('transport and CORS identity', () => {
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    await loader.cacheSource(Asset.type('video', 'intro.mp4'));
+    await loader.cacheSource({ type: 'video', source: 'intro.mp4' });
     fetchSpy.mockClear();
 
-    const queued = scope.load(Asset.type('video', 'intro.mp4'));
+    const queued = scope.load({ type: 'video', source: 'intro.mp4' });
     const element = await reachReadiness();
 
     await queued;
@@ -416,7 +417,7 @@ describe('failure timing', () => {
 
     loader.onError.add((_type, _alias, error) => reported.push(error));
 
-    const queued = scope.load(Asset.type('video', 'broken.mp4'));
+    const queued = scope.load({ type: 'video', source: 'broken.mp4' });
     const element = await nextMedia();
 
     element.dispatchEvent(new Event('error'));
@@ -433,7 +434,7 @@ describe('failure timing', () => {
 
     loader.onError.add((_type, _alias, error) => reported.push(error));
 
-    const queued = scope.load(Asset.type('music', 'theme.ogg'));
+    const queued = scope.load({ type: 'music', source: 'theme.ogg' });
     const element = await reachReadiness();
     const stream = (await queued) as Music;
 
@@ -457,7 +458,7 @@ describe('cancellation', () => {
 
     loader.onError.add((_type, _alias, error) => reported.push(error));
 
-    const queued = scope.load(Asset.type('video', 'intro.mp4'));
+    const queued = scope.load({ type: 'video', source: 'intro.mp4' });
     const element = await nextMedia();
 
     expect(element.getAttribute('src')).toBe('/assets/intro.mp4');
@@ -476,7 +477,7 @@ describe('release', () => {
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const queued = scope.load(Asset.type('video', 'intro.mp4'));
+    const queued = scope.load({ type: 'video', source: 'intro.mp4' });
     const element = await reachReadiness();
 
     await queued;
@@ -486,7 +487,7 @@ describe('release', () => {
     scope.destroy();
 
     expect(element.hasAttribute('src')).toBe(false);
-    expect(loader.peek(Asset.type('video', 'intro.mp4'))).toBeUndefined();
+    expect(loader.peek({ type: 'video', source: 'intro.mp4' })).toBeUndefined();
   });
 
   test('a second owner keeps the media resident', async () => {
@@ -495,15 +496,15 @@ describe('release', () => {
     const first = loader.createScope({ name: 'first' });
     const second = loader.createScope({ name: 'second' });
 
-    const queued = first.load(Asset.type('video', 'intro.mp4'));
+    const queued = first.load({ type: 'video', source: 'intro.mp4' });
     const element = await reachReadiness();
     const video = (await queued) as Video;
 
-    await second.load(Asset.type('video', 'intro.mp4'));
+    await second.load({ type: 'video', source: 'intro.mp4' });
     first.destroy();
 
     expect(element.getAttribute('src')).toBe('/assets/intro.mp4');
-    expect(loader.peek(Asset.type('video', 'intro.mp4'))).toBe(video);
+    expect(loader.peek({ type: 'video', source: 'intro.mp4' })).toBe(video);
   });
 });
 
@@ -517,9 +518,10 @@ describe('the media option surface', () => {
       stallTimeout?: number;
     }>();
 
-    // @ts-expect-error - `download` was removed with the transport flag
-    const rejected = Asset.type('music', 'theme.mp3', { download: true });
+    const rejected = { type: 'music', source: 'theme.mp3', download: true } as const;
 
+    // @ts-expect-error - `download` was removed with the transport flag
+    expectTypeOf(rejected).toMatchTypeOf<ValidatedAssetDescriptor<typeof rejected>>();
     expect(rejected).toBeDefined();
   });
 });

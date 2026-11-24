@@ -1,5 +1,5 @@
 import type { AssetFactoryContext } from '@codexo/exojs';
-import { Asset, logger, TextureRegion } from '@codexo/exojs';
+import { logger, TextureRegion } from '@codexo/exojs';
 import { type TileDefinition, TileSet } from '@codexo/exojs/tilemap';
 
 import type { LdtkData, LdtkLevel, LdtkTilesetDef } from './LdtkData';
@@ -37,7 +37,7 @@ export const loadLdtkTileset = async (def: LdtkTilesetDef, ldtkSource: string, c
   }
 
   const imageUrl = resolveLdtkUrl(def.relPath, ldtkSource);
-  const texture = await context.dependencies.load(Asset.type('texture', imageUrl));
+  const texture = await context.dependencies.load({ type: 'texture', source: imageUrl });
 
   const tileSize = def.tileGridSize;
   const spacing = def.spacing ?? 0;
@@ -159,7 +159,7 @@ const loadExternalLevel = async (level: LdtkLevel, ldtkSource: string, context: 
   // Validated against the same level shape as an inlined level, with the
   // `.ldtkl` file itself as the error source - a malformed external payload
   // must fail as loudly as a malformed root document.
-  const external = validateLdtkLevelData(await context.dependencies.load(Asset.type('json', externalUrl)), externalUrl);
+  const external = validateLdtkLevelData(await context.dependencies.load({ type: 'json', source: externalUrl }), externalUrl);
   const fieldInstances = external.fieldInstances ?? level.fieldInstances;
 
   return {
@@ -218,7 +218,7 @@ const withResolvedLevels = (data: LdtkData, resolvedLevels: readonly LdtkLevel[]
  */
 export const loadLdtkMap = async (context: AssetFactoryContext): Promise<LdtkMap> => {
   const source = context.source;
-  const data = validateLdtkData(await context.dependencies.load(Asset.type('json', source)), source);
+  const data = validateLdtkData(await context.dependencies.load({ type: 'json', source }), source);
 
   // Load all referenced tilesets and resolve externalized levels concurrently.
   // Iterate the flattened level list (not raw data.levels) so multi-world

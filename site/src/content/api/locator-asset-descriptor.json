@@ -1,7 +1,7 @@
 {
-  "title": "ResourceAsset",
-  "description": "A descriptor whose type hands out the resource itself as its catalog leaf, empty until the payload arrives and healed in place (`Texture`, `Sound`). The brand is a phantom; it mirrors a type whose `leaf` is a seamless adapter.",
-  "symbol": "ResourceAsset",
+  "title": "LocatorAssetDescriptor",
+  "description": "A descriptor whose source is a locator - the form a catalog, `get()` and background loading accept.",
+  "symbol": "LocatorAssetDescriptor",
   "kind": "type",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A descriptor whose type hands out the resource itself as its catalog leaf, empty until the payload arrives and healed in place (`Texture`, `Sound`). The brand is a phantom; it mirrors a type whose `leaf` is a seamless adapter."
+        "A descriptor whose source is a locator - the form a catalog, `get()` and background loading accept."
       ],
-      "importLine": "import { ResourceAsset } from '@codexo/exojs'",
+      "importLine": "import { LocatorAssetDescriptor } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,24 +29,12 @@
       "title": "Definition",
       "members": [
         {
-          "name": "ResourceAsset",
-          "signature": "Asset<T> & { [RESOURCE_ASSET]: true }",
+          "name": "LocatorAssetDescriptor",
+          "signature": "AssetDescriptor & { source: string }",
           "signatureTokens": [
             {
-              "text": "Asset",
+              "text": "AssetDescriptor",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": " & ",
@@ -57,7 +45,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "[RESOURCE_ASSET]",
+              "text": "source",
               "kind": "name"
             },
             {
@@ -65,7 +53,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "true",
+              "text": "string",
               "kind": "keyword"
             },
             {
@@ -89,11 +77,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/Asset.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+        "label": "src/assets/AssetDescriptor.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/Asset.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+  "sourcePath": "src/assets/AssetDescriptor.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
 }

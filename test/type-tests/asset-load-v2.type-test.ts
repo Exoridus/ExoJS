@@ -1,4 +1,4 @@
-import { type Application, Asset, AudioStream, type LoadingQueue, Music, type Scene, Sound, Texture, Video } from '@codexo/exojs';
+import { type Application, AudioStream, type LoadingQueue, Music, type Scene, Sound, Texture, Video } from '@codexo/exojs';
 
 declare const app: Application;
 declare const scene: Scene;
@@ -10,8 +10,17 @@ class Palette {
 export const single: LoadingQueue<Texture> = app.assets.load('hero.png');
 export const value: LoadingQueue<unknown> = app.assets.load('level.json');
 export const handle: LoadingQueue<Sound> = scene.assets.load(new Sound('click.wav'));
-export const typed: LoadingQueue<Palette> = scene.assets.load([Palette, 'sunset.palette']);
-export const descriptor: LoadingQueue<{ start: string }> = scene.assets.load(Asset.type<{ start: string }>('json', 'config.json'));
+export const typed: LoadingQueue<Palette> = scene.assets.load({ type: Palette, source: 'sunset.palette' });
+export const descriptor: LoadingQueue<{ start: string }> = scene.assets.load({
+  type: 'json',
+  source: 'config.json',
+  parse: (raw: unknown) => raw as { start: string },
+});
+export const parsedPeek: { start: string } | undefined = app.loader.peek({
+  type: 'json',
+  source: 'config.json',
+  parse: (raw: unknown) => raw as { start: string },
+});
 
 export const record: LoadingQueue<{
   hero: Texture;
@@ -25,10 +34,10 @@ export const record: LoadingQueue<{
   hero: 'hero.png',
   theme: new Sound('theme.ogg'),
   config: 'config.json',
-  intro: [Video, 'intro.mp4'],
-  music: [Music, 'music.ogg', { loadEvent: 'canplay' }],
-  radio: [AudioStream, 'https://radio.example/live', { reconnect: false }],
-  palette: [Palette, 'sunset.palette'],
+  intro: { type: Video, source: 'intro.mp4' },
+  music: { type: Music, source: 'music.ogg', loadEvent: 'canplay' },
+  radio: { type: AudioStream, source: 'https://radio.example/live', reconnect: false },
+  palette: { type: Palette, source: 'sunset.palette' },
 });
 
 export const tuple: LoadingQueue<[Texture, Sound, unknown]> = scene.assets.load(['a.png', new Sound('b.wav'), 'c.json']);
@@ -38,6 +47,8 @@ export const scoped: LoadingQueue<Texture> = scene.assets.createScope().load(new
 scene.assets.load('intro.mp4');
 // @ts-expect-error an unclaimed suffix inside a group is rejected as well
 scene.assets.load({ intro: 'intro.mp4' });
+// @ts-expect-error a load group cannot use `type` even when the value is an asset descriptor
+scene.assets.load({ type: { type: Texture, source: 'hero.png' }, theme: 'theme.ogg' });
 // @ts-expect-error a number is not an asset entry
 scene.assets.load([new Texture('a.png'), 42]);
 // @ts-expect-error a group's resolved values are not handles
@@ -48,4 +59,4 @@ export const dynamic: LoadingQueue<unknown> = scene.assets.load(dynamicPath);
 
 scene.assets.release('hero.png');
 scene.assets.release({ hero: 'hero.png', theme: new Sound('theme.ogg') });
-scene.assets.release([Palette, 'sunset.palette']);
+scene.assets.release({ type: Palette, source: 'sunset.palette' });

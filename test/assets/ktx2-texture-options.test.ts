@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 import { NormalMap } from '@codexo/exojs/lighting';
 import { describe, expect, test, vi } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { type TextureAssetOptions, TextureFactory } from '#assets/factories/TextureFactory';
 import { Loader } from '#assets/Loader';
@@ -38,7 +37,7 @@ describe('KTX2 texture options', () => {
     );
 
     try {
-      const rejected = Asset.type('texture', 'rgba8-linear.ktx2', { textureOptions: { flipY: true } });
+      const rejected = { type: 'texture', source: 'rgba8-linear.ktx2', textureOptions: { flipY: true } } as const;
 
       await expect(scope.load(rejected)).rejects.toThrow(/flipY cannot re-orient/);
 
@@ -46,7 +45,7 @@ describe('KTX2 texture options', () => {
         scope.release(rejected);
       }
 
-      const texture = await scope.load(Asset.type('texture', 'rgba8-linear.ktx2'));
+      const texture = await scope.load({ type: 'texture', source: 'rgba8-linear.ktx2' });
 
       expect(texture.colorSpace).toBe('linear-srgb');
       expect(texture.loadState).toBe('ready');
@@ -68,7 +67,7 @@ describe('KTX2 texture options', () => {
       const handle = loader.get('rgba8-linear.ktx2', { textureOptions: { flipY: true } });
 
       await expect(handle.loaded).rejects.toThrow(/flipY cannot re-orient/);
-      await expect(loader.load(Asset.type('texture', 'rgba8-linear.ktx2'))).rejects.toThrow(/flipY cannot re-orient/);
+      await expect(loader.load({ type: 'texture', source: 'rgba8-linear.ktx2' })).rejects.toThrow(/flipY cannot re-orient/);
       expect(handle.loadState).toBe('failed');
     } finally {
       loader.destroy();

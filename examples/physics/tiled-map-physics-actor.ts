@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   Color,
   FixedResolutionCanvasSizing,
   type RenderingContext,
@@ -36,7 +35,7 @@ class TiledMapPhysicsActorScene extends Scene {
 
   override async load(): Promise<void> {
     const [map, charactersTexture, spritesheetData] = await Promise.all([
-      this.loader.load(Asset.type('tileMap', assets.physicsRoomMap.source)),
+      this.loader.load({ type: 'tileMap', source: assets.physicsRoomMap.source }),
       this.loader.load(assets.platformerCharactersImage),
       this.loader.load(assets.platformerCharactersAtlas),
     ]);

@@ -1,6 +1,6 @@
 {
   "title": "ValidatedAssetLoadInput",
-  "description": "AssetLoadInput with every literal path checked against the registered suffixes.",
+  "description": "AssetLoadInput with every literal path and descriptor checked against what its type accepts.",
   "symbol": "ValidatedAssetLoadInput",
   "kind": "type",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "AssetLoadInput with every literal path checked against the registered suffixes."
+        "AssetLoadInput with every literal path and descriptor checked against what its type accepts."
       ],
       "importLine": "import { ValidatedAssetLoadInput } from '@codexo/exojs'",
       "sourceLink": null
