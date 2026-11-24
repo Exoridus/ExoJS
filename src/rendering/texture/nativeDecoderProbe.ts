@@ -5,8 +5,8 @@ import type { AnimatedImageMime } from './animatedImageMime';
  * decoder most often gets wrong: disposal to background (frame 1 is cleared
  * before frame 2), for APNG and WebP the "source" blend that replaces pixels
  * instead of blending them (frame 2 is half transparent white), and decoding
- * an earlier frame again, which playback does on every loop (frame 0 is opaque
- * blue and must not inherit frame 2).
+ * the first frame again after walking the sequence, which playback does on every
+ * loop (frame 0 is opaque blue and must not inherit frame 2).
  */
 const gifProbe =
   'R0lGODlhBAABAPAAAAAA/wAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQECgAAACwAAAAABAABAAACAoRRACH5BAgKAAAALAAAAAACAAEAgAD/AAAAAAICBAoAIfkEBAoAAAAsAgAAAAIAAQCAAAAA////AgJMCgA7';
@@ -65,6 +65,10 @@ const run = async (decoderClass: ProbeDecoderConstructor, type: AnimatedImageMim
 
       return context.getImageData(0, 0, 4, 1).data;
     };
+
+    // Decoded in playback order, because some engines only go wrong when a loop returns to frame 0 after walking the whole sequence.
+    await read(0);
+    await read(1);
 
     const last = await read(2);
     const first = await read(0);

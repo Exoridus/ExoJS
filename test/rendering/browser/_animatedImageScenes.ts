@@ -79,9 +79,16 @@ const expectPixelAt = (
     expectPixelNear(actual, expected, 4);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
+    const around = [
+      [4, 4],
+      [12, 12],
+      [28, 28],
+    ]
+      .map(([px, py]) => `(${px}, ${py}): [${gpu.pixel(px!, py!).join(', ')}]`)
+      .join(' ');
 
     throw new Error(
-      `step ${step} (${sourceOf(texture).decoderKind} decoder) at (${x}, ${y}): got [${actual.join(', ')}], expected [${expected.join(', ')}]: ${reason}`,
+      `step ${step} (${sourceOf(texture).decoderKind} decoder) at (${x}, ${y}): got [${actual.join(', ')}], expected [${expected.join(', ')}] (frame now ${around}): ${reason}`,
       { cause: error },
     );
   }
