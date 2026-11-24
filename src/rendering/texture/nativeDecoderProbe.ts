@@ -1,10 +1,12 @@
 import type { AnimatedImageMime } from './animatedImageMime';
 
 /**
- * Three-frame, 4x1 animations that exercise the two composition rules a native
+ * Three-frame, 4x1 animations that exercise the composition rules a native
  * decoder most often gets wrong: disposal to background (frame 1 is cleared
- * before frame 2) and, for APNG and WebP, the "source" blend that replaces
- * pixels instead of blending them (frame 2 is half transparent white).
+ * before frame 2), for APNG and WebP the "source" blend that replaces pixels
+ * instead of blending them (frame 2 is half transparent white), and decoding
+ * an earlier frame again, which playback does on every loop (frame 0 is opaque
+ * blue and must not inherit frame 2).
  */
 const gifProbe =
   'R0lGODlhBAABAPAAAAAA/wAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQECgAAACwAAAAABAABAAACAoRRACH5BAgKAAAALAAAAAACAAEAgAD/AAAAAAICBAoAIfkEBAoAAAAsAgAAAAIAAQCAAAAA////AgJMCgA7';
@@ -48,23 +50,34 @@ const run = async (decoderClass: ProbeDecoderConstructor, type: AnimatedImageMim
   try {
     await decoder.tracks.ready;
 
-    const { image } = await decoder.decode({ frameIndex: 2 });
-    const context = new OffscreenCanvas(4, 1).getContext('2d', { willReadFrequently: true });
+    const read = async (frameIndex: number): Promise<Uint8ClampedArray | null> => {
+      const { image } = await decoder.decode({ frameIndex });
+      const context = new OffscreenCanvas(4, 1).getContext('2d', { willReadFrequently: true });
 
-    if (context === null) {
+      if (context === null) {
+        image.close();
+
+        return null;
+      }
+
+      context.drawImage(image, 0, 0);
       image.close();
 
+      return context.getImageData(0, 0, 4, 1).data;
+    };
+
+    const last = await read(2);
+    const first = await read(0);
+
+    if (last === null || first === null) {
       return true;
     }
 
-    context.drawImage(image, 0, 0);
-    image.close();
+    const disposedToBackground = last[3]! < 16;
+    const blendedAsAuthored = !hasPartialAlpha(type) || (last[11]! > 100 && last[11]! < 160);
+    const restartsCleanly = first[2]! > 200 && first[3]! > 200;
 
-    const pixels = context.getImageData(0, 0, 4, 1).data;
-    const disposedToBackground = pixels[3]! < 16;
-    const blendedAsAuthored = !hasPartialAlpha(type) || (pixels[11]! > 100 && pixels[11]! < 160);
-
-    return disposedToBackground && blendedAsAuthored;
+    return disposedToBackground && blendedAsAuthored && restartsCleanly;
   } catch {
     return false;
   } finally {
