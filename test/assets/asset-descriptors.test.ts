@@ -1,11 +1,17 @@
+import { runInNewContext } from 'node:vm';
+
+import type { AssetDescriptor } from '#assets/AssetDescriptor';
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import { Assets } from '#assets/Assets';
 import { type AnyAssetType, type AssetRequest, AssetType } from '#assets/AssetType';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
+import { textureSeamlessAdapter } from '#assets/seamless';
 import { Json } from '#assets/tokens';
 import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
+
+import { testAssetType } from './test-asset-type';
 
 class Field {
   public disposed = false;
@@ -66,12 +72,10 @@ const createLoader = (...types: AnyAssetType[]): Loader => {
   return loader;
 };
 
-const claims = (loader: Loader, resource: object): number => {
-  const key = (loader as unknown as { _residency: { _getHandleKey(resource: object): string | undefined } })._residency._getHandleKey(
-    resource,
-  );
+const claims = (loader: Loader, descriptor: AssetDescriptor): number => {
+  const { resourceKey } = loader.identify(descriptor);
 
-  return loader.inspect().find(row => row.canonicalKey === key)?.claims ?? 0;
+  return loader.inspect().find(row => row.canonicalKey === resourceKey)?.claims ?? 0;
 };
 
 beforeEach(() => {
@@ -168,17 +172,40 @@ describe('descriptor sources', () => {
     const loader = createLoader(noise);
     const scope = loader.createScope();
 
-    const a = await scope.load({ type: noise, seed: 7 });
+    const descriptor = { type: noise, seed: 7 };
+    const a = await scope.load(descriptor);
     const b = await scope.load({ type: noise, seed: 7 });
     const c = await scope.load({ type: noise, seed: 8 });
 
     expect(b).toBe(a);
     expect(c).not.toBe(a);
-    expect(claims(loader, a)).toBe(1);
+    expect(claims(loader, descriptor)).toBe(1);
 
     scope.release({ type: noise, seed: 7 });
-    expect(claims(loader, a)).toBe(0);
+    expect(claims(loader, descriptor)).toBe(0);
     scope.destroy();
+    loader.destroy();
+  });
+
+  test('loading a released source-free key uses the new acquisition options', async () => {
+    class GeneratedType extends FieldType {
+      public override resourceIdentity(): string {
+        return 'generated';
+      }
+    }
+
+    const fields = new GeneratedType();
+    const loader = createLoader(fields);
+    const scope = loader.createScope();
+    const first = await scope.load({ type: fields, scale: 2 });
+
+    scope.release(first);
+
+    const second = await scope.load({ type: fields, scale: 4 });
+
+    expect(first.disposed).toBe(true);
+    expect(second.scale).toBe(4);
+    expect(fields.created).toHaveLength(2);
     loader.destroy();
   });
 
@@ -215,16 +242,17 @@ describe('direct resource lifecycle', () => {
     const first = loader.createScope();
     const second = loader.createScope();
     const samples = [5];
+    const descriptor = { type: fields, source: samples };
 
-    const a = await first.load({ type: fields, source: samples });
+    const a = await first.load(descriptor);
     const b = await second.load({ type: fields, source: samples });
 
     expect(b).toBe(a);
-    expect(claims(loader, a)).toBe(2);
+    expect(claims(loader, descriptor)).toBe(2);
 
     first.release({ type: fields, source: samples });
     expect(a.disposed).toBe(false);
-    expect(claims(loader, a)).toBe(1);
+    expect(claims(loader, descriptor)).toBe(1);
 
     second.destroy();
     expect(a.disposed).toBe(true);
@@ -256,6 +284,33 @@ describe('direct resource lifecycle', () => {
     loader.destroy();
   });
 
+  test('reclaiming a cancelled direct key uses the replacement options', async () => {
+    const late = new Field([], 2);
+    let finish!: (field: Field) => void;
+    const pending = new Promise<Field>(resolve => {
+      finish = resolve;
+    });
+    const type = testAssetType<undefined, Field, FieldOptions>({
+      id: 'test.cancelled-field',
+      resourceIdentity: () => 'field',
+      create: async (_source, { options }) => (options?.scale === 2 ? pending : new Field([], options?.scale ?? 1)),
+      dispose: field => {
+        field.disposed = true;
+      },
+    });
+    const loader = createLoader(type);
+    const abandoned = loader.load({ type, scale: 2 });
+
+    abandoned.cancel();
+    const replacement = loader.load({ type, scale: 4 });
+    finish(late);
+
+    await expect(abandoned).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(replacement).resolves.toMatchObject({ scale: 4, disposed: false });
+    expect(late.disposed).toBe(true);
+    loader.destroy();
+  });
+
   test('a plain-object direct resource is released as itself, not read as a group or descriptor', async () => {
     class RecordType extends AssetType<undefined, { readonly type: string; readonly width: number }, { readonly width: number }> {
       public readonly id = 'test.record';
@@ -268,14 +323,16 @@ describe('direct resource lifecycle', () => {
     const records = new RecordType();
     const loader = createLoader(records);
     const scope = loader.createScope();
-    const record = await scope.load({ type: records, width: 3 });
+    const descriptor = { type: records, width: 3 };
+    const record = await scope.load(descriptor);
 
-    expect(claims(loader, record)).toBe(1);
+    expect(claims(loader, descriptor)).toBe(1);
     expect(() => scope.release(record)).not.toThrow();
-    expect(claims(loader, record)).toBe(0);
+    expect(claims(loader, descriptor)).toBe(0);
 
     // Released again after eviction, it is still the resource - not a group of its fields.
-    const successor = await scope.load({ type: records, width: 3 });
+    const successor = { type: records, width: 3 };
+    await scope.load(successor);
 
     expect(() => scope.release(record)).not.toThrow();
     expect(claims(loader, successor)).toBe(1);
@@ -288,19 +345,96 @@ describe('direct resource lifecycle', () => {
     const loader = createLoader(fields);
     const scope = loader.createScope();
     const samples = [1];
+    const descriptor = { type: fields, source: samples };
 
-    const first = await scope.load({ type: fields, source: samples });
+    const first = await scope.load(descriptor);
 
     scope.release(first);
     expect(first.disposed).toBe(true);
 
-    const second = await scope.load({ type: fields, source: samples });
+    const second = await scope.load(descriptor);
 
     expect(second).not.toBe(first);
     expect(() => scope.release(first)).not.toThrow();
     expect(second.disposed).toBe(false);
-    expect(claims(loader, second)).toBe(1);
+    expect(claims(loader, descriptor)).toBe(1);
     scope.destroy();
+    loader.destroy();
+  });
+
+  test('a directly loaded callable can be released by each owner', async () => {
+    const dispose = vi.fn();
+    const type = testAssetType<undefined, () => number>({ id: 'test.callable', create: async () => () => 42, dispose });
+    const loader = createLoader(type);
+    const first = loader.createScope();
+    const second = loader.createScope();
+    const descriptor = { type };
+    const callable = await first.load(descriptor);
+
+    expect(typeof callable).toBe('function');
+    expect(await second.load(descriptor)).toBe(callable);
+    expect(loader.inspect()).toMatchObject([{ claims: 2 }]);
+
+    first.release(callable);
+    expect(loader.inspect()).toMatchObject([{ claims: 1 }]);
+    expect(dispose).not.toHaveBeenCalled();
+
+    second.release(callable);
+    second.release(callable);
+    expect(loader.inspect()).toHaveLength(0);
+    expect(dispose).toHaveBeenCalledExactlyOnceWith(callable);
+    loader.destroy();
+  });
+
+  test('releasing a shared callable follows the releasing scope across direct keys', async () => {
+    const callable = () => 42;
+    const type = testAssetType<undefined, () => number>({ id: 'test.shared-callable', create: async () => callable });
+    const loader = createLoader(type);
+    const first = loader.createScope();
+    const second = loader.createScope();
+    const firstDescriptor = { type };
+    const secondDescriptor = { type };
+
+    expect(await first.load(firstDescriptor)).toBe(callable);
+    expect(await second.load(secondDescriptor)).toBe(callable);
+    second.release(callable);
+    expect(loader.inspect()).toMatchObject([{ canonicalKey: loader.identify(firstDescriptor).resourceKey, claims: 1 }]);
+    first.release(callable);
+    expect(loader.inspect()).toHaveLength(0);
+
+    await second.load({ type });
+    await second.load({ type });
+    expect(loader.inspect()).toHaveLength(2);
+    second.release(callable);
+    expect(loader.inspect()).toHaveLength(0);
+    loader.destroy();
+  });
+
+  test('a direct resource with a seamless adapter never becomes a deferred handle', async () => {
+    const type = testAssetType<number, Texture>({
+      id: 'test.direct-texture',
+      leaf: textureSeamlessAdapter,
+      create: async width => {
+        const canvas = document.createElement('canvas');
+
+        canvas.width = width;
+
+        return new Texture(canvas);
+      },
+    });
+    const loader = createLoader(type);
+    const scope = loader.createScope();
+    const descriptor = { type, source: 8 };
+    const first = await scope.load(descriptor);
+
+    scope.release(first);
+
+    const second = await scope.load(descriptor);
+
+    expect(second).not.toBe(first);
+    expect(second).toBeInstanceOf(Texture);
+    scope.release(first);
+    expect(claims(loader, descriptor)).toBe(1);
     loader.destroy();
   });
 
@@ -344,6 +478,40 @@ describe('descriptor validation', () => {
     expect(() => loader.load({ type: Texture, source: 'a.png', parse: (raw: unknown) => raw } as never)).toThrow(
       /"parse" is a synchronous function for value asset types/,
     );
+    loader.destroy();
+  });
+
+  test.each(['resolve', 'reject'])('all descriptor reads reject an asynchronous parser that will %s', async outcome => {
+    const loader = createLoader();
+    const descriptor = {
+      type: 'json',
+      source: 'config.json',
+      parse: async () => {
+        if (outcome === 'reject') {
+          throw new Error('invalid value');
+        }
+
+        return 3;
+      },
+    } as const;
+    const contractError = /parse\(\) must be synchronous/;
+
+    await expect(loader.load(descriptor)).rejects.toThrow(contractError);
+    await expect(loader.get(descriptor).loaded).rejects.toThrow(contractError);
+    expect(() => loader.peek(descriptor)).toThrow(contractError);
+    expect(loader.peek('config.json')).toEqual({ hp: 3 });
+    loader.destroy();
+  });
+
+  test('a native promise from another realm rejects with the synchronous parser contract error', async () => {
+    const loader = createLoader();
+    const descriptor = {
+      type: 'json',
+      source: 'config.json',
+      parse: () => runInNewContext('Promise.reject(new Error("parser failed"))') as Promise<never>,
+    } as const;
+
+    await expect(loader.load(descriptor)).rejects.toThrow(/parse\(\) must be synchronous/);
     loader.destroy();
   });
 

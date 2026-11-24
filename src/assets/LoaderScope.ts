@@ -196,8 +196,9 @@ export class LoaderScope implements Destroyable {
    * a catalog leaf), an asset descriptor (`{ type: Video, source: 'intro.mp4' }`,
    * `{ type: paletteType, source: 'sunset.json' }`), or an array, tuple or named
    * object of those. A group resolves to the same shape with every entry
-   * replaced by its loaded value, and handles heal in place as well. An
-   * {@link Assets} catalog resolves to a new map of its finished values.
+   * replaced by its loaded value, and handles heal in place as well. Named
+   * groups reserve `type` for descriptors. An {@link Assets} catalog resolves
+   * to a new map of its finished values.
    *
    * The claims belong to this scope, also when a fetch or decode fails and
    * rejects the queue. Cancelling the queue withdraws only this load's pending
@@ -252,10 +253,12 @@ export class LoaderScope implements Destroyable {
    * Accepts anything {@link load} accepts - a path, a handle, a descriptor, or a
    * group of those - plus a whole {@link Assets} catalog, and a resource built
    * from a descriptor without a string source. Releasing something this scope
-   * never claimed is a no-op, and releasing twice is idempotent. A descriptor
-   * without a string source matches only the claim its own object (or its type's
-   * resource identity) made, so release such a resource by the resource itself
-   * when the descriptor is not kept.
+   * never claimed is a no-op, and releasing twice is idempotent. A resource
+   * loaded from a direct source can be released by its descriptor or by the
+   * returned object or function. Releasing the returned resource drops this
+   * scope's claims on every direct key that produced it. Use a descriptor to
+   * release a particular key. A source-free request with no custom resource
+   * identity requires the original descriptor when releasing by descriptor.
    *
    * Throws only for an object that has no claim identity at all - a resolved
    * resource loaded from a path, or an object this loader has never issued.

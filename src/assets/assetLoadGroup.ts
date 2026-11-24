@@ -14,7 +14,7 @@ export interface AssetLoadHandle {
  */
 export type AssetLoadEntry = string | AssetLoadHandle | CatalogLeafBrand<unknown> | AnyAssetConfig | AssetDescriptor;
 
-/** A single entry, or an array, tuple or named object of entries whose shape a load preserves. */
+/** A single entry, or an array, tuple or named object of entries whose shape a load preserves. Named groups reserve `type` for descriptors. */
 export type AssetLoadInput = AssetLoadEntry | readonly AssetLoadEntry[] | Readonly<Record<string, AssetLoadEntry>>;
 
 /** The value one {@link AssetLoadEntry} resolves to. */
@@ -58,4 +58,4 @@ type ValidatedEntry<E> = E extends string
 /** {@link AssetLoadInput} with every literal path and descriptor checked against what its type accepts. */
 export type ValidatedAssetLoadInput<Input> = Input extends AssetLoadEntry
   ? ValidatedEntry<Input>
-  : { readonly [Key in keyof Input]: ValidatedEntry<Input[Key]> };
+  : { readonly [Key in keyof Input]: Key extends 'type' ? never : ValidatedEntry<Input[Key]> };

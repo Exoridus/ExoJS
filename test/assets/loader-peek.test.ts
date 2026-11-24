@@ -102,6 +102,25 @@ describe('Loader.peek — pure in-memory lookup', () => {
     loader.destroy();
   });
 
+  test('applies a descriptor parser to the resident raw value without claiming it', async () => {
+    const loader = createCoreLoader();
+    const scope = loader.createScope();
+    const descriptor = { type: 'json', source: 'data/config.json', parse: vi.fn(raw => (raw === null ? 'empty' : 'other')) } as const;
+    mockFetchJson(null);
+
+    expect(loader.peek(descriptor)).toBeUndefined();
+    expect(descriptor.parse).not.toHaveBeenCalled();
+    await scope.load('data/config.json');
+
+    expect(loader.peek(descriptor)).toBe('empty');
+    expect(descriptor.parse).toHaveBeenCalledExactlyOnceWith(null);
+    expect(loader.peek('data/config.json')).toBeUndefined();
+    scope.release('data/config.json');
+    expect(loader.peek(descriptor)).toBeUndefined();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    loader.destroy();
+  });
+
   // Invalid usage fails loudly exactly as it does on get(); only "the key is
   // fine, nothing stored under it" is the undefined case.
   // Both of these are rejected at compile time by the overloads too - an

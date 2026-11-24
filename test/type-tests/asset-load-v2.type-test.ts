@@ -16,6 +16,11 @@ export const descriptor: LoadingQueue<{ start: string }> = scene.assets.load({
   source: 'config.json',
   parse: (raw: unknown) => raw as { start: string },
 });
+export const parsedPeek: { start: string } | undefined = app.loader.peek({
+  type: 'json',
+  source: 'config.json',
+  parse: (raw: unknown) => raw as { start: string },
+});
 
 export const record: LoadingQueue<{
   hero: Texture;
@@ -42,6 +47,8 @@ export const scoped: LoadingQueue<Texture> = scene.assets.createScope().load(new
 scene.assets.load('intro.mp4');
 // @ts-expect-error an unclaimed suffix inside a group is rejected as well
 scene.assets.load({ intro: 'intro.mp4' });
+// @ts-expect-error a load group cannot use `type` even when the value is an asset descriptor
+scene.assets.load({ type: { type: Texture, source: 'hero.png' }, theme: 'theme.ogg' });
 // @ts-expect-error a number is not an asset entry
 scene.assets.load([new Texture('a.png'), 42]);
 // @ts-expect-error a group's resolved values are not handles

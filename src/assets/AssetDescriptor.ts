@@ -162,8 +162,7 @@ export type ValidatedLeafDescriptor<D> =
     : ValidatedAssetDescriptor<D>;
 
 /**
- * Whether `value` is read as a descriptor: a plain object with an own `type`
- * that is a string, a constructor or an {@link AssetType}.
+ * Whether `value` is read as a descriptor: a plain object with an own `type`.
  * @internal
  */
 export const _isAssetDescriptor = (value: unknown): value is AssetDescriptor => {
@@ -173,13 +172,7 @@ export const _isAssetDescriptor = (value: unknown): value is AssetDescriptor => 
 
   const prototype: unknown = Object.getPrototypeOf(value);
 
-  if ((prototype !== Object.prototype && prototype !== null) || !Object.hasOwn(value, 'type')) {
-    return false;
-  }
-
-  const type: unknown = (value as { type: unknown }).type;
-
-  return typeof type === 'string' || typeof type === 'function' || type instanceof AssetType;
+  return (prototype === Object.prototype || prototype === null) && Object.hasOwn(value, 'type');
 };
 
 /** A descriptor taken apart into its type reference, its source and its option bag. @internal */

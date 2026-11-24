@@ -62,6 +62,7 @@ import { createLeaf } from './catalogLeaf';
 import { LoadBatch } from './LoadBatch';
 import { LoaderScope, type LoaderScopeOptions } from './LoaderScope';
 import { LoadingQueue } from './LoadingQueue';
+import { parseAssetValue } from './parseAssetValue';
 import { isAbortError } from './SharedAbort';
 
 /**
@@ -415,12 +416,17 @@ export class Loader {
     }
 
     return new Error(
-      `Loader: ${api} - no asset type ${_describeTypeReference(type)} is installed on this application.${
-        typeof type === 'string'
-          ? ' A plain object with an own "type" property is always read as an asset descriptor, so a load group cannot use "type" as a key.'
-          : ''
-      }`,
+      `Loader: ${api} - no asset type ${_describeTypeReference(type)} is installed on this application. ` +
+        'A plain object with an own "type" property is always read as an asset descriptor, so a load group cannot use "type" as a key.',
     );
+  }
+
+  private _descriptorParse({ installed: { type }, parse }: ResolvedDescriptor): ((raw: unknown) => unknown) | undefined {
+    if (parse !== undefined && (typeof parse !== 'function' || type.leaf !== 'ref')) {
+      throw new TypeError(`Loader: "parse" is a synchronous function for value asset types, which the "${type.id}" type is not.`);
+    }
+
+    return parse as ((raw: unknown) => unknown) | undefined;
   }
 
   /**
@@ -936,8 +942,8 @@ export class Loader {
    * a catalog leaf), an asset descriptor (`{ type: Video, source: 'intro.mp4' }`;
    * see {@link AssetDescriptor}), or an array, tuple or named object of those. A
    * group resolves to the same shape with every entry replaced by its loaded
-   * value; a handle heals in place as well. An {@link Assets} catalog resolves
-   * to a new map of its finished values.
+   * value; a handle heals in place as well. Named groups reserve `type` for
+   * descriptors. An {@link Assets} catalog resolves to a new map of its finished values.
    *
    * In-flight and resident assets are shared: loading the same request again
    * joins the existing fetch. Invalid input throws synchronously before any
@@ -1079,7 +1085,7 @@ export class Loader {
             start: () => {
               const loading = this._residency._loadSingle(canonical, unitOptions);
 
-              return parse === undefined ? loading : loading.then(parse);
+              return parse === undefined ? loading : loading.then(raw => parseAssetValue(raw, parse));
             },
           });
         } else {
@@ -1134,11 +1140,8 @@ export class Loader {
     }
 
     const assetType = resolved.installed.type;
-    const { options, parse } = resolved;
-
-    if (parse !== undefined && (typeof parse !== 'function' || assetType.leaf !== 'ref')) {
-      throw new TypeError(`Loader: "parse" is a synchronous function for value asset types, which the "${assetType.id}" type is not.`);
-    }
+    const { options } = resolved;
+    const parse = this._descriptorParse(resolved);
 
     if (background) {
       if (typeof resolved.source !== 'string') {
@@ -1169,7 +1172,7 @@ export class Loader {
       src: label,
       canonical,
       options,
-      ...(parse !== undefined && { parse: parse as (raw: unknown) => unknown }),
+      ...(parse !== undefined && { parse }),
     };
   }
 
@@ -1380,15 +1383,12 @@ export class Loader {
         throw new Error(`Loader: get() hands out a catalog leaf, and the "${assetType.id}" type has none - load it with load() instead.`);
       }
 
-      if (resolved.parse !== undefined && (typeof resolved.parse !== 'function' || assetType.leaf !== 'ref')) {
-        throw new TypeError(`Loader: "parse" is a synchronous function for value asset types, which the "${assetType.id}" type is not.`);
-      }
-
+      const parse = this._descriptorParse(resolved);
       const leaf = createLeaf(
         assetType.leaf as AssetLeaf<unknown>,
         assetType.id,
         resolved.source,
-        resolved.parse === undefined ? resolved.options : { ...resolved.options, parse: resolved.parse },
+        parse === undefined ? resolved.options : { ...resolved.options, parse },
       );
       this._adopt(leaf, claimer);
 
@@ -1471,7 +1471,11 @@ export class Loader {
    * entry reports `undefined` here and is indistinguishable from "not stored".
    */
   public peek<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): ResourceForKind<KindByPath<S>> | undefined;
-  /** Pure in-memory lookup from an asset descriptor - see the path overload. */
+  /**
+   * Looks up a resident resource without fetching or claiming it. A descriptor's
+   * `parse` runs synchronously on the stored value whenever the resource is resident.
+   * A parser error propagates to the caller.
+   */
   public peek<const D extends AssetDescriptor>(descriptor: D & ValidatedAssetDescriptor<D>): AssetDescriptorResource<D> | undefined;
   public peek(input: string | object): unknown {
     let ctor: AssetConstructor;
@@ -1480,11 +1484,19 @@ export class Loader {
 
     if (_isAssetDescriptor(input)) {
       const descriptor = input;
+      const resolved = this._requireDescriptor(descriptor, 'peek()');
+      const parse = this._descriptorParse(resolved);
       // Identity-relevant options are part of the canonical key, so a descriptor
       // carrying them must peek the key it would actually load.
-      const { key } = this._canonicalizeDescriptor(this._requireDescriptor(descriptor, 'peek()'), descriptor);
+      const { key } = this._canonicalizeDescriptor(resolved, descriptor);
 
-      return this._residency._hasStored(key) ? (this._residency._peekResource(key) ?? undefined) : undefined;
+      if (!this._residency._hasStored(key)) {
+        return undefined;
+      }
+
+      const raw = this._residency._peekResource(key);
+
+      return parse === undefined ? (raw ?? undefined) : parseAssetValue(raw, parse);
     }
 
     if (typeof input === 'string') {
@@ -1501,19 +1513,15 @@ export class Loader {
 
     const { key } = this._canonicalize(ctor, source, options);
 
-    return this._residency._hasStored(key) ? (this._residency._peekResource(key) ?? undefined) : undefined;
+    return this._residency._peekResource(key) ?? undefined;
   }
 
   /**
    * Backs {@link LoaderScope.release}: resolve every accepted release form to a
    * canonical key and drop `claimer`'s claim on it.
    *
-   * The handle form resolves through an internal handle → key map populated only
-   * for adopted seamless handles and value-refs. A materialized-but-never-adopted
-   * catalog leaf is recognized by its meta stamp and stays an idempotent no-op,
-   * as does a handle this loader has EVER issued - that check is deliberately
-   * independent of current claim state, so the same object never throws or not
-   * depending on unrelated internal teardown ordering.
+   * A never-adopted catalog leaf and a previously issued handle or direct
+   * resource whose key has been removed are both safe to release again.
    * @internal
    */
   public _releaseFrom(claimer: LoaderScope, handleOrType: unknown): void {
@@ -1525,29 +1533,37 @@ export class Loader {
       return;
     }
 
-    if (typeof handleOrType !== 'object' || handleOrType === null) {
+    if ((typeof handleOrType !== 'object' && typeof handleOrType !== 'function') || handleOrType === null) {
       throw new TypeError(
         `LoaderScope.release(): ${String(handleOrType)} has no claim identity. Release a path, a handle, a descriptor or a catalog instead.`,
       );
     }
 
-    // A resource built from a direct source is its own claim identity, and may
-    // itself be a plain object or array: it must not be read as a group.
-    const directKey = this._residency._getHandleKey(handleOrType);
+    // A directly loaded record or array must be released as a resource before
+    // attempting to interpret it as a group.
+    const key = this._residency._getHandleKey(handleOrType);
+    const directKeys = this._residency._getDirectKeys(handleOrType, claimer);
 
-    if (directKey !== undefined) {
-      this._release(directKey, claimer);
+    if (key !== undefined) {
+      this._release(key, claimer);
+    }
+
+    if (directKeys !== undefined) {
+      for (const directKey of directKeys) {
+        // A disposer may release and restart another direct claim synchronously.
+        if (this._residency._peekResource(directKey) === handleOrType) {
+          this._release(directKey, claimer);
+        }
+      }
 
       return;
     }
 
-    // An issued handle or direct resource whose key is gone (an evicted direct
-    // resource, possibly rebuilt since) is a no-op, never a group to walk.
-    if (this._residency._wasEverRegisteredHandle(handleOrType)) {
+    if (key !== undefined || this._residency._wasEverRegisteredHandle(handleOrType)) {
       return;
     }
 
-    if (this._releaseGroup(claimer, handleOrType)) {
+    if (typeof handleOrType === 'object' && this._releaseGroup(claimer, handleOrType)) {
       return;
     }
 
@@ -1561,7 +1577,7 @@ export class Loader {
       return;
     }
 
-    if (_readMeta(handleOrType) === undefined && !this._residency._wasEverRegisteredHandle(handleOrType)) {
+    if (_readMeta(handleOrType) === undefined) {
       throw new Error('LoaderScope.release(): this object has no claim identity. Release its descriptor, catalog leaf or catalog instead.');
     }
   }
@@ -1601,8 +1617,7 @@ export class Loader {
       return false;
     }
 
-    // Match load(): named records may use the alias "type" and enumerable
-    // symbol keys. Object.values silently drops symbols, leaking their claims.
+    // Object.values silently drops symbol keys, leaking their claims.
     const record = input as Record<string | symbol, unknown>;
 
     for (const key of Reflect.ownKeys(record)) {
@@ -1684,7 +1699,7 @@ export class Loader {
    * @internal
    */
   public _peekResource(type: AssetConstructor, source: string, options?: unknown): unknown {
-    return this._residency._peekResource(this._canonicalize(type, source, options).key);
+    return this._residency._peekResource(this._canonicalize(type, source, options).key) ?? null;
   }
 
   /** Give a serialized sampler a handle of its own, using only a resident payload. @internal */

@@ -1,5 +1,7 @@
 import { LoadState, type LoadStateValue } from '#core/LoadState';
 
+import { parseAssetValue } from './parseAssetValue';
+
 /**
  * Deferred handle for value assets (parsed JSON, text, CSV rows, ...), returned
  * by `loader.get({ type: 'json', source: src })` / a bare value path and friends. Values cannot heal in place the way
@@ -71,13 +73,7 @@ export class AssetRef<T> {
     let value: T;
 
     try {
-      const parsed = this._parse ? this._parse(raw) : raw;
-
-      if (typeof (parsed as { then?: unknown } | null)?.then === 'function') {
-        throw new Error('Asset parse() must be synchronous. Move asynchronous work into the asset handler load phase.');
-      }
-
-      value = parsed as T;
+      value = parseAssetValue(raw, this._parse) as T;
     } catch (error) {
       this._fail(error instanceof Error ? error : new Error(String(error)));
 

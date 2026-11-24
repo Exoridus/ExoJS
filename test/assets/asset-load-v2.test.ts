@@ -266,6 +266,21 @@ describe('asset owners', () => {
     loader.destroy();
   });
 
+  test('type is reserved even when its value is an asset entry rather than a type reference', async () => {
+    const loader = createLoader();
+    const scope = loader.createScope();
+    const group = { type: { type: Texture, source: 'hero.png' }, data: 'data.png' } as const;
+
+    expect(() => scope.load(group as never)).toThrow(/cannot use "type" as a key/);
+    expect(loader.inspect()).toHaveLength(0);
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    await scope.load('data.png');
+    scope.release(group);
+    expect(claimsOf(loader, 'data.png')).toBe(1);
+    loader.destroy();
+  });
+
   test('direct object request passes a structured source and extra properties to a custom decoder without fetching', async () => {
     class Generated {
       public constructor(public readonly value: number) {}
