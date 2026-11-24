@@ -1286,6 +1286,17 @@ const exampleLifecycleChecks = async (browser: Browser, origin: string, base: st
 
           const response = await page.request.get(`${origin}${base}/examples/${example}.js`);
           assert(response.ok(), `Cannot load served example ${example}: HTTP ${response.status()}`);
+
+          if (example === 'showcase/boss-intro-cinematic') {
+            // The engine can consume captured keys before later window listeners run.
+            await page.evaluate(`(() => {
+              globalThis.__featuredKeys = 0;
+              addEventListener('keydown', event => {
+                if (event.isTrusted && event.code === 'KeyR') globalThis.__featuredKeys++;
+              }, { capture: true });
+            })()`);
+          }
+
           const source = (await response.text()).replace(
             '\nawait startExample',
             '\nglobalThis.__acceptanceApp = app; globalThis.__featuredErrors = []; app.onError.add(error => globalThis.__featuredErrors.push(error.message));\nawait startExample',
@@ -1534,21 +1545,22 @@ const exampleLifecycleChecks = async (browser: Browser, origin: string, base: st
             await readable('replay');
             assert((await prompt()).text.toLowerCase().includes('replay'), 'Finished sequence must explain replay');
             await shot('finished');
-            // Report what the scene saw when a replay does not start, not only a timeout.
-            await page.evaluate(
-              "globalThis.__featuredKeys = 0; addEventListener('keydown', () => globalThis.__featuredKeys++, { capture: true })",
-            );
             const sequence = () =>
               page.evaluate<Record<string, unknown>>(`(() => {
                 const app = globalThis.__acceptanceApp, scene = app.scenes.currentScene;
                 return { finished: scene.finished, started: scene.started, state: scene.state, locked: app.audio.locked,
                   keys: globalThis.__featuredKeys, focus: document.activeElement?.tagName, pageFocus: document.hasFocus(), errors: globalThis.__featuredErrors };
               })()`);
-            // Restore page focus before synthesizing keys: after a touch tap,
-            // headless Chromium on Linux can otherwise deliver none to the document.
             await page.bringToFront();
-            await page.keyboard.press('r', { delay: 50 });
-            await waitFor(sequence, value => !value.finished, 'keyboard replay to restart the sequence', 30_000);
+            await page.keyboard.down('r');
+
+            try {
+              const restarted = await waitFor(sequence, value => !value.finished, 'keyboard replay to restart on keydown', 30_000);
+              assert(restarted.keys === 1, 'Replay must follow one trusted KeyR event');
+            } finally {
+              await page.keyboard.up('r');
+            }
+
             await waitFor(sequence, value => Boolean(value.finished), 'keyboard replay to finish', 30_000);
             await frames();
             await readable('keyboard replay');
