@@ -1,0 +1,99 @@
+import { ImageSequenceSource } from './ImageSequenceSource';
+import { Texture } from './Texture';
+import type { TextureOptions } from './TextureOptions';
+
+/**
+ * A path-backed texture with explicit playback controls for GIF, APNG and
+ * animated WebP. A plain Texture(path) also plays these formats automatically;
+ * use this class only when the caller needs pause, rate or loop control.
+ *
+ * Like Texture, the constructor yields an idle handle. Attach it to a scene
+ * or pass it to scene.assets.load(...) to claim its source.
+ */
+export class AnimatedTexture extends Texture {
+  private _requestedPlaying = true;
+  private _requestedRate = 1;
+  private _requestedLoop = true;
+
+  public constructor(path: string, options?: Partial<TextureOptions>) {
+    super(path, options);
+  }
+
+  private get _sequence(): ImageSequenceSource | null {
+    const source = this._getFrameSource();
+
+    return source instanceof ImageSequenceSource ? source : null;
+  }
+
+  /** Whether the shared animation is currently advancing. `false` before it has loaded. */
+  public get playing(): boolean {
+    return this._sequence?.playing ?? false;
+  }
+
+  /**
+   * Resumes playback, restarting from the first frame when a non-looping animation had finished.
+   * Playback state belongs to the loaded animation: every handle sharing the same loaded asset
+   * advances, pauses and changes rate together, while separately loaded assets are independent.
+   */
+  public play(): this {
+    this._requestedPlaying = true;
+    this._sequence?.play();
+
+    return this;
+  }
+
+  /** Freezes the animation on its current frame; resuming continues the unplayed part of that frame. */
+  public pause(): this {
+    this._requestedPlaying = false;
+    this._sequence?.pause();
+
+    return this;
+  }
+
+  /** Speed multiplier applied to every authored frame duration. Must be positive and finite. */
+  public get playbackRate(): number {
+    return this._requestedRate;
+  }
+
+  public set playbackRate(value: number) {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new RangeError('AnimatedTexture playbackRate must be positive and finite.');
+    }
+
+    this._requestedRate = value;
+
+    if (this._sequence !== null) {
+      this._sequence.playbackRate = value;
+    }
+  }
+
+  /** `true` (default) repeats as often as the file authors; `false` plays the sequence once. */
+  public get loop(): boolean {
+    return this._requestedLoop;
+  }
+
+  public set loop(value: boolean) {
+    this._requestedLoop = value;
+
+    if (this._sequence !== null) {
+      this._sequence.loop = value;
+    }
+  }
+
+  /** Ensure playback options set before loading are applied to the resident animation. @internal */
+  public override _copyPayloadFrom(donor: Texture): this {
+    super._copyPayloadFrom(donor);
+    const sequence = this._sequence;
+
+    if (sequence !== null) {
+      sequence.playbackRate = this._requestedRate;
+      sequence.loop = this._requestedLoop;
+
+      if (!this._requestedPlaying) {
+        sequence.pause();
+      }
+    }
+
+    return this;
+  }
+}

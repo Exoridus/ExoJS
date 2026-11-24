@@ -53,6 +53,13 @@ export class Sprite extends Drawable {
   declare private _claimedScope: LoaderScope | null | undefined;
   declare private _claimedAsset: object | null | undefined;
   private _textureClaimRevision = 0;
+  private readonly _onDynamicTextureUpdate = (texture: Texture): void => {
+    if (texture._getFrameSource() !== null && !this.destroyed) {
+      // A retained subtree can skip collecting this sprite entirely. Its
+      // texture's new pixels must therefore dirty the node proactively.
+      this.invalidateContent();
+    }
+  };
   private _textureFrame: Rectangle = new Rectangle();
   private _frameResolution = 1;
   /**
@@ -310,8 +317,18 @@ export class Sprite extends Drawable {
     );
 
     if (this._texture !== texture) {
+      const previous = this._texture;
+
       if (!this._syncTextureClaim(this.parent?._getAssetScope() ?? null, texture, true)) {
         return this;
+      }
+
+      if (previous instanceof Texture) {
+        previous._removeUpdateListener(this._onDynamicTextureUpdate);
+      }
+
+      if (texture instanceof Texture) {
+        texture._addUpdateListener(this._onDynamicTextureUpdate);
       }
 
       if (texture !== null) {
@@ -659,6 +676,11 @@ export class Sprite extends Drawable {
 
   public override destroy(): void {
     this._textureClaimRevision++;
+
+    if (this._texture instanceof Texture) {
+      this._texture._removeUpdateListener(this._onDynamicTextureUpdate);
+    }
+
     super.destroy();
 
     if (this._normals !== null) {
