@@ -1,14 +1,13 @@
 import {
   AnimatedSprite,
   Application,
-  Asset,
-  type AudioStream,
   BitmapText,
   type BmFont,
   Color,
   Graphics,
   type LoaderScope,
   ManualCanvasSizing,
+  type Music,
   type Rectangle,
   type RenderingContext,
   type RenderNode,
@@ -264,7 +263,7 @@ class AssetBrowserScene extends Scene {
     // The package's manifest carries byte sizes and media metadata. It is
     // optional here: without it the inspector only shows what loading tells.
     try {
-      const manifest = await this.loader.load(Asset.type<DemoManifest>('json', MANIFEST_URL));
+      const manifest = await this.loader.load({ type: 'json', source: MANIFEST_URL, parse: (raw: unknown) => raw as DemoManifest });
 
       this.manifest = new Map(manifest.entries.map(entry => [entry.key, entry]));
     } catch (error) {
@@ -1061,7 +1060,7 @@ const openTexture = async ({ scene, item, scope }: PreviewContext): Promise<Prev
   const svg = descriptor.type === 'svg';
   // An SVG loads as an image element; a texture over it is this preview's to destroy.
   const texture = svg
-    ? new Texture(await scope.load(Asset.type('svg', descriptor.source, { width: 150, height: 150 })))
+    ? new Texture(await scope.load({ type: 'svg', source: descriptor.source, width: 150, height: 150 }))
     : await scope.load(descriptor as typeof assets.ship);
   const sprite = new Sprite(texture);
   const backdrop = checkerboard(texture.width, texture.height);
@@ -1303,8 +1302,8 @@ const openMap = async ({ scene, item, scope }: PreviewContext): Promise<Preview>
   const ldtk = item.kind === 'ldtk';
   // Tileset images resolve relative to the map file, which is why the map
   // loads from the catalog's absolute URL through the format's own type.
-  const world = ldtk ? await scope.load(Asset.type('ldtkMap', source)) : null;
-  const levels: readonly TileMap[] = world ? world.levels : [await scope.load(Asset.type('tileMap', source))];
+  const world = ldtk ? await scope.load({ type: 'ldtkMap', source }) : null;
+  const levels: readonly TileMap[] = world ? world.levels : [await scope.load({ type: 'tileMap', source })];
   const state = { level: 0, objects: true, zoom: 1, layers: new Map<string, boolean>() };
   const objects = new Graphics();
   let node: TileMapNode | null = null;
@@ -1421,7 +1420,9 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
   const spriteTable = demoAssetCategories[item.key] === 'soundSprites' ? descriptor.source.replace(/\.[a-z0-9]+$/, '.json') : null;
   const [playable, table] = await Promise.all([
     music ? scope.load(descriptor as typeof assets.musicAtmosphericSynth) : scope.load(descriptor as typeof assets.soundUiClick),
-    spriteTable ? scope.load(Asset.type<Record<string, { start: number; end: number }>>('json', spriteTable)) : Promise.resolve(null),
+    spriteTable
+      ? scope.load({ type: 'json', source: spriteTable, parse: (raw: unknown) => raw as Record<string, { start: number; end: number }> })
+      : Promise.resolve(null),
   ]);
   const clips = table ? Object.keys(table) : [];
   const audio = scene.app.audio;
@@ -1562,7 +1563,7 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
   drawWaveform();
   drawLive(null);
 
-  const target = (): Sound | AudioStream => (clips.length > 0 ? (playable as Sound).sprite(state.clip) : playable);
+  const target = (): Sound | Music => (clips.length > 0 ? (playable as Sound).sprite(state.clip) : playable);
   const pausable = (candidate: Voice | null): (Voice & { paused: boolean; pause(): void; resume(): void }) | null =>
     candidate && 'pause' in candidate && 'resume' in candidate
       ? (candidate as Voice & { paused: boolean; pause(): void; resume(): void })
@@ -2025,22 +2026,14 @@ await app.start(PreviewScene);
 const textureSnippet = (item: BrowserItem, state: { zoom: number; nearest: boolean; width: number; height: number }): string => {
   const svg = assets[item.key].type === 'svg';
   const scale = round(state.zoom);
-  const names = [
-    'Application',
-    'Scene',
-    'Sprite',
-    ...(svg ? ['Asset', 'Texture'] : []),
-    ...(state.nearest ? (svg ? ['ScaleModes'] : ['Asset', 'ScaleModes']) : []),
-  ].sort();
+  const names = ['Application', 'Scene', 'Sprite', ...(svg ? ['Texture'] : []), ...(state.nearest ? ['ScaleModes'] : [])].sort();
   const load = svg
     ? `    // An SVG loads as an image; the texture over it is yours to destroy.
-    const image = await this.loader.load(Asset.type('svg', assets.${item.key}.source, { width: ${state.width}, height: ${state.height} }));
+    const image = await this.loader.load({ ...assets.${item.key}, width: ${state.width}, height: ${state.height} });
     const texture = new Texture(image${state.nearest ? ', { scaleMode: ScaleModes.Nearest }' : ''});`
     : state.nearest
       ? `    // Sampling is part of the texture handle, chosen when it is loaded.
-    const texture = await this.loader.load(
-      Asset.type('texture', assets.${item.key}.source, { textureOptions: { scaleMode: ScaleModes.Nearest } }),
-    );`
+    const texture = await this.loader.load({ ...assets.${item.key}, textureOptions: { scaleMode: ScaleModes.Nearest } });`
       : `    const texture = await this.loader.load(assets.${item.key});`;
 
   return program(
@@ -2083,13 +2076,13 @@ const mapSnippet = (item: BrowserItem, state: { level: string; zoom: number; ldt
   state.ldtk
     ? program(
         [
-          "import { Application, Asset, Scene } from '@codexo/exojs';",
+          "import { Application, Scene } from '@codexo/exojs';",
           "import { TileMapNode } from '@codexo/exojs/tilemap';",
           "import { ldtkExtension } from '@codexo/exojs-ldtk';",
         ],
         `  override async load(): Promise<void> {
     // Tileset paths resolve against the world's URL, so load it from the catalog's absolute source.
-    const world = await this.loader.load(Asset.type('ldtkMap', assets.${item.key}.source));
+    const world = await this.loader.load({ type: 'ldtkMap', source: assets.${item.key}.source });
     const level = world.getLevelByName(${JSON.stringify(state.level)}) ?? world.levels[0]!;
 
     this.addChild(new TileMapNode(level).setScale(${round(state.zoom)}));
@@ -2098,13 +2091,13 @@ const mapSnippet = (item: BrowserItem, state: { level: string; zoom: number; ldt
       )
     : program(
         [
-          "import { Application, Asset, Scene } from '@codexo/exojs';",
+          "import { Application, Scene } from '@codexo/exojs';",
           "import { TileMapNode } from '@codexo/exojs/tilemap';",
           "import { tiledExtension } from '@codexo/exojs-tiled';",
         ],
         `  override async load(): Promise<void> {
     // Tileset images resolve against the map's URL, so load it from the catalog's absolute source.
-    const map = await this.loader.load(Asset.type('tileMap', assets.${item.key}.source));
+    const map = await this.loader.load({ type: 'tileMap', source: assets.${item.key}.source });
 
     this.addChild(new TileMapNode(map).setScale(${round(state.zoom)}));
   }`,

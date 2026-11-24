@@ -1,0 +1,606 @@
+import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
+import type { AudioStreamVoice } from '#audio/AudioStreamVoice';
+import { AudioSystem } from '#audio/AudioSystem';
+import { Music } from '#audio/Music';
+
+import { frameDelta } from '../support/frame-delta';
+import { mutable } from '../support/mutable';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const createAudioElementStub = (): HTMLAudioElement => {
+  const el = document.createElement('audio');
+  Object.defineProperty(el, 'duration', { configurable: true, value: 30 });
+  Object.defineProperty(el, 'currentTime', { configurable: true, writable: true, value: 0 });
+  Object.defineProperty(el, 'loop', { configurable: true, writable: true, value: false });
+  Object.defineProperty(el, 'playbackRate', { configurable: true, writable: true, value: 1 });
+  Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: true });
+
+  return el;
+};
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('Music', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test('constructor applies default playback options', () => {
+    const stream = new Music(createAudioElementStub(), { volume: 0.5, loop: true, playbackRate: 1.5 });
+    expect(stream.volume).toBe(0.5);
+    expect(stream.loop).toBe(true);
+    expect(stream.playbackRate).toBe(1.5);
+    stream.destroy();
+  });
+
+  test('volume default is clamped into [0, 1]', () => {
+    const stream = new Music(createAudioElementStub(), { volume: 5 });
+    expect(stream.volume).toBe(1);
+    stream.destroy();
+  });
+
+  test('play() seeds the element loop/rate from the descriptor and starts playback', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const playSpy = vi.spyOn(el, 'play');
+    const stream = new Music(el, { loop: true, playbackRate: 1.25 });
+
+    system.play(stream);
+
+    expect(el.loop).toBe(true);
+    expect(el.playbackRate).toBe(1.25);
+    expect(playSpy).toHaveBeenCalled();
+
+    stream.destroy();
+  });
+
+  test('a play() rejection other than AbortError ends the voice with one warning', async () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    vi.spyOn(el, 'play').mockRejectedValue(new DOMException('x', 'NotSupportedError'));
+
+    const voice = system.play(new Music(el)) as AudioStreamVoice;
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(voice.ended).toBe(true);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  test('an AbortError play() rejection leaves the voice running', async () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+
+    vi.spyOn(el, 'play').mockRejectedValue(new DOMException('x', 'AbortError'));
+
+    const voice = system.play(new Music(el)) as AudioStreamVoice;
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(voice.ended).toBe(false);
+  });
+
+  test('voice.pause()/resume() drive the underlying element', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    const pauseSpy = vi.spyOn(el, 'pause');
+    const playSpy = vi.spyOn(el, 'play');
+
+    voice.pause();
+    expect(pauseSpy).toHaveBeenCalledTimes(1);
+
+    voice.resume();
+    expect(playSpy).toHaveBeenCalledTimes(1);
+
+    stream.destroy();
+  });
+
+  test('voice.seek() / voice.time set the element currentTime', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    voice.seek(12);
+    expect(el.currentTime).toBe(12);
+
+    voice.time = 7;
+    expect(el.currentTime).toBe(7);
+
+    expect(voice.duration).toBe(30);
+
+    stream.destroy();
+  });
+
+  test('voice.loop reflects the element loop flag', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    voice.loop = true;
+    expect(el.loop).toBe(true);
+    expect(voice.loop).toBe(true);
+
+    stream.destroy();
+  });
+
+  test('voice.detune is stored but inert (HTMLMediaElement has no detune)', () => {
+    const system = new AudioSystem();
+    const stream = new Music(createAudioElementStub());
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    voice.detune = 600;
+    expect(voice.detune).toBe(600);
+
+    stream.destroy();
+  });
+
+  test('setting voice.position spatializes the stream (creates a PannerNode)', () => {
+    const system = new AudioSystem();
+    const ctx = getAudioContext();
+    const pannerSpy = vi.spyOn(ctx, 'createPanner');
+    const stream = new Music(createAudioElementStub());
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    voice.position = { x: 5, y: 6 };
+    expect(pannerSpy).toHaveBeenCalledTimes(1);
+    expect(voice.position?.x).toBe(5);
+    expect(voice.position?.y).toBe(6);
+
+    pannerSpy.mockRestore();
+    stream.destroy();
+  });
+
+  test('a spatialized stream voice is ticked by the system', () => {
+    const system = new AudioSystem();
+    const stream = new Music(createAudioElementStub());
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    voice.position = { x: 1, y: 2 };
+    const tickSpy = vi.spyOn(voice, '_tickSpatial');
+    system.preFrame(frameDelta);
+    expect(tickSpy).toHaveBeenCalledTimes(1);
+
+    stream.destroy();
+  });
+
+  test('playing again stops the previous voice and reuses the element', () => {
+    const system = new AudioSystem();
+    const stream = new Music(createAudioElementStub());
+
+    const first = system.play(stream);
+    const second = system.play(stream);
+
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(false);
+
+    stream.destroy();
+  });
+
+  test('destroy() stops the active voice', () => {
+    const system = new AudioSystem();
+    const stream = new Music(createAudioElementStub());
+    const voice = system.play(stream);
+
+    stream.destroy();
+    expect(voice.ended).toBe(true);
+  });
+
+  test('the element "ended" event finishes the voice', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    expect(voice.ended).toBe(false);
+    el.dispatchEvent(new Event('ended'));
+    expect(voice.ended).toBe(true);
+
+    stream.destroy();
+  });
+
+  test('play({ time }) seeds the element currentTime from startTime', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+
+    system.play(stream, { time: 5 });
+
+    expect(el.currentTime).toBe(5);
+
+    stream.destroy();
+  });
+
+  test('voice.time getter reads the element currentTime', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    el.currentTime = 9;
+    expect(voice.time).toBe(9);
+
+    stream.destroy();
+  });
+
+  test('voice.paused reflects the element paused flag', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    mutable(el).paused = false;
+    expect(voice.paused).toBe(false);
+    mutable(el).paused = true;
+    expect(voice.paused).toBe(true);
+
+    stream.destroy();
+  });
+
+  test('voice.playbackRate getter/setter reads and clamps the element playbackRate', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    voice.playbackRate = 2;
+    expect(el.playbackRate).toBe(2);
+    expect(voice.playbackRate).toBe(2);
+
+    // Out-of-range values are clamped to [0.1, 20].
+    voice.playbackRate = 50;
+    expect(voice.playbackRate).toBe(20);
+
+    stream.destroy();
+  });
+
+  test('seek()/pause()/resume() are no-ops once the voice has ended', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    voice.stop();
+    expect(voice.ended).toBe(true);
+
+    const timeBefore = el.currentTime;
+    const pauseSpy = vi.spyOn(el, 'pause');
+    const playSpy = vi.spyOn(el, 'play');
+
+    voice.seek(3);
+    expect(el.currentTime).toBe(timeBefore);
+
+    voice.pause();
+    expect(pauseSpy).not.toHaveBeenCalled();
+
+    voice.resume();
+    expect(playSpy).not.toHaveBeenCalled();
+  });
+
+  test('the loop setter is a no-op once the voice has ended', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el, { loop: false });
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    voice.stop();
+    expect(voice.ended).toBe(true);
+
+    voice.loop = true;
+    expect(el.loop).toBe(false);
+
+    stream.destroy();
+  });
+
+  test('an ended voice cannot retarget the loop flag of the next voice on the same element', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el, { loop: false });
+    const first = system.play(stream) as AudioStreamVoice;
+
+    // Starting a second voice stops the first - both share one `<audio>` element.
+    const second = system.play(stream) as AudioStreamVoice;
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(false);
+
+    first.loop = true;
+
+    expect(el.loop).toBe(false);
+    expect(second.loop).toBe(false);
+
+    stream.destroy();
+  });
+
+  test('the playbackRate setter is a no-op once the voice has ended', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el, { playbackRate: 1 });
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    voice.stop();
+    expect(voice.ended).toBe(true);
+
+    voice.playbackRate = 3;
+
+    expect(el.playbackRate).toBe(1);
+    // The cached base rate is not updated either - reporting a rate the voice
+    // never applied would be a lie, and `seek`/`pause`/`resume`/`loop` are all
+    // whole-setter no-ops after the end too.
+    expect(voice.playbackRate).toBe(1);
+
+    stream.destroy();
+  });
+
+  test('an ended voice cannot retarget the playback rate of the next voice on the same element', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el, { playbackRate: 1 });
+    const first = system.play(stream) as AudioStreamVoice;
+
+    const second = system.play(stream) as AudioStreamVoice;
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(false);
+
+    first.playbackRate = 3;
+
+    expect(el.playbackRate).toBe(1);
+    expect(second.playbackRate).toBe(1);
+
+    stream.destroy();
+  });
+
+  test('construction while the audio context is not ready defers playback until unlock', () => {
+    const ctx = getAudioContext();
+    const originalState = ctx.state;
+    mutable(ctx).state = 'suspended';
+
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const playSpy = vi.spyOn(el, 'play');
+    const stream = new Music(el);
+
+    const voice = system.play(stream) as AudioStreamVoice;
+    expect(playSpy).not.toHaveBeenCalled();
+
+    mutable(ctx).state = originalState;
+    onAudioContextReady.dispatch(ctx);
+
+    expect(playSpy).toHaveBeenCalledTimes(1);
+
+    stream.destroy();
+  });
+
+  test('the unlock handler is a safe no-op if the voice already ended by the time the context becomes ready', () => {
+    const ctx = getAudioContext();
+    const originalState = ctx.state;
+    mutable(ctx).state = 'suspended';
+
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+
+    const holder: { voice?: AudioStreamVoice } = {};
+    // Registered before the voice's own unlock handler - Signal dispatches in
+    // registration order, so this stops the voice before its handler runs.
+    const stopFirst = (): void => holder.voice?.stop();
+    onAudioContextReady.add(stopFirst);
+
+    const voice = system.play(stream) as AudioStreamVoice;
+    holder.voice = voice;
+    const playSpy = vi.spyOn(el, 'play');
+
+    mutable(ctx).state = originalState;
+    onAudioContextReady.dispatch(ctx);
+
+    expect(voice.ended).toBe(true);
+    // The voice's own unlock handler saw `_ended === true` and skipped play().
+    expect(playSpy).not.toHaveBeenCalled();
+
+    onAudioContextReady.remove(stopFirst);
+    stream.destroy();
+  });
+
+  test('pause() while playback is deferred to unlock cancels the deferred start', () => {
+    const ctx = getAudioContext();
+    const originalState = ctx.state;
+    mutable(ctx).state = 'suspended';
+
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const playSpy = vi.spyOn(el, 'play');
+    const stream = new Music(el);
+
+    const voice = system.play(stream) as AudioStreamVoice;
+    voice.pause();
+
+    mutable(ctx).state = originalState;
+    onAudioContextReady.dispatch(ctx);
+
+    expect(playSpy).not.toHaveBeenCalled();
+    expect(voice.paused).toBe(true);
+    expect(voice.ended).toBe(false);
+
+    stream.destroy();
+  });
+
+  test('resume() while still locked defers the start to unlock instead of playing into a suspended context', () => {
+    const ctx = getAudioContext();
+    const originalState = ctx.state;
+    mutable(ctx).state = 'suspended';
+
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const playSpy = vi.spyOn(el, 'play');
+    const stream = new Music(el);
+
+    const voice = system.play(stream) as AudioStreamVoice;
+    voice.pause();
+    voice.resume();
+
+    expect(playSpy).not.toHaveBeenCalled();
+
+    mutable(ctx).state = originalState;
+    onAudioContextReady.dispatch(ctx);
+
+    expect(playSpy).toHaveBeenCalledTimes(1);
+
+    stream.destroy();
+  });
+
+  // ---- descriptor getters ----
+
+  test('audioElement getter exposes the backing HTMLMediaElement', () => {
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+    expect(stream.audioElement).toBe(el);
+    stream.destroy();
+  });
+
+  test('duration getter reflects the element duration', () => {
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+    expect(stream.duration).toBe(30);
+    stream.destroy();
+  });
+
+  // ---- constructor options.time seeds the element currentTime up front ----
+
+  test('constructor options.time seeds the element currentTime', () => {
+    const el = createAudioElementStub();
+    const stream = new Music(el, { time: 12 });
+    expect(el.currentTime).toBe(12);
+    stream.destroy();
+  });
+
+  test('constructor options.time clamps a negative value to 0', () => {
+    const el = createAudioElementStub();
+    const stream = new Music(el, { time: -5 });
+    expect(el.currentTime).toBe(0);
+    stream.destroy();
+  });
+
+  test('constructor without options.time leaves the element currentTime untouched', () => {
+    const el = createAudioElementStub();
+    new Music(el);
+    expect(el.currentTime).toBe(0);
+  });
+
+  // ---- volume/muted option resolution (per-play override chain) ----
+
+  test('options.muted overrides both options.volume and the descriptor volume to 0', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el, { volume: 1 });
+
+    const voice = system.play(stream, { muted: true, volume: 0.7 }) as AudioStreamVoice;
+
+    expect(voice.volume).toBe(0);
+
+    stream.destroy();
+  });
+
+  test('options.volume overrides the descriptor volume when not muted', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el, { volume: 1 });
+
+    const voice = system.play(stream, { volume: 0.4 }) as AudioStreamVoice;
+
+    expect(voice.volume).toBe(0.4);
+
+    stream.destroy();
+  });
+
+  test('descriptor muted=true zeroes the voice volume when no per-play override is given', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el, { volume: 1, muted: true });
+
+    const voice = system.play(stream) as AudioStreamVoice;
+
+    expect(voice.volume).toBe(0);
+
+    stream.destroy();
+  });
+
+  // `createVoice` always stops the previous voice (removing its 'ended'
+  // listener) before creating a new one, so through the public API the voice
+  // whose onEnd fires is always the one `_activeVoice` still points to. To
+  // observe the guard's *other* arm - where a stale voice's end must NOT clear
+  // a newer, already-superseding `_activeVoice` - this test bypasses that
+  // built-in "stop the previous voice" step by resetting the private
+  // `_activeVoice` slot directly between two `createVoice` calls, leaving the
+  // first voice's listener attached to the (shared) element alongside the
+  // second's.
+  test("a stale voice's own end does not clear a newer, already-active voice", () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+
+    const first = stream.createVoice(system, {}) as AudioStreamVoice;
+    (stream as unknown as { _activeVoice: unknown })._activeVoice = null;
+    const second = stream.createVoice(system, {}) as AudioStreamVoice;
+
+    // Both voices' 'ended' listeners are still attached to the shared element.
+    el.dispatchEvent(new Event('ended'));
+
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(true);
+    // The second (later) voice's own end correctly cleared `_activeVoice`.
+    expect((stream as unknown as { _activeVoice: unknown })._activeVoice).toBeNull();
+
+    stream.destroy();
+  });
+
+  // ---- destroyed streams are not reusable ----
+
+  test('destroyed is false while the stream is live and true after destroy()', () => {
+    const stream = new Music(createAudioElementStub());
+
+    expect(stream.destroyed).toBe(false);
+    stream.destroy();
+    expect(stream.destroyed).toBe(true);
+  });
+
+  test('playing a destroyed stream throws instead of re-sourcing the media element', () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const stream = new Music(el);
+    const ctx = getAudioContext();
+
+    system.play(stream);
+    stream.destroy();
+
+    const sourceSpy = vi.spyOn(ctx, 'createMediaElementSource');
+
+    expect(() => system.play(stream)).toThrow(/destroyed Music/);
+    // A second createMediaElementSource() on the same element is exactly the
+    // InvalidStateError this guard exists to prevent.
+    expect(sourceSpy).not.toHaveBeenCalled();
+
+    sourceSpy.mockRestore();
+  });
+
+  test('destroy() is idempotent', () => {
+    const system = new AudioSystem();
+    const stream = new Music(createAudioElementStub());
+    system.play(stream);
+
+    stream.destroy();
+    expect(() => stream.destroy()).not.toThrow();
+    expect(stream.destroyed).toBe(true);
+  });
+});

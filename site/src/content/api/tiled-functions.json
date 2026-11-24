@@ -430,7 +430,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Default immutable Tiled extension descriptor. Installs two asset types: - tileMapType - loader.load(tileMapType.asset('world.tmj')) returns a format-independent runtime TileMap (common case). - tiledSourceType - loader.load(tiledSourceType.asset('world.tmj')) returns the raw parsed TiledMap source model (advanced/diagnostic). Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the Tiled adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
+          "description": "Default immutable Tiled extension descriptor. Installs two asset types: - tileMapType - loader.load({ type: tileMapType, source: 'world.tmj' }) returns a format-independent runtime TileMap (common case). - tiledSourceType - loader.load({ type: tiledSourceType, source: 'world.tmj' }) returns the raw parsed TiledMap source model (advanced/diagnostic). Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the Tiled adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
         },
         {
           "name": "tiledSourceType",

@@ -1,15 +1,15 @@
 import type { Seconds } from '@codexo/exojs';
-import { Asset, type AudioStream, Scene } from '@codexo/exojs';
+import { type Music, Scene } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 
 // #region guide:visualizer-scene
 class VisualizerScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private analyser!: AudioAnalyser;
   private spectrum!: Uint8Array;
 
   async load() {
-    this.music = await this.loader.load(Asset.type('music', 'audio/track.ogg'));
+    this.music = await this.loader.load({ type: 'music', source: 'audio/track.ogg' });
   }
 
   init() {

@@ -1,6 +1,5 @@
 import type { MockInstance } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { SvgFactory } from '#assets/factories/SvgFactory';
 import { Loader } from '#assets/Loader';
@@ -59,7 +58,7 @@ describe('SvgFactory', () => {
   test('reacquiring a sized SVG after a cancelled preview retains the requested raster size', async () => {
     const loader = new Loader();
     materializeAssetTypes(loader, coreAssetTypes);
-    const descriptor = Asset.type('svg', 'icon-play.svg', { width: 150, height: 150 });
+    const descriptor = { type: 'svg', source: 'icon-play.svg', width: 150, height: 150 } as const;
     const markup = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3v18l15-9z"/></svg>';
     const fetchSpy = vi.fn<typeof fetch>().mockImplementation(async () => new Response(markup));
     vi.stubGlobal('fetch', fetchSpy);

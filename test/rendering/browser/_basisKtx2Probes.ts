@@ -1,6 +1,5 @@
 import { describe, expect, onTestFinished, test } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { selectBasisTarget } from '#assets/factories/basisTargets';
 import { TextureFactory } from '#assets/factories/TextureFactory';
 import { Loader } from '#assets/Loader';
@@ -40,7 +39,7 @@ export const defineBasisKtx2Probes = (backend: string, open: OpenColorProbeHarne
         h.destroy();
       });
       const start = performance.now();
-      const texture = await loader.load(Asset.type('texture', sourceUrl(name)));
+      const texture = await loader.load({ type: 'texture', source: sourceUrl(name) });
       const loadMs = performance.now() - start;
       const hasAlpha = name.includes('alpha'),
         srgb = name.includes('srgb');

@@ -15,8 +15,8 @@ import { choice, demoPanel, slider, startExample, toggle } from '@examples/runti
 
 // SDR clips only. Browser external video textures do not establish an HDR pipeline.
 const VIDEOS = [
-  { label: '4K 24 fps (MP4)', asset: assets.videoHighRes },
-  { label: '1080p 60 fps (WebM)', asset: assets.videoHighFps },
+  { label: '4K 24 fps (MP4)', asset: assets.videoHighRes, key: Keyboard.One },
+  { label: '1080p 60 fps (WebM)', asset: assets.videoHighFps, key: Keyboard.Two },
 ];
 const controls = {
   clip: choice(
@@ -80,15 +80,18 @@ class VideoDrawableScene extends Scene {
         }
       },
     });
-    this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('paused'));
-    this.inputs.onTrigger(Keyboard.R, () => {
+    // Commands respond on key press, including a held key. They do not need
+    // onTrigger's short release window, which is intended for tap gestures.
+    this.inputs.onStart(Keyboard.Space, () => this.panel.step('paused'));
+    this.inputs.onStart(Keyboard.R, () => {
       this.elapsed = 0;
       this.panel.set('paused', true);
       this.panel.set('seek', 0);
     });
-    this.inputs.onTrigger(Keyboard.One, () => this.panel.set('clip', VIDEOS[0].label));
-    this.inputs.onTrigger(Keyboard.Two, () => this.panel.set('clip', VIDEOS[1].label));
-    this.inputs.onTrigger(Keyboard.Three, () => this.panel.set('clip', VIDEOS[2].label));
+
+    for (const video of VIDEOS) {
+      this.inputs.onStart(video.key, () => this.panel.set('clip', video.label));
+    }
   }
 
   private readonly onError = (error: Error): void => {
@@ -122,7 +125,7 @@ class VideoDrawableScene extends Scene {
   }
 
   private async switchVideo(index: number): Promise<void> {
-    if (index < 0) {
+    if (!VIDEOS[index]) {
       return;
     }
 

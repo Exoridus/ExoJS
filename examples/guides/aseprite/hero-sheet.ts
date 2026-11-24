@@ -1,4 +1,4 @@
-import { type AnimatedSprite, Asset, Scene } from '@codexo/exojs';
+import { type AnimatedSprite, Scene } from '@codexo/exojs';
 import type { AsepriteSheet } from '@codexo/exojs-aseprite';
 
 class HeroScene extends Scene {
@@ -7,7 +7,7 @@ class HeroScene extends Scene {
 
   // #region guide:aseprite-scene
   override async load(): Promise<void> {
-    this.sheet = await this.loader.load(Asset.type('asepriteSheet', 'sprites/hero.json'));
+    this.sheet = await this.loader.load({ type: 'asepriteSheet', source: 'sprites/hero.json' });
   }
 
   override init(): void {

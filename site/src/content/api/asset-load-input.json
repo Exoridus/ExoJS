@@ -1,7 +1,7 @@
 {
-  "title": "AssetLoadGroup",
-  "description": "A single asset or a group whose array or object shape is preserved.",
-  "symbol": "AssetLoadGroup",
+  "title": "AssetLoadInput",
+  "description": "A single entry, or an array, tuple or named object of entries whose shape a load preserves. Named groups reserve `type` for descriptors.",
+  "symbol": "AssetLoadInput",
   "kind": "type",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A single asset or a group whose array or object shape is preserved."
+        "A single entry, or an array, tuple or named object of entries whose shape a load preserves. Named groups reserve `type` for descriptors."
       ],
-      "importLine": "import { AssetLoadGroup } from '@codexo/exojs'",
+      "importLine": "import { AssetLoadInput } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "AssetLoadGroup",
-          "signature": "AssetLoadHandle | Readonly<Record<string, AssetLoadHandle>> | readonly AssetLoadHandle[]",
+          "name": "AssetLoadInput",
+          "signature": "AssetLoadEntry | Readonly<Record<string, AssetLoadEntry>> | readonly AssetLoadEntry[]",
           "signatureTokens": [
             {
-              "text": "AssetLoadHandle",
+              "text": "AssetLoadEntry",
               "kind": "type"
             },
             {
@@ -65,7 +65,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetLoadHandle",
+              "text": "AssetLoadEntry",
               "kind": "type"
             },
             {
@@ -89,7 +89,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetLoadHandle",
+              "text": "AssetLoadEntry",
               "kind": "type"
             },
             {

@@ -25,9 +25,8 @@ Every texture sample is one of three things, and `colorSpace` says which:
 An image, canvas or video source is sRGB colour unless you say otherwise, so ordinary sprites, tilemaps and UI art need nothing extra. Anything that carries numbers rather than colour must be declared, because an sRGB view would hardware-decode the value before your shader or filter reads it. A loaded image declares it in its texture options:
 
 ```ts
-import { Asset } from '@codexo/exojs';
 
-export const brickNormals = Asset.type('texture', 'normals/brick.png', { textureOptions: { colorSpace: 'none' } });
+export const brickNormals = { type: 'texture', source: 'normals/brick.png', textureOptions: { colorSpace: 'none' } } as const;
 ```
 
 For a loaded image, `'none'` also decodes the file without the browser's own colour conversion, so the bytes reach the GPU exactly as stored. A `DataTexture` already is numeric. `NormalMap`, `DisplacementFilter` and `LutFilter` sample their maps as data and reject a texture that resolves to `'srgb'` instead of silently misreading it.

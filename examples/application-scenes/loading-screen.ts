@@ -1,14 +1,4 @@
-import {
-  Application,
-  Asset,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  type RenderingContext,
-  Scene,
-  Sprite,
-  Text,
-} from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, Text } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { demoPanel, startExample, toggle } from '@examples/runtime';
 
@@ -56,7 +46,7 @@ class BootScene extends Scene {
   private async loadOne(index: number, broken = false): Promise<void> {
     this.states[index] = 'loading';
     this.attempts[index]!++;
-    const descriptor = broken ? Asset.type('texture', `${descriptors[index]!.source}.missing.png`) : descriptors[index]!;
+    const descriptor = broken ? ({ type: 'texture', source: `${descriptors[index]!.source}.missing.png` } as const) : descriptors[index]!;
 
     try {
       const texture = await this.loader.load(descriptor);

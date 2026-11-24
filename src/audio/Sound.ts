@@ -183,7 +183,7 @@ export class Sound implements Playable {
 
   /**
    * Load lifecycle of this sound. Directly constructed sounds are `'ready'`;
-   * deferred handles returned by `loader.get('theme.ogg')` / `loader.get(Asset.type('sound', src))`
+   * deferred handles returned by `loader.get('theme.ogg')` / `loader.get({ type: 'sound', source: src })`
    * start `'loading'` and become `'ready'` once the payload fills in, or
    * `'failed'` when the load errors. A {@link Sound.clip} / {@link Sound.sprite}
    * reports its root's lifecycle - it has no payload of its own to load.

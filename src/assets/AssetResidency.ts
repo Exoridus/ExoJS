@@ -90,10 +90,6 @@ export class AssetResidency {
   private readonly _resources = new Map<ResourceKey, ResidentEntry>();
   // Identity this residency binds catalog leaves to; see `_bindLeaves`.
   private readonly _leafOwner = {};
-  // Reverse lookup: loaded resource object -> the (type, source) it was first
-  // stored under. Backs Loader.keyFor for scene serialization. A WeakMap so
-  // it never retains resources; only object resources participate.
-  private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string; key: ResourceKey }>();
   private readonly _inFlight = new Map<ResourceKey, Promise<unknown>>();
   private readonly _acquisitionOptions = new Map<ResourceKey, unknown>();
   private readonly _preventStoreKeys = new Set<ResourceKey>();
@@ -452,7 +448,9 @@ export class AssetResidency {
     }
 
     if (__DEV__) {
-      this._warnIgnoredOptions(asset, this._optionsFor(asset.key, asset.options), asset.options);
+      const active = this._resources.get(asset.key)?.asset ?? (this._inFlight.has(asset.key) ? entry.asset : asset);
+
+      this._warnIgnoredOptions(asset, this._optionsFor(asset.key, active.options), asset.options);
     }
 
     this._requestLog.record(asset);
@@ -531,7 +529,7 @@ export class AssetResidency {
    */
   private _evictKey(asset: CanonicalAsset): void {
     const { key, type } = asset;
-    const adapter = this._typeRegistry.getSeamlessAdapter(type);
+    const adapter = Object.hasOwn(asset, 'directSource') ? undefined : this._typeRegistry.getSeamlessAdapter(type);
     const stored = this._resources.get(key)?.value;
 
     if (adapter !== undefined && stored !== undefined) {
@@ -618,15 +616,14 @@ export class AssetResidency {
     this._resources.delete(asset.key);
     this._dependencyScopes.delete(asset.key);
 
-    const entry = this._refs.get(asset.key);
-
-    if (entry !== undefined) {
-      for (const ref of entry.refs) {
-        ref._begin();
-      }
+    for (const ref of this._refs.get(asset.key)?.refs ?? []) {
+      ref._begin();
     }
 
-    this._evicted.add(asset.key);
+    if (!Object.hasOwn(asset, 'directSource')) {
+      this._evicted.add(asset.key);
+    }
+
     // Drop a resolved-but-not-yet-cleaned in-flight entry so the reclaim's
     // re-fetch starts fresh instead of deduping onto it - see the seamless
     // branch above for the full reasoning; it applies verbatim here.
@@ -1190,11 +1187,12 @@ export class AssetResidency {
    * never released and the queue wedges.
    */
   private _dispatchTracked(asset: CanonicalAsset, options: unknown): Promise<unknown> {
-    if (!this._acquisitionOptions.has(asset.key)) {
+    // Only locator-backed handles can reuse acquisition options after eviction.
+    if (!Object.hasOwn(asset, 'directSource') && !this._acquisitionOptions.has(asset.key)) {
       this._acquisitionOptions.set(asset.key, options);
     }
 
-    options = this._acquisitionOptions.get(asset.key);
+    options = this._optionsFor(asset.key, options);
     const abort = new SharedAbort(asset.key);
 
     this._abort.set(asset.key, abort);
@@ -1276,7 +1274,10 @@ export class AssetResidency {
   }
 
   private _onFetchAborted(asset: CanonicalAsset, reason: unknown): void {
-    this._evicted.add(asset.key);
+    if (!Object.hasOwn(asset, 'directSource')) {
+      this._evicted.add(asset.key);
+    }
+
     this._onTrackedFailure(asset, reason);
     this._releaseDependencies(asset.key);
   }
@@ -1388,6 +1389,7 @@ export class AssetResidency {
   // eslint-disable-next-line complexity
   public _storeResource(asset: CanonicalAsset, resource: unknown): unknown {
     const key = asset.key;
+    const direct = Object.hasOwn(asset, 'directSource');
     // Marked evicted while unclaimed: every holder left while this payload was
     // still being produced, and the abort could not stop a factory that ignores
     // its signal.
@@ -1395,7 +1397,7 @@ export class AssetResidency {
 
     this._requestLog.record(asset);
 
-    if (!this._acquisitionOptions.has(key)) {
+    if (!direct && !this._acquisitionOptions.has(key)) {
       this._acquisitionOptions.set(key, asset.options);
     }
 
@@ -1499,9 +1501,10 @@ export class AssetResidency {
 
     this._resources.set(key, { asset, value: resource });
 
-    // Record the canonical reverse key (first source wins) for object resources.
-    if (typeof resource === 'object' && resource !== null && !this._resourceKeys.has(resource)) {
-      this._resourceKeys.set(resource, { type: asset.type, source: asset.source, key });
+    const handle = (typeof resource === 'object' && resource !== null) || (direct && typeof resource === 'function') ? resource : undefined;
+
+    if (handle !== undefined) {
+      this._requestLog.recordResource(asset, handle, direct);
     }
 
     // Register the stored seamless resource as its key's representative so a
@@ -1509,13 +1512,8 @@ export class AssetResidency {
     // set. A resource that already came from a deferred handle is a member
     // already; a plain `load()` donor (no prior get()) is added here. Held
     // weakly, so a fully-released source does not pin its evicted payload.
-    if (
-      typeof resource === 'object' &&
-      resource !== null &&
-      this._typeRegistry.hasSeamlessAdapter(asset.type) &&
-      !this._deferred.has(key)
-    ) {
-      this._createDeferredEntry(asset, resource, this._optionsFor(key, asset.options));
+    if (!direct && handle !== undefined && this._typeRegistry.hasSeamlessAdapter(asset.type) && !this._deferred.has(key)) {
+      this._createDeferredEntry(asset, handle, this._optionsFor(key, asset.options));
     }
 
     this._signals.onLoaded.dispatchIsolated(reportAssetObserverFailure, asset.type, asset.source, resource);
@@ -1849,12 +1847,14 @@ export class AssetResidency {
   /**
    * Non-throwing in-memory lookup: the resource stored under `key`, or `null`
    * if none is held. Backs `Loader._peekResource` (scene deserialization).
-   * Coalesces a legitimately-stored `null`/`undefined` to `null`; use
-   * {@link _hasStored} when the distinction matters.
+   * A legitimately stored nullish value is returned as-is. Use {@link _hasStored}
+   * to distinguish it from absence.
    * @internal
    */
   public _peekResource(key: ResourceKey): unknown {
-    return this._resources.get(key)?.value ?? null;
+    const stored = this._resources.get(key);
+
+    return stored === undefined ? null : stored.value;
   }
 
   /**
@@ -1883,9 +1883,9 @@ export class AssetResidency {
    * @internal
    */
   public _keyFor(resource: object): { readonly type: AssetConstructor; readonly source: string } | null {
-    const entry = this._resourceKeys.get(resource);
+    const entry = this._requestLog.origin(resource);
 
-    return entry === undefined ? null : { type: entry.type, source: entry.source };
+    return entry === undefined || entry.direct ? null : { type: entry.type, source: entry.source };
   }
 
   /**
@@ -1901,7 +1901,7 @@ export class AssetResidency {
    * @internal
    */
   public _referenceFor(resource: object): AssetReferenceLookup | null {
-    const loaded = this._resourceKeys.get(resource);
+    const loaded = this._requestLog.origin(resource);
     const key = loaded?.key ?? this._handleKeys.get(resource);
     const meta = _readMeta(resource);
 
@@ -1912,12 +1912,14 @@ export class AssetResidency {
     return this._requestLog.lookup(key, loaded, resource, this._resources.get(key)?.value, meta?.live === true ? meta.src : undefined);
   }
 
-  /**
-   * The canonical key a deferred handle / value-ref is registered under, or
-   * `undefined`. Backs releasing a handle. @internal
-   */
+  /** The key a deferred handle or value ref is held under. @internal */
   public _getHandleKey(handle: object): ResourceKey | undefined {
     return this._handleKeys.get(handle);
+  }
+
+  /** Owner-scoped claim keys for a direct resource, or undefined for an object never directly loaded. @internal */
+  public _getDirectKeys(resource: object, scope: LoaderScope): ResourceKey[] | undefined {
+    return this._requestLog.directKeys(resource, this._scopeKeys.get(scope), this._resources);
   }
 
   /**

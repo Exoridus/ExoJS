@@ -1,22 +1,21 @@
 // Descriptor and catalog contracts: required options, reserved request keys,
 // leaf-policy classification, leafless types, the decoded image type and
-// fragment-before-query suffix inference.
+// fragment-before-query suffix inference. A descriptor is a plain object, so
+// its options are checked where it is used: `identify()` stands in for every
+// entry point that validates one.
 
 import {
-  Asset,
+  type AssetDescriptorLeafPolicy,
   Assets,
   AssetType,
   type DecodedImage,
   fontType,
   imageType,
   type KindByPath,
-  type LeaflessAsset,
   type Loader,
   musicType,
-  type ResourceAsset,
-  type Texture,
+  Texture,
   textureType,
-  type ValueAsset,
   videoType,
 } from '@codexo/exojs';
 
@@ -29,19 +28,25 @@ declare const loader: Loader;
 
 // --- Required options ------------------------------------------------------
 
-fontType.asset('Inter.woff2', { family: 'Inter' });
-Asset.type('font', 'Inter.woff2', { family: 'Inter' });
+loader.identify({ type: fontType, source: 'Inter.woff2', family: 'Inter' });
+loader.identify({ type: 'font', source: 'Inter.woff2', family: 'Inter' });
+loader.identify({ type: FontFace, source: 'Inter.woff2', family: 'Inter' });
 // @ts-expect-error `family` is required on the font type
-fontType.asset('Inter.woff2');
-// @ts-expect-error the core facade carries the same requirement
-Asset.type('font', 'Inter.woff2');
-// @ts-expect-error an option bag without the required field is rejected too
-fontType.asset('Inter.woff2', {});
+loader.identify({ type: fontType, source: 'Inter.woff2' });
+// @ts-expect-error the type id carries the same requirement
+loader.identify({ type: 'font', source: 'Inter.woff2' });
+// @ts-expect-error and so does the class the type produces
+loader.identify({ type: FontFace, source: 'Inter.woff2' });
 
 // Types without required options stay option-free.
-Asset.type('texture', 'hero.png');
-Asset.type('texture', 'hero.png', { mimeType: 'image/png' });
-textureType.asset('hero.png');
+loader.identify({ type: 'texture', source: 'hero.png' });
+loader.identify({ type: 'texture', source: 'hero.png', mimeType: 'image/png' });
+loader.identify({ type: textureType, source: 'hero.png' });
+loader.identify({ type: Texture, source: 'hero.png', textureOptions: {} });
+// @ts-expect-error an option of another type is rejected, whichever way the type is named
+loader.identify({ type: Texture, source: 'hero.png', delimiter: ',' });
+// @ts-expect-error a built-in type's source is a locator
+loader.identify({ type: 'texture', source: 42 });
 
 class NoOptionsType extends AssetType<unknown, { hp: number }> {
   public readonly id = 'com.example.no-options';
@@ -75,17 +80,17 @@ class UnionType extends AssetType<unknown, { hp: number }, { mode: 'a' } | { mod
   }
 }
 
-new NoOptionsType().asset('a.dat');
+loader.identify({ type: new NoOptionsType(), source: 'a.dat' });
 // @ts-expect-error a type that declares no options takes none
-new NoOptionsType().asset('a.dat', { locale: 'de' });
-new OptionalType().asset('a.dat');
-new OptionalType().asset('a.dat', { locale: 'de' });
-new RequiredType().asset('a.dat', { locale: 'de' });
+loader.identify({ type: new NoOptionsType(), source: 'a.dat', locale: 'de' });
+loader.identify({ type: new OptionalType(), source: 'a.dat' });
+loader.identify({ type: new OptionalType(), source: 'a.dat', locale: 'de' });
+loader.identify({ type: new RequiredType(), source: 'a.dat', locale: 'de' });
 // @ts-expect-error required options cannot be omitted on a custom type either
-new RequiredType().asset('a.dat');
-// A union that has an all-optional member keeps the argument optional.
-new UnionType().asset('a.dat');
-new UnionType().asset('a.dat', { mode: 'a' });
+loader.identify({ type: new RequiredType(), source: 'a.dat' });
+// A union that has an all-optional member keeps the options optional.
+loader.identify({ type: new UnionType(), source: 'a.dat' });
+loader.identify({ type: new UnionType(), source: 'a.dat', mode: 'a' });
 
 // --- Reserved request keys -------------------------------------------------
 
@@ -97,11 +102,7 @@ class SourceOptionType extends AssetType<unknown, { hp: number }, { source?: str
   }
 }
 
-new SourceOptionType().asset('a.dat', { mode: 'fast' });
-// @ts-expect-error `source` is reserved for the request, even where a type declares it
-new SourceOptionType().asset('a.dat', { source: 'b.dat' });
-// @ts-expect-error `type` is reserved as well
-Asset.type('texture', 'hero.png', { type: 'json' });
+loader.identify({ type: new SourceOptionType(), source: 'a.dat', mode: 'fast' });
 
 // --- Leaf policy -----------------------------------------------------------
 
@@ -113,7 +114,7 @@ class MetaType extends AssetType<unknown, { hp: number }> {
   }
 }
 
-const metaCatalog = Assets.from({ metadata: new MetaType().asset('game.meta'), hero: Asset.type('texture', 'hero.png') });
+const metaCatalog = Assets.from({ metadata: { type: new MetaType(), source: 'game.meta' }, hero: { type: 'texture', source: 'hero.png' } });
 
 type _MetaIsRef = Expect<Equal<typeof metaCatalog.metadata, CatalogValueLeaf<{ hp: number }>>>;
 type _MetaValue = Expect<Equal<typeof metaCatalog.metadata.value, { hp: number }>>;
@@ -123,43 +124,50 @@ void metaCatalog.metadata.hp;
 const hero: Texture = metaCatalog.hero;
 void hero;
 
-type _TextureDescriptor = Expect<Equal<ReturnType<typeof textureType.asset>, ResourceAsset<Texture>>>;
-type _MetaDescriptor = Expect<Equal<ReturnType<MetaType['asset']>, ValueAsset<{ hp: number }>>>;
-type _FontDescriptor = Expect<Equal<ReturnType<typeof fontType.asset>, LeaflessAsset<FontFace>>>;
+type _TexturePolicy = Expect<Equal<AssetDescriptorLeafPolicy<{ type: typeof textureType; source: string }>, 'resource'>>;
+type _TextureClassPolicy = Expect<Equal<AssetDescriptorLeafPolicy<{ type: typeof Texture; source: string }>, 'resource'>>;
+type _JsonPolicy = Expect<Equal<AssetDescriptorLeafPolicy<{ type: 'json'; source: string }>, 'ref'>>;
+type _MetaPolicy = Expect<Equal<AssetDescriptorLeafPolicy<{ type: MetaType; source: string }>, 'ref'>>;
+type _FontPolicy = Expect<Equal<AssetDescriptorLeafPolicy<{ type: typeof fontType; source: string }>, 'none'>>;
+type _UnknownIdPolicy = Expect<Equal<AssetDescriptorLeafPolicy<{ type: 'com.example.unknown'; source: string }>, 'unknown'>>;
 
 // --- Leafless types --------------------------------------------------------
 
-void loader.load(Asset.type('music', 'theme.ogg'));
-void loader.load(musicType.asset('theme.ogg'));
-void loader.load(Asset.type('video', 'intro.mp4'));
-void loader.load(Asset.type('font', 'ui.woff2', { family: 'UI' }));
-void loader.load(Asset.type('bmFont', 'ui.fnt'));
-void loader.load(Asset.type('svg', 'icon.svg'));
-void loader.load(Asset.type('image', 'a.png'));
+void loader.load({ type: 'music', source: 'theme.ogg' });
+void loader.load({ type: musicType, source: 'theme.ogg' });
+void loader.load({ type: 'video', source: 'intro.mp4' });
+void loader.load({ type: 'font', source: 'ui.woff2', family: 'UI' });
+void loader.load({ type: 'bmFont', source: 'ui.fnt' });
+void loader.load({ type: 'svg', source: 'icon.svg' });
+void loader.load({ type: 'image', source: 'a.png' });
 
 // @ts-expect-error music hands out no catalog leaf
-Assets.from({ theme: Asset.type('music', 'theme.ogg') });
+Assets.from({ theme: { type: 'music', source: 'theme.ogg' } });
 // @ts-expect-error nor does its type instance
-Assets.from({ theme: musicType.asset('theme.ogg') });
+Assets.from({ theme: { type: musicType, source: 'theme.ogg' } });
 // @ts-expect-error nor does video
-Assets.from({ intro: videoType.asset('intro.mp4') });
+Assets.from({ intro: { type: videoType, source: 'intro.mp4' } });
 // @ts-expect-error nor does font
-Assets.from({ ui: Asset.type('font', 'ui.woff2', { family: 'UI' }) });
+Assets.from({ ui: { type: 'font', source: 'ui.woff2', family: 'UI' } });
 // @ts-expect-error nor does bmFont
-Assets.from({ ui: Asset.type('bmFont', 'ui.fnt') });
+Assets.from({ ui: { type: 'bmFont', source: 'ui.fnt' } });
 // @ts-expect-error nor does svg
-Assets.from({ icon: Asset.type('svg', 'icon.svg') });
+Assets.from({ icon: { type: 'svg', source: 'icon.svg' } });
 // @ts-expect-error nor does image
-Assets.from({ raw: imageType.asset('a.png') });
+Assets.from({ raw: { type: imageType, source: 'a.png' } });
 // @ts-expect-error nor does an explicit config of a leafless type
 Assets.from({ theme: { type: 'music', source: 'theme.ogg' } });
 // @ts-expect-error get() hands out a leaf, so it rejects a leafless descriptor
-loader.get(Asset.type('music', 'theme.ogg'));
+loader.get({ type: 'music', source: 'theme.ogg' });
+// @ts-expect-error a catalog holds placeholders keyed by locator, so a source must be a string
+Assets.from({ meta: { type: new MetaType(), source: { hp: 1 } } });
+// @ts-expect-error parse is a value type's transform, not a resource type's
+loader.identify({ type: 'texture', source: 'hero.png', parse: (raw: unknown) => raw });
 
 // --- Decoded image ---------------------------------------------------------
 
-const loadImage = () => loader.load(Asset.type('image', 'a.png'));
-const loadImageByType = () => loader.load(imageType.asset('a.png'));
+const loadImage = () => loader.load({ type: 'image', source: 'a.png' });
+const loadImageByType = () => loader.load({ type: imageType, source: 'a.png' });
 type _ImageFacade = Expect<Equal<Awaited<ReturnType<typeof loadImage>>, DecodedImage>>;
 type _ImageType = Expect<Equal<Awaited<ReturnType<typeof loadImageByType>>, DecodedImage>>;
 

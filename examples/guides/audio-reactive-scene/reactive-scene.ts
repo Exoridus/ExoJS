@@ -1,15 +1,4 @@
-import {
-  Application,
-  Asset,
-  type AudioStream,
-  type RenderingContext,
-  Scene,
-  type Seconds,
-  type Texture,
-  Time,
-  Vector,
-  View,
-} from '@codexo/exojs';
+import { Application, type Music, type RenderingContext, Scene, type Seconds, type Texture, Time, Vector, View } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs/particles';
 
@@ -17,7 +6,7 @@ import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesEx
 const app = new Application({ extensions: [particlesExtension] });
 
 class AudioReactiveScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private particleTexture!: Texture;
   private analyser!: AudioAnalyser;
   private detector!: BeatDetector;
@@ -27,7 +16,7 @@ class AudioReactiveScene extends Scene {
 
   async load() {
     const [music, particleTexture] = await Promise.all([
-      this.loader.load(Asset.type('music', 'audio/track.ogg')),
+      this.loader.load({ type: 'music', source: 'audio/track.ogg' }),
       this.loader.load('image/particle.png'),
     ]);
     this.music = music;

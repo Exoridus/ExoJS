@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
@@ -130,7 +129,7 @@ describe('LoaderScope.release() scope safety', () => {
   test('release(asset) resolves the same claim key the load path registered', async () => {
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
-    const asset = new Asset({ type: 'texture', source: 'boss.png' });
+    const asset = { type: 'texture', source: 'boss.png' } as const;
 
     await owner.load(asset);
 
@@ -152,7 +151,7 @@ describe('LoaderScope.release() scope safety', () => {
     owner.release(handle);
 
     expect(() => owner.release(handle)).not.toThrow();
-    expect(() => owner.release(Texture, 'never-claimed.png')).not.toThrow();
+    expect(() => owner.release({ type: Texture, source: 'never-claimed.png' })).not.toThrow();
   });
 
   test('two scopes taken under the same name are independent owners', async () => {

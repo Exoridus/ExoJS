@@ -1,9 +1,9 @@
 import {
   Application,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
+  type Music,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -15,7 +15,7 @@ import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 class VinylRecordScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private musicVoice!: Voice;
   private analyser!: AudioAnalyser;
   private disc!: Graphics;
@@ -29,8 +29,8 @@ class VinylRecordScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-    // is loaded directly through `Asset.type('music', ...)` and awaited rather
+    // Music is a non-leaf resource kind (no seamless placeholder), so it
+    // is loaded directly through `{ type: 'music', source }` and awaited rather
     // than fetched synchronously via `get()`.
     this.music = await this.loader.load(assets.musicLofiRhodes);
     this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });

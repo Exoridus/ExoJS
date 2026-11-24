@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
 import type { AssetFactoryContext } from '@codexo/exojs';
-import { Asset, Texture } from '@codexo/exojs';
+import { Texture } from '@codexo/exojs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AsepriteArrayData } from '../src/AsepriteData';
@@ -21,7 +21,7 @@ const loadFixture = (name: string): unknown => JSON.parse(readFileSync(join(FIXT
 /** Drives the type end to end - codec then factory - against in-memory fixtures. */
 const makeContext = (fixtures: Record<string, unknown>) => {
   const loaderLoad = vi.fn(async (asset: unknown): Promise<unknown> => {
-    const { type } = (asset as { _config: { type: string } })._config;
+    const { type } = asset as { type: string };
 
     if (type !== 'texture') {
       throw new Error(`aseprite-type.test: unexpected dependency "${type}"`);
@@ -102,7 +102,7 @@ describe('asepriteType - array fixture', () => {
   it('resolves the packed image URL relative to the JSON source and sub-loads it as a Texture', async () => {
     const { loadSheet, loaderLoad } = makeContext(fixtures);
     await loadSheet('sprites/hero.json');
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'sprites/hero.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'sprites/hero.png' });
   });
 
   it('passes absolute image references through unchanged', async () => {
@@ -110,7 +110,7 @@ describe('asepriteType - array fixture', () => {
     doc.meta.image = 'https://cdn.example.com/hero.png';
     const { loadSheet, loaderLoad } = makeContext({ 'sprites/hero.json': doc });
     await loadSheet('sprites/hero.json');
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://cdn.example.com/hero.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'https://cdn.example.com/hero.png' });
   });
 
   it('loads the hash-form fixture identically', async () => {
@@ -162,19 +162,19 @@ describe('asepriteType - array fixture', () => {
   it('resolves a relative image ref against an absolute (scheme-qualified) source URL', async () => {
     const { loadSheet, loaderLoad } = makeContext({ 'https://cdn.example.com/sprites/hero.json': loadFixture('hero.array.json') });
     await loadSheet('https://cdn.example.com/sprites/hero.json');
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://cdn.example.com/sprites/hero.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'https://cdn.example.com/sprites/hero.png' });
   });
 
   it('resolves a relative image ref against a root-relative source, preserving the leading slash', async () => {
     const { loadSheet, loaderLoad } = makeContext({ '/assets/sprites/hero.json': loadFixture('hero.array.json') });
     await loadSheet('/assets/sprites/hero.json');
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', '/assets/sprites/hero.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: '/assets/sprites/hero.png' });
   });
 
   it('resolves a relative image ref against a protocol-relative source, preserving the authority', async () => {
     const { loadSheet, loaderLoad } = makeContext({ '//cdn.example.com/art/hero.json': loadFixture('hero.array.json') });
     await loadSheet('//cdn.example.com/art/hero.json');
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', '//cdn.example.com/art/hero.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: '//cdn.example.com/art/hero.png' });
   });
 });
 

@@ -1,7 +1,7 @@
 {
-  "title": "LoadedAssetGroup",
-  "description": "Replaces each handle with the value produced by loading it.",
-  "symbol": "LoadedAssetGroup",
+  "title": "ValidatedAssetLoadInput",
+  "description": "AssetLoadInput with every literal path and descriptor checked against what its type accepts.",
+  "symbol": "ValidatedAssetLoadInput",
   "kind": "type",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Replaces each handle with the value produced by loading it."
+        "AssetLoadInput with every literal path and descriptor checked against what its type accepts."
       ],
-      "importLine": "import { LoadedAssetGroup } from '@codexo/exojs'",
+      "importLine": "import { ValidatedAssetLoadInput } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,8 +29,8 @@
       "title": "Definition",
       "members": [
         {
-          "name": "LoadedAssetGroup",
-          "signature": "Input extends AssetLoadHandle ? Awaited<Input[\"loaded\"]> : mapped",
+          "name": "ValidatedAssetLoadInput",
+          "signature": "Input extends AssetLoadEntry ? ValidatedEntry<Input> : mapped",
           "signatureTokens": [
             {
               "text": "Input",
@@ -49,7 +49,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetLoadHandle",
+              "text": "AssetLoadEntry",
               "kind": "type"
             },
             {
@@ -57,7 +57,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Awaited",
+              "text": "ValidatedEntry",
               "kind": "type"
             },
             {
@@ -67,18 +67,6 @@
             {
               "text": "Input",
               "kind": "type"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"loaded\"",
-              "kind": "keyword"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
             },
             {
               "text": ">",

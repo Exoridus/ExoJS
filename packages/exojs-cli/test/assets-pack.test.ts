@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { Asset, coreAssetTypes, Loader } from '@codexo/exojs';
+import { coreAssetTypes, Loader } from '@codexo/exojs';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { runAssetsPack } from '../src/commands/assetsPack';
@@ -84,8 +84,8 @@ describe('exo assets pack round trip', () => {
     const loader = loaderReading(container);
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Asset.type('json', 'data/level.json')).value).toEqual({ score: 42 });
-    expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
+    expect(loader.get({ type: 'json', source: 'data/level.json' }).value).toEqual({ score: 42 });
+    expect(loader.get({ type: 'text', source: 'docs/readme.txt' }).value).toBe('hello world');
   });
 
   test('a compressible pack is stored deflated and reads back byte for byte', async () => {
@@ -102,7 +102,7 @@ describe('exo assets pack round trip', () => {
     const loader = loaderReading(container);
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Asset.type('text', 'docs/big.txt')).value).toBe(compressible);
+    expect(loader.get({ type: 'text', source: 'docs/big.txt' }).value).toBe(compressible);
   });
 
   test('an incompressible pack is stored as it is', async () => {
@@ -124,7 +124,7 @@ describe('exo assets pack round trip', () => {
     const loader = loaderReading(container);
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'data/noise.bin')).value)).toEqual(random);
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'data/noise.bin' }).value)).toEqual(random);
   });
 
   test('a packed KTX2 texture keeps its bytes and its DFD transfer and alpha meaning, whatever the file is called', async () => {
@@ -151,11 +151,11 @@ describe('exo assets pack round trip', () => {
     const loader = loaderReading(container);
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'art/a.ktx2')).value)).toEqual(srgbStraight);
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'art/b.ktx2')).value)).toEqual(linear);
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'art/a.ktx2' }).value)).toEqual(srgbStraight);
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'art/b.ktx2' }).value)).toEqual(linear);
 
-    const sRgbTexture = await loader.load(Asset.type('texture', 'art/c.ktx2'));
-    const linearTexture = await loader.load(Asset.type('texture', 'art/d.ktx2'));
+    const sRgbTexture = await loader.load({ type: 'texture', source: 'art/c.ktx2' });
+    const linearTexture = await loader.load({ type: 'texture', source: 'art/d.ktx2' });
 
     expect([sRgbTexture.colorSpace, sRgbTexture.alphaMode]).toEqual(['srgb', 'straight']);
     expect(linearTexture.colorSpace).toBe('linear-srgb');

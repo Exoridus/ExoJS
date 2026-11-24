@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
 
 const paragraph = 'ExoJS text layout can render multiline content with configurable wrapping behavior and style.';
 const longToken = 'ExoJStextlayoutrendersaverylongunbrokentokenwithoutanyspacestobreakon';
@@ -40,15 +40,7 @@ class MultilineAndWrapScene extends Scene {
     this.titleC.setPosition(colX(2), titleY);
     this.textC = new Text(paragraph, { fillColor: Color.white, fontSize: 22 });
     this.textC.setPosition(colX(2), bodyY);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.titleA);
-    context.render(this.titleB);
-    context.render(this.titleC);
-    context.render(this.textA);
-    context.render(this.textB);
-    context.render(this.textC);
+    this.root.addChild(this.titleA, this.titleB, this.titleC, this.textA, this.textB, this.textC);
   }
 }
 

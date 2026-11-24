@@ -8,9 +8,9 @@ import { tileMapType } from './tileMapType';
  * Default immutable Tiled extension descriptor.
  *
  * Installs two asset types:
- * - {@link tileMapType} - `loader.load(tileMapType.asset('world.tmj'))` returns
+ * - {@link tileMapType} - `loader.load({ type: tileMapType, source: 'world.tmj' })` returns
  *   a format-independent runtime {@link TileMap} (common case).
- * - {@link tiledSourceType} - `loader.load(tiledSourceType.asset('world.tmj'))`
+ * - {@link tiledSourceType} - `loader.load({ type: tiledSourceType, source: 'world.tmj' })`
  *   returns the raw parsed {@link TiledMap} source model (advanced/diagnostic).
  *
  * Depends on {@link tilemapExtension} so that snapshot construction always

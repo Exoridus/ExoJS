@@ -1,4 +1,4 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Texture } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class SvgDrawableScene extends Scene {
@@ -15,7 +15,7 @@ class SvgDrawableScene extends Scene {
     // it would rasterise to a 0x0 image. Request an explicit pixel size -
     // the SVG is vector, so it stays crisp at any rasterised resolution.
     //
-    const mark = (await this.loader.load(Asset.type('svg', assets.exoWordmark.source, { width: 850, height: 324 }))) as HTMLImageElement;
+    const mark = (await this.loader.load({ type: 'svg', source: assets.exoWordmark.source, width: 850, height: 324 })) as HTMLImageElement;
 
     this.texture = new Texture(mark);
     this.sprite = new Sprite(this.texture);

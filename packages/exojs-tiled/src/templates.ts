@@ -1,5 +1,4 @@
 import type { AssetFactoryContext } from '@codexo/exojs';
-import { Asset } from '@codexo/exojs';
 
 import type { TiledLayerData, TiledMapData, TiledObjectData, TiledPropertyData, TiledTemplateData } from './data';
 import { maskTiledGid } from './gid';
@@ -19,7 +18,7 @@ const loadTemplate = async (url: string, path: string, mapSource: string, contex
   let text: string;
 
   try {
-    text = await context.dependencies.load(Asset.type('text', url));
+    text = await context.dependencies.load({ type: 'text', source: url });
   } catch (error) {
     throw new TiledFormatError(mapSource, path, `object template "${url}" could not be loaded: ${String(error)}`);
   }

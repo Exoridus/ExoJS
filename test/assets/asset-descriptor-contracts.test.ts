@@ -1,12 +1,13 @@
-import { Asset } from '#assets/Asset';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
 import { AssetType } from '#assets/AssetType';
 import { builtinTypeForPath, coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { fontType } from '#assets/types/font';
+import { textureType } from '#assets/types/image';
 import { musicType } from '#assets/types/media';
 import { materializeAssetTypes } from '#extensions/materialize';
+import { Texture } from '#rendering/texture/Texture';
 
 const createCoreLoader = (): Loader => {
   const loader = new Loader({ basePath: '/' });
@@ -49,32 +50,22 @@ afterEach(() => {
   global.fetch = originalFetch;
 });
 
-describe('reserved request keys', () => {
-  test('a type instance rejects an option bag that names the request', () => {
+describe('descriptor type references', () => {
+  test('an id, the produced class and the type instance name the same installed type', () => {
+    const loader = createCoreLoader();
     const custom = new CustomType();
-    const untyped = custom.asset.bind(custom) as (source: string, options?: object) => unknown;
 
-    expect(() => untyped('original.dat', { type: 'replaced' })).toThrow(/"type" is reserved/);
-    expect(() => untyped('original.dat', { source: 'different.dat' })).toThrow(/"source" is reserved/);
-  });
+    loader._installAssetTypes([custom]);
 
-  test('the core facade rejects an object variable and untyped JSON alike', () => {
-    const fromVariable: object = { source: 'b.json' };
-    const fromJson = JSON.parse('{"type":"text","mode":"x"}') as object;
-    const untyped = Asset.type as unknown as (type: string, source: string, options?: object) => unknown;
+    const byInstance = loader.identify({ type: custom, source: 'a.dat', mode: 'fast' });
+    const byId = loader.identify({ type: 'com.example.custom', source: 'a.dat', mode: 'fast' });
+    const textureById = loader.identify({ type: 'texture', source: 'hero.png' });
+    const textureByClass = loader.identify({ type: Texture, source: 'hero.png' });
+    const textureByType = loader.identify({ type: textureType, source: 'hero.png' });
 
-    expect(() => untyped('json', 'a.json', fromVariable)).toThrow(/"source" is reserved/);
-    expect(() => untyped('json', 'a.json', fromJson)).toThrow(/"type" is reserved/);
-    expect(() => untyped('json', 'a.json', 'oops' as unknown as object)).toThrow(/options must be an object/);
-  });
-
-  test('unrelated options pass through unchanged on both builders', () => {
-    const viaType = new CustomType().asset('a.dat', { mode: 'fast' });
-    const viaFacade = Asset.type('texture', 'hero.png', { mimeType: 'image/png' });
-
-    expect(viaType._config).toEqual({ type: 'com.example.custom', source: 'a.dat', mode: 'fast' });
-    expect(viaType._assetType).toBeInstanceOf(CustomType);
-    expect(viaFacade._config).toEqual({ type: 'texture', source: 'hero.png', mimeType: 'image/png' });
+    expect(byInstance).toEqual(byId);
+    expect(textureByClass).toEqual(textureById);
+    expect(textureByType).toEqual(textureById);
   });
 });
 
@@ -82,9 +73,9 @@ describe('required options', () => {
   test('a font descriptor without a family rejects its load', async () => {
     mockFetch();
     const loader = createCoreLoader();
-    const untyped = fontType.asset.bind(fontType) as (source: string) => ReturnType<typeof fontType.asset>;
+    const untyped = { type: fontType, source: 'Inter.woff2' } as never;
 
-    await expect(loader.load(untyped('Inter.woff2'))).rejects.toThrow(/requires a "family" option/);
+    await expect(loader.load(untyped)).rejects.toThrow(/requires a "family" option/);
   });
 
   test('an untyped bare font path keeps its file-name family default', () => {
@@ -108,20 +99,20 @@ describe('required options', () => {
 
 describe('catalog leaf policy', () => {
   test('a custom object payload of the default leaf policy is held as an AssetRef', () => {
-    const catalog = Assets.from({ metadata: new CustomType().asset('game.meta') });
+    const catalog = Assets.from({ metadata: { type: new CustomType(), source: 'game.meta' } });
 
     expect(catalog.metadata).toBeInstanceOf(AssetRef);
     expect((catalog.metadata as unknown as { hp?: number }).hp).toBeUndefined();
   });
 
   test.each([
-    ['music', () => Asset.type('music', 'audio/theme.ogg')],
-    ['music (type instance)', () => musicType.asset('audio/theme.ogg')],
-    ['video', () => Asset.type('video', 'video/intro.mp4')],
-    ['font', () => Asset.type('font', 'fonts/ui.woff2', { family: 'UI' })],
-    ['bmFont', () => Asset.type('bmFont', 'fonts/ui.fnt')],
-    ['svg', () => Asset.type('svg', 'icon.svg')],
-    ['image', () => Asset.type('image', 'a.png')],
+    ['music', () => ({ type: 'music', source: 'audio/theme.ogg' }) as const],
+    ['music (type instance)', () => ({ type: musicType, source: 'audio/theme.ogg' })],
+    ['video', () => ({ type: 'video', source: 'video/intro.mp4' }) as const],
+    ['font', () => ({ type: 'font', source: 'fonts/ui.woff2', family: 'UI' }) as const],
+    ['bmFont', () => ({ type: 'bmFont', source: 'fonts/ui.fnt' }) as const],
+    ['svg', () => ({ type: 'svg', source: 'icon.svg' }) as const],
+    ['image', () => ({ type: 'image', source: 'a.png' }) as const],
   ])('a leafless %s descriptor keeps its precise runtime error in a catalog', (_name, make) => {
     const fromUntyped = Assets.from as unknown as (definition: object) => unknown;
 
@@ -138,7 +129,7 @@ describe('decoded image', () => {
     );
     const loader = createCoreLoader();
 
-    const image = await loader.load(Asset.type('image', 'a.png'));
+    const image = await loader.load({ type: 'image', source: 'a.png' });
 
     expect(image).not.toBeInstanceOf(HTMLImageElement);
     expect((image as unknown as { kind: string }).kind).toBe('ImageBitmap');

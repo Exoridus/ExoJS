@@ -1,11 +1,11 @@
-import { Application, Asset, Scene, Sprite, type Texture } from '@codexo/exojs';
+import { Application, Scene, Sprite, type Texture } from '@codexo/exojs';
 
 // #region guide:before-lazy
 class LegacyScene extends Scene {
   private hero!: Texture;
 
   override async load(): Promise<void> {
-    this.hero = await this.loader.load(Asset.type('texture', 'hero.png'));
+    this.hero = await this.loader.load({ type: 'texture', source: 'hero.png' });
   }
 
   override init(): void {

@@ -1,10 +1,10 @@
 import {
   Application,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
   Keyboard,
+  type Music,
   type Pausable,
   type RenderingContext,
   Scene,
@@ -23,7 +23,7 @@ const controls = {
 };
 
 class MusicLoopScene extends Scene {
-  private tracks: AudioStream[] = [];
+  private tracks: Music[] = [];
   private voices: MusicVoice[] = [];
   private playing = false;
   private readonly graphics = this.track(new Graphics());

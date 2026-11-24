@@ -1,16 +1,16 @@
 {
   "title": "AssetDescriptor",
-  "description": "The descriptor AssetType.asset produces for a type whose `leaf` has type `Leaf`: branded with that leaf policy, so a catalog classifies it exactly as the runtime will. A type that does not override `leaf` keeps the default `'ref'`.",
+  "description": "One asset, described as a plain object: its type, an optional source, and the type's options as further properties. - A string `source` is a locator. It goes through variant selection, the base path, the cache and the network, and two descriptors with the same type, locator and identity-relevant options share one resource. - Any other `source` value is handed to the type's factory as it is: nothing is fetched or cached. Descriptors sharing the same source object (or the same primitive value) share one resource. - Without a `source`, the factory builds from the options alone. Such a descriptor is identified by its type's `resourceIdentity` when the type defines one, and otherwise by the descriptor object itself: release it with the same object, or release the loaded resource. Only a locator can be held by a catalog, handed out by `get()`, loaded at background priority or saved as a portable reference. A plain object with an own `type` property is always read as a descriptor, never as a named load group.",
   "symbol": "AssetDescriptor",
-  "kind": "type",
+  "kind": "interface",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
-  "tier": "advanced",
-  "memberCount": 0,
+  "tier": "stable",
+  "memberCount": 2,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 0,
+    "properties": 2,
     "events": 0
   },
   "sections": [
@@ -19,218 +19,58 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The descriptor AssetType.asset produces for a type whose `leaf` has type `Leaf`: branded with that leaf policy, so a catalog classifies it exactly as the runtime will. A type that does not override `leaf` keeps the default `'ref'`."
+        "One asset, described as a plain object: its type, an optional source, and the type's options as further properties.",
+        "- A string `source` is a locator. It goes through variant selection, the base path, the cache and the network, and two descriptors with the same type, locator and identity-relevant options share one resource. - Any other `source` value is handed to the type's factory as it is: nothing is fetched or cached. Descriptors sharing the same source object (or the same primitive value) share one resource. - Without a `source`, the factory builds from the options alone. Such a descriptor is identified by its type's `resourceIdentity` when the type defines one, and otherwise by the descriptor object itself: release it with the same object, or release the loaded resource.",
+        "Only a locator can be held by a catalog, handed out by `get()`, loaded at background priority or saved as a portable reference.",
+        "A plain object with an own `type` property is always read as a descriptor, never as a named load group."
       ],
       "importLine": "import { AssetDescriptor } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
-      "id": "definition",
-      "title": "Definition",
+      "id": "properties",
+      "title": "Properties",
       "members": [
         {
-          "name": "AssetDescriptor",
-          "signature": "0 extends 1 & Resource ? Asset<Resource> : [Leaf] extends [\"none\"] ? LeaflessAsset<Resource> : [Leaf] extends [SeamlessAdapter<unknown>] ? ResourceAsset<Resource> : ValueAsset<Resource>",
+          "name": "source",
+          "signature": "source?: unknown",
           "signatureTokens": [
             {
-              "text": "0",
-              "kind": "keyword"
+              "text": "source",
+              "kind": "name"
             },
             {
-              "text": " ",
+              "text": "?",
               "kind": "punctuation"
             },
             {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "1",
-              "kind": "keyword"
-            },
-            {
-              "text": " & ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Resource",
-              "kind": "type"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Asset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Resource",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Leaf",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"none\"",
-              "kind": "keyword"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LeaflessAsset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Resource",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Leaf",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SeamlessAdapter",
-              "kind": "type"
-            },
-            {
-              "text": "<",
+              "text": ": ",
               "kind": "punctuation"
             },
             {
               "text": "unknown",
               "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: AssetTypeReference",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
             },
             {
-              "text": ">",
+              "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ResourceAsset",
+              "text": "AssetTypeReference",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Resource",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ValueAsset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Resource",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -249,11 +89,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/AssetType.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetType.ts"
+        "label": "src/assets/AssetDescriptor.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/AssetType.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetType.ts"
+  "sourcePath": "src/assets/AssetDescriptor.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
 }

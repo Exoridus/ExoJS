@@ -42,7 +42,7 @@ test.for(['webgl2', 'webgpu'] as const)('demand, explicit load and shared varian
   class MainScene extends Scene {
     public override async load(): Promise<void> {
       expect(fetchAsset).not.toHaveBeenCalled();
-      await expect(this.app.load(explicit, sound)).resolves.toEqual([explicit, sound]);
+      await expect(this.app.assets.load([explicit, sound])).resolves.toEqual([explicit, sound]);
     }
 
     public override init(): void {

@@ -48,7 +48,7 @@ const createLoader = (cache: AssetCache, type: AssetType<never, never, never, ne
   return loader;
 };
 
-const load = async (loader: Loader, type: AtlasAssetType): Promise<Atlas> => loader.load(type.asset('ui.atlas.json'));
+const load = async (loader: Loader, type: AtlasAssetType): Promise<Atlas> => loader.load({ type, source: 'ui.atlas.json' });
 
 describe('a versioned document through Loader, AssetDecoder and AssetCache', () => {
   const originalFetch = global.fetch;

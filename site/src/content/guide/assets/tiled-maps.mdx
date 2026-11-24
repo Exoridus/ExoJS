@@ -16,7 +16,7 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 > ```
 
 <Callout type="pitfall" title="TiledMap is data, not something you can draw">
-Loading a map gives you layer grids and tileset textures — it is not a `Drawable`, so adding it to the scene puts nothing on screen. Load with `Asset.type('tileMap', path)` or call `toTileMap()`, then render the runtime through `TileMapNode`.
+Loading a map gives you layer grids and tileset textures — it is not a `Drawable`, so adding it to the scene puts nothing on screen. Load with `{ type: 'tileMap', source: path }` or call `toTileMap()`, then render the runtime through `TileMapNode`.
 </Callout>
 
 Like all extensions, the core ships nothing Tiled-specific — an `Application` only understands `.tmj` files once you activate the extension.
@@ -55,10 +55,9 @@ XML (`.tmx`/`.tsx`/`.tx`) and `zstd` compression raise a clear error rather than
 </Callout>
 
 ```ts
-import { Asset } from '@codexo/exojs';
 
 // Explicit type
-const map = await loader.load(Asset.type('tiledSource', 'levels/forest.tmj'));
+const map = await loader.load({ type: 'tiledSource', source: 'levels/forest.tmj' });
 
 // By path — the `.tmj` extension is registered, so the type is inferred
 const sameMap = await loader.load('levels/forest.tmj');
@@ -319,7 +318,7 @@ These raise a clear error or are intentionally absent from this release:
 ## Where to look next
 
 - **Package README:** [`@codexo/exojs-tiled`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/README.md) — install, entry points, and the supported-format matrix.
-- **API reference:** the [`Loader`](/ExoJS/en/api/loader/) page documents `load(...)`, explicit `Asset.type(...)` descriptors, and the `.tmj` extension lookup.
+- **API reference:** the [`Loader`](/ExoJS/en/api/loader/) page documents `load(...)`, explicit `{ type, source }` descriptors, and the `.tmj` extension lookup.
 - **Spawning objects:** [Worlds and level streaming](/ExoJS/en/guide/assets/worlds-and-spawning/) turns an object layer into game objects with `MapObjectSpawner`, and shows how to drive several Tiled maps as one streamed world.
 - **Extension model:** the [Particles](/ExoJS/en/guide/effects/particles/) chapter walks through the same activation model for the sibling renderer extension.
 

@@ -61,7 +61,7 @@ Styles can be deliberately shared by assigning the same `TextStyle` to several n
 
 ## Font loading
 
-System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load one via `Asset.type('font', ...)` in the scene's `load` hook — fonts aren't a seamless type, so a bare path isn't enough; an explicit descriptor is required even for a literal path, and `family` is a required option:
+System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load one via `{ type: 'font', source }` in the scene's `load` hook — fonts aren't a seamless type, so a bare path isn't enough; an explicit descriptor is required even for a literal path, and `family` is a required option:
 
 <SourceSnippet
   source="examples/guides/text/custom-font.ts"
@@ -90,10 +90,10 @@ Text colours (`fillColor`, outline and shadow colours) are authored sRGB `Color`
 [`BitmapText`](/ExoJS/en/api/bitmap-text/) uses a loaded [`BmFont`](/ExoJS/en/api/bm-font/). The `bmFont` asset type accepts AngelCode BMFont text and the BMFont JSON shape emitted by [msdf-bmfont-xml](https://github.com/soimy/msdf-bmfont-xml). Request JSON explicitly as `bmFont`; ordinary `.json` assets keep their usual meaning.
 
 ```ts
-import { Asset, BitmapText, type Loader } from '@codexo/exojs';
+import { BitmapText, type Loader } from '@codexo/exojs';
 
 declare const loader: Loader;
-const font = await loader.load(Asset.type('bmFont', 'fonts/ui.json'));
+const font = await loader.load({ type: 'bmFont', source: 'fonts/ui.json' });
 const label = new BitmapText('Score: 0', font, { msdf: true });
 ```
 
@@ -102,16 +102,14 @@ The supported `distanceField` extension contains `fieldType` (`sdf`, `msdf` or `
 For missing or asymmetric encoding metadata, supply an explicit [`BmFontAssetOptions`](/ExoJS/en/api/bm-font-asset-options/) declaration. This replaces the descriptor's distance metadata for that request. For example, an increasing encoding covering -6 through +2 atlas texels has span 8 and zero at 0.75:
 
 ```ts
-import { Asset, type Loader } from '@codexo/exojs';
+import { type Loader } from '@codexo/exojs';
 
 declare const loader: Loader;
-const font = await loader.load(Asset.type('bmFont', 'fonts/custom.fnt', {
-    distanceField: {
+const font = await loader.load({ type: 'bmFont', source: 'fonts/custom.fnt', distanceField: {
         fieldType: 'mtsdf',
         distanceRange: 8,
         zeroDistanceValue: 0.75,
-    },
-}));
+    } });
 ```
 
 Both `distanceRange` and `zeroDistanceValue` accept `null` when unknown; an explicit declaration never infers a radius or assumes symmetry. For known values, signed distance in atlas texels is `(sample - zeroDistanceValue) * distanceRange`, positive inside the glyph. When converting [msdf-atlas-gen metadata](https://github.com/Chlumsky/msdf-atlas-gen), its `distanceRangeMiddle` is a distance, so the normalized zero is `0.5 - distanceRangeMiddle / distanceRange`. Native `msdf-atlas-gen` JSON uses different glyph geometry and is not directly imported; convert its geometry to BMFont metrics first or construct `BmFontData` yourself. PSDF, XML and binary BMFont are not supported by this importer.

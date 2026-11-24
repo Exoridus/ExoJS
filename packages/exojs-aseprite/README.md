@@ -11,12 +11,12 @@ npm install --save-exact @codexo/exojs @codexo/exojs-aseprite
 Core is a peer dependency. Add `asepriteExtension` to the application; importing the package alone does not install a loader.
 
 ```ts
-import { Application, Asset, Scene } from '@codexo/exojs';
+import { Application, Scene } from '@codexo/exojs';
 import { asepriteExtension } from '@codexo/exojs-aseprite';
 
 class CharacterScene extends Scene {
   override async load(): Promise<void> {
-    const sheet = await this.loader.load(Asset.type('asepriteSheet', 'sprites/hero.json'));
+    const sheet = await this.loader.load({ type: 'asepriteSheet', source: 'sprites/hero.json' });
     const character = sheet.createAnimatedSprite();
 
     if (sheet.clips.has('walk')) {

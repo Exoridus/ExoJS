@@ -1,16 +1,21 @@
 import {
   Application,
+  BlendModes,
   Color,
-  FixedResolutionCanvasSizing,
+  Graphics,
+  type InteractionEvent,
   Keyboard,
+  type Pointer,
   Rectangle,
-  type RenderingContext,
+  ResponsiveCanvasSizing,
   Scene,
-  type Seconds,
   Sprite,
   type Texture,
+  Time,
+  Vector,
 } from '@codexo/exojs';
 import {
+  AlphaFadeOverLifetime,
   ColorGradient,
   ColorOverLifetime,
   ConeDirection,
@@ -25,21 +30,22 @@ import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { demoPanel, slider, startExample } from '@examples/runtime';
 
 const controls = {
-  rate: slider('Rate / s', { min: 0, max: 250, step: 10, value: 100 }),
-  lifetime: slider('Lifetime / s', { min: 0.2, max: 2.5, step: 0.1, value: 1.2 }),
-  speed: slider('Speed / px/s', { min: 10, max: 180, step: 10, value: 80 }),
+  rate: slider('Rate / s', { min: 0, max: 250, step: 10, value: 140 }),
+  lifetime: slider('Lifetime / s', { min: 0.2, max: 2.5, step: 0.1, value: 1.4 }),
+  speed: slider('Speed / px/s', { min: 10, max: 180, step: 10, value: 120 }),
 };
 class EmitterBasicsScene extends Scene {
   private system!: ParticleSystem;
+  private sparks!: ParticleSystem;
   private particleTexture!: Texture;
   private log!: Sprite;
   private spawn!: RateSpawn;
   private panel!: ReturnType<typeof demoPanel<typeof controls>>;
   private playing = true;
-  private elapsed = 0;
-  private dragging = false;
+  private dragPointer: number | null = null;
+  private readonly backdrop = new Graphics();
   private emitterX = 0.5;
-  private emitterY = 0.85;
+  private emitterY = 0.76;
   private scale = 1;
   private width = 1280;
   private height = 600;
@@ -50,14 +56,30 @@ class EmitterBasicsScene extends Scene {
 
   override init(): void {
     this.system = new ParticleSystem(this.particleTexture, { capacity: 2000, simulation: 'cpu' });
+    this.system.blendMode = BlendModes.Additive;
     this.log = new Sprite(this.loader.get(assets.platformerTilesImage)).setTextureFrame(new Rectangle(585, 0, 64, 64)).setAnchor(0.5);
-    this.root.addChild(this.log, this.system);
+    this.sparks = new ParticleSystem(this.loader.get(assets.particleSpark), { capacity: 100, simulation: 'cpu' });
+    this.sparks.blendMode = BlendModes.Additive;
+    this.sparks.addSpawnModule(
+      new RateSpawn({
+        rate: new Constant(18),
+        lifetime: new Constant(1.2),
+        velocity: new ConeDirection(-Math.PI / 2, Math.PI / 5, 100, 210),
+        scale: new Constant(new Vector(0.013, 0.025)),
+        tint: new Constant(new Color(255, 196, 102)),
+      }),
+    );
+    this.sparks.addUpdateModule(new AlphaFadeOverLifetime());
+    this.backdrop.fillColor = new Color(20, 27, 34);
+    this.backdrop.drawRectangle(0, 0, 1, 1);
+    this.root.addChild(this.backdrop, this.log, this.system, this.sparks);
     this.systems.add(this.system);
+    this.systems.add(this.sparks);
     this.system.addUpdateModule(
       new ScaleOverLifetime(
         new Curve([
-          { t: 0, v: 0.015 },
-          { t: 0.2, v: 0.04 },
+          { t: 0, v: 0.06 },
+          { t: 0.2, v: 0.13 },
           { t: 1, v: 0 },
         ]),
       ),
@@ -81,10 +103,23 @@ class EmitterBasicsScene extends Scene {
       },
     });
     this.setSpawn();
+
+    // A short warm-up makes the initial flame show the lifetime gradient.
+    for (let frame = 0; frame < 72; frame++) {
+      this.system.update(Time.seconds(1 / 60));
+      this.sparks.update(Time.seconds(1 / 60));
+    }
+
     this.inputs.onTrigger(Keyboard.Space, () => this.togglePlaying());
-    this.app.input.onPointerDown.add(this.onDown);
+    // Hit-tested scene input respects the UI layer, including open control menus.
+    this.root.interactive = true;
+    this.root.onPointerDown.add(this.onDown);
     this.app.input.onPointerMove.add(this.onMove);
     this.app.input.onPointerUp.add(this.onUp);
+    this.app.input.onPointerCancel.add(this.onUp);
+    window.addEventListener('pointerup', this.onWindowEnd);
+    window.addEventListener('blur', this.onBlur);
+    this.onSuspend.add(this.onBlur);
   }
 
   private setSpawn(): void {
@@ -98,28 +133,49 @@ class EmitterBasicsScene extends Scene {
     this.system.addSpawnModule(this.spawn);
   }
 
-  private readonly onDown = (p: { x: number; y: number }): void => {
-    this.dragging = true;
-    this.onMove(p);
+  private readonly onDown = (event: InteractionEvent): void => {
+    if (event.button !== 0 || this.dragPointer !== null) {
+      return;
+    }
+
+    this.dragPointer = event.pointer.id;
+    this.onMove(event.pointer, event.x, event.y);
   };
-  private readonly onMove = (p: { x: number; y: number }): void => {
-    if (this.dragging) {
-      this.emitterX = Math.max(0.1, Math.min(0.9, p.x / this.scale / this.width));
-      this.emitterY = Math.max(0.2, Math.min(0.9, p.y / this.scale / this.height));
+  private readonly onMove = (pointer: Pointer, x: number, y: number): void => {
+    if (pointer.id === this.dragPointer) {
+      this.emitterX = Math.max(0.1, Math.min(0.9, x / this.scale / this.width));
+      this.emitterY = Math.max(0.2, Math.min(0.9, y / this.scale / this.height));
     }
   };
-  private readonly onUp = (): void => {
-    this.dragging = false;
+  private readonly onUp = (pointer: Pointer): void => {
+    if (pointer.id === this.dragPointer) {
+      this.onBlur();
+    }
+  };
+  private readonly onWindowEnd = (event: PointerEvent): void => {
+    if (event.pointerId === this.dragPointer) {
+      this.onBlur();
+    }
+  };
+  private readonly onBlur = (): void => {
+    this.dragPointer = null;
   };
 
-  override update(delta: Seconds): void {
+  override update(): void {
+    // This layout uses top-left coordinates even as the host changes aspect.
+    this.app.rendering.view.setCenter(this.app.width / 2, this.app.height / 2);
     const v = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
     this.scale = v.scale;
     this.width = v.width;
     this.height = v.contentHeight;
     this.root.setScale(v.scale);
-    this.system.setPosition(v.width * this.emitterX, v.contentHeight * this.emitterY - 10);
-    this.log.setPosition(v.width * this.emitterX, v.contentHeight * this.emitterY + 12).setScale(0.75, 0.45);
+    this.backdrop.setScale(v.width, v.contentHeight);
+    const effectScale = Math.max(0.25, Math.min(1.5, v.contentHeight / 300));
+    const x = v.width * this.emitterX;
+    const y = v.contentHeight * this.emitterY;
+    this.system.setPosition(x, y - 10 * effectScale).setScale(effectScale);
+    this.sparks.setPosition(x, y - 10 * effectScale).setScale(effectScale);
+    this.log.setPosition(x, y + 10 * effectScale).setScale(1.45 * effectScale, 0.7 * effectScale);
     const values = this.panel.values;
     (this.spawn.config.rate as Constant<number>).value = values.rate;
     (this.spawn.config.lifetime as Constant<number>).value = values.lifetime;
@@ -127,18 +183,9 @@ class EmitterBasicsScene extends Scene {
     velocity.minSpeed = values.speed * 0.7;
     velocity.maxSpeed = values.speed;
 
-    if (this.playing) {
-      this.elapsed += delta;
-    }
-
     this.panel.status(
-      `${this.playing ? 'Running' : 'Paused'} | ${this.system.aliveCount} active | rate x lifetime ~ ${(values.rate * values.lifetime).toFixed(0)} steady-state particles`,
+      `${this.playing ? 'Running' : 'Paused'} | ${this.system.aliveCount} flame particles + sparks | rate x lifetime ~ ${(values.rate * values.lifetime).toFixed(0)} steady-state particles`,
     );
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.log);
-    context.render(this.system);
   }
 
   private togglePlaying(): void {
@@ -147,23 +194,26 @@ class EmitterBasicsScene extends Scene {
     // Leaving the scene's system registry freezes emission and live particles alike.
     if (this.playing) {
       this.systems.add(this.system);
+      this.systems.add(this.sparks);
     } else {
       this.systems.remove(this.system);
+      this.systems.remove(this.sparks);
     }
   }
 
   override destroy(): void {
-    this.app.input.onPointerDown.remove(this.onDown);
+    this.onBlur();
     this.app.input.onPointerMove.remove(this.onMove);
     this.app.input.onPointerUp.remove(this.onUp);
-    this.panel.dispose();
-    super.destroy();
+    this.app.input.onPointerCancel.remove(this.onUp);
+    window.removeEventListener('pointerup', this.onWindowEnd);
+    window.removeEventListener('blur', this.onBlur);
   }
 }
 
 const app = new Application({
   scenes: { EmitterBasicsScene },
-  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new ResponsiveCanvasSizing({ minAspect: 1 }) },
   clearColor: new Color(20, 27, 34),
   extensions: [particlesExtension],
 });

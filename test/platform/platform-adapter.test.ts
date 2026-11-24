@@ -144,7 +144,6 @@ declare module '#assets/AssetDefinitions' {
 
 describe('application asset definitions', async () => {
   const Application = await loadApplication();
-  const { Asset } = await import('#assets/Asset');
 
   test('startup and pre-use registration share a registry without changing an in-flight claim', async () => {
     const disposed = vi.fn();
@@ -179,7 +178,7 @@ describe('application asset definitions', async () => {
       ],
     });
     const other = new Application();
-    const asset = Asset.type('testDocument', 'message.txt');
+    const asset = { type: 'testDocument', source: 'message.txt' } as const;
     const first = app.loader.createScope();
     const second = app.loader.createScope();
     const fetch = vi.fn(async () => new Response(JSON.stringify({ $type: 'testDocument', $version: 1, message: 'message' })));

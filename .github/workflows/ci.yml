@@ -20,8 +20,7 @@ name: CI
 on:
   push:
     branches: [main, next]
-  pull_request:
-    branches: [main, next]
+  pull_request: # A stacked pull request can target a feature branch.
   workflow_dispatch:
     inputs:
       full_qualification:
@@ -142,6 +141,23 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
+      - name: Fetch source hygiene base
+        if: matrix.id == 'lint' && github.event_name != 'workflow_dispatch'
+        env:
+          SOURCE_HYGIENE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        shell: bash
+        run: |
+          if [ "$SOURCE_HYGIENE_BASE" = "0000000000000000000000000000000000000000" ]; then
+            exit 0
+          fi
+          if [[ ! "$SOURCE_HYGIENE_BASE" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Invalid source hygiene base commit."
+            exit 1
+          fi
+          if ! git cat-file -e "$SOURCE_HYGIENE_BASE^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "$SOURCE_HYGIENE_BASE"
+          fi
+          printf 'EXOJS_SOURCE_HYGIENE_BASE=%s\n' "$SOURCE_HYGIENE_BASE" >> "$GITHUB_ENV"
       - name: Fetch document history base
         if: matrix.id == 'sync'
         env:

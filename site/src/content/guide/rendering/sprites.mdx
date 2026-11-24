@@ -182,6 +182,55 @@ const rt = new RenderTexture(256, 256);
 const offscreenSprite = new Sprite(rt);
 ```
 
+## Dynamic textures: video and canvas
+
+A `FrameTexture` follows a `FrameSource`, an image that changes over time, and works wherever a texture is accepted: a `Sprite`, a `Mesh`, a custom material or a render pass input. It keeps one GPU texture for its whole life. A new frame is uploaded once, the next time a renderer binds the texture, however many consumers draw it; an unchanged frame uploads nothing, and a size change reallocates the GPU texture.
+
+`VideoTexture` is the ready-made one for an `HTMLVideoElement`. Where the browser supports `requestVideoFrameCallback`, each presented frame is uploaded once and a paused video uploads nothing; elsewhere the texture follows the playback position. The `Video` scene node draws its own `VideoTexture` and adds playback controls and audio, so its `texture` can feed other consumers while the video lives:
+
+```ts
+import { Mesh, Scene, Sprite, VideoTexture } from '@codexo/exojs';
+
+class ScreenScene extends Scene {
+  override async load(): Promise<void> {
+    const intro = await this.loader.load({ type: 'video', source: 'video/intro.mp4' });
+
+    intro.play({ loop: true, muted: true });
+
+    // The Video node and the mesh share one texture and one upload per frame.
+    const screen = new Mesh({
+      vertices: new Float32Array([0, 0, 320, 20, 320, 200, 0, 0, 320, 200, 0, 180]),
+      uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]),
+      texture: intro.texture,
+    });
+
+    this.root.addChild(intro, screen);
+  }
+}
+
+// Without a Video node: the element and its playback stay yours.
+export const videoSprite = (element: HTMLVideoElement): Sprite => new Sprite(new VideoTexture(element));
+```
+
+A canvas you draw into is a `CanvasFrameSource`. Drawing cannot be observed, so call `invalidate()` after each new frame:
+
+```ts
+import { CanvasFrameSource, FrameTexture, Sprite } from '@codexo/exojs';
+
+const canvas = document.createElement('canvas');
+const source = new CanvasFrameSource(canvas);
+const minimap = new Sprite(new FrameTexture(source, { ownsSource: true }));
+
+export const redrawMinimap = (draw: (context: CanvasRenderingContext2D) => void): void => {
+  draw(canvas.getContext('2d')!);
+  source.invalidate(); // uploaded once, the next time the minimap renders
+};
+
+export { minimap };
+```
+
+A texture owns its source only when created with `ownsSource: true` (`VideoTexture` always owns its `VideoFrameSource`, never the element). Destroying the texture frees its GPU memory and stops further uploads. Animated GIF, APNG and animated WebP are not decoded into frame sources yet; a custom `FrameSource` can feed any frames you decode yourself.
+
 The source decides how the samples are read. Image, canvas, SVG and video sources are sRGB colour: a video frame is SDR content, and the engine has no HDR video path. A `DataTexture` is numeric and is never colour-converted, so a lookup table, mask or normal map belongs there or in a `Texture` declared `colorSpace: 'none'`. A `RenderTexture` is colour or data according to its `format`; see [Render targets](/ExoJS/en/guide/rendering/render-targets/).
 
 ## Sprite transforms in the graph

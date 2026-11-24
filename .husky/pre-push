@@ -1,12 +1,14 @@
 #!/usr/bin/env sh
 # Pre-push verification.
 #
-# Branch pushes:  `scripts/ci/push-scope.ts` handles empty and published-data
-#                 ranges. Other pushes run path-aware static gates and local
-#                 units and allocation/physics checks against the pushed range.
-#                 Resolved source scopes explicitly defer browser, benchmark
-#                 and smoke lanes to mandatory CI for the pushed commit.
-#                 Unknown, global or unresolved scopes keep broad local lanes.
+# Branch pushes:  fast CI-first mode by default on feature branches:
+#                 tracked-file formatting/hygiene gates only. The expensive
+#                 dist rebuild, typechecks, test/benchmark/browser/smoke lanes
+#                 run in PR CI, whose verdict must pass before merging.
+#                 EXOJS_PRE_PUSH_MODE=full opts into the original local checks.
+#                 Direct main/next pushes always retain the full local checks.
+#                 GitHub Actions validates feature branches only once a PR
+#                 has been opened (create a Draft early).
 # Tag pushes:     `scripts/ci/trust.ts` - the release workflow's own admission
 #                 check: the tagged commit carries the package.json version,
 #                 sits on origin/main and has a green `verdict`. Nothing is
@@ -20,6 +22,7 @@ is_tag_push=0
 EXOJS_OUTPUT=${EXOJS_OUTPUT:-compact}
 export EXOJS_OUTPUT
 is_branch_push=0
+protected_branch_push=0
 pushed_tags=""
 push_head_sha=""
 push_base_sha=""
@@ -35,6 +38,13 @@ while read local_ref local_sha remote_ref remote_sha; do
             ;;
         *)
             is_branch_push=1
+            # A push touching an integration branch must not bypass full
+            # local verification just because it also pushes a feature ref.
+            case "$remote_ref" in
+                refs/heads/main|refs/heads/next)
+                    protected_branch_push=1
+                    ;;
+            esac
             # Only the last pushed branch ref wins when a push carries several
             # refs at once; same simplification the pre-existing boolean
             # flags above already make; a multi-branch push is a rare edge
@@ -55,7 +65,8 @@ fi
 
 if [ "$is_branch_push" = "1" ]; then
     # Existing remote SHA scopes incremental pushes; a new branch uses the
-    # merge base with origin/HEAD. An unresolved base runs everything.
+    # nearest integration branch. An unresolved base runs complete cheap gates
+    # in fast mode and the original full suite in explicit full mode.
     lane_base=$(node scripts/ci/push-range.ts "$push_head_sha" "${push_base_sha:-$null_sha}") || exit 1
     echo "[pre-push] validation base ${lane_base:-unknown}"
 
@@ -63,6 +74,19 @@ if [ "$is_branch_push" = "1" ]; then
     # `push-scope.ts` does not positively recognise, including an undeterminable
     # range, so a narrower answer is always a deliberate one.
     scope=$(node scripts/ci/push-scope.ts "$lane_base" "$push_head_sha")
+
+    push_mode=${EXOJS_PRE_PUSH_MODE:-fast}
+    case "$push_mode" in
+        fast|full) ;;
+        *)
+            echo "[pre-push] invalid EXOJS_PRE_PUSH_MODE=$push_mode; expected fast or full" >&2
+            exit 2
+            ;;
+    esac
+
+    if [ "$protected_branch_push" = "1" ]; then
+        push_mode=full
+    fi
 
     case "$scope" in
         none)
@@ -75,26 +99,39 @@ if [ "$is_branch_push" = "1" ]; then
         *)
             # Cheap tracked-file gates first: a formatting or hygiene failure is
             # reported before any dist rebuild or compiler run starts.
-            echo "[pre-push] fast static validation"
-            npm run gates -- affected-fast "$lane_base" "$push_head_sha" || exit 1
-
-            # Static and retained unit consumers still need current dist even
-            # when browser, benchmark and smoke lanes defer to mandatory CI.
-            needs_dist=$(node scripts/ci/local-policy.ts --needs-dist "$lane_base" "$push_head_sha") || exit 1
-            if [ "$needs_dist" = "true" ]; then
-                echo "[pre-push] checking dist against the sources"
-                node scripts/check-dist-fresh.ts --rebuild || exit 1
+            # Hygiene checks the full PR diff even when the push is incremental.
+            hygiene_base=${EXOJS_SOURCE_HYGIENE_BASE:-$lane_base}
+            if [ -z "${EXOJS_SOURCE_HYGIENE_BASE:-}" ] && [ "$protected_branch_push" = "0" ] && [ -n "$push_base_sha" ]; then
+                hygiene_base=$(node scripts/ci/push-range.ts "$push_head_sha" "$null_sha") || exit 1
             fi
+            echo "[pre-push] fast static validation"
+            EXOJS_SOURCE_HYGIENE_BASE="$hygiene_base" npm run gates -- affected-fast "$lane_base" "$push_head_sha" || exit 1
 
-            echo "[pre-push] static validation"
-            npm run gates -- affected-rest "$lane_base" "$push_head_sha" || exit 1
+            if [ "$push_mode" = "full" ]; then
+                echo "[pre-push] full local verification requested"
+                # Original high-confidence path: dist, static gates, units and
+                # conditionally browsers. CI repeats every required check.
+                # Static and retained unit consumers still need current dist even
+                # when browser, benchmark and smoke lanes defer to mandatory CI.
+                needs_dist=$(node scripts/ci/local-policy.ts --needs-dist "$lane_base" "$push_head_sha") || exit 1
+                if [ "$needs_dist" = "true" ]; then
+                    echo "[pre-push] checking dist against the sources"
+                    node scripts/check-dist-fresh.ts --rebuild || exit 1
+                fi
 
-            if [ -n "$lane_base" ]; then
-                echo "[pre-push] running the test lanes this push requires"
-                npm run lanes -- --run --tests-only --pre-push --base "$lane_base" || exit 1
+                echo "[pre-push] static validation"
+                npm run gates -- affected-rest "$lane_base" "$push_head_sha" || exit 1
+
+                if [ -n "$lane_base" ]; then
+                    echo "[pre-push] running the test lanes this push requires"
+                    npm run lanes -- --run --tests-only --pre-push --base "$lane_base" --head "$push_head_sha" || exit 1
+                else
+                    echo "[pre-push] no base commit to scope lanes against - running every lane"
+                    npm run lanes -- --run --tests-only --pre-push --all || exit 1
+                fi
             else
-                echo "[pre-push] no base commit to scope lanes against - running every lane"
-                npm run lanes -- --run --tests-only --pre-push --all || exit 1
+                echo "[pre-push] CI-first: expensive local build/typechecks/tests deferred to PR CI"
+                echo "[pre-push] open a Draft PR early; feature-branch pushes alone do not trigger CI"
             fi
             ;;
     esac

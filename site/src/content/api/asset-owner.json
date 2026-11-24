@@ -1,7 +1,7 @@
 {
-  "title": "ResourceAsset",
-  "description": "A descriptor whose type hands out the resource itself as its catalog leaf, empty until the payload arrives and healed in place (`Texture`, `Sound`). The brand is a phantom; it mirrors a type whose `leaf` is a seamless adapter.",
-  "symbol": "ResourceAsset",
+  "title": "AssetOwner",
+  "description": "Loading, releasing and child scopes on one asset owner. `app.assets`, `scene.assets` and every scope created from them share this surface; only the lifetime of the claims differs.",
+  "symbol": "AssetOwner",
   "kind": "type",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A descriptor whose type hands out the resource itself as its catalog leaf, empty until the payload arrives and healed in place (`Texture`, `Sound`). The brand is a phantom; it mirrors a type whose `leaf` is a seamless adapter."
+        "Loading, releasing and child scopes on one asset owner. `app.assets`, `scene.assets` and every scope created from them share this surface; only the lifetime of the claims differs."
       ],
-      "importLine": "import { ResourceAsset } from '@codexo/exojs'",
+      "importLine": "import { AssetOwner } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "ResourceAsset",
-          "signature": "Asset<T> & { [RESOURCE_ASSET]: true }",
+          "name": "AssetOwner",
+          "signature": "Pick<LoaderScope, \"createScope\" | \"load\" | \"release\">",
           "signatureTokens": [
             {
-              "text": "Asset",
+              "text": "Pick",
               "kind": "type"
             },
             {
@@ -41,35 +41,35 @@
               "kind": "punctuation"
             },
             {
-              "text": "T",
+              "text": "LoaderScope",
               "kind": "type"
             },
             {
-              "text": ">",
+              "text": ", ",
               "kind": "punctuation"
             },
             {
-              "text": " & ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[RESOURCE_ASSET]",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "true",
+              "text": "\"createScope\"",
               "kind": "keyword"
             },
             {
-              "text": " }",
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"load\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"release\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
               "kind": "punctuation"
             }
           ],
@@ -89,11 +89,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/Asset.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+        "label": "src/assets/ApplicationAssets.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/ApplicationAssets.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/Asset.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+  "sourcePath": "src/assets/ApplicationAssets.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/ApplicationAssets.ts"
 }

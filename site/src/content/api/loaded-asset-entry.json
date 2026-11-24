@@ -1,7 +1,7 @@
 {
-  "title": "AssetForKind",
-  "description": "The descriptor a built-in or declaration-merged asset type produces, branded with the leaf policy that type declares at runtime.",
-  "symbol": "AssetForKind",
+  "title": "LoadedAssetEntry",
+  "description": "The value one AssetLoadEntry resolves to.",
+  "symbol": "LoadedAssetEntry",
   "kind": "type",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The descriptor a built-in or declaration-merged asset type produces, branded with the leaf policy that type declares at runtime."
+        "The value one AssetLoadEntry resolves to."
       ],
-      "importLine": "import { AssetForKind } from '@codexo/exojs'",
+      "importLine": "import { LoadedAssetEntry } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "AssetForKind",
-          "signature": "K extends ValueAssetKind ? ValueAsset<AssetDefinitions[K][\"resource\"]> : K extends LeaflessAssetKind ? LeaflessAsset<AssetDefinitions[K][\"resource\"]> : ResourceAsset<AssetDefinitions[K][\"resource\"]>",
+          "name": "LoadedAssetEntry",
+          "signature": "E extends string ? [KindByPath<E>] extends [never] ? unknown : ResourceForKind<KindByPath<E>> : E extends CatalogLeafBrand<T> ? T : E extends AssetLoadHandle ? Awaited<E[\"loaded\"]> : E extends AssetDescriptor ? AssetDescriptorResource<E> : never",
           "signatureTokens": [
             {
-              "text": "K",
+              "text": "E",
               "kind": "type"
             },
             {
@@ -49,15 +49,19 @@
               "kind": "punctuation"
             },
             {
-              "text": "ValueAssetKind",
-              "kind": "type"
+              "text": "string",
+              "kind": "keyword"
             },
             {
               "text": " ? ",
               "kind": "punctuation"
             },
             {
-              "text": "ValueAsset",
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KindByPath",
               "kind": "type"
             },
             {
@@ -65,31 +69,75 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetDefinitions",
+              "text": "E",
               "kind": "type"
             },
             {
-              "text": "[",
+              "text": ">",
               "kind": "punctuation"
-            },
-            {
-              "text": "K",
-              "kind": "type"
             },
             {
               "text": "]",
               "kind": "punctuation"
             },
             {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
               "text": "[",
               "kind": "punctuation"
             },
             {
-              "text": "\"resource\"",
+              "text": "never",
               "kind": "keyword"
             },
             {
               "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ResourceForKind",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KindByPath",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "E",
+              "kind": "type"
+            },
+            {
+              "text": ">",
               "kind": "punctuation"
             },
             {
@@ -101,7 +149,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "K",
+              "text": "E",
               "kind": "type"
             },
             {
@@ -117,15 +165,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "LeaflessAssetKind",
-              "kind": "type"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LeaflessAsset",
+              "text": "CatalogLeafBrand",
               "kind": "type"
             },
             {
@@ -133,7 +173,59 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetDefinitions",
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "E",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetLoadHandle",
+              "kind": "type"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Awaited",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "E",
               "kind": "type"
             },
             {
@@ -141,19 +233,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "K",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"resource\"",
+              "text": "\"loaded\"",
               "kind": "keyword"
             },
             {
@@ -169,7 +249,31 @@
               "kind": "punctuation"
             },
             {
-              "text": "ResourceAsset",
+              "text": "E",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptor",
+              "kind": "type"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptorResource",
               "kind": "type"
             },
             {
@@ -177,36 +281,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetDefinitions",
+              "text": "E",
               "kind": "type"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "K",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"resource\"",
-              "kind": "keyword"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
             },
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -225,11 +313,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/Asset.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+        "label": "src/assets/assetLoadGroup.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/Asset.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+  "sourcePath": "src/assets/assetLoadGroup.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
 }

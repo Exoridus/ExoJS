@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "AssetTypeDefinitionEntry",
-          "signature": "readonly [AssetConstructor, BinaryDefinition | CodecDefinition | DocumentDefinition]",
+          "signature": "readonly [AssetConstructor, BinaryDefinition | CodecDefinition | DocumentDefinition | ReadDefinition]",
           "signatureTokens": [
             {
               "text": "readonly",
@@ -70,6 +70,14 @@
             },
             {
               "text": "DocumentDefinition",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadDefinition",
               "kind": "type"
             },
             {

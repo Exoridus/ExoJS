@@ -1,11 +1,11 @@
-import { Asset, Color, Container, Panel, Scene, Text } from '@codexo/exojs';
+import { Color, Container, Panel, Scene, Text } from '@codexo/exojs';
 
 class FontFamilyScene extends Scene {
   private title!: Text;
 
   // #region guide:font-by-family
   override async load(): Promise<void> {
-    await this.loader.load(Asset.type('font', 'font/MyFont.woff2', { family: 'MyFont' }));
+    await this.loader.load({ type: 'font', source: 'font/MyFont.woff2', family: 'MyFont' });
   }
 
   override init(): void {
@@ -23,7 +23,7 @@ class FontFaceScene extends Scene {
 
   // #region guide:font-by-face
   override async load(): Promise<void> {
-    const face = await this.loader.load(Asset.type('font', 'font/MyFont.woff2', { family: 'MyFont' }));
+    const face = await this.loader.load({ type: 'font', source: 'font/MyFont.woff2', family: 'MyFont' });
 
     this.title = new Text('Custom Font', { font: face, fontSize: 48 });
   }

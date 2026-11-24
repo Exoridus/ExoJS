@@ -31,7 +31,7 @@ import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { readWebGl2Pixel } from './_backendSetup';
 import { expectPixelNear } from './_pixels';
-import { wireTilemapRenderers } from './_tilemapScene';
+import { overlappingTextureRunPair, singleTileMap, wireTilemapRenderers } from './_tilemapScene';
 
 const canvasSize = 64;
 
@@ -247,6 +247,67 @@ describe('WebGL2 renderer matrix: TileChunkNode retained instruction-set replay 
       expect(steadyFrame).toEqual(recordFrame);
     } finally {
       scene.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('multi-atlas retained replay preserves all RGBA bytes and re-captures after a tile edit', async () => {
+    const backend = await createBackend();
+    const outsideTexture = createSolidTexture('#00ff00');
+    const pair = overlappingTextureRunPair(['rgba(255, 0, 0, 0.5)', 'rgba(0, 0, 255, 0.5)'], [0, 1, 0, 1]);
+    const root = new Container();
+    const group = new RetainedContainer();
+    const outside = new TileMapNode(singleTileMap(outsideTexture));
+    const mixed = new TileMapNode(pair.optimized);
+    const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
+
+    outside.setPosition(48, 0);
+    group.setPosition(24, 12);
+    group.addChild(mixed);
+    root.addChild(outside);
+    root.addChild(group);
+
+    try {
+      render(backend, root); // collect
+      const collect = readCanvas(backend);
+
+      render(backend, root); // record
+      const recorded = readCanvas(backend);
+
+      render(backend, root); // replay recorded multi-slot payload
+      const replayed = readCanvas(backend);
+
+      expect(replaySpy).toHaveBeenCalled();
+      expect(recorded).toEqual(collect);
+      expect(replayed).toEqual(recorded);
+
+      const overlap = readWebGl2Pixel(backend, 30, 20);
+
+      expect(overlap[2]).toBeGreaterThan(overlap[0]);
+
+      // A content-dirty chunk invalidates the recorded A-B-A-B slot payload.
+      pair.optimized.layers[0]!.clearTileAt(0, 1);
+      render(backend, root);
+      const edited = readCanvas(backend);
+      const changed = readWebGl2Pixel(backend, 30, 20);
+
+      expect(edited).not.toEqual(recorded);
+      expect(changed[0]).toBeGreaterThan(changed[2]);
+
+      render(backend, root); // re-record the edited geometry
+      replaySpy.mockClear();
+      render(backend, root); // replay the new retained payload
+
+      expect(replaySpy).toHaveBeenCalled();
+      expect(readCanvas(backend)).toEqual(edited);
+    } finally {
+      root.destroy();
+      outsideTexture.destroy();
+
+      for (const texture of pair.textures) {
+        texture.destroy();
+      }
+
       backend.destroy();
     }
   });

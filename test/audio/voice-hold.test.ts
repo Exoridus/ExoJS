@@ -7,9 +7,9 @@
 import { getAudioContext } from '#audio/audioContext';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
-import { AudioStream } from '#audio/AudioStream';
 import type { AudioStreamVoice } from '#audio/AudioStreamVoice';
 import { AudioSystem } from '#audio/AudioSystem';
+import { Music } from '#audio/Music';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 import { Time } from '#core/units';
@@ -148,7 +148,7 @@ describe('AudioStreamVoice hold', () => {
 
   test('silences the element without reporting a caller pause, and restarts it when lifted', () => {
     const element = createAudioElementStub();
-    const voice = system.play(new AudioStream(element)) as AudioStreamVoice;
+    const voice = system.play(new Music(element)) as AudioStreamVoice;
 
     voice._setHeld(true);
 
@@ -162,7 +162,7 @@ describe('AudioStreamVoice hold', () => {
 
   test('a caller pause made while held survives the hold being lifted', () => {
     const element = createAudioElementStub();
-    const voice = system.play(new AudioStream(element)) as AudioStreamVoice;
+    const voice = system.play(new Music(element)) as AudioStreamVoice;
 
     voice._setHeld(true);
     voice.pause();
@@ -174,7 +174,7 @@ describe('AudioStreamVoice hold', () => {
 
   test('a caller resume made while held waits for the hold to lift', () => {
     const element = createAudioElementStub();
-    const voice = system.play(new AudioStream(element)) as AudioStreamVoice;
+    const voice = system.play(new Music(element)) as AudioStreamVoice;
 
     voice.pause();
     voice._setHeld(true);

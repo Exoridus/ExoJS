@@ -2,7 +2,6 @@ import '#assets/coreAssetTypes';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { _readMeta } from '#assets/assetMeta';
 import { AssetRef } from '#assets/AssetRef';
 import { _readProvenance, Assets } from '#assets/Assets';
@@ -179,7 +178,7 @@ describe('Assets.extend', () => {
 
     const derived = Assets.extend(base, {
       theme: 'audio/forest.ogg',
-      logo: Asset.type('texture', 'sprites/forest-logo.png', { mimeType: 'image/png' }),
+      logo: { type: 'texture', source: 'sprites/forest-logo.png', mimeType: 'image/png' },
     });
 
     expect(_readMeta(derived.theme)).toMatchObject({ kind: 'sound', src: 'audio/forest.ogg' });

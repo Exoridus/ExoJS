@@ -49,7 +49,7 @@ export interface HTMLTextOptions {
  * pass the raw font bytes (from {@link BinaryAsset} or a plain `fetch`):
  *
  * ```ts
- * const bytes = await loader.load(Asset.type('binary', 'roboto.woff2'));
+ * const bytes = await loader.load({ type: 'binary', source: 'roboto.woff2' });
  * htmlText.addFont('Roboto', bytes, 'woff2');
  * ```
  *
@@ -188,7 +188,7 @@ export class HTMLText extends Container {
    * Registering the same family twice replaces the previous entry.
    *
    * ```ts
-   * const bytes = await loader.load(Asset.type('binary', 'roboto.woff2'));
+   * const bytes = await loader.load({ type: 'binary', source: 'roboto.woff2' });
    * label.addFont('Roboto', bytes, 'woff2');
    * ```
    */

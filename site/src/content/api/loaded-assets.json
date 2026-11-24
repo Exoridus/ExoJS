@@ -1,7 +1,7 @@
 {
-  "title": "ValueAsset",
-  "description": "A descriptor whose type hands out a deferred `AssetRef<T>` as its catalog leaf - even when `T` is an object type (e.g. typed JSON). The brand is a phantom (never present at runtime); it mirrors the type's `leaf: 'ref'`.",
-  "symbol": "ValueAsset",
+  "title": "LoadedAssets",
+  "description": "Replaces each entry of an AssetLoadInput with the value loading it produces.",
+  "symbol": "LoadedAssets",
   "kind": "type",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A descriptor whose type hands out a deferred `AssetRef<T>` as its catalog leaf - even when `T` is an object type (e.g. typed JSON). The brand is a phantom (never present at runtime); it mirrors the type's `leaf: 'ref'`."
+        "Replaces each entry of an AssetLoadInput with the value loading it produces."
       ],
-      "importLine": "import { ValueAsset } from '@codexo/exojs'",
+      "importLine": "import { LoadedAssets } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,35 @@
       "title": "Definition",
       "members": [
         {
-          "name": "ValueAsset",
-          "signature": "Asset<T> & { [VALUE_ASSET]: true }",
+          "name": "LoadedAssets",
+          "signature": "Input extends AssetLoadEntry ? LoadedAssetEntry<Input> : mapped",
           "signatureTokens": [
             {
-              "text": "Asset",
+              "text": "Input",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetLoadEntry",
+              "kind": "type"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadedAssetEntry",
               "kind": "type"
             },
             {
@@ -41,7 +65,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "T",
+              "text": "Input",
               "kind": "type"
             },
             {
@@ -49,28 +73,12 @@
               "kind": "punctuation"
             },
             {
-              "text": " & ",
+              "text": " : ",
               "kind": "punctuation"
             },
             {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[VALUE_ASSET]",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "true",
+              "text": "mapped",
               "kind": "keyword"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -89,11 +97,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/Asset.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+        "label": "src/assets/assetLoadGroup.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/Asset.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+  "sourcePath": "src/assets/assetLoadGroup.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
 }

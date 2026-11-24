@@ -1,5 +1,4 @@
 import type { LoaderScope } from '@codexo/exojs';
-import { Asset } from '@codexo/exojs';
 import type { MapLevelLoadContext, MapWorld, TileMap, TileSet } from '@codexo/exojs/tilemap';
 import { MapWorldRuntime } from '@codexo/exojs/tilemap';
 
@@ -64,7 +63,7 @@ export interface LdtkRuntimeOptions {
  *
  * @example
  * ```ts
- * const project = await scene.loader.load(Asset.type('ldtkProject', 'world.ldtk'));
+ * const project = await scene.loader.load({ type: 'ldtkProject', source: 'world.ldtk' });
  * const runtime = project.createRuntime({ scope: scene.loader });
  *
  * const forest = await runtime.loadLevel(project.world.getLevelByName('Forest')!.id, {
@@ -178,7 +177,7 @@ export class LdtkProject {
     const url = resolveLdtkUrl(level.externalRelPath, this.source);
     // Validated as strictly as an inlined level, with the `.ldtkl` file as the
     // error source - a malformed external payload must fail as loudly.
-    const external = validateLdtkLevelData(await scope.load(Asset.type('json', url)), url);
+    const external = validateLdtkLevelData(await scope.load({ type: 'json', source: url }), url);
     const fieldInstances = external.fieldInstances ?? level.fieldInstances;
 
     return {

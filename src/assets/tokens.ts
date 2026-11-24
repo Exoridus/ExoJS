@@ -6,8 +6,8 @@
 /**
  * Dispatch token for generic JSON loading.
  *
- * `loader.load(Asset.type('json', 'config.json'))` returns `Promise<unknown>`.
- * Narrow via generic: `loader.load(Asset.type<Config>('json', 'config.json'))`.
+ * `loader.load({ type: 'json', source: 'config.json' })` returns `Promise<unknown>`.
+ * Narrow via generic: `loader.load({ type: 'json', source: 'config.json', parse: (raw): Config => raw as Config })`.
  * Handles all JSON shapes - objects, arrays, scalars.
  */
 export abstract class Json {
@@ -17,7 +17,7 @@ export abstract class Json {
 /**
  * Dispatch token for plain text loading.
  *
- * `loader.load(Asset.type('text', 'greeting.txt'))` returns `Promise<string>`.
+ * `loader.load({ type: 'text', source: 'greeting.txt' })` returns `Promise<string>`.
  */
 export abstract class TextAsset {
   declare protected readonly _token: 'text';
@@ -26,7 +26,7 @@ export abstract class TextAsset {
 /**
  * Dispatch token for SVG loading.
  *
- * `loader.load(Asset.type('svg', 'icon.svg'))` returns `Promise<HTMLImageElement>`.
+ * `loader.load({ type: 'svg', source: 'icon.svg' })` returns `Promise<HTMLImageElement>`.
  */
 export abstract class SvgAsset {
   declare protected readonly _token: 'svg';
@@ -35,7 +35,7 @@ export abstract class SvgAsset {
 /**
  * Dispatch token for subtitle loading (WebVTT and SRT).
  *
- * `loader.load(Asset.type('subtitle', 'subs.vtt'))` returns `Promise<VTTCue[]>`,
+ * `loader.load({ type: 'subtitle', source: 'subs.vtt' })` returns `Promise<VTTCue[]>`,
  * and so does the same call for a `.srt` file. The format is taken from the file
  * extension; anything else reads as WebVTT.
  */
@@ -46,7 +46,7 @@ export abstract class SubtitleAsset {
 /**
  * Dispatch token for XML document loading.
  *
- * `loader.load(Asset.type('xml', 'data.xml'))` returns `Promise<Document>`.
+ * `loader.load({ type: 'xml', source: 'data.xml' })` returns `Promise<Document>`.
  * Throws if the file cannot be parsed as well-formed XML.
  */
 export abstract class XmlAsset {
@@ -56,7 +56,7 @@ export abstract class XmlAsset {
 /**
  * Dispatch token for CSV loading.
  *
- * `loader.load(Asset.type('csv', 'table.csv'))` returns `Promise<string[][]>`.
+ * `loader.load({ type: 'csv', source: 'table.csv' })` returns `Promise<string[][]>`.
  * Each inner array is one row; values are raw strings (no type coercion).
  */
 export abstract class CsvAsset {
@@ -66,7 +66,7 @@ export abstract class CsvAsset {
 /**
  * Dispatch token for image loading.
  *
- * `loader.load(Asset.type('image', 'img.png'))` returns `Promise<DecodedImage>`: an
+ * `loader.load({ type: 'image', source: 'img.png' })` returns `Promise<DecodedImage>`: an
  * `ImageBitmap` where the environment has `createImageBitmap`, an
  * `HTMLImageElement` otherwise. Narrow before reading element-only members such
  * as `naturalWidth` or `src`.
@@ -78,7 +78,7 @@ export abstract class ImageAsset {
 /**
  * Dispatch token for font loading.
  *
- * `loader.load(Asset.type('font', 'font.woff2', { family: 'MyFont' }))` returns `Promise<FontFace>`.
+ * `loader.load({ type: 'font', source: 'font.woff2', family: 'MyFont' })` returns `Promise<FontFace>`.
  */
 export abstract class FontAsset {
   declare protected readonly _token: 'font';
@@ -87,7 +87,7 @@ export abstract class FontAsset {
 /**
  * Dispatch token for binary data loading.
  *
- * `loader.load(Asset.type('binary', 'data.bin'))` returns `Promise<ArrayBuffer>`.
+ * `loader.load({ type: 'binary', source: 'data.bin' })` returns `Promise<ArrayBuffer>`.
  */
 export abstract class BinaryAsset {
   declare protected readonly _token: 'binary';
@@ -96,7 +96,7 @@ export abstract class BinaryAsset {
 /**
  * Dispatch token for WebAssembly module loading.
  *
- * `loader.load(Asset.type('wasm', 'module.wasm'))` returns `Promise<WebAssembly.Module>`.
+ * `loader.load({ type: 'wasm', source: 'module.wasm' })` returns `Promise<WebAssembly.Module>`.
  */
 export abstract class WasmAsset {
   declare protected readonly _token: 'wasm';

@@ -15,7 +15,7 @@
 // and `tsconfig.type-tests.json` again with `--strictNullChecks false` on the
 // command line. Every assertion below must hold identically in all three.
 
-import { Asset, Assets, type Loader, type Scene, type Texture } from '@codexo/exojs';
+import { Assets, type Loader, type Scene, type Texture } from '@codexo/exojs';
 
 import { LoadPriority } from '#assets/Loader';
 
@@ -48,16 +48,16 @@ const bare = Assets.from({
 });
 
 const explicit = Assets.from({
-  player: Asset.type('texture', 'sprites/player.png', { mimeType: 'image/png' }),
+  player: { type: 'texture', source: 'sprites/player.png', mimeType: 'image/png' },
   // A value descriptor with an explicit payload annotation keeps that payload.
-  config: Asset.type<LevelData>('json', 'data/config.json'),
+  config: { type: 'json', source: 'data/config.json', parse: (raw: unknown) => raw as LevelData },
 });
 
 // Bare paths and explicit descriptors/configs side by side.
 const mixed = Assets.from({
   player: 'sprites/player.png',
   raw: { type: 'json', source: 'data/raw.json' },
-  level: Asset.type<LevelData>('json', 'data/level.json'),
+  level: { type: 'json', source: 'data/level.json', parse: (raw: unknown) => raw as LevelData },
 });
 
 const forest = Assets.from({ tree: 'sprites/tree.png', trees: 'data/trees.json' });
@@ -119,7 +119,7 @@ export const loads = async (): Promise<void> => {
 
 export const neighbours = async (): Promise<void> => {
   // Single descriptor.
-  const single = await loader.load(Asset.type('texture', 'sprites/one.png'));
+  const single = await loader.load({ type: 'texture', source: 'sprites/one.png' });
   expectType<Equal<typeof single, Texture>>();
 
   // Single value leaf (an `AssetRef` catalog property) resolves to its payload.
@@ -136,19 +136,19 @@ export const neighbours = async (): Promise<void> => {
   expectType<Equal<typeof path, Texture>>();
 };
 
-// --- negative: a plain record is not a catalog ------------------------------
+// --- a plain record of paths is a named load group --------------------------
 
 declare const plainRecord: { player: 'sprites/player.png'; config: 'data/config.json' };
 
+export const records = async (): Promise<void> => {
+  const loaded = await loader.load(plainRecord);
+  expectType<Equal<typeof loaded, { player: Texture; config: unknown }>>();
+
+  const scoped = await scene.loader.load(plainRecord);
+  expectType<Equal<typeof scoped, { player: Texture; config: unknown }>>();
+};
+
 export const negatives = (): void => {
-  // @ts-expect-error - a definition RECORD is not a materialized `Assets`
-  // catalog; the catalog overload takes `Assets.from(...)` output, not the
-  // record it was built from.
-  loader.load(plainRecord);
-
-  // @ts-expect-error - and the scene-scoped mirror rejects it just the same.
-  scene.loader.load(plainRecord);
-
   // @ts-expect-error - an arbitrary object matches no loader input either.
   loader.load({ nope: 1 });
 };

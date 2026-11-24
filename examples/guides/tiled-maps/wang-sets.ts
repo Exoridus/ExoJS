@@ -1,10 +1,10 @@
-import { Asset, Scene } from '@codexo/exojs';
+import { Scene } from '@codexo/exojs';
 import { autoTile, refreshCell } from '@codexo/exojs/tilemap';
 import { tiledWangSetToWangSet } from '@codexo/exojs-tiled';
 
 class WangSetScene extends Scene {
   public override async load(): Promise<void> {
-    const map = await this.loader.load(Asset.type('tiledSource', 'levels/forest.tmj'));
+    const map = await this.loader.load({ type: 'tiledSource', source: 'levels/forest.tmj' });
     const tx = 0;
     const ty = 0;
 

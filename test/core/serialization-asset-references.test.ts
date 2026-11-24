@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
 import { binarySourceCodec } from '#assets/AssetSourceCodec';
 import { AssetType } from '#assets/AssetType';
@@ -97,7 +96,7 @@ describe('asset references keep their interpretation', () => {
 
   test('the current format writes the typed reference format 3 introduced', async () => {
     const loader = createCoreLoader();
-    const texture = await loader.load(Asset.type('texture', 'hero.png'));
+    const texture = await loader.load({ type: 'texture', source: 'hero.png' });
     const tree = new Container();
     tree.addChild(new Sprite(texture));
 
@@ -270,7 +269,7 @@ describe('asset references keep their interpretation', () => {
     const loader = createCoreLoader();
     const nearest = { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.Repeat };
     const defaults = { scaleMode: Texture.defaultOptions.scaleMode, wrapMode: Texture.defaultOptions.wrapMode };
-    await loader.load(Asset.type('texture', 'hero.png', { textureOptions: nearest }));
+    await loader.load({ type: 'texture', source: 'hero.png', textureOptions: nearest });
     const catalog = Assets.from({ hero: { type: 'texture', source: 'hero.png' } });
 
     try {
@@ -321,7 +320,7 @@ describe('asset references keep their interpretation', () => {
     const options = { mimeType: 'image/png', textureOptions: null } as unknown as { mimeType: string };
 
     try {
-      const texture = await loader.load(Asset.type('texture', 'hero.png', options));
+      const texture = await loader.load({ type: 'texture', source: 'hero.png', ...options });
       const document = { type: 'Sprite', texture: { source: 'hero.png', options } };
       expect((deserializeTree(document, loader) as Sprite).texture).toBe(texture);
     } finally {
@@ -331,8 +330,8 @@ describe('asset references keep their interpretation', () => {
 
   test('two textures of one source with different identity options round-trip to their own texture', async () => {
     const loader = createCoreLoader();
-    const plain = await loader.load(Asset.type('texture', 'hero.png'));
-    const data = await loader.load(Asset.type('texture', 'hero.png', { mimeType: 'image/png', textureOptions: { colorSpace: 'none' } }));
+    const plain = await loader.load({ type: 'texture', source: 'hero.png' });
+    const data = await loader.load({ type: 'texture', source: 'hero.png', mimeType: 'image/png', textureOptions: { colorSpace: 'none' } });
 
     expect(data).not.toBe(plain);
 
@@ -359,7 +358,7 @@ describe('asset references keep their interpretation', () => {
 
   test('a reference whose asset was not pre-loaded still resolves to null with a diagnostic', async () => {
     const source = createCoreLoader();
-    const texture = await source.load(Asset.type('texture', 'hero.png', { textureOptions: { colorSpace: 'none' } }));
+    const texture = await source.load({ type: 'texture', source: 'hero.png', textureOptions: { colorSpace: 'none' } });
     const tree = new Container();
     tree.addChild(new Sprite(texture));
 
@@ -367,7 +366,7 @@ describe('asset references keep their interpretation', () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const target = createCoreLoader();
 
-    await target.load(Asset.type('texture', 'hero.png'));
+    await target.load({ type: 'texture', source: 'hero.png' });
 
     const restored = deserializeTree(serialized, target, undefined, 2);
 
@@ -411,7 +410,7 @@ describe('asset references keep their interpretation', () => {
     materializeAssetTypes(loader, [type]);
 
     const holder = new Holder();
-    holder.resource = (await loader.load(type.asset('a.shape', { shape }))) as object;
+    holder.resource = (await loader.load({ type, source: 'a.shape', shape })) as object;
 
     expect(() => serializeTree(holder, loader)).toThrow(/cannot be written as data/);
   });
@@ -495,7 +494,7 @@ describe('asset references keep the logical source', () => {
     const loader = createCoreLoader();
     const texture = await loader.load('hero.png');
 
-    await loader.load(Asset.type('texture', 'hero.png'));
+    await loader.load({ type: 'texture', source: 'hero.png' });
 
     const tree = new Container();
     tree.addChild(new Sprite(texture));

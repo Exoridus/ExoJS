@@ -1,6 +1,6 @@
 {
   "title": "LeaflessAssetKind",
-  "description": "The built-in types that hand out no catalog leaf at all - the type-level mirror of the built-in types whose `leaf` is `'none'`. Their assets load directly (`loader.load(Asset.type('music', ...))`) but cannot be held by a catalog, inferred from a bare path, or handed out by `get()`.",
+  "description": "The built-in types that hand out no catalog leaf at all - the type-level mirror of the built-in types whose `leaf` is `'none'`. Their assets load directly (`loader.load({ type: 'music', source })`) but cannot be held by a catalog, inferred from a bare path, or handed out by `get()`.",
   "symbol": "LeaflessAssetKind",
   "kind": "type",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The built-in types that hand out no catalog leaf at all - the type-level mirror of the built-in types whose `leaf` is `'none'`. Their assets load directly (`loader.load(Asset.type('music', ...))`) but cannot be held by a catalog, inferred from a bare path, or handed out by `get()`."
+        "The built-in types that hand out no catalog leaf at all - the type-level mirror of the built-in types whose `leaf` is `'none'`. Their assets load directly (`loader.load({ type: 'music', source })`) but cannot be held by a catalog, inferred from a bare path, or handed out by `get()`."
       ],
       "importLine": "import { LeaflessAssetKind } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,8 +30,16 @@
       "members": [
         {
           "name": "LeaflessAssetKind",
-          "signature": "\"bmFont\" | \"font\" | \"image\" | \"music\" | \"svg\" | \"video\"",
+          "signature": "\"audioStream\" | \"bmFont\" | \"font\" | \"image\" | \"music\" | \"svg\" | \"video\"",
           "signatureTokens": [
+            {
+              "text": "\"audioStream\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
             {
               "text": "\"bmFont\"",
               "kind": "keyword"
