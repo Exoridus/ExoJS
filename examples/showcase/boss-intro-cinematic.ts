@@ -91,7 +91,7 @@ class BossIntroCinematicScene extends Scene {
       }
     });
 
-    this.inputs.onTrigger(Keyboard.R, () => this.replay());
+    this.inputs.onStart(Keyboard.R, () => this.replay());
     app.input.onPointerDown.add(this.replay);
   }
 
