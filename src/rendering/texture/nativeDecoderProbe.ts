@@ -52,18 +52,20 @@ const run = async (decoderClass: ProbeDecoderConstructor, type: AnimatedImageMim
 
     const read = async (frameIndex: number): Promise<Uint8ClampedArray | null> => {
       const { image } = await decoder.decode({ frameIndex });
-      const context = new OffscreenCanvas(4, 1).getContext('2d', { willReadFrequently: true });
 
-      if (context === null) {
+      try {
+        const context = new OffscreenCanvas(4, 1).getContext('2d', { willReadFrequently: true });
+
+        if (context === null) {
+          return null;
+        }
+
+        context.drawImage(image, 0, 0);
+
+        return context.getImageData(0, 0, 4, 1).data;
+      } finally {
         image.close();
-
-        return null;
       }
-
-      context.drawImage(image, 0, 0);
-      image.close();
-
-      return context.getImageData(0, 0, 4, 1).data;
     };
 
     // Decoded in playback order, because some engines only go wrong when a loop returns to frame 0 after walking the whole sequence.

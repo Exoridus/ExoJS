@@ -259,7 +259,7 @@ const describeAnimatedImageCells = (harness: AnimatedImageHarness, mode: 'ImageD
         }
 
         await new Promise(resolve => setTimeout(resolve, 150));
-        expect(tracker.leaked()).toEqual({ decoders: 0, frames: 0, bitmaps: 0 });
+        expect({ leaked: tracker.leaked(), opened: tracker.opened() }).toMatchObject({ leaked: { decoders: 0, frames: 0, bitmaps: 0 } });
         expect(tracker.opened().decoders + tracker.opened().bitmaps).toBeGreaterThan(0);
       } finally {
         tracker.restore();
