@@ -58,6 +58,10 @@ let formatSkipped = false;
 if (isAffected) {
   const [base, head] = outputOptions.argv.slice(1);
 
+  if (base) {
+    process.env.EXOJS_SOURCE_HYGIENE_BASE ||= base;
+  }
+
   try {
     const policy = selectLocalPolicy(base && head ? changedFilesBetween(base, head) : []);
     scripts = policy.gates;

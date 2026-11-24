@@ -20,7 +20,7 @@ describe.skipIf(process.platform === 'win32')('pre-push command dispatch', () =>
       encoding: 'utf8',
     }).trim();
 
-  const runHook = (remote: string, mode: 'fast' | 'full' = 'fast', remoteRef = 'refs/heads/topic') => {
+  const runHook = (remote: string, mode: 'fast' | 'full' = 'fast', remoteRef = 'refs/heads/topic', hygieneBase = '') => {
     const log = join(root, 'commands.log');
     // Keep the real hook, Git range and policy. Only expensive gate/lane/build
     // processes are replaced at their command boundary.
@@ -28,7 +28,12 @@ describe.skipIf(process.platform === 'win32')('pre-push command dispatch', () =>
       'sh',
       [
         '-c',
-        `npm() { printf 'npm'; printf '\\t%s' "$@"; printf '\\n'; } >> "$PRE_PUSH_CALL_LOG"
+        `npm() {
+  if [ "$4" = 'affected-fast' ]; then
+    printf 'source hygiene base %s\\n' "$EXOJS_SOURCE_HYGIENE_BASE"
+  fi
+  { printf 'npm'; printf '\\t%s' "$@"; printf '\\n'; } >> "$PRE_PUSH_CALL_LOG"
+}
 node() {
   if [ "$1" = 'scripts/check-dist-fresh.ts' ]; then
     { printf 'node'; printf '\\t%s' "$@"; printf '\\n'; } >> "$PRE_PUSH_CALL_LOG"
@@ -43,6 +48,7 @@ node() {
         env: {
           ...environment,
           EXOJS_PRE_PUSH_MODE: mode,
+          EXOJS_SOURCE_HYGIENE_BASE: hygieneBase,
           PRE_PUSH_HOOK: join(repository, '.husky/pre-push'),
           PRE_PUSH_CALL_LOG: log,
         },
@@ -91,6 +97,22 @@ node() {
 
     expect(calls).toEqual([['npm', 'run', 'gates', '--', 'affected-fast', base, head]]);
     expect(output).toContain('CI-first');
+  });
+
+  it('selects an integration or explicit stack base for hygiene on incremental updates', () => {
+    git('update-ref', 'refs/remotes/origin/next', base);
+    const previousHead = head;
+    git('update-ref', 'refs/remotes/origin/stack/parent', previousHead);
+    writeFileSync(join(root, 'src/math/Random.ts'), 'export const random = 3;\n');
+    git('commit', '-qam', 'incremental change');
+    head = git('rev-parse', 'HEAD');
+
+    const inferred = runHook(previousHead);
+    expect(inferred.calls).toEqual([['npm', 'run', 'gates', '--', 'affected-fast', previousHead, head]]);
+    expect(inferred.output).toContain(`source hygiene base ${base}`);
+
+    const parent = 'refs/remotes/origin/stack/parent';
+    expect(runHook(previousHead, 'fast', 'refs/heads/topic', parent).output).toContain(`source hygiene base ${parent}`);
   });
 
   it('runs no hook commands when there are no new committed files', () => {

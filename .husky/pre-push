@@ -8,7 +8,7 @@
 #                 EXOJS_PRE_PUSH_MODE=full opts into the original local checks.
 #                 Direct main/next pushes always retain the full local checks.
 #                 GitHub Actions validates feature branches only once a PR
-#                 targeting main/next has been opened (create a Draft early).
+#                 has been opened (create a Draft early).
 # Tag pushes:     `scripts/ci/trust.ts` - the release workflow's own admission
 #                 check: the tagged commit carries the package.json version,
 #                 sits on origin/main and has a green `verdict`. Nothing is
@@ -99,8 +99,13 @@ if [ "$is_branch_push" = "1" ]; then
         *)
             # Cheap tracked-file gates first: a formatting or hygiene failure is
             # reported before any dist rebuild or compiler run starts.
+            # Hygiene checks the full PR diff even when the push is incremental.
+            hygiene_base=${EXOJS_SOURCE_HYGIENE_BASE:-$lane_base}
+            if [ -z "${EXOJS_SOURCE_HYGIENE_BASE:-}" ] && [ "$protected_branch_push" = "0" ] && [ -n "$push_base_sha" ]; then
+                hygiene_base=$(node scripts/ci/push-range.ts "$push_head_sha" "$null_sha") || exit 1
+            fi
             echo "[pre-push] fast static validation"
-            npm run gates -- affected-fast "$lane_base" "$push_head_sha" || exit 1
+            EXOJS_SOURCE_HYGIENE_BASE="$hygiene_base" npm run gates -- affected-fast "$lane_base" "$push_head_sha" || exit 1
 
             if [ "$push_mode" = "full" ]; then
                 echo "[pre-push] full local verification requested"
