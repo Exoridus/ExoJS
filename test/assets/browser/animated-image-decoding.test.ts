@@ -329,8 +329,15 @@ describe('animated image decoding in a real browser', () => {
 
     await withDecoder('compositing', async () => {
       const original = globalThis.createImageBitmap;
-      const gate = Promise.withResolvers<void>();
-      const decoded = Promise.withResolvers<void>();
+      let resumeDecode!: () => void;
+      let signalDecoded!: () => void;
+
+      const gate = new Promise<void>(resolve => {
+        resumeDecode = resolve;
+      });
+      const decoded = new Promise<void>(resolve => {
+        signalDecoded = resolve;
+      });
       let calls = 0;
 
       const bitmap = async (blob: ImageBitmapSource, options?: ImageBitmapOptions): Promise<ImageBitmap> => {
@@ -338,8 +345,8 @@ describe('animated image decoding in a real browser', () => {
         const result = await original(blob, options);
 
         if (call === 2) {
-          await gate.promise;
-          decoded.resolve();
+          await gate;
+          signalDecoded();
         }
 
         return result;
@@ -353,8 +360,8 @@ describe('animated image decoding in a real browser', () => {
         await new Promise(resolve => setTimeout(resolve, 150));
         source.pause();
         expect(source.revision).toBe(1);
-        gate.resolve();
-        await decoded.promise;
+        resumeDecode();
+        await decoded;
         await new Promise(resolve => setTimeout(resolve, 0));
         expect(source.revision).toBe(1);
         expectClose(read(source, points.middle), blue, 'paused frame pixels');
@@ -362,7 +369,7 @@ describe('animated image decoding in a real browser', () => {
         expect(source.revision).toBe(2);
         expectClose(read(source, points.middle), red, 'resumed frame pixels');
       } finally {
-        gate.resolve();
+        resumeDecode();
         source?.destroy();
         globalThis.createImageBitmap = original;
       }

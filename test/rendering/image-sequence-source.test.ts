@@ -69,7 +69,11 @@ describe('ImageSequenceSource', () => {
   });
 
   test.each([true, false])('retains one pending decode across pause/resume (resume before completion: %s)', async resumeEarly => {
-    const gate = Promise.withResolvers<void>();
+    let resumeDecode!: () => void;
+
+    const gate = new Promise<void>(resolve => {
+      resumeDecode = resolve;
+    });
     const calls = vi.fn();
 
     class DeferredDecoder extends FakeImageDecoder {
@@ -77,7 +81,7 @@ describe('ImageSequenceSource', () => {
         calls(options.frameIndex);
 
         if (options.frameIndex === 1) {
-          await gate.promise;
+          await gate;
         }
 
         return super.decode(options);
@@ -102,7 +106,7 @@ describe('ImageSequenceSource', () => {
         expect(calls.mock.calls).toEqual([[0], [1]]);
       }
 
-      gate.resolve();
+      resumeDecode();
       await vi.advanceTimersByTimeAsync(0);
 
       if (!resumeEarly) {
@@ -115,7 +119,7 @@ describe('ImageSequenceSource', () => {
       expect(changed).toHaveBeenCalledTimes(1);
       expect(calls.mock.calls).toEqual([[0], [1]]);
     } finally {
-      gate.resolve();
+      resumeDecode();
       source.destroy();
     }
 
