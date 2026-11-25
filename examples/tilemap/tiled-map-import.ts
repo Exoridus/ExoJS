@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
@@ -40,7 +39,7 @@ class TiledMapImportScene extends Scene {
   private hud!: ReturnType<typeof demoPanel>;
 
   override async load(): Promise<void> {
-    const map = await this.loader.load(Asset.type('tileMap', assets.tinyDungeonMap.source));
+    const map = await this.loader.load({ type: 'tileMap', source: assets.tinyDungeonMap.source });
     map.tilesets[0]!.texture!.texture.scaleMode = ScaleModes.Nearest;
     this.mapNode = new TileMapNode(map);
     this.zones = [...(map.getObjectLayer('Zones')?.objects ?? [])];

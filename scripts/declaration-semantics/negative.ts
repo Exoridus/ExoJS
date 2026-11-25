@@ -6,9 +6,9 @@
  * A shipped declaration surface that accepts a data-less activation of a
  * data-carrying scene has lost the conditional arity the source declares.
  */
-import { Application, Asset, Assets, Container, type DecodedImage, fontType, type Loader, musicType, type Scene } from '@codexo/exojs';
+import { Application, Assets, Container, type DecodedImage, fontType, type Loader, musicType, type Scene } from '@codexo/exojs';
 
-import { type Armor, DataScene, Health, LocalizedAssetType, MetaAssetType, Spin } from './fixtures';
+import { type Armor, DataScene, Health, LocalizedAssetType, MetaAssetType, NotesAssetType, Spin } from './fixtures';
 
 const app = new Application({ scenes: { DataScene } });
 
@@ -29,25 +29,31 @@ export const startWithWrongDataShape = (): Promise<unknown> => app.start(DataSce
 
 declare const loader: Loader;
 
-// @ts-expect-error a font cannot be named without its family
-export const fontWithoutFamily = fontType.asset('Inter.woff2');
+// @ts-expect-error a font cannot be loaded without its family
+export const fontWithoutFamily = (): PromiseLike<unknown> => loader.load({ type: fontType, source: 'Inter.woff2' });
 
-// @ts-expect-error nor through the core facade
-export const fontFacadeWithoutFamily = Asset.type('font', 'Inter.woff2');
+// @ts-expect-error nor when named by its type id
+export const fontIdWithoutFamily = (): PromiseLike<unknown> => loader.load({ type: 'font', source: 'Inter.woff2' });
 
-// @ts-expect-error a required option bag of a custom type cannot be omitted
-export const localizedWithoutOptions = new LocalizedAssetType().asset('a.txt');
+// @ts-expect-error a required option of a custom type cannot be omitted
+export const localizedWithoutOptions = (): PromiseLike<unknown> => loader.load({ type: new LocalizedAssetType(), source: 'a.txt' });
 
-// @ts-expect-error `source` is reserved for the request
-export const redirected = Asset.type('texture', 'hero.png', { source: 'other.png' });
+// @ts-expect-error an option the type does not declare is rejected
+export const unknownOption = (): PromiseLike<unknown> => loader.load({ type: 'texture', source: 'hero.png', delimiter: ',' });
+
+// @ts-expect-error a type whose source cannot be undefined needs a source
+export const notesWithoutSource = (): PromiseLike<unknown> => loader.load({ type: new NotesAssetType() });
+
+// @ts-expect-error a catalog holds locators, not factory sources
+export const directCatalog = Assets.from({ meta: { type: new MetaAssetType(), source: { hp: 1 } } });
 
 // @ts-expect-error a type without a catalog leaf cannot be held by a catalog
-export const musicCatalog = Assets.from({ theme: musicType.asset('theme.ogg') });
+export const musicCatalog = Assets.from({ theme: { type: musicType, source: 'theme.ogg' } });
 
 // @ts-expect-error nor handed out by get()
-export const musicLeaf = loader.get(Asset.type('music', 'theme.ogg'));
+export const musicLeaf = loader.get({ type: 'music', source: 'theme.ogg' });
 
-const metaCatalog = Assets.from({ meta: new MetaAssetType().asset('game.meta') });
+const metaCatalog = Assets.from({ meta: { type: new MetaAssetType(), source: 'game.meta' } });
 
 // @ts-expect-error the catalog leaf is an AssetRef, not the payload
 export const metaHp: number = metaCatalog.meta.hp;

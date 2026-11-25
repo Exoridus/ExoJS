@@ -1,7 +1,7 @@
 {
-  "title": "AssetForKind",
-  "description": "The descriptor a built-in or declaration-merged asset type produces, branded with the leaf policy that type declares at runtime.",
-  "symbol": "AssetForKind",
+  "title": "AssetDescriptorLeaf",
+  "description": "The branded catalog leaf a descriptor materializes as, or `never` for a type without one.",
+  "symbol": "AssetDescriptorLeaf",
   "kind": "type",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The descriptor a built-in or declaration-merged asset type produces, branded with the leaf policy that type declares at runtime."
+        "The branded catalog leaf a descriptor materializes as, or `never` for a type without one."
       ],
-      "importLine": "import { AssetForKind } from '@codexo/exojs'",
+      "importLine": "import { AssetDescriptorLeaf } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,12 +29,24 @@
       "title": "Definition",
       "members": [
         {
-          "name": "AssetForKind",
-          "signature": "K extends ValueAssetKind ? ValueAsset<AssetDefinitions[K][\"resource\"]> : K extends LeaflessAssetKind ? LeaflessAsset<AssetDefinitions[K][\"resource\"]> : ResourceAsset<AssetDefinitions[K][\"resource\"]>",
+          "name": "AssetDescriptorLeaf",
+          "signature": "AssetDescriptorLeafPolicy<D> extends \"ref\" ? CatalogValueLeaf<AssetDescriptorResource<D>> : AssetDescriptorLeafPolicy<D> extends \"resource\" ? CatalogResourceLeaf<AssetDescriptorResource<D>> : AssetDescriptorLeafPolicy<D> extends \"none\" ? never : CatalogResourceLeaf<AssetDescriptorResource<D>> | CatalogValueLeaf<AssetDescriptorResource<D>>",
           "signatureTokens": [
             {
-              "text": "K",
+              "text": "AssetDescriptorLeafPolicy",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": " ",
@@ -49,15 +61,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "ValueAssetKind",
-              "kind": "type"
+              "text": "\"ref\"",
+              "kind": "keyword"
             },
             {
               "text": " ? ",
               "kind": "punctuation"
             },
             {
-              "text": "ValueAsset",
+              "text": "CatalogValueLeaf",
               "kind": "type"
             },
             {
@@ -65,31 +77,19 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetDefinitions",
+              "text": "AssetDescriptorResource",
               "kind": "type"
             },
             {
-              "text": "[",
+              "text": "<",
               "kind": "punctuation"
             },
             {
-              "text": "K",
+              "text": "D",
               "kind": "type"
             },
             {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"resource\"",
-              "kind": "keyword"
-            },
-            {
-              "text": "]",
+              "text": ">",
               "kind": "punctuation"
             },
             {
@@ -101,8 +101,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "K",
+              "text": "AssetDescriptorLeafPolicy",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": " ",
@@ -117,15 +129,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "LeaflessAssetKind",
-              "kind": "type"
+              "text": "\"resource\"",
+              "kind": "keyword"
             },
             {
               "text": " ? ",
               "kind": "punctuation"
             },
             {
-              "text": "LeaflessAsset",
+              "text": "CatalogResourceLeaf",
               "kind": "type"
             },
             {
@@ -133,31 +145,19 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetDefinitions",
+              "text": "AssetDescriptorResource",
               "kind": "type"
             },
             {
-              "text": "[",
+              "text": "<",
               "kind": "punctuation"
             },
             {
-              "text": "K",
+              "text": "D",
               "kind": "type"
             },
             {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"resource\"",
-              "kind": "keyword"
-            },
-            {
-              "text": "]",
+              "text": ">",
               "kind": "punctuation"
             },
             {
@@ -169,7 +169,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ResourceAsset",
+              "text": "AssetDescriptorLeafPolicy",
               "kind": "type"
             },
             {
@@ -177,31 +177,95 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetDefinitions",
+              "text": "D",
               "kind": "type"
             },
             {
-              "text": "[",
+              "text": ">",
               "kind": "punctuation"
             },
             {
-              "text": "K",
-              "kind": "type"
-            },
-            {
-              "text": "]",
+              "text": " ",
               "kind": "punctuation"
             },
             {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"resource\"",
+              "text": "extends",
               "kind": "keyword"
             },
             {
-              "text": "]",
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"none\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CatalogResourceLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptorResource",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CatalogValueLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptorResource",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
               "kind": "punctuation"
             },
             {
@@ -225,11 +289,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/Asset.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+        "label": "src/assets/AssetDescriptor.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/Asset.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+  "sourcePath": "src/assets/AssetDescriptor.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
 }

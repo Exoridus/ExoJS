@@ -1,6 +1,6 @@
 {
   "title": "Music",
-  "description": "A finite music track: background music, ambience loops, voice-over. The browser streams and decodes it progressively, so playback can start at `canplay` long before the whole file has arrived. Its duration is known once metadata has loaded, and voices can seek and loop. Load it with `assets.load([Music, 'theme.ogg'])` and play it with `audio.play(music, { loop: true })`. Use AudioStream for a live or unbounded source such as internet radio, and Sound for short clips.",
+  "description": "A finite music track: background music, ambience loops, voice-over. The browser streams and decodes it progressively, so playback can start at `canplay` long before the whole file has arrived. Its duration is known once metadata has loaded, and voices can seek and loop. Load it with `assets.load({ type: Music, source: 'theme.ogg' })` and play it with `audio.play(music, { loop: true })`. Use AudioStream for a live or unbounded source such as internet radio, and Sound for short clips.",
   "symbol": "Music",
   "kind": "class",
   "subsystem": "audio",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A finite music track: background music, ambience loops, voice-over.",
         "The browser streams and decodes it progressively, so playback can start at `canplay` long before the whole file has arrived. Its duration is known once metadata has loaded, and voices can seek and loop.",
-        "Load it with `assets.load([Music, 'theme.ogg'])` and play it with `audio.play(music, { loop: true })`. Use AudioStream for a live or unbounded source such as internet radio, and Sound for short clips."
+        "Load it with `assets.load({ type: Music, source: 'theme.ogg' })` and play it with `audio.play(music, { loop: true })`. Use AudioStream for a live or unbounded source such as internet radio, and Sound for short clips."
       ],
       "importLine": "import { Music } from '@codexo/exojs'",
       "sourceLink": null

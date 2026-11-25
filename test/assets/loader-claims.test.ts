@@ -1,6 +1,5 @@
 import { expectTypeOf } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, type LoaderOptions, LoadPriority } from '#assets/Loader';
@@ -134,11 +133,13 @@ describe('refcount / claims', () => {
       },
     );
     const loader = createCoreLoader();
-    const asset = Asset.type('font', 'heading.woff2', {
+    const asset = {
+      type: 'font',
+      source: 'heading.woff2',
       family: 'Heading',
       descriptors: { weight: '700' },
       addToDocument: false,
-    });
+    } as const;
     const firstScope = loader.createScope({ name: 'first scene' });
     const first = await firstScope.load(asset);
     expect(first.family).toBe('Heading');
@@ -167,7 +168,7 @@ describe('refcount / claims', () => {
     owner.load(Assets.from({ a: 'a.ogg', b: 'b.ogg', c: 'c.ogg' }), { priority: LoadPriority.Background });
 
     expect(loader['_residency']['_backgroundQueue'].has(loader['_canonicalize'](Sound, 'c.ogg').key)).toBe(true); // still queued behind the cap
-    owner.release(Sound, 'c.ogg');
+    owner.release({ type: Sound, source: 'c.ogg' });
     expect(loader['_residency']['_backgroundQueue'].has(loader['_canonicalize'](Sound, 'c.ogg').key)).toBe(false); // dropped at refcount 0
   });
 
@@ -177,8 +178,8 @@ describe('refcount / claims', () => {
     const owner = loader.createScope({ name: 'owner' });
     const scopeA = loader.createScope({ name: 'A' });
     const scopeB = loader.createScope({ name: 'B' });
-    const handle = loader._getClaimed(scopeA, Asset.type('sound', 'boom.ogg')) as Sound;
-    loader._getClaimed(scopeB, Asset.type('sound', 'boom.ogg'));
+    const handle = loader._getClaimed(scopeA, { type: 'sound', source: 'boom.ogg' }) as Sound;
+    loader._getClaimed(scopeB, { type: 'sound', source: 'boom.ogg' });
     await handle.loaded;
 
     loader._release(loader['_canonicalize'](Sound, 'boom.ogg').key, scopeA);
@@ -281,7 +282,7 @@ describe('refcount / claims', () => {
   test('release of an unheld key is a no-op (no throw)', () => {
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
-    expect(() => owner.release(Sound, 'never.ogg')).not.toThrow();
+    expect(() => owner.release({ type: Sound, source: 'never.ogg' })).not.toThrow();
   });
 
   test('Texture eviction frees the source and heals on re-get', async () => {

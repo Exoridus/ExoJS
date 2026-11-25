@@ -59,11 +59,11 @@ class PaletteScene extends Scene {
 
   override async load(): Promise<void> {
     // #region guide:custom-palette-load
-    this.palette = await this.assets.load([Palette, sunset]);
+    this.palette = await this.assets.load({ type: Palette, source: sunset });
     // #endregion guide:custom-palette-load
 
     try {
-      await this.assets.load([Palette, broken]);
+      await this.assets.load({ type: Palette, source: broken });
     } catch (error) {
       this.rejection = rootCause(error);
     }

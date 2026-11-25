@@ -34,7 +34,7 @@ const PACKAGE_OUTCOMES: Readonly<Record<string, PackageOutcome>> = {
   'eslint-plugin-exojs': { outcome: 'NONE', evidence: [] },
   'exojs-aseprite': {
     outcome: 'TEST',
-    evidence: [{ file: 'packages/exojs-aseprite/src/asepriteType.ts', includes: "Asset.type('texture'" }],
+    evidence: [{ file: 'packages/exojs-aseprite/src/asepriteType.ts', includes: "type: 'texture'" }],
   },
   'exojs-audio-fx': { outcome: 'NONE', evidence: [] },
   'exojs-bench': {
@@ -54,7 +54,7 @@ const PACKAGE_OUTCOMES: Readonly<Record<string, PackageOutcome>> = {
     outcome: 'CHANGE',
     evidence: [{ file: 'packages/exojs-demo-assets/catalog.json', includes: 'images/srgb-ramp.png' }],
   },
-  'exojs-ldtk': { outcome: 'TEST', evidence: [{ file: 'packages/exojs-ldtk/src/loadLdtkMap.ts', includes: "Asset.type('texture'" }] },
+  'exojs-ldtk': { outcome: 'TEST', evidence: [{ file: 'packages/exojs-ldtk/src/loadLdtkMap.ts', includes: "type: 'texture'" }] },
   'exojs-lighting': {
     outcome: 'CHANGE',
     evidence: [{ file: 'packages/exojs-lighting/test/color-contract.test.ts', includes: 'lighting colour contract' }],
@@ -169,7 +169,7 @@ describe('package dependency direction', () => {
     const files = ['packages/exojs-aseprite/src/asepriteType.ts', 'packages/exojs-ldtk/src/loadLdtkMap.ts'];
     const sources = files.map(file => readFileSync(join(repoRoot, file), 'utf8'));
 
-    expect(sources.filter(source => !source.includes("Asset.type('texture'"))).toEqual([]);
+    expect(sources.filter(source => !source.includes("type: 'texture'"))).toEqual([]);
     expect(sources.filter(source => /colorSpace|alphaMode/.test(source))).toEqual([]);
   });
 

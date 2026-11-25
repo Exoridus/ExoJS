@@ -1,4 +1,3 @@
-import type { ResourceAsset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
 import { Loader } from '#assets/Loader';
 import { textureSeamlessAdapter } from '#assets/seamless';
@@ -167,8 +166,8 @@ describe('reclaim from a seamless disposer', () => {
 
         seenOptions.push(context.options);
         await Promise.all([
-          context.dependencies.load(dependency.asset('shared.dat')),
-          context.dependencies.load(dependency.asset(attempt === 1 ? 'old.dat' : 'new.dat')),
+          context.dependencies.load({ type: dependency, source: 'shared.dat' }),
+          context.dependencies.load({ type: dependency, source: attempt === 1 ? 'old.dat' : 'new.dat' }),
         ]);
         const canvas = document.createElement('canvas');
 
@@ -197,14 +196,14 @@ describe('reclaim from a seamless disposer', () => {
     try {
       const handle = first.get('asset.png', options);
       const initialLoaded = handle.loaded;
-      const sibling = Assets.from({ item: type.asset('asset.png', options) });
+      const sibling = Assets.from({ item: { type, source: 'asset.png', ...options } });
 
       await Promise.all([initialLoaded, keeper.load(sibling)]);
       const oldSource = handle.source;
       const oldDependencyOwner = loader.inspect().find(row => row.aliases.includes('shared.dat'))!.owners[0]!.id;
 
       expect(sibling.item).not.toBe(handle);
-      expect(sibling.item.source).toBe(oldSource);
+      expect((sibling.item as Texture).source).toBe(oldSource);
       first.release(handle);
       expect(disposed).toHaveLength(0);
       expect(handle.width).toBe(8);
@@ -217,10 +216,10 @@ describe('reclaim from a seamless disposer', () => {
           reclaimed = next.get('./asset.png', options);
           replacement = reclaimed.loaded;
         } else if (method === 'descriptor') {
-          reclaimed = next.get(type.asset('./asset.png', options) as ResourceAsset<Texture>);
+          reclaimed = next.get({ type, source: './asset.png', ...options }) as Texture;
           replacement = reclaimed.loaded;
         } else {
-          replacement = next.load(type.asset('./asset.png', options));
+          replacement = next.load({ type, source: './asset.png', ...options });
         }
       };
 
@@ -238,7 +237,7 @@ describe('reclaim from a seamless disposer', () => {
         expect(replacement).toBe(reclaimed!.loaded);
       }
 
-      const concurrent = other.load(type.asset('asset.png', options));
+      const concurrent = other.load({ type, source: 'asset.png', ...options });
 
       await expect(replacement).resolves.toBe(method === 'descriptor' ? reclaimed : handle);
       await expect(concurrent).resolves.toBe(handle);
@@ -247,7 +246,7 @@ describe('reclaim from a seamless disposer', () => {
       expect(handle.loadState).toBe('ready');
       expect(handle.width).toBe(16);
       expect(sibling.item.loadState).toBe('ready');
-      expect(sibling.item.source).toBe(handle.source);
+      expect((sibling.item as Texture).source).toBe(handle.source);
       expect(handle.source).not.toBe(oldSource);
 
       if (reclaimed !== undefined) {
@@ -267,7 +266,7 @@ describe('reclaim from a seamless disposer', () => {
       expect(disposed).toHaveLength(1);
       other.destroy();
       expect(handle.source).toBeNull();
-      expect(sibling.item.source).toBeNull();
+      expect((sibling.item as Texture).source).toBeNull();
 
       if (reclaimed !== undefined) {
         expect(reclaimed.source).toBeNull();

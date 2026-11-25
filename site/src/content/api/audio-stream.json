@@ -1,6 +1,6 @@
 {
   "title": "AudioStream",
-  "description": "A live or unbounded audio source, such as internet radio. Readiness means playback can start: a live source never finishes downloading. Its duration may be `Infinity`, seeking is only available when the source reports a seekable range, and the connection can break and recover while the stream exists. connection and onConnectionChange report that health separately from playback. When the connection breaks - a network error, or the server ending the response of a live source - a URL-backed stream reopens the URL with exponential backoff, and a voice that was playing resumes once data arrives. After the configured attempts it reports `'disconnected'` and dispatches onError. reconnect starts a new round manually. Load it with `assets.load([AudioStream, 'https://radio.example/stream'])`. Use Music for a finite track.",
+  "description": "A live or unbounded audio source, such as internet radio. Readiness means playback can start: a live source never finishes downloading. Its duration may be `Infinity`, seeking is only available when the source reports a seekable range, and the connection can break and recover while the stream exists. connection and onConnectionChange report that health separately from playback. When the connection breaks - a network error, or the server ending the response of a live source - a URL-backed stream reopens the URL with exponential backoff, and a voice that was playing resumes once data arrives. After the configured attempts it reports `'disconnected'` and dispatches onError. reconnect starts a new round manually. Load it with `assets.load({ type: AudioStream, source: 'https://radio.example/stream' })`. Use Music for a finite track.",
   "symbol": "AudioStream",
   "kind": "class",
   "subsystem": "audio",
@@ -22,7 +22,7 @@
         "A live or unbounded audio source, such as internet radio.",
         "Readiness means playback can start: a live source never finishes downloading. Its duration may be `Infinity`, seeking is only available when the source reports a seekable range, and the connection can break and recover while the stream exists. connection and onConnectionChange report that health separately from playback.",
         "When the connection breaks - a network error, or the server ending the response of a live source - a URL-backed stream reopens the URL with exponential backoff, and a voice that was playing resumes once data arrives. After the configured attempts it reports `'disconnected'` and dispatches onError. reconnect starts a new round manually.",
-        "Load it with `assets.load([AudioStream, 'https://radio.example/stream'])`. Use Music for a finite track."
+        "Load it with `assets.load({ type: AudioStream, source: 'https://radio.example/stream' })`. Use Music for a finite track."
       ],
       "importLine": "import { AudioStream } from '@codexo/exojs'",
       "sourceLink": null

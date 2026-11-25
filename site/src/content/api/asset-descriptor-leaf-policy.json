@@ -1,11 +1,11 @@
 {
-  "title": "AssetOptionsArgument",
-  "description": "The option argument a descriptor builder takes for a type with option bag `Options`: none for a type that takes no options, optional when every option is, and required when any option is - so a type that cannot build a resource without an option (a `font` needs its `family`) cannot be named without it. The existential `any` bag of AnyAssetType stays optional.",
-  "symbol": "AssetOptionsArgument",
+  "title": "AssetDescriptorLeafPolicy",
+  "description": "What a catalog or `get()` hands out for a descriptor: `'ref'` for a deferred `AssetRef`, `'resource'` for a heal-in-place resource, `'none'` for a type without a placeholder, and `'unknown'` when the type is not visible to the type system (an id or class that no AssetDefinitions entry declares).",
+  "symbol": "AssetDescriptorLeafPolicy",
   "kind": "type",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
-  "tier": "advanced",
+  "tier": "stable",
   "memberCount": 0,
   "counts": {
     "constructors": 0,
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The option argument a descriptor builder takes for a type with option bag `Options`: none for a type that takes no options, optional when every option is, and required when any option is - so a type that cannot build a resource without an option (a `font` needs its `family`) cannot be named without it. The existential `any` bag of AnyAssetType stays optional."
+        "What a catalog or `get()` hands out for a descriptor: `'ref'` for a deferred `AssetRef`, `'resource'` for a heal-in-place resource, `'none'` for a type without a placeholder, and `'unknown'` when the type is not visible to the type system (an id or class that no AssetDefinitions entry declares)."
       ],
-      "importLine": "import { AssetOptionsArgument } from '@codexo/exojs'",
+      "importLine": "import { AssetDescriptorLeafPolicy } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,9 +29,49 @@
       "title": "Definition",
       "members": [
         {
-          "name": "AssetOptionsArgument",
-          "signature": "0 extends 1 & Options ? [options] : [Options] extends [undefined] ? [options] : Record<never, never> extends Options ? [options] : undefined extends Options ? undefined extends Record<never, never> ? [options] : [options] : [options]",
+          "name": "AssetDescriptorLeafPolicy",
+          "signature": "D extends { type: T } ? 0 extends 1 & AssetTypeParts<T>[\"resource\"] ? \"unknown\" : PolicyOfLeaf<T[\"leaf\"]> : [DescriptorKind<D>] extends [never] ? \"unknown\" : DescriptorKind<D> extends ValueAssetKind ? \"ref\" : DescriptorKind<D> extends LeaflessAssetKind ? \"none\" : \"resource\"",
           "signatureTokens": [
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
             {
               "text": "0",
               "kind": "keyword"
@@ -57,11 +97,19 @@
               "kind": "punctuation"
             },
             {
-              "text": "Options",
+              "text": "AssetTypeParts",
               "kind": "type"
             },
             {
-              "text": " ? ",
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
               "kind": "punctuation"
             },
             {
@@ -69,11 +117,51 @@
               "kind": "punctuation"
             },
             {
-              "text": "options",
-              "kind": "type"
+              "text": "\"resource\"",
+              "kind": "keyword"
             },
             {
               "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"unknown\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PolicyOfLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"leaf\"",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
               "kind": "punctuation"
             },
             {
@@ -85,8 +173,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "Options",
+              "text": "DescriptorKind",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": "]",
@@ -109,7 +209,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "undefined",
+              "text": "never",
               "kind": "keyword"
             },
             {
@@ -121,23 +221,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
+              "text": "\"unknown\"",
+              "kind": "keyword"
             },
             {
               "text": " : ",
               "kind": "punctuation"
             },
             {
-              "text": "Record",
+              "text": "DescriptorKind",
               "kind": "type"
             },
             {
@@ -145,16 +237,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "never",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
-              "kind": "keyword"
+              "text": "D",
+              "kind": "type"
             },
             {
               "text": ">",
@@ -173,7 +257,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Options",
+              "text": "ValueAssetKind",
               "kind": "type"
             },
             {
@@ -181,63 +265,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
+              "text": "\"ref\"",
+              "kind": "keyword"
             },
             {
               "text": " : ",
               "kind": "punctuation"
             },
             {
-              "text": "undefined",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Options",
-              "kind": "type"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "undefined",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Record",
+              "text": "DescriptorKind",
               "kind": "type"
             },
             {
@@ -245,68 +281,44 @@
               "kind": "punctuation"
             },
             {
-              "text": "never",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
-              "kind": "keyword"
+              "text": "D",
+              "kind": "type"
             },
             {
               "text": ">",
               "kind": "punctuation"
             },
             {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LeaflessAssetKind",
+              "kind": "type"
+            },
+            {
               "text": " ? ",
               "kind": "punctuation"
             },
             {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
+              "text": "\"none\"",
+              "kind": "keyword"
             },
             {
               "text": " : ",
               "kind": "punctuation"
             },
             {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
+              "text": "\"resource\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -325,11 +337,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/AssetType.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetType.ts"
+        "label": "src/assets/AssetDescriptor.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/AssetType.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetType.ts"
+  "sourcePath": "src/assets/AssetDescriptor.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
 }

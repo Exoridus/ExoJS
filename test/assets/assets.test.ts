@@ -1,6 +1,5 @@
 import '#assets/coreAssetTypes';
 
-import { Asset } from '#assets/Asset';
 import { _readMeta } from '#assets/assetMeta';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
@@ -31,7 +30,7 @@ describe('Assets', () => {
   });
 
   test('converts an already-constructed Asset into a fresh handle-hybrid leaf (no longer passed through by reference)', () => {
-    const existing = new Asset({ type: 'texture', source: '/shared.png' });
+    const existing = { type: 'texture', source: '/shared.png' } as const;
     const bag = new Assets({ logo: existing });
 
     // Pre-1.0 breaking change: a catalog value is always materialized as a leaf.

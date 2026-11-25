@@ -19,7 +19,7 @@ A catalog suits named, typed groups that several scenes share. For a single text
 
 Creating `SharedAssets` does not fetch files. Its texture property is a deferred resource handle; its JSON property is an `AssetRef`. Acquiring the catalog through a scope starts the work and gives that scope claims on its assets.
 
-The generic annotation on `Asset.type<Settings>('json', ...)` expresses an expected TypeScript shape. **It does not validate the downloaded JSON.** Use a synchronous `parse` transform or validate the decoded `unknown` value when the document is not fully controlled by your build pipeline. Do not let a type annotation stand in for validation of a save file, server response, or user-supplied document.
+A `parse` transform that only casts (`raw => raw as Settings`) expresses an expected TypeScript shape. **It does not validate the downloaded JSON.** Check the decoded `unknown` value inside `parse` when the document is not fully controlled by your build pipeline. Do not let a type assertion stand in for validation of a save file, server response, or user-supplied document.
 
 ## Two ways to use the completed load
 
@@ -43,7 +43,7 @@ A catalog is not a global asset lifetime. Loading the same composed definition t
 
 Start independent queues before awaiting them, then use `Promise.all` when both are required. Each queue's progress describes that acquisition group. Aggregate loader signals describe wider activity and can include work started elsewhere.
 
-Background priority belongs to a catalog or catalog leaf load. Per-resource decode options belong in `Asset.type(...)`. Those two option bags solve different problems and are not interchangeable.
+Background priority belongs to a catalog or catalog leaf load. Per-resource decode options belong on the asset's descriptor. Those two option bags solve different problems and are not interchangeable.
 
 ## Keep definitions close to the feature
 

@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import type { AssetConstructor } from '#assets/AssetConstructor';
 import type { AssetFactory } from '#assets/AssetFactory';
 import type { AssetSourceCodec } from '#assets/AssetSourceCodec';
@@ -96,13 +95,11 @@ export class BmFontAssetType extends AssetType<BmFontData, BmFont, BmFontAssetOp
         const numeric = fieldType === 'sdf' || fieldType === 'msdf' || fieldType === 'mtsdf';
         const pages = await Promise.all(
           data.pages.map(page =>
-            context.dependencies.load(
-              Asset.type(
-                'texture',
-                resolveSubAssetPath(page, context.source),
-                numeric ? { textureOptions: { colorSpace: 'none' } } : undefined,
-              ),
-            ),
+            context.dependencies.load({
+              type: 'texture',
+              source: resolveSubAssetPath(page, context.source),
+              ...(numeric ? { textureOptions: { colorSpace: 'none' } } : undefined),
+            }),
           ),
         );
 

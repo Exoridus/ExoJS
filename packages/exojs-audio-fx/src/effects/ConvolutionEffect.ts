@@ -80,7 +80,7 @@ interface ConvolutionEffectSetup {
  *
  * @example
  * ```ts
- * const hall = await loader.load(Asset.type('sound', 'hall.wav'));
+ * const hall = await loader.load({ type: 'sound', source: 'hall.wav' });
  * const reverb = new ConvolutionEffect({ impulse: hall, wet: 0.6 });
  * bus.addEffect(reverb);
  * ```

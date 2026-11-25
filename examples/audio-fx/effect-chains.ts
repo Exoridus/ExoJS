@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioEffect,
   Color,
   FixedResolutionCanvasSizing,
@@ -85,7 +84,7 @@ class EffectChainsScene extends Scene {
   private panel!: DemoPanel<{ chain: ChoiceSpec<string>; bypass: ToggleSpec }>;
 
   override async load(): Promise<void> {
-    this.music = await this.loader.load(Asset.type('music', assets.voiceCongratulations.source));
+    this.music = await this.loader.load({ type: 'music', source: assets.voiceCongratulations.source });
     this.impact = this.loader.get(assets.soundImpactLight);
   }
 

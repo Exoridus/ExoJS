@@ -1,6 +1,6 @@
 {
   "title": "AssetLoadEntry",
-  "description": "One entry of a load: a path, a handle, a catalog leaf, a descriptor or an explicitly typed request.",
+  "description": "One entry of a load: a path, a handle, a catalog leaf or an asset descriptor. The built-in descriptor shapes are listed so a literal's options are contextually typed.",
   "symbol": "AssetLoadEntry",
   "kind": "type",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One entry of a load: a path, a handle, a catalog leaf, a descriptor or an explicitly typed request."
+        "One entry of a load: a path, a handle, a catalog leaf or an asset descriptor. The built-in descriptor shapes are listed so a literal's options are contextually typed."
       ],
       "importLine": "import { AssetLoadEntry } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,23 +30,19 @@
       "members": [
         {
           "name": "AssetLoadEntry",
-          "signature": "Asset<unknown> | AssetLoadHandle | AssetTypeRequest | CatalogLeafBrand<unknown> | string",
+          "signature": "AnyAssetConfig | AssetDescriptor | AssetLoadHandle | CatalogLeafBrand<unknown> | string",
           "signatureTokens": [
             {
-              "text": "Asset",
+              "text": "AnyAssetConfig",
               "kind": "type"
             },
             {
-              "text": "<",
+              "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "unknown",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
+              "text": "AssetDescriptor",
+              "kind": "type"
             },
             {
               "text": " | ",
@@ -54,14 +50,6 @@
             },
             {
               "text": "AssetLoadHandle",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetTypeRequest",
               "kind": "type"
             },
             {

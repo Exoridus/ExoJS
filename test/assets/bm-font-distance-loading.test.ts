@@ -1,6 +1,5 @@
 import type { MockedFunction } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { MemoryCacheStore } from '#assets/cache/MemoryCacheStore';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
@@ -105,7 +104,7 @@ describe('distance-font page loading', () => {
   ] as const)('loads declared $fieldType range $distanceRange as numeric page data', async ({ fieldType, distanceRange }) => {
     serveFont('fonts/ui.fnt', `distanceField fieldType=${fieldType} distanceRange=${distanceRange}`);
     const loader = createLoader();
-    const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt'));
+    const font = await loader.load({ type: 'bmFont', source: 'fonts/ui.fnt' });
     const page = font.textures[0]!;
 
     expect(font.fontData.distanceField).toEqual({ fieldType, distanceRange, zeroDistanceValue: 0.5 });
@@ -119,11 +118,11 @@ describe('distance-font page loading', () => {
   test('keeps a declared field numeric when its distance encoding is unknown', async () => {
     serveFont('fonts/ui.fnt');
     const loader = createLoader();
-    const font = await loader.load(
-      Asset.type('bmFont', 'fonts/ui.fnt', {
-        distanceField: { fieldType: 'mtsdf', distanceRange: null, zeroDistanceValue: null },
-      }),
-    );
+    const font = await loader.load({
+      type: 'bmFont',
+      source: 'fonts/ui.fnt',
+      distanceField: { fieldType: 'mtsdf', distanceRange: null, zeroDistanceValue: null },
+    });
 
     expect(font.fontData.distanceField).toEqual({ fieldType: 'mtsdf', distanceRange: null, zeroDistanceValue: null });
     expect(font.textures[0]!.colorSpace).toBe('none');
@@ -135,7 +134,7 @@ describe('distance-font page loading', () => {
     serveFont('fonts/bitmap.fnt');
     const images = captureFallbackImages();
     const loader = createLoader();
-    const pending = loader.load(Asset.type('bmFont', 'fonts/bitmap.fnt'));
+    const pending = loader.load({ type: 'bmFont', source: 'fonts/bitmap.fnt' });
 
     await vi.waitFor(() => expect(images).toHaveLength(1));
 
@@ -163,7 +162,7 @@ describe('distance-font page loading', () => {
     const images = captureFallbackImages();
     const loader = createLoader();
 
-    await expect(loader.load(Asset.type('bmFont', 'fonts/distance.fnt'))).rejects.toThrow(
+    await expect(loader.load({ type: 'bmFont', source: 'fonts/distance.fnt' })).rejects.toThrow(
       /Numeric image decoding requires createImageBitmap/,
     );
     expect(images).toHaveLength(0);
@@ -173,8 +172,8 @@ describe('distance-font page loading', () => {
     serveFont('fonts/bitmap.fnt');
     serveFont('fonts/distance.fnt', 'distanceField fieldType=msdf distanceRange=4');
     const loader = createLoader();
-    const bitmapAsset = Asset.type('bmFont', 'fonts/bitmap.fnt');
-    const distanceAsset = Asset.type('bmFont', 'fonts/distance.fnt');
+    const bitmapAsset = { type: 'bmFont', source: 'fonts/bitmap.fnt' } as const;
+    const distanceAsset = { type: 'bmFont', source: 'fonts/distance.fnt' } as const;
 
     if (order === 'bitmap-first') {
       await loader.load(bitmapAsset);
@@ -209,18 +208,20 @@ describe('distance-font page loading', () => {
       { fieldType: 'mtsdf', distanceRange: 8, zeroDistanceValue: 0.75 },
       { fieldType: 'msdf', distanceRange: 8, zeroDistanceValue: 0.25 },
     ];
-    const assets = fields.map(distanceField => Asset.type('bmFont', 'fonts/ui.fnt', { distanceField }));
+    const assets = fields.map(distanceField => ({ type: 'bmFont', source: 'fonts/ui.fnt', distanceField }) as const);
     const fonts = [];
 
     for (const asset of assets) {
       fonts.push(await loader.load(asset));
     }
 
-    const descriptorAsset = bmFontType.asset('fonts/ui.fnt');
+    const descriptorAsset = { type: bmFontType, source: 'fonts/ui.fnt' } as const;
     const descriptorFont = await loader.load(descriptorAsset);
-    const reorderedAsset = bmFontType.asset('fonts/ui.fnt', {
+    const reorderedAsset = {
+      type: bmFontType,
+      source: 'fonts/ui.fnt',
       distanceField: { zeroDistanceValue: 0.25, distanceRange: 8, fieldType: 'mtsdf' },
-    });
+    } as const;
 
     expect(fonts.map(font => font.fontData.distanceField)).toEqual(fields);
     expect(new Set(fonts).size).toBe(4);
@@ -228,7 +229,7 @@ describe('distance-font page loading', () => {
     expect(fonts).not.toContain(descriptorFont);
     expect(await loader.load(reorderedAsset)).toBe(fonts[0]);
     expect(loader.identify(reorderedAsset)).toEqual(loader.identify(assets[0]!));
-    expect(loader.identify(bmFontType.asset('fonts/ui.fnt', {}))).toEqual(loader.identify(descriptorAsset));
+    expect(loader.identify({ type: bmFontType, source: 'fonts/ui.fnt' })).toEqual(loader.identify(descriptorAsset));
 
     for (const asset of assets) {
       expect(loader.identify(asset).sourceKey).toBe(loader.identify(descriptorAsset).sourceKey);
@@ -249,12 +250,12 @@ describe('distance-font page loading', () => {
     const second = loader.createScope({ name: 'second-font' });
     const pageOwner = loader.createScope({ name: 'numeric-page' });
     const colorOwner = loader.createScope({ name: 'color-page' });
-    const asset = Asset.type('bmFont', 'fonts/ui.fnt');
+    const asset = { type: 'bmFont', source: 'fonts/ui.fnt' } as const;
     const [font, shared] = await Promise.all([first.load(asset), second.load(asset)]);
     const page = font.textures[0]!;
     const bitmap = page.source as ImageBitmap;
-    const independent = await pageOwner.load(Asset.type('texture', 'fonts/page.png', { textureOptions: { colorSpace: 'none' } }));
-    const color = await colorOwner.load(Asset.type('texture', 'fonts/page.png'));
+    const independent = await pageOwner.load({ type: 'texture', source: 'fonts/page.png', textureOptions: { colorSpace: 'none' } });
+    const color = await colorOwner.load({ type: 'texture', source: 'fonts/page.png' });
     const colorBitmap = color.source as ImageBitmap;
 
     expect(shared).toBe(font);
@@ -293,7 +294,7 @@ describe('distance-font page loading', () => {
 
     decode.mockResolvedValueOnce(bitmap as unknown as ImageBitmap).mockRejectedValueOnce(new Error('page decode failed'));
 
-    await expect(scope.load(Asset.type('bmFont', 'fonts/ui.fnt'))).rejects.toThrow('page decode failed');
+    await expect(scope.load({ type: 'bmFont', source: 'fonts/ui.fnt' })).rejects.toThrow('page decode failed');
 
     expect(decode).toHaveBeenCalledTimes(2);
     expect(decode).toHaveBeenNthCalledWith(1, expect.any(Blob), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });

@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { createLeaf } from '#assets/catalogLeaf';
 import { Loader } from '#assets/Loader';
 import type { SeamlessAdapter } from '#assets/seamless';
@@ -30,13 +29,8 @@ class StubHandle {
   }
 }
 
-/**
- * `new Asset({...})` types its `type` against the registered `AssetDefinitions`
- * keys, and `stub` is deliberately not one - the walk installs it on the loader
- * at runtime only, so the descriptor goes through the implementation signature.
- */
-const stubAsset = (source: string): Asset<StubHandle> =>
-  new (Asset as unknown as new (config: { type: string; source: string }) => Asset<StubHandle>)({ type: 'stub', source });
+/** `stub` is installed on the loader at runtime only, so the type system cannot see its resource. */
+const stubAsset = (source: string) => ({ type: 'stub', source }) as const;
 
 const stubAdapter: SeamlessAdapter<StubHandle> = {
   createPlaceholder(): StubHandle {

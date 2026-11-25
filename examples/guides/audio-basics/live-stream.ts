@@ -6,7 +6,11 @@ class RadioScene extends Scene {
   private radio!: AudioStream;
 
   override async load(): Promise<void> {
-    this.radio = await this.assets.load([AudioStream, 'https://radio.example/live.mp3', { reconnect: { attempts: 5, delay: 1000 } }]);
+    this.radio = await this.assets.load({
+      type: AudioStream,
+      source: 'https://radio.example/live.mp3',
+      reconnect: { attempts: 5, delay: 1000 },
+    });
   }
 
   override init(): void {

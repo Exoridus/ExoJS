@@ -4,6 +4,7 @@ import type { AssetConstructor } from './AssetConstructor';
 import type { AssetTypeName } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import type { AnyAssetType, AssetLeaf, AssetRequest } from './AssetType';
+import { AssetType } from './AssetType';
 import { normalizeExtension } from './extensions';
 import type { SeamlessAdapter } from './seamless';
 
@@ -285,6 +286,24 @@ export class AssetTypeRegistry {
     return this._byId.get(name)?.token;
   }
 
+  /**
+   * The installed type a descriptor's `type` names - an id, the class the type
+   * produces, or an {@link AssetType} instance (matched by its id) - or
+   * `undefined` when none is installed.
+   * @internal
+   */
+  public _resolveReference(reference: unknown): InstalledAssetType | undefined {
+    if (typeof reference === 'string') {
+      return this._byId.get(reference);
+    }
+
+    if (reference instanceof AssetType) {
+      return this._byId.get(reference.id);
+    }
+
+    return typeof reference === 'function' ? this._byToken.get(reference as AssetConstructor) : undefined;
+  }
+
   /** What the type named `name` hands out as a catalog leaf, or `undefined` when no such type is installed. @internal */
   public leafFor(name: string): AssetLeaf<unknown> | undefined {
     return this._byId.get(name)?.type.leaf as AssetLeaf<unknown> | undefined;
@@ -388,7 +407,7 @@ export class AssetTypeRegistry {
     if (existing !== undefined && existing !== type) {
       throw new Error(
         `AssetTypeRegistry: extension ".${key}" is already registered to type "${existing}" on this ` +
-          `app, cannot also register it as "${type}". Use Asset.type(...) for a one-off exception ` +
+          `app, cannot also register it as "${type}". Use { type, source } for a one-off exception ` +
           `instead of a second app-wide override.`,
       );
     }

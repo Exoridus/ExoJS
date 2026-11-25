@@ -1,15 +1,15 @@
 {
   "title": "LoaderScope",
-  "description": "An owner of asset claims with an explicit lifetime. Assets acquired through a scope stay resident for as long as that scope holds them, and are freed when it releases them - but only if no other scope still holds the same asset. Several scopes can own one asset independently: they share a single fetch and a single resident payload, and one scope releasing never invalidates another. Use the scene's scope for scene assets, and a child scope from createScope for anything shorter-lived - a level, a streamed chunk, a preview, a prefetch. Assets acquired directly on the Loader are held for the application's lifetime instead and are freed only when the loader is destroyed. A scope describes a lifetime, never a set of assets: what to acquire comes from an Assets catalog or an Asset descriptor passed to get / load, and typed access stays on that catalog.",
+  "description": "An owner of asset claims with an explicit lifetime. Assets acquired through a scope stay resident for as long as that scope holds them, and are freed when it releases them - but only if no other scope still holds the same asset. Several scopes can own one asset independently: they share a single fetch and a single resident payload, and one scope releasing never invalidates another. Use the scene's scope for scene assets, and a child scope from createScope for anything shorter-lived - a level, a streamed chunk, a preview, a prefetch. Assets acquired directly on the Loader are held for the application's lifetime instead and are freed only when the loader is destroyed. A scope describes a lifetime, never a set of assets: what to acquire comes from an Assets catalog or an AssetDescriptor passed to get / load, and typed access stays on that catalog.",
   "symbol": "LoaderScope",
   "kind": "class",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 20,
+  "memberCount": 19,
   "counts": {
     "constructors": 0,
-    "methods": 13,
+    "methods": 12,
     "properties": 3,
     "events": 4
   },
@@ -22,7 +22,7 @@
         "An owner of asset claims with an explicit lifetime.",
         "Assets acquired through a scope stay resident for as long as that scope holds them, and are freed when it releases them - but only if no other scope still holds the same asset. Several scopes can own one asset independently: they share a single fetch and a single resident payload, and one scope releasing never invalidates another.",
         "Use the scene's scope for scene assets, and a child scope from createScope for anything shorter-lived - a level, a streamed chunk, a preview, a prefetch. Assets acquired directly on the Loader are held for the application's lifetime instead and are freed only when the loader is destroyed.",
-        "A scope describes a lifetime, never a set of assets: what to acquire comes from an Assets catalog or an Asset descriptor passed to get / load, and typed access stays on that catalog."
+        "A scope describes a lifetime, never a set of assets: what to acquire comes from an Assets catalog or an AssetDescriptor passed to get / load, and typed access stays on that catalog."
       ],
       "importLine": "import { LoaderScope } from '@codexo/exojs'",
       "sourceLink": null
@@ -257,7 +257,7 @@
         },
         {
           "name": "get",
-          "signature": "get(asset: CatalogValueLeaf<T> | ValueAsset<T>): CatalogValueLeaf<T>",
+          "signature": "get(descriptor: D & ValidatedLeafDescriptor<D>): AssetDescriptorLeaf<D>",
           "signatureTokens": [
             {
               "text": "get",
@@ -268,7 +268,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "asset",
+              "text": "descriptor",
               "kind": "param"
             },
             {
@@ -276,7 +276,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "CatalogValueLeaf",
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ValidatedLeafDescriptor",
               "kind": "type"
             },
             {
@@ -284,27 +292,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ValueAsset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
+              "text": "D",
               "kind": "type"
             },
             {
@@ -320,7 +308,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "CatalogValueLeaf",
+              "text": "AssetDescriptorLeaf",
               "kind": "type"
             },
             {
@@ -328,7 +316,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "T",
+              "text": "D",
               "kind": "type"
             },
             {
@@ -338,17 +326,17 @@
           ],
           "params": [
             {
-              "name": "asset",
-              "type": "CatalogValueLeaf<T> | ValueAsset<T>",
+              "name": "descriptor",
+              "type": "D & ValidatedLeafDescriptor<D>",
               "optional": false
             }
           ],
-          "returnType": "CatalogValueLeaf<T>",
+          "returnType": "AssetDescriptorLeaf<D>",
           "description": "Claims an asset for this scope and returns synchronously: a handle that fills in place, a value reference, or a catalog's leaves. Starts loading if the asset is not resident; it is not a passive cache lookup. Await load when the finished value is required. A bare path reuses its source-keyed handle, while each new descriptor can produce a distinct leaf sharing the same resident payload."
         },
         {
           "name": "get",
-          "signature": "get(asset: ResourceAsset<T>): CatalogResourceLeaf<T>",
+          "signature": "get(leaf: CatalogValueLeaf<T>): CatalogValueLeaf<T>",
           "signatureTokens": [
             {
               "text": "get",
@@ -359,7 +347,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "asset",
+              "text": "leaf",
               "kind": "param"
             },
             {
@@ -367,7 +355,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ResourceAsset",
+              "text": "CatalogValueLeaf",
               "kind": "type"
             },
             {
@@ -391,7 +379,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "CatalogResourceLeaf",
+              "text": "CatalogValueLeaf",
               "kind": "type"
             },
             {
@@ -409,12 +397,12 @@
           ],
           "params": [
             {
-              "name": "asset",
-              "type": "ResourceAsset<T>",
+              "name": "leaf",
+              "type": "CatalogValueLeaf<T>",
               "optional": false
             }
           ],
-          "returnType": "CatalogResourceLeaf<T>",
+          "returnType": "CatalogValueLeaf<T>",
           "description": "Claims an asset for this scope and returns synchronously: a handle that fills in place, a value reference, or a catalog's leaves. Starts loading if the asset is not resident; it is not a passive cache lookup. Await load when the finished value is required. A bare path reuses its source-keyed handle, while each new descriptor can produce a distinct leaf sharing the same resident payload."
         },
         {
@@ -665,7 +653,7 @@
             }
           ],
           "returnType": "LoadingQueue<InferLoadedMap<M>>",
-          "description": "Loads into this scope and returns an awaitable queue with progress and cancellation. Accepts a path whose suffix names its type, a handle (new Texture(path), a catalog leaf), a descriptor, an explicitly typed request ([Video, 'intro.mp4'], [Palette, 'sunset.json']), or an array, tuple or named object of those. A group resolves to the same shape with every entry replaced by its loaded value, and handles heal in place as well. An Assets catalog resolves to a new map of its finished values. The claims belong to this scope, also when a fetch or decode fails and rejects the queue. Cancelling the queue withdraws only this load's pending stakes. Invalid input throws before any claim is made. With priority: LoadPriority.Background the fetches use the background queue and a later foreground request promotes them; types without a placeholder, such as streamed media, cannot load at background priority."
+          "description": "Loads into this scope and returns an awaitable queue with progress and cancellation. Accepts a path whose suffix names its type, a handle (new Texture(path), a catalog leaf), an asset descriptor ({ type: Video, source: 'intro.mp4' }, { type: paletteType, source: 'sunset.json' }), or an array, tuple or named object of those. A group resolves to the same shape with every entry replaced by its loaded value, and handles heal in place as well. Named groups reserve type for descriptors. An Assets catalog resolves to a new map of its finished values. The claims belong to this scope, also when a fetch or decode fails and rejects the queue. Cancelling the queue withdraws only this load's pending stakes. Invalid input throws before any claim is made. With priority: LoadPriority.Background the fetches use the background queue and a later foreground request promotes them; types without a placeholder, such as streamed media, cannot load at background priority."
         },
         {
           "name": "load",
@@ -781,7 +769,7 @@
             }
           ],
           "returnType": "LoadingQueue<LoadedAssets<Input>>",
-          "description": "Loads into this scope and returns an awaitable queue with progress and cancellation. Accepts a path whose suffix names its type, a handle (new Texture(path), a catalog leaf), a descriptor, an explicitly typed request ([Video, 'intro.mp4'], [Palette, 'sunset.json']), or an array, tuple or named object of those. A group resolves to the same shape with every entry replaced by its loaded value, and handles heal in place as well. An Assets catalog resolves to a new map of its finished values. The claims belong to this scope, also when a fetch or decode fails and rejects the queue. Cancelling the queue withdraws only this load's pending stakes. Invalid input throws before any claim is made. With priority: LoadPriority.Background the fetches use the background queue and a later foreground request promotes them; types without a placeholder, such as streamed media, cannot load at background priority."
+          "description": "Loads into this scope and returns an awaitable queue with progress and cancellation. Accepts a path whose suffix names its type, a handle (new Texture(path), a catalog leaf), an asset descriptor ({ type: Video, source: 'intro.mp4' }, { type: paletteType, source: 'sunset.json' }), or an array, tuple or named object of those. A group resolves to the same shape with every entry replaced by its loaded value, and handles heal in place as well. Named groups reserve type for descriptors. An Assets catalog resolves to a new map of its finished values. The claims belong to this scope, also when a fetch or decode fails and rejects the queue. Cancelling the queue withdraws only this load's pending stakes. Invalid input throws before any claim is made. With priority: LoadPriority.Background the fetches use the background queue and a later foreground request promotes them; types without a placeholder, such as streamed media, cannot load at background priority."
         },
         {
           "name": "loadContainer",
@@ -928,7 +916,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Drops this scope's claim on one asset. The payload is freed only when no other scope still holds it; a scope can never release another owner's claim. Accepts anything load accepts - a path, a handle, a descriptor, a [Type, source] request, or a group of those - plus a whole Assets catalog and a (type, source) pair. Releasing something this scope never claimed is a no-op, and releasing twice is idempotent. Throws only for an object that has no claim identity at all - a resolved non-leaf resource, or an object this loader has never issued. Release such a resource through its descriptor or its (type, source) pair instead."
+          "description": "Drops this scope's claim on one asset. The payload is freed only when no other scope still holds it; a scope can never release another owner's claim. Accepts anything load accepts - a path, a handle, a descriptor, or a group of those - plus a whole Assets catalog, and a resource built from a descriptor without a string source. Releasing something this scope never claimed is a no-op, and releasing twice is idempotent. A resource loaded from a direct source can be released by its descriptor or by the returned object or function. Releasing the returned resource drops this scope's claims on every direct key that produced it. Use a descriptor to release a particular key. A source-free request with no custom resource identity requires the original descriptor when releasing by descriptor. Throws only for an object that has no claim identity at all - a resolved resource loaded from a path, or an object this loader has never issued. Release such a resource through its path or descriptor instead."
         },
         {
           "name": "release",
@@ -987,75 +975,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Drops this scope's claim on one asset. The payload is freed only when no other scope still holds it; a scope can never release another owner's claim. Accepts anything load accepts - a path, a handle, a descriptor, a [Type, source] request, or a group of those - plus a whole Assets catalog and a (type, source) pair. Releasing something this scope never claimed is a no-op, and releasing twice is idempotent. Throws only for an object that has no claim identity at all - a resolved non-leaf resource, or an object this loader has never issued. Release such a resource through its descriptor or its (type, source) pair instead."
-        },
-        {
-          "name": "release",
-          "signature": "release(type: AssetConstructor, source: string): void",
-          "signatureTokens": [
-            {
-              "text": "release",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "type",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetConstructor",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "source",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "type",
-              "type": "AssetConstructor",
-              "optional": false
-            },
-            {
-              "name": "source",
-              "type": "string",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Drops this scope's claim on one asset. The payload is freed only when no other scope still holds it; a scope can never release another owner's claim. Accepts anything load accepts - a path, a handle, a descriptor, a [Type, source] request, or a group of those - plus a whole Assets catalog and a (type, source) pair. Releasing something this scope never claimed is a no-op, and releasing twice is idempotent. Throws only for an object that has no claim identity at all - a resolved non-leaf resource, or an object this loader has never issued. Release such a resource through its descriptor or its (type, source) pair instead."
+          "description": "Drops this scope's claim on one asset. The payload is freed only when no other scope still holds it; a scope can never release another owner's claim. Accepts anything load accepts - a path, a handle, a descriptor, or a group of those - plus a whole Assets catalog, and a resource built from a descriptor without a string source. Releasing something this scope never claimed is a no-op, and releasing twice is idempotent. A resource loaded from a direct source can be released by its descriptor or by the returned object or function. Releasing the returned resource drops this scope's claims on every direct key that produced it. Use a descriptor to release a particular key. A source-free request with no custom resource identity requires the original descriptor when releasing by descriptor. Throws only for an object that has no claim identity at all - a resolved resource loaded from a path, or an object this loader has never issued. Release such a resource through its path or descriptor instead."
         }
       ],
       "paragraphs": [],

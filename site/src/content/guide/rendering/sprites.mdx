@@ -189,11 +189,11 @@ A `FrameTexture` follows a `FrameSource`, an image that changes over time, and w
 `VideoTexture` is the ready-made one for an `HTMLVideoElement`. Where the browser supports `requestVideoFrameCallback`, each presented frame is uploaded once and a paused video uploads nothing; elsewhere the texture follows the playback position. The `Video` scene node draws its own `VideoTexture` and adds playback controls and audio, so its `texture` can feed other consumers while the video lives:
 
 ```ts
-import { Asset, Mesh, Scene, Sprite, VideoTexture } from '@codexo/exojs';
+import { Mesh, Scene, Sprite, VideoTexture } from '@codexo/exojs';
 
 class ScreenScene extends Scene {
   override async load(): Promise<void> {
-    const intro = await this.loader.load(Asset.type('video', 'video/intro.mp4'));
+    const intro = await this.loader.load({ type: 'video', source: 'video/intro.mp4' });
 
     intro.play({ loop: true, muted: true });
 

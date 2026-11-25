@@ -1,25 +1,32 @@
 import {
-  Asset,
+  type AssetDescriptorResource,
   type BmFont,
   type BmFontAssetOptions,
   type BmFontDistanceField,
   bmFontType,
-  type LeaflessAsset,
   type Loader,
   type LoadingQueue,
 } from '@codexo/exojs';
 
+type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
+type Expect<T extends true> = T;
+
 const field: BmFontDistanceField = { fieldType: 'mtsdf', distanceRange: 8, zeroDistanceValue: 0.75 };
 const options: BmFontAssetOptions = { distanceField: field };
-const builtIn: LeaflessAsset<BmFont> = Asset.type('bmFont', 'ui.fnt', options);
-const firstClass: LeaflessAsset<BmFont> = bmFontType.asset('ui.fnt', options);
-const ordinary: LeaflessAsset<BmFont> = Asset.type('bmFont', 'color.fnt');
+const builtIn = { type: 'bmFont', source: 'ui.fnt', ...options } as const;
+const firstClass = { type: bmFontType, source: 'ui.fnt', ...options };
+const ordinary = { type: 'bmFont', source: 'color.fnt' } as const;
+type _BuiltInIsBmFont = Expect<Equal<AssetDescriptorResource<typeof builtIn>, BmFont>>;
+type _FirstClassIsBmFont = Expect<Equal<AssetDescriptorResource<typeof firstClass>, BmFont>>;
+type _OrdinaryIsBmFont = Expect<Equal<AssetDescriptorResource<typeof ordinary>, BmFont>>;
 
 declare const loader: Loader;
 const loading: LoadingQueue<BmFont> = loader.load(builtIn);
 void [firstClass, ordinary, loading];
 
-Asset.type('bmFont', 'unknown.fnt', {
+loader.identify({
+  type: 'bmFont',
+  source: 'unknown.fnt',
   distanceField: { fieldType: 'msdf', distanceRange: null, zeroDistanceValue: null },
 });
 

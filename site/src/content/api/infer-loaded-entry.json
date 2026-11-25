@@ -1,6 +1,6 @@
 {
   "title": "InferLoadedEntry",
-  "description": "The LOADED payload a CatalogEntry resolves to - what a `loader.load(catalog)` result map holds, as opposed to the handle-hybrid leaf InferCatalogLeaf materializes on the catalog itself. A bare path string is classified by its file suffix exactly as LeafForPath does, but resolves to the raw resource for every type: a value type's LOAD result is its decoded value (`unknown` for `json`), not the `AssetRef` wrapper its catalog property holds. Descriptors and explicit configs delegate to InferAssetResource unchanged.",
+  "description": "The LOADED payload a CatalogEntry resolves to - what a `loader.load(catalog)` result map holds, as opposed to the handle-hybrid leaf InferCatalogLeaf materializes on the catalog itself. A bare path string is classified by its file suffix exactly as LeafForPath does, but resolves to the raw resource for every type: a value type's LOAD result is its decoded value (`unknown` for `json`), not the `AssetRef` wrapper its catalog property holds.",
   "symbol": "InferLoadedEntry",
   "kind": "type",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "The LOADED payload a CatalogEntry resolves to - what a `loader.load(catalog)` result map holds, as opposed to the handle-hybrid leaf InferCatalogLeaf materializes on the catalog itself.",
-        "A bare path string is classified by its file suffix exactly as LeafForPath does, but resolves to the raw resource for every type: a value type's LOAD result is its decoded value (`unknown` for `json`), not the `AssetRef` wrapper its catalog property holds. Descriptors and explicit configs delegate to InferAssetResource unchanged."
+        "A bare path string is classified by its file suffix exactly as LeafForPath does, but resolves to the raw resource for every type: a value type's LOAD result is its decoded value (`unknown` for `json`), not the `AssetRef` wrapper its catalog property holds."
       ],
       "importLine": "import { InferLoadedEntry } from '@codexo/exojs'",
       "sourceLink": null
@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "InferLoadedEntry",
-          "signature": "E extends string ? [KindByPath<E>] extends [never] ? unknown : ResourceForKind<KindByPath<E>> : E extends AssetInput ? InferAssetResource<E> : never",
+          "signature": "E extends string ? [KindByPath<E>] extends [never] ? unknown : ResourceForKind<KindByPath<E>> : AssetDescriptorResource<E>",
           "signatureTokens": [
             {
               "text": "E",
@@ -150,31 +150,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "E",
-              "kind": "type"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetInput",
-              "kind": "type"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "InferAssetResource",
+              "text": "AssetDescriptorResource",
               "kind": "type"
             },
             {
@@ -188,14 +164,6 @@
             {
               "text": ">",
               "kind": "punctuation"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
-              "kind": "keyword"
             }
           ],
           "params": [],

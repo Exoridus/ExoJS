@@ -8,7 +8,6 @@
  */
 import {
   Application,
-  Asset,
   Assets,
   Container,
   fontType,
@@ -18,9 +17,10 @@ import {
   type SceneNode,
   type Sprite,
   type Texture,
+  Texture as TextureClass,
 } from '@codexo/exojs';
 
-import { Armor, BareScene, DataScene, Health, LocalizedAssetType, MetaAssetType, type PlayerData, Spin } from './fixtures';
+import { Armor, BareScene, DataScene, Health, LocalizedAssetType, MetaAssetType, NotesAssetType, type PlayerData, Spin } from './fixtures';
 
 const app = new Application({ scenes: { BareScene, DataScene } });
 
@@ -54,17 +54,22 @@ export const assignableData: Scene<PlayerData> = new DataScene();
 declare const loader: Loader;
 
 /** A type with a required option is named with it; a type without one takes none. */
-export const fontWithFamily = fontType.asset('Inter.woff2', { family: 'Inter' });
-export const fontFacadeWithFamily = Asset.type('font', 'Inter.woff2', { family: 'Inter' });
-export const textureWithoutOptions = Asset.type('texture', 'hero.png');
-export const localized = new LocalizedAssetType().asset('a.txt', { locale: 'de' });
+export const fontWithFamily = (): PromiseLike<FontFace> => loader.load({ type: fontType, source: 'Inter.woff2', family: 'Inter' });
+export const fontIdWithFamily = (): PromiseLike<FontFace> => loader.load({ type: 'font', source: 'Inter.woff2', family: 'Inter' });
+export const textureByClass = (): PromiseLike<Texture> => loader.load({ type: TextureClass, source: 'hero.png' });
+export const localized = (): PromiseLike<unknown> => loader.load({ type: new LocalizedAssetType(), source: 'a.txt', locale: 'de' });
+
+/** A non-locator source is the type's own factory input; a source-free descriptor builds from options alone. */
+export const inlineMeta = (): PromiseLike<{ readonly hp: number }> => loader.load({ type: new MetaAssetType(), source: { hp: 1 } });
+export const notesFromText = (): PromiseLike<readonly string[]> => loader.load({ type: new NotesAssetType(), source: 'a.txt' });
+export const sourceFreeMeta = (): PromiseLike<{ readonly hp: number }> => loader.load({ type: new MetaAssetType() });
 
 /** A type without a catalog leaf still loads directly. */
-export const loadMusic = (): PromiseLike<unknown> => loader.load(musicType.asset('theme.ogg'));
-export const loadFont = (): PromiseLike<unknown> => loader.load(Asset.type('font', 'ui.woff2', { family: 'UI' }));
+export const loadMusic = (): PromiseLike<unknown> => loader.load({ type: musicType, source: 'theme.ogg' });
+export const loadFont = (): PromiseLike<unknown> => loader.load({ type: 'font', source: 'ui.woff2', family: 'UI' });
 
 /** Catalog leaves follow the leaf policy their type declares. */
-const catalog = Assets.from({ hero: Asset.type('texture', 'hero.png'), meta: new MetaAssetType().asset('game.meta') });
+const catalog = Assets.from({ hero: { type: 'texture', source: 'hero.png' }, meta: { type: new MetaAssetType(), source: 'game.meta' } });
 export const heroIsTexture: Texture = catalog.hero;
 export const metaValue: { readonly hp: number } | undefined = catalog.meta.value;
 

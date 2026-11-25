@@ -1,5 +1,5 @@
 import type { RenderingContext, Seconds } from '@codexo/exojs';
-import { Application, Asset, Color, Graphics, type Music, Scene } from '@codexo/exojs';
+import { Application, Color, Graphics, type Music, Scene } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
 
 // #region guide:full-visualizer
@@ -11,7 +11,7 @@ class AudioReactiveScene extends Scene {
   private bars!: Graphics;
 
   async load() {
-    this.music = await this.loader.load(Asset.type('music', 'audio/track.ogg'));
+    this.music = await this.loader.load({ type: 'music', source: 'audio/track.ogg' });
   }
 
   init() {

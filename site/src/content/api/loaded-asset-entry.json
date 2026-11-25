@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "LoadedAssetEntry",
-          "signature": "E extends string ? [KindByPath<E>] extends [never] ? unknown : ResourceForKind<KindByPath<E>> : E extends AssetTypeRequest<T> ? T : E extends Asset<T> ? T : E extends CatalogLeafBrand<T> ? T : E extends AssetLoadHandle ? Awaited<E[\"loaded\"]> : never",
+          "signature": "E extends string ? [KindByPath<E>] extends [never] ? unknown : ResourceForKind<KindByPath<E>> : E extends CatalogLeafBrand<T> ? T : E extends AssetLoadHandle ? Awaited<E[\"loaded\"]> : E extends AssetDescriptor ? AssetDescriptorResource<E> : never",
           "signatureTokens": [
             {
               "text": "E",
@@ -165,94 +165,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetTypeRequest",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "E",
-              "kind": "type"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Asset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "E",
-              "kind": "type"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
               "text": "CatalogLeafBrand",
               "kind": "type"
             },
@@ -327,6 +239,50 @@
             {
               "text": "]",
               "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "E",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptor",
+              "kind": "type"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptorResource",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "E",
+              "kind": "type"
             },
             {
               "text": ">",

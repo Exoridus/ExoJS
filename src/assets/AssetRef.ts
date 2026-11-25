@@ -1,8 +1,10 @@
 import { LoadState, type LoadStateValue } from '#core/LoadState';
 
+import { parseAssetValue } from './parseAssetValue';
+
 /**
  * Deferred handle for value assets (parsed JSON, text, CSV rows, ...), returned
- * by `loader.get(Asset.type('json', src))` / a bare value path and friends. Values cannot heal in place the way
+ * by `loader.get({ type: 'json', source: src })` / a bare value path and friends. Values cannot heal in place the way
  * resource handles do, so the REF is the stable identity: {@link value} throws
  * until `'ready'`, {@link loaded} resolves with the value itself, and a failed
  * ref retries (healing in place) on the next `get`.
@@ -71,13 +73,7 @@ export class AssetRef<T> {
     let value: T;
 
     try {
-      const parsed = this._parse ? this._parse(raw) : raw;
-
-      if (typeof (parsed as { then?: unknown } | null)?.then === 'function') {
-        throw new Error('Asset parse() must be synchronous. Move asynchronous work into the asset handler load phase.');
-      }
-
-      value = parsed as T;
+      value = parseAssetValue(raw, this._parse) as T;
     } catch (error) {
       this._fail(error instanceof Error ? error : new Error(String(error)));
 

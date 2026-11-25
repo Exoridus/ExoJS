@@ -1,7 +1,6 @@
 import { type ContainerInput, encodeContainer } from '@codexo/exojs-build/asset-container';
 import { containerPackFileName, describeContainerPack } from '@codexo/exojs-build/asset-manifest';
 
-import { Asset } from '#assets/Asset';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { AssetNetworkError } from '#assets/AssetNetworkError';
 import { AssetCache } from '#assets/cache/AssetCache';
@@ -306,7 +305,7 @@ describe('loading a pack through a manifest', () => {
 
     await loader.loadContainer(manifest.pack('level1'));
 
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'b.bin')).value)).toEqual(noise(1500, 2));
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'b.bin' }).value)).toEqual(noise(1500, 2));
   });
 
   test('refuses pack bytes whose hash is not the one the manifest states', async () => {
@@ -361,7 +360,7 @@ describe('loading a pack through a manifest', () => {
 
     await loader.loadContainer(after.pack('level1'), { store });
 
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'b.bin')).value)).toEqual(noise(1500, 7));
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'b.bin' }).value)).toEqual(noise(1500, 7));
     // The manifest, the pack head, and exactly the one block that changed.
     expect(requests.filter(request => request.path.endsWith('.exoa'))).toHaveLength(2);
     expect(store.hits).toHaveLength(2);
@@ -390,7 +389,7 @@ describe('loading a pack through a manifest', () => {
 
     await loader.loadContainer(manifest.pack('level1'));
 
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'b.bin')).value)).toEqual(noise(1500, 2));
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'b.bin' }).value)).toEqual(noise(1500, 2));
   });
 
   test('checks the length even where crypto.subtle is unavailable', async () => {
@@ -422,7 +421,7 @@ describe('loading a pack through a manifest', () => {
     // `crypto.subtle` there is none: degrading beats refusing to load at all.
     await loader.loadContainer(manifest.pack('level1'));
 
-    expect(loader.get(Asset.type('binary', 'b.bin')).value.byteLength).toBe(1500);
+    expect(loader.get({ type: 'binary', source: 'b.bin' }).value.byteLength).toBe(1500);
   });
 
   test('a pack the server does not have is a transport failure on the block path too', async () => {

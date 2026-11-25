@@ -71,8 +71,8 @@ describe('font descriptor resource identity', () => {
   for (const [field, value] of Object.entries(descriptors)) {
     test(`${field} changes the resource but preserves the acquisition`, () => {
       const loader = createLoader();
-      const ordinary = loader.identify(fontType.asset('ui.woff2', options()));
-      const changed = loader.identify(fontType.asset('ui.woff2', options({ [field]: value })));
+      const ordinary = loader.identify({ type: fontType, source: 'ui.woff2', ...options() });
+      const changed = loader.identify({ type: fontType, source: 'ui.woff2', ...options({ [field]: value }) });
 
       expect(changed.resourceKey).not.toBe(ordinary.resourceKey);
       expect(changed.sourceKey).toBe(ordinary.sourceKey);
@@ -82,8 +82,8 @@ describe('font descriptor resource identity', () => {
   for (const order of ['custom-first', 'default-first'] as const) {
     test(`loads distinct faces with the requested descriptors (${order})`, async () => {
       const loader = createLoader();
-      const custom = fontType.asset('ui.woff2', options({ weight: '700', style: 'italic' }));
-      const ordinary = fontType.asset('ui.woff2', options());
+      const custom = { type: fontType, source: 'ui.woff2', ...options({ weight: '700', style: 'italic' }) };
+      const ordinary = { type: fontType, source: 'ui.woff2', ...options() };
       const requests = order === 'custom-first' ? ([custom, ordinary] as const) : ([ordinary, custom] as const);
       const first = await loader.load(requests[0]);
       const second = await loader.load(requests[1]);
@@ -102,9 +102,9 @@ describe('font descriptor resource identity', () => {
 
   test('deduplicates reordered descriptors and reuses cached source across interpretations', async () => {
     const loader = createLoader();
-    const firstRequest = fontType.asset('ui.woff2', options({ weight: '700', style: 'italic' }));
-    const reorderedRequest = fontType.asset('ui.woff2', options({ style: 'italic', weight: '700' }));
-    const otherRequest = fontType.asset('ui.woff2', options({ weight: '400', style: 'normal' }));
+    const firstRequest = { type: fontType, source: 'ui.woff2', ...options({ weight: '700', style: 'italic' }) };
+    const reorderedRequest = { type: fontType, source: 'ui.woff2', ...options({ style: 'italic', weight: '700' }) };
+    const otherRequest = { type: fontType, source: 'ui.woff2', ...options({ weight: '400', style: 'normal' }) };
 
     expect(loader.identify(firstRequest)).toEqual(loader.identify(reorderedRequest));
 
@@ -118,9 +118,9 @@ describe('font descriptor resource identity', () => {
 
   test('keeps an empty descriptor bag equivalent to omission without merging distinct families', () => {
     const loader = createLoader();
-    const ordinary = loader.identify(fontType.asset('ui.woff2', options()));
-    const empty = loader.identify(fontType.asset('ui.woff2', options({})));
-    const otherFamily = loader.identify(fontType.asset('ui.woff2', { ...options(), family: 'Other' }));
+    const ordinary = loader.identify({ type: fontType, source: 'ui.woff2', ...options() });
+    const empty = loader.identify({ type: fontType, source: 'ui.woff2', ...options({}) });
+    const otherFamily = loader.identify({ type: fontType, source: 'ui.woff2', ...options(), family: 'Other' });
 
     expect(empty).toEqual(ordinary);
     expect(otherFamily.resourceKey).not.toBe(ordinary.resourceKey);
@@ -129,8 +129,8 @@ describe('font descriptor resource identity', () => {
 
   test('does not confuse family text with descriptor delimiters', () => {
     const loader = createLoader();
-    const family = loader.identify(fontType.asset('ui.woff2', { ...options(), family: 'Ui&weight=700' }));
-    const weighted = loader.identify(fontType.asset('ui.woff2', options({ weight: '700' })));
+    const family = loader.identify({ type: fontType, source: 'ui.woff2', ...options(), family: 'Ui&weight=700' });
+    const weighted = loader.identify({ type: fontType, source: 'ui.woff2', ...options({ weight: '700' }) });
 
     expect(family.resourceKey).not.toBe(weighted.resourceKey);
   });

@@ -4,7 +4,6 @@
  * it: a closed bitmap reports a 0x0 size, which no stand-in decoder models.
  */
 
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { TextureFactory } from '#assets/factories/TextureFactory';
 import { Loader } from '#assets/Loader';
@@ -43,7 +42,7 @@ describe('texture decode lifetime', () => {
 
   test('releasing the last claim closes the decoded bitmap', async () => {
     const scope = loader.createScope({ name: 'level' });
-    const texture = await scope.load(Asset.type('texture', url));
+    const texture = await scope.load({ type: 'texture', source: url });
     const bitmap = texture.source as ImageBitmap;
 
     expect(bitmap).toBeInstanceOf(ImageBitmap);
@@ -58,8 +57,8 @@ describe('texture decode lifetime', () => {
   test('a bitmap shared by a deferred handle stays open until every claim is released', async () => {
     const first = loader.createScope({ name: 'first' });
     const second = loader.createScope({ name: 'second' });
-    const loaded = await first.load(Asset.type('texture', url));
-    const handle = second.get(Asset.type('texture', url));
+    const loaded = await first.load({ type: 'texture', source: url });
+    const handle = second.get({ type: 'texture', source: url });
 
     await handle.loaded;
     const bitmap = loaded.source as ImageBitmap;
@@ -78,12 +77,12 @@ describe('texture decode lifetime', () => {
 
   test('a texture reclaimed after release decodes a fresh bitmap', async () => {
     const scope = loader.createScope({ name: 'level' });
-    const texture = await scope.load(Asset.type('texture', url));
+    const texture = await scope.load({ type: 'texture', source: url });
     const released = texture.source as ImageBitmap;
 
     scope.release(texture);
 
-    const reloaded = await scope.load(Asset.type('texture', url));
+    const reloaded = await scope.load({ type: 'texture', source: url });
 
     expect(reloaded).toBe(texture);
     expect(reloaded.source).not.toBe(released);
@@ -94,7 +93,7 @@ describe('texture decode lifetime', () => {
     const first = loader.createScope();
     const next = loader.createScope();
     const other = loader.createScope();
-    const asset = Asset.type('texture', url);
+    const asset = { type: 'texture', source: url } as const;
     const texture = await first.load(asset);
     const oldLoaded = texture.loaded;
     const released = texture.source as ImageBitmap;

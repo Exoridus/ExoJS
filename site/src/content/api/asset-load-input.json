@@ -1,6 +1,6 @@
 {
   "title": "AssetLoadInput",
-  "description": "A single entry, or an array, tuple or named object of entries whose shape a load preserves.",
+  "description": "A single entry, or an array, tuple or named object of entries whose shape a load preserves. Named groups reserve `type` for descriptors.",
   "symbol": "AssetLoadInput",
   "kind": "type",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A single entry, or an array, tuple or named object of entries whose shape a load preserves."
+        "A single entry, or an array, tuple or named object of entries whose shape a load preserves. Named groups reserve `type` for descriptors."
       ],
       "importLine": "import { AssetLoadInput } from '@codexo/exojs'",
       "sourceLink": null

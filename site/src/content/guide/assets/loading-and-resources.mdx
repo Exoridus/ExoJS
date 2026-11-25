@@ -48,25 +48,47 @@ Load a resource before activating a scene when layout or gameplay needs its real
 
 Place an image at `public/assets/image/hero.png` and configure `loader.basePath: 'assets/'` when starting this scene. `public` is a project directory, not part of the requested URL. Resolve deployment base paths as described in [Deployment](/ExoJS/en/guide/shipping/deployment/).
 
-A registered literal suffix such as `.png` supplies the asset type. For a computed path, an ambiguous file name, or a type without a placeholder, name the type with a `[Type, source]` request:
+A registered literal suffix such as `.png` supplies the asset type. For a computed path, an ambiguous file name, or a type without a placeholder, name the type with a descriptor:
 
 ```ts
 import { type AssetOwner, Texture } from '@codexo/exojs';
 
-export const loadPortrait = (assets: AssetOwner, name: string) => assets.load([Texture, `portraits/${name}.png`]);
+export const loadPortrait = (assets: AssetOwner, name: string) => assets.load({ type: Texture, source: `portraits/${name}.png` });
 ```
 
-A request describes an asset; writing it does not fetch anything. Per-asset options are its third element. Streamed music and video, bitmap fonts and browser fonts load the same way and are awaited rather than handed out as placeholders.
+A descriptor is a plain object that describes an asset; writing it fetches nothing. Per-asset options are further properties on it. Streamed music and video, bitmap fonts and browser fonts load the same way and are awaited rather than handed out as placeholders.
 
 One per-asset option changes what the bytes mean. A texture is sRGB colour by default; an image that carries numbers rather than colour, such as a normal map, a displacement map or a lookup table, is loaded with `textureOptions: { colorSpace: 'none' }` so it is decoded without colour conversion and never treated as colour:
 
 ```ts
 import { type AssetOwner, Texture } from '@codexo/exojs';
 
-export const loadHeightMap = (assets: AssetOwner) => assets.load([Texture, 'terrain/height.png', { textureOptions: { colorSpace: 'none' } }]);
+export const loadHeightMap = (assets: AssetOwner) => assets.load({ type: Texture, source: 'terrain/height.png', textureOptions: { colorSpace: 'none' } });
 ```
 
 The [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/) chapter explains colour, data and alpha.
+
+## Name a type, and sources that are not paths
+
+`type` names the asset type by its id (`'texture'`), by the class it produces (`Texture`, `Music`, `Video`) or by the `AssetType` instance itself. All three are checked against the options that type accepts. Write a descriptor inline where it is used, or add `as const` when you keep a string-id descriptor in a variable, so the id is not widened to `string`.
+
+A string `source` is always a locator: it goes through the base path, variant rules, the cache and the network. A custom type can also take a `source` that is already its factory input, such as data generated in memory, or no source at all and build from the descriptor's other properties alone:
+
+```ts
+import type { AssetOwner } from '@codexo/exojs';
+
+class Noise {
+  public constructor(
+    public readonly seed: number,
+    public readonly size: number,
+  ) {}
+}
+
+// Registered once: app.assets.define(Noise, { type: 'noise', decode: (_source, { options }) => ... })
+export const loadNoise = (assets: AssetOwner, seed: number) => assets.load({ type: Noise, seed, size: 64 });
+```
+
+The factory receives such a source unfetched and uncached, and every other property as its options. Descriptors that share the same source object, or the same primitive value, share one resource. A source-free descriptor is one resource per descriptor object unless its type declares a `resourceIdentity`; keep the descriptor to release it, or release the loaded resource itself. Without a locator there is no placeholder and nothing to reload from, so such an asset cannot be held by a catalog, handed out by `get()`, loaded at background priority or saved as a reference in a scene document.
 
 ## Use a placeholder deliberately
 
@@ -74,7 +96,7 @@ The [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/) chapter explain
 
 Use a placeholder for optional decoration or progressive content whose layout does not depend on the final result. Observe the handle's readiness and error state, or await its `loaded` promise when a later operation needs completion. Do not assume an immediate `get()` has finished a network request.
 
-A bare-path `get` reuses the source-keyed handle. Repeated `get(Asset.type(...))` calls instead construct distinct leaves that share the underlying payload. Capture a descriptor-based handle once, not once per frame.
+A bare-path `get` reuses the source-keyed handle. Repeated `get({ type, source })` calls instead construct distinct leaves that share the underlying payload. Capture a descriptor-based handle once, not once per frame.
 
 Use the loader's `peek` API to inspect residency without acquiring or starting work. Choose it for diagnostics, not for retaining a resource that gameplay is about to use.
 
@@ -87,7 +109,7 @@ import { type AssetOwner, Texture } from '@codexo/exojs';
 
 export const tryPortrait = async (assets: AssetOwner, path: string): Promise<Texture | null> => {
   try {
-    return await assets.load([Texture, path]);
+    return await assets.load({ type: Texture, source: path });
   } catch (error) {
     console.error('Portrait unavailable', error);
     return null;
@@ -156,7 +178,7 @@ A resident texture is a live runtime resource. A persistent cache holds source r
 
 Use [Offline and caching](/ExoJS/en/guide/assets/offline/) for persistence and connectivity, [Device variants](/ExoJS/en/guide/assets/device-variants/) for choosing a source before loading, and [Worlds and level streaming](/ExoJS/en/guide/assets/worlds-and-spawning/) for level-owned scopes. Custom asset-type authors should continue with [Authoring extensions](/ExoJS/en/guide/debugging/authoring-extensions/), not add application-specific decoders to ordinary scene code.
 
-<TryIt examples={['application-scenes/loading-screen', 'tilemap/level-loading-and-ownership', 'debug-layer/asset-browser']} api={['loader', 'loader-scope', 'asset', 'assets', 'asset-ref', 'loading-queue']} />
+<TryIt examples={['application-scenes/loading-screen', 'tilemap/level-loading-and-ownership', 'debug-layer/asset-browser']} api={['loader', 'loader-scope', 'asset-descriptor', 'assets', 'asset-ref', 'loading-queue']} />
 
 ## Application-level progress and warm navigation
 

@@ -26,7 +26,7 @@ export const loadFixture = (name: string): unknown => JSON.parse(readFileSync(jo
  */
 export const makeTiledContext = (fixtures: Record<string, unknown>, textureSizes: Record<string, { w: number; h: number }> = {}) => {
   const textureLoad = vi.fn((asset: unknown): Texture => {
-    const source = (asset as { _config: { source: string } })._config.source;
+    const { source } = asset as { source: string };
     const texture = new Texture();
     // A runtime TileSet validates its atlas dimensions, so a fixture that
     // declares a specific atlas needs a texture that matches it.
@@ -39,7 +39,8 @@ export const makeTiledContext = (fixtures: Record<string, unknown>, textureSizes
   });
 
   const load = vi.fn(async (asset: unknown): Promise<unknown> => {
-    const { type, source } = (asset as { _config: { type: string; source: string } })._config;
+    const { type: reference, source } = asset as { type: string | { id: string }; source: string };
+    const type = typeof reference === 'string' ? reference : reference.id;
 
     if (type === 'texture') {
       return textureLoad(asset);

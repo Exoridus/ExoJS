@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { MemoryCacheStore } from '#assets/cache/MemoryCacheStore';
 import { Loader } from '#assets/Loader';
 import { soundType } from '#assets/types/media';
@@ -34,16 +33,16 @@ describe('path-backed sound sprite identity', () => {
     const bSprites = { b: { start: 1, end: 2 } };
     const a = new Sound(source, { sprites: aSprites });
     const b = new Sound(source, { sprites: bSprites });
-    const aDescriptor = Asset.type('sound', source, { sprites: { a: { end: 1, loop: false, start: 0 } } });
-    const bDescriptor = Asset.type('sound', source, { sprites: bSprites });
+    const aDescriptor = { type: 'sound', source, sprites: { a: { end: 1, loop: false, start: 0 } } } as const;
+    const bDescriptor = { type: 'sound', source, sprites: bSprites } as const;
 
     try {
       const aIdentity = loader.identify(aDescriptor);
       const bIdentity = loader.identify(bDescriptor);
-      const plain = Asset.type('sound', source);
+      const plain = { type: 'sound', source } as const;
       expect(aIdentity.sourceKey).toBe(bIdentity.sourceKey);
       expect(aIdentity.resourceKey).not.toBe(bIdentity.resourceKey);
-      expect(loader.identify(Asset.type('sound', source, { sprites: {} }))).toEqual(loader.identify(plain));
+      expect(loader.identify({ type: 'sound', source, sprites: {} })).toEqual(loader.identify(plain));
 
       await loader.cacheSource(plain);
       await expect(scope.load([a, b])).resolves.toEqual([a, b]);
@@ -67,7 +66,7 @@ describe('path-backed sound sprite identity', () => {
     const b = new Sound('sample.wav', { sprites: { invalid: { start: 0, end: 100 } } });
 
     try {
-      await loader.cacheSource(Asset.type('sound', 'sample.wav'));
+      await loader.cacheSource({ type: 'sound', source: 'sample.wav' });
       await expect(scope.load([a, b])).rejects.toThrow(/exceeds sound duration/);
       await expect(a.loaded).resolves.toBe(a);
       await expect(b.loaded).rejects.toThrow(/exceeds sound duration/);

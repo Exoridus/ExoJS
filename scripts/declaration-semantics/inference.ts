@@ -6,7 +6,6 @@
  * integration problem further out in `Application` or `SceneDirector`.
  */
 import {
-  Asset,
   type ComponentQueryRow,
   type DecodedImage,
   type InferSceneData,
@@ -52,7 +51,7 @@ type _fragmentBeforeQuery = Expect<Exact<KindByPath<'data.json#preview.png?ignor
 
 // The image type resolves to what its factory produces.
 declare const loader: Loader;
-const loadImage = () => loader.load(Asset.type('image', 'a.png'));
+const loadImage = () => loader.load({ type: 'image', source: 'a.png' });
 type _imageIsDecoded = Expect<Exact<Awaited<ReturnType<typeof loadImage>>, DecodedImage>>;
 
 // Component lookup and query rows keep their exact types through the emit.
