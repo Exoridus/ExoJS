@@ -2278,6 +2278,27 @@ const audioBusChecks = async (browser: Browser, origin: string, base: string): P
 };
 
 const headerChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('legacy example listing redirects to the localized Playground without JavaScript', async () => {
+    const page = await browser.newPage({ javaScriptEnabled: false });
+    watchPage(page);
+
+    try {
+      for (const locale of ['en', 'de']) {
+        const playground = `${origin}${base}/${locale}/playground/`;
+        await page.goto(`${playground}tools/`);
+        await page.waitForURL(playground, { timeout: 5000 });
+        assert((await page.locator('html').getAttribute('lang')) === locale, `legacy listing lost the ${locale} locale`);
+        assert((await page.locator('[data-app-header]').boundingBox())?.y === 0, 'the site header has space above it');
+      }
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await page.context().close();
+    }
+  });
+
   const sizingSource = (policy: 'ResponsiveCanvasSizing' | 'FixedResolutionCanvasSizing') => `
     import { Application, Scene, ${policy} } from '@codexo/exojs';
     import { startExample } from '@examples/runtime';
@@ -2297,6 +2318,8 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
     try {
       await page.goto(`${origin}${base}/en/playground/`, { waitUntil: 'domcontentloaded' });
       await page.getByRole('heading', { name: 'Drag and Throw Physics', exact: true }).waitFor();
+      const header = await page.locator('[data-app-header]').boundingBox();
+      assert(header?.y === 0, 'the site header has space above it');
       assert((await page.locator('[data-layout]').getAttribute('data-layout')) === 'stacked', 'fresh entry did not retain stacked layout');
       const paths = await page
         .locator('#playground-navigation nav a')
@@ -2956,10 +2979,7 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
         await page.getByRole('button', { name: 'Examples', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: 'Examples', exact: true });
         await dialog.waitFor();
-        assert(
-          (await dialog.getByRole('link', { name: 'All examples', exact: true }).getAttribute('href'))?.includes('/de/'),
-          'All examples lost the DE locale',
-        );
+        assert((await dialog.getByRole('link', { name: 'All examples', exact: true }).count()) === 0, 'the catalog link is still present');
         assert(
           (await dialog.getByRole('link', { name: /^Asset Browser/ }).getAttribute('href'))?.includes('/de/'),
           'Asset Browser lost the DE locale',

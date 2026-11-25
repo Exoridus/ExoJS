@@ -7,7 +7,7 @@
 
   display: grid;
   grid-template-columns: var(--nav-width) minmax(0, 1fr);
-  min-height: calc(100dvh - var(--playground-chrome-height, 64px));
+  min-height: calc(100dvh - var(--playground-header-height, 64px));
   position: relative;
   background: var(--bg-canvas);
   overflow-x: clip;
@@ -93,8 +93,8 @@
   // without a definite height here the list is clipped instead of scrollable.
   .side-content {
     position: sticky;
-    top: 64px;
-    height: calc(100dvh - var(--playground-chrome-height, 64px));
+    top: var(--playground-header-height, 64px);
+    height: calc(100dvh - var(--playground-header-height, 64px));
     align-self: start;
   }
 
@@ -149,7 +149,7 @@
   }
 
   .root {
-    height: calc(100dvh - var(--playground-chrome-height, 64px));
+    height: calc(100dvh - var(--playground-header-height, 64px));
     min-height: 0;
     grid-template-columns: minmax(0, 1fr);
   }

@@ -10,15 +10,13 @@ export interface SiteBuildInfo {
   readonly sourceSha: string;
   readonly packageVersion: string;
   readonly createdAt: string;
-  /** Base of the other channel for an explicit switch; `null` when there is none. */
-  readonly counterpartBase: string | null;
 }
 
 // Outside a site build (unit tests importing site modules) the build constant
 // is not defined; those callers get an unconfigured Stable identity.
 export const siteBuild: SiteBuildInfo =
   typeof __EXOJS_SITE_BUILD__ === 'undefined'
-    ? { channel: 'stable', basePath: '/ExoJS/', sourceSha: '', packageVersion: '', createdAt: '', counterpartBase: null }
+    ? { channel: 'stable', basePath: '/ExoJS/', sourceSha: '', packageVersion: '', createdAt: '' }
     : __EXOJS_SITE_BUILD__;
 
 const STORAGE_SCHEMA = 1;

@@ -85,17 +85,20 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
 
   useEffect(() => {
     const root = rootRef.current;
-    const chrome = Array.from(document.querySelectorAll<HTMLElement>('[data-app-header], [data-channel-banner]'));
+    const header = document.querySelector('[data-app-header]');
 
-    const measureChrome = (): void => {
-      const height = chrome.reduce((sum, element) => sum + element.getBoundingClientRect().height, 0);
-      root?.style.setProperty('--playground-chrome-height', `${height}px`);
+    if (!root || !header) {
+      return;
+    }
+
+    const measureHeader = (): void => {
+      root.style.setProperty('--playground-header-height', `${header.getBoundingClientRect().height}px`);
     };
 
-    const observer = new ResizeObserver(measureChrome);
+    const observer = new ResizeObserver(measureHeader);
 
-    chrome.forEach(element => observer.observe(element));
-    measureChrome();
+    observer.observe(header);
+    measureHeader();
 
     return () => observer.disconnect();
   }, []);

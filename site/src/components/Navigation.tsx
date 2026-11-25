@@ -105,9 +105,8 @@ export const Navigation = ({
         />
         <kbd>/</kbd>
       </div>
-      <div className={css(styles, 'reference-links')}>
+      <div className={css(styles, 'catalog-summary')}>
         <span>{allExamples.length} entries</span>
-        <a href={`${import.meta.env.BASE_URL + locale}/playground/tools/`}>All examples</a>
         {headerAction}
       </div>
       {highlights.length > 0 && (

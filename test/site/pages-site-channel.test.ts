@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   channelForBranch,
-  counterpartBasePath,
   isSafeBasePath,
   resolveSiteChannel,
   SITE_CHANNEL_BASE,
@@ -103,12 +102,6 @@ describe('channel relations', () => {
     expect(channelForBranch('next')).toBe('next');
     expect(channelForBranch('feature/x')).toBeNull();
     expect(channelForBranch('refs/heads/main')).toBeNull();
-  });
-
-  it('names the other channel as the explicit switch target, but not for a local test base', () => {
-    expect(counterpartBasePath({ channel: 'next', basePath: '/ExoJS/next/', localTest: false })).toBe('/ExoJS/');
-    expect(counterpartBasePath({ channel: 'stable', basePath: '/ExoJS/', localTest: false })).toBe('/ExoJS/next/');
-    expect(counterpartBasePath({ channel: 'next', basePath: '/sandbox/', localTest: true })).toBeNull();
   });
 });
 

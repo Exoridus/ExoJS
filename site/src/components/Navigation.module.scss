@@ -27,7 +27,7 @@
   color: oklch(76% 0.15 27);
 }
 
-.reference-links {
+.catalog-summary {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -78,14 +78,6 @@
   padding: var(--s-4);
   color: var(--fg-muted);
   font-size: var(--text-sm);
-}
-
-.reference-links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  font-size: 0.875rem;
-  color: var(--fg);
 }
 
 .catalog-filters {
