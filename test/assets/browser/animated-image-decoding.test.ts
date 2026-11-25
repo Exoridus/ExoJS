@@ -324,6 +324,51 @@ describe('animated image decoding in a real browser', () => {
     });
   }
 
+  test('a pending software decode cannot change the paused canvas', async () => {
+    const encoded = await load('animated.png');
+
+    await withDecoder('compositing', async () => {
+      const original = globalThis.createImageBitmap;
+      const gate = Promise.withResolvers<void>();
+      const decoded = Promise.withResolvers<void>();
+      let calls = 0;
+
+      const bitmap = async (blob: ImageBitmapSource, options?: ImageBitmapOptions): Promise<ImageBitmap> => {
+        const call = ++calls;
+        const result = await original(blob, options);
+
+        if (call === 2) {
+          await gate.promise;
+          decoded.resolve();
+        }
+
+        return result;
+      };
+
+      globalThis.createImageBitmap = bitmap as typeof createImageBitmap;
+      let source: ImageSequenceSource | null = null;
+
+      try {
+        source = await ImageSequenceSource.open(encoded);
+        await new Promise(resolve => setTimeout(resolve, 150));
+        source.pause();
+        expect(source.revision).toBe(1);
+        gate.resolve();
+        await decoded.promise;
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(source.revision).toBe(1);
+        expectClose(read(source, points.middle), blue, 'paused frame pixels');
+        source.play();
+        expect(source.revision).toBe(2);
+        expectClose(read(source, points.middle), red, 'resumed frame pixels');
+      } finally {
+        gate.resolve();
+        source?.destroy();
+        globalThis.createImageBitmap = original;
+      }
+    });
+  });
+
   test('static files and single-frame animations are not treated as animated', async () => {
     for (const name of ['static.gif', 'static.png', 'static.webp', 'single-frame.png']) {
       expect([name, animatedImageMime(await load(name))]).toEqual([name, null]);

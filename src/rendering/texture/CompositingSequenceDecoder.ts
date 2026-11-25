@@ -24,8 +24,9 @@ const createSurface = (width: number, height: number): { canvas: Surface; contex
  * format's disposal and blend rules, so the canvas always shows the frame a
  * native decoder would produce.
  *
- * Frames are composed strictly in order. Requesting frame 0 restarts the
- * composition; the next frame is decoded while the current one is displayed.
+ * Frames are composed strictly in order, only when published. Frame 0
+ * restarts the composition; the next bitmap can decode while the current
+ * frame is displayed without changing that frame's pixels.
  * @internal
  */
 export class CompositingSequenceDecoder implements SequenceDecoder {
@@ -54,30 +55,11 @@ export class CompositingSequenceDecoder implements SequenceDecoder {
   }
 
   public async decode(index: number): Promise<DecodedSequenceFrame> {
-    if (index !== this._composed) {
-      if (index !== this._composed + 1) {
-        // Composition is stateful, so a non-sequential request replays from the start.
-        this._restart();
-
-        for (let replay = 0; replay < index; replay++) {
-          await this._composeFrame(replay);
-        }
-      }
-
-      await this._composeFrame(index);
+    if (index !== 0 && index !== this._composed + 1) {
+      throw new RangeError('Animation frames must be composed in playback order.');
     }
 
-    return {
-      image: this._canvas,
-      width: this._animation.width,
-      height: this._animation.height,
-      durationMs: this._frames[index]!.durationMs,
-      release: noop,
-    };
-  }
-
-  private async _composeFrame(index: number): Promise<void> {
-    const bitmap = await this._takeBitmap(index);
+    let bitmap: ImageBitmap | null = await this._takeBitmap(index);
 
     if (this._closed) {
       bitmap.close();
@@ -85,10 +67,35 @@ export class CompositingSequenceDecoder implements SequenceDecoder {
       throw new Error('The animation decoder was closed.');
     }
 
-    this._compose(index, bitmap);
-    bitmap.close();
-    this._composed = index;
-    this._startPrefetch((index + 1) % this.frameCount);
+    const release = (): void => {
+      bitmap?.close();
+      bitmap = null;
+    };
+
+    return {
+      image: this._canvas,
+      width: this._animation.width,
+      height: this._animation.height,
+      durationMs: this._frames[index]!.durationMs,
+      release,
+      publish: () => {
+        if (bitmap === null) {
+          return;
+        }
+
+        try {
+          if (index === 0) {
+            this._restart();
+          }
+
+          this._compose(index, bitmap);
+          this._composed = index;
+          this._startPrefetch((index + 1) % this.frameCount);
+        } finally {
+          release();
+        }
+      },
+    };
   }
 
   public close(): void {

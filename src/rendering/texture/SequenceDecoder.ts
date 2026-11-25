@@ -6,6 +6,8 @@ export interface DecodedSequenceFrame {
   readonly width: number;
   readonly height: number;
   readonly durationMs: number;
+  /** Commits stateful composition only when the source displays this frame. */
+  publish?(): void;
   /** Frees decoder-owned memory behind {@link image}; called once the frame is no longer displayed. */
   release(): void;
 }

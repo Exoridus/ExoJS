@@ -68,6 +68,62 @@ describe('ImageSequenceSource', () => {
     expect(images[1]!.close).toHaveBeenCalledTimes(1);
   });
 
+  test.each([true, false])('retains one pending decode across pause/resume (resume before completion: %s)', async resumeEarly => {
+    const gate = Promise.withResolvers<void>();
+    const calls = vi.fn();
+
+    class DeferredDecoder extends FakeImageDecoder {
+      public override async decode(options: { frameIndex: number }): Promise<{ image: VideoFrame }> {
+        calls(options.frameIndex);
+
+        if (options.frameIndex === 1) {
+          await gate.promise;
+        }
+
+        return super.decode(options);
+      }
+    }
+
+    vi.stubGlobal('ImageDecoder', DeferredDecoder);
+
+    const source = await ImageSequenceSource.open(gif());
+    const changed = vi.fn();
+
+    source.onFrame.add(changed);
+
+    try {
+      await vi.advanceTimersByTimeAsync(20);
+      expect(calls.mock.calls).toEqual([[0], [1]]);
+      source.pause();
+
+      if (resumeEarly) {
+        source.play();
+        await vi.advanceTimersByTimeAsync(100);
+        expect(calls.mock.calls).toEqual([[0], [1]]);
+      }
+
+      gate.resolve();
+      await vi.advanceTimersByTimeAsync(0);
+
+      if (!resumeEarly) {
+        expect(source.revision).toBe(1);
+        expect(changed).not.toHaveBeenCalled();
+        source.play();
+      }
+
+      expect(source.revision).toBe(2);
+      expect(changed).toHaveBeenCalledTimes(1);
+      expect(calls.mock.calls).toEqual([[0], [1]]);
+    } finally {
+      gate.resolve();
+      source.destroy();
+    }
+
+    expect(images).toHaveLength(2);
+    expect(images.every(image => image.close.mock.calls.length === 1)).toBe(true);
+    expect(closeDecoder).toHaveBeenCalledTimes(1);
+  });
+
   test('a finite loop stops at the last frame', async () => {
     const source = await ImageSequenceSource.open(gif());
 

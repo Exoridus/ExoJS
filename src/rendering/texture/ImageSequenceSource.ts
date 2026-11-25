@@ -29,6 +29,13 @@ interface BrowserImageDecoderConstructor {
 /** Frame length used when a native frame reports no duration. */
 const defaultFrameMs = 100;
 
+interface PendingSequenceFrame {
+  readonly index: number;
+  readonly loopsDone: number;
+  scheduledAt: number;
+  frame: DecodedSequenceFrame | null;
+}
+
 class NativeSequenceDecoder implements SequenceDecoder {
   public constructor(
     private readonly _decoder: BrowserImageDecoder,
@@ -124,8 +131,8 @@ const openCompositing = (encoded: ArrayBuffer, type: AnimatedImageMime): Sequenc
  * compositor otherwise; both advance only at the authored frame durations and
  * honour the authored repeat count. No GPU resources are allocated here.
  *
- * Only the current and previous frame are retained; decoder-owned frames are
- * released as soon as they are no longer displayed.
+ * Retains the current and previous frame and at most one prepared next frame.
+ * A prepared frame cannot change the displayed image until it is published.
  * @internal
  */
 export class ImageSequenceSource implements FrameSource {
@@ -138,7 +145,7 @@ export class ImageSequenceSource implements FrameSource {
   private _revision = 0;
   private _playing = false;
   private _finished = false;
-  private _generation = 0;
+  private _pending: PendingSequenceFrame | null = null;
   private _loopsDone = 0;
   private _loop = true;
   private _rate = 1;
@@ -165,15 +172,13 @@ export class ImageSequenceSource implements FrameSource {
     const native = await openNative(encoded, type, signal);
     const decoder = native ?? openCompositing(encoded, type);
 
+    let first: DecodedSequenceFrame | null = null;
+
     try {
       signal?.throwIfAborted();
-
-      const first = await decoder.decode(0);
-
-      if (signal?.aborted) {
-        first.release();
-        signal.throwIfAborted();
-      }
+      first = await decoder.decode(0);
+      signal?.throwIfAborted();
+      first.publish?.();
 
       const source = new ImageSequenceSource(decoder, native === null ? 'compositing' : 'native');
 
@@ -183,6 +188,7 @@ export class ImageSequenceSource implements FrameSource {
 
       return source;
     } catch (error) {
+      first?.release();
       decoder.close();
 
       throw error;
@@ -250,15 +256,26 @@ export class ImageSequenceSource implements FrameSource {
 
     this._playing = true;
 
-    if (this._finished) {
-      this._finished = false;
-      this._loopsDone = 0;
-      this._begin(0);
+    const now = performance.now();
+    const pending = this._pending;
+
+    if (pending !== null) {
+      // A decode started before pause owns the next frame, even if it is
+      // still running. Do not start a competing request on a stateful decoder.
+      pending.scheduledAt = now;
+
+      if (pending.frame !== null) {
+        this._publish(pending);
+      }
 
       return;
     }
 
-    const now = performance.now();
+    if (this._finished) {
+      void this._begin(0, 0, now);
+
+      return;
+    }
 
     this._arm(this._remainingMs > 0 ? this._remainingMs / this._rate : this._currentWallMs(), now);
   }
@@ -271,8 +288,7 @@ export class ImageSequenceSource implements FrameSource {
     }
 
     this._playing = false;
-    // A decode already running must not present a frame after pause.
-    this._generation++;
+    // A pending decode may finish, but cannot publish while paused.
     this._clearTimer();
   }
 
@@ -287,6 +303,8 @@ export class ImageSequenceSource implements FrameSource {
     this._retired?.release();
     this._frame = null;
     this._retired = null;
+    this._pending?.frame?.release();
+    this._pending = null;
     this._decoder.close();
     this.onFrame.destroy();
     this.onError.destroy();
@@ -305,27 +323,51 @@ export class ImageSequenceSource implements FrameSource {
     this._remainingMs = 0;
     this._timer = setTimeout(() => {
       this._timer = null;
-      void this._advance();
+      this._advance();
     }, delayMs);
   }
 
-  private _begin(index: number): void {
-    const generation = this._generation;
+  private async _begin(index: number, loopsDone: number, scheduledAt: number): Promise<void> {
+    const pending: PendingSequenceFrame = { index, loopsDone, scheduledAt, frame: null };
 
-    void this._present(index, generation, performance.now());
+    this._pending = pending;
+
+    try {
+      const frame = await this._decoder.decode(index);
+
+      if (this._pending !== pending) {
+        frame.release();
+
+        return;
+      }
+
+      pending.frame = frame;
+    } catch (error) {
+      if (this._pending === pending) {
+        this._pending = null;
+        this._fail(error);
+      }
+
+      return;
+    }
+
+    if (this._playing) {
+      this._publish(pending);
+    }
   }
 
-  private async _advance(): Promise<void> {
+  private _advance(): void {
     if (!this._playing || this._destroyed) {
       return;
     }
 
     let next = this._index + 1;
+    let loopsDone = this._loopsDone;
 
     if (next >= this._decoder.frameCount) {
       const repeats = this._loop ? this._decoder.repetitions : 0;
 
-      if (this._loopsDone >= repeats) {
+      if (loopsDone >= repeats) {
         this._playing = false;
         this._finished = true;
         this._remainingMs = 0;
@@ -333,44 +375,57 @@ export class ImageSequenceSource implements FrameSource {
         return;
       }
 
-      this._loopsDone++;
+      loopsDone++;
       next = 0;
     }
 
-    await this._present(next, this._generation, this._dueAt);
+    void this._begin(next, loopsDone, this._dueAt);
   }
 
-  private async _present(index: number, generation: number, scheduledAt: number): Promise<void> {
+  private _publish(pending: PendingSequenceFrame): void {
+    const frame = pending.frame!;
+
+    this._pending = null;
+
     try {
-      const decoded = await this._decoder.decode(index);
-
-      if (this._destroyed || !this._playing || generation !== this._generation) {
-        decoded.release();
-
-        return;
-      }
-
-      this._retired?.release();
-      this._retired = this._frame;
-      this._frame = decoded;
-      this._index = index;
-      this._revision++;
-      this.onFrame.dispatch();
-
-      // Chaining deadlines from the previous due time keeps decode latency from accumulating as drift.
-      const now = performance.now();
-      const wall = this._currentWallMs();
-      const due = scheduledAt + wall;
-
-      this._arm(due > now ? due - now : wall, now);
+      frame.publish?.();
     } catch (error) {
-      if (!this._destroyed) {
-        const failure = error instanceof Error ? error : new Error(String(error));
+      frame.release();
+      this._fail(error);
 
-        this.pause();
-        logger.error('Animated image playback stopped: a frame could not be decoded.', { source: 'texture', error: failure });
-        this.onError.dispatch(failure);
-      }
+      return;
+    }
+
+    this._retired?.release();
+    this._retired = this._frame;
+    this._frame = frame;
+    this._index = pending.index;
+    this._loopsDone = pending.loopsDone;
+    this._finished = false;
+    this._revision++;
+
+    // Arm before notifying listeners: a listener may pause, resume or destroy
+    // the source synchronously, and must own the resulting timer state.
+    const now = performance.now();
+    const wall = this._currentWallMs();
+    const due = pending.scheduledAt + wall;
+
+    this._arm(due > now ? due - now : wall, now);
+
+    try {
+      this.onFrame.dispatch();
+    } catch (error) {
+      this._fail(error);
+    }
+  }
+
+  private _fail(error: unknown): void {
+    if (!this._destroyed) {
+      const failure = error instanceof Error ? error : new Error(String(error));
+
+      this.pause();
+      logger.error('Animated image playback stopped: a frame could not be decoded.', { source: 'texture', error: failure });
+      this.onError.dispatch(failure);
     }
   }
 
