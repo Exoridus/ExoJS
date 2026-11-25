@@ -327,9 +327,16 @@ export const GlobalSearch = ({ baseUrl }: GlobalSearchProps): JSX.Element => {
   // The platform never changes after load - a read, not state.
   const isMac = useClientValue(getIsMac, false);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
+      // The phone header provides its own visible Search sheet. A shortcut
+      // must not open this desktop dialog inside hidden or inert content.
+      if (event.defaultPrevented || !triggerRef.current?.getClientRects().length || triggerRef.current.closest('[inert]')) {
+        return;
+      }
+
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setOpen(current => !current);
@@ -359,7 +366,14 @@ export const GlobalSearch = ({ baseUrl }: GlobalSearchProps): JSX.Element => {
 
   return (
     <>
-      <button className={css(styles, 'trigger')} type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
+      <button
+        ref={triggerRef}
+        className={css(styles, 'trigger')}
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
         <svg viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true">
           <circle cx="9" cy="9" r="5.2" stroke="currentColor" strokeWidth="1.6" />
           <path d="M12.8 12.8L17 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />

@@ -1,7 +1,7 @@
 // The iframe keeps the stage's own layout size and is scaled with a transform,
 // never with `zoom`: a transform leaves the iframe's inner viewport untouched,
-// so preview.html always fits its 1280x720 stage against a 1280x720 window and
-// the stage scale stays 1. Zoom rescales that inner viewport, and an example
+// so the example sees the stage reported by its own canvas sizing policy.
+// Zoom rescales that inner viewport, and an example
 // whose canvas appears after the zoom was applied fitted its stage a second
 // time and rendered at a quarter of the size.
 .root {

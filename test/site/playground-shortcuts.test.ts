@@ -73,6 +73,7 @@ it('focuses example search for an unmodified slash outside editable widgets', ()
   const preventDefault = vi.fn();
   const handler = runInNewContext(code, {
     breakpointRef: { current: null },
+    setIsDesktop: vi.fn(),
     setIsCompactMobile: vi.fn(),
     setSearchRequest: focus,
     window: { matchMedia: () => ({ matches: false }) },
@@ -87,6 +88,7 @@ it('opens the navigation before focusing the global search', () => {
   const setSidebarOpen = vi.fn();
   const handler = runInNewContext(code, {
     breakpointRef: { current: null },
+    setIsDesktop: vi.fn(),
     setIsCompactMobile: vi.fn(),
     filterRef: { current: { focus: vi.fn() } },
     window: { matchMedia: () => ({ matches: false }) },
@@ -101,6 +103,7 @@ it('uses the live narrow viewport when opening search during a breakpoint change
   const setExamplesSheetOpen = vi.fn();
   const handler = runInNewContext(code, {
     breakpointRef: { current: null },
+    setIsDesktop: vi.fn(),
     setIsCompactMobile: vi.fn(),
     isCompactMobile: false,
     window: { matchMedia: () => ({ matches: true }) },

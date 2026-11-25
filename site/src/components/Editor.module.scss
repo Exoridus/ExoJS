@@ -20,15 +20,13 @@
     font-size: 1.125rem;
     line-height: 1.25;
     letter-spacing: -0.025em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 }
 
 .example-heading {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   min-height: 2.75rem;
   gap: var(--s-3);
 }
@@ -41,6 +39,93 @@
   min-width: 0;
 }
 
+.example-details {
+  min-width: 0;
+}
+
+.context-summary {
+  min-height: 44px;
+  padding: var(--s-2);
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  color: var(--fg);
+  font-size: var(--text-xs);
+  line-height: 26px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+  }
+}
+
+.context-next {
+  margin-top: var(--s-2);
+}
+
+.example-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+.code-link,
+.run-feedback button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-2);
+  background: var(--accent-soft);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+  }
+}
+
+.next-example {
+  color: var(--fg);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  text-decoration: none;
+
+  span:first-child {
+    color: var(--fg-muted);
+    margin-right: var(--s-2);
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.run-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+  min-height: 24px;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+
+  p {
+    margin: 0;
+  }
+
+  &[data-run-status='error'] {
+    color: var(--fg);
+  }
+}
+
 .example-description {
   flex: 1 1 auto;
   min-width: 0;
@@ -48,9 +133,7 @@
   color: var(--fg-muted);
   font-size: var(--text-sm);
   line-height: 1.5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .learning-links {
@@ -61,7 +144,7 @@
   white-space: nowrap;
 
   a {
-    color: var(--accent);
+    color: var(--fg);
     text-decoration: none;
 
     &:hover {
@@ -111,6 +194,45 @@
   background: var(--bg-code);
   overflow: hidden;
   border-radius: inherit;
+}
+
+.preview-component {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.preview-component > [role='alert'] {
+  padding: var(--s-4);
+  background: var(--bg-panel);
+  color: var(--fg);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  p {
+    margin: 0 0 var(--s-3);
+  }
+
+  p:first-child {
+    font-weight: 600;
+  }
+
+  button {
+    min-height: 44px;
+    margin: var(--s-1) var(--s-2) var(--s-1) 0;
+    padding: var(--s-2) var(--s-3);
+    border: 1px solid var(--accent-line);
+    border-radius: var(--r-2);
+    background: var(--accent-soft);
+    color: var(--fg);
+    font: inherit;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent-line);
+      outline-offset: 2px;
+    }
+  }
 }
 
 .toolbar-slot {
@@ -198,6 +320,7 @@
   padding: 1.2rem;
   background: rgb(0 0 0 / 0.75);
   backdrop-filter: blur(2px);
+  color: #f4f6f8;
 }
 
 .unavailable-icon {
@@ -209,7 +332,7 @@
   font-size: 0.82rem;
   line-height: 1.55;
   text-align: center;
-  color: var(--fg-muted);
+  color: inherit;
 }
 
 .error-panel {
@@ -285,13 +408,19 @@
 // Split layout (editor left, preview right) — desktop only; below the
 // breakpoint the stacked flow always applies regardless of the toggle.
 @media (width >= 1120px) {
+  .example-context {
+    // Reserve two readable lines so normal example changes do not move the
+    // preview. Longer instructions can still grow without being clipped.
+    min-height: calc(var(--text-sm) * 3);
+  }
+
   .root[data-layout='split'] {
     width: 100%;
 
     // The viewport under the header, less the column's own padding: the
     // editor stretches to it, so the source is as tall as the screen instead
     // of a fixed box with the rest of the column empty beneath it.
-    min-height: calc(100vh - 64px - 1.2rem);
+    min-height: calc(100dvh - var(--playground-header-height, 64px) - 1.2rem);
     padding: 0;
     display: grid;
     grid-template:
@@ -410,6 +539,64 @@
     padding: var(--s-2) var(--s-3);
   }
 
+  .example-heading {
+    flex-wrap: wrap;
+    gap: var(--s-2);
+
+    h1 {
+      flex-basis: 100%;
+    }
+  }
+
+  .root[data-active-view='code'] .example-header {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--s-2);
+
+    .example-heading,
+    .run-feedback {
+      grid-column: 1 / -1;
+    }
+
+    .example-actions {
+      grid-row: 2;
+      grid-column: 1;
+      margin-top: 0;
+    }
+
+    .example-details {
+      grid-row: 2;
+      grid-column: 2;
+
+      &[open] {
+        grid-row: 3;
+        grid-column: 1 / -1;
+
+        .example-context {
+          margin-top: var(--s-2);
+        }
+      }
+    }
+
+    .run-feedback {
+      margin-top: 0;
+    }
+  }
+
+  .code-link {
+    display: none;
+  }
+
+  .example-actions {
+    flex-wrap: wrap;
+    row-gap: var(--s-2);
+  }
+
+  .next-example {
+    width: 100%;
+    font-size: var(--text-xs);
+  }
+
   .example-context {
     flex-wrap: wrap;
     row-gap: var(--s-1);
@@ -417,11 +604,11 @@
 
   .example-description {
     flex: 1 1 100%;
-    order: 1;
   }
 
-  .example-context > .learning-links {
-    display: none;
+  .learning-links {
+    flex-wrap: wrap;
+    white-space: normal;
   }
 
   .view-tabs {
@@ -430,7 +617,7 @@
     flex: 1 1 auto;
 
     button {
-      min-height: 2rem;
+      min-height: 36px;
       padding: 0 var(--s-3);
       border: 1px solid var(--line);
       border-radius: var(--r-2);
@@ -439,9 +626,14 @@
       font: inherit;
 
       &[aria-selected='true'] {
-        color: var(--accent);
+        color: var(--fg);
         background: var(--accent-soft);
         border-color: var(--accent-line);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--accent-line);
+        outline-offset: 2px;
       }
     }
   }

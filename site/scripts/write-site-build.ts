@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { counterpartBasePath, resolveSiteChannel } from '../../scripts/pages/site-channel.ts';
+import { resolveSiteChannel } from '../../scripts/pages/site-channel.ts';
 import {
   assertSiteBuildIdentity,
   createSiteBuildManifest,
@@ -28,11 +28,6 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 const distDir = resolve(here, '..', 'dist');
 
-export interface SiteBuildInfo extends SiteBuildIdentity {
-  /** Base of the other channel for the explicit channel switch; `null` for a local test base. */
-  counterpartBase: string | null;
-}
-
 type Env = Readonly<Record<string, string | undefined>>;
 
 const resolveSourceSha = (env: Env): string => {
@@ -49,7 +44,7 @@ const resolveSourceSha = (env: Env): string => {
  * The identity of the build the current environment describes. Throws when
  * the channel contract or any identity field is invalid.
  */
-export const resolveSiteBuild = (env: Env): SiteBuildInfo => {
+export const resolveSiteBuild = (env: Env): SiteBuildIdentity => {
   const channel = resolveSiteChannel(env);
   const rootPackage = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')) as { version?: string };
   const identity: SiteBuildIdentity = {
@@ -63,14 +58,13 @@ export const resolveSiteBuild = (env: Env): SiteBuildInfo => {
   };
   assertSiteBuildIdentity(identity);
 
-  return { ...identity, counterpartBase: counterpartBasePath(channel) };
+  return identity;
 };
 
 const PROVISIONAL_MARKER = 'provisional';
 
 /** Leaves the identity in the built tree for `finalizeSiteBuild`. */
-export const writeProvisionalSiteBuild = (dir: string, info: SiteBuildInfo): void => {
-  const { counterpartBase: _counterpartBase, ...identity } = info;
+export const writeProvisionalSiteBuild = (dir: string, identity: SiteBuildIdentity): void => {
   writeFileSync(join(dir, SITE_BUILD_FILE), `${JSON.stringify({ [PROVISIONAL_MARKER]: true, ...identity }, null, 2)}\n`);
 };
 

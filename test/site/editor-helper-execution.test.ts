@@ -64,12 +64,12 @@ const fixture = (helperCode = 'edited helper') => {
   const originals = new Map([['shared/runtime.ts', 'original helper']]);
   const onUpdateCode = vi.fn();
   const onDirty = vi.fn();
+  const onRunStatus = vi.fn();
   const emit = vi.fn(async (model: typeof entry) => `compiled ${model.getValue()}`);
   const run = runInNewContext(`${compiled}\nrun;`, {
     persistDraft: vi.fn(),
     suppressDraftRef: { current: false },
     setRunError: vi.fn(),
-    onRunStatus: vi.fn(),
     lastRunFilesRef: { current: new Map() },
     runGenerationRef: { current: 0 },
     readOnly: false,
@@ -81,12 +81,14 @@ const fixture = (helperCode = 'edited helper') => {
     getExecutionCode: emit,
     onUpdateCode,
     onDirty,
+    onRunStatus,
   }) as () => Promise<void>;
 
   return {
     run,
     onUpdateCode,
     onDirty,
+    onRunStatus,
     emit,
     changeHelper: (code = helperCode) => {
       helperCode = code;
@@ -110,6 +112,7 @@ it('runs the entry with compiled local helper edits and clears the unrun state',
     executionModules: { 'shared/runtime.ts': 'compiled edited helper' },
   });
   expect(editor.onDirty).toHaveBeenCalledWith(false);
+  expect(editor.onRunStatus.mock.calls.map(([status]) => status)).toEqual(['compiling', 'running']);
 });
 
 it('does not override unmodified helpers', async () => {
@@ -129,6 +132,7 @@ it('keeps the previous preview when a helper changes during compilation', async 
   });
   await editor.run();
   expect(editor.onUpdateCode).not.toHaveBeenCalled();
+  expect(editor.onRunStatus.mock.calls.map(([status]) => status)).toEqual(['compiling', 'error']);
 });
 
 it('keeps the previous preview when a clean helper is edited during compilation', async () => {
@@ -185,7 +189,6 @@ it.each([false, true])('auto-runs restored helper source only when the visible b
     persistDraft: vi.fn(),
     suppressDraftRef: { current: false },
     setRunError: vi.fn(),
-    onRunStatus: vi.fn(),
     lastRunFilesRef: { current: new Map() },
     editor: { getModel: () => helper, getOption: () => readOnly },
     monacoApi: { editor: { EditorOption: { readOnly: 1 } } },
@@ -195,6 +198,7 @@ it.each([false, true])('auto-runs restored helper source only when the visible b
     originalFilesRef: { current: new Map([['shared/runtime.ts', 'original helper']]) },
     isEditableSharedFile,
     onDirty: vi.fn(),
+    onRunStatus: vi.fn(),
     footgunTimerRef: { current: null },
     FOOTGUN_DEBOUNCE_MS: 150,
     autoRefreshRef: { current: true },
@@ -246,7 +250,6 @@ it.each(['source-sync', 'import'] as const)('preserves helper reset availability
     persistDraft: vi.fn(),
     suppressDraftRef: { current: false },
     setRunError: vi.fn(),
-    onRunStatus: vi.fn(),
     lastRunFilesRef: { current: new Map() },
     runGenerationRef: { current: 0 },
     readOnly: false,

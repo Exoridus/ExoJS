@@ -19,6 +19,33 @@ export const CURATED_SECTIONS = [
 
 const sourcePath = (source: string): string => source.replace(/^examples\//, '').replace(/\.ts$/, '.js');
 
+// A small tour of existing catalog entries. Titles, instructions, categories
+// and availability continue to belong to the loaded catalog version.
+const PLAYGROUND_HIGHLIGHT_PATHS = [
+  'physics/sprite-follows-body.js',
+  'tweens-animation/tween-basics.js',
+  'filters/custom-fragment-shader.js',
+  'showcase/boss-intro-cinematic.js',
+] as const;
+
+export const getPlaygroundHighlights = (examples: readonly Example[]): Example[] =>
+  PLAYGROUND_HIGHLIGHT_PATHS.flatMap(path => {
+    const example = examples.find(entry => entry.path === path && entry.featured !== false);
+
+    return example ? [example] : [];
+  });
+
+export const getPlaygroundDefault = (examples: readonly Example[]): Example | null =>
+  getPlaygroundHighlights(examples)[0] ?? examples[0] ?? null;
+
+export const getNextPlaygroundHighlight = (examples: readonly Example[], currentPath: string): Example | null => {
+  const highlights = getPlaygroundHighlights(examples);
+  const currentIndex = highlights.findIndex(example => example.path === currentPath);
+  const next = highlights[(currentIndex + 1) % highlights.length] ?? null;
+
+  return next?.path === currentPath ? null : next;
+};
+
 export const getCuratedExamples = () => {
   const entries = new Map(getAllExamples().map(entry => [entry.path, entry]));
 
