@@ -173,6 +173,7 @@ export type {
   TextSize,
   TextTransform,
 } from '#rendering/text/types';
+export { AnimatedTexture } from '#rendering/texture/AnimatedTexture';
 export { CanvasFrameSource } from '#rendering/texture/CanvasFrameSource';
 export type { CompressedTextureLevel, CompressedTexturePayload } from '#rendering/texture/compressedPayload';
 export type { CompressedTextureOptions } from '#rendering/texture/CompressedTexture';
