@@ -43,5 +43,12 @@ export const checkNativeProject = (tsconfig: string, cwd: string): { status: num
     throw new Error(`Native TypeScript check failed without parseable diagnostics:\n${result.output}`);
   }
 
+  // Config errors can point to an inherited JSON file outside the caller's source scope.
+  const configErrors = diagnostics.filter(({ file }) => file !== null && /\.jsonc?$/iu.test(file));
+
+  if (configErrors.length > 0) {
+    throw new Error(configErrors.map(({ line }) => line).join('\n'));
+  }
+
   return { ...result, diagnostics };
 };
