@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-physics",
-  "version": "0.19.1",
+  "version": "0.20.0",
   "description": "Compatibility shim that forwards to @codexo/exojs/physics. Since ExoJS v0.20, import from @codexo/exojs/physics.",
   "repository": {
     "type": "git",
@@ -33,7 +33,7 @@
     "LICENSE"
   ],
   "peerDependencies": {
-    "@codexo/exojs": "0.19.x"
+    "@codexo/exojs": "0.20.x"
   },
   "devDependencies": {
     "@codexo/exojs": "workspace:*"

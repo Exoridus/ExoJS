@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-27
+
 ### Changed
 
 - **BREAKING: Consolidate v0.20 runtime, demo assets and playground.** Import tilemap, particles, audio-fx, physics, tilemap-physics, lighting and pathfinding from the matching `@codexo/exojs` subpaths. The old npm names forward to Core and require a `0.20.x` Core peer. Replace classic script-tag bundles with ESM imports or an import map. [Runtime migration guide](https://exoridus.github.io/ExoJS/en/guide/getting-started/migration-v020/). ([#861](https://github.com/Exoridus/ExoJS/pull/861))
