@@ -26,6 +26,7 @@ import { SpotLight } from '../src/lights/SpotLight';
 import { SunLight } from '../src/lights/SunLight';
 import { LitMaterial } from '../src/LitMaterial';
 import { NormalMap } from '../src/normals/NormalMap';
+import { PolygonOccluder } from '../src/occluders/PolygonOccluder';
 import { RadianceLighting } from '../src/RadianceLighting';
 
 const channels = 4;
@@ -329,6 +330,106 @@ describe('Lighting', () => {
     lighting.update();
 
     expect(regions).toEqual(['-36,-36,36,36']);
+  });
+
+  test('a finite line builds four independent CPU shadow rows and caches their origins', () => {
+    const lighting = new LightmapLighting(fakeApp(false), { ambient: Color.black });
+    const backend = lighting.backend as FrameLightingBackend;
+
+    backend.shadowFiller = 'cpu';
+    lighting.occludeFrom(
+      new PolygonOccluder([
+        { x: 38, y: 25 },
+        { x: 40, y: 25 },
+        { x: 40, y: 45 },
+        { x: 38, y: 45 },
+      ]),
+    );
+    const line = lighting.add(new LineLight({ length: 32, radius: 24, softness: 0 })).setPosition(32, 32);
+
+    try {
+      lighting.update();
+      expect(backend.activeLightCount).toBe(1);
+      expect(backend.shadowRowsRebuilt).toBe(4);
+      expect(backend.shadowBytesUploaded).toBeGreaterThan(0);
+
+      // Neither geometry nor emitter moved; no upload or shadow-row rebuild.
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(0);
+      expect(backend.shadowBytesUploaded).toBe(0);
+
+      line.rotation = 90;
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(4);
+
+      // A point-degenerate line must not read four rows past its allocation.
+      line.length = 0;
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(1);
+      expect(backend.activeLightCount).toBe(1);
+    } finally {
+      lighting.destroy();
+    }
+  });
+
+  test('a line that shrinks to a point and regrows rebuilds the rows another light reused meanwhile', () => {
+    const lighting = new LightmapLighting(fakeApp(false), { ambient: Color.black });
+    const backend = lighting.backend as FrameLightingBackend;
+
+    backend.shadowFiller = 'cpu';
+    lighting.occludeFrom(
+      new PolygonOccluder([
+        { x: 38, y: 25 },
+        { x: 40, y: 25 },
+        { x: 40, y: 45 },
+        { x: 38, y: 45 },
+      ]),
+    );
+    const line = lighting.add(new LineLight({ length: 32, radius: 24, softness: 0 })).setPosition(32, 32);
+
+    lighting.add(new PointLight({ radius: 24 })).setPosition(44, 32);
+
+    try {
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(5);
+
+      // The point light moves up into the line's second row.
+      line.length = 0;
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(2);
+
+      // Every line sample is rebuilt: rows 1-3 no longer hold what it traced there.
+      line.length = 32;
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(5);
+    } finally {
+      lighting.destroy();
+    }
+  });
+
+  test('the GPU shadow marcher reserves four rows per finite line', () => {
+    const lighting = new LightmapLighting(fakeApp(true), { ambient: Color.black });
+    const backend = lighting.backend as FrameLightingBackend;
+
+    backend.shadowFiller = 'gpu';
+    lighting.occludeFrom(
+      new PolygonOccluder([
+        { x: 38, y: 25 },
+        { x: 40, y: 25 },
+        { x: 40, y: 45 },
+        { x: 38, y: 45 },
+      ]),
+    );
+    lighting.add(new LineLight({ length: 32, radius: 24 })).setPosition(32, 32);
+
+    try {
+      lighting.update();
+      expect(backend.activeLightCount).toBe(1);
+      expect(backend.shadowRowsRebuilt).toBe(4);
+      expect(backend.shadowFiller).toBe('gpu');
+    } finally {
+      lighting.destroy();
+    }
   });
 
   test('radiance asks for the field it traces rather than for the lights own reach', () => {

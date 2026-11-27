@@ -253,6 +253,8 @@ jobs:
           # Record only the four explicitly bracketed guide interactions when
           # their sources or capture setup changed; never the entire suite.
           EXOJS_GUIDE_MOTION: ${{ matrix.id == 'webgl' && needs.plan.outputs.guideMotion == 'true' && '1' || '0' }}
+          # Explicitly opt in to finite-line reference captures on review PRs only.
+          EXOJS_CAPTURE_LIGHTMAP_REFERENCES: ${{ (matrix.id == 'webgl' || matrix.id == 'webgpu' || matrix.id == 'firefox') && contains(github.event.pull_request.labels.*.name, 'ci:lightmap-references') && '1' || '0' }}
           EXOJS_VISUAL_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
       # Optional probes require complete successful shadow evidence for the

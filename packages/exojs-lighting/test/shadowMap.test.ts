@@ -196,8 +196,12 @@ describe('buildShadowRow', () => {
 
   test('a wall across the seam behind the light covers its end bins only in part', () => {
     // Behind the light, from just past -pi round to just short of pi.
-    const row = rowFor(segments(-40, -40 * Math.tan(1.3 * binWidth), -40, 40 * Math.tan(2.6 * binWidth)), 1);
+    const low = -40 * Math.tan(1.3 * binWidth);
+    const high = 40 * Math.tan(2.6 * binWidth);
+    const row = rowFor(segments(-40, low, -40, high), 1);
 
+    // Reversing the segment traverses the seam in the other direction.
+    expect(rowFor(segments(-40, high, -40, low), 1)).toEqual(row);
     expect(fullAt(row, 0)).toBeCloseTo(0.4, 2);
     expect(fullAt(row, bins - 1)).toBeCloseTo(0.4, 2);
     expect(fullAt(row, bins - 2)).toBeCloseTo(0.4, 2);
@@ -213,6 +217,18 @@ describe('buildShadowRow', () => {
       1,
       expect.closeTo(40 / Math.cos(2 * binWidth) / 100, 4),
     ]);
+  });
+
+  test('reused span scratch cannot change whole-bin or unoccluded row data', () => {
+    const wall = segments(40, -20, 40, 20);
+    const whole = rowFor(wall, 1);
+    const corner = 30 * Math.tan(insideFirstBin(0.4));
+
+    // The next row contains partial spans and a corner in the shared scratch.
+    rowFor(segments(60, -20, 30, corner, 30, corner, 60, 40), 2);
+
+    expect(rowFor(wall, 1)).toEqual(whole);
+    expect(rowFor(segments(), 0)).toEqual(new Float32Array(Array.from({ length: bins }, () => [1, 0, 1, 1, 1, 0, 0, 0]).flat()));
   });
 
   test('a turned box around the light, its corners inside bins, leaves no part of any bin open', () => {

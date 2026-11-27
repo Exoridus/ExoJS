@@ -38,11 +38,15 @@ export interface LineLightOptions extends LightOptions {
  *
  * # Shadows
  *
- * Under `lightmap`, the shadow map is polar around the segment's CENTRE, the
- * same as for a point light. This approximates a long tube, whose occluder
- * would really be lit from many points along the segment. {@link LightOptions.softness}
- * controls that approximation. `radiance` instead transports from the actual
- * capsule emitter. `forward` currently has no occluder-shadow path.
+ * Under `lightmap`, a nonzero-length segment casts four polar shadow fans
+ * from stratified positions along its length. Their weighted visibility
+ * approximates an extended area emitter and produces a geometrically varying
+ * penumbra even with zero `softness`. This is four-point sampling, not an
+ * analytic solution; long lines can show finite-sample banding and cost four
+ * shadow rows and up to four filtered shadow lookups per fragment. A zero-length
+ * line uses one row. {@link LightOptions.softness} additionally softens each
+ * sampled ray. `radiance` transports from its capsule emitter; `forward`
+ * currently has no occluder-shadow path.
  */
 export class LineLight extends Light {
   /** Length of the emitting segment in pixels. */

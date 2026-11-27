@@ -175,10 +175,6 @@ fn binTerm(bin: i32, low: f32, texel: vec4<f32>, bins: i32, row: i32, threshold:
 
 /** The shadow filter and its penumbra width. See `shadowTerm` in `light-quad.frag`. */
 fn shadowTerm(local: vec2<f32>, threshold: f32, shadowRow: f32, softness: f32, footprint: f32) -> f32 {
-    if (shadowRow < 0.0) {
-        return 1.0;
-    }
-
     let bins = i32(textureDimensions(u_shadow, 0).x) / 2;
     let row = i32(shadowRow);
     let narrowest = clamp(0.5 * footprint * f32(bins) / (2.0 * PI), 0.02, f32(MAX_HALF));
@@ -315,9 +311,10 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     let clearance = uniforms.u_shadowClearance * fwidth(radial);
     // Rounding of the stored distance, divided out of the fragment's side once;
     // see `light-quad.frag`.
-    let threshold = (radial - clearance) / (1.0 + uniforms.u_shadowPrecision);
-    // The fragment's own angular size; see `light-quad.frag`. Also taken while control flow is uniform.
-    let footprint = max(length(dpdx(input.local)), length(dpdy(input.local))) / max(length(input.local), 1e-6);
+    let rounding = 1.0 + uniforms.u_shadowPrecision;
+    // The fragment's span in the light's frame; see `light-quad.frag`. Also
+    // taken while control flow is uniform, before the per-sample loop.
+    let pixelSpan = max(length(dpdx(input.local)), length(dpdy(input.local)));
 
     // Distance to the segment, not to the centre: folding `x` onto the segment
     // first is what turns the disc into a capsule, and a zero half-length
@@ -344,7 +341,30 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         coneTerm = step(input.cone.x, alignment);
     }
 
-    let shadow = shadowTerm(input.local, threshold, input.shadowRow, input.softness, footprint);
+    // One row per emitter sample, four for a finite line; see `light-quad.frag`.
+    var shadow = 1.0;
+
+    if (input.shadowRow >= 0.0 && input.half > 0.0) {
+        let reach = 1.0 + 2.0 * input.half;
+        let rowClearance = clearance * (input.half + 1.0) / reach;
+        var weights = 0.0;
+
+        shadow = 0.0;
+
+        for (var i = 0; i < 4; i++) {
+            let ray = input.local - vec2<f32>(input.half * (f32(i) - 1.5) * 0.5, 0.0);
+            let rayLength = length(ray);
+            let weight = 1.0 / (1.0 + rayLength * rayLength);
+
+            shadow += weight * shadowTerm(ray, (rayLength / reach - rowClearance) / rounding, input.shadowRow + f32(i), input.softness, pixelSpan / max(rayLength, 1e-6));
+            weights += weight;
+        }
+
+        shadow /= weights;
+    } else if (input.shadowRow >= 0.0) {
+        shadow = shadowTerm(input.local, (radial - clearance) / rounding, input.shadowRow, input.softness, pixelSpan / max(length(input.local), 1e-6));
+    }
+
     let surface = surfaceTerm(input.position.xy, input.local, input.surface);
     // The quad spans -1..1 in the light's own frame, which is the cookie's 0..1
     // exactly - so the pattern turns and scales with the light for free, and a

@@ -253,7 +253,15 @@ const castSegment = (
       continue;
     }
 
-    const slot = ((bin % bins) + bins) % bins;
+    // The unwrapped arc is at most half a turn, so one wrap in either
+    // direction suffices. Avoid two remainders in the per-bin hot path.
+    let slot = bin;
+
+    if (bin < 0) {
+      slot += bins;
+    } else if (bin >= bins) {
+      slot -= bins;
+    }
 
     // Most bins a segment crosses it covers whole; kept out of `coverBin`
     // so that the common case stays small enough to inline.
@@ -423,6 +431,12 @@ const setSpan = (scratch: number, low: number, high: number, lowDistance: number
  */
 const encodeSpans = (row: Float32Array, bins: number): void => {
   for (let bin = 0; bin < bins; bin++) {
+    // Whole-bin coverage was written directly to the row. With no partial
+    // parts, neither span nor corner encoding can change it.
+    if (partCounts[bin] === 0) {
+      continue;
+    }
+
     const texel = bin * shadowRowStride;
     const scratch = bin * spanStride;
     const priorStart = row[texel + 2]!;

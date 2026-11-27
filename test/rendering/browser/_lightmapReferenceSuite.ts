@@ -11,12 +11,19 @@
  * profile could find.
  */
 
-import { type Light, LightmapLighting, PointLight, PolygonOccluder, SpotLight } from '@codexo/exojs/lighting';
-import { describe, expect, test } from 'vitest';
+import { type Light, LightmapLighting, LineLight, PointLight, PolygonOccluder, SpotLight } from '@codexo/exojs/lighting';
+import { describe, expect, test, vi } from 'vitest';
+import { page, server } from 'vitest/browser';
 
 import { Color } from '#core/Color';
+import { TextureFormat } from '#rendering/types';
+import { View } from '#rendering/View';
 
+import type { LightmapBackend } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
 import { type ContactBackend, contactCanvasSize, type ContactHost, createContactHost } from './_lightmapContact';
+
+/** Set by `EXOJS_CAPTURE_LIGHTMAP_REFERENCES=1`: also capture the finite-line framebuffer readbacks for visual review. */
+declare const __EXOJS_CAPTURE_LIGHTMAP_REFERENCES__: boolean;
 
 type Polygon = ReadonlyArray<readonly [number, number]>;
 
@@ -181,20 +188,261 @@ const worstDisagreement = async (
   }
 };
 
-/** Penumbra width, 10 to 90 percent, down the column `x`, in pixels. `null` when the device was dropped. */
-const penumbraWidth = async (host: ContactHost, lighting: LightmapLighting, x: number): Promise<number | null> => {
-  const frame = await host.render(lighting);
-
-  if (frame === null) {
-    return null;
-  }
-
+/** Penumbra width, 10 to 90 percent, down the column `x`, in pixels. */
+const framePenumbraWidth = (frame: Uint8Array | Uint8ClampedArray, x: number): number => {
   const column = Array.from({ length: contactCanvasSize }, (_, y) => frame[(y * contactCanvasSize + x) * 4]!);
   const lit = column[30]!;
   const top = column.findIndex((value, y) => y > 30 && value < lit * 0.9);
   const bottom = column.findIndex((value, y) => y > 30 && value < lit * 0.1);
 
   return bottom - top;
+};
+
+/** `null` when the device was dropped. */
+const penumbraWidth = async (host: ContactHost, lighting: LightmapLighting, x: number): Promise<number | null> => {
+  const frame = await host.render(lighting);
+
+  return frame === null ? null : framePenumbraWidth(frame, x);
+};
+
+type ShadowFiller = 'cpu' | 'gpu';
+
+interface LineScene {
+  readonly lightX: number;
+  readonly lightY: number;
+  readonly length: number;
+  /** Falloff radius. */
+  readonly radius: number;
+  /** Node rotation of the light, in degrees. */
+  readonly rotation: number;
+  readonly polygons: readonly Polygon[];
+}
+
+/** Where the lightmap traces a finite line's shadow rows, as fractions of its half-length. */
+const fourSamples = [-0.75, -0.25, 0.25, 0.75];
+/** Midpoints of 256 equal pieces of the segment: the continuous emitter, for any scene here. */
+const denseSamples = Array.from({ length: 256 }, (_, index) => ((index + 0.5) / 256) * 2 - 1);
+
+/**
+ * The share of a line's emission reaching `(px, py)` unblocked: each emitter
+ * point weighted `1 / (1 + d^2)` in falloff radii, the attenuation the
+ * lightmap documents for its samples, over the points at `fractions` of the
+ * half-length along `axis`.
+ */
+const lineVisibility = (
+  scene: LineScene,
+  axis: { readonly x: number; readonly y: number },
+  fractions: readonly number[],
+  px: number,
+  py: number,
+): number => {
+  const half = scene.length / 2;
+  let visible = 0;
+  let total = 0;
+
+  for (const fraction of fractions) {
+    const sx = scene.lightX + axis.x * half * fraction;
+    const sy = scene.lightY + axis.y * half * fraction;
+    const distance = Math.hypot(px - sx, py - sy) / scene.radius;
+    const weight = 1 / (1 + distance * distance);
+
+    total += weight;
+
+    if (!blocked(scene.polygons, sx, sy, px, py)) {
+      visible += weight;
+    }
+  }
+
+  return visible / total;
+};
+
+const nearOutline = (polygons: readonly Polygon[], px: number, py: number, reach: number): boolean =>
+  polygons.some(polygon =>
+    polygon.some(([x1, y1], index) => {
+      const [x2, y2] = polygon[(index + 1) % polygon.length]!;
+      const ex = x2 - x1;
+      const ey = y2 - y1;
+      const t = Math.max(0, Math.min(1, ((px - x1) * ex + (py - y1) * ey) / (ex * ex + ey * ey)));
+
+      return Math.hypot(px - x1 - t * ex, py - y1 - t * ey) < reach;
+    }),
+  );
+
+const lineScenes: ReadonlyArray<[string, LineScene]> = [
+  [
+    'a long line along the axis, half hidden by a post',
+    { lightX: 70, lightY: 128, length: 120, radius: 300, rotation: 0, polygons: [square(150, 118, 158, 150)] },
+  ],
+  [
+    'a long line turned 37 degrees past a turned cross',
+    { lightX: 70, lightY: 90, length: 100, radius: 300, rotation: 37, polygons: [cross(160, 150, 17)] },
+  ],
+  [
+    'a short line across the axis touching a crate',
+    { lightX: 60, lightY: 128, length: 16, radius: 300, rotation: 90, polygons: [square(110, 100, 150, 140)] },
+  ],
+  [
+    'a line longer than the gap between two boxes',
+    { lightX: 128, lightY: 60, length: 200, radius: 300, rotation: 143, polygons: [square(90, 120, 110, 140), square(150, 150, 175, 165)] },
+  ],
+];
+
+interface LineShadowResult {
+  readonly filler: ShadowFiller;
+  readonly metrics: {
+    readonly counted: number;
+    /** Against the exact four-sample visibility, on pixels no sample ray's edge crosses. */
+    readonly sampledMae: number;
+    readonly sampledP99: number;
+    /** Share of those pixels off by more than a tenth: a sample's silhouette in the wrong place. */
+    readonly sampledMismatch: number;
+    /** Against the continuous emitter, on every lit pixel clear of the outline. */
+    readonly integralMae: number;
+    readonly integralP99: number;
+    /** What a shadow cast from the segment's centre alone would score against the continuous emitter. */
+    readonly centreMae: number;
+  };
+}
+
+const quantile = (values: number[], q: number): number => {
+  values.sort((a, b) => a - b);
+
+  return values.length === 0 ? 0 : values[Math.min(values.length - 1, Math.floor(q * values.length))]!;
+};
+
+const mean = (values: readonly number[]): number => values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length);
+
+/** Capture the exact readback used by the reference, not the live GPU canvas. */
+const captureLineSource = async (
+  backend: ContactBackend,
+  rotation: number | string,
+  filler: ShadowFiller,
+  open: Uint8Array | Uint8ClampedArray,
+  walled: Uint8Array | Uint8ClampedArray,
+): Promise<void> => {
+  const canvas = document.createElement('canvas');
+
+  canvas.width = contactCanvasSize;
+  canvas.height = contactCanvasSize;
+  document.body.appendChild(canvas);
+
+  try {
+    const context = canvas.getContext('2d')!;
+
+    for (const [kind, pixels] of [
+      [`open-${filler}`, open],
+      [filler, walled],
+    ] as const) {
+      context.putImageData(new ImageData(new Uint8ClampedArray(pixels), contactCanvasSize), 0, 0);
+      await page.screenshot({
+        element: canvas,
+        path: `../../../.workspace/visual-review/current/line-source-${kind}-${rotation}-${backend}-${server.browser}.png`,
+      });
+    }
+  } finally {
+    canvas.remove();
+  }
+};
+
+/** `null` when the device was dropped. */
+const lineShadowError = async (backend: ContactBackend, scene: LineScene, filler: ShadowFiller): Promise<LineShadowResult | null> => {
+  const host = await createContactHost(backend);
+  const size = contactCanvasSize;
+
+  host.context.view = new View(size / 2, size / 2, size, size);
+
+  const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
+  const light = lighting.add(new LineLight({ length: scene.length, radius: scene.radius, softness: 0 }));
+  const frameBackend = lighting.backend as LightmapBackend;
+
+  light.setPosition(scene.lightX, scene.lightY);
+  light.rotation = scene.rotation;
+  frameBackend.shadowFiller = filler;
+
+  try {
+    // Readbacks can share a buffer between frames.
+    const open = (await host.render(lighting))?.slice() ?? null;
+
+    for (const polygon of scene.polygons) {
+      lighting.occludeFrom(new PolygonOccluder(polygon.map(([x, y]) => ({ x, y }))));
+    }
+
+    const walled = await host.render(lighting);
+
+    if (open === null || walled === null) {
+      return null;
+    }
+
+    // Never label a CPU fallback as a GPU capture.
+    if (__EXOJS_CAPTURE_LIGHTMAP_REFERENCES__ && frameBackend.shadowFiller === filler) {
+      await captureLineSource(backend, scene.rotation, filler, open, walled);
+    }
+
+    const axis = { x: 0, y: 0 };
+
+    light.getWorldDirection(axis);
+    const sampledErrors: number[] = [];
+    const integralErrors: number[] = [];
+    const centreErrors: number[] = [];
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const offset = (y * size + x) * 4;
+
+        if (open[offset]! < 60) {
+          continue;
+        }
+
+        const term = walled[offset]! / open[offset]!;
+        const exact = lineVisibility(scene, axis, denseSamples, x + 0.5, y + 0.5);
+
+        if (!nearOutline(scene.polygons, x + 0.5, y + 0.5, 1)) {
+          integralErrors.push(Math.abs(term - exact));
+          centreErrors.push(Math.abs(lineVisibility(scene, axis, [0], x + 0.5, y + 0.5) - exact));
+        }
+
+        const corners = [
+          [x + 0.5, y + 0.5],
+          [x, y],
+          [x + 1, y],
+          [x, y + 1],
+          [x + 1, y + 1],
+        ].map(([px, py]) =>
+          fourSamples
+            .map(fraction =>
+              blocked(
+                scene.polygons,
+                scene.lightX + (axis.x * scene.length * fraction) / 2,
+                scene.lightY + (axis.y * scene.length * fraction) / 2,
+                px!,
+                py!,
+              ),
+            )
+            .join(),
+        );
+
+        if (corners.every(corner => corner === corners[0])) {
+          sampledErrors.push(Math.abs(term - lineVisibility(scene, axis, fourSamples, x + 0.5, y + 0.5)));
+        }
+      }
+    }
+
+    return {
+      filler: frameBackend.shadowFiller,
+      metrics: {
+        counted: integralErrors.length,
+        sampledMae: mean(sampledErrors),
+        sampledP99: quantile(sampledErrors, 0.99),
+        sampledMismatch: sampledErrors.filter(error => error > 0.1).length / Math.max(1, sampledErrors.length),
+        integralMae: mean(integralErrors),
+        integralP99: quantile(integralErrors, 0.99),
+        centreMae: mean(centreErrors),
+      },
+    };
+  } finally {
+    lighting.destroy();
+    host.destroy();
+  }
 };
 
 export const describeLightmapReference = (backend: ContactBackend): void => {
@@ -252,6 +500,47 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
     });
   });
 
+  describe('finite LineLight shadows against integration over the segment', () => {
+    test.for(lineScenes.flatMap(([name, scene]) => (['cpu', 'gpu'] as const).map(filler => ({ name, scene, filler }))))(
+      '$name ($filler filler)',
+      async ({ name, scene, filler }, ctx) => {
+        const result = await lineShadowError(backend, scene, filler);
+
+        if (result === null) {
+          return;
+        }
+
+        if (result.filler !== filler) {
+          ctx.skip(`no ${filler} shadow filler on this device`);
+        }
+
+        console.info('line shadow error', { backend, filler, scene: name, ...result.metrics });
+
+        expect(result.metrics.counted).toBeGreaterThan(5_000);
+
+        // Wherever no sample's ray crosses an edge inside the pixel, the renderer
+        // has to agree with the exact four-sample visibility it evaluates. The
+        // segment walk does to a few counts of an 8-bit ratio. The marcher reads
+        // silhouettes off the rasterized occluder mask, each a mask texel wider
+        // than the outline, which already darkens a sliver of a point light's
+        // shadow edge; a line has four such edges per outline.
+        if (filler === 'cpu') {
+          expect(result.metrics.sampledMae).toBeLessThan(0.005);
+          expect(result.metrics.sampledP99).toBeLessThan(0.05);
+        } else {
+          expect(result.metrics.sampledMae).toBeLessThan(0.015);
+          expect(result.metrics.sampledMismatch).toBeLessThan(0.05);
+        }
+
+        // Against the continuous emitter, four samples leave bands in the
+        // penumbra but stay close on average, and closer than a shadow cast
+        // from the centre of the segment alone.
+        expect(result.metrics.integralMae).toBeLessThan(result.metrics.centreMae);
+        expect(result.metrics.integralMae).toBeLessThan(0.05);
+      },
+    );
+  });
+
   describe('lightmap penumbra width', () => {
     test('is narrow at the contact and widens with the distance behind the occluder', async () => {
       const host = await createContactHost(backend);
@@ -288,5 +577,97 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
         host.destroy();
       }
     });
+
+    const softnessCases = [
+      { name: 'CPU filler', filler: 'cpu', withoutFloatTarget: false },
+      { name: 'GPU filler', filler: 'gpu', withoutFloatTarget: false },
+      ...(backend === 'webgl2' ? ([{ name: 'CPU fallback', filler: 'gpu', withoutFloatTarget: true }] as const) : []),
+    ] as const;
+
+    test.for(softnessCases)(
+      'finite LineLight softness widens the distant shadow edge and keeps contact narrow ($name)',
+      async ({ filler, withoutFloatTarget }) => {
+        const host = await createContactHost(backend);
+
+        if (withoutFloatTarget) {
+          const supportsColorFormat = host.context.supportsColorFormat.bind(host.context);
+
+          vi.spyOn(host.context, 'supportsColorFormat').mockImplementation(
+            format => format !== TextureFormat.Rgba16F && supportsColorFormat(format),
+          );
+        }
+
+        const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
+        const frameBackend = lighting.backend as LightmapBackend;
+        // All four emitters lie on the same horizontal edge ray: geometric
+        // segment penumbra cannot masquerade as the additional softness.
+        const light = lighting.add(new LineLight({ radius: 2000, length: 24, intensity: 1, softness: 0 }));
+
+        light.setPosition(40, 60);
+        frameBackend.shadowFiller = filler;
+
+        try {
+          const open = (await host.render(lighting))?.slice() ?? null;
+
+          lighting.occludeFrom(
+            new PolygonOccluder(
+              [
+                { x: 100, y: 60 },
+                { x: 100, y: 250 },
+              ],
+              { closed: false },
+            ),
+          );
+
+          const hard = (await host.render(lighting))?.slice() ?? null;
+
+          light.softness = 1;
+
+          const soft = await host.render(lighting);
+
+          if (open === null || hard === null || soft === null) {
+            throw new Error('Finite LineLight softness readback unavailable');
+          }
+
+          const expectedFiller = filler === 'gpu' && !host.context.supportsColorFormat(TextureFormat.Rgba16F) ? 'cpu' : filler;
+          expect(frameBackend.shadowFiller).toBe(expectedFiller);
+
+          if (__EXOJS_CAPTURE_LIGHTMAP_REFERENCES__ && expectedFiller === filler) {
+            await captureLineSource(backend, '0-penumbra-hard', filler, open, hard);
+            await captureLineSource(backend, '0-penumbra-soft', filler, open, soft);
+          }
+
+          // Require a genuinely lit and a genuinely shadowed region on both
+          // profiles, rather than accepting a width from an empty frame.
+          const lit = (30 * contactCanvasSize + 230) * 4;
+          const dark = (110 * contactCanvasSize + 230) * 4;
+
+          expect(open[lit]!).toBeGreaterThan(60);
+          expect(open[dark]!).toBeGreaterThan(60);
+
+          for (const frame of [hard, soft]) {
+            expect(frame[lit]!).toBeGreaterThan(open[lit]! * 0.8);
+            expect(frame[dark]!).toBeLessThan(open[dark]! * 0.1);
+          }
+
+          const hardFar = framePenumbraWidth(hard, 230);
+          const softNear = framePenumbraWidth(soft, 110);
+          const softFar = framePenumbraWidth(soft, 230);
+
+          console.info('finite line penumbra width', { backend, filler: expectedFiller, hardFar, softNear, softFar });
+
+          expect(hardFar).toBeGreaterThanOrEqual(0);
+          expect(hardFar).toBeLessThanOrEqual(8);
+          expect(softNear).toBeGreaterThanOrEqual(0);
+          expect(softNear).toBeLessThanOrEqual(8);
+          expect(softFar).toBeGreaterThanOrEqual(12);
+          expect(softFar).toBeLessThanOrEqual(40);
+          expect(softFar).toBeGreaterThan(hardFar + 6);
+        } finally {
+          lighting.destroy();
+          host.destroy();
+        }
+      },
+    );
   });
 };

@@ -53,7 +53,7 @@ import sunQuadFragment from './shaders/sun-quad.frag';
 import sunQuadVertex from './shaders/sun-quad.vert';
 import sunQuadWgsl from './shaders/sun-quad.wgsl';
 import { ShadowMarchFiller } from './shadowMarch';
-import { removeStaleShadowRows, ShadowGeometryRevision, type ShadowRowState, type SunShadowRowState } from './shadowRows';
+import { claimShadowRow, removeStaleShadowRows, ShadowGeometryRevision, type ShadowRowState, type SunShadowRowState } from './shadowRows';
 
 /**
  * The composite that multiplies the frame by the light: one instanced quad,
@@ -94,6 +94,15 @@ const halfFloatRounding = 2 ** -11;
 const noCone = -1;
 /** Shadow row a light without occluders in reach carries: the shader reads it as "nothing blocks". */
 const noShadow = -1;
+/**
+ * Where along its half-length a finite line traces each of its shadow rows,
+ * stratified over the segment. `light-quad` derives the same offsets from the
+ * row index, so the two must change together.
+ */
+const lineShadowSamples = [-0.75, -0.25, 0.25, 0.75] as const;
+/** The single row of any light that emits from a point, traced from its centre. */
+const pointShadowSample = [0] as const;
+const shadowSamples = (half: number): readonly number[] => (half > 0 ? lineShadowSamples : pointShadowSample);
 /** Width of a debug occluder line, in world pixels. */
 const debugLineWidth = 2;
 
@@ -308,12 +317,15 @@ export abstract class FrameLightingBackend implements LightingBackend {
   /** Built only where a float render target exists; `null` pins the renderer to the CPU filler. */
   private readonly _filler: ShadowMarchFiller | null;
   private _fillerRequest: ShadowFillerOption = 'auto';
-  private readonly _shadowRows = new Map<Light, ShadowRowState>();
+  /** What each light's rows were last built from, one entry per emitter sample. */
+  private readonly _shadowRows = new Map<Light, ShadowRowState[]>();
   private readonly _sunShadowRows = new Map<Light, SunShadowRowState>();
   private readonly _shadowGeometry = new ShadowGeometryRevision();
   private _shadowEpoch = 0;
   private _shadowClearance = 0.25;
   private _shadowRowsRebuilt = 0;
+  private _firstDirtyRow = Infinity;
+  private _lastDirtyRow = -1;
   private _shadowBytesUploaded = 0;
   private _walkMaskEnabled = true;
   private _compositeScale = 0;
@@ -707,7 +719,9 @@ ${sunQuadWgsl}`,
    * the marcher's own uniforms then have to be pointed at.
    */
   private _writeLights(lights: readonly Light[], occluders: OccluderField): boolean {
-    this._growShadowMap(lights.length);
+    const rowBudget = lights.reduce((rows, light) => rows + shadowSamples(lightHalfLength(light)).length, 0);
+
+    this._growShadowMap(rowBudget);
 
     for (const batch of this._lightBatches.values()) {
       batch.clear();
@@ -726,12 +740,14 @@ ${sunQuadWgsl}`,
     this._shadowBytesUploaded = 0;
 
     if (casting && marching) {
-      this._filler!.begin(lights.length);
+      this._filler!.begin(rowBudget);
     }
 
     let written = 0;
-    let firstDirtyRow = Infinity;
-    let lastDirtyRow = -1;
+    let shadowRow = 0;
+
+    this._firstDirtyRow = Infinity;
+    this._lastDirtyRow = -1;
 
     for (const light of lights) {
       if (!light.enabled || light.intensity <= 0) {
@@ -756,12 +772,8 @@ ${sunQuadWgsl}`,
       if (!casting) {
         scratchInstance.a_shadow[0] = noShadow;
       } else {
-        scratchInstance.a_shadow[0] = written;
-
-        if (this._writeShadowRow(light, written, radius, segments, segmentCount, geometryRevision, epoch, marching)) {
-          firstDirtyRow = Math.min(firstDirtyRow, written);
-          lastDirtyRow = written;
-        }
+        scratchInstance.a_shadow[0] = shadowRow;
+        shadowRow += this._writeShadowRows(light, shadowRow, half, radius, segments, segmentCount, geometryRevision, epoch, marching);
       }
 
       scratchInstance.a_shadow[1] = light.softness;
@@ -797,10 +809,10 @@ ${sunQuadWgsl}`,
       removeStaleShadowRows(this._shadowRows, epoch);
     }
 
-    if (lastDirtyRow >= firstDirtyRow) {
-      const rows = lastDirtyRow - firstDirtyRow + 1;
+    if (this._lastDirtyRow >= this._firstDirtyRow) {
+      const rows = this._lastDirtyRow - this._firstDirtyRow + 1;
 
-      this._shadowMap.commitRect(0, firstDirtyRow, this._shadowResolution * shadowRowTexels, rows);
+      this._shadowMap.commitRect(0, this._firstDirtyRow, this._shadowResolution * shadowRowTexels, rows);
       this._shadowBytesUploaded += this._shadowResolution * rows * shadowRowStride * Float32Array.BYTES_PER_ELEMENT;
     }
 
@@ -881,83 +893,66 @@ ${sunQuadWgsl}`,
   }
 
   /**
-   * Give one light the polar row the shader will sample, from whichever filler
-   * is active. The light's position and axis are the ones the caller has just
-   * read into the shared scratch.
+   * Give one light the polar rows the shader will sample, one per emitter
+   * sample, from whichever filler is active, and answer how many it took. The
+   * light's position and axis are the ones the caller has just read into the
+   * shared scratch. A finite line's samples see out to the opposite end of the
+   * segment plus the falloff, which is `radius + half`.
    */
-  private _writeShadowRow(
+  private _writeShadowRows(
     light: Light,
-    row: number,
+    firstRow: number,
+    half: number,
     radius: number,
     segments: Float32Array,
     segmentCount: number,
     geometryRevision: number,
     epoch: number,
     marching: boolean,
-  ): boolean {
+  ): number {
+    const offsets = shadowSamples(half);
+    const reach = radius + half;
+    const axisX = scratchDirection.x;
+    const axisY = scratchDirection.y;
     const bins = this._shadowResolution;
+    // Empty while marching: `_writeLights` clears the cache for the GPU filler.
+    let states = this._shadowRows.get(light);
 
-    if (marching) {
-      this._filler!.write(row, scratchPosition.x, scratchPosition.y, radius, scratchDirection.x, scratchDirection.y);
-      this._shadowRowsRebuilt++;
-
-      return false;
+    if (states === undefined && !marching) {
+      states = [];
+      this._shadowRows.set(light, states);
+    } else if (states !== undefined && states.length > offsets.length) {
+      // A line shortened to a point leaves its other samples' rows to the next light.
+      states.length = offsets.length;
     }
 
-    const state = this._shadowRows.get(light);
+    for (let sample = 0; sample < offsets.length; sample++) {
+      const row = firstRow + sample;
+      const x = scratchPosition.x + axisX * half * offsets[sample]!;
+      const y = scratchPosition.y + axisY * half * offsets[sample]!;
 
-    if (
-      state?.row === row &&
-      state.x === scratchPosition.x &&
-      state.y === scratchPosition.y &&
-      state.axisX === scratchDirection.x &&
-      state.axisY === scratchDirection.y &&
-      state.radius === radius &&
-      state.geometryRevision === geometryRevision
-    ) {
-      state.epoch = epoch;
-
-      return false;
+      if (marching) {
+        this._filler!.write(row, x, y, reach, axisX, axisY);
+        this._shadowRowsRebuilt++;
+      } else if (claimShadowRow(states!, sample, row, x, y, axisX, axisY, reach, geometryRevision, epoch)) {
+        buildShadowRow(
+          segments,
+          segmentCount,
+          x,
+          y,
+          axisX,
+          axisY,
+          reach,
+          this._shadowMap.buffer.subarray(row * bins * shadowRowStride, (row + 1) * bins * shadowRowStride),
+          bins,
+        );
+        this._shadowRowsRebuilt++;
+        this._firstDirtyRow = Math.min(this._firstDirtyRow, row);
+        this._lastDirtyRow = row;
+      }
     }
 
-    buildShadowRow(
-      segments,
-      segmentCount,
-      scratchPosition.x,
-      scratchPosition.y,
-      scratchDirection.x,
-      scratchDirection.y,
-      radius,
-      this._shadowMap.buffer.subarray(row * bins * shadowRowStride, (row + 1) * bins * shadowRowStride),
-      bins,
-    );
-    this._shadowRowsRebuilt++;
-
-    if (state === undefined) {
-      const next: ShadowRowState = {
-        row,
-        x: scratchPosition.x,
-        y: scratchPosition.y,
-        axisX: scratchDirection.x,
-        axisY: scratchDirection.y,
-        radius,
-        geometryRevision,
-        epoch,
-      };
-
-      this._shadowRows.set(light, next);
-    } else {
-      state.row = row;
-      state.x = scratchPosition.x;
-      state.y = scratchPosition.y;
-      state.axisX = scratchDirection.x;
-      state.axisY = scratchDirection.y;
-      state.radius = radius;
-      state.geometryRevision = geometryRevision;
-      state.epoch = epoch;
-    }
-
-    return true;
+    return offsets.length;
   }
 
   /**
@@ -1554,13 +1549,13 @@ ${sunQuadWgsl}`,
   }
 
   /**
-   * One shadow row per light, so a row index is the light's own index in the
-   * batch. The map only ever grows: a scene that once lit with fifty lights
-   * keeps the rows, which is a few hundred kilobytes and saves reallocating
-   * whenever a light is toggled.
+   * One shadow row per emitter sample, numbered in light order, so a finite
+   * line takes four consecutive rows. The map only ever grows: a scene that
+   * once lit with fifty lights keeps the rows, which is a few hundred kilobytes
+   * and saves reallocating whenever a light is toggled.
    */
-  private _growShadowMap(lights: number): void {
-    const rows = Math.max(1, lights);
+  private _growShadowMap(needed: number): void {
+    const rows = Math.max(1, needed);
 
     if (this._shadowMap.height >= rows) {
       return;
