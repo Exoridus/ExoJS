@@ -4,7 +4,7 @@
   "symbol": "AttachOptions",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 13,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "PhysicsWorld.attach convenience options: a body type plus a single collider, attached to a scene node in one call."
       ],
-      "importLine": "import { AttachOptions } from '@codexo/exojs-physics'",
+      "importLine": "import { AttachOptions } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

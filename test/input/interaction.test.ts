@@ -14,6 +14,7 @@ import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
+import { View } from '#rendering/View';
 
 import { frameDelta } from '../support/frame-delta';
 
@@ -247,6 +248,55 @@ const flushInteractions = (im: InteractionSystem): void => {
 // ---------------------------------------------------------------------------
 
 describe('InteractionSystem — hit-test basics', () => {
+  test('destroy detaches world and UI roots and ignores later node notifications', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionSystem(app);
+
+    im.attachRoot(scene.root);
+    im.attachUIRoot(scene.ui);
+    im.destroy();
+
+    expect(scene.root._getStage()).toBeNull();
+    expect(scene.ui._getStage()).toBeNull();
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+    const onDown = vi.fn();
+
+    sprite.interactive = true;
+    sprite.onPointerDown.add(onDown);
+    scene.addChild(sprite);
+    im._notifyNodeAdded(sprite);
+    im._notifyInteractiveChanged(sprite, true);
+    im._notifyBoundsInvalidated(sprite);
+    im.attachRoot(scene.root);
+    im.attachUIRoot(scene.ui);
+
+    expect(scene.root._getStage()).toBeNull();
+    expect(scene.ui._getStage()).toBeNull();
+    expect(im._getDebugQuadtree()).toBeNull();
+
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    expect(onDown).not.toHaveBeenCalled();
+    expect(() => im.destroy()).not.toThrow();
+
+    sprite.destroy();
+  });
+
+  test('destroy does not detach a root already transferred to another interaction system', () => {
+    const { app, scene } = createApp();
+    const first = new InteractionSystem(app);
+    const second = new InteractionSystem(app);
+
+    first.attachRoot(scene.root);
+    second.attachRoot(scene.root);
+    first.destroy();
+
+    expect(scene.root._getStage()?.interaction).toBe(second);
+
+    second.destroy();
+    expect(scene.root._getStage()).toBeNull();
+  });
+
   test('fires onPointerDown on interactive sprite when pointer is over it', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionSystem(app);
@@ -315,6 +365,54 @@ describe('InteractionSystem — hit-test basics', () => {
 // ---------------------------------------------------------------------------
 // 2. Z-order - top child wins
 // ---------------------------------------------------------------------------
+
+describe('InteractionSystem — active camera mapping', () => {
+  const hitsAt = (
+    app: Application,
+    scene: Scene,
+    signals: MockSignals,
+    bounds: [number, number, number, number],
+    pointer: { x: number; y: number },
+  ): boolean => {
+    const im = new InteractionSystem(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(...bounds);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const handler = vi.fn();
+
+    sprite.onPointerDown.add(handler);
+    dispatchPointer(signals.onPointerDown, pointer);
+    flushInteractions(im);
+
+    im.destroy();
+    sprite.destroy();
+
+    return handler.mock.calls.length === 1;
+  };
+
+  test('hits a world node under the pointer through a zoomed camera', () => {
+    const { app, scene, signals } = createApp();
+    const view = new View(400, 300, 800, 600).setZoom(2);
+
+    (app.rendering as { view: View }).view = view;
+
+    // Design (200, 150) shows world (300, 225) at zoom 2.
+    expect(hitsAt(app, scene, signals, [290, 215, 20, 20], { x: 200, y: 150 })).toBe(true);
+  });
+
+  test('hits a world node through a split-screen active camera viewport', () => {
+    const { app, scene, signals } = createApp();
+    const view = new View(1000, 0, 400, 600).setViewport(0.5, 0, 0.5, 1).setZoom(2);
+
+    (app.rendering as { view: View }).view = view;
+
+    // The centre of the right half shows the camera centre (1000, 0).
+    expect(hitsAt(app, scene, signals, [990, -10, 20, 20], { x: 600, y: 300 })).toBe(true);
+  });
+});
 
 describe('InteractionSystem — z-order', () => {
   test('top child (added last) receives hit over bottom child at same position', () => {
@@ -1455,6 +1553,36 @@ describe('InteractionSystem — drag and drop', () => {
     sprite.destroy();
   });
 
+  test.each(['cancel', 'leave'] as const)('pointer %s balances hover after ending a drag', exit => {
+    const { app, scene, signals, canvas } = createApp();
+    mockPointerCapture(canvas);
+    const im = new InteractionSystem(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+    sprite.interactive = true;
+    sprite.draggable = true;
+    scene.addChild(sprite);
+    const over = vi.fn();
+    const out = vi.fn();
+    const end = vi.fn();
+    sprite.onPointerOver.add(over);
+    sprite.onPointerOut.add(out);
+    sprite.onDragEnd.add(end);
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 50 });
+    flushInteractions(im);
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    flushInteractions(im);
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 90, travelled: pastThreshold });
+    flushInteractions(im);
+    dispatchPointer(exit === 'cancel' ? signals.onPointerCancel : signals.onPointerLeave, { x: 50, y: 90 });
+    flushInteractions(im);
+    expect(end).toHaveBeenCalledTimes(1);
+    expect(over).toHaveBeenCalledTimes(1);
+    expect(out).toHaveBeenCalledTimes(1);
+    im.destroy();
+    sprite.destroy();
+  });
+
   test('pointercancel during drag fires onDragEnd and clears drag state', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
@@ -1926,8 +2054,8 @@ describe('InteractionSystem — getCapturedNodes', () => {
   test('returns the dragged node while a drag is active', () => {
     const { app, scene, signals, canvas } = createApp();
 
-    Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
-    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'setPointerCapture', { value: () => {}, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => {}, writable: true, configurable: true });
 
     const im = new InteractionSystem(app);
 
@@ -2087,8 +2215,8 @@ describe('InteractionSystem — UI layer', () => {
   test('dragging a node inside the UI layer resolves coordinates in UI space (_isUINode traversal)', () => {
     const { app, scene, signals, canvas } = createApp();
 
-    Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
-    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'setPointerCapture', { value: () => {}, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => {}, writable: true, configurable: true });
 
     const im = new InteractionSystem(app);
 
@@ -2120,8 +2248,8 @@ describe('InteractionSystem — UI layer', () => {
   test('_isUINode returns false while dragging a world node, even when a UI root is also attached', () => {
     const { app, scene, signals, canvas } = createApp();
 
-    Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
-    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'setPointerCapture', { value: () => {}, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => {}, writable: true, configurable: true });
 
     const im = new InteractionSystem(app);
 
@@ -2319,6 +2447,32 @@ describe('InteractionSystem — clip-aware hit-testing', () => {
     im.destroy();
     child.destroy();
     clipper.destroy();
+  });
+
+  test('a nested scope respects clipping ancestors', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionSystem(app);
+    im.attachRoot(scene.root);
+    const clipper = new TestClipContainer();
+    const scope = new Container();
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+    clipper.clip = true;
+    clipper.clipShape = new Rectangle(0, 0, 50, 50);
+    child.interactive = true;
+    scope.addChild(child);
+    clipper.addChild(scope);
+    scene.addChild(clipper);
+    im.pushScope(scope);
+    const handler = vi.fn();
+    child.onPointerDown.add(handler);
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).not.toHaveBeenCalled();
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+    im.destroy();
+    scene.root.destroy();
   });
 
   test('a Rectangle clipShape bounds descendant hits in the scoped/recursive hit-test path', () => {

@@ -37,6 +37,12 @@ export class TiledTileset {
   public readonly tileWidth: number;
   public readonly tileHeight: number;
   public readonly tileCount: number;
+  /**
+   * Number of local tile ids this tileset spans. Equal to {@link tileCount}
+   * for an atlas; for a collection of images it reaches the highest tile id,
+   * because tiles removed in the editor leave their ids unused.
+   */
+  public readonly idCount: number;
   public readonly columns: number;
   public readonly spacing: number;
   public readonly margin: number;
@@ -79,14 +85,16 @@ export class TiledTileset {
     this.tileOffset = data.tileoffset ?? { x: 0, y: 0 };
     this.objectAlignment = data.objectalignment;
     this.tiles = data.tiles ?? [];
+    this.idCount =
+      data.image === undefined ? this.tiles.reduce((count, tile) => Math.max(count, tile.id + 1), data.tilecount) : data.tilecount;
     this.wangSets = data.wangsets ?? [];
     this.tileTextures = resources.tileTextures ?? new Map();
     this.properties = data.properties ?? [];
   }
 
-  /** Last global tile id (inclusive) owned by this tileset. Empty (`lastGid < firstGid`) when {@link tileCount} is `0`. */
+  /** Last global tile id (inclusive) owned by this tileset. Empty (`lastGid < firstGid`) when {@link idCount} is `0`. */
   public get lastGid(): number {
-    return this.firstGid + this.tileCount - 1;
+    return this.firstGid + this.idCount - 1;
   }
 
   /** Looks up a per-tile definition by local tile id. */

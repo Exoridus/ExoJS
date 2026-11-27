@@ -1,6 +1,9 @@
 import type { MockInstance } from 'vitest';
 
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { SvgFactory } from '#assets/factories/SvgFactory';
+import { Loader } from '#assets/Loader';
+import { materializeAssetTypes } from '#extensions/materialize';
 
 import { factoryContext } from './factory-context';
 
@@ -43,11 +46,60 @@ afterEach(() => {
 
 const lastImage = (): HTMLImageElement => {
   const image = capturedImages.at(-1);
-  if (!image) throw new Error('No Image instance was created by the factory under test.');
+
+  if (!image) {
+    throw new Error('No Image instance was created by the factory under test.');
+  }
+
   return image;
 };
 
 describe('SvgFactory', () => {
+  test('reacquiring a sized SVG after a cancelled preview retains the requested raster size', async () => {
+    const loader = new Loader();
+    materializeAssetTypes(loader, coreAssetTypes);
+    const descriptor = { type: 'svg', source: 'icon-play.svg', width: 150, height: 150 } as const;
+    const markup = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3v18l15-9z"/></svg>';
+    const fetchSpy = vi.fn<typeof fetch>().mockImplementation(async () => new Response(markup));
+    vi.stubGlobal('fetch', fetchSpy);
+
+    try {
+      const first = loader.createScope();
+      const initialLoad = first.load(descriptor);
+      await vi.waitFor(() => expect(capturedImages).toHaveLength(1));
+      lastImage().dispatchEvent(new Event('load'));
+      await initialLoad;
+      first.destroy();
+
+      fetchSpy.mockImplementationOnce(
+        (_input, init) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once: true });
+          }),
+      );
+      const cancelled = loader.createScope();
+      const cancelledLoad = cancelled.load(descriptor);
+      await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+      cancelled.destroy();
+      await expect(cancelledLoad).rejects.toMatchObject({ name: 'AbortError' });
+
+      const current = loader.createScope();
+      const reloaded = current.load(descriptor);
+      await vi.waitFor(() => expect(capturedImages).toHaveLength(2));
+      lastImage().dispatchEvent(new Event('load'));
+      await reloaded;
+
+      const blob = createObjectUrlSpy.mock.calls.at(-1)?.[0] as Blob;
+      const rasterized = await blob.text();
+
+      expect(rasterized).toContain('width="150"');
+      expect(rasterized).toContain('height="150"');
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+    } finally {
+      loader.destroy();
+    }
+  });
+
   test('create() resolves with an HTMLImageElement once "load" fires', async () => {
     const factory = new SvgFactory();
 
@@ -66,7 +118,9 @@ describe('SvgFactory', () => {
     const promise = factory.create('<svg></svg>', factoryContext());
     lastImage().dispatchEvent(new Event('error'));
 
-    await expect(promise).rejects.toThrow('Failed to decode SVG source - the markup may be malformed, or (if loaded as the wrong asset type) not SVG at all.');
+    await expect(promise).rejects.toThrow(
+      'Failed to decode SVG source - the markup may be malformed, or (if loaded as the wrong asset type) not SVG at all.',
+    );
   });
 
   test('create() rejects with a clear message on "abort"', async () => {
@@ -107,6 +161,23 @@ describe('SvgFactory', () => {
     expect(text).toContain('height="200"');
     expect(text).not.toContain('width="5"');
     expect(text).not.toContain('height="5"');
+  });
+
+  test('create() keeps a ">" inside a root attribute value and a self-closing root intact', async () => {
+    const factory = new SvgFactory();
+
+    const first = factory.create('<svg data-note="a>b" width="5"><rect/></svg>', factoryContext({ width: 100 }));
+    lastImage().dispatchEvent(new Event('load'));
+    await first;
+
+    const second = factory.create('<svg width="5" viewBox="0 0 1 1"/>', factoryContext({ width: 100 }));
+    lastImage().dispatchEvent(new Event('load'));
+    await second;
+
+    const markupOf = async (call: number): Promise<string> => (createObjectUrlSpy.mock.calls[call]?.[0] as Blob).text();
+
+    expect(await markupOf(0)).toBe('<svg data-note="a>b" width="100"><rect/></svg>');
+    expect(await markupOf(1)).toBe('<svg viewBox="0 0 1 1" width="100"/>');
   });
 
   test('create() leaves the markup untouched when width/height are not provided', async () => {

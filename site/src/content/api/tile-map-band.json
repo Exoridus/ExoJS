@@ -4,7 +4,7 @@
   "symbol": "TileMapBand",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 104,
   "counts": {
@@ -27,7 +27,7 @@
         "Bounds are the union of the band's layer-node bounds (an empty band collapses to a degenerate rect at the band's transformed origin).",
         "Bands are created by TileMapView; construct them through TileMapView rather than directly."
       ],
-      "importLine": "import { TileMapBand } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileMapBand } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {
@@ -575,7 +575,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - either shape is a Polygon that encloses no area (empty, fewer than three distinct vertices, or collinear vertices) and the other is a filled shape (Rectangle, Circle, Ellipse or Polygon); such a polygon overlaps no filled shape, and intersectsWith returns false for the same pairs. Line and Point queries are unchanged: they test the polygon's outline and vertices as before, **or** - the specific shape-pair combination does not support response generation (for example Line against any shape, or Ellipse against a Point). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
         },
         {
           "name": "contains",
@@ -2804,7 +2804,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer (WebGL2). Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
+          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer on both backends. Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
         },
         {
           "name": "clipShape",
@@ -2990,7 +2990,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Filters are borrowed; destroying this node detaches them without destroying them."
         },
         {
           "name": "height",

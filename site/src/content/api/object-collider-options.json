@@ -4,7 +4,7 @@
   "symbol": "ObjectColliderOptions",
   "kind": "interface",
   "subsystem": "tilemap-physics",
-  "importPath": "@codexo/exojs-tilemap-physics",
+  "importPath": "@codexo/exojs/tilemap-physics",
   "tier": "stable",
   "memberCount": 7,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for buildObjectLayerColliders."
       ],
-      "importLine": "import { ObjectColliderOptions } from '@codexo/exojs-tilemap-physics'",
+      "importLine": "import { ObjectColliderOptions } from '@codexo/exojs/tilemap-physics'",
       "sourceLink": null
     },
     {

@@ -67,8 +67,8 @@ const framesUntilAsleep = (world: PhysicsWorld, body: PhysicsBody, seconds: numb
   return -1;
 };
 
-const points = (...coords: number[]): Readonly<PointLike>[] => {
-  const result: Readonly<PointLike>[] = [];
+const points = (...coords: number[]): Array<Readonly<PointLike>> => {
+  const result: Array<Readonly<PointLike>> = [];
 
   for (let i = 0; i < coords.length; i += 2) {
     result.push({ x: coords[i]!, y: coords[i + 1]! });
@@ -242,7 +242,13 @@ describe('sleeping with unresolved contact penetration', () => {
     addBoxFloor(world);
 
     // A trigger volume the resting body sits well inside of.
-    world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: FLOOR_TOP - 16 }, colliders: [{ shape: new BoxShape(200, 200), isSensor: true }] }));
+    world.add(
+      new PhysicsBody({
+        type: 'static',
+        position: { x: 0, y: FLOOR_TOP - 16 },
+        colliders: [{ shape: new BoxShape(200, 200), isSensor: true }],
+      }),
+    );
 
     const body = addDynamic(world, new BoxShape(32, 32), FLOOR_TOP - 16 - 2);
     const sleptAt = framesUntilAsleep(world, body, 2);
@@ -259,7 +265,9 @@ describe('sleeping with unresolved contact penetration', () => {
     // A pass-through platform the resting body overlaps by 10px. Disabled, it
     // applies no impulse, so its penetration is never going to be resolved -
     // and must not keep the body awake forever.
-    const platform = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: FLOOR_TOP - 26 }, colliders: [{ shape: new BoxShape(200, 20) }] }));
+    const platform = world.add(
+      new PhysicsBody({ type: 'static', position: { x: 0, y: FLOOR_TOP - 26 }, colliders: [{ shape: new BoxShape(200, 20) }] }),
+    );
 
     world.contactModifier = (contact: ContactModifierContext): void => {
       if (contact.bodyA === platform || contact.bodyB === platform) {

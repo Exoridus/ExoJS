@@ -1,14 +1,16 @@
-# @codexo/exojs-tilemap
+# @codexo/exojs/tilemap
 
 Generic, format-independent tilemap runtime **and** WebGL2/WebGPU chunk renderer for [ExoJS](https://exoridus.github.io/ExoJS/). No Tiled (or any other on-disk format) vocabulary leaks into this package - adapters such as [`@codexo/exojs-tiled`](https://www.npmjs.com/package/@codexo/exojs-tiled) parse their format and hand this runtime fully resolved tiles.
+
+The former `@codexo/exojs-tilemap` package name remains a 0.20 compatibility shim that forwards to this subpath. Prefer the subpath for new code.
 
 ## Installation
 
 ```sh
-npm install @codexo/exojs @codexo/exojs-tilemap
+npm install --save-exact @codexo/exojs
 ```
 
-`@codexo/exojs` is a peer dependency, so install it explicitly. This package is itself a peer of the format adapters (`@codexo/exojs-tiled`, `@codexo/exojs-ldtk`) rather than something they pull in transitively — install it whether you use an adapter or build procedural / custom-format maps directly.
+The tilemap runtime and renderer ship inside Core. Import them from `@codexo/exojs/tilemap`. Format adapters (`@codexo/exojs-tiled`, `@codexo/exojs-ldtk`) remain separate packages; install only the adapter your format needs.
 
 ## What this package provides
 
@@ -43,7 +45,7 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 
 ```ts
 import { Application, Scene, type Texture, TextureRegion } from '@codexo/exojs';
-import { TileLayer, TileMap, TileMapNode, TileSet, tilemapExtension, TILE_TRANSFORM_IDENTITY } from '@codexo/exojs-tilemap';
+import { TileLayer, TileMap, TileMapNode, TileSet, tilemapExtension, TILE_TRANSFORM_IDENTITY } from '@codexo/exojs/tilemap';
 
 class WorldScene extends Scene {
   private atlas: Texture | null = null;
@@ -135,13 +137,13 @@ Supply a shared `TileProjection({ orientation: 'isometric', tileWidth, tileHeigh
 
 Layer offsets are display translations. `TileLayer.logicalOffset` exposes the corresponding logical vector for simulation. A map's pixel dimensions describe the projected grid AABB, while `projection.getBounds()` also supplies its possibly negative origin. Scene-node bounds include isometric artwork overhangs and tileset offsets. Picking describes cells, not opaque pixels of tall artwork; apply inverse scene and camera transforms before calling the map/layer helpers.
 
-Isometric rendering splits resident storage chunks into diagonal draw sections, sorted across chunks by increasing `tx + ty`, then increasing `tx`. Only consecutive tiles with the same texture are batched, so tall tiles preserve painter order across texture and chunk boundaries. Geometry stays revision-cached. All sections share a layer-grid snap origin, including odd tile sizes. More draw sections and texture changes can cost more than orthogonal batching; no throughput improvement is promised.
+Isometric rendering splits resident storage chunks into diagonal draw sections, sorted across chunks by increasing `tx + ty`, then increasing `tx`. The geometry builder preserves the necessary tile painter order across texture and chunk boundaries. Each renderer can now batch consecutive ordered tiles drawn from up to **four** distinct textures in one instanced draw; a fifth texture flushes the batch without reordering tiles. Geometry stays revision-cached. All sections share a layer-grid snap origin, including odd tile sizes. More draw sections and texture changes can cost more than orthogonal batching; no throughput improvement is promised.
 
 Object layers remain data-only. With a projection their objects use logical coordinates; `layer.getDisplayObject(object)` returns display geometry with the layer offset applied. Rectangles may become polygons and ellipses retain their exact affine shape. Tile/text dimensions stay in display pixels. Actors remain application-owned; bands interleave them between layers, not automatically among individual terrain tiles.
 
 ## Renderer model
 
-- **Chunk-first.** A `TileLayerNode` is a container of per-chunk `TileChunkNode` drawables (one per non-empty loaded chunk). The renderer batches tiles by `(shader, tileset texture)` and issues one instanced draw per batch — draw calls scale with _visible chunks × layers_, not total tile count.
+- **Chunk-first.** A `TileLayerNode` is a container of per-chunk `TileChunkNode` drawables (one per non-empty loaded chunk). The renderer uses a bounded **four-texture slot table** per instanced draw (WebGL2 and WebGPU); the two high bits of each existing 32-byte tile instance select its texture. A blend-mode change, full instance batch, or fifth unique texture flushes the batch. Texture slots reuse entries for repeated atlases, and no tile is reordered to improve batching. Geometry stays revision-cached; reduced texture-change draw calls do not imply a universal improvement across large maps or slow GPUs.
 - **Revision-cached geometry.** Each chunk's quad geometry is built once and cached against the source chunk's `revision`. Unchanged chunks never rebuild; a camera pan rebuilds nothing — off-screen chunks are culled by their local bounds before any geometry is touched.
 - **Orientation.** `flipX` / `flipY` / `diagonal` are baked into the chunk geometry / resolved in the shader (all 8 combinations), with no per-tile matrix or per-frame cost.
 - **Multiple tilesets** with differing tile sizes are first-class; tiles taller than the map grid are bottom-left aligned (Tiled orthogonal convention).
@@ -157,7 +159,7 @@ Object layers remain data-only. With a projection their objects use logical coor
 
 ## Core compatibility
 
-This package follows the Core lockstep release line and declares the compatible `@codexo/exojs` minor as a peer dependency. Install matching package versions.
+This module is built and released with Core. Its private workspace implementation package is not a separate application dependency.
 
 ## Links
 

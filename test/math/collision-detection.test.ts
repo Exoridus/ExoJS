@@ -62,6 +62,29 @@ const diamond = (cx: number, cy: number, r: number): Polygon =>
 // intersectionPointPoint
 // ---------------------------------------------------------------------------
 
+describe('circle and rectangle containment', () => {
+  test('reports full containment for elongated rectangles and corner gaps', () => {
+    const inside = getCollisionCircleRectangle(circle(18, 5, 1), rect(0, 0, 20, 10))!;
+    expect(inside.shapeAinB).toBe(true);
+    const cornerOutside = getCollisionCircleRectangle(circle(0, 0, 5), rect(-4, -4, 8, 8))!;
+    expect(cornerOutside.shapeBinA).toBe(false);
+    const cornerInside = getCollisionCircleRectangle(circle(0, 0, 6), rect(-4, -4, 8, 8))!;
+    expect(cornerInside.shapeBinA).toBe(true);
+  });
+});
+
+describe('segment overlap', () => {
+  test('detects contained and edge-aligned segments', () => {
+    const target = rect(0, 0, 10, 10);
+    const polygon = square(0, 0, 10);
+    expect(intersectionLineRect(line(2, 2, 4, 4), target)).toBe(true);
+    expect(intersectionLinePoly(line(2, 2, 4, 4), polygon)).toBe(true);
+    expect(intersectionLineRect(line(2, 0, 4, 0), target)).toBe(true);
+    expect(intersectionLinePoly(line(2, 0, 4, 0), polygon)).toBe(true);
+    expect(intersectionLineLine(line(2, 0, 4, 0), line(0, 0, 10, 0))).toBe(true);
+  });
+});
+
 describe('intersectionPointPoint', () => {
   test('identical points intersect with zero threshold', () => {
     expect(intersectionPointPoint({ x: 1, y: 1 }, { x: 1, y: 1 })).toBe(true);
@@ -628,12 +651,12 @@ describe('getCollisionCircleRectangle', () => {
     expect(getCollisionCircleRectangle(circle(1000, 1000, 5), rect(0, 0, 10, 10))).toBeNull();
   });
 
-  test('circle overlapping the rectangle face-on computes the correct normal', () => {
+  test('circle overlapping the rectangle face-on computes the correct normal (circle is shapeA, so the normal points into the rectangle)', () => {
     // Circle centred to the right of the rectangle, overlapping its right face.
     const response = getCollisionCircleRectangle(circle(13, 5, 5), rect(0, 0, 10, 10));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(1);
+    expect(response!.projectionN.x).toBeCloseTo(-1);
     expect(response!.projectionN.y).toBeCloseTo(0);
     expect(response!.overlap).toBeCloseTo(2);
   });
@@ -643,7 +666,7 @@ describe('getCollisionCircleRectangle', () => {
     const response = getCollisionCircleRectangle(circle(3, 5, 1), rect(0, 0, 10, 10));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(-1);
+    expect(response!.projectionN.x).toBeCloseTo(1);
     expect(response!.projectionN.y).toBeCloseTo(0);
   });
 
@@ -674,7 +697,7 @@ describe('getCollisionCircleRectangle', () => {
 
     expect(response).not.toBeNull();
     expect(response!.projectionN.x).toBeCloseTo(0);
-    expect(response!.projectionN.y).toBeCloseTo(-1);
+    expect(response!.projectionN.y).toBeCloseTo(1);
   });
 
   test('circle centre exactly inside the rectangle, Y exit axis, exitBottom is the smaller exit', () => {
@@ -683,7 +706,7 @@ describe('getCollisionCircleRectangle', () => {
 
     expect(response).not.toBeNull();
     expect(response!.projectionN.x).toBeCloseTo(0);
-    expect(response!.projectionN.y).toBeCloseTo(1);
+    expect(response!.projectionN.y).toBeCloseTo(-1);
   });
 });
 
@@ -701,7 +724,7 @@ describe('getCollisionEllipseRectangle', () => {
     const response = getCollisionEllipseRectangle(ellipse(-1, 5, 3, 3), rect(0, 0, 10, 10));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(-1);
+    expect(response!.projectionN.x).toBeCloseTo(1);
     expect(response!.projectionN.y).toBeCloseTo(0);
     expect(response!.overlap).toBeCloseTo(2);
   });
@@ -710,7 +733,7 @@ describe('getCollisionEllipseRectangle', () => {
     const response = getCollisionEllipseRectangle(ellipse(3, 5, 2, 2), rect(0, 0, 10, 10));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(-1);
+    expect(response!.projectionN.x).toBeCloseTo(1);
     expect(response!.projectionN.y).toBeCloseTo(0);
     expect(response!.overlap).toBeCloseTo(5); // minExitX (3) + ellipse.rx (2)
   });
@@ -719,7 +742,7 @@ describe('getCollisionEllipseRectangle', () => {
     const response = getCollisionEllipseRectangle(ellipse(7, 5, 2, 2), rect(0, 0, 10, 10));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(1);
+    expect(response!.projectionN.x).toBeCloseTo(-1);
     expect(response!.projectionN.y).toBeCloseTo(0);
     expect(response!.overlap).toBeCloseTo(5); // minExitX (3) + ellipse.rx (2)
   });
@@ -743,7 +766,7 @@ describe('getCollisionEllipseRectangle', () => {
 
     expect(response).not.toBeNull();
     expect(response!.projectionN.x).toBeCloseTo(0);
-    expect(response!.projectionN.y).toBeCloseTo(-1);
+    expect(response!.projectionN.y).toBeCloseTo(1);
     expect(response!.overlap).toBeCloseTo(4); // minExitY (2) + ellipse.ry (2)
   });
 
@@ -753,7 +776,7 @@ describe('getCollisionEllipseRectangle', () => {
 
     expect(response).not.toBeNull();
     expect(response!.projectionN.x).toBeCloseTo(0);
-    expect(response!.projectionN.y).toBeCloseTo(1);
+    expect(response!.projectionN.y).toBeCloseTo(-1);
     expect(response!.overlap).toBeCloseTo(4); // minExitY (2) + ellipse.ry (2)
   });
 });
@@ -771,8 +794,8 @@ describe('getCollisionEllipseCircle', () => {
     const response = getCollisionEllipseCircle(ellipse(0, 0, 5, 3), circle(6, 0, 2));
 
     expect(response).not.toBeNull();
-    // normal points from the circle toward the ellipse, i.e. in -X here.
-    expect(response!.projectionN.x).toBeCloseTo(-1);
+    // normal points from the ellipse (shapeA) toward the circle (shapeB), i.e. +X here.
+    expect(response!.projectionN.x).toBeCloseTo(1);
     expect(response!.overlap).toBeCloseTo(1); // ellipseBoundary(5) + circleRadius(2) - distance(6)
   });
 
@@ -781,7 +804,7 @@ describe('getCollisionEllipseCircle', () => {
 
     expect(response).not.toBeNull();
     expect(response!.projectionN.x).toBeCloseTo(0);
-    expect(response!.projectionN.y).toBeCloseTo(1);
+    expect(response!.projectionN.y).toBeCloseTo(-1);
     expect(response!.overlap).toBeCloseTo(4); // ellipse.ry(3) + circle.radius(1)
   });
 
@@ -789,7 +812,7 @@ describe('getCollisionEllipseCircle', () => {
     const response = getCollisionEllipseCircle(ellipse(0, 0, 2, 5), circle(0, 0, 1));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(1);
+    expect(response!.projectionN.x).toBeCloseTo(-1);
     expect(response!.projectionN.y).toBeCloseTo(0);
     expect(response!.overlap).toBeCloseTo(3); // ellipse.rx(2) + circle.radius(1)
   });
@@ -907,7 +930,7 @@ describe('getCollisionEllipseEllipse', () => {
 
     expect(response).not.toBeNull();
     expect(response!.overlap).toBeGreaterThan(0);
-    expect(response!.projectionN.x).toBeCloseTo(-1);
+    expect(response!.projectionN.x).toBeCloseTo(1);
   });
 
   test('coincident centres with rx > ry push along Y using the smaller axis', () => {
@@ -966,6 +989,46 @@ describe('getCollisionSat', () => {
     expect(response!.shapeAinB).toBe(false);
   });
 
+  test.each([
+    [2, 2, 3],
+    [2, 4, 3],
+    [7, 4, 3],
+    [4, 2, 3],
+    [4, 7, 3],
+  ])('containment at (%s, %s) uses the nearest exit depth %s in both operand orders', (x, y, expectedDepth) => {
+    const big = square(0, 0, 10);
+    const small = rect(x, y, 1, 1);
+    const forward = getCollisionSat(big, small)!;
+    const backward = getCollisionSat(small, big)!;
+
+    expect(forward.overlap).toBeCloseTo(expectedDepth);
+    expect(backward.overlap).toBeCloseTo(expectedDepth);
+    expect(forward.shapeBinA).toBe(true);
+    expect(backward.shapeAinB).toBe(true);
+    expect(backward.projectionN.x).toBeCloseTo(-forward.projectionN.x);
+    expect(backward.projectionN.y).toBeCloseTo(-forward.projectionN.y);
+    expect(forward.projectionN.x * (x - 4.5) + forward.projectionN.y * (y - 4.5)).toBeGreaterThan(0);
+
+    for (const reverse of [false, true]) {
+      const shapeA = reverse ? rect(x, y, 1, 1) : square(0, 0, 10);
+      const shapeB = reverse ? square(0, 0, 10) : rect(x, y, 1, 1);
+      const response = reverse ? backward : forward;
+
+      shapeB.x += response.projectionN.x * (expectedDepth - 0.25);
+      shapeB.y += response.projectionN.y * (expectedDepth - 0.25);
+      expect(getCollisionSat(shapeA, shapeB)!.overlap).toBeCloseTo(0.25);
+      shapeB.x += response.projectionN.x * 0.25;
+      shapeB.y += response.projectionN.y * 0.25;
+      expect(getCollisionSat(shapeA, shapeB)?.overlap ?? 0).toBeCloseTo(0);
+
+      const movedA = reverse ? rect(x, y, 1, 1) : square(0, 0, 10);
+      const stationaryB = reverse ? square(0, 0, 10) : rect(x, y, 1, 1);
+      movedA.x -= response.projectionV.x;
+      movedA.y -= response.projectionV.y;
+      expect(getCollisionSat(movedA, stationaryB)?.overlap ?? 0).toBeCloseTo(0);
+    }
+  });
+
   test('works across shape types (rectangle vs polygon)', () => {
     const response = getCollisionSat(rect(0, 0, 10, 10), square(5, 5, 10));
 
@@ -978,6 +1041,11 @@ describe('getCollisionSat', () => {
     // axes see overlap everywhere, but the diamond's diagonal normals reveal
     // the true separating axis, which can only be found in the second loop.
     expect(getCollisionSat(square(0, 0, 10), diamond(14, -3, 5))).toBeNull();
+  });
+
+  test('returns null when neither shape yields an edge normal', () => {
+    expect(getCollisionSat(new Ellipse(0, 0, 10, 10), new Polygon())).toBeNull();
+    expect(getCollisionSat(new Polygon(), new Ellipse(0, 0, 10, 10))).toBeNull();
   });
 
   test('shapeAinB stays true through every axis of the first shape, then flips false in the second loop', () => {

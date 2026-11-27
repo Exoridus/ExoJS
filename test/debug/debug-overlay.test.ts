@@ -228,7 +228,14 @@ describe('DebugOverlay — lifecycle', () => {
     // A binding is what marks a key consumed, so the browser's own F1 help
     // window / F3 find bar stay shut while the overlay owns those keys. A
     // plain `onKeyDown` subscription runs a frame late and prevents nothing.
-    expect([...mockInput(app).bound.keys()].sort((a, b) => a - b)).toEqual([Keyboard.F1, Keyboard.F2, Keyboard.F3, Keyboard.F4, Keyboard.F6, Keyboard.F7]);
+    expect([...mockInput(app).bound.keys()].sort((a, b) => a - b)).toEqual([
+      Keyboard.F1,
+      Keyboard.F2,
+      Keyboard.F3,
+      Keyboard.F4,
+      Keyboard.F6,
+      Keyboard.F7,
+    ]);
 
     debug.destroy();
   });
@@ -555,6 +562,29 @@ describe('DebugOverlay — master visible switch', () => {
     expect(app.backend.setView).toHaveBeenCalled();
 
     debug.destroy();
+  });
+
+  test('visible=false releases GPU timing without touching the layer flags, and visible=true restores it', () => {
+    const app = makeApp();
+    const debug = new DebugOverlay(app);
+    const setTiming = app.backend.setGpuTimingEnabled as ReturnType<typeof vi.fn>;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
+
+    debug.layers.performance.visible = true;
+    app.onFrame.dispatch(fakeTime);
+    debug.visible = false;
+
+    expect(setTiming).toHaveBeenLastCalledWith(false);
+    expect(debug.layers.performance.visible).toBe(true);
+
+    debug.visible = true;
+    app.onFrame.dispatch(fakeTime);
+
+    expect(setTiming.mock.calls).toEqual([[true], [false], [true]]);
+
+    debug.destroy();
+
+    expect(setTiming).toHaveBeenLastCalledWith(false);
   });
 
   test('restoring visible=true after false resumes rendering', () => {

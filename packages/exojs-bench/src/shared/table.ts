@@ -61,17 +61,26 @@ const pad = (text: string, width: number, align: ColumnAlign): string => (align 
  * Render `rows` under `columns` as a bordered table.
  *
  * Rows shorter than the column list are padded with empty cells, so a caller may
- * leave a trailing column off a row it has nothing to say in. Returns the lines
+ * leave a trailing column off a row it has nothing to say in. Cells past the last
+ * column are ignored. Returns the lines
  * rather than printing them, which is what lets a caller indent a table inside a
  * larger block.
  */
-export const formatTextTable = (columns: readonly TableColumn[], rows: ReadonlyArray<readonly string[]>, options: TableOptions = {}): readonly string[] => {
-  const widths = columns.map((column, index) => rows.reduce((width, row) => Math.max(width, (row[index] ?? '').length), column.header.length));
+export const formatTextTable = (
+  columns: readonly TableColumn[],
+  rows: ReadonlyArray<readonly string[]>,
+  options: TableOptions = {},
+): readonly string[] => {
+  const widths = columns.map((column, index) =>
+    rows.reduce((width, row) => Math.max(width, (row[index] ?? '').length), column.header.length),
+  );
   const rule = (left: string, join: string, right: string): string =>
     left + widths.map(width => BOX.horizontal.repeat(width + CELL_PADDING.length * 2)).join(join) + right;
   const line = (cells: readonly string[]): string =>
     BOX.vertical +
-    columns.map((column, index) => CELL_PADDING + pad(cells[index] ?? '', widths[index]!, column.align ?? 'left') + CELL_PADDING).join(BOX.vertical) +
+    columns
+      .map((column, index) => CELL_PADDING + pad(cells[index] ?? '', widths[index]!, column.align ?? 'left') + CELL_PADDING)
+      .join(BOX.vertical) +
     BOX.vertical;
 
   const body: string[] = [];
@@ -95,7 +104,12 @@ export const formatTextTable = (columns: readonly TableColumn[], rows: ReadonlyA
 };
 
 /** Print a table produced by {@link formatTextTable}, each line indented by `indent`. */
-export const printTextTable = (columns: readonly TableColumn[], rows: ReadonlyArray<readonly string[]>, options: TableOptions = {}, indent = '  '): void => {
+export const printTextTable = (
+  columns: readonly TableColumn[],
+  rows: ReadonlyArray<readonly string[]>,
+  options: TableOptions = {},
+  indent = '  ',
+): void => {
   for (const text of formatTextTable(columns, rows, options)) {
     console.log(`${indent}${text}`);
   }

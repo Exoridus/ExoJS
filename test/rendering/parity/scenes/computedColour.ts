@@ -62,7 +62,9 @@ const square = (color: Color, x: number, y: number, size: number): Sprite => {
 const rooted = (...children: readonly RenderNode[]): Container => {
   const root = new Container();
 
-  for (const child of children) root.addChild(child);
+  for (const child of children) {
+    root.addChild(child);
+  }
 
   return root;
 };
@@ -131,7 +133,12 @@ export const computedColourScenes: readonly Scene[] = [
             ],
             describe: 'backdrop + overlay overlap',
           },
-          { x: 48, y: 48, expect: [ADDITIVE_OVERLAY.r, ADDITIVE_OVERLAY.g, ADDITIVE_OVERLAY.b, 255], describe: 'overlay over the cleared canvas' },
+          {
+            x: 48,
+            y: 48,
+            expect: [ADDITIVE_OVERLAY.r, ADDITIVE_OVERLAY.g, ADDITIVE_OVERLAY.b, 255],
+            describe: 'overlay over the cleared canvas',
+          },
           clearedAt(2, 2),
         ];
       },

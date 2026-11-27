@@ -35,15 +35,27 @@ const PART_SLUGS = new Set(GUIDE_PARTS.map(part => part.slug));
 // `mesh-shader` → `mesh-material` + `shader-source`; the *-application-options /
 // loader-options interfaces are not generated (the generator documents classes
 // and enums only), so their option-page links were dropped.
-const REMOVED_API_SLUGS = ['mesh-shader', 'canvas-application-options', 'loader-options', 'rendering-application-options', 'input-application-options'];
+const REMOVED_API_SLUGS = [
+  'mesh-shader',
+  'canvas-application-options',
+  'loader-options',
+  'rendering-application-options',
+  'input-application-options',
+];
 
 const walkMdx = (dir: string): string[] => {
   const out: string[] = [];
+
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
-    if (statSync(full).isDirectory()) out.push(...walkMdx(full));
-    else if (full.endsWith('.mdx') || full.endsWith('.md')) out.push(full);
+
+    if (statSync(full).isDirectory()) {
+      out.push(...walkMdx(full));
+    } else if (full.endsWith('.mdx') || full.endsWith('.md')) {
+      out.push(full);
+    }
   }
+
   return out;
 };
 
@@ -59,21 +71,40 @@ const normalizeInternal = (href: string): string | null => {
   let h = href.trim();
   // Drop an optional markdown link title: [x](/path "Title").
   const space = h.search(/\s/);
-  if (space >= 0) h = h.slice(0, space);
+
+  if (space >= 0) {
+    h = h.slice(0, space);
+  }
+
   // External, protocol-relative, mailto, anchor-only, or query-only - not ours.
-  if (/^(https?:)?\/\//i.test(h) || h.startsWith('mailto:')) return null;
-  if (h.startsWith('#') || h.startsWith('?')) return null;
+  if (/^(https?:)?\/\//i.test(h) || h.startsWith('mailto:')) {
+    return null;
+  }
+
+  if (h.startsWith('#') || h.startsWith('?')) {
+    return null;
+  }
+
   // Strip hash + query.
   h = h.split('#')[0].split('?')[0];
-  if (!h) return null;
+
+  if (!h) {
+    return null;
+  }
+
   // Strip the optional GitHub Pages base prefix.
   h = h.replace(/^\/ExoJS\//, '/');
-  if (!h.startsWith('/')) return null; // relative link — none exist in the guides
+
+  if (!h.startsWith('/')) {
+    return null;
+  } // relative link — none exist in the guides
+
   // Strip leading slashes, an optional locale segment, and the trailing slash.
   const path = h
     .replace(/^\/+/, '')
     .replace(/^(en|de)\//, '')
     .replace(/\/+$/, '');
+
   return path;
 };
 
@@ -85,16 +116,21 @@ interface Resolution {
 
 const resolveInternal = (path: string): Resolution => {
   const seg = path.split('/');
+
   if (seg[0] === 'api') {
     const slug = seg.slice(1).join('/');
     const ok = API_INDEX_SLUGS.has(slug) || existsSync(join(API_DIR, `${slug}.json`));
+
     return { kind: 'api', ok, target: slug };
   }
+
   if (seg[0] === 'guide') {
     const chapterPath = seg.slice(1).join('/');
     const ok = chapterPath === '' || PART_SLUGS.has(chapterPath) || GUIDE_CHAPTER_BY_PATH.has(chapterPath);
+
     return { kind: 'guide', ok, target: chapterPath };
   }
+
   // Playground and other internal routes are validated by their own embeds.
   return { kind: 'other', ok: true, target: path };
 };
@@ -107,16 +143,31 @@ const STRING_LITERAL_RE = /['"]([^'"]+)['"]/g;
 /** Collect every internal (api|guide) link in a file with its raw form. */
 const collectLinks = (body: string): Array<{ raw: string; path: string; res: Resolution }> => {
   const found: Array<{ raw: string; path: string; res: Resolution }> = [];
+
   const add = (raw: string): void => {
     const path = normalizeInternal(raw);
-    if (path === null) return;
+
+    if (path === null) {
+      return;
+    }
+
     const res = resolveInternal(path);
-    if (res.kind === 'other') return;
+
+    if (res.kind === 'other') {
+      return;
+    }
+
     found.push({ raw, path, res });
   };
 
-  for (const m of body.matchAll(MD_LINK_RE)) add(m[1]);
-  for (const m of body.matchAll(NEXTSTEP_HREF_RE)) add(m[1]);
+  for (const m of body.matchAll(MD_LINK_RE)) {
+    add(m[1]);
+  }
+
+  for (const m of body.matchAll(NEXTSTEP_HREF_RE)) {
+    add(m[1]);
+  }
+
   return found;
 };
 
@@ -126,13 +177,25 @@ const exampleExists = (ref: string): boolean => examplePaths.has(resolveExampleA
 const collectTryItRefs = (body: string): { api: string[]; examples: string[] } => {
   const api: string[] = [];
   const examples: string[] = [];
+
   for (const tag of body.matchAll(TRYIT_TAG_RE)) {
     const block = tag[0];
     const apiArr = /api=\{\[([^\]]*)\]\}/.exec(block);
     const exArr = /examples=\{\[([^\]]*)\]\}/.exec(block);
-    if (apiArr) for (const s of apiArr[1].matchAll(STRING_LITERAL_RE)) api.push(s[1]);
-    if (exArr) for (const s of exArr[1].matchAll(STRING_LITERAL_RE)) examples.push(s[1]);
+
+    if (apiArr) {
+      for (const s of apiArr[1].matchAll(STRING_LITERAL_RE)) {
+        api.push(s[1]);
+      }
+    }
+
+    if (exArr) {
+      for (const s of exArr[1].matchAll(STRING_LITERAL_RE)) {
+        examples.push(s[1]);
+      }
+    }
   }
+
   return { api, examples };
 };
 
@@ -140,12 +203,17 @@ describe('guide prose links', () => {
   it('actually collects internal links (guards against a vacuous regex)', () => {
     let api = 0;
     let guide = 0;
+
     for (const file of guideFiles) {
       for (const link of collectLinks(readFileSync(file, 'utf8'))) {
-        if (link.res.kind === 'api') api++;
-        else if (link.res.kind === 'guide') guide++;
+        if (link.res.kind === 'api') {
+          api++;
+        } else if (link.res.kind === 'guide') {
+          guide++;
+        }
       }
     }
+
     // Conservative floors well below the real counts (~80 API, ~40 guide): high
     // enough that a broken collector trips this, low enough to survive edits.
     expect(api).toBeGreaterThan(50);
@@ -154,37 +222,50 @@ describe('guide prose links', () => {
 
   it('resolves every internal API link to an existing API page', () => {
     const broken: string[] = [];
+
     for (const file of guideFiles) {
       const body = readFileSync(file, 'utf8');
+
       for (const link of collectLinks(body)) {
-        if (link.res.kind === 'api' && !link.res.ok) broken.push(`${rel(file)} → ${link.raw}`);
+        if (link.res.kind === 'api' && !link.res.ok) {
+          broken.push(`${rel(file)} → ${link.raw}`);
+        }
       }
     }
+
     expect(broken).toEqual([]);
   });
 
   it('resolves every internal guide link to a known chapter, part, or landing', () => {
     const broken: string[] = [];
+
     for (const file of guideFiles) {
       const body = readFileSync(file, 'utf8');
+
       for (const link of collectLinks(body)) {
-        if (link.res.kind === 'guide' && !link.res.ok) broken.push(`${rel(file)} → ${link.raw}`);
+        if (link.res.kind === 'guide' && !link.res.ok) {
+          broken.push(`${rel(file)} → ${link.raw}`);
+        }
       }
     }
+
     expect(broken).toEqual([]);
   });
 
   it('never links to a removed or renamed API page', () => {
     const removed = new Set(REMOVED_API_SLUGS);
     const offenders: string[] = [];
+
     for (const file of guideFiles) {
       const body = readFileSync(file, 'utf8');
+
       for (const link of collectLinks(body)) {
         if (link.res.kind === 'api' && removed.has(link.res.target)) {
           offenders.push(`${rel(file)} → ${link.raw}`);
         }
       }
     }
+
     expect(offenders).toEqual([]);
   });
 
@@ -192,27 +273,43 @@ describe('guide prose links', () => {
     // `custom-mesh-shaders` is a valid chapter slug, so match the symbol and the
     // dead API route precisely rather than the substring "mesh-shader".
     const offenders: string[] = [];
+
     for (const file of guideFiles) {
       const body = readFileSync(file, 'utf8');
-      if (/\bMeshShader\b/.test(body)) offenders.push(`${rel(file)} (MeshShader symbol)`);
-      if (body.includes('/api/mesh-shader/')) offenders.push(`${rel(file)} (/api/mesh-shader/ link)`);
+
+      if (/\bMeshShader\b/.test(body)) {
+        offenders.push(`${rel(file)} (MeshShader symbol)`);
+      }
+
+      if (body.includes('/api/mesh-shader/')) {
+        offenders.push(`${rel(file)} (/api/mesh-shader/ link)`);
+      }
     }
+
     expect(offenders).toEqual([]);
   });
 
   it('resolves every TryIt api slug and example ref', () => {
     const brokenApi: string[] = [];
     const brokenExamples: string[] = [];
+
     for (const file of guideFiles) {
       const body = readFileSync(file, 'utf8');
       const { api, examples } = collectTryItRefs(body);
+
       for (const slug of api) {
-        if (!existsSync(join(API_DIR, `${slug}.json`))) brokenApi.push(`${rel(file)} → ${slug}`);
+        if (!existsSync(join(API_DIR, `${slug}.json`))) {
+          brokenApi.push(`${rel(file)} → ${slug}`);
+        }
       }
+
       for (const ref of examples) {
-        if (!exampleExists(ref)) brokenExamples.push(`${rel(file)} → ${ref}`);
+        if (!exampleExists(ref)) {
+          brokenExamples.push(`${rel(file)} → ${ref}`);
+        }
       }
     }
+
     expect(brokenApi).toEqual([]);
     expect(brokenExamples).toEqual([]);
   });

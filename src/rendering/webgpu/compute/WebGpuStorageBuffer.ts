@@ -17,7 +17,8 @@ export class WebGpuStorageBuffer {
   public readonly byteLength: number;
   public readonly label: string;
 
-  private _readbackBuffer: GPUBuffer | null = null;
+  private readonly _readbackSlots: Array<{ buffer: GPUBuffer; busy: boolean }> = [];
+  private _destroyed = false;
 
   public constructor(device: GPUDevice, byteLength: number, label = 'storage', extraUsage: GPUBufferUsageFlags = 0) {
     this.device = device;
@@ -36,7 +37,7 @@ export class WebGpuStorageBuffer {
   }
 
   /**
-   * Optional sink invoked after each {@link read} with the number of bytes read
+   * Optional sink invoked after each completed readback with the number of bytes read
    * back GPU → CPU. Lets a consumer route readback traffic into a backend's
    * resource accountant (`RenderStats.downloadBytes` / `downloadCount`) without
    * coupling this primitive to the backend. Defaults to a no-op.
@@ -44,48 +45,157 @@ export class WebGpuStorageBuffer {
   public onReadback: ((bytes: number) => void) | null = null;
 
   /**
-   * Copy this buffer's contents into a CPU-mappable readback buffer and
-   * await the result. Allocates the readback buffer lazily on first call;
-   * subsequent calls re-use it.
+   * Submit a copy of the requested source range and fill `target` when it maps.
+   * Each in-flight read owns a staging slot, so overlapping reads observe their
+   * own submitted copies. At most three slots are allocated lazily and reused.
    *
-   * Caller passes `target` (a typed-array view) to be filled. Async; one
-   * frame of latency at minimum. Use sparingly - readback is a stall.
+   * `sourceByteOffset` and `target.byteLength` must be multiples of four and the
+   * range must fit this buffer. An empty target completes without GPU work.
+   * Rejects after destruction or while all three staging slots are occupied.
    */
-  public async read(target: ArrayBufferView, encoder?: GPUCommandEncoder): Promise<void> {
-    if (this._readbackBuffer === null) {
-      this._readbackBuffer = this.device.createBuffer({
-        label: `${this.label}-readback`,
-        size: this.byteLength,
-        usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-      });
+  public async read(target: ArrayBufferView, sourceByteOffset = 0): Promise<void> {
+    this._validateRead(target, sourceByteOffset);
+
+    if (target.byteLength === 0) {
+      return;
     }
 
-    const ownEncoder = encoder ?? this.device.createCommandEncoder({ label: `${this.label}-readback-copy` });
+    const encoder = this.device.createCommandEncoder({ label: `${this.label}-readback-copy` });
+    const slot = this._recordCopy(encoder, target.byteLength, sourceByteOffset);
 
-    ownEncoder.copyBufferToBuffer(this.buffer, 0, this._readbackBuffer, 0, this.byteLength);
+    try {
+      this.device.queue.submit([encoder.finish()]);
+    } catch (error) {
+      slot.busy = false;
 
-    if (encoder === undefined) {
-      this.device.queue.submit([ownEncoder.finish()]);
+      throw error;
     }
 
-    await this._readbackBuffer.mapAsync(GPUMapMode.READ);
+    await this._completeRead(slot, target, target.byteLength);
+  }
 
-    const mapped = new Uint8Array(this._readbackBuffer.getMappedRange());
-    const bytes = new Uint8Array(target.buffer as ArrayBuffer, target.byteOffset, target.byteLength);
+  /**
+   * Record a source-range copy in a caller-owned encoder without submitting or
+   * mapping it. Call the returned completion function only after submitting
+   * that encoder. Repeated calls share one completion promise.
+   *
+   * The same range and three-slot capacity limits as {@link read} apply. A
+   * recorded copy reserves its slot until completion or {@link destroy}, even
+   * if its encoder is abandoned. Keep `target` attached and its range valid until completion.
+   */
+  public recordRead(encoder: GPUCommandEncoder, target: ArrayBufferView, sourceByteOffset = 0): () => Promise<void> {
+    this._validateRead(target, sourceByteOffset);
 
-    bytes.set(mapped.subarray(0, target.byteLength));
+    if (target.byteLength === 0) {
+      const completed = Promise.resolve();
 
-    this._readbackBuffer.unmap();
+      return () => completed;
+    }
 
-    this.onReadback?.(target.byteLength);
+    const byteLength = target.byteLength;
+    const slot = this._recordCopy(encoder, byteLength, sourceByteOffset);
+    let completion: Promise<void> | null = null;
+
+    return () => (completion ??= this._completeRead(slot, target, byteLength));
   }
 
   public destroy(): void {
+    if (this._destroyed) {
+      return;
+    }
+
+    this._destroyed = true;
     this.buffer.destroy();
 
-    if (this._readbackBuffer !== null) {
-      this._readbackBuffer.destroy();
-      this._readbackBuffer = null;
+    for (const slot of this._readbackSlots) {
+      slot.buffer.destroy();
     }
+
+    this._readbackSlots.length = 0;
+  }
+
+  private _validateRead(target: ArrayBufferView, sourceByteOffset: number): void {
+    if (this._destroyed) {
+      throw new Error('Cannot read a destroyed storage buffer.');
+    }
+
+    if (!ArrayBuffer.isView(target)) {
+      throw new TypeError('Readback target must be an ArrayBuffer view.');
+    }
+
+    if (
+      !Number.isSafeInteger(sourceByteOffset) ||
+      sourceByteOffset < 0 ||
+      sourceByteOffset % 4 !== 0 ||
+      target.byteLength % 4 !== 0 ||
+      sourceByteOffset + target.byteLength > this.byteLength
+    ) {
+      throw new RangeError('Readback range must be four-byte aligned and fit the storage buffer.');
+    }
+  }
+
+  private _recordCopy(encoder: GPUCommandEncoder, byteLength: number, sourceByteOffset: number): { buffer: GPUBuffer; busy: boolean } {
+    let slot = this._readbackSlots.find(candidate => !candidate.busy);
+
+    if (slot === undefined) {
+      if (this._readbackSlots.length === 3) {
+        throw new Error('Storage buffer readback capacity exhausted.');
+      }
+
+      slot = {
+        buffer: this.device.createBuffer({
+          label: `${this.label}-readback`,
+          size: this.byteLength,
+          usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+        }),
+        busy: false,
+      };
+      this._readbackSlots.push(slot);
+    }
+
+    slot.busy = true;
+
+    try {
+      encoder.copyBufferToBuffer(this.buffer, sourceByteOffset, slot.buffer, 0, byteLength);
+    } catch (error) {
+      slot.busy = false;
+
+      throw error;
+    }
+
+    return slot;
+  }
+
+  private async _completeRead(slot: { buffer: GPUBuffer; busy: boolean }, target: ArrayBufferView, byteLength: number): Promise<void> {
+    if (this._destroyed) {
+      throw new Error('Cannot complete a read from a destroyed storage buffer.');
+    }
+
+    let mapped = false;
+
+    try {
+      await slot.buffer.mapAsync(GPUMapMode.READ, 0, byteLength);
+      mapped = true;
+
+      if (this._destroyed) {
+        throw new Error('Cannot complete a read from a destroyed storage buffer.');
+      }
+
+      if (target.byteLength < byteLength) {
+        throw new TypeError('Readback target was detached or resized before completion.');
+      }
+
+      const bytes = new Uint8Array(target.buffer, target.byteOffset, byteLength);
+
+      bytes.set(new Uint8Array(slot.buffer.getMappedRange(0, byteLength)));
+    } finally {
+      if (mapped) {
+        slot.buffer.unmap();
+      }
+
+      slot.busy = false;
+    }
+
+    this.onReadback?.(byteLength);
   }
 }

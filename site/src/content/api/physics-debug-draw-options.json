@@ -1,0 +1,250 @@
+{
+  "title": "PhysicsDebugDrawOptions",
+  "description": "Toggles for the physics debug overlay.",
+  "symbol": "PhysicsDebugDrawOptions",
+  "kind": "interface",
+  "subsystem": "debug",
+  "importPath": "@codexo/exojs/debug",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Toggles for the physics debug overlay."
+      ],
+      "importLine": "import { PhysicsDebugDrawOptions } from '@codexo/exojs/debug'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "drawAabb",
+          "signature": "drawAabb?: boolean",
+          "signatureTokens": [
+            {
+              "text": "drawAabb",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World AABBs of the geometry the broad phase holds - a chain as its per-edge leaves. Default false."
+        },
+        {
+          "name": "drawBroadphase",
+          "signature": "drawBroadphase?: boolean",
+          "signatureTokens": [
+            {
+              "text": "drawBroadphase",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Broad-phase candidate links between AABB-overlapping leaves - a chain links per edge. Default false."
+        },
+        {
+          "name": "drawCenters",
+          "signature": "drawCenters?: boolean",
+          "signatureTokens": [
+            {
+              "text": "drawCenters",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Body origins (centre markers). Default false."
+        },
+        {
+          "name": "drawContacts",
+          "signature": "drawContacts?: boolean",
+          "signatureTokens": [
+            {
+              "text": "drawContacts",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Contact points. Default false."
+        },
+        {
+          "name": "drawJoints",
+          "signature": "drawJoints?: boolean",
+          "signatureTokens": [
+            {
+              "text": "drawJoints",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lines connecting the bodies of each joint. Default false."
+        },
+        {
+          "name": "drawNormals",
+          "signature": "drawNormals?: boolean",
+          "signatureTokens": [
+            {
+              "text": "drawNormals",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Contact normals. Default false."
+        },
+        {
+          "name": "drawShapes",
+          "signature": "drawShapes?: boolean",
+          "signatureTokens": [
+            {
+              "text": "drawShapes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Collider shape outlines, coloured by body type. Default true."
+        },
+        {
+          "name": "drawSleeping",
+          "signature": "drawSleeping?: boolean",
+          "signatureTokens": [
+            {
+              "text": "drawSleeping",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tint sleeping bodies distinctly (applies to the shape outline). Default false."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/debug/PhysicsDebugDraw.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/debug/PhysicsDebugDraw.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/debug/PhysicsDebugDraw.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/debug/PhysicsDebugDraw.ts"
+}

@@ -16,7 +16,11 @@ const displacementUniforms = { uScale: UniformType.Vec4, uOffset: UniformType.Ve
  * The displacement source pair, built once and shared by every instance.
  * @internal
  */
-export const displacementShader = createFilterShader({ glsl: { fragment: glslFragment }, wgsl: wgslFragment, uniforms: displacementUniforms });
+export const displacementShader = createFilterShader({
+  glsl: { fragment: glslFragment },
+  wgsl: wgslFragment,
+  uniforms: displacementUniforms,
+});
 
 /** Construction-time options for a {@link DisplacementFilter}. */
 export interface DisplacementFilterOptions {
@@ -103,7 +107,7 @@ export class DisplacementFilter extends Filter {
     });
   }
 
-  /** The displacement map. Assigning swaps it without rebuilding the pass. */
+  /** The displacement map. Assigning swaps it and invalidates cached owners without rebuilding the pass. */
   public get map(): Texture {
     return this._map;
   }
@@ -113,6 +117,7 @@ export class DisplacementFilter extends Filter {
       assertNumericMap(map);
       this._map = map;
       this._shaderFilter._setTexture('uMap', map);
+      this.invalidate();
     }
   }
 
@@ -146,7 +151,10 @@ export class DisplacementFilter extends Filter {
   }
 
   public set offsetU(offsetU: number) {
-    this._shaderFilter.uniforms.uOffset.x = offsetU;
+    if (this.offsetU !== offsetU) {
+      this._shaderFilter.uniforms.uOffset.x = offsetU;
+      this.invalidate();
+    }
   }
 
   /** Vertical map sampling offset, in the map's own UV units. */
@@ -155,7 +163,10 @@ export class DisplacementFilter extends Filter {
   }
 
   public set offsetV(offsetV: number) {
-    this._shaderFilter.uniforms.uOffset.y = offsetV;
+    if (this.offsetV !== offsetV) {
+      this._shaderFilter.uniforms.uOffset.y = offsetV;
+      this.invalidate();
+    }
   }
 
   /** Set both axes at once. Returns `this` for chaining. */

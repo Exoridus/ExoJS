@@ -22,8 +22,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
  */
 const REPO_ROOT = resolve(__dirname, '../..');
 const SCANNER = 'scripts/check-inline-source.ts';
-const TSX_CLI = join('node_modules', 'tsx', 'dist', 'cli.mjs');
-const FIXTURE_DIRECTORY = 'test/ci/inline-source-fixtures';
+const FIXTURE_DIRECTORY = 'test/ci/__inline-source-fixtures__';
 /**
  * WebGl2Shader detection is scoped to engine-owned code, so a shader fixture only
  * proves anything from inside that scope. It lives under `src/` for the duration
@@ -34,10 +33,13 @@ const SHADER_FIXTURE_DIRECTORY = 'src/__inline-source-fixtures__';
 
 /** Strings that name a marker without being a module, and must stay silent. */
 const ACCEPTED: Readonly<Record<string, string>> = {
-  'prose-about-worklets': "export const hint = 'Call registerProcessor(name, ctor) at the end of your worklet module, once it is authored.';",
-  'error-message': "export const message = 'self.postMessage() is unavailable: this code is not running inside a Worker global scope at all.';",
+  'prose-about-worklets':
+    "export const hint = 'Call registerProcessor(name, ctor) at the end of your worklet module, once it is authored.';",
+  'error-message':
+    "export const message = 'self.postMessage() is unavailable: this code is not running inside a Worker global scope at all.';",
   'short-literal': "export const marker = 'self.onmessage = handler;';",
-  'wgsl-identifier-in-prose': "export const note = 'The @fragment entry point is supplied by the material author, not by the engine, in every backend.';",
+  'wgsl-identifier-in-prose':
+    "export const note = 'The @fragment entry point is supplied by the material author, not by the engine, in every backend.';",
 };
 
 /** Strings that are a module the repository would otherwise be maintaining as text. */
@@ -89,7 +91,7 @@ const fixturePath = (name: string): string => `${SHADER_CASES.has(name) ? SHADER
 /** Runs the scanner over one fixture; returns its combined output, or null when it passed. */
 const scan = (name: string): string | null => {
   try {
-    execFileSync('node', [TSX_CLI, SCANNER, fixturePath(name)], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' });
+    execFileSync(process.execPath, ['--import', 'tsx', SCANNER, fixturePath(name)], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' });
 
     return null;
   } catch (error) {

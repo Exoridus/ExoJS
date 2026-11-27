@@ -1,12 +1,12 @@
 {
   "name": "@codexo/exojs-bench",
   "version": "0.0.0",
-  "description": "Private, reproducible cross-library rendering benchmark harness for ExoJS. Not published; run `pnpm --filter @codexo/exojs-bench bench:setup` once to pull the competitor libraries (kept out of the workspace install -- see competitors/package.json), then `pnpm --filter @codexo/exojs-bench bench`.",
+  "description": "Private, reproducible cross-library benchmark harness for ExoJS. Not published. Competitor libraries are pinned devDependencies of this package, installed by the ordinary workspace install; run pnpm bench:competitive for the cross-library rendering benchmark.",
   "private": true,
   "type": "module",
   "scripts": {
-    "bench:setup": "pnpm install --dir competitors --frozen-lockfile && node competitors/link.ts",
     "bench": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts",
+    "bench:competitive": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/runCompetitive.ts",
     "bench:reference": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts --suite=reference --domain=all",
     "perf:baseline": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts",
     "gate:timing": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/runTimingGate.ts",
@@ -21,15 +21,22 @@
   "devDependencies": {
     "@codexo/exojs": "workspace:*",
     "@codexo/exojs-config": "workspace:*",
-    "@codexo/exojs-lighting": "workspace:*",
-    "@codexo/exojs-particles": "workspace:*",
-    "@codexo/exojs-physics": "workspace:*",
-    "@codexo/exojs-tilemap": "workspace:*",
+    "@dimforge/rapier2d-compat": "0.19.3",
+    "@newkrok/nape-js": "3.42.0",
+    "@pixi/layout": "3.2.1",
+    "@pixi/tilemap": "5.0.2",
+    "@types/matter-js": "0.20.2",
     "@types/node": "^26.6.2",
     "@webgpu/types": "^0.1.74",
+    "excalibur": "0.32.0",
+    "matter-js": "0.20.0",
+    "phaser": "4.2.1",
+    "pixi.js": "8.19.0",
+    "planck": "1.5.0",
     "playwright": "^1.63.0",
     "tsx": "^4.23.15",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.2",
+    "yoga-layout": "3.2.1"
   },
   "license": "MIT"
 }

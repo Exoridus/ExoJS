@@ -9,14 +9,15 @@
  *
  * Read-only against the registry: nothing here talks to npm beyond `pnpm pack`.
  */
-import { readFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 
 import type { CommandRunner } from './command-runner.ts';
-import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+import { isShimDue } from './legacy-shims.ts';
+import { LEGACY_SHIMS, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import {
-  PUBLISH_ORDER,
   type OfficialPackageName,
+  PUBLISH_ORDER,
   type ReleaseManifest,
   renderChecksums,
   serializeManifest,
@@ -40,12 +41,24 @@ export interface PrepareOptions {
 
 const readVersion = (packageJsonPath: string): { name: string; version: string } => {
   const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { name: string; version: string };
+
   return { name: pkg.name, version: pkg.version };
 };
 
-/** Resolves the lockstep official packages in canonical publish order (PUBLISH_ORDER). */
-export const officialPackages = (rootDir: string): OfficialPackage[] =>
-  LOCKSTEP_PACKAGES.map(p => ({ name: p.name, dir: p.dir === '.' ? rootDir : resolve(rootDir, p.dir) }));
+/**
+ * The packages a release packs, in PUBLISH_ORDER: every lockstep package, then
+ * the legacy shims whose version the cut set to this release. An unchanged shim
+ * stays on the version it was last published under and is left out.
+ */
+export const officialPackages = (rootDir: string): OfficialPackage[] => {
+  const release = readVersion(resolve(rootDir, 'package.json')).version;
+  const lockstep = LOCKSTEP_PACKAGES.map(p => ({ name: p.name, dir: p.dir === '.' ? rootDir : resolve(rootDir, p.dir) }));
+  const shims = LEGACY_SHIMS.map(shim => ({ name: shim.name, dir: resolve(rootDir, shim.dir), line: shim.line })).filter(shim =>
+    isShimDue(shim, readVersion(resolve(shim.dir, 'package.json')).version, release),
+  );
+
+  return [...lockstep, ...shims.map(({ name, dir }) => ({ name, dir }))];
+};
 
 /**
  * Asserts all official packages share one lockstep version and returns it.
@@ -54,9 +67,11 @@ export const officialPackages = (rootDir: string): OfficialPackage[] =>
 export const assertLockstepVersion = (packages: OfficialPackage[]): string => {
   const versions = packages.map(p => ({ ...p, ...readVersion(resolve(p.dir, 'package.json')) }));
   const unique = new Set(versions.map(v => v.version));
+
   if (unique.size !== 1) {
     throw new Error(`Lockstep version mismatch: ${versions.map(v => `${v.name}@${v.version}`).join(', ')}`);
   }
+
   return [...unique][0];
 };
 
@@ -66,9 +81,13 @@ export const assertLockstepVersion = (packages: OfficialPackage[]): string => {
  * path for each, in publish order. Throws if any pack fails or a tarball is
  * missing - a coordinated release cannot have a hole in the matrix.
  */
-export const packOfficialTarballs = (runner: CommandRunner, packages: OfficialPackage[], stagingDir: string): { pkg: OfficialPackage; tarball: string }[] => {
+export const packOfficialTarballs = (
+  runner: CommandRunner,
+  packages: OfficialPackage[],
+  stagingDir: string,
+): Array<{ pkg: OfficialPackage; tarball: string }> => {
   mkdirSync(stagingDir, { recursive: true });
-  const out: { pkg: OfficialPackage; tarball: string }[] = [];
+  const out: Array<{ pkg: OfficialPackage; tarball: string }> = [];
 
   for (const pkg of packages) {
     const result = runner.run({
@@ -76,9 +95,11 @@ export const packOfficialTarballs = (runner: CommandRunner, packages: OfficialPa
       args: ['pack', '--pack-destination', stagingDir, '--config.ignore-scripts=true'],
       cwd: pkg.dir,
     });
+
     if (result.code !== 0) {
       throw new Error(`pnpm pack failed for ${pkg.name}:\n${result.stderr || result.stdout}`);
     }
+
     const { version } = readVersion(resolve(pkg.dir, 'package.json'));
     const scoped = pkg.name.replace('@', '').replace('/', '-');
     const tarball = resolve(stagingDir, `${scoped}-${version}.tgz`);
@@ -89,12 +110,17 @@ export const packOfficialTarballs = (runner: CommandRunner, packages: OfficialPa
 };
 
 /** Builds a release manifest from the packed tarballs (hashing each one). */
-export const buildManifest = (version: string, revision: string, packed: { pkg: OfficialPackage; tarball: string }[]): ReleaseManifest => {
+export const buildManifest = (
+  version: string,
+  revision: string,
+  packed: Array<{ pkg: OfficialPackage; tarball: string }>,
+): ReleaseManifest => {
   const shortRevision = revision.length >= 7 ? revision.slice(0, 7) : revision;
 
   const packages: TarballRecord[] = packed
     .map(({ pkg, tarball }) => {
       const { sha256, bytes } = sha256File(tarball);
+
       return { name: pkg.name, version, file: basename(tarball), sha256, bytes };
     })
     .sort((a, b) => PUBLISH_ORDER.indexOf(a.name) - PUBLISH_ORDER.indexOf(b.name));

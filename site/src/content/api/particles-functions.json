@@ -1,10 +1,10 @@
 {
   "title": "Particles Functions",
-  "description": "Free functions and constants exported from @codexo/exojs-particles.",
+  "description": "Free functions and constants exported from @codexo/exojs/particles.",
   "symbol": "Particles Functions",
   "kind": "namespace",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -19,7 +19,7 @@
       "title": "Overview",
       "members": [],
       "paragraphs": [
-        "Free functions and constants exported from @codexo/exojs-particles. Import any of them directly, for example `import { createParticlesExtension } from '@codexo/exojs-particles'`."
+        "Free functions and constants exported from @codexo/exojs/particles. Import any of them directly, for example `import { createParticlesExtension } from '@codexo/exojs/particles'`."
       ],
       "importLine": null,
       "sourceLink": null

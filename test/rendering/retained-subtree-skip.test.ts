@@ -1,7 +1,7 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Mesh } from '#rendering/mesh/Mesh';
-import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
+import { type DrawCommand, RenderEntryKind, resolveDrawBounds } from '#rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { GroupScope } from '#rendering/plan/RenderScope';
@@ -45,6 +45,7 @@ const createTestBackend = (): RenderBackend => {
     },
     setView(v: View | null) {
       renderTarget.setView(v);
+
       return this;
     },
     setRenderTarget() {
@@ -104,6 +105,7 @@ const collectDraws = (root: Container, backend: RenderBackend): DrawCommand[] =>
   RenderPlanOptimizer.optimize(plan);
 
   const draws: DrawCommand[] = [];
+
   for (const pass of plan.passes) {
     gatherScopeDraws(pass.root, draws);
   }
@@ -254,7 +256,7 @@ describe('static-subtree skip: invalidation gates', () => {
     expect(cache).not.toBeNull();
 
     const isCaptureClean = (): boolean =>
-      cache!.isClean(root._contentRevision, root._structureRevision, root._transformRevision, backend.view.updateId, backend);
+      cache!.isClean(root._contentRevision, root._structureRevision, root._transformRevision, backend.view.updateId, backend, backend.view);
 
     expect(isCaptureClean()).toBe(true);
 
@@ -278,6 +280,8 @@ describe('static-subtree skip: invalidation gates', () => {
 
     leaf.setPosition(500, 500); // still likely in view at 800x600, bounds still change
     const draws = collectDraws(root, backend);
+
+    resolveDrawBounds(draws[0]!);
 
     expect(draws[0]!.minX).toBe(500);
 

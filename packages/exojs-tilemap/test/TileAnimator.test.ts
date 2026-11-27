@@ -9,23 +9,20 @@ import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── Test helpers ──────────────────────────────────────────────────────────
 
-const fakeTexture = (): Texture => {
-  return {
+const fakeTexture = (): Texture =>
+  ({
     destroyed: false,
     destroy: () => {},
     height: 512,
     label: 'test',
     uid: 0,
     width: 512,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const fakeRegion = (): TextureRegion => {
-  return new TextureRegion(fakeTexture(), { height: 512, width: 512, x: 0, y: 0 });
-};
+const fakeRegion = (): TextureRegion => new TextureRegion(fakeTexture(), { height: 512, width: 512, x: 0, y: 0 });
 
-const makeTileset256 = (name = 'ts'): TileSet => {
-  return new TileSet({
+const makeTileset256 = (name = 'ts'): TileSet =>
+  new TileSet({
     columns: 16,
     name,
     tileCount: 256,
@@ -33,10 +30,9 @@ const makeTileset256 = (name = 'ts'): TileSet => {
     tileWidth: 32,
     texture: fakeRegion(),
   });
-};
 
-const makeLayer = (ts: TileSet, w = 3, h = 3): TileLayer => {
-  return new TileLayer({
+const makeLayer = (ts: TileSet, w = 3, h = 3): TileLayer =>
+  new TileLayer({
     height: h,
     id: 0,
     name: 'layer',
@@ -45,7 +41,6 @@ const makeLayer = (ts: TileSet, w = 3, h = 3): TileLayer => {
     tilesets: [ts],
     width: w,
   });
-};
 
 const setTile = (layer: TileLayer, ts: TileSet, tx: number, ty: number, localTileId = 0): void => {
   layer.setTileAt(tx, ty, { localTileId, tileset: ts, transform: TILE_TRANSFORM_IDENTITY });
@@ -101,6 +96,101 @@ describe('TileAnimator', () => {
 
     // The static cell was never touched.
     expect(layer.getTileAt(1, 1)?.localTileId).toBe(5);
+  });
+
+  it('animates a definition tile that is not one of its frames', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(3, {
+      animation: [
+        { localTileId: 1, duration: 100 },
+        { localTileId: 2, duration: 100 },
+      ],
+    });
+    const layer = makeLayer(ts, 1, 1);
+    setTile(layer, ts, 0, 0, 3);
+    const animator = new TileAnimator(layer);
+
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(3);
+    animator.update(0.05);
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(1);
+    animator.update(0.1);
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(2);
+    animator.update(0.1);
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(1);
+  });
+
+  it('keeps the definition animation through reset and rescan when its frames have no definition', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(3, {
+      animation: [
+        { localTileId: 1, duration: 100 },
+        { localTileId: 2, duration: 100 },
+      ],
+    });
+    const layer = makeLayer(ts, 2, 1);
+    setTile(layer, ts, 0, 0, 3);
+    const animator = new TileAnimator(layer);
+
+    animator.reset();
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(1);
+    animator.update(0.15);
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(2);
+    setTile(layer, ts, 1, 0, 3);
+    animator.rescan();
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(1);
+    expect(animator.animatedCellCount).toBe(2);
+    expect(animator.elapsedMs).toBe(0);
+    animator.update(0.15);
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(2);
+    expect(layer.getTileAt(1, 0)?.localTileId).toBe(2);
+  });
+
+  it('does not take ownership of a frame tile written by the caller', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(0, {
+      animation: [
+        { localTileId: 0, duration: 100 },
+        { localTileId: 1, duration: 100 },
+      ],
+    });
+    const layer = makeLayer(ts, 1, 1);
+    setTile(layer, ts, 0, 0, 0);
+    const animator = new TileAnimator(layer);
+    animator.update(0.05);
+    setTile(layer, ts, 0, 0, 1);
+    const revision = layer.revision;
+
+    animator.update(0.1);
+    animator.update(0.1);
+    animator.reset();
+    animator.rescan();
+
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(1);
+    expect(layer.revision).toBe(revision);
+    expect(animator.animatedCellCount).toBe(0);
+  });
+
+  it('does not overwrite a caller change to the tile orientation', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(0, {
+      animation: [
+        { localTileId: 0, duration: 100 },
+        { localTileId: 1, duration: 100 },
+      ],
+    });
+    const layer = makeLayer(ts, 1, 1);
+    setTile(layer, ts, 0, 0, 0);
+    const animator = new TileAnimator(layer);
+    animator.update(0.05);
+    layer.setTileAt(0, 0, { localTileId: 0, tileset: ts, transform: { flipX: true, flipY: false, diagonal: false } });
+    const revision = layer.revision;
+
+    animator.update(0.1);
+    animator.reset();
+
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(0);
+    expect(layer.getTileAt(0, 0)?.transform.flipX).toBe(true);
+    expect(layer.revision).toBe(revision);
   });
 
   it('does not rewrite a cell that stays within the same frame window', () => {
@@ -267,6 +357,33 @@ describe('TileAnimator', () => {
     expect(layer.getTileAt(0, 0)?.localTileId).toBe(0);
     expect(animator.elapsedMs).toBe(0);
     expect(animator.animatedCellCount).toBe(2);
+  });
+
+  it('rescan() does not restore an animated tile the caller removed or replaced', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(0, {
+      animation: [
+        { localTileId: 0, duration: 100 },
+        { localTileId: 1, duration: 100 },
+      ],
+    });
+
+    const layer = makeLayer(ts, 3, 1);
+    setTile(layer, ts, 0, 0, 0);
+    setTile(layer, ts, 1, 0, 0);
+    setTile(layer, ts, 2, 0, 0);
+
+    const animator = new TileAnimator(layer);
+    animator.update(0.15);
+
+    layer.clearTileAt(0, 0);
+    setTile(layer, ts, 1, 0, 9);
+    animator.rescan();
+
+    expect(layer.getTileAt(0, 0)).toBeNull();
+    expect(layer.getTileAt(1, 0)?.localTileId).toBe(9);
+    expect(layer.getTileAt(2, 0)?.localTileId).toBe(0);
+    expect(animator.animatedCellCount).toBe(1);
   });
 
   it('destroy() drops the cell registry and zeroes the clock', () => {

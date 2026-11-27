@@ -4,7 +4,7 @@
   "symbol": "FlangerEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 12,
   "counts": {
@@ -25,7 +25,7 @@
         "lfoOscillator ── lfoGain (depth in seconds) ──▶ delayNode.delayTime ```",
         "Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `feedbackGain.gain = feedback`; `lfoGain.gain = depthMs / 1000`."
       ],
-      "importLine": "import { FlangerEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { FlangerEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

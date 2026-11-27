@@ -27,7 +27,7 @@ import type { TargetResolution } from '#rendering/types';
 const MIN_RESOLUTION = 1 / 64;
 
 /** Resolve one {@link TargetResolution} against the enclosing target's. */
-const resolveOne = (value: TargetResolution, parentResolution: number): number => {
+export const resolveTargetResolution = (value: TargetResolution, parentResolution: number): number => {
   if (value === 'inherit') {
     return parentResolution;
   }
@@ -61,10 +61,10 @@ export const resolveBarrierResolution = (
     readonly filters: readonly Filter[];
   },
 ): number => {
-  let resolution = options.cacheAsTexture ? resolveOne(options.cacheResolution, parentResolution) : Number.POSITIVE_INFINITY;
+  let resolution = options.cacheAsTexture ? resolveTargetResolution(options.cacheResolution, parentResolution) : Number.POSITIVE_INFINITY;
 
   for (const filter of options.filters) {
-    resolution = Math.min(resolution, resolveOne(filter.resolution, parentResolution));
+    resolution = Math.min(resolution, resolveTargetResolution(filter.resolution, parentResolution));
   }
 
   // Neither a cache nor a filter: the barrier still allocates a target (an alpha
@@ -84,7 +84,12 @@ export const resolveBarrierResolution = (
  * on a DPR-3 phone" into a hard render error for a scene that renders fine
  * today.
  */
-export const clampResolutionToTextureSize = (resolution: number, logicalWidth: number, logicalHeight: number, maxTextureSize: number): number => {
+export const clampResolutionToTextureSize = (
+  resolution: number,
+  logicalWidth: number,
+  logicalHeight: number,
+  maxTextureSize: number,
+): number => {
   if (maxTextureSize <= 0) {
     return resolution;
   }

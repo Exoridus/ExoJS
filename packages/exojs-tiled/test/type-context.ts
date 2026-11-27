@@ -3,7 +3,7 @@ import { basename, join } from 'node:path';
 
 import type { AssetFactoryContext } from '@codexo/exojs';
 import { Texture } from '@codexo/exojs';
-import type { TileMap } from '@codexo/exojs-tilemap';
+import type { TileMap } from '@codexo/exojs/tilemap';
 import { vi } from 'vitest';
 
 import type { TiledMap } from '../src/TiledMap';
@@ -14,20 +14,19 @@ import { tileMapType } from '../src/tileMapType';
 const PKG_DIR = basename(process.cwd()) === 'exojs-tiled' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-tiled');
 const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
 
-export const loadFixture = (name: string): unknown => {
-  return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
-};
+export const loadFixture = (name: string): unknown => JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
 
 /**
  * Drives the two Tiled types against a set of in-memory fixtures.
  *
- * The dependency scope answers the three requests a Tiled load makes: a
- * `texture` for every image, a `json` for every external `.tsj`, and a
- * `tiledSource` for the document the runtime map is derived from.
+ * The dependency scope answers the requests a Tiled load makes: a `texture`
+ * for every image, a `json` for every external `.tsj`, a `text` for every
+ * object template, and a `tiledSource` for the document the runtime map is
+ * derived from. A string fixture is served as text as is.
  */
 export const makeTiledContext = (fixtures: Record<string, unknown>, textureSizes: Record<string, { w: number; h: number }> = {}) => {
   const textureLoad = vi.fn((asset: unknown): Texture => {
-    const source = (asset as { _config: { source: string } })._config.source;
+    const { source } = asset as { source: string };
     const texture = new Texture();
     // A runtime TileSet validates its atlas dimensions, so a fixture that
     // declares a specific atlas needs a texture that matches it.
@@ -40,14 +39,19 @@ export const makeTiledContext = (fixtures: Record<string, unknown>, textureSizes
   });
 
   const load = vi.fn(async (asset: unknown): Promise<unknown> => {
-    const { type, source } = (asset as { _config: { type: string; source: string } })._config;
+    const { type: reference, source } = asset as { type: string | { id: string }; source: string };
+    const type = typeof reference === 'string' ? reference : reference.id;
 
     if (type === 'texture') {
       return textureLoad(asset);
     }
 
-    if (type === 'json') {
-      if (Object.hasOwn(fixtures, source)) return fixtures[source];
+    if (type === 'json' || type === 'text') {
+      if (Object.hasOwn(fixtures, source)) {
+        const fixture = fixtures[source];
+
+        return type === 'text' && typeof fixture !== 'string' ? JSON.stringify(fixture) : fixture;
+      }
 
       throw new Error(`makeTiledContext: no fixture registered for "${source}"`);
     }
@@ -81,9 +85,8 @@ export const makeTiledContext = (fixtures: Record<string, unknown>, textureSizes
   };
 
   /** Runs the runtime type, which reaches its document through the dependency scope. */
-  const loadRuntime = async (source: string, options?: unknown): Promise<TileMap> => {
-    return tileMapType.createFactory().create(undefined, contextFor(source, options) as never);
-  };
+  const loadRuntime = async (source: string, options?: unknown): Promise<TileMap> =>
+    tileMapType.createFactory().create(undefined, contextFor(source, options) as never);
 
   return { load, textureLoad, contextFor, loadSource, loadRuntime };
 };

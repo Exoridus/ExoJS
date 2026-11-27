@@ -31,7 +31,10 @@ const chapters = [
 
 const examplesPath = path.resolve(repoRoot, 'examples', 'examples.json');
 const outputDir = path.resolve(siteRoot, 'src', 'content', 'guide');
-const examplesCatalog = JSON.parse(fs.readFileSync(examplesPath, 'utf8')) as Record<string, { slug: string; title: string; description: string }[]>;
+const examplesCatalog = JSON.parse(fs.readFileSync(examplesPath, 'utf8')) as Record<
+  string,
+  Array<{ slug: string; title: string; description: string }>
+>;
 
 const safeDescription = (text: string): string => text.replaceAll('"', '\\"');
 const safeTitle = (text: string): string => text.replaceAll('"', '\\"');
@@ -39,7 +42,8 @@ const safeTitle = (text: string): string => text.replaceAll('"', '\\"');
 const makeIntro = (title: string): string =>
   `${title} introduces the core patterns used in this chapter, with short runnable examples that can be previewed inline and opened in the playground for deeper iteration. Use this page as a quick tour of capabilities before writing fuller production code.`;
 
-const makeNote = (title: string): string => `${title} highlights a focused technique that is meant to be copied and adapted in your own scene setup.`;
+const makeNote = (title: string): string =>
+  `${title} highlights a focused technique that is meant to be copied and adapted in your own scene setup.`;
 
 fs.rmSync(outputDir, { recursive: true, force: true });
 fs.mkdirSync(outputDir, { recursive: true });

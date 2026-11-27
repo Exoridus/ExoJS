@@ -54,20 +54,28 @@ Verify JavaScript MIME types, font and media responses, HTTPS, and any required 
 
 ## Using a release bundle without a bundler
 
-Core provides ESM and classic-script bundles. Prefer a bundler-based project for dependency resolution and tree shaking; importing selected names from an already bundled browser module does not make the browser download only those exports.
+Core ships ESM only. Prefer a bundler-based project for dependency resolution and tree shaking; importing selected names from an already bundled browser module does not make the browser download only those exports.
 
-For a classic script, copy a specific release's Core bundle into your deployed files:
+For a module script, copy a specific release's `dist/esm/` tree (or the Full Release ZIP's `vendor/exojs/esm/`) into your deployed files and map the package name with an import map:
 
 ```html
-<script src="./vendor/exo.iife.min.js"></script>
-<script>
-  const { Application, Scene } = Exo;
+<script type="importmap">
+  {
+    "imports": {
+      "@codexo/exojs": "./vendor/exojs/esm/index.js",
+      "@codexo/exojs/physics": "./vendor/exojs/esm/physics/index.js"
+    }
+  }
+</script>
+<script type="module">
+  import { Application, Scene } from '@codexo/exojs';
+  import { PhysicsDebugDraw } from '@codexo/exojs/physics';
 </script>
 ```
 
-The Core-only bundle is `exo.iife.min.js`. `exo.full.iife.min.js` contains Core and the official runtime packages except React and tilemap physics on the same `Exo` global. Choose one; do not load separate independent Core copies together. The full bundle includes APIs, but package-specific systems and application configuration still need to be used correctly.
+Import maps require the page's scripts to be modules and the files to be served with a JavaScript MIME type. The classic-script bundles of earlier lines (`exo.iife.min.js`, `exo.full.iife.min.js` and the `Exo` global) are gone since v0.20; see the [v0.20 migration guide](/ExoJS/en/guide/getting-started/migration-v020/) for the replacement patterns.
 
-For browser ESM, the debug bundle is external-Core and needs `@codexo/exojs` resolved to the same Core module, for example through an import map. Keep the map, engine, debug module, and optional packages version-aligned. Avoid unversioned CDN URLs in a reproducible production deployment.
+The debug bundle (`exo.debug.esm.js`) is external-Core and needs `@codexo/exojs` resolved to the same Core module, for example through the same import map. Keep the map, engine, debug module, and optional packages version-aligned. Avoid unversioned CDN URLs in a reproducible production deployment.
 
 ## Policies and optional features
 

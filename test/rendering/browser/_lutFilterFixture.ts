@@ -30,7 +30,9 @@ const LUT_SIZE = 256;
 const context2d = (canvas: HTMLCanvasElement): CanvasRenderingContext2D => {
   const context = canvas.getContext('2d');
 
-  if (context === null) throw new Error('A 2D context is required to build LUT fixtures.');
+  if (context === null) {
+    throw new Error('A 2D context is required to build LUT fixtures.');
+  }
 
   return context;
 };
@@ -82,6 +84,24 @@ export const probeLut = (): Texture => {
 
 /** `probeLut()` applied to one 0-255 channel triple, on the CPU. */
 export const expectedProbeOutput = (r: number, g: number, b: number): RgbaTuple => [255 - r, Math.round(g / 2), 255, 255];
+
+/** Fill an existing handle with an identity cube, optionally inverting its red curve. */
+export const fillCubeLut = (texture: Texture, size: number, invertRed = false): void => {
+  const cube = LutFilter.identityLut3D(size);
+
+  if (invertRed) {
+    for (let offset = 0; offset < cube.buffer.length; offset += 4) {
+      cube.buffer[offset] = 255 - cube.buffer[offset]!;
+    }
+  }
+
+  texture.setPixels({
+    colorSpace: 'none',
+    alphaMode: 'straight',
+    levels: [{ width: cube.width, height: cube.height, data: cube.buffer }],
+  });
+  cube.destroy();
+};
 
 /** A sprite of `color`, filtered by `filter`, parented under a fresh root. */
 export const lutScene = (color: string, filter: LutFilter): { root: Container; texture: Texture } => {

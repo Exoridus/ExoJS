@@ -12,10 +12,10 @@ import { getAudioContext } from '#audio/audioContext';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
 import { AudioInput } from '#audio/AudioInput';
-import { AudioStream } from '#audio/AudioStream';
 import type { AudioStreamVoice } from '#audio/AudioStreamVoice';
 import { AudioSystem } from '#audio/AudioSystem';
 import type { InputVoice } from '#audio/InputVoice';
+import { Music } from '#audio/Music';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 
@@ -34,11 +34,13 @@ const createAudioElementStub = (): HTMLAudioElement => {
   Object.defineProperty(el, 'loop', { configurable: true, writable: true, value: false });
   Object.defineProperty(el, 'playbackRate', { configurable: true, writable: true, value: 1 });
   Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: true });
+
   return el;
 };
 
 const makeStream = (): MediaStream => {
   const tracks = [{ stop: vi.fn() }];
+
   return { getTracks: () => tracks } as unknown as MediaStream;
 };
 
@@ -96,8 +98,10 @@ const setupPannerSpy = (): { panners: MockPannerNode[]; restore: () => void } =>
       orientationZ: makeParam(),
     };
     panners.push(panner);
+
     return panner as unknown as PannerNode;
   });
+
   return { panners, restore: () => spy.mockRestore() };
 };
 
@@ -124,8 +128,10 @@ const setupGainSpy = (): { gains: MockGainNode[]; restore: () => void } => {
       gain: { value: 1, ...makeParam() },
     };
     gains.push(node);
+
     return node as unknown as GainNode;
   });
+
   return { gains, restore: () => spy.mockRestore() };
 };
 
@@ -153,8 +159,10 @@ const setupBufferSourceSpy = (): { sources: MockSourceNode[]; restore: () => voi
       buffer: null as AudioBuffer | null,
     };
     sources.push(node);
+
     return node as unknown as AudioBufferSourceNode;
   });
+
   return { sources, restore: () => spy.mockRestore() };
 };
 
@@ -165,8 +173,10 @@ const setupMediaElementSourceSpy = (): { sources: MockSourceNode[]; restore: () 
   const spy = vi.spyOn(ctx, 'createMediaElementSource').mockImplementation(() => {
     const node = { connect: vi.fn(), disconnect: vi.fn() };
     sources.push(node);
+
     return node as unknown as MediaElementAudioSourceNode;
   });
+
   return { sources, restore: () => spy.mockRestore() };
 };
 
@@ -178,8 +188,10 @@ const setupMediaStreamSourceSpy = (): { sources: MockSourceNode[]; restore: () =
   const spy = vi.spyOn(ctx, 'createMediaStreamSource').mockImplementation(stream => {
     const node = original(stream) as unknown as MockSourceNode;
     sources.push(node);
+
     return node as unknown as MediaStreamAudioSourceNode;
   });
+
   return { sources, restore: () => spy.mockRestore() };
 };
 
@@ -232,7 +244,7 @@ describe('Real de-spatialization — each concrete voice reconnects directly exa
     const pannerSpy = setupPannerSpy();
     const sourceSpy = setupMediaElementSourceSpy();
     const el = createAudioElementStub();
-    const stream = new AudioStream(el);
+    const stream = new Music(el);
 
     const voice = system.play(stream) as AudioStreamVoice;
     const output = gainSpy.gains[0];

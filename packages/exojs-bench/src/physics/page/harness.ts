@@ -87,8 +87,8 @@ const CLOCK_PROBE_ITERATIONS = 200_000;
  *
  * Each arm's ADAPTER MODULE is imported dynamically rather than at the top of
  * this file, because the adapter is where the competitor library's bare
- * specifier lives. A specifier the dev server cannot resolve - the state of a
- * checkout that never ran `bench:setup` - fails that module, and a static import
+ * specifier lives. A specifier the dev server cannot resolve - for example an
+ * uninstalled competitor - fails that module, and a static import
  * would take the whole harness page down with it, leaving no page to report from.
  * Loading each adapter on demand turns that into one rejected arm carrying the
  * loader's own message.
@@ -102,7 +102,7 @@ const ARM_FACTORIES: ReadonlyArray<{
   {
     engine: 'exojs-physics',
     config: 'native',
-    library: '@codexo/exojs-physics',
+    library: '@codexo/exojs/physics',
     create: async (): Promise<PhysicsAdapter> => {
       const module = await import('../adapters/exojs-physics');
 
@@ -196,7 +196,10 @@ const resolveArms = async (): Promise<Map<string, ResolvedArm>> => {
         throw new Error(`the arm identifies itself as ${armKey(adapter.engine, adapter.config)}, but the matrix knows it as ${key}`);
       }
 
-      arms.set(key, { adapter, report: { engine: factory.engine, config: factory.config, library: factory.library, available: true, reason: '' } });
+      arms.set(key, {
+        adapter,
+        report: { engine: factory.engine, config: factory.config, library: factory.library, available: true, reason: '' },
+      });
     } catch (error) {
       const reason = sanitizeReason(error instanceof Error ? error.message : String(error), factory.library);
 

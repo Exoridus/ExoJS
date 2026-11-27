@@ -23,14 +23,75 @@ export interface SunShadowRowState {
   epoch: number;
 }
 
-export const removeStaleShadowRows = <T extends { epoch: number }>(rows: Map<Light, T>, epoch: number): void => {
+/**
+ * Drop every light that was not written in pass `epoch`. A light's samples are
+ * all claimed in the same pass, so its first one dates them all.
+ */
+export const removeStaleShadowRows = <T extends { epoch: number }>(rows: Map<Light, T | readonly T[]>, epoch: number): void => {
   for (const [light, state] of rows) {
-    if (state.epoch !== epoch) {
+    const first = Array.isArray(state) ? (state[0] as T | undefined) : (state as T);
+
+    if (first?.epoch !== epoch) {
       rows.delete(light);
     }
   }
 };
 
+/**
+ * Record `states[sample]` as built for this row, origin, axis, reach and
+ * geometry in pass `epoch`, and answer whether the row has to be rebuilt:
+ * `false` only when that same row was last built from exactly those inputs.
+ */
+export const claimShadowRow = (
+  states: ShadowRowState[],
+  sample: number,
+  row: number,
+  x: number,
+  y: number,
+  axisX: number,
+  axisY: number,
+  radius: number,
+  geometryRevision: number,
+  epoch: number,
+): boolean => {
+  const state = states[sample];
+
+  if (state === undefined) {
+    states[sample] = { row, x, y, axisX, axisY, radius, geometryRevision, epoch };
+
+    return true;
+  }
+
+  state.epoch = epoch;
+
+  if (
+    state.row === row &&
+    state.x === x &&
+    state.y === y &&
+    state.axisX === axisX &&
+    state.axisY === axisY &&
+    state.radius === radius &&
+    state.geometryRevision === geometryRevision
+  ) {
+    return false;
+  }
+
+  state.row = row;
+  state.x = x;
+  state.y = y;
+  state.axisX = axisX;
+  state.axisY = axisY;
+  state.radius = radius;
+  state.geometryRevision = geometryRevision;
+
+  return true;
+};
+
+/**
+ * The revision of a segment buffer's contents: it stays put while the count
+ * and the first `count * 4` floats match the previous call, and increments
+ * when either differs. `clear` drops the retained capacity and resets it.
+ */
 export class ShadowGeometryRevision {
   private _segments = new Float32Array(0);
   private _segmentCount = -1;

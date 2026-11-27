@@ -1,0 +1,309 @@
+{
+  "title": "DocumentCodec",
+  "description": "AssetSourceCodec for an asset whose source file is a persisted, versioned document (`{ \"$type\": ..., \"$version\": ..., ...body }`). The representation kept in a cache is the text exactly as it arrived, frame and original version included. Migrations and validation run on every decode, after the cache and before the factory, so shipping a newer document version with new migrations reads records cached by an older release without a cache miss and without a layout version bump. Any failure to read the document - malformed JSON, a foreign `$type`, a newer or discontinued `$version`, a failing migration, a body the parser rejects - is an AssetDecodeError naming the type, with the specific error as its `cause`. A factory only ever sees a validated current-version body.",
+  "symbol": "DocumentCodec",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "AssetSourceCodec for an asset whose source file is a persisted, versioned document (`{ \"$type\": ..., \"$version\": ..., ...body }`).",
+        "The representation kept in a cache is the text exactly as it arrived, frame and original version included. Migrations and validation run on every decode, after the cache and before the factory, so shipping a newer document version with new migrations reads records cached by an older release without a cache miss and without a layout version bump.",
+        "Any failure to read the document - malformed JSON, a foreign `$type`, a newer or discontinued `$version`, a failing migration, a body the parser rejects - is an AssetDecodeError naming the type, with the specific error as its `cause`. A factory only ever sees a validated current-version body."
+      ],
+      "importLine": "import { DocumentCodec } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(history: DocumentHistory<Document>): DocumentCodec<Document>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "history",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DocumentHistory",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DocumentCodec",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "history",
+              "type": "DocumentHistory<Document>",
+              "optional": false
+            }
+          ],
+          "returnType": "DocumentCodec<Document>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "decode",
+          "signature": "decode(stored: string): Promise<Document>",
+          "signatureTokens": [
+            {
+              "text": "decode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "stored",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "stored",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Document>",
+          "description": "Interpret a stored representation as the source a factory consumes."
+        },
+        {
+          "name": "fromBytes",
+          "signature": "fromBytes(bytes: ArrayBuffer): Promise<string>",
+          "signatureTokens": [
+            {
+              "text": "fromBytes",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bytes",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "bytes",
+              "type": "ArrayBuffer",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<string>",
+          "description": "Read the representation out of bytes the application already holds - a slice of an asset container, or any other in-memory acquisition. Omit it when the type cannot be built from bytes alone (it needs response headers, or a URL a browser primitive must own). Such a type cannot be packed into a container, and attempting it reports that specifically rather than failing somewhere inside a decode."
+        },
+        {
+          "name": "fromResponse",
+          "signature": "fromResponse(response: Response): Promise<string>",
+          "signatureTokens": [
+            {
+              "text": "fromResponse",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "response",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Response",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "response",
+              "type": "Response",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<string>",
+          "description": "Read the representation out of a network response."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/DocumentCodec.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/DocumentCodec.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/DocumentCodec.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/DocumentCodec.ts"
+}

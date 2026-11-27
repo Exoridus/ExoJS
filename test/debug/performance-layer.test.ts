@@ -96,7 +96,8 @@ const makeApp = (opts: { root?: FakeNode | null; gpuTiming?: boolean } = {}) =>
   }) as unknown as import('#core/Application').Application;
 
 /** The fake backend behind an app built by {@link makeApp}. */
-const backendOf = (app: import('#core/Application').Application): ReturnType<typeof makeBackend> => app.backend as unknown as ReturnType<typeof makeBackend>;
+const backendOf = (app: import('#core/Application').Application): ReturnType<typeof makeBackend> =>
+  app.backend as unknown as ReturnType<typeof makeBackend>;
 
 const time = (ms: number): Seconds => Time.toSeconds(Time.milliseconds(ms));
 
@@ -294,6 +295,64 @@ describe('PerformanceLayer', () => {
       expect(backendOf(app).setGpuTimingEnabled).toHaveBeenLastCalledWith(false);
     });
 
+    test('hiding a shown panel stops GPU timing', () => {
+      const app = makeApp({ gpuTiming: true });
+      const layer = new PerformanceLayer(app);
+
+      layer.visible = true;
+      layer.update(time(16));
+      layer.visible = false;
+
+      expect(backendOf(app).setGpuTimingEnabled).toHaveBeenLastCalledWith(false);
+      layer.destroy();
+    });
+
+    test('hide, show and hide again switch timing off, on and off once each', () => {
+      const app = makeApp({ gpuTiming: true });
+      const layer = new PerformanceLayer(app);
+      const setTiming = backendOf(app).setGpuTimingEnabled;
+
+      layer.visible = true;
+      layer.update(time(16));
+      layer.visible = false;
+      layer.visible = false;
+      layer.visible = true;
+      layer.update(time(16));
+      layer.update(time(16));
+      layer.visible = false;
+
+      expect(setTiming.mock.calls).toEqual([[true], [false], [true], [false]]);
+      layer.destroy();
+    });
+
+    test('a re-shown panel reports the device clock again', () => {
+      const app = makeApp({ gpuTiming: true });
+      const layer = new PerformanceLayer(app);
+
+      layer.visible = true;
+      layer.update(time(16));
+      layer.visible = false;
+      layer.visible = true;
+      backendOf(app).stats.gpuFrameTimeMs = 2;
+      layer.update(time(16));
+
+      expect(internals(layer)._textGpu?.text).toBe('GPU: 2.00ms last');
+      layer.destroy();
+    });
+
+    test('destroy() while hidden does not switch timing off a second time', () => {
+      const app = makeApp({ gpuTiming: true });
+      const layer = new PerformanceLayer(app);
+      const setTiming = backendOf(app).setGpuTimingEnabled;
+
+      layer.visible = true;
+      layer.update(time(16));
+      layer.visible = false;
+      layer.destroy();
+
+      expect(setTiming.mock.calls).toEqual([[true], [false]]);
+    });
+
     test('destroy() before the panel exists asks the backend for nothing', () => {
       const app = makeApp({ gpuTiming: true });
 
@@ -339,6 +398,18 @@ describe('PerformanceLayer', () => {
       expect(internals(layer)._textBudget?.text).toBe('Over: 0/120 (33.3ms)');
     });
 
+    test('rebuilding the panel restores the over-budget color', () => {
+      const layer = new PerformanceLayer(makeApp());
+      layer.update(time(40));
+      const red = internals(layer)._textFrame!.style.fillColor.clone();
+      layer.destroy();
+
+      layer.update(time(40));
+
+      expect(internals(layer)._textFrame!.style.fillColor.equals(red)).toBe(true);
+      expect(internals(layer)._textBudget!.style.fillColor.equals(red)).toBe(true);
+    });
+
     test('the frame-time and budget rows turn red while the window holds an overrun and revert once it ages out', () => {
       const layer = new PerformanceLayer(makeApp());
 
@@ -353,7 +424,9 @@ describe('PerformanceLayer', () => {
       expect(int._textBudget?.style.fillColor.equals(inBudgetColor!)).toBe(false);
 
       // Push the 40ms sample out of the 120-entry ring.
-      for (let i = 0; i < 120; i++) layer.update(time(10));
+      for (let i = 0; i < 120; i++) {
+        layer.update(time(10));
+      }
 
       expect(int._textFrame?.style.fillColor.equals(inBudgetColor!)).toBe(true);
       expect(int._textBudget?.style.fillColor.equals(inBudgetColor!)).toBe(true);

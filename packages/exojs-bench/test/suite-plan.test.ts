@@ -7,15 +7,45 @@ import { applyPlan } from '../src/rendering/selection';
 import type { ScenarioLoads } from '../src/suite/catalog';
 import { PHYSICS_SCENARIOS, primaryLoadOf, RENDERING_SCENARIOS } from '../src/suite/catalog';
 import type { PlanDomain } from '../src/suite/plan';
-import { cellKey, parseSuite, resolveSuitePlan } from '../src/suite/plan';
+import { cellKey, computePlanHash, parseSuite, resolveSuitePlan } from '../src/suite/plan';
 
 const RENDERING_LADDERS = new Map<string, readonly number[]>(ARCHETYPES.map(archetype => [archetype.id as string, archetype.nodeCounts]));
-const PHYSICS_LADDERS = new Map<string, readonly number[]>(PHYSICS_ARCHETYPES.map(archetype => [archetype.id as string, archetype.bodyCounts]));
+const PHYSICS_LADDERS = new Map<string, readonly number[]>(
+  PHYSICS_ARCHETYPES.map(archetype => [archetype.id as string, archetype.bodyCounts]),
+);
 
 const planFor = (suite: 'reference' | 'full', domain: PlanDomain, extreme = false): ReturnType<typeof resolveSuitePlan> =>
   resolveSuitePlan({ suite, domain, extreme, ladders: domain === 'rendering' ? RENDERING_LADDERS : PHYSICS_LADDERS });
 
-const scenarioIds = (plan: ReturnType<typeof resolveSuitePlan>): Set<string> => new Set(plan.workloads.map(workload => workload.scenarioId));
+const scenarioIds = (plan: ReturnType<typeof resolveSuitePlan>): Set<string> =>
+  new Set(plan.workloads.map(workload => workload.scenarioId));
+
+it('changes plan identity when a workload unit or membership changes', () => {
+  const workload = { scenarioId: 'scene', loadId: '1k', value: 1000, unit: 'nodes' as const, primary: true, extreme: false };
+  const original = computePlanHash('reference', 'rendering', [workload]);
+
+  expect(computePlanHash('reference', 'rendering', [{ ...workload, unit: 'bodies' }])).not.toBe(original);
+  expect(computePlanHash('reference', 'rendering', [])).not.toBe(original);
+});
+
+it('hashes workload content independently of order without mutating the workloads', () => {
+  const workload = { scenarioId: 'scene', loadId: 'load', value: 1000, unit: 'nodes' as const, primary: true, extreme: false };
+  const workloads = Object.freeze([
+    workload,
+    { ...workload, scenarioId: 'other' },
+    { ...workload, loadId: 'other' },
+    { ...workload, value: 2000 },
+    { ...workload, unit: 'bodies' as const },
+  ]);
+  const reversed = [...workloads].reverse();
+
+  expect(computePlanHash('reference', 'rendering', workloads)).toBe(computePlanHash('reference', 'rendering', reversed));
+  expect(workloads[0]).toBe(workload);
+  expect(computePlanHash('reference', 'rendering', [workload, workload])).not.toBe(computePlanHash('reference', 'rendering', [workload]));
+  expect(computePlanHash('reference', 'rendering', [{ ...workload, value: 2000 }])).not.toBe(
+    computePlanHash('reference', 'rendering', [workload]),
+  );
+});
 
 /**
  * ExoJS-internal probes: archetypes the published catalog deliberately omits
@@ -32,15 +62,36 @@ const INTERNAL_PROBES = [
   'overdraw',
 ];
 
+describe('primaryLoadOf', () => {
+  const scenario = (loads: ScenarioLoads['loads']): ScenarioLoads => ({ scenarioId: 'fixture', unit: 'nodes', loads });
+
+  test('throws when no load is primary', () => {
+    expect(() => primaryLoadOf(scenario([{ loadId: '1k', value: 1_000, reference: true }]))).toThrow(/exactly one/);
+  });
+
+  test('throws when two loads claim to be primary', () => {
+    expect(() =>
+      primaryLoadOf(
+        scenario([
+          { loadId: '1k', value: 1_000, reference: true, primary: true },
+          { loadId: '2k', value: 2_000, reference: false, primary: true },
+        ]),
+      ),
+    ).toThrow(/exactly one/);
+  });
+});
+
 describe('published workload catalog', () => {
-  const catalogs: readonly (readonly [string, readonly ScenarioLoads[]])[] = [
+  const catalogs: ReadonlyArray<readonly [string, readonly ScenarioLoads[]]> = [
     ['rendering', RENDERING_SCENARIOS],
     ['physics', PHYSICS_SCENARIOS],
   ];
 
   for (const [domain, scenarios] of catalogs) {
     it(`${domain}: every scenario names exactly one headline load, and it is part of the reference plan`, () => {
-      const offenders = scenarios.filter(scenario => scenario.loads.filter(load => load.primary === true).length !== 1 || !primaryLoadOf(scenario).reference);
+      const offenders = scenarios.filter(
+        scenario => scenario.loads.filter(load => load.primary === true).length !== 1 || !primaryLoadOf(scenario).reference,
+      );
 
       expect(offenders.map(scenario => scenario.scenarioId)).toStrictEqual([]);
     });
@@ -99,9 +150,11 @@ describe('suite resolution', () => {
     for (const scenario of RENDERING_SCENARIOS) {
       const headline = primaryLoadOf(scenario);
 
-      expect(plan.workloads.some(workload => workload.scenarioId === scenario.scenarioId && workload.loadId === headline.loadId && workload.primary)).toBe(
-        true,
-      );
+      expect(
+        plan.workloads.some(
+          workload => workload.scenarioId === scenario.scenarioId && workload.loadId === headline.loadId && workload.primary,
+        ),
+      ).toBe(true);
     }
   });
 
@@ -182,7 +235,14 @@ describe('plan identity', () => {
   });
 
   it('cell keys separate backend, arm configuration and load', () => {
-    const base = { domain: 'rendering' as const, engine: 'exojs', config: 'current', backend: 'webgl2', scenarioId: 'static-heavy', loadId: '10k' };
+    const base = {
+      domain: 'rendering' as const,
+      engine: 'exojs',
+      config: 'current',
+      backend: 'webgl2',
+      scenarioId: 'static-heavy',
+      loadId: '10k',
+    };
 
     expect(cellKey(base)).toBe(cellKey({ ...base }));
     expect(cellKey(base)).not.toBe(cellKey({ ...base, backend: 'webgpu' }));

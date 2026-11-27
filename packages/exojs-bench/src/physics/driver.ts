@@ -4,7 +4,14 @@ import { fileURLToPath } from 'node:url';
 import type { Browser } from 'playwright';
 import { chromium, webkit } from 'playwright';
 
-import type { BaseProvenance, HostInfo, LibraryProvenance, PlatformDeclaration, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
+import type {
+  BaseProvenance,
+  HostInfo,
+  LibraryProvenance,
+  PlatformDeclaration,
+  PrereleaseStamp,
+  RenderingBrowser,
+} from '../shared/provenance';
 import {
   classifyPrerelease,
   declaredPrereleaseOf,
@@ -13,6 +20,7 @@ import {
   readLibraryProvenance,
   readPlatformVersion,
 } from '../shared/provenance';
+import { raceWithTimeout } from '../shared/timeout';
 import type { ViteDevServer } from '../shared/viteServer';
 import { PHYSICS_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
 import type { RunPlan } from '../suite/plan';
@@ -21,7 +29,7 @@ import type { PhysicsArmReport, PhysicsClockReport } from './page/contract';
 import type { PhysicsCellResult, PhysicsCellSpec } from './PhysicsAdapter';
 
 /** npm package name of the native physics arm, resolved for version provenance. */
-const NATIVE_PHYSICS_PACKAGE = '@codexo/exojs-physics';
+const NATIVE_PHYSICS_PACKAGE = '@codexo/exojs/physics';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PAGE_DIR = resolve(HERE, 'page');
@@ -180,7 +188,11 @@ export const startViteServer = async (version: string): Promise<ViteDevServer> =
  * instead of letting it reject - except a determinism divergence, which the page
  * reports as its own outcome kind and which fails the run.
  */
-const runCellInPage = async (page: import('playwright').Page, spec: PhysicsCellSpec, resolutionMs: number | null): Promise<PhysicsCellResult> => {
+const runCellInPage = async (
+  page: import('playwright').Page,
+  spec: PhysicsCellSpec,
+  resolutionMs: number | null,
+): Promise<PhysicsCellResult> => {
   let outcome;
 
   try {
@@ -202,32 +214,14 @@ const runCellInPage = async (page: import('playwright').Page, spec: PhysicsCellS
  * Run one cell, resolving to {@link CELL_WEDGED} if it does not finish within
  * {@link CELL_TIMEOUT_MS}. The still-pending evaluate is left to reject when the
  * browser closes; its rejection is swallowed so it never surfaces as an
- * unhandled rejection.
+ * unhandled rejection, and the hang guard is disarmed on every settlement.
  */
 const runCellOrWedge = async (
   page: import('playwright').Page,
   spec: PhysicsCellSpec,
   resolutionMs: number | null,
-): Promise<PhysicsCellResult | typeof CELL_WEDGED> => {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<typeof CELL_WEDGED>(resolvePromise => {
-    timer = setTimeout(() => resolvePromise(CELL_WEDGED), CELL_TIMEOUT_MS);
-  });
-
-  const run = runCellInPage(page, spec, resolutionMs).then(result => {
-    if (timer !== undefined) {
-      clearTimeout(timer);
-    }
-
-    return result;
-  });
-
-  run.catch(() => {
-    /* intentionally ignored */
-  });
-
-  return Promise.race([run, timeout]);
-};
+): Promise<PhysicsCellResult | typeof CELL_WEDGED> =>
+  raceWithTimeout(runCellInPage(page, spec, resolutionMs), CELL_TIMEOUT_MS, CELL_WEDGED);
 
 /** A page ready to drive cells, plus what it reported about itself. */
 interface HarnessSession {
@@ -241,15 +235,22 @@ interface HarnessSession {
 /** Open the harness page and read the arms it could build plus the clock it can time with. */
 const openSession = async (baseUrl: string, browserName: RenderingBrowser): Promise<HarnessSession> => {
   const browser = await launchBrowser(browserName);
-  const page = await browser.newPage();
 
-  await page.goto(baseUrl, { waitUntil: 'load' });
-  await page.waitForFunction(() => typeof globalThis.__runPhysicsCell === 'function');
+  try {
+    const page = await browser.newPage();
 
-  const clock = await page.evaluate(() => globalThis.__physicsClock!());
-  const arms = await page.evaluate(() => globalThis.__physicsArms!());
+    await page.goto(baseUrl, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof globalThis.__runPhysicsCell === 'function');
 
-  return { browser, page, arms, clock, version: browser.version() };
+    const clock = await page.evaluate(() => globalThis.__physicsClock!());
+    const arms = await page.evaluate(() => globalThis.__physicsArms!());
+
+    return { browser, page, arms, clock, version: browser.version() };
+  } catch (error) {
+    await browser.close().catch(() => undefined);
+
+    throw error;
+  }
 };
 
 /**
@@ -288,29 +289,31 @@ export const runPhysicsMatrix = async (
   const browserName = options.browser ?? DEFAULT_RENDERING_BROWSER;
   const engineVersionSource = readLibraryProvenance([NATIVE_PHYSICS_PACKAGE]);
   const server = await startViteServer(engineVersionSource[0]?.version ?? '0.0.0');
-  const baseUrl = server.resolvedUrls?.local[0];
-
-  if (baseUrl === undefined) {
-    await server.close();
-    throw new Error('The physics harness server started without a local URL to drive.');
-  }
-
-  const onCellResult: PhysicsCellResultSink = options.onCellResult ?? ((): void => undefined);
-  const results: PhysicsCellResult[] = [];
-  const timestamp = new Date().toISOString();
-
-  let session = await openSession(baseUrl, browserName);
-  let relaunched = false;
+  let session: HarnessSession | undefined;
 
   try {
-    const { arms, clock } = session;
-    const available = new Set(arms.filter(arm => arm.available).map(arm => `${arm.engine}/${arm.config}`));
-    const reasons = new Map(arms.map(arm => [`${arm.engine}/${arm.config}`, arm.reason]));
+    const baseUrl = server.resolvedUrls?.local[0];
+
+    if (baseUrl === undefined) {
+      throw new Error('The physics harness server started without a local URL to drive.');
+    }
+
+    const onCellResult: PhysicsCellResultSink = options.onCellResult ?? ((): void => undefined);
+    const results: PhysicsCellResult[] = [];
+    const timestamp = new Date().toISOString();
+    let relaunched = false;
+
+    session = await openSession(baseUrl, browserName);
+    const { arms } = session;
+    let clock = session.clock;
+    let available = new Set(arms.filter(arm => arm.available).map(arm => `${arm.engine}/${arm.config}`));
+    let reasons = new Map(arms.map(arm => [`${arm.engine}/${arm.config}`, arm.reason]));
 
     const allCells = buildPhysicsMatrix(arms);
     const planned = options.plan ? applyPhysicsPlan(allCells, options.plan) : allCells;
     const filtered = options.filter ? applyFilter(planned, options.filter) : planned;
-    const cells = options.timedStepsOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedSteps: options.timedStepsOverride! }));
+    const cells =
+      options.timedStepsOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedSteps: options.timedStepsOverride! }));
 
     if (cells.length === 0) {
       throw new Error('The physics matrix is empty: no arm/archetype/body-count matched the requested filter.');
@@ -344,8 +347,16 @@ export const runPhysicsMatrix = async (
         remaining = remaining.slice(1);
         relaunched = true;
 
-        await session.browser.close();
+        const previousSession = session;
+        session = undefined;
+        await previousSession.browser.close();
         session = await openSession(baseUrl, browserName);
+
+        // The relaunched page is a new measurement condition: its clock, its
+        // arm set and its version are what the remaining cells run against.
+        clock = session.clock;
+        available = new Set(session.arms.filter(arm => arm.available).map(arm => `${arm.engine}/${arm.config}`));
+        reasons = new Map(session.arms.map(arm => [`${arm.engine}/${arm.config}`, arm.reason]));
         continue;
       }
 
@@ -357,7 +368,10 @@ export const runPhysicsMatrix = async (
     // Disclosures and arm versions only for the arms this browser could build,
     // in matrix order: a run never claims a version for an arm it did not run.
     const measuredArms = arms.filter(arm => arm.available);
-    const libraries = readLibraryProvenance([NATIVE_PHYSICS_PACKAGE, ...measuredArms.map(arm => arm.library).filter(name => name !== NATIVE_PHYSICS_PACKAGE)]);
+    const libraries = readLibraryProvenance([
+      NATIVE_PHYSICS_PACKAGE,
+      ...measuredArms.map(arm => arm.library).filter(name => name !== NATIVE_PHYSICS_PACKAGE),
+    ]);
     const armCaveats = [...new Set(measuredArms.map(arm => arm.engine))]
       .map(engine => ARM_DISCLOSURES[engine])
       .filter((caveat): caveat is string => caveat !== undefined);
@@ -381,7 +395,6 @@ export const runPhysicsMatrix = async (
         'All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.',
         'Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.',
         'Arm roles: matter-js, planck and nape-js are the JAVASCRIPT PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.',
-        "Jointed bodies do not collide with each other. The joint scene pins each link at the edge it shares with the next, so whether that pair ALSO registers a contact is a configuration choice and not a property of the scene - and the libraries disagree about it at their defaults. Every arm that exposes the switch is set explicitly (exojs collideConnected=false, planck collideConnected=false, rapier setContactsEnabled(false), nape Constraint.ignore=true) so the row measures the constraint work and not each engine's contact margin at a touching edge. matter-js exposes no per-constraint switch and is left at its defaults, where it produces no contact between the links of this scene; its figure is published on that basis rather than on a configured one.",
         'Jointed bodies do not collide with each other. The joint scene pins each link at the edge it shares with the next, so whether that pair ALSO registers a contact is a configuration choice rather than a property of the scene - and the libraries disagree about it at their defaults. Every arm that exposes the switch is set explicitly (exojs collideConnected=false, planck collideConnected=false, rapier setContactsEnabled(false), nape Constraint.ignore=true), so the row measures constraint work and not each engine contact margin at a touching edge. matter-js exposes no per-constraint switch and is left at its defaults, where it produces no contact between the links of this scene; its figure is published on that basis rather than on a configured one.',
         ...(unavailableArms.length > 0
           ? [
@@ -399,7 +412,10 @@ export const runPhysicsMatrix = async (
 
     return { provenance, libraries, results };
   } finally {
-    await session.browser.close();
-    await server.close();
+    try {
+      await session?.browser.close();
+    } finally {
+      await server.close();
+    }
   }
 };

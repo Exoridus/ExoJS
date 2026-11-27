@@ -57,7 +57,9 @@ export const sweepMask = (): MaskSpec => {
     // Kept out of the four blocks around texel 48, which the corner pair below
     // has to itself: anything else in them would mark them and hide what that
     // case is about.
-    if (x >= 40 && x < 56 && y >= 40 && y < 56) continue;
+    if (x >= 40 && x < 56 && y >= 40 && y < 56) {
+      continue;
+    }
 
     blocked.push([x, y]);
   }
@@ -73,7 +75,9 @@ export const sweepMask = (): MaskSpec => {
 
   for (let y = 8; y < 16; y++) {
     for (let x = 8; x < 16; x++) {
-      if ((x + y) % 2 === 0) blocked.push([x, y]);
+      if ((x + y) % 2 === 0) {
+        blocked.push([x, y]);
+      }
     }
   }
 
@@ -110,7 +114,12 @@ export const sweepRays = (): ReadonlyArray<readonly [number, number, number, num
   const roll = rolls(768);
 
   for (let index = 0; index < 28; index++) {
-    rays.push([WORLD.x + roll() * WORLD.width, WORLD.y + roll() * WORLD.height, WORLD.x + roll() * WORLD.width, WORLD.y + roll() * WORLD.height]);
+    rays.push([
+      WORLD.x + roll() * WORLD.width,
+      WORLD.y + roll() * WORLD.height,
+      WORLD.x + roll() * WORLD.width,
+      WORLD.y + roll() * WORLD.height,
+    ]);
   }
 
   return rays;

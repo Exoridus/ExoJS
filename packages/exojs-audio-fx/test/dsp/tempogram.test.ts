@@ -1,4 +1,11 @@
-import { computeAcf, computeTempoCandidates, findTempoPeaks, isOctaveRelated, scoreTempoHypotheses, tempoPrior } from '../../src/dsp/tempogram';
+import {
+  computeAcf,
+  computeTempoCandidates,
+  findTempoPeaks,
+  isOctaveRelated,
+  scoreTempoHypotheses,
+  tempoPrior,
+} from '../../src/dsp/tempogram';
 
 const SAMPLE_RATE = 48000;
 const HOP_SIZE = 512;
@@ -14,13 +21,17 @@ const syntheticNovelty = (bpm: number, numHops: number): Float32Array => {
   const beatPeriodHops = hopRate / (bpm / 60); // hops between beats
   const flux = new Float32Array(numHops);
   let beatPos = 0;
+
   while (beatPos < numHops) {
     const idx = Math.round(beatPos);
+
     if (idx >= 0 && idx < numHops) {
-      flux[idx] = 1.0;
+      flux[idx] = 1;
     }
+
     beatPos += beatPeriodHops;
   }
+
   return flux;
 };
 
@@ -35,14 +46,20 @@ const spreadNovelty = (bpm: number, seconds: number): Float32Array => {
   const numHops = Math.round(seconds * hopRate);
   const periodHops = hopRate / (bpm / 60);
   const flux = new Float32Array(numHops);
-  const kernel = [0.4, 1.0, 0.7, 0.3];
+  const kernel = [0.4, 1, 0.7, 0.3];
+
   for (let pos = 0; pos < numHops; pos += periodHops) {
     const base = Math.round(pos);
+
     for (let k = 0; k < kernel.length; k++) {
       const idx = base + k;
-      if (idx >= 0 && idx < numHops) flux[idx]! += kernel[k]!;
+
+      if (idx >= 0 && idx < numHops) {
+        flux[idx]! += kernel[k]!;
+      }
     }
   }
+
   return flux;
 };
 
@@ -51,6 +68,7 @@ const topBpm = (bpm: number): number => {
     minBpm: 50,
     maxBpm: 250,
   });
+
   return cands[0]!.bpm;
 };
 
@@ -66,18 +84,25 @@ const subdividedNovelty = (beatBpm: number, subdivisionsPerBeat: number, seconds
   const numHops = Math.round(seconds * hopRate);
   const subPeriodHops = hopRate / ((beatBpm * subdivisionsPerBeat) / 60);
   const flux = new Float32Array(numHops);
-  const kernel = [0.4, 1.0, 0.7, 0.3];
+  const kernel = [0.4, 1, 0.7, 0.3];
   let sub = 0;
+
   for (let pos = 0; pos < numHops; pos += subPeriodHops) {
     const onBeat = sub % subdivisionsPerBeat === 0;
-    const amp = onBeat ? 1.2 : 1.0; // beats only mildly louder than subdivisions
+    const amp = onBeat ? 1.2 : 1; // beats only mildly louder than subdivisions
     const base = Math.round(pos);
+
     for (let k = 0; k < kernel.length; k++) {
       const idx = base + k;
-      if (idx >= 0 && idx < numHops) flux[idx]! += amp * kernel[k]!;
+
+      if (idx >= 0 && idx < numHops) {
+        flux[idx]! += amp * kernel[k]!;
+      }
     }
+
     sub++;
   }
+
   return flux;
 };
 
@@ -94,6 +119,7 @@ describe('computeACF', () => {
     const minLag = Math.round(((60 / 250) * SAMPLE_RATE) / HOP_SIZE);
     const maxLag = Math.round(((60 / 50) * SAMPLE_RATE) / HOP_SIZE);
     const acf = computeAcf(flux, minLag, maxLag);
+
     for (const v of acf) {
       expect(v).toBeGreaterThanOrEqual(-1.01);
       expect(v).toBeLessThanOrEqual(1.01);
@@ -121,6 +147,7 @@ describe('findTempoPeaks — synthetic 120 BPM', () => {
     const maxLag = Math.round(((60 / 50) * SAMPLE_RATE) / HOP_SIZE);
     const acf = computeAcf(flux, minLag, maxLag);
     const peaks = findTempoPeaks(acf, minLag, HOP_SIZE, SAMPLE_RATE, 3);
+
     if (peaks.length > 0) {
       // 240 BPM (octave above) should not be the top peak
       // (it may appear but with lower score)
@@ -179,7 +206,10 @@ describe('computeTempoCandidates — octave disambiguation', () => {
     const fund = cands.find(c => Math.abs(c.bpm - 250) / 250 < 0.05);
     const half = cands.find(c => Math.abs(c.bpm - 125) / 125 < 0.05);
     expect(fund).toBeDefined();
-    if (half) expect(fund!.score).toBeGreaterThan(half.score);
+
+    if (half) {
+      expect(fund!.score).toBeGreaterThan(half.score);
+    }
   });
 });
 
@@ -211,7 +241,10 @@ describe('computeAcf — empty input', () => {
   it('returns all zeros for an empty flux array (n === 0 guards)', () => {
     const acf = computeAcf(new Float32Array(0), 1, 5);
     expect(acf.length).toBe(5);
-    for (const v of acf) expect(v).toBe(0);
+
+    for (const v of acf) {
+      expect(v).toBe(0);
+    }
   });
 });
 

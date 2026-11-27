@@ -73,7 +73,9 @@ export const resolveOutputTransformOptions = (options: OutputTransformOptions = 
   const exposure = options.exposure ?? 0;
 
   if (!Number.isFinite(exposure) || exposure < minExposureStops || exposure > maxExposureStops) {
-    throw new Error(`rendering.color.exposure must be a finite number within [${minExposureStops}, ${maxExposureStops}] stops, got ${exposure}.`);
+    throw new Error(
+      `rendering.color.exposure must be a finite number within [${minExposureStops}, ${maxExposureStops}] stops, got ${exposure}.`,
+    );
   }
 
   const toneMapping = options.toneMapping ?? 'none';
@@ -126,7 +128,8 @@ const outputHuge = 3e38;
 
 const sanitizeChannel = (value: number): number => (Number.isNaN(value) ? 0 : Math.min(Math.max(value, 0), outputHuge));
 
-const mapChannel = (exposed: number, toneMapping: OutputToneMapping): number => (toneMapping === 'reinhard' ? exposed / (1 + exposed) : Math.min(exposed, 1));
+const mapChannel = (exposed: number, toneMapping: OutputToneMapping): number =>
+  toneMapping === 'reinhard' ? exposed / (1 + exposed) : Math.min(exposed, 1);
 
 /**
  * The pure CPU reference for D3's output transform: exposure, the HDR-to-SDR
@@ -204,7 +207,14 @@ export class OutputTransform {
    * result unassociated (the layout `ImageData` expects) instead of
    * premultiplied like a canvas.
    */
-  public present(backend: RenderBackend, source: RenderTexture, transparent: boolean, matte: Color, target?: RenderTexture, straightAlpha = false): void {
+  public present(
+    backend: RenderBackend,
+    source: RenderTexture,
+    transparent: boolean,
+    matte: Color,
+    target?: RenderTexture,
+    straightAlpha = false,
+  ): void {
     if (backend.backendType === RenderBackendType.WebGpu) {
       (this._webgpuPass ??= new WebGpuOutputPass()).present(backend, source, this._options, transparent, matte, target, straightAlpha);
 

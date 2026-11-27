@@ -35,9 +35,9 @@ export interface RenderPassInspectorEntry {
   readonly drawableLabel: string;
   /** Filter instances currently attached, in execution order. */
   readonly filters: readonly Filter[];
-  /** Bounding-box width as the filter pipeline sees it (ceil). */
+  /** Bounding-box width in the node's {@link SceneNode.getBounds} space (ceil, at least 1); an expanding filter captures a larger domain. */
   readonly width: number;
-  /** Bounding-box height as the filter pipeline sees it (ceil). */
+  /** Bounding-box height in the node's {@link SceneNode.getBounds} space (ceil, at least 1); an expanding filter captures a larger domain. */
   readonly height: number;
   /** Whether the drawable has a mask attached (mask passes count toward total). */
   readonly hasMask: boolean;
@@ -47,7 +47,9 @@ export interface RenderPassInspectorEntry {
 
 /**
  * One row of a {@link RenderPipeline} listing produced by {@link RenderPassInspectorLayer.describePipeline}.
- * Identity is the pass object; `label` is display-only (no names are required). Nested pipelines increase `depth`.
+ * Rows are positional only: they carry no pass object, and `label` is
+ * display-only, so equal labels do not identify equal rows. Nested
+ * pipelines increase `depth`.
  */
 export interface RenderPipelineRow {
   /** Nesting depth (0 = top-level pass). */
@@ -74,8 +76,8 @@ export interface RenderPipelineRow {
  * The pass total counts the attached filters plus one per collected entry with
  * a mask. It is a structural estimate, not a hardware-pass count or GPU timing:
  * multi-step filters are not expanded, cached work is not subtracted, and
- * mask-only nodes are not collected. The returned entries are reused on every
- * update.
+ * mask-only nodes are not collected. The entry array is reused and refilled on
+ * every update.
  *
  * For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL
  * source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel.
@@ -101,12 +103,14 @@ export class RenderPassInspectorLayer extends DebugLayer {
   public static describePipeline(pipeline: RenderPipeline): RenderPipelineRow[] {
     const rows: RenderPipelineRow[] = [];
     RenderPassInspectorLayer._collectPipelineRows(pipeline, 0, rows);
+
     return rows;
   }
 
   private static _collectPipelineRows(pipeline: RenderPipeline, depth: number, rows: RenderPipelineRow[]): void {
     for (const pass of pipeline) {
       rows.push({ depth, label: pass.label, enabled: pass.enabled, isPipeline: pass instanceof RenderPipeline });
+
       if (pass instanceof RenderPipeline) {
         RenderPassInspectorLayer._collectPipelineRows(pass, depth + 1, rows);
       }
@@ -131,6 +135,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
     this._entries.length = 0;
 
     const root = this._app.scenes.currentScene?.root;
+
     if (root) {
       this.collect(root);
     }
@@ -148,6 +153,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
       this._root.destroy();
       this._root = null;
     }
+
     this._bg = null;
     this._header = null;
     this._lines = [];
@@ -156,10 +162,11 @@ export class RenderPassInspectorLayer extends DebugLayer {
   }
 
   /**
-   * Read-only snapshot of the entries collected on the most recent
-   * {@link update} call. Useful for tests and for external tooling that
-   * wants to render its own visualisation rather than use the built-in
-   * panel.
+   * The entries collected by the most recent {@link update} call, as a live
+   * array: the same instance is truncated and refilled on the next update, so
+   * copy it if it must outlive the current frame. Useful for tests and for
+   * external tooling that wants to render its own visualisation rather than
+   * use the built-in panel.
    */
   public get entries(): readonly RenderPassInspectorEntry[] {
     return this._entries;
@@ -168,10 +175,15 @@ export class RenderPassInspectorLayer extends DebugLayer {
   /** Total pass count across all collected entries. */
   public get totalPasses(): number {
     let total = 0;
+
     for (const entry of this._entries) {
       total += entry.filters.length;
-      if (entry.hasMask) total++;
+
+      if (entry.hasMask) {
+        total++;
+      }
     }
+
     return total;
   }
 
@@ -195,7 +207,9 @@ export class RenderPassInspectorLayer extends DebugLayer {
   // -----------------------------------------------------------------------
 
   private collect(node: RenderNode): void {
-    if (!node.visible) return;
+    if (!node.visible) {
+      return;
+    }
 
     if (node.filters.length > 0) {
       const bounds = node.getBounds();
@@ -210,6 +224,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
     }
 
     const container = node as Partial<{ children: RenderNode[] }>;
+
     if (Array.isArray(container.children)) {
       for (const child of container.children) {
         this.collect(child);
@@ -232,6 +247,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
     this._header.y = panelY + panelPadding;
 
     this._lines = [];
+
     for (let i = 0; i < panelMaxLines; i++) {
       const line = new Text('', style);
       line.x = panelX + panelPadding;
@@ -242,11 +258,16 @@ export class RenderPassInspectorLayer extends DebugLayer {
     this._root = new Container();
     this._root.addChild(this._bg);
     this._root.addChild(this._header);
-    for (const line of this._lines) this._root.addChild(line);
+
+    for (const line of this._lines) {
+      this._root.addChild(line);
+    }
   }
 
   private _refreshPanel(): void {
-    if (this._header === null || this._bg === null) return;
+    if (this._header === null || this._bg === null) {
+      return;
+    }
 
     const lines: Array<{ text: string; dim: boolean }> = [];
 
@@ -255,26 +276,38 @@ export class RenderPassInspectorLayer extends DebugLayer {
     } else {
       for (const entry of this._entries) {
         const flags: string[] = [];
-        if (entry.hasMask) flags.push('mask');
-        if (entry.cachedAsTexture) flags.push('cached');
+
+        if (entry.hasMask) {
+          flags.push('mask');
+        }
+
+        if (entry.cachedAsTexture) {
+          flags.push('cached');
+        }
+
         const flagsText = flags.length > 0 ? ` [${flags.join(',')}]` : '';
         lines.push({
           text: `${entry.drawableLabel} ${entry.width}x${entry.height}${flagsText}`,
           dim: false,
         });
+
         for (let i = 0; i < entry.filters.length; i++) {
           const filter = entry.filters[i];
+
           if (filter === undefined) {
             continue;
           }
+
           lines.push({ text: `  ${i}. ${filter.constructor.name}`, dim: false });
         }
       }
     }
 
     const pipelineRows = this.pipelineRows();
+
     if (pipelineRows.length > 0) {
       lines.push({ text: 'Pipeline:', dim: true });
+
       for (const row of pipelineRows) {
         const indent = '  '.repeat(row.depth + 1);
         lines.push({ text: `${indent}${row.label}${row.enabled ? '' : ' [off]'}`, dim: !row.enabled });
@@ -283,13 +316,20 @@ export class RenderPassInspectorLayer extends DebugLayer {
 
     this._header.text = `Render Passes: ${this.totalPasses}`;
 
-    const visibleCount = Math.min(lines.length, this._lines.length);
-    for (let i = 0; i < this._lines.length; i++) {
+    const rowCount = this._lines.length;
+    const overflow = lines.length > rowCount;
+    // The marker takes the last row, so one fewer line fits whenever it shows.
+    const dataCount = overflow ? rowCount - 1 : lines.length;
+
+    for (let i = 0; i < rowCount; i++) {
       const line = this._lines[i];
+
       if (line === undefined) {
         continue;
       }
-      const entry = i < visibleCount ? lines[i] : undefined;
+
+      const entry = i < dataCount ? lines[i] : undefined;
+
       if (entry !== undefined) {
         line.text = entry.text;
         line.style.fillColor = entry.dim ? dimColor : textColor;
@@ -300,18 +340,18 @@ export class RenderPassInspectorLayer extends DebugLayer {
       }
     }
 
-    if (lines.length > this._lines.length) {
-      const last = this._lines[this._lines.length - 1];
-      const overflow = lines.length - this._lines.length;
+    if (overflow) {
+      const last = this._lines[rowCount - 1];
+
       if (last !== undefined) {
-        last.text = `... (+${overflow} more)`;
+        last.text = `... (+${lines.length - dataCount} more)`;
         last.style.fillColor = dimColor;
         last.visible = true;
       }
     }
 
     // Resize background to fit content.
-    const panelHeight = panelPadding * 2 + panelLineH * (1 + visibleCount);
+    const panelHeight = panelPadding * 2 + panelLineH * (1 + Math.min(lines.length, rowCount));
     this._bg.clear();
     this._bg.fillColor = bgColor;
     this._bg.drawRectangle(panelX, panelY, panelMinW, panelHeight);

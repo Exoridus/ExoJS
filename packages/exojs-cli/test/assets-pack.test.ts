@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { Asset, coreAssetTypes, Loader } from '@codexo/exojs';
+import { coreAssetTypes, Loader } from '@codexo/exojs';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { runAssetsPack } from '../src/commands/assetsPack';
@@ -44,7 +44,9 @@ const loaderReading = (container: ArrayBuffer): Loader => {
   const loader = new Loader({ basePath: '/' });
 
   loader._installAssetTypes(coreAssetTypes);
-  global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response);
+  global.fetch = vi.fn(
+    async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
+  );
 
   return loader;
 };
@@ -82,8 +84,8 @@ describe('exo assets pack round trip', () => {
     const loader = loaderReading(container);
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Asset.type('json', 'data/level.json')).value).toEqual({ score: 42 });
-    expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
+    expect(loader.get({ type: 'json', source: 'data/level.json' }).value).toEqual({ score: 42 });
+    expect(loader.get({ type: 'text', source: 'docs/readme.txt' }).value).toBe('hello world');
   });
 
   test('a compressible pack is stored deflated and reads back byte for byte', async () => {
@@ -100,7 +102,7 @@ describe('exo assets pack round trip', () => {
     const loader = loaderReading(container);
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Asset.type('text', 'docs/big.txt')).value).toBe(compressible);
+    expect(loader.get({ type: 'text', source: 'docs/big.txt' }).value).toBe(compressible);
   });
 
   test('an incompressible pack is stored as it is', async () => {
@@ -108,7 +110,9 @@ describe('exo assets pack round trip', () => {
     // so the writer must keep the plain bytes rather than wrap them twice.
     const random = new Uint8Array(2048);
 
-    for (let i = 0; i < random.length; i++) random[i] = Math.floor(Math.random() * 256);
+    for (let i = 0; i < random.length; i++) {
+      random[i] = Math.floor(Math.random() * 256);
+    }
 
     write('noise.bin', random);
 
@@ -120,11 +124,12 @@ describe('exo assets pack round trip', () => {
     const loader = loaderReading(container);
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'data/noise.bin')).value)).toEqual(random);
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'data/noise.bin' }).value)).toEqual(random);
   });
 
   test('a packed KTX2 texture keeps its bytes and its DFD transfer and alpha meaning, whatever the file is called', async () => {
-    const fixture = (name: string): Uint8Array => new Uint8Array(readFileSync(fileURLToPath(new URL(`../../../test/fixtures/color/${name}`, import.meta.url))));
+    const fixture = (name: string): Uint8Array =>
+      new Uint8Array(readFileSync(fileURLToPath(new URL(`../../../test/fixtures/color/${name}`, import.meta.url))));
     const srgbStraight = fixture('alpha-straight-srgb.ktx2');
     const linear = fixture('rgba8-linear.ktx2');
 
@@ -146,11 +151,11 @@ describe('exo assets pack round trip', () => {
     const loader = loaderReading(container);
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'art/a.ktx2')).value)).toEqual(srgbStraight);
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'art/b.ktx2')).value)).toEqual(linear);
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'art/a.ktx2' }).value)).toEqual(srgbStraight);
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'art/b.ktx2' }).value)).toEqual(linear);
 
-    const sRgbTexture = await loader.load(Asset.type('texture', 'art/c.ktx2'));
-    const linearTexture = await loader.load(Asset.type('texture', 'art/d.ktx2'));
+    const sRgbTexture = await loader.load({ type: 'texture', source: 'art/c.ktx2' });
+    const linearTexture = await loader.load({ type: 'texture', source: 'art/d.ktx2' });
 
     expect([sRgbTexture.colorSpace, sRgbTexture.alphaMode]).toEqual(['srgb', 'straight']);
     expect(linearTexture.colorSpace).toBe('linear-srgb');
@@ -230,8 +235,8 @@ describe('exo assets pack failures', () => {
 });
 
 interface ContainerHead {
-  readonly entries: Record<string, unknown>[];
-  readonly blocks: Record<string, unknown>[];
+  readonly entries: Array<Record<string, unknown>>;
+  readonly blocks: Array<Record<string, unknown>>;
 }
 
 /** The JSON head of a written container, read straight out of the file the CLI produced. */

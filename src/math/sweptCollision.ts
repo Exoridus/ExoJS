@@ -30,7 +30,7 @@ export interface SweptHit {
  * occurs (0 = already overlapping at start, 1 = just barely reaches).
  *
  * Already-overlapping case (tEntry < 0 overall): returns `t = 0` with the
- * normal of the deepest-penetration axis, allowing callers to handle the
+ * normal along the shortest separating translation, allowing callers to handle the
  * "I'm already inside" situation without a separate discrete test.
  */
 export const sweepRectangle = (moving: Rectangle, deltaX: number, deltaY: number, target: Rectangle): SweptHit | null => {
@@ -87,19 +87,22 @@ export const sweepRectangle = (moving: Rectangle, deltaX: number, deltaY: number
   const hitY = moving.y + deltaY * t;
 
   // Normal is on the axis whose slab entry was latest.
-  // Already-overlapping: use the deepest-penetration axis normal.
+  // Already-overlapping: use the shortest separating translation.
   let normalX = 0;
   let normalY = 0;
 
   if (tEntry <= 0) {
-    // Already overlapping - pick the axis with least penetration
-    const overlapX = Math.min(movMaxX - tarMinX, tarMaxX - movMinX);
-    const overlapY = Math.min(movMaxY - tarMinY, tarMaxY - movMinY);
+    const exitLeft = movMaxX - tarMinX;
+    const exitRight = tarMaxX - movMinX;
+    const exitTop = movMaxY - tarMinY;
+    const exitBottom = tarMaxY - movMinY;
+    const overlapX = Math.min(exitLeft, exitRight);
+    const overlapY = Math.min(exitTop, exitBottom);
 
     if (overlapX < overlapY) {
-      normalX = movMinX < tarMinX ? -1 : 1;
+      normalX = exitLeft < exitRight ? -1 : 1;
     } else {
-      normalY = movMinY < tarMinY ? -1 : 1;
+      normalY = exitTop < exitBottom ? -1 : 1;
     }
   } else if (tEntryX > tEntryY) {
     // X axis had the latest entry
@@ -171,7 +174,9 @@ export const sweepCircleVsRectangle = (moving: CircleLike, deltaX: number, delta
     return { t: 0, x: cx, y: cy, normalX: 0, normalY: exitTop < exitBottom ? -1 : 1 };
   }
 
-  if (deltaX === 0 && deltaY === 0) return null;
+  if (deltaX === 0 && deltaY === 0) {
+    return null;
+  }
 
   let bestT = Infinity;
   let bestNx = 0;
@@ -189,27 +194,45 @@ export const sweepCircleVsRectangle = (moving: CircleLike, deltaX: number, delta
   // and land within the face's extent (not a corner arc region).
   if (deltaX !== 0) {
     const tL = (left - r - cx) / deltaX;
+
     if (tL >= 0 && tL <= 1) {
       const hy = cy + deltaY * tL;
-      if (hy >= top && hy <= bottom) tryHit(tL, -1, 0);
+
+      if (hy >= top && hy <= bottom) {
+        tryHit(tL, -1, 0);
+      }
     }
+
     const tR = (right + r - cx) / deltaX;
+
     if (tR >= 0 && tR <= 1) {
       const hy = cy + deltaY * tR;
-      if (hy >= top && hy <= bottom) tryHit(tR, 1, 0);
+
+      if (hy >= top && hy <= bottom) {
+        tryHit(tR, 1, 0);
+      }
     }
   }
 
   if (deltaY !== 0) {
     const tT = (top - r - cy) / deltaY;
+
     if (tT >= 0 && tT <= 1) {
       const hx = cx + deltaX * tT;
-      if (hx >= left && hx <= right) tryHit(tT, 0, -1);
+
+      if (hx >= left && hx <= right) {
+        tryHit(tT, 0, -1);
+      }
     }
+
     const tB = (bottom + r - cy) / deltaY;
+
     if (tB >= 0 && tB <= 1) {
       const hx = cx + deltaX * tB;
-      if (hx >= left && hx <= right) tryHit(tB, 0, 1);
+
+      if (hx >= left && hx <= right) {
+        tryHit(tB, 0, 1);
+      }
     }
   }
 
@@ -229,11 +252,15 @@ export const sweepCircleVsRectangle = (moving: CircleLike, deltaX: number, delta
     const c = cdx * cdx + cdy * cdy - r * r;
     const disc = b * b - 4 * a * c;
 
-    if (disc < 0) continue;
+    if (disc < 0) {
+      continue;
+    }
 
     const t = (-b - Math.sqrt(disc)) / (2 * a);
 
-    if (t < 0 || t > 1) continue;
+    if (t < 0 || t > 1) {
+      continue;
+    }
 
     const hitX = cx + deltaX * t;
     const hitY = cy + deltaY * t;
@@ -241,7 +268,9 @@ export const sweepCircleVsRectangle = (moving: CircleLike, deltaX: number, delta
     tryHit(t, (hitX - corX) / r, (hitY - corY) / r);
   }
 
-  if (bestT > 1) return null;
+  if (bestT > 1) {
+    return null;
+  }
 
   return { t: bestT, x: cx + deltaX * bestT, y: cy + deltaY * bestT, normalX: bestNx, normalY: bestNy };
 };
@@ -316,7 +345,12 @@ export const sweepCircleVsCircle = (moving: CircleLike, deltaX: number, deltaY: 
  * moving rectangle is computed once; targets whose AABB does not overlap the
  * swept AABB are skipped.
  */
-export const sweepRectangleAgainst = (moving: Rectangle, deltaX: number, deltaY: number, targets: readonly Rectangle[]): SweptHit | null => {
+export const sweepRectangleAgainst = (
+  moving: Rectangle,
+  deltaX: number,
+  deltaY: number,
+  targets: readonly Rectangle[],
+): SweptHit | null => {
   if (targets.length === 0) {
     return null;
   }
@@ -410,7 +444,9 @@ export const substepSweep = function* (
   maxStepSize: number,
 ): IterableIterator<{ x: number; y: number; t: number }> {
   const length = Math.hypot(deltaX, deltaY);
-  const stepCount = Math.max(1, Math.ceil(length / maxStepSize));
+  // A non-positive or non-finite step would make the loop infinite (length > 0)
+  // or empty (length === 0); one step still yields the documented t=0 and t=1.
+  const stepCount = maxStepSize > 0 && Number.isFinite(maxStepSize) ? Math.max(1, Math.ceil(length / maxStepSize)) : 1;
 
   for (let i = 0; i <= stepCount; i++) {
     const t = i / stepCount;

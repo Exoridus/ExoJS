@@ -1,9 +1,16 @@
 import type { Drawable } from '#rendering/Drawable';
 import { createEmptyMaterialKey } from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import type { View } from '#rendering/View';
 
 import { type DrawCommand } from './renderCommand';
-import { copyRetainedDrawData, type MutableRetainedDrawData, releasePooledDrawables, type RetainedDrawData, RetainedRecordPool } from './RetainedRecordPool';
+import {
+  copyRetainedDrawData,
+  type MutableRetainedDrawData,
+  releasePooledDrawables,
+  type RetainedDrawData,
+  RetainedRecordPool,
+} from './RetainedRecordPool';
 
 /**
  * @internal
@@ -15,6 +22,7 @@ import { copyRetainedDrawData, type MutableRetainedDrawData, releasePooledDrawab
  */
 export interface RetainedDrawSlot extends RetainedDrawData {
   readonly childIndex: number;
+  readonly viewDependent: boolean;
 }
 
 /**
@@ -25,14 +33,17 @@ export interface RetainedDrawSlot extends RetainedDrawData {
  */
 interface MutableRetainedDrawSlot extends MutableRetainedDrawData {
   childIndex: number;
+  viewDependent: boolean;
 }
 
 const createSlot = (): MutableRetainedDrawSlot => ({
   childIndex: 0,
+  viewDependent: false,
   drawable: undefined as unknown as Drawable,
   seq: 0,
   zIndex: 0,
   material: createEmptyMaterialKey(),
+  boundsStale: false,
   minX: 0,
   minY: 0,
   maxX: 0,
@@ -48,7 +59,7 @@ const createSlot = (): MutableRetainedDrawSlot => ({
  * produced by the last full (non-skipped) collect of that container's own
  * scope, keyed on the container's aggregate content/structure revision
  * (`SceneNode._contentRevision`/`_structureRevision`), the active view's
- * `updateId`, and the active `RenderBackend` identity.
+ * identity and `updateId`, and the active `RenderBackend` identity.
  *
  * Direct container/effect-bearing children are never represented here - they
  * are always re-dispatched through a normal `collect` call by the owning
@@ -75,6 +86,7 @@ export class RetainedPlanCache {
   private _structureRevision = -1;
   private _transformRevision = -1;
   private _viewUpdateId = -1;
+  private _view: View | null = null;
   private _backend: RenderBackend | null = null;
   private _hasCapture = false;
 
@@ -97,13 +109,21 @@ export class RetainedPlanCache {
    * place - the plain-container skip has no per-slot patch path and simply
    * re-collects, exactly as it did when transform still content-dirtied.
    */
-  public isClean(contentRevision: number, structureRevision: number, transformRevision: number, viewUpdateId: number, backend: RenderBackend): boolean {
+  public isClean(
+    contentRevision: number,
+    structureRevision: number,
+    transformRevision: number,
+    viewUpdateId: number,
+    backend: RenderBackend,
+    view: View,
+  ): boolean {
     return (
       this._hasCapture &&
       this._contentRevision === contentRevision &&
       this._structureRevision === structureRevision &&
       this._transformRevision === transformRevision &&
       this._viewUpdateId === viewUpdateId &&
+      this._view === view &&
       this._backend === backend
     );
   }
@@ -124,25 +144,36 @@ export class RetainedPlanCache {
    * pool has grown to the child count).
    * @internal
    */
-  public _appendSlot(childIndex: number, command: DrawCommand): void {
+  public _appendSlot(childIndex: number, command: DrawCommand, viewDependent: boolean): void {
     const slot = this._slotPool.acquire();
 
     slot.childIndex = childIndex;
+    slot.viewDependent = viewDependent;
     copyRetainedDrawData(slot, command);
   }
 
   /** @internal - key the capture; only after this does {@link isClean} consider it. */
-  public _commitCapture(contentRevision: number, structureRevision: number, transformRevision: number, viewUpdateId: number, backend: RenderBackend): void {
+  public _commitCapture(
+    contentRevision: number,
+    structureRevision: number,
+    transformRevision: number,
+    viewUpdateId: number,
+    backend: RenderBackend,
+    view: View,
+  ): void {
     this._contentRevision = contentRevision;
     this._structureRevision = structureRevision;
     this._transformRevision = transformRevision;
     this._viewUpdateId = viewUpdateId;
+    this._view = view;
     this._backend = backend;
     this._hasCapture = true;
   }
 
+  /** Drop the capture and every pooled drawable reference while retaining reusable record objects. */
   public invalidate(): void {
     releasePooledDrawables(this._slotPool);
+    this._view = null;
     this._hasCapture = false;
     this._slotPool.rewind();
   }

@@ -38,6 +38,8 @@ export class SpatialZones {
   private readonly _zones: AudioZone[] = [];
   /** One entry per voice that currently has at least one zone send open. */
   private readonly _sends = new Map<Voice, Map<AudioZone, AudioSend>>();
+  /** Per-zone send level for the current tick, index-aligned with `_zones`. */
+  private readonly _levels: number[] = [];
 
   /** The zones currently registered, in the order they were added. */
   public get zones(): readonly AudioZone[] {
@@ -119,6 +121,15 @@ export class SpatialZones {
 
     const { x, y } = listener.position;
     const elevation = listener.elevation;
+    const levels = this._levels;
+
+    levels.length = this._zones.length;
+
+    for (let i = 0; i < this._zones.length; i++) {
+      const zone = this._zones[i]!;
+
+      levels[i] = zone.weightAt(x, y, elevation) * zone.send;
+    }
 
     for (const voice of voices) {
       if (voice.ended) {
@@ -126,7 +137,7 @@ export class SpatialZones {
         continue;
       }
 
-      this._reconcileVoice(voice, x, y, elevation);
+      this._reconcileVoice(voice);
     }
   }
 
@@ -154,11 +165,12 @@ export class SpatialZones {
     this._sends.delete(voice);
   }
 
-  private _reconcileVoice(voice: Voice, x: number, y: number, z: number): void {
+  private _reconcileVoice(voice: Voice): void {
     let byZone = this._sends.get(voice);
 
-    for (const zone of this._zones) {
-      const level = zone.weightAt(x, y, z) * zone.send;
+    for (let i = 0; i < this._zones.length; i++) {
+      const zone = this._zones[i]!;
+      const level = this._levels[i]!;
       const existing = byZone?.get(zone);
 
       if (level <= inaudibleSend) {

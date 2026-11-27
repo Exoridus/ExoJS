@@ -45,6 +45,7 @@ export const openIndexedDb = (
     // soon as that connection goes away. Nobody is waiting for the connection
     // by then, and an unclosed one blocks every future upgrade in its turn.
     let rejected = false;
+
     const failOpen = (error: AssetCacheError): void => {
       rejected = true;
       reject(error);
@@ -74,7 +75,12 @@ export const openIndexedDb = (
     request.addEventListener('success', () => (rejected ? request.result.close() : resolve(request.result)));
     request.addEventListener('error', () => failOpen(asCacheError(failure, request.error ?? undefined)));
     request.addEventListener('blocked', () =>
-      failOpen(new AssetCacheError({ ...failure, message: `Opening the database "${name}" is blocked by another connection holding an older version.` })),
+      failOpen(
+        new AssetCacheError({
+          ...failure,
+          message: `Opening the database "${name}" is blocked by another connection holding an older version.`,
+        }),
+      ),
     );
   });
 };
@@ -85,6 +91,38 @@ export const requestResult = <T>(request: IDBRequest<T>, failure: IndexedDbFailu
     request.addEventListener('success', () => resolve(request.result));
     request.addEventListener('error', () => reject(asCacheError(failure, request.error ?? undefined)));
   });
+
+/**
+ * Issue a write on a transaction whose completion is already being awaited.
+ *
+ * `put()` and `delete()` throw synchronously (a `DataCloneError` for a value
+ * that cannot be cloned, a `DataError` for an invalid key). Left alone, that
+ * would escape untyped and strand `committed` as an unhandled rejection once
+ * the transaction aborts.
+ * @internal
+ */
+export const issueWrite = (
+  transaction: IDBTransaction,
+  committed: Promise<void>,
+  failure: IndexedDbFailureContext,
+  issue: () => void,
+): Promise<void> => {
+  try {
+    issue();
+  } catch (error: unknown) {
+    committed.catch(() => undefined);
+
+    try {
+      transaction.abort();
+    } catch {
+      // Already finished; nothing left to abort.
+    }
+
+    return Promise.reject(asCacheError(failure, error));
+  }
+
+  return committed;
+};
 
 /**
  * Resolve once `transaction` has COMMITTED.

@@ -769,7 +769,7 @@
         },
         {
           "name": "stops",
-          "signature": "stops: readonly GradientStop[]",
+          "signature": "stops: readonly Readonly<GradientStop>[]",
           "signatureTokens": [
             {
               "text": "stops",
@@ -788,8 +788,20 @@
               "kind": "punctuation"
             },
             {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "GradientStop",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": "[]",
@@ -798,7 +810,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The normalized stops, clamped and sorted by offset. The list is the gradient's own and is not copied: build a new gradient, or copy one, to change the stops."
         }
       ],
       "paragraphs": [],

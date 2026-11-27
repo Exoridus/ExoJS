@@ -5,6 +5,7 @@ import type { CacheLayout } from '#assets/cache/CacheLayout';
 import { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
 import type { Connectivity, NetworkSnapshot } from '#core/Connectivity';
 import { unrestrictedNetwork } from '#core/Connectivity';
+import { logger } from '#core/Logger';
 
 import { AssetDecodeError } from './AssetDecodeError';
 import type { AssetFactoryContext } from './AssetFactory';
@@ -48,33 +49,58 @@ const CONTAINER_NAMESPACE = 'exoa';
 /** A container is acquired whole, so one record holds it. */
 const containerLayout = SingleEntryLayout.version<ArrayBuffer>(2);
 
+interface ComposedSignal {
+  readonly signal: AbortSignal;
+  readonly release?: (() => void) | undefined;
+}
+
+interface AcquisitionRequest {
+  readonly init: RequestInit;
+  readonly release?: (() => void) | undefined;
+}
+
 /** A signal that aborts as soon as either input does, with that input's reason. */
-const anySignal = (first: AbortSignal, second: AbortSignal): AbortSignal => {
+const anySignal = (first: AbortSignal, second: AbortSignal): ComposedSignal => {
   if (typeof AbortSignal.any === 'function') {
-    return AbortSignal.any([first, second]);
+    return { signal: AbortSignal.any([first, second]) };
+  }
+
+  if (first.aborted || second.aborted) {
+    return { signal: first.aborted ? first : second };
   }
 
   const controller = new AbortController();
-  const follow = (source: AbortSignal): void => {
-    if (source.aborted) {
-      controller.abort(source.reason);
+  let released = false;
 
+  const release = (): void => {
+    if (released) {
       return;
     }
 
-    // Removing the listeners is what keeps a long-lived application signal from
-    // accumulating one per asset load; aborting the composite fires them off.
-    source.addEventListener('abort', () => controller.abort(source.reason), { once: true, signal: controller.signal });
+    released = true;
+    first.removeEventListener('abort', abortFirst);
+    second.removeEventListener('abort', abortSecond);
   };
 
-  follow(first);
-  follow(second);
+  const abortFirst = (): void => {
+    release();
+    controller.abort(first.reason);
+  };
 
-  return controller.signal;
+  const abortSecond = (): void => {
+    release();
+    controller.abort(second.reason);
+  };
+
+  first.addEventListener('abort', abortFirst, { once: true });
+  second.addEventListener('abort', abortSecond, { once: true });
+
+  return { signal: controller.signal, release };
 };
 
 /** The shape an identity hook sees. Options are omitted entirely when the request carried none. */
-const toRequest = (source: string, options: unknown): AssetRequest<unknown> => (options === undefined || options === null ? { source } : { source, options });
+const toRequest = (source: string, options: unknown): AssetRequest<unknown> =>
+  options === undefined || options === null ? { source } : { source, options };
 
 /**
  * Turns a canonical request into a built resource: URL resolution, acquisition
@@ -111,7 +137,14 @@ export class AssetDecoder {
    * loader between calls.
    */
   private readonly _reportCacheError = (error: AssetCacheError): void => {
-    this._loader.onCacheError.dispatch(error);
+    // A throwing listener must not unwind the cache path it observes, which
+    // would skip the remaining stores and the fallback read.
+    this._loader.onCacheError.dispatchIsolated(listenerError => {
+      logger.error('Loader.onCacheError listener failed.', {
+        source: 'Loader',
+        ...(listenerError instanceof Error && { error: listenerError }),
+      });
+    }, error);
   };
 
   public constructor(loader: Loader, typeRegistry: AssetTypeRegistry, options: AssetDecoderOptions) {
@@ -190,8 +223,17 @@ export class AssetDecoder {
     signal?: AbortSignal,
   ): Promise<T> {
     const url = this._resolveUrl(source);
-    const requestOptions = this._requestOptions(signal);
-    const fetchRepresentation = async (): Promise<T> => read(await fetchAsset(url, requestOptions));
+    const fetchOptions = this._fetchOptions;
+
+    const fetchRepresentation = async (): Promise<T> => {
+      const request = this._requestOptions(fetchOptions, signal);
+
+      try {
+        return await read(await fetchAsset(url, request.init));
+      } finally {
+        request.release?.();
+      }
+    };
 
     if (this._cache === null) {
       return fetchRepresentation();
@@ -215,16 +257,23 @@ export class AssetDecoder {
    * are composed rather than one replacing the other: the application's signal
    * is the only cancellation an application-level abort has, and the load's is
    * what a release or a scope teardown fires. Without a load signal the very
-   * `fetchOptions` object is handed on, so a plain fetch stays allocation-free.
+   * `fetchOptions` object is handed on unchanged. Release fallback listeners
+   * after reading the response body; releasing never aborts either input signal.
    */
-  private _requestOptions(signal?: AbortSignal): RequestInit {
+  private _requestOptions(fetchOptions: RequestInit, signal?: AbortSignal): AcquisitionRequest {
+    const configured = fetchOptions.signal;
+
     if (signal === undefined) {
-      return this._fetchOptions;
+      return { init: fetchOptions };
     }
 
-    const configured = this._fetchOptions.signal;
+    if (configured === undefined || configured === null) {
+      return { init: { ...fetchOptions, signal } };
+    }
 
-    return { ...this._fetchOptions, signal: configured === undefined || configured === null ? signal : anySignal(configured, signal) };
+    const composed = anySignal(configured, signal);
+
+    return { init: { ...fetchOptions, signal: composed.signal }, release: composed.release };
   }
 
   /**
@@ -267,11 +316,11 @@ export class AssetDecoder {
    * The block-wise container path does its own fetching - that is the point of
    * it - but must still resolve the source against the loader's base path and
    * carry the application's `fetchOptions`, exactly as every other acquisition
-   * does.
+   * does. A caller supplying a signal releases its request after the body is read.
    * @internal
    */
-  public _containerRequest(url: string, signal?: AbortSignal): { url: string; init: RequestInit } {
-    return { url: this._resolveUrl(url), init: this._requestOptions(signal) };
+  public _containerRequest(url: string, signal?: AbortSignal): AcquisitionRequest & { url: string } {
+    return { url: this._resolveUrl(url), ...this._requestOptions(this._fetchOptions, signal) };
   }
 
   /** The context a factory sees for one request. */
@@ -279,7 +328,8 @@ export class AssetDecoder {
     return {
       ...(options !== undefined && options !== null && { options }),
       signal,
-      source: asset.source,
+      // A direct source has no locator for a factory to resolve references against.
+      source: Object.hasOwn(asset, 'directSource') ? '' : asset.source,
       textureFormats: this._loader.variants.profile.textureFormats,
       locator: asset.locator,
       resourceKey: asset.key,
@@ -345,7 +395,12 @@ export class AssetDecoder {
    * belonged to.
    */
   private _describeFailure(asset: CanonicalAsset, error: unknown): unknown {
-    if (isAbortError(error) || error instanceof AssetCacheMissError || error instanceof AssetCacheError || error instanceof AssetNetworkError) {
+    if (
+      isAbortError(error) ||
+      error instanceof AssetCacheMissError ||
+      error instanceof AssetCacheError ||
+      error instanceof AssetNetworkError
+    ) {
       return error;
     }
 
@@ -370,7 +425,12 @@ export class AssetDecoder {
    * acquisition.
    * @internal
    */
-  public async _dispatchFetch(asset: CanonicalAsset, options: unknown, signal: AbortSignal | undefined, scope: LoaderScope): Promise<unknown> {
+  public async _dispatchFetch(
+    asset: CanonicalAsset,
+    options: unknown,
+    signal: AbortSignal | undefined,
+    scope: LoaderScope,
+  ): Promise<unknown> {
     const installed = this._typeRegistry.getInstalled(asset.type);
 
     if (installed === undefined) {
@@ -380,11 +440,35 @@ export class AssetDecoder {
     const { type, factory } = installed;
 
     try {
-      const unacquired = type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source), this._network()) as
-        { source: unknown } | undefined;
-      const source = unacquired === undefined ? await this._acquireSource(asset, type, signal) : unacquired.source;
+      // Direct object requests are already decoded input. Never fetch, inspect
+      // cache policy or ask a URL-based hook to reinterpret their value.
+      const direct = Object.hasOwn(asset, 'directSource');
+      const unacquired = direct
+        ? undefined
+        : (type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source), this._network()) as
+            | { source: unknown }
+            | undefined);
+      let source: unknown;
 
-      return this._storeResource(asset, await factory.create(source, this._factoryContext(asset, scope, options, signal)));
+      if (direct) {
+        source = asset.directSource;
+      } else if (unacquired !== undefined) {
+        source = unacquired.source;
+      } else {
+        source = await this._acquireSource(asset, type, signal);
+      }
+
+      const resource = await factory.create(source, this._factoryContext(asset, scope, options, signal));
+
+      if (signal?.aborted === true) {
+        try {
+          factory.dispose?.(resource);
+        } finally {
+          signal.throwIfAborted();
+        }
+      }
+
+      return this._storeResource(asset, resource);
     } catch (error: unknown) {
       throw this._describeFailure(asset, error);
     }
@@ -412,6 +496,7 @@ export class AssetDecoder {
       throw this._typeRegistry._missingTypeError(asset.type);
     }
 
+    this._typeRegistry.markUsed(asset.type);
     const { type } = installed;
 
     // Deliberately unwrapped. The "Failed to load X from Y" envelope belongs to

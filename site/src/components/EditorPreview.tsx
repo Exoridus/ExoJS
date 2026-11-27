@@ -9,8 +9,11 @@ import {
   useState,
 } from 'react';
 
-import { assets } from '../lib/asset-catalog';
+import type { ExampleRendererStatus } from '../../../examples/shared/runtime';
 import type { Capability } from '../lib/examples-catalog';
+import type { ConsoleWindow, PreviewConsole } from '../lib/preview-console';
+import { serializePreviewModules } from '../lib/preview-modules';
+import { readRendererStatus } from '../lib/preview-renderer';
 import { detectRuntimeSupport, getMissingCapabilities } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry, UrlParams } from '../lib/types';
 import { buildIframeUrl } from '../lib/url-builder';
@@ -34,6 +37,8 @@ const CAPABILITY_LABELS: Record<Capability, string> = {
 };
 
 const PREVIEW_SCROLL_KEYS = new Set([' ', 'PageUp', 'PageDown', 'End', 'Home', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown']);
+const PREVIEW_COMPLETE_EVENT = 'exo-preview-complete';
+const PREVIEW_COMPLETE_MODULE = `data:text/javascript,${encodeURIComponent(`window.dispatchEvent(new Event('${PREVIEW_COMPLETE_EVENT}'));`)}`;
 
 export interface CanvasSizeEvent {
   height: number;
@@ -51,19 +56,61 @@ export interface EditorPreviewProps {
   ref?: Ref<EditorPreviewHandle>;
   selectedVersionId: string;
   sourceCode: string | null;
+  executionModules?: Readonly<Record<string, string>>;
+  /**
+   * Receives the preview's console output and uncaught errors. Each iframe load
+   * starts a new generation of it; without one, errors only blank the preview.
+   */
+  output?: PreviewConsole;
+  /** Changing it restarts the preview even when `sourceCode` is unchanged. */
+  runId?: number;
   onCanvasSize?(event: CanvasSizeEvent): void;
-  onPreviewErrors?(errors: PreviewErrorEntry[]): void;
+  onRendererStatus?(status: ExampleRendererStatus | null): void;
+  onExecutionStatus?(status: 'updated' | 'error'): void;
+  onAssets?(sources: readonly string[] | null): void;
 }
 
-export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref, selectedVersionId, sourceCode }: EditorPreviewProps): JSX.Element => {
-  const [updateId, setUpdateId] = useState(0);
+export const EditorPreview = ({
+  exampleMeta,
+  executionModules,
+  onCanvasSize,
+  onRendererStatus,
+  onExecutionStatus,
+  onAssets,
+  output,
+  ref,
+  runId = 0,
+  selectedVersionId,
+  sourceCode,
+}: EditorPreviewProps): JSX.Element => {
+  const [previewRequest, setPreviewRequest] = useState<{
+    id: number;
+    modules: string | null;
+    modulesKey?: string;
+    error: string | null;
+  }>({ id: 0, modules: null, error: null });
+  const requestRef = useRef(previewRequest);
+  const rendererStatusRef = useRef(onRendererStatus);
+  const executionStatusRef = useRef(onExecutionStatus);
+  const assetsRef = useRef(onAssets);
+  const rendererCleanupRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    rendererStatusRef.current = onRendererStatus;
+    executionStatusRef.current = onExecutionStatus;
+    assetsRef.current = onAssets;
+  });
+  useEffect(() => () => rendererCleanupRef.current?.(), []);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const sourceRef = useRef<string | null>(sourceCode);
   const exampleRef = useRef<Example | null>(exampleMeta);
   const versionRef = useRef(selectedVersionId);
+  const outputRef = useRef<PreviewConsole | undefined>(output);
   const canvasMutationObserverRef = useRef<MutationObserver | null>(null);
   const canvasAttributeObserverRef = useRef<MutationObserver | null>(null);
+  const canvasMeasureRef = useRef<(() => void) | null>(null);
+  const canvasMeasureFrameRef = useRef(0);
+  const stageSizeRef = useRef({ width: STAGE_WIDTH, height: STAGE_HEIGHT });
   const currentCanvasRef = useRef({ width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 });
 
   // Latest-value refs for the callbacks below - the iframe load handler and
@@ -74,51 +121,150 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
     sourceRef.current = sourceCode;
     exampleRef.current = exampleMeta;
     versionRef.current = selectedVersionId;
+    outputRef.current = output;
   });
 
   useEffect(() => {
-    // Bump the iframe cache-buster to force a reload when the source changes.
-    // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect -- reload preview on source change
-    setUpdateId(value => value + 1);
+    let modules: string | null = null;
+    let modulesKey: string | undefined;
+    let error: string | null = null;
+
+    try {
+      modules = serializePreviewModules(executionModules);
+
+      if (modules !== null) {
+        modulesKey = `exo-preview-modules:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+        window.sessionStorage.setItem(modulesKey, modules);
+      }
+    } catch (cause) {
+      error = `Could not prepare edited helper modules. ${createPreviewErrorEntry(cause).summary}`;
+    }
+
+    const request = { id: requestRef.current.id + 1, modules, modulesKey, error };
+    requestRef.current = request;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect -- start a fresh document after staging its helper snapshot
+    setPreviewRequest(request);
+    // The outgoing document can still log until the new one loads; its
+    // messages must not reach the record the next load starts.
+    rendererCleanupRef.current?.();
+    rendererCleanupRef.current = null;
+    rendererStatusRef.current?.(null);
+    assetsRef.current?.(null);
+    outputRef.current?.detach();
+
+    if (error) {
+      executionStatusRef.current?.('error');
+    }
+
     disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
+    cancelAnimationFrame(canvasMeasureFrameRef.current);
+    canvasMeasureRef.current = null;
     currentCanvasRef.current = { width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 };
-    // Before the example reports its canvas, the frame already takes the
-    // stage's size scaled to the surface, so the iframe never sits at a
-    // different size or position from the one it settles on: the transform
-    // leaves the iframe's inner viewport alone, so this can be set early.
-    const zoom = measureFillZoom(rootRef.current, STAGE_WIDTH, STAGE_HEIGHT);
-    rootRef.current?.style.setProperty('--canvas-w', `${STAGE_WIDTH}px`);
-    rootRef.current?.style.setProperty('--canvas-h', `${STAGE_HEIGHT}px`);
+    // Give responsive phone scenes a useful portrait host. A fixed-world
+    // sizing policy reports its fitted canvas below and keeps its own aspect.
+    const stage = measureStageSize(rootRef.current);
+    stageSizeRef.current = stage;
+    const zoom = measureFillZoom(rootRef.current, stage.width, stage.height);
+    rootRef.current?.style.setProperty('--canvas-w', `${stage.width}px`);
+    rootRef.current?.style.setProperty('--canvas-h', `${stage.height}px`);
     rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
     onCanvasSize?.({ width: 0, height: 0, zoom: 1 });
-  }, [onCanvasSize, sourceCode]);
+
+    return () => {
+      if (modulesKey) {
+        try {
+          window.sessionStorage.removeItem(modulesKey);
+        } catch {
+          // Storage access can be revoked before the outgoing frame is cleaned up.
+        }
+      }
+    };
+  }, [onCanvasSize, sourceCode, executionModules, runId, selectedVersionId, exampleMeta?.path]);
 
   useEffect(() => {
+    let settleFrame = 0;
+    let resizeFrame = 0;
+    let wasVisible = false;
+
     const recalculateZoom = (): void => {
-      const { width, height, resolutionWidth, resolutionHeight } = currentCanvasRef.current;
-      if (!width) {
-        rootRef.current?.style.setProperty('--preview-zoom', String(measureFillZoom(rootRef.current, STAGE_WIDTH, STAGE_HEIGHT)));
+      if (!rootRef.current?.getClientRects().length) {
+        wasVisible = false;
+
         return;
       }
+
+      const becameVisible = !wasVisible;
+      wasVisible = true;
+      const stage = measureStageSize(rootRef.current);
+
+      if (becameVisible || stage.width !== stageSizeRef.current.width || stage.height !== stageSizeRef.current.height) {
+        stageSizeRef.current = stage;
+        const zoom = measureFillZoom(rootRef.current, stage.width, stage.height);
+        currentCanvasRef.current = { ...currentCanvasRef.current, ...stage, zoom };
+        rootRef.current?.style.setProperty('--canvas-w', `${stage.width}px`);
+        rootRef.current?.style.setProperty('--canvas-h', `${stage.height}px`);
+        rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
+        // A Run can finish while the Demo tab is hidden. Restore its intended
+        // host on reveal, then let the sizing policy settle before adopting
+        // the canvas, including fixed canvases whose attributes stay equal.
+        cancelAnimationFrame(settleFrame);
+        settleFrame = requestAnimationFrame(() => {
+          settleFrame = requestAnimationFrame(() => canvasMeasureRef.current?.());
+        });
+
+        return;
+      }
+
+      const { width, height, resolutionWidth, resolutionHeight } = currentCanvasRef.current;
+
+      if (!width) {
+        rootRef.current?.style.setProperty('--preview-zoom', String(measureFillZoom(rootRef.current, stage.width, stage.height)));
+
+        return;
+      }
+
       const zoom = measureFillZoom(rootRef.current, width, height);
       currentCanvasRef.current = { width, height, zoom, resolutionWidth, resolutionHeight };
       rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
       onCanvasSize?.({ width: resolutionWidth, height: resolutionHeight, zoom });
     };
 
+    const scheduleZoom = (): void => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(recalculateZoom);
+    };
+
     const preventScroll = (event: KeyboardEvent): void => {
-      if (document.activeElement !== iframeRef.current) return;
+      if (document.activeElement !== iframeRef.current) {
+        return;
+      }
+
       if (PREVIEW_SCROLL_KEYS.has(event.key)) {
         event.preventDefault();
       }
     };
 
-    window.addEventListener('resize', recalculateZoom);
+    // Responsive layout can settle after window.resize has measured an intermediate width.
+    const surface = rootRef.current?.closest<HTMLElement>('[data-preview-surface]');
+    const surfaceObserver = new ResizeObserver(scheduleZoom);
+
+    if (surface) {
+      surfaceObserver.observe(surface);
+    }
+
+    window.addEventListener('resize', scheduleZoom);
     window.addEventListener('keydown', preventScroll);
+
     return () => {
-      window.removeEventListener('resize', recalculateZoom);
+      cancelAnimationFrame(settleFrame);
+      cancelAnimationFrame(resizeFrame);
+      cancelAnimationFrame(canvasMeasureFrameRef.current);
+      surfaceObserver.disconnect();
+      window.removeEventListener('resize', scheduleZoom);
       window.removeEventListener('keydown', preventScroll);
       disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
+      canvasMeasureRef.current = null;
+      outputRef.current?.detach();
     };
   }, [onCanvasSize]);
 
@@ -130,22 +276,50 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
       },
       openPreviewInTab(): void {
         const source = sourceRef.current;
-        if (!source) return;
+
+        if (source === null) {
+          return;
+        }
+
         const storageKey = `exo-preview-source:${Date.now()}:${Math.random().toString(36).slice(2)}`;
-        window.sessionStorage.setItem(storageKey, source);
-        const target = buildPreviewUrl({ noCache: Date.now(), sourceKey: storageKey }, versionRef.current);
-        window.open(target, '_blank', 'noopener,noreferrer');
+        const modules = requestRef.current.modules;
+        const modulesKey = modules === null ? undefined : `${storageKey}:modules`;
+        const target = buildPreviewUrl({ noCache: Date.now(), sourceKey: storageKey, modulesKey }, versionRef.current);
+        const preview = window.open('about:blank', '_blank');
+
+        if (!preview) {
+          return;
+        }
+
+        // A noopener tab does not inherit sessionStorage; seed its own storage before navigating.
+        preview.opener = null;
+
+        try {
+          preview.sessionStorage.setItem(storageKey, source);
+
+          if (modulesKey && modules !== null) {
+            preview.sessionStorage.setItem(modulesKey, modules);
+          }
+
+          const link = preview.document.createElement('a');
+          link.href = target;
+          link.referrerPolicy = 'no-referrer';
+          link.click();
+        } catch (error) {
+          preview.close();
+
+          throw error;
+        }
       },
     }),
     [],
   );
 
-  const syncPreviewErrors = (errors: PreviewErrorEntry[]): void => {
-    onPreviewErrors?.(errors.filter(error => Boolean(error.summary)));
-  };
-
   const applyCanvasSize = (width: number, height: number, resolutionWidth: number, resolutionHeight: number): void => {
-    if (!width || !height) return;
+    if (!width || !height) {
+      return;
+    }
+
     const zoom = measureFillZoom(rootRef.current, width, height);
     currentCanvasRef.current = { width, height, zoom, resolutionWidth, resolutionHeight };
     rootRef.current?.style.setProperty('--canvas-w', `${width}px`);
@@ -160,11 +334,27 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
     // device pixel ratio would feed back into an example that sizes its canvas
     // to that window, doubling it on every resize.
     const measure = (): void => {
-      applyCanvasSize(canvas.clientWidth || canvas.width, canvas.clientHeight || canvas.height, canvas.width, canvas.height);
+      if (!rootRef.current?.getClientRects().length || !canvas.isConnected || canvas.ownerDocument !== iframeRef.current?.contentDocument) {
+        return;
+      }
+
+      // A hidden Demo tab has no CSS box. Its backing store can still carry
+      // the initial resolution and DPR; it must never become the host size.
+      applyCanvasSize(canvas.clientWidth, canvas.clientHeight, canvas.width, canvas.height);
     };
 
-    measure();
-    canvasAttributeObserverRef.current = new MutationObserver(measure);
+    // A sizing policy writes canvas styles from its host ResizeObserver.
+    // Changing that host synchronously from a canvas mutation feeds back into
+    // the same observer delivery and browsers report a resize loop. Adopt the
+    // settled canvas on the next frame, and never measure a detached surface.
+    const scheduleMeasure = (): void => {
+      cancelAnimationFrame(canvasMeasureFrameRef.current);
+      canvasMeasureFrameRef.current = requestAnimationFrame(measure);
+    };
+
+    canvasMeasureRef.current = scheduleMeasure;
+    scheduleMeasure();
+    canvasAttributeObserverRef.current = new MutationObserver(scheduleMeasure);
     canvasAttributeObserverRef.current.observe(canvas, {
       attributes: true,
       attributeFilter: ['width', 'height', 'style'],
@@ -181,14 +371,20 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
     // (the whole --canvas-w/h/zoom sizing never ran). `querySelector('canvas')`
     // is already typed `HTMLCanvasElement | null`, so a null check narrows fine.
     const existing = iframeBody.querySelector('canvas');
+
     if (existing) {
       observeCanvas(existing);
+
       return;
     }
 
     canvasMutationObserverRef.current = new MutationObserver(() => {
       const canvas = iframeBody.querySelector('canvas');
-      if (!canvas) return;
+
+      if (!canvas) {
+        return;
+      }
+
       canvasMutationObserverRef.current?.disconnect();
       canvasMutationObserverRef.current = null;
       observeCanvas(canvas);
@@ -200,27 +396,139 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
     const iframe = event.currentTarget;
     const iframeBody = (iframe.contentDocument ?? iframe.contentWindow?.document)?.body as HTMLBodyElement | null;
     const source = sourceRef.current;
-    if (!iframeBody || !source) return;
 
-    const iframeWindow = iframe.contentWindow;
-    syncPreviewErrors([]);
-
-    if (iframeWindow) {
-      iframeWindow.__EXAMPLE_META__ = exampleRef.current;
-      iframeWindow.assets = assets;
-      installPreviewErrorHandlers(iframeWindow, iframeBody, syncPreviewErrors);
+    if (!iframeBody || source === null) {
+      return;
     }
 
+    const loadedId = new URL(iframe.contentWindow?.location.href ?? iframe.src).searchParams.get('no-cache');
+
+    if (loadedId !== String(requestRef.current.id)) {
+      return;
+    }
+
+    const iframeWindow = iframe.contentWindow;
+    rendererCleanupRef.current?.();
+    rendererStatusRef.current?.(null);
+
+    if (iframeWindow) {
+      const report = (event: Event): void => {
+        const status = readRendererStatus((event as CustomEvent<unknown>).detail);
+
+        if (status && loadedId === String(requestRef.current.id)) {
+          rendererStatusRef.current?.(status);
+        }
+      };
+
+      iframeWindow.addEventListener('exo-renderer-status', report);
+
+      const complete = (): void => {
+        if (loadedId === String(requestRef.current.id)) {
+          executionStatusRef.current?.('updated');
+        }
+      };
+
+      iframeWindow.addEventListener(PREVIEW_COMPLETE_EVENT, complete, { once: true });
+
+      const forwardShortcut = (event: KeyboardEvent): void => {
+        const target = event.target as HTMLElement | null;
+
+        if ((target === iframeBody || target?.tagName === 'CANVAS') && PREVIEW_SCROLL_KEYS.has(event.key)) {
+          event.preventDefault();
+        }
+
+        if (
+          ((event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey)) || event.key === '/') &&
+          !event.defaultPrevented &&
+          !event.isComposing &&
+          !event.altKey &&
+          !target?.closest?.('input, textarea, select, [role="textbox"], [contenteditable]:not([contenteditable="false"])')
+        ) {
+          event.preventDefault();
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey }));
+        }
+      };
+
+      iframeWindow.addEventListener('keydown', forwardShortcut);
+      let previousAssets = '';
+      const assetTimer = window.setInterval(() => {
+        const sources = iframeWindow.__EXAMPLE_ASSETS__?.();
+        const key = JSON.stringify(sources ?? null);
+
+        if (key !== previousAssets) {
+          previousAssets = key;
+          assetsRef.current?.(sources ?? null);
+        }
+      }, 500);
+
+      rendererCleanupRef.current = () => {
+        window.clearInterval(assetTimer);
+        iframeWindow.removeEventListener('exo-renderer-status', report);
+        iframeWindow.removeEventListener(PREVIEW_COMPLETE_EVENT, complete);
+        iframeWindow.removeEventListener('keydown', forwardShortcut);
+      };
+
+      const sink = outputRef.current;
+      // Attached before the example's module is appended, so its first
+      // top-level log is already captured.
+      const generation = sink?.attach(iframeWindow as ConsoleWindow) ?? 0;
+
+      iframeWindow.__EXAMPLE_META__ = exampleRef.current;
+      installPreviewErrorHandlers(iframeWindow, iframeBody, error => {
+        if (loadedId === String(requestRef.current.id)) {
+          sink?.writeException(generation, error.summary, error.details ?? null);
+          executionStatusRef.current?.('error');
+        }
+      });
+
+      const modulesError = iframeBody.ownerDocument.documentElement.dataset.previewModulesError;
+
+      if (modulesError) {
+        sink?.writeException(generation, modulesError, null);
+        executionStatusRef.current?.('error');
+        renderExecutionError(iframeBody);
+
+        return;
+      }
+    }
+
+    const reportExecutionFailure = (error?: PreviewErrorEntry): void => {
+      if (loadedId !== String(requestRef.current.id)) {
+        return;
+      }
+
+      if (error) {
+        const sink = outputRef.current;
+        sink?.writeException(sink.generation, error.summary, error.details ?? null);
+        renderExecutionError(iframeBody);
+      }
+
+      executionStatusRef.current?.('error');
+    };
+
     iframeBody.tabIndex = -1;
-    void executePreviewSource(iframeBody, source, exampleRef.current, syncPreviewErrors);
+    void executePreviewSource(iframeBody, source, exampleRef.current, reportExecutionFailure).catch(error => {
+      reportExecutionFailure(createPreviewErrorEntry(error));
+    });
     watchForCanvas(iframeBody);
-    focusPreviewSurface(iframe);
+
+    if (document.activeElement === document.body || document.activeElement === iframe) {
+      focusPreviewSurface(iframe);
+    }
   };
 
-  if (!sourceCode) {
+  if (sourceCode === null) {
     return (
       <div ref={rootRef} className={css(styles, 'root')}>
         <LoadingSpinner centered />
+      </div>
+    );
+  }
+
+  if (previewRequest.error) {
+    return (
+      <div ref={rootRef} className={css(styles, 'root')}>
+        <p role="alert">{previewRequest.error}</p>
       </div>
     );
   }
@@ -229,79 +537,126 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
     <div ref={rootRef} className={css(styles, 'root')}>
       <iframe
         ref={iframeRef}
+        title={`Live demo: ${exampleMeta?.title ?? 'ExoJS example'}`}
         className={css(styles, 'preview')}
         onLoad={onLoadIframe}
-        onError={() => syncPreviewErrors([{ summary: 'The preview iframe failed to load.', details: 'The preview iframe failed to load.' }])}
+        onError={() => {
+          const sink = outputRef.current;
+
+          sink?.writeException(sink.generation, 'The preview iframe failed to load.', null);
+          executionStatusRef.current?.('error');
+        }}
         onPointerDown={() => focusPreviewSurface(iframeRef.current)}
         onKeyDown={(event: ReactKeyboardEvent<HTMLIFrameElement>) => {
-          if (event.key === 'Enter') focusPreviewSurface(iframeRef.current);
+          if (event.key === 'Enter') {
+            focusPreviewSurface(iframeRef.current);
+          }
         }}
         allow="autoplay"
         tabIndex={0}
-        src={buildPreviewUrl({ noCache: updateId }, selectedVersionId)}
+        src={buildPreviewUrl({ noCache: previewRequest.id, modulesKey: previewRequest.modulesKey }, selectedVersionId)}
       />
     </div>
   );
 };
 
-/** The stage preview.html lays every example out on; the frame takes this size until the canvas reports its own. */
+/** Desktop's starting stage; each canvas can report its own size. */
 const STAGE_WIDTH = 1280;
 const STAGE_HEIGHT = 720;
 
+const measureSurfaceWidth = (root: HTMLElement | null): number => {
+  const width = root?.closest<HTMLElement>('[data-preview-surface]')?.clientWidth ?? 0;
+
+  return width > 0 ? width : window.innerWidth;
+};
+
+const measureStageSize = (root: HTMLElement | null): { width: number; height: number } => {
+  if (!window.matchMedia('(max-width: 760px)').matches) {
+    return { width: STAGE_WIDTH, height: STAGE_HEIGHT };
+  }
+
+  return {
+    width: measureSurfaceWidth(root),
+    height: Math.min(440, Math.floor(window.innerHeight * 0.65)),
+  };
+};
+
 // Scale the canvas to fill the available preview-panel width rather than
 // sitting at native size with empty gutters. The iframe itself is a fixed
-// 1280x720 stage that uniformly transform-scales its content (see
-// public/preview.html), so scaling the outer container up is crop-free and
-// keeps DOM overlays aligned - unlike engine-level `fill`, which would resize
-// the backing store and crop fixed coordinates. We measure the surrounding
-// `.preview-surface` (a layout-driven width, not the shrink-to-fit wrapper)
-// and allow upscaling past 1, capping height at ~72vh so a small native canvas
-// never overflows the viewport.
+// stage reported by the canvas. Uniform transform scaling keeps DOM overlays
+// aligned without changing the example's sizing policy or fixed coordinates.
+// Measure the layout-driven surface, not the shrink-to-fit wrapper, and cap
+// the preview at 65vh so a small native canvas never overflows the viewport.
 const measureFillZoom = (root: HTMLElement | null, width: number, height: number): number => {
-  if (!width || !height) return 1;
-  const surface = root?.closest<HTMLElement>('[data-preview-surface]');
-  const availableWidth = surface?.clientWidth ?? window.innerWidth;
+  if (!width || !height) {
+    return 1;
+  }
+
+  const availableWidth = measureSurfaceWidth(root);
   const widthZoom = availableWidth / width;
-  const heightZoom = (window.innerHeight * 0.72) / height;
+  const heightZoom = (window.innerHeight * 0.65) / height;
+
   return Math.max(0.1, Math.min(widthZoom, heightZoom));
 };
 
-const buildPreviewUrl = (options: { noCache: number; sourceKey?: string }, selectedVersionId: string): string => {
+const buildPreviewUrl = (options: { noCache: number; sourceKey?: string; modulesKey?: string }, selectedVersionId: string): string => {
   const params: UrlParams = { 'no-cache': options.noCache };
-  if (selectedVersionId) params.v = selectedVersionId;
-  if (options.sourceKey) params['source-key'] = options.sourceKey;
+
+  if (selectedVersionId) {
+    params.v = selectedVersionId;
+  }
+
+  if (options.sourceKey) {
+    params['source-key'] = options.sourceKey;
+  }
+
+  if (options.modulesKey) {
+    params['modules-key'] = options.modulesKey;
+  }
+
   return buildIframeUrl(params);
 };
 
 const focusPreviewSurface = (iframe: HTMLIFrameElement | null): void => {
-  iframe?.focus();
+  iframe?.focus({ preventScroll: true });
   iframe?.contentWindow?.focus();
-  iframe?.contentDocument?.body?.focus();
+  iframe?.contentDocument?.body?.focus({ preventScroll: true });
 };
 
-const installPreviewErrorHandlers = (iframeWindow: Window, iframeBody: HTMLBodyElement, syncPreviewErrors: (errors: PreviewErrorEntry[]) => void): void => {
+const installPreviewErrorHandlers = (
+  iframeWindow: Window,
+  iframeBody: HTMLBodyElement,
+  reportError: (error: PreviewErrorEntry) => void,
+): void => {
   iframeWindow.__EXAMPLE_PREVIEW_ERROR_RENDERED__ = false;
 
   iframeWindow.onerror = (message, _source, _lineno, _colno, error) => {
     const previewError = createPreviewErrorEntry(error, message);
+    reportError(previewError);
+
     if (isRecoverablePreviewError(previewError.summary)) {
       blankPreviewSurface(iframeBody);
+
       return true;
     }
-    syncPreviewErrors([previewError]);
+
     renderExecutionError(iframeBody);
+
     return true;
   };
 
   iframeWindow.onunhandledrejection = (event: PromiseRejectionEvent) => {
     const previewError = createPreviewErrorEntry(event.reason);
+    reportError(previewError);
+
     if (isRecoverablePreviewError(previewError.summary)) {
       event.preventDefault();
       blankPreviewSurface(iframeBody);
+
       return;
     }
+
     event.preventDefault();
-    syncPreviewErrors([previewError]);
     renderExecutionError(iframeBody);
   };
 };
@@ -310,17 +665,22 @@ const executePreviewSource = async (
   iframeBody: HTMLBodyElement,
   sourceCode: string,
   exampleMeta: Example | null,
-  _syncPreviewErrors: (errors: PreviewErrorEntry[]) => void,
+  onFailure: (error?: PreviewErrorEntry) => void,
 ): Promise<void> => {
   const required = exampleMeta?.capabilities ?? [];
+
   if (required.length > 0) {
     let missing = getMissingCapabilities(required);
+
     if (missing === null) {
       await detectRuntimeSupport();
       missing = getMissingCapabilities(required);
     }
+
     if (missing && missing.length > 0) {
       renderCapabilityOverlay(iframeBody, required, missing);
+      onFailure();
+
       return;
     }
   }
@@ -329,7 +689,16 @@ const executePreviewSource = async (
 
   const script = iframeBody.ownerDocument.createElement('script');
   script.type = 'module';
-  script.textContent = `${sourceCode}\n`;
+  // Inline modules have no load event. A separate, constant module signals
+  // completion after the user's last statement and top-level awaits. Keeping
+  // the entry inline preserves its relative imports and import.meta.url;
+  // the notifier has its own scope and cannot collide with user bindings.
+  script.textContent = `${sourceCode}\n;await import(${JSON.stringify(PREVIEW_COMPLETE_MODULE)});\n`;
+  script.addEventListener(
+    'error',
+    () => onFailure({ summary: 'The preview module could not load. Check its imports and the browser console.' }),
+    { once: true },
+  );
   iframeBody.appendChild(script);
 };
 
@@ -341,10 +710,9 @@ const executePreviewSource = async (
  * module graph is per realm, so a signal imported here would be a different
  * object from the one the sample's engine dispatches on.
  *
- * Kept out of the sample's own module for the reason the gate exists at all:
- * the editor shows the visitor's code, and what runs must be exactly that.
- * Which also rules out reading the sample's variables - a visitor names their
- * application whatever they like, or builds none.
+ * Kept in its own module scope so it cannot collide with the sample's
+ * bindings. The gate never reads the sample's variables: a visitor names
+ * their application whatever they like, or builds none.
  *
  * The gesture needs no handling of its own. The engine resumes a suspended
  * context on a pointer or key event anywhere in the realm, so clicking the
@@ -376,6 +744,7 @@ const disconnectCanvasObservers = (
 
 const isRecoverablePreviewError = (message: string): boolean => {
   const normalized = message.toLowerCase();
+
   return (
     normalized.includes('does not support webgl') ||
     normalized.includes('failed to create a webgl') ||
@@ -390,8 +759,15 @@ const isRecoverablePreviewError = (message: string): boolean => {
 
 const blankPreviewSurface = (iframeBody: HTMLBodyElement): void => {
   const iframeWindow = iframeBody.ownerDocument.defaultView;
-  if (iframeWindow?.__EXAMPLE_PREVIEW_ERROR_RENDERED__) return;
-  if (iframeWindow) iframeWindow.__EXAMPLE_PREVIEW_ERROR_RENDERED__ = true;
+
+  if (iframeWindow?.__EXAMPLE_PREVIEW_ERROR_RENDERED__) {
+    return;
+  }
+
+  if (iframeWindow) {
+    iframeWindow.__EXAMPLE_PREVIEW_ERROR_RENDERED__ = true;
+  }
+
   iframeBody.setAttribute('data-preview-blanked', '');
   iframeBody.replaceChildren();
   Object.assign(iframeBody.style, {
@@ -419,8 +795,10 @@ const createPreviewErrorEntry = (error: unknown, fallbackMessage?: string | Even
   // useless "{}" panel via JSON.stringify (Error props are non-enumerable).
   if (typeof error === 'object' && error !== null && typeof (error as { message?: unknown }).message === 'string') {
     const errorLike = error as { message: string; stack?: unknown; name?: unknown };
+
     if (errorLike.message.trim()) {
       const prefix = typeof errorLike.name === 'string' && errorLike.name && errorLike.name !== 'Error' ? `${errorLike.name}: ` : '';
+
       return {
         summary: `${prefix}${errorLike.message}`,
         details: typeof errorLike.stack === 'string' && errorLike.stack.trim() ? errorLike.stack : `${prefix}${errorLike.message}`,
@@ -436,6 +814,7 @@ const createPreviewErrorEntry = (error: unknown, fallbackMessage?: string | Even
   }
 
   const details = stringifyPreviewError(error);
+
   return {
     summary: details,
     details,
@@ -443,14 +822,28 @@ const createPreviewErrorEntry = (error: unknown, fallbackMessage?: string | Even
 };
 
 const stringifyPreviewError = (error: unknown): string => {
-  if (typeof error === 'string') return error;
-  if (typeof error === 'number' || typeof error === 'boolean' || typeof error === 'bigint') return String(error);
-  if (error === null) return 'null';
-  if (error === undefined) return 'Unknown preview error';
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (typeof error === 'number' || typeof error === 'boolean' || typeof error === 'bigint') {
+    return String(error);
+  }
+
+  if (error === null) {
+    return 'null';
+  }
+
+  if (error === undefined) {
+    return 'Unknown preview error';
+  }
 
   try {
     const serialized = JSON.stringify(error);
-    if (typeof serialized === 'string') return serialized;
+
+    if (typeof serialized === 'string') {
+      return serialized;
+    }
   } catch {
     // Fall through to Object.prototype formatting.
   }
@@ -458,10 +851,17 @@ const stringifyPreviewError = (error: unknown): string => {
   return Object.prototype.toString.call(error);
 };
 
-const renderCapabilityOverlay = (iframeBody: HTMLBodyElement, required: ReadonlyArray<Capability>, missing: ReadonlyArray<Capability>): void => {
+const renderCapabilityOverlay = (
+  iframeBody: HTMLBodyElement,
+  required: ReadonlyArray<Capability>,
+  missing: ReadonlyArray<Capability>,
+): void => {
   const doc = iframeBody.ownerDocument;
   const iframeWindow = doc.defaultView;
-  if (iframeWindow) iframeWindow.__EXAMPLE_PREVIEW_ERROR_RENDERED__ = true;
+
+  if (iframeWindow) {
+    iframeWindow.__EXAMPLE_PREVIEW_ERROR_RENDERED__ = true;
+  }
 
   iframeBody.setAttribute('data-preview-blanked', 'capabilities');
   iframeBody.replaceChildren();
@@ -510,6 +910,7 @@ const renderCapabilityOverlay = (iframeBody: HTMLBodyElement, required: Readonly
   const list = doc.createElement('ul');
   Object.assign(list.style, { margin: '0', padding: '0', listStyle: 'none', display: 'grid', gap: '0.4rem' });
   const missingSet = new Set(missing);
+
   for (const capability of required) {
     const item = doc.createElement('li');
     const isMissing = missingSet.has(capability);
@@ -534,6 +935,7 @@ const renderCapabilityOverlay = (iframeBody: HTMLBodyElement, required: Readonly
     item.appendChild(text);
     list.appendChild(item);
   }
+
   overlay.appendChild(list);
   iframeBody.appendChild(overlay);
 };

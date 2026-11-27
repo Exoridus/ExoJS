@@ -4,7 +4,7 @@
   "symbol": "PhysicsBinding",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -23,7 +23,7 @@
         "The two angles have opposite signs: a body angle turns clockwise on the Y-down screen, a `SceneNode.rotation` counter-clockwise, so a body at `+30°` (in radians) shows as a node rotation of `-30°`.",
         "By default the node snaps to the latest fixed-step state after each step. With `PhysicsWorld`'s interpolation enabled the node is instead placed between the body's previous and current fixed states, which smooths motion when the fixed rate is below the frame rate. Either way this is presentation: nothing written onto the node is read back into the simulation."
       ],
-      "importLine": "import { PhysicsBinding } from '@codexo/exojs-physics'",
+      "importLine": "import { PhysicsBinding } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

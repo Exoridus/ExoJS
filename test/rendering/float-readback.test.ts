@@ -24,47 +24,51 @@ describe('float readback', () => {
     expect(allocate).not.toHaveBeenCalled();
   });
 
-  test.each([TextureFormat.Rgba16F, TextureFormat.Rgba32F] as const)('float reader reuses held storage and follows resize for %s', format => {
-    const backend = createRenderBackendDouble();
-    const readbacks: Array<ReturnType<typeof createPixelReadbackDouble<'uint8' | 'float32'>>> = [];
-    backend.createPixelReadback = (<T extends PixelDataType = 'uint8'>(
-      _source: RenderTexture,
-      _x: number,
-      _y: number,
-      width: number,
-      height: number,
-      slots: number,
-      dataType: T = 'uint8' as T,
-    ) => {
-      const readback = createPixelReadbackDouble(width, height, slots, dataType);
-      readbacks.push(readback);
-      return readback;
-    }) as RenderBackend['createPixelReadback'];
-    const context = new RenderingContext(backend);
-    const target = new RenderTexture(3, 2, { format });
-    const reader = context.createPixelReader(target, { dataType: 'float32', slots: 1 });
-    const first = reader.request()!;
+  test.each([TextureFormat.Rgba16F, TextureFormat.Rgba32F] as const)(
+    'float reader reuses held storage and follows resize for %s',
+    format => {
+      const backend = createRenderBackendDouble();
+      const readbacks: Array<ReturnType<typeof createPixelReadbackDouble<'uint8' | 'float32'>>> = [];
+      backend.createPixelReadback = (<T extends PixelDataType = 'uint8'>(
+        _source: RenderTexture,
+        _x: number,
+        _y: number,
+        width: number,
+        height: number,
+        slots: number,
+        dataType: T = 'uint8' as T,
+      ) => {
+        const readback = createPixelReadbackDouble(width, height, slots, dataType);
+        readbacks.push(readback);
 
-    expect(first.data).toBeNull();
-    readbacks[0]!.settle(-2.5);
-    const payload = first.data!.data;
-    expect(payload).toBeInstanceOf(Float32Array);
-    expect(payload[0]).toBe(-2.5);
-    first.release();
-    const second = reader.request()!;
-    expect(second).toBe(first);
-    readbacks[0]!.settle(3.5);
-    expect(second.data!.data).toBe(payload);
-    expect(payload[0]).toBe(3.5);
-    target.resize(1, 1);
-    const resized = reader.request()!;
-    expect(second.failed).toBe(true);
-    readbacks[1]!.settle(-4);
-    expect(resized.data!.data).toEqual(new Float32Array(4).fill(-4));
-    resized.release();
-    reader.destroy();
-    target.destroy();
-  });
+        return readback;
+      }) as RenderBackend['createPixelReadback'];
+      const context = new RenderingContext(backend);
+      const target = new RenderTexture(3, 2, { format });
+      const reader = context.createPixelReader(target, { dataType: 'float32', slots: 1 });
+      const first = reader.request()!;
+
+      expect(first.data).toBeNull();
+      readbacks[0]!.settle(-2.5);
+      const payload = first.data!.data;
+      expect(payload).toBeInstanceOf(Float32Array);
+      expect(payload[0]).toBe(-2.5);
+      first.release();
+      const second = reader.request()!;
+      expect(second).toBe(first);
+      readbacks[0]!.settle(3.5);
+      expect(second.data!.data).toBe(payload);
+      expect(payload[0]).toBe(3.5);
+      target.resize(1, 1);
+      const resized = reader.request()!;
+      expect(second.failed).toBe(true);
+      readbacks[1]!.settle(-4);
+      expect(resized.data!.data).toEqual(new Float32Array(4).fill(-4));
+      resized.release();
+      reader.destroy();
+      target.destroy();
+    },
+  );
   test.each([TextureFormat.Rgba16F, TextureFormat.Rgba32F] as const)('accepts explicit float payloads from %s', async format => {
     const backend = createRenderBackendDouble();
     const payload = new Float32Array([-2, 4, 0.5, 1]);
@@ -96,6 +100,7 @@ describe('float readback', () => {
     const mapped = new ArrayBuffer(512);
     const view = new DataView(mapped);
     const output = new Float32Array(8);
+
     for (let channel = 0; channel < 4; channel++) {
       if (format === TextureFormat.Rgba16F) {
         view.setUint16(channel * 2, 0xc100, true);
@@ -105,6 +110,7 @@ describe('float readback', () => {
         view.setFloat32(256 + channel * 4, 3.5, true);
       }
     }
+
     unpackPixelRows(mapped, output, 1, 2, 256, format);
     expect(output).toEqual(new Float32Array([-2.5, -2.5, -2.5, -2.5, 3.5, 3.5, 3.5, 3.5]));
   });

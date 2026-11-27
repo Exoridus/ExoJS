@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   Color,
   FixedResolutionCanvasSizing,
   type RenderingContext,
@@ -9,7 +8,8 @@ import {
   Spritesheet,
   type SpritesheetData,
 } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, mountControls, slider, toggle } from '@examples/runtime';
 
 const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'];
 
@@ -25,8 +25,8 @@ class SpritesheetFramesScene extends Scene {
   override async load(): Promise<void> {
     const app = this.app;
     const { width, height } = app;
-    const texture = this.loader.get('image/platformer-characters.png');
-    const data = (await this.loader.load(Asset.type('json', 'json/platformer-characters.json'))) as SpritesheetData;
+    const texture = this.loader.get(assets.platformerCharactersImage);
+    const data = (await this.loader.load(assets.platformerCharactersAtlas)) as SpritesheetData;
 
     this.spritesheet = new Spritesheet(texture, data);
 
@@ -44,9 +44,18 @@ class SpritesheetFramesScene extends Scene {
       hint: 'A two-frame walk cycle stepped on a timer from named spritesheet frames.',
     });
 
-    const panel = mountControlPanel({ title: 'Animation' });
-    panel.addSlider({ label: 'Speed (fps)', min: 1, max: 16, step: 1, value: this.fps, onChange: value => (this.fps = value) });
-    panel.addToggle({ label: 'Playing', value: true, onChange: on => (this.playing = on) });
+    demoPanel({
+      scene: this,
+      title: 'Animation',
+      controls: {
+        fps: slider('Speed (fps)', { min: 1, max: 16, step: 1, value: this.fps }),
+        playing: toggle('Playing', true),
+      },
+      onChange: (_key, _value, values) => {
+        this.fps = values.fps;
+        this.playing = values.playing;
+      },
+    });
 
     app.input.onContextMenu.add(() => {
       const index = (CHARACTERS.indexOf(this.character) + 1) % CHARACTERS.length;
@@ -99,9 +108,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(24, 28, 38),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(SpritesheetFramesScene);

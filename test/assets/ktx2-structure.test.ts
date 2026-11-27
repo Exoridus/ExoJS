@@ -27,7 +27,15 @@ const writeDfd = (bytes: Uint8Array, offset: number, transfer: number): void => 
 
 const align16 = (value: number): number => Math.ceil(value / 16) * 16;
 
-const buildKtx2 = ({ layerCount = 0, levelCount = 1, dfdOffset, dfdLength, levelOffset, transfer = 1, kvd }: Ktx2StructureSpec = {}): ArrayBuffer => {
+const buildKtx2 = ({
+  layerCount = 0,
+  levelCount = 1,
+  dfdOffset,
+  dfdLength,
+  levelOffset,
+  transfer = 1,
+  kvd,
+}: Ktx2StructureSpec = {}): ArrayBuffer => {
   const levelLength = compressedLevelByteLength(CompressedTextureFormat.Bc7RgbaUnorm, 8, 8);
   const indexBytes = Math.max(levelCount, 1) * levelIndexEntryBytes;
   const storageDfdOffset = headerBytes + indexBytes;

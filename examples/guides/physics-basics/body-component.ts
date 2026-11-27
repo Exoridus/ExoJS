@@ -1,12 +1,14 @@
 import { Color, Graphics, Scene, SystemOrder } from '@codexo/exojs';
-import { BoxShape, CircleShape, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, CircleShape, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:body-component
 class ArenaScene extends Scene {
-  private readonly world = new PhysicsWorld({ gravity: { x: 0, y: 980 } });
+  private world!: PhysicsWorld;
 
   public override init(): void {
-    this.systems.add(this.world, { order: SystemOrder.Physics });
+    this.world = this.systems.add(new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep, gravity: { x: 0, y: 980 } }), {
+      order: SystemOrder.Physics,
+    });
 
     const floor = new Graphics();
 

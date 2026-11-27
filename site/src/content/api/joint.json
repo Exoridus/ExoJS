@@ -4,7 +4,7 @@
   "symbol": "Joint",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Base class for a two-body constraint solved alongside contacts in the sub-step loop. Concrete joints (distance, revolute, weld) implement the three solver hooks; the world owns the joint list and drives them, and joins the two bodies into one sleep island so a jointed pair sleeps and wakes together."
       ],
-      "importLine": "import { Joint } from '@codexo/exojs-physics'",
+      "importLine": "import { Joint } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

@@ -1,5 +1,5 @@
 import { Keyboard, type RenderingContext, Scene, type Seconds, Sprite, Text } from '@codexo/exojs';
-import { PhysicsWorld } from '@codexo/exojs-physics';
+import { PhysicsWorld } from '@codexo/exojs/physics';
 
 interface Player {
   jump(): void;

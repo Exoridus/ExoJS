@@ -241,7 +241,9 @@ describe('Polygon — points / edges', () => {
   test('setPoints() grows the point/edge arrays when given more points than before', () => {
     const polygon = new Polygon([new Vector(0, 0), new Vector(10, 0)]);
 
-    expect(() => polygon.setPoints([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10), new Vector(-5, 5)])).not.toThrow();
+    expect(() =>
+      polygon.setPoints([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10), new Vector(-5, 5)]),
+    ).not.toThrow();
     expect(polygon.points.length).toBe(5);
     expect(polygon.edges.length).toBe(5);
 
@@ -383,6 +385,16 @@ describe('Polygon.getBounds()', () => {
     expect(bounds.height).toBe(10);
 
     polygon.destroy();
+  });
+
+  test('an empty polygon has finite zero bounds', () => {
+    const polygon = new Polygon([], 7, 9);
+    const bounds = polygon.getBounds();
+
+    expect(bounds.x).toBe(7);
+    expect(bounds.y).toBe(9);
+    expect(bounds.width).toBe(0);
+    expect(bounds.height).toBe(0);
   });
 });
 
@@ -575,6 +587,16 @@ describe('Polygon.destroy()', () => {
     expect(() => polygon.destroy()).not.toThrow();
     expect(polygon.points.length).toBe(0);
     expect(polygon.edges.length).toBe(0);
+  });
+
+  test('a warm normals cache reads as empty after destroy', () => {
+    const polygon = new Polygon([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10)]);
+
+    expect(polygon.getNormals()).toHaveLength(3);
+
+    polygon.destroy();
+
+    expect(polygon.getNormals()).toEqual([]);
   });
 });
 

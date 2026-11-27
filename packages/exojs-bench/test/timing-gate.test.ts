@@ -51,7 +51,8 @@ const recorded = {
 };
 
 /** A baseline holding one cell at `baselineMs`. */
-const baselineAt = (baselineMs: number): TimingBaseline => recordTimingBaseline([cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs })], recorded);
+const baselineAt = (baselineMs: number): TimingBaseline =>
+  recordTimingBaseline([cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs })], recorded);
 
 describe('compareToTimingBaseline', () => {
   test('passes a cell inside the threshold', () => {
@@ -82,8 +83,12 @@ describe('compareToTimingBaseline', () => {
     // At this baseline the floor and the threshold coincide, so the pair of cases
     // pins both boundaries at once: "more than 25 %" is strict.
     const baselineMs = TIMING_FLOOR_MS / TIMING_THRESHOLD;
-    const atThreshold = compareToTimingBaseline(baselineAt(baselineMs), [cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs + TIMING_FLOOR_MS })]);
-    const past = compareToTimingBaseline(baselineAt(baselineMs), [cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs + TIMING_FLOOR_MS + 0.001 })]);
+    const atThreshold = compareToTimingBaseline(baselineAt(baselineMs), [
+      cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs + TIMING_FLOOR_MS }),
+    ]);
+    const past = compareToTimingBaseline(baselineAt(baselineMs), [
+      cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs + TIMING_FLOOR_MS + 0.001 }),
+    ]);
 
     expect(atThreshold.comparisons[0]!.failed).toBe(false);
     expect(past.comparisons[0]!.failed).toBe(true);
@@ -111,8 +116,14 @@ describe('compareToTimingBaseline', () => {
   });
 
   test('sorts the worst regression first, so the report leads with what matters', () => {
-    const baseline = recordTimingBaseline([cell({ archetype: 'static-heavy', cpuMsMedian: 10 }), cell({ archetype: 'overdraw', cpuMsMedian: 10 })], recorded);
-    const outcome = compareToTimingBaseline(baseline, [cell({ archetype: 'static-heavy', cpuMsMedian: 11 }), cell({ archetype: 'overdraw', cpuMsMedian: 20 })]);
+    const baseline = recordTimingBaseline(
+      [cell({ archetype: 'static-heavy', cpuMsMedian: 10 }), cell({ archetype: 'overdraw', cpuMsMedian: 10 })],
+      recorded,
+    );
+    const outcome = compareToTimingBaseline(baseline, [
+      cell({ archetype: 'static-heavy', cpuMsMedian: 11 }),
+      cell({ archetype: 'overdraw', cpuMsMedian: 20 }),
+    ]);
 
     expect(outcome.comparisons.map(comparison => comparison.cell.archetype)).toEqual(['overdraw', 'static-heavy']);
   });
@@ -126,6 +137,14 @@ describe('compareToTimingBaseline', () => {
 });
 
 describe('formatTimingOutcome', () => {
+  test('reports a thinner measurement alongside its baseline sample count', () => {
+    const measured = cell({ archetype: 'static-heavy', cpuMsMedian: 10 });
+    const outcome = compareToTimingBaseline(baselineAt(10), [{ ...measured, spec: { ...measured.spec, timedFrames: 5 } }]);
+
+    expect(formatTimingOutcome(outcome)).toContain('frames 90 -> 5');
+    expect(isTimingFailure(outcome)).toBe(false);
+  });
+
   test('says so when the baseline was not recorded on a confirmed-idle machine', () => {
     const loose = recordTimingBaseline([cell({ archetype: 'static-heavy', cpuMsMedian: 10 })], { ...recorded, confirmedIdle: false });
     const report = formatTimingOutcome(compareToTimingBaseline(loose, [cell({ archetype: 'static-heavy', cpuMsMedian: 10 })]));

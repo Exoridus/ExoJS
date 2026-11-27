@@ -1,9 +1,11 @@
 import { Color } from '#core/Color';
-import { assert } from '#core/dev';
+import { assert, invariant } from '#core/dev';
 import { Signal } from '#core/Signal';
 import type { GradientStop } from '#rendering/gradient/Gradient';
 
 import { cssFontString } from './canvasTextState';
+import { TextEffectError } from './TextEffectError';
+import type { TextEffectIssue } from './textEffects';
 import type { FontStyle, FontVariant, FontVariantKey, TextAlignment, TextTransform } from './types';
 
 /**
@@ -58,7 +60,7 @@ const byOffset = (left: GradientStop, right: GradientStop): number => left.offse
  */
 const _normalizeGradient = (gradient: TextGradient): ResolvedTextGradient => {
   assert(gradient.stops.length >= 2, 'TextStyle gradient requires at least 2 colour stops.');
-  assert(gradient.stops.length <= textGradientMaxStops, `TextStyle gradient accepts at most ${textGradientMaxStops} colour stops.`);
+  invariant(gradient.stops.length <= textGradientMaxStops, `TextStyle gradient accepts at most ${textGradientMaxStops} colour stops.`);
 
   const stops = gradient.stops
     .map(stop => {
@@ -72,7 +74,9 @@ const _normalizeGradient = (gradient: TextGradient): ResolvedTextGradient => {
 };
 
 const _cloneGradient = (gradient: ResolvedTextGradient | null): ResolvedTextGradient | null =>
-  gradient === null ? null : { stops: gradient.stops.map(stop => ({ offset: stop.offset, color: stop.color.clone() })), angle: gradient.angle };
+  gradient === null
+    ? null
+    : { stops: gradient.stops.map(stop => ({ offset: stop.offset, color: stop.color.clone() })), angle: gradient.angle };
 
 /**
  * Describes how costly a style change is to incorporate.
@@ -88,8 +92,14 @@ export type StyleChangeHint = 'tint' | 'layout' | 'font';
  * @internal
  */
 export const mergeHint = (a: StyleChangeHint, b: StyleChangeHint): StyleChangeHint => {
-  if (a === 'font' || b === 'font') return 'font';
-  if (a === 'layout' || b === 'layout') return 'layout';
+  if (a === 'font' || b === 'font') {
+    return 'font';
+  }
+
+  if (a === 'layout' || b === 'layout') {
+    return 'layout';
+  }
+
   return 'tint';
 };
 
@@ -136,7 +146,7 @@ export interface TextStyleOptions {
    * Takes precedence over `fontFamily` when both are set.
    *
    * ```ts
-   * const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' }));
+   * const face = await loader.load({ type: 'font', source: 'roboto.woff2', family: 'Roboto' });
    * const label = new Text('Score: 0', { font: face, fontSize: 24 });
    * ```
    */
@@ -151,10 +161,15 @@ export interface TextStyleOptions {
   fontStyle?: FontStyle;
   /** CSS font-variant-caps. Defaults to `'normal'`. */
   fontVariant?: FontVariant;
+  /** Must be a positive finite number; otherwise the constructor and setter throw `RangeError`. */
   fontSize?: number;
   fillColor?: Color;
   outlineColor?: Color;
-  /** Outline width in SDF units (0..0.5). 0 disables the outline. */
+  /**
+   * Outline extent outside the glyph edge, in logical pixels of the node's
+   * local space. `0` disables the outline. Must be finite and not negative,
+   * else `RangeError`; a width the node cannot draw throws {@link TextEffectError}.
+   */
   outlineWidth?: number;
   align?: TextAlignment;
   /**
@@ -170,7 +185,7 @@ export interface TextStyleOptions {
    * one.
    */
   textTransform?: TextTransform;
-  /** Multiplier of `fontSize` for the distance between lines. Default `1.2` - not a pixel value. */
+  /** Multiplier of `fontSize` for the distance between lines. Default `1.2` - not a pixel value. Must be a positive finite number, else `RangeError`. */
   lineHeight?: number;
   /** Extra pixel gap between lines, added on top of `lineHeight`. */
   leading?: number;
@@ -178,13 +193,19 @@ export interface TextStyleOptions {
   // ── Shadow ────────────────────────────────────────────────────────────────
   /** Drop-shadow color. */
   shadowColor?: Color;
-  /** Horizontal shadow offset in pixels. */
+  /** Horizontal shadow offset in logical pixels of the node's local space. */
   shadowOffsetX?: number;
-  /** Vertical shadow offset in pixels. */
+  /** Vertical shadow offset in logical pixels of the node's local space. */
   shadowOffsetY?: number;
-  /** Shadow opacity (0..1). 0 disables the shadow. */
+  /** Shadow opacity (0..1). 0 disables the shadow; offsets and blur only matter above it. */
   shadowAlpha?: number;
-  /** Shadow blur softness (0..1). Larger values soften the shadow edge. */
+  /**
+   * Half-width of the shadow's soft edge in logical pixels of the node's local
+   * space: the shadow fades from full strength `shadowBlur` pixels inside the
+   * offset glyph edge to nothing `shadowBlur` pixels outside it. A smooth ramp,
+   * not a Gaussian. `0` keeps a crisp, antialiased edge. Must be finite and not
+   * negative, else `RangeError`.
+   */
   shadowBlur?: number;
 
   // ── Decorations ───────────────────────────────────────────────────────────
@@ -217,26 +238,67 @@ export interface TextStyleOptions {
   gradient?: TextGradient | null;
 }
 
+// An invalid size yields a CSS font the canvas silently ignores, leaving the previous font active.
+const assertPositive = (name: string, value: number): number => {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`[ExoJS] TextStyle ${name} must be a positive finite number (got ${value}).`);
+  }
+
+  return value;
+};
+
+const assertNonNegative = (name: string, value: number): number => {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`[ExoJS] TextStyle ${name} must be a non-negative finite number (got ${value}).`);
+  }
+
+  return value;
+};
+
+const assertFinite = (name: string, value: number): number => {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`TextStyle.${name} must be finite (got ${value}).`);
+  }
+
+  return value;
+};
+
 /**
- * Describes how a {@link Text} node renders its string.
+ * Describes how {@link Text} and {@link BitmapText} render their strings.
+ * Assign the same instance to multiple nodes' `style` properties to share it;
+ * each node observes changes independently and rebuilds on its next read.
  *
  * Every setter marks the style dirty with a {@link StyleChangeHint} so that
- * the owning node can batch-rebuild efficiently on the next frame:
- * - `'tint'`  - only updates `Mesh.tint`, no atlas work
+ * nodes can batch-rebuild efficiently:
+ * - `'tint'`  - render state only, no layout or atlas work
  * - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs
  * - `'font'`  - atlas lookup + full mesh rebuild
  *
- * Call {@link consumeDirty} at the start of each frame to get the accumulated
- * hint and clear the flag.
+ * {@link consumeDirty} reads and clears the public dirty cycle without
+ * acknowledging changes on behalf of any node.
+ *
+ * Outline and shadow lengths are logical pixels in the local space of the node
+ * drawing the style, so they scale with node and camera transforms and not
+ * with the canvas pixel ratio. While a style is attached to text nodes, a
+ * change no attached node can draw throws {@link TextEffectError} and leaves
+ * the style unchanged.
  */
 export class TextStyle {
   private _dirty = false;
   private _pendingHint: StyleChangeHint = 'tint';
+  private _changeRevision = 1;
+  private _fontRevision = 1;
+  private _layoutRevision = 0;
 
   /** Fires once per dirty cycle when any property changes. */
   public readonly onChange = new Signal();
 
+  // An array, not a Set: preflight runs on every effect setter, which an
+  // animated style calls each frame, and iterating a Set allocates.
+  private _effectHosts: TextEffectHost[] | null = null;
+
   private _fontFamily: FontFamily;
+  private _fontFace: FontFace | null;
   private _fontWeight: FontWeight;
   private _fontStyle: FontStyle;
   private _fontVariant: FontVariant;
@@ -269,25 +331,26 @@ export class TextStyle {
   public constructor(options: TextStyleOptions = {}) {
     const explicitFace = typeof FontFace !== 'undefined' && options.font instanceof FontFace ? options.font : null;
 
-    this._fontFamily = explicitFace ? explicitFace.family : (options.fontFamily ?? 'Arial');
+    this._fontFace = explicitFace;
+    this._fontFamily = explicitFace?.family ?? options.fontFamily ?? 'Arial';
 
     this._fontWeight = options.fontWeight ?? 'normal';
     this._fontStyle = options.fontStyle ?? 'normal';
     this._fontVariant = options.fontVariant ?? 'normal';
-    this._fontSize = options.fontSize ?? 20;
+    this._fontSize = options.fontSize === undefined ? 20 : assertPositive('fontSize', options.fontSize);
     this._fillColor = options.fillColor ? options.fillColor.clone() : Color.white.clone();
     this._outlineColor = options.outlineColor ? options.outlineColor.clone() : Color.black.clone();
-    this._outlineWidth = options.outlineWidth ?? 0;
+    this._outlineWidth = options.outlineWidth === undefined ? 0 : assertNonNegative('outlineWidth', options.outlineWidth);
     this._align = options.align ?? 'left';
     this._textTransform = options.textTransform ?? 'none';
-    this._lineHeight = options.lineHeight ?? 1.2;
+    this._lineHeight = options.lineHeight === undefined ? 1.2 : assertPositive('lineHeight', options.lineHeight);
     this._leading = options.leading ?? 0;
 
     this._shadowColor = options.shadowColor ? options.shadowColor.clone() : Color.black.clone();
-    this._shadowOffsetX = options.shadowOffsetX ?? 0;
-    this._shadowOffsetY = options.shadowOffsetY ?? 0;
-    this._shadowAlpha = options.shadowAlpha ?? 0;
-    this._shadowBlur = options.shadowBlur ?? 0;
+    this._shadowOffsetX = assertFinite('shadowOffsetX', options.shadowOffsetX ?? 0);
+    this._shadowOffsetY = assertFinite('shadowOffsetY', options.shadowOffsetY ?? 0);
+    this._shadowAlpha = assertFinite('shadowAlpha', options.shadowAlpha ?? 0);
+    this._shadowBlur = options.shadowBlur === undefined ? 0 : assertNonNegative('shadowBlur', options.shadowBlur);
 
     this._underline = options.underline ?? false;
     this._strikethrough = options.strikethrough ?? false;
@@ -306,18 +369,93 @@ export class TextStyle {
    * Returns the accumulated {@link StyleChangeHint} and clears the dirty flag,
    * or `null` if nothing has changed since the last call.
    *
-   * Call this once per frame from the owning node's layout pass.
+   * Each attached text node observes changes independently of this dirty cycle.
    */
   public consumeDirty(): StyleChangeHint | null {
-    if (!this._dirty) return null;
+    if (!this._dirty) {
+      return null;
+    }
+
     const hint = this._pendingHint;
     this._dirty = false;
     this._pendingHint = 'tint';
+
     return hint;
   }
 
+  /**
+   * Register a node whose effect capacity every later effect change must fit.
+   * @internal
+   */
+  public _addEffectHost(host: TextEffectHost): void {
+    const hosts = (this._effectHosts ??= []);
+
+    if (!hosts.includes(host)) {
+      hosts.push(host);
+    }
+  }
+
+  /** @internal */
+  public _removeEffectHost(host: TextEffectHost): void {
+    const index = this._effectHosts?.indexOf(host) ?? -1;
+
+    if (index >= 0) {
+      this._effectHosts!.splice(index, 1);
+    }
+  }
+
+  /** Throws before any field changes when an attached node cannot draw the candidate effect values. */
+  private _preflightEffects(
+    outlineWidth: number,
+    shadowAlpha: number,
+    shadowOffsetX: number,
+    shadowOffsetY: number,
+    shadowBlur: number,
+  ): void {
+    const hosts = this._effectHosts;
+
+    if (hosts === null) {
+      return;
+    }
+
+    for (let i = 0; i < hosts.length; i++) {
+      const found = hosts[i]!._checkEffectValues(outlineWidth, shadowAlpha, shadowOffsetX, shadowOffsetY, shadowBlur);
+
+      if (found !== null) {
+        throw new TextEffectError(found, 'TextStyle');
+      }
+    }
+  }
+
+  /** @internal */
+  public get _revision(): number {
+    return this._changeRevision;
+  }
+
+  /** @internal */
+  public _hintSince(revision: number): StyleChangeHint | null {
+    if (revision === this._changeRevision) {
+      return null;
+    }
+
+    if (revision < this._fontRevision) {
+      return 'font';
+    }
+
+    return revision < this._layoutRevision ? 'layout' : 'tint';
+  }
+
   private _markDirty(hint: StyleChangeHint): void {
+    const revision = ++this._changeRevision;
+
+    if (hint === 'font') {
+      this._fontRevision = revision;
+    } else if (hint === 'layout') {
+      this._layoutRevision = revision;
+    }
+
     this._pendingHint = mergeHint(this._pendingHint, hint);
+
     if (!this._dirty) {
       this._dirty = true;
       this.onChange.dispatch();
@@ -326,15 +464,32 @@ export class TextStyle {
 
   // ── Font properties (hint: 'font') ─────────────────────────────────────
 
+  /**
+   * CSS font-family this style resolves glyphs through.
+   *
+   * Assign a `FontFace` to let attached `Text` nodes register and load it.
+   * A family name selects a face already available to the browser.
+   */
   public get fontFamily(): FontFamily {
     return this._fontFamily;
   }
 
   public set fontFamily(v: FontFace | FontFamily) {
-    const family = typeof FontFace !== 'undefined' && v instanceof FontFace ? v.family : (v as FontFamily);
-    if (this._fontFamily === family) return;
+    const face = typeof FontFace !== 'undefined' && v instanceof FontFace ? v : null;
+    const family = face?.family ?? (v as FontFamily);
+
+    if (this._fontFamily === family && this._fontFace === face) {
+      return;
+    }
+
     this._fontFamily = family;
+    this._fontFace = face;
     this._markDirty('font');
+  }
+
+  /** @internal */
+  public get _face(): FontFace | null {
+    return this._fontFace;
   }
 
   public get fontWeight(): FontWeight {
@@ -342,7 +497,10 @@ export class TextStyle {
   }
 
   public set fontWeight(v: FontWeight) {
-    if (this._fontWeight === v) return;
+    if (this._fontWeight === v) {
+      return;
+    }
+
     this._fontWeight = v;
     this._markDirty('font');
   }
@@ -352,7 +510,10 @@ export class TextStyle {
   }
 
   public set fontStyle(v: FontStyle) {
-    if (this._fontStyle === v) return;
+    if (this._fontStyle === v) {
+      return;
+    }
+
     this._fontStyle = v;
     this._markDirty('font');
   }
@@ -362,7 +523,10 @@ export class TextStyle {
   }
 
   public set fontVariant(v: FontVariant) {
-    if (this._fontVariant === v) return;
+    if (this._fontVariant === v) {
+      return;
+    }
+
     this._fontVariant = v;
     this._markDirty('font');
   }
@@ -374,7 +538,12 @@ export class TextStyle {
   }
 
   public set fontSize(v: number) {
-    if (this._fontSize === v) return;
+    assertPositive('fontSize', v);
+
+    if (this._fontSize === v) {
+      return;
+    }
+
     this._fontSize = v;
     this._markDirty('layout');
   }
@@ -384,7 +553,10 @@ export class TextStyle {
   }
 
   public set align(v: TextAlignment) {
-    if (this._align === v) return;
+    if (this._align === v) {
+      return;
+    }
+
     this._align = v;
     this._markDirty('layout');
   }
@@ -398,7 +570,10 @@ export class TextStyle {
   }
 
   public set textTransform(v: TextTransform) {
-    if (this._textTransform === v) return;
+    if (this._textTransform === v) {
+      return;
+    }
+
     this._textTransform = v;
     this._markDirty('layout');
   }
@@ -408,7 +583,12 @@ export class TextStyle {
   }
 
   public set lineHeight(v: number) {
-    if (this._lineHeight === v) return;
+    assertPositive('lineHeight', v);
+
+    if (this._lineHeight === v) {
+      return;
+    }
+
     this._lineHeight = v;
     this._markDirty('layout');
   }
@@ -419,7 +599,10 @@ export class TextStyle {
   }
 
   public set leading(v: number) {
-    if (this._leading === v) return;
+    if (this._leading === v) {
+      return;
+    }
+
     this._leading = v;
     this._markDirty('layout');
   }
@@ -449,13 +632,19 @@ export class TextStyle {
     this._markDirty('tint');
   }
 
-  /** Outline width in SDF units (0..0.5). `0` disables the outline. */
+  /** Outline extent outside the glyph edge in local logical pixels. `0` disables the outline. */
   public get outlineWidth(): number {
     return this._outlineWidth;
   }
 
   public set outlineWidth(v: number) {
-    if (this._outlineWidth === v) return;
+    assertNonNegative('outlineWidth', v);
+
+    if (this._outlineWidth === v) {
+      return;
+    }
+
+    this._preflightEffects(v, this._shadowAlpha, this._shadowOffsetX, this._shadowOffsetY, this._shadowBlur);
     this._outlineWidth = v;
     this._markDirty('tint');
   }
@@ -471,22 +660,36 @@ export class TextStyle {
     this._markDirty('tint');
   }
 
+  /** Horizontal shadow offset in local logical pixels. */
   public get shadowOffsetX(): number {
     return this._shadowOffsetX;
   }
 
   public set shadowOffsetX(v: number) {
-    if (this._shadowOffsetX === v) return;
+    assertFinite('shadowOffsetX', v);
+
+    if (this._shadowOffsetX === v) {
+      return;
+    }
+
+    this._preflightEffects(this._outlineWidth, this._shadowAlpha, v, this._shadowOffsetY, this._shadowBlur);
     this._shadowOffsetX = v;
     this._markDirty('tint');
   }
 
+  /** Vertical shadow offset in local logical pixels. */
   public get shadowOffsetY(): number {
     return this._shadowOffsetY;
   }
 
   public set shadowOffsetY(v: number) {
-    if (this._shadowOffsetY === v) return;
+    assertFinite('shadowOffsetY', v);
+
+    if (this._shadowOffsetY === v) {
+      return;
+    }
+
+    this._preflightEffects(this._outlineWidth, this._shadowAlpha, this._shadowOffsetX, v, this._shadowBlur);
     this._shadowOffsetY = v;
     this._markDirty('tint');
   }
@@ -497,17 +700,30 @@ export class TextStyle {
   }
 
   public set shadowAlpha(v: number) {
-    if (this._shadowAlpha === v) return;
+    assertFinite('shadowAlpha', v);
+
+    if (this._shadowAlpha === v) {
+      return;
+    }
+
+    this._preflightEffects(this._outlineWidth, v, this._shadowOffsetX, this._shadowOffsetY, this._shadowBlur);
     this._shadowAlpha = v;
     this._markDirty('tint');
   }
 
+  /** Half-width of the shadow's soft edge in local logical pixels. */
   public get shadowBlur(): number {
     return this._shadowBlur;
   }
 
   public set shadowBlur(v: number) {
-    if (this._shadowBlur === v) return;
+    assertNonNegative('shadowBlur', v);
+
+    if (this._shadowBlur === v) {
+      return;
+    }
+
+    this._preflightEffects(this._outlineWidth, this._shadowAlpha, this._shadowOffsetX, this._shadowOffsetY, v);
     this._shadowBlur = v;
     this._markDirty('tint');
   }
@@ -520,7 +736,10 @@ export class TextStyle {
   }
 
   public set underline(v: boolean) {
-    if (this._underline === v) return;
+    if (this._underline === v) {
+      return;
+    }
+
     this._underline = v;
     this._markDirty('layout');
   }
@@ -531,7 +750,10 @@ export class TextStyle {
   }
 
   public set strikethrough(v: boolean) {
-    if (this._strikethrough === v) return;
+    if (this._strikethrough === v) {
+      return;
+    }
+
     this._strikethrough = v;
     this._markDirty('layout');
   }
@@ -552,7 +774,10 @@ export class TextStyle {
   }
 
   public set decorationThickness(v: number) {
-    if (this._decorationThickness === v) return;
+    if (this._decorationThickness === v) {
+      return;
+    }
+
     this._decorationThickness = v;
     this._markDirty('layout');
   }
@@ -563,7 +788,10 @@ export class TextStyle {
   }
 
   public set decorationOffset(v: number) {
-    if (this._decorationOffset === v) return;
+    if (this._decorationOffset === v) {
+      return;
+    }
+
     this._decorationOffset = v;
     this._markDirty('layout');
   }
@@ -574,9 +802,14 @@ export class TextStyle {
    * Multi-stop fill gradient, or `null` when the glyph interior takes
    * `fillColor`.
    *
-   * Read back normalized: stops cloned, offsets clamped to `0..1` and sorted,
-   * `angle` resolved. Assigning re-normalizes, so the object handed in is
-   * never aliased and mutating it afterwards changes nothing.
+   * Normalized on the way in: stops cloned, offsets clamped to `0..1` and
+   * sorted, `angle` resolved. Assigning re-normalizes, so the object handed in
+   * is never aliased and mutating it afterwards changes nothing.
+   *
+   * The getter returns that same normalized object rather than a copy, so
+   * treat it as read-only: editing a stop's `color` in place bypasses dirty
+   * tracking and the owning node is never told to re-pack the ramp.
+   * @throws Error - More than eight stops are supplied, in every build.
    */
   public get gradient(): ResolvedTextGradient | null {
     return this._gradient;
@@ -607,10 +840,16 @@ export class TextStyle {
 
   // ── Clone / copy ────────────────────────────────────────────────────────
 
-  /** Copy all properties from `style` into this instance and return `this`. */
+  /**
+   * Copy all properties from `style` into this instance and return `this`.
+   * Throws {@link TextEffectError} without copying anything when a node this
+   * style is attached to cannot draw the incoming effects.
+   */
   public copy(style: TextStyle): this {
     if (style !== this) {
+      this._preflightEffects(style._outlineWidth, style._shadowAlpha, style._shadowOffsetX, style._shadowOffsetY, style._shadowBlur);
       this._fontFamily = style._fontFamily;
+      this._fontFace = style._fontFace;
       this._fontWeight = style._fontWeight;
       this._fontStyle = style._fontStyle;
       this._fontVariant = style._fontVariant;
@@ -635,6 +874,7 @@ export class TextStyle {
       this._gradient = _cloneGradient(style._gradient);
       this._markDirty('font');
     }
+
     return this;
   }
 
@@ -642,6 +882,7 @@ export class TextStyle {
   public clone(): TextStyle {
     const s = new TextStyle();
     s._fontFamily = this._fontFamily;
+    s._fontFace = this._fontFace;
     s._fontWeight = this._fontWeight;
     s._fontStyle = this._fontStyle;
     s._fontVariant = this._fontVariant;
@@ -666,6 +907,21 @@ export class TextStyle {
     s._gradient = _cloneGradient(this._gradient);
     s._dirty = true;
     s._pendingHint = 'font';
+
     return s;
   }
+}
+
+/**
+ * A node that constrains the effect values of the styles attached to it.
+ * @internal
+ */
+export interface TextEffectHost {
+  _checkEffectValues(
+    outlineWidth: number,
+    shadowAlpha: number,
+    shadowOffsetX: number,
+    shadowOffsetY: number,
+    shadowBlur: number,
+  ): TextEffectIssue | null;
 }

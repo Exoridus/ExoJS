@@ -10,20 +10,15 @@ let _capabilitySnapshot: Record<Capability, boolean> | null = null;
 
 const _listeners = new Set<() => void>();
 
-export const getAutoRendererStatus = (): AutoRendererStatus => {
-  return _autoRendererStatus;
-};
+export const getAutoRendererStatus = (): AutoRendererStatus => _autoRendererStatus;
 
-export const isWebGpuSupported = (): boolean => {
-  return _webgpuSupported;
-};
+export const isWebGpuSupported = (): boolean => _webgpuSupported;
 
-export const isWebGl2Supported = (): boolean => {
-  return _webgl2Supported;
-};
+export const isWebGl2Supported = (): boolean => _webgl2Supported;
 
 export const onRuntimeDetected = (callback: () => void): (() => void) => {
   _listeners.add(callback);
+
   return () => _listeners.delete(callback);
 };
 
@@ -42,7 +37,9 @@ export const getAvailabilityForBackend = (backend: ExampleBackend): ExampleAvail
 
   switch (backend) {
     case 'core':
-      return _autoRendererStatus === 'unsupported' ? { available: false, reason: 'Requires WebGPU or WebGL2 support.' } : { available: true, reason: null };
+      return _autoRendererStatus === 'unsupported'
+        ? { available: false, reason: 'Requires WebGPU or WebGL2 support.' }
+        : { available: true, reason: null };
     case 'webgl2':
       return _webgl2Supported ? { available: true, reason: null } : { available: false, reason: 'Requires WebGL2 support.' };
     case 'webgpu':
@@ -64,6 +61,7 @@ export const detectRuntimeSupport = async (): Promise<void> => {
 
   _webgpuSupported = caps.webgpuAdapter !== null;
   _webgl2Supported = caps.webgl2;
+
   if (_webgpuSupported) {
     _autoRendererStatus = 'webgpu';
   } else if (_webgl2Supported) {
@@ -97,9 +95,7 @@ export const detectRuntimeSupport = async (): Promise<void> => {
  * Returns the resolved capability snapshot, or `null` if
  * {@link detectRuntimeSupport} hasn't run yet. Read-only.
  */
-export const getCapabilitySnapshot = (): Readonly<Record<Capability, boolean>> | null => {
-  return _capabilitySnapshot;
-};
+export const getCapabilitySnapshot = (): Readonly<Record<Capability, boolean>> | null => _capabilitySnapshot;
 
 /**
  * Filters `required` to the subset that is currently `false` in the
@@ -108,6 +104,9 @@ export const getCapabilitySnapshot = (): Readonly<Record<Capability, boolean>> |
  * required capabilities are met.
  */
 export const getMissingCapabilities = (required: ReadonlyArray<Capability>): ReadonlyArray<Capability> | null => {
-  if (_capabilitySnapshot === null) return null;
+  if (_capabilitySnapshot === null) {
+    return null;
+  }
+
   return required.filter(cap => !_capabilitySnapshot![cap]);
 };

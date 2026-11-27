@@ -121,7 +121,7 @@ export class Flags<T extends TypedEnum<T, number>> {
 
   /**
    * Return `true` when **any** of the supplied flags are currently set
-   * (bitwise OR test). Allocates a rest array and a closure per call - use
+   * (bitwise OR test). Allocates a rest array per call - use
    * {@link hasMask} on hot paths.
    */
   public has<V extends number = T[keyof T]>(...flags: V[]): boolean {

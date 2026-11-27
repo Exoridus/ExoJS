@@ -96,7 +96,7 @@ export class CallbackRenderPass extends RenderPass {
         context.backend.clear(this._clear);
       }
 
-      this._callback(new PassContext(context, context.backend.renderTarget, context.backend.view));
+      this._callback(new PassContext(context, context.backend.renderTarget, this._view ?? context.backend.view));
     } finally {
       this._executing = false;
     }

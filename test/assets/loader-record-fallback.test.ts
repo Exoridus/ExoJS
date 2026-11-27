@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
@@ -8,6 +7,7 @@ import { Texture } from '#rendering/texture/Texture';
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -60,12 +60,12 @@ describe('Loader.load internal record fallback', () => {
     expect((result as { b: Texture }).b).toBeInstanceOf(Texture);
   });
 
-  test('mixed bare-string and Asset.type descriptor values normalize', async () => {
+  test('mixed bare-string and descriptor values normalize', async () => {
     const loader = createCoreLoader();
 
     const result = await loader.load({
       a: 'a.png',
-      b: Asset.type('texture', 'b.png'),
+      b: { type: 'texture', source: 'b.png' },
     } as never);
 
     expect((result as { a: Texture }).a).toBeInstanceOf(Texture);

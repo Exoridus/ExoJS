@@ -1,61 +1,85 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Rectangle, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, demoPanel, startExample } from '@examples/runtime';
 
-const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
+const controls = { shape: choice('Shape', ['Rectangle', 'Circle', 'Ellipse', 'Polygon']) };
 
 class MasksScene extends Scene {
-  private rectSprite!: Sprite;
-  private rectMask!: Rectangle;
-  private gfxSprite!: Sprite;
-  private time = 0;
+  private sprite!: Sprite;
+  private readonly rectMask = new Rectangle();
+  private readonly shapeMask = this.track(new Graphics());
+  private panel!: ReturnType<typeof demoPanel<typeof controls>>;
+
+  override async load(): Promise<void> {
+    const hills = new Texture(assets.backgroundPlatformerHills.source);
+
+    await this.assets.load(hills);
+    this.sprite = new Sprite(hills).setAnchor(0.5);
+  }
 
   override init(): void {
-    const app = this.app;
-    const { width, height } = app;
-    const tex = this.loader.get(ALPHA_RINGS);
-
-    this.rectSprite = new Sprite(tex);
-    this.rectSprite.setScale(1);
-    this.rectSprite.setPosition((width / 4) | 0, (height / 2) | 0);
-    this.rectSprite.setAnchor(0.5);
-    this.rectMask = new Rectangle(0, 0, 110, 110);
-    this.rectSprite.mask = this.rectMask;
-
-    const circle = new Graphics();
-    circle.fillColor = Color.white;
-    circle.drawCircle(0, 0, 72);
-
-    this.gfxSprite = new Sprite(tex);
-    this.gfxSprite.setScale(1);
-    this.gfxSprite.setPosition(((width * 3) / 4) | 0, (height / 2) | 0);
-    this.gfxSprite.setAnchor(0.5);
-    this.gfxSprite.mask = circle;
+    this.sprite.interactive = true;
+    this.sprite.onPointerTap.add(() => this.panel.step('shape'));
+    this.root.addChild(this.sprite);
+    this.panel = demoPanel({ scene: this, layout: 'bar', controls });
   }
 
-  override update(delta: Seconds): void {
-    const app = this.app;
-    const { width, height } = app;
-    this.time += delta;
+  override update(): void {
+    const { scale: k, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const x = (width / 2) * k;
+    const y = (contentHeight / 2) * k;
+    const radius = Math.min(width * 0.32, contentHeight * 0.4, 200) * k;
 
-    const r = 80;
-    this.rectMask.x = (width / 4 + Math.cos(this.time * 1.4) * r - 55) | 0;
-    this.rectMask.y = (height / 2 + Math.sin(this.time * 1.4) * r - 55) | 0;
+    this.sprite.setPosition(x, y);
+    this.sprite.width = radius * 2.8;
+    this.sprite.height = radius * 2.1;
+    this.shapeMask.clear();
+    this.shapeMask.fillColor = Color.white;
+
+    switch (this.panel.values.shape) {
+      case 'Rectangle':
+        this.rectMask.set(x - radius, y - radius * 0.72, radius * 2, radius * 1.44);
+        this.sprite.mask = this.rectMask;
+        break;
+      case 'Circle':
+        this.shapeMask.drawCircle(x, y, radius);
+        this.sprite.mask = this.shapeMask;
+        break;
+      case 'Ellipse':
+        this.shapeMask.drawEllipse(x, y, radius * 1.15, radius * 0.7);
+        this.sprite.mask = this.shapeMask;
+        break;
+      case 'Polygon':
+        this.shapeMask.drawPolygon([
+          x - radius,
+          y,
+          x - radius * 0.5,
+          y - radius * 0.85,
+          x + radius * 0.5,
+          y - radius * 0.85,
+          x + radius,
+          y,
+          x + radius * 0.5,
+          y + radius * 0.85,
+          x - radius * 0.5,
+          y + radius * 0.85,
+        ]);
+        this.sprite.mask = this.shapeMask;
+        break;
+    }
+
+    this.panel.status('Click the image to change its mask');
   }
 
-  override draw(context: RenderingContext): void {
-    context.render(this.rectSprite);
-    context.render(this.gfxSprite);
+  override destroy(): void {
+    this.panel?.dispose();
+    super.destroy();
   }
 }
 
 const app = new Application({
   scenes: { MasksScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: Color.black,
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(20, 27, 34),
 });
-
-await app.start(MasksScene);
+await startExample(app, () => app.start(MasksScene));

@@ -1,4 +1,5 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Scene, type Seconds, Sprite, Text, Texture } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class LocalVsGlobalTransformScene extends Scene {
   private parent!: Container;
@@ -10,7 +11,7 @@ class LocalVsGlobalTransformScene extends Scene {
   override init(): void {
     const app = this.app;
     const { width, height } = app;
-    const texture = this.loader.get('image/ship-a.png');
+    const texture = new Texture(assets.ship.source);
 
     this.parent = new Container().setPosition(width / 4, height / 2);
     this.localSprite = new Sprite(texture)
@@ -29,17 +30,11 @@ class LocalVsGlobalTransformScene extends Scene {
     this.localLabel.setPosition(width / 4 - 60, height / 2 - 220);
     this.globalLabel = new Text('screen-space', { fillColor: Color.white, fontSize: 16 });
     this.globalLabel.setPosition((width * 3) / 4 - 50, height / 2 - 220);
+    this.root.addChild(this.parent, this.globalSprite, this.localLabel, this.globalLabel);
   }
 
   override update(delta: Seconds): void {
     this.parent.rotate(delta * 60);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.parent);
-    context.render(this.globalSprite);
-    context.render(this.localLabel);
-    context.render(this.globalLabel);
   }
 }
 
@@ -52,9 +47,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(LocalVsGlobalTransformScene);

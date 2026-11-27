@@ -58,13 +58,15 @@ export type Ktx2Payload = Ktx2CompressedPayload | Ktx2UncompressedPayload;
  * `texture` type accepts both container and image bytes under one identity, and
  * a variant rule may hand it either.
  */
-export const isKtx2 = (bytes: Uint8Array): boolean => bytes.length >= identifier.length && identifier.every((expected, index) => bytes[index] === expected);
+export const isKtx2 = (bytes: Uint8Array): boolean =>
+  bytes.length >= identifier.length && identifier.every((expected, index) => bytes[index] === expected);
 
 const fail = (source: string, message: string): never => {
   throw new AssetDecodeError({ message: `KTX2 file "${source}": ${message}`, assetType: 'ktx2' });
 };
 
-const isSrgbFormat = (format: Format | number): boolean => format === vkFormatRgba8Srgb || (typeof format === 'string' && format.endsWith('srgb'));
+const isSrgbFormat = (format: Format | number): boolean =>
+  format === vkFormatRgba8Srgb || (typeof format === 'string' && format.endsWith('srgb'));
 
 /**
  * `KHR_DF_FLAG_ALPHA_PREMULTIPLIED`, bit 0 of the DFD flags byte.
@@ -90,6 +92,7 @@ const resolveColorMetadata = (
   }
 
   let colorSpace: TextureColorSpace = 'none';
+
   if (transferFunction === 2) {
     colorSpace = 'srgb';
   } else if (transferFunction === 1) {
@@ -138,6 +141,7 @@ export const parseKtx2 = (buffer: ArrayBuffer, source: string): Ktx2Payload => {
   }
 
   const descriptor = parseKtx2Descriptor(buffer, source);
+
   return materializeKtx2(buffer, source, descriptor);
 };
 
@@ -165,7 +169,10 @@ export const materializeKtx2 = (
   }
 
   const sliceLevel = (index: number, expected: number): Uint8Array => {
-    if (readLevel !== undefined) return readLevel(index, expected);
+    if (readLevel !== undefined) {
+      return readLevel(index, expected);
+    }
+
     const level = descriptor.levels[index];
 
     if (level === undefined) {
@@ -214,7 +221,10 @@ export const materializeKtx2 = (
   }
 
   if (descriptor.declaredLevelCount === 0) {
-    return fail(source, 'compressed payload declares levelCount 0, which requests generated mips that cannot be represented by compressed data.');
+    return fail(
+      source,
+      'compressed payload declares levelCount 0, which requests generated mips that cannot be represented by compressed data.',
+    );
   }
 
   const levels: CompressedTextureLevel[] = [];
@@ -232,25 +242,47 @@ export const materializeKtx2 = (
 };
 
 /** Inflates validated ZLIB levels directly into their final CPU payload. */
-export const inflateKtx2Payload = async (buffer: ArrayBuffer, source: string, descriptor: Ktx2Descriptor, signal?: AbortSignal): Promise<Ktx2Payload> => {
+export const inflateKtx2Payload = async (
+  buffer: ArrayBuffer,
+  source: string,
+  descriptor: Ktx2Descriptor,
+  signal?: AbortSignal,
+): Promise<Ktx2Payload> => {
   throwIfAborted(signal);
   let decodedBytes = 0;
+
   for (const level of descriptor.levels) {
     decodedBytes += level.uncompressedByteLength;
-    if (!Number.isSafeInteger(decodedBytes) || decodedBytes > maxInflatedKtx2Bytes)
+
+    if (!Number.isSafeInteger(decodedBytes) || decodedBytes > maxInflatedKtx2Bytes) {
       return fail(source, `exceeds the ${maxInflatedKtx2Bytes}-byte ZLIB safety budget.`);
+    }
   }
+
   const payload = materializeKtx2(buffer, source, descriptor, (index, expected) => {
-    if (descriptor.levels[index]?.uncompressedByteLength !== expected) return fail(source, `level ${index} inflated byte length must be ${expected}.`);
+    if (descriptor.levels[index]?.uncompressedByteLength !== expected) {
+      return fail(source, `level ${index} inflated byte length must be ${expected}.`);
+    }
+
     return new Uint8Array(expected);
   });
-  if (typeof DecompressionStream === 'undefined') return fail(source, 'ZLIB requires DecompressionStream.');
+
+  if (typeof DecompressionStream === 'undefined') {
+    return fail(source, 'ZLIB requires DecompressionStream.');
+  }
+
   const bytes = new Uint8Array(buffer);
+
   for (const [index, level] of descriptor.levels.entries()) {
     const destination = payload.levels[index];
-    if (destination === undefined) return fail(source, `level ${index} is missing.`);
+
+    if (destination === undefined) {
+      return fail(source, `level ${index} is missing.`);
+    }
+
     await inflateZlib(bytes.subarray(level.offset, level.offset + level.length), destination.data, source, index, signal);
   }
+
   return payload;
 };
 
@@ -293,7 +325,10 @@ export const inflateKtx2Levels = async (buffer: ArrayBuffer, source: string, sig
   const descriptor = parseKtx2Descriptor(buffer, source);
 
   if (typeof DecompressionStream === 'undefined') {
-    return fail(source, 'payload is ZLIB-supercompressed, which needs DecompressionStream. Ship the container uncompressed for this runtime.');
+    return fail(
+      source,
+      'payload is ZLIB-supercompressed, which needs DecompressionStream. Ship the container uncompressed for this runtime.',
+    );
   }
 
   // Everything the header points at other than level data - the format
@@ -344,7 +379,9 @@ export const inflateKtx2Levels = async (buffer: ArrayBuffer, source: string, sig
   for (const { index } of storageOrder) {
     const level = levels[index];
 
-    if (level === undefined) return fail(source, `level ${index} is missing from the validated index.`);
+    if (level === undefined) {
+      return fail(source, `level ${index} is missing from the validated index.`);
+    }
 
     const entry = headerBytes + index * levelIndexEntryBytes;
 
@@ -381,7 +418,13 @@ const throwIfAborted = (signal: AbortSignal | undefined): void => {
 // over a plain ArrayBuffer, which a Uint8Array is not required to be.
 const ignoreRejection = (): void => undefined;
 
-const inflateZlib = async (data: Uint8Array<ArrayBuffer>, destination: Uint8Array, source: string, index: number, signal?: AbortSignal): Promise<void> => {
+const inflateZlib = async (
+  data: Uint8Array<ArrayBuffer>,
+  destination: Uint8Array,
+  source: string,
+  index: number,
+  signal?: AbortSignal,
+): Promise<void> => {
   throwIfAborted(signal);
 
   const decompressor = new DecompressionStream('deflate');
@@ -392,10 +435,12 @@ const inflateZlib = async (data: Uint8Array<ArrayBuffer>, destination: Uint8Arra
     await writer.close();
   })();
   void pump.catch(ignoreRejection);
+
   const cancel = (): void => {
     void reader.cancel().catch(ignoreRejection);
     void writer.abort().catch(ignoreRejection);
   };
+
   const onAbort = (): void => cancel();
   let cursor = 0;
 
@@ -409,10 +454,13 @@ const inflateZlib = async (data: Uint8Array<ArrayBuffer>, destination: Uint8Arra
 
       throwIfAborted(signal);
 
-      if (done) break;
+      if (done) {
+        break;
+      }
 
       if (value.byteLength > destination.byteLength - cursor) {
         cancel();
+
         return fail(source, `level ${index} inflates to ${cursor + value.byteLength} bytes but declares ${destination.byteLength}.`);
       }
 
@@ -429,8 +477,13 @@ const inflateZlib = async (data: Uint8Array<ArrayBuffer>, destination: Uint8Arra
     cancel();
     await pump.catch(ignoreRejection);
 
-    if (signal?.aborted === true) throw abortError(signal);
-    if (error instanceof AssetDecodeError) throw error;
+    if (signal?.aborted === true) {
+      throw abortError(signal);
+    }
+
+    if (error instanceof AssetDecodeError) {
+      throw error;
+    }
 
     return fail(source, `level ${index} cannot be inflated as a complete ZLIB stream.`);
   } finally {

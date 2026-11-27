@@ -25,7 +25,13 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { MeshParticles, particlesExtension, ParticleSystem, RibbonParticles, TrailParticles } from '../../../packages/exojs-particles/src/index';
+import {
+  MeshParticles,
+  particlesExtension,
+  ParticleSystem,
+  RibbonParticles,
+  TrailParticles,
+} from '../../../packages/exojs-particles/src/index';
 import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
@@ -583,4 +589,29 @@ describe('WebGL2 ParticleSystem — mesh mutation', () => {
       backend.destroy();
     }
   });
+});
+
+test('samples its texture after another sampler unit is active', async () => {
+  const backend = await createBackend();
+  const texture = createSolidTexture('#0000ff');
+  const unrelated = createSolidTexture('#ff0000');
+  const root = new Container();
+  const system = new ParticleSystem(texture, { capacity: 1 });
+
+  try {
+    system.emit();
+    system.setPosition(32, 32);
+    root.addChild(system);
+    backend.bindTexture(unrelated, 0);
+    backend.bindTexture(unrelated, 7);
+
+    render(backend, root);
+
+    expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 0, 255, 255]);
+  } finally {
+    root.destroy();
+    texture.destroy();
+    unrelated.destroy();
+    backend.destroy();
+  }
 });

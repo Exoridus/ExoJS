@@ -1,0 +1,112 @@
+{
+  "title": "CoreValueAssetKind",
+  "description": "The built-in types whose catalog leaf is a deferred AssetRef rather than a heal-in-place resource handle - the type-level mirror of the built-in types whose `leaf` is `'ref'`. A structural `R extends object` heuristic cannot classify these, because several value resources (`Document`, `VTTCue[]`, `ArrayBuffer`, `WebAssembly.Module`) are object types; only an explicit type list is correct.",
+  "symbol": "CoreValueAssetKind",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The built-in types whose catalog leaf is a deferred AssetRef rather than a heal-in-place resource handle - the type-level mirror of the built-in types whose `leaf` is `'ref'`.",
+        "A structural `R extends object` heuristic cannot classify these, because several value resources (`Document`, `VTTCue[]`, `ArrayBuffer`, `WebAssembly.Module`) are object types; only an explicit type list is correct."
+      ],
+      "importLine": "import { CoreValueAssetKind } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "CoreValueAssetKind",
+          "signature": "\"binary\" | \"csv\" | \"json\" | \"subtitle\" | \"text\" | \"wasm\" | \"xml\"",
+          "signatureTokens": [
+            {
+              "text": "\"binary\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"csv\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"json\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"subtitle\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"text\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"wasm\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"xml\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+}

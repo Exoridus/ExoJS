@@ -4,7 +4,7 @@
   "symbol": "FindPathOptions",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for Pathfinder.findPath and Pathfinder.findPathBetween."
       ],
-      "importLine": "import { FindPathOptions } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { FindPathOptions } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

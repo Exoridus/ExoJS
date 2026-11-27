@@ -1,5 +1,8 @@
 import { type Seconds, seconds } from '#core/units';
 
+const finiteOr = (value: number | undefined, fallback: number): number =>
+  value !== undefined && Number.isFinite(value) ? value : fallback;
+
 export interface EnvelopeOptions {
   /** Attack time - gain ramps from 0 to peak (1.0). Default 0.01. */
   attack?: Seconds;
@@ -45,10 +48,11 @@ export class Envelope {
   private readonly _triggeredAt = new WeakMap<AudioParam, number>();
 
   public constructor(options: EnvelopeOptions = {}) {
-    this.attack = seconds(Math.max(0, options.attack ?? 0.01));
-    this.decay = seconds(Math.max(0, options.decay ?? 0.1));
-    this.sustainLevel = Math.max(0, Math.min(1, options.sustainLevel ?? 0.7));
-    this.release = seconds(Math.max(0, options.release ?? 0.2));
+    // A non-finite value would reach AudioParam scheduling, which throws.
+    this.attack = seconds(Math.max(0, finiteOr(options.attack, 0.01)));
+    this.decay = seconds(Math.max(0, finiteOr(options.decay, 0.1)));
+    this.sustainLevel = Math.max(0, Math.min(1, finiteOr(options.sustainLevel, 0.7)));
+    this.release = seconds(Math.max(0, finiteOr(options.release, 0.2)));
   }
 
   /**
@@ -138,7 +142,9 @@ export class Envelope {
   private _valueAt(gainParam: AudioParam, time: number): number {
     const triggeredAt = this._triggeredAt.get(gainParam);
 
-    if (triggeredAt === undefined) return gainParam.value;
+    if (triggeredAt === undefined) {
+      return gainParam.value;
+    }
 
     return this._valueSince(triggeredAt, time);
   }
@@ -148,9 +154,17 @@ export class Envelope {
     const attackEnd = triggeredAt + this.attack;
     const decayEnd = attackEnd + this.decay;
 
-    if (time >= decayEnd) return this.sustainLevel;
-    if (time >= attackEnd) return 1 + (this.sustainLevel - 1) * ((time - attackEnd) / (decayEnd - attackEnd));
-    if (time <= triggeredAt) return 0;
+    if (time >= decayEnd) {
+      return this.sustainLevel;
+    }
+
+    if (time >= attackEnd) {
+      return 1 + (this.sustainLevel - 1) * ((time - attackEnd) / (decayEnd - attackEnd));
+    }
+
+    if (time <= triggeredAt) {
+      return 0;
+    }
 
     return (time - triggeredAt) / (attackEnd - triggeredAt);
   }

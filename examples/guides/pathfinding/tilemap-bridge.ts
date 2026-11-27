@@ -1,5 +1,5 @@
-import { GridSpace } from '@codexo/exojs-pathfinding';
-import type { ResolvedTile, TileLayer } from '@codexo/exojs-tilemap';
+import { GridSpace } from '@codexo/exojs/pathfinding';
+import type { ResolvedTile, TileLayer } from '@codexo/exojs/tilemap';
 
 declare const ground: TileLayer;
 declare const loaded: { x: number; y: number; width: number; height: number };
@@ -8,13 +8,17 @@ declare const loaded: { x: number; y: number; width: number; height: number };
 // The pathfinding package has no tilemap dependency. The bridge is this
 // function, which lives in the game and answers out of whatever the map stores.
 const walkCost = (tile: ResolvedTile | null): number => {
-  if (tile === null) return 0;
+  if (tile === null) {
+    return 0;
+  }
 
   const definition = tile.tileset.getTileDefinition(tile.localTileId);
 
   // A tile with authored collision geometry is solid; everything else is
   // walkable, with the terrain's own cost if the map carries one.
-  if (definition?.collision !== undefined) return 0;
+  if (definition?.collision !== undefined) {
+    return 0;
+  }
 
   return typeof definition?.properties?.moveCost === 'number' ? definition.properties.moveCost : 1;
 };

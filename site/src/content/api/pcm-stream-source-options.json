@@ -4,7 +4,7 @@
   "symbol": "PcmStreamSourceOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [],
-      "importLine": "import { PcmStreamSourceOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { PcmStreamSourceOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

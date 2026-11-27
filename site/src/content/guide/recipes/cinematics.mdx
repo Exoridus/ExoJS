@@ -9,11 +9,11 @@ import Callout from '../../../components/Callout.astro';
 
 # Cinematics
 
-A cinematic (or cutscene) is a choreographed sequence where the camera moves, dialogue appears, characters animate, music swells, and the player's input is temporarily suspended — all driven by timing, not by gameplay logic. ExoJS does not ship a timeline or cutscene system, but you can build one from the primitives that already exist: tweens (for timed animation), `View` (for camera movement), `AudioStream` (for music), and `app.scenes.change(...)` for transitioning between game states.
+A cinematic (or cutscene) is a choreographed sequence where the camera moves, dialogue appears, characters animate, music swells, and the player's input is temporarily suspended, all driven by timing. ExoJS provides tweens and `TweenSequencer` for animation timing, `View` for camera movement, scene-owned audio for music, and `app.scenes.change(...)` for transitioning between game states. This recipe coordinates a short sequence with independent tweens and delays.
 
 ## Approach
 
-A cinematic is a scene. It owns the sequence. Tweens drive every timed element — camera pans, title reveals, character entrances, music fades. Navigate to the cinematic scene via `app.scenes.change(CinematicScene)` to fully replace the game scene while the cutscene plays, and call `app.scenes.change(...)` again when the sequence ends to return to gameplay.
+A cinematic is a scene. Tweens drive its camera pan, title reveal, character entrance, and music fade. Create them through `this.tweens` and play music through `this.audio` so they stop when the scene ends. Keep references to the sequence's own tweens so skip can stop them without interrupting animation elsewhere in the application. `CinematicScene` below implements the visuals; `CutsceneFlowScene` extends it with skip input and a return to gameplay.
 
 The key technique: **tween chains and delays**. Each tween starts at a specific time offset. Together they form a timeline:
 
@@ -33,7 +33,11 @@ The sequence above runs as follows:
 | 0.0s | Shutter bars start opening. Camera begins panning. Music starts fading in. |
 | 1.1s | Boss begins scaling up from 0.4x to 2.1x. |
 | 1.6s | Title text begins revealing character-by-character. |
-| 2.0s | Camera pan completes. Music reaches full volume. |
+| 2.0s | Camera pan completes. Music reaches its target volume. |
+| 2.6s | The full title is visible. |
+| 2.9s | Boss reaches its final scale. |
+| 3.5s | The flow scene starts closing the shutter bars. |
+| 4.1s | The bars are closed; the return to gameplay begins. |
 
 Each tween operates independently — they don't need to know about each other. The `delay()` method offsets the start time. The `.onUpdate()` callback on the title tween drives the character reveal, mirroring the typewriter pattern from [UI patterns](/ExoJS/en/guide/recipes/ui-patterns/).
 
@@ -76,10 +80,10 @@ Use `scene.ui` for any overlay that must remain fixed to the screen — subtitle
 
 ## Skip support
 
-Add a skip mechanism — press any confirm key (Space, Enter, gamepad Start) to jump to the end and switch scenes:
+Press Space, Enter, or gamepad Start to stop the sequence, snap its visible state, and return to gameplay with a fade. The scene-owned input binding is removed automatically when the scene ends:
 
-<Callout type="hint" title="delay() builds the timeline, clear() skips it">
-Staggering tweens with `Tween.delay()` is what turns independent animations into a timeline — no sequencer needed. To skip the whole cutscene, `app.tweens.clear()` stops every active tween at once so you can snap straight to the end state.
+<Callout type="hint" title="Stop only the sequence you own">
+Call `stop()` on the stored tween references, then explicitly assign the camera, scale, title, bars, and volume you want to show. Stopping a tween does not fast-forward it or run its completion callback. Avoid `app.tweens.clear()`: it also stops unrelated application and scene tweens.
 </Callout>
 
 <SourceSnippet
@@ -89,18 +93,18 @@ Staggering tweens with `Tween.delay()` is what turns independent animations into
   title="examples/guides/cinematics/cutscene-flow.ts"
 />
 
-For a smoother skip, fast-forward remaining tweens to completion rather than cutting hard:
+The return timer and skip input call the same guarded method. `stopAndSnap()` stops this sequence's stored tweens and assigns its final state before navigation; the guard prevents two input events from starting concurrent changes:
 
 <SourceSnippet
   source="examples/guides/cinematics/cutscene-flow.ts"
-  region="skip-fast-forward"
+  region="skip-stop-snap"
   language="ts"
   title="examples/guides/cinematics/cutscene-flow.ts"
 />
 
 ## When not to build a cinematic system
 
-For a single boss intro, the flat approach above — one scene, many tweens with delays — is sufficient. For a game with many cutscenes, you might wrap the pattern in a `Sequence` class that accepts an array of `{ time, tween }` entries and starts them at the right moments. ExoJS does not ship this abstraction — it's a few dozen lines of your own code on top of `Tween.delay()` and `TweenSystem.create()`.
+For a single boss intro, one scene with delayed tweens is sufficient. For sequential beats, use `this.tweens.createSequencer()` to obtain a scene-owned `TweenSequencer`: `then(tween)` adds a stage, `then([a, b])` runs tweens together, and `wait(seconds)` inserts a pause. Build a separate cutscene authoring layer only when your content needs more than these timing primitives.
 
 ## Examples
 

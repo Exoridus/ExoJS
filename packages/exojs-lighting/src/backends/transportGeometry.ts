@@ -2,7 +2,7 @@ import type { Color, ReadonlyRectangle } from '@codexo/exojs';
 
 import type { Light } from '../lights/Light';
 import { LineLight } from '../lights/LineLight';
-import { lightFalloff, lightHalfLength } from '../lights/reach';
+import { isEmissive, lightFalloff, lightHalfLength } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
 
 /** Floats per texel of every table, which are all RGBA32F. */
@@ -33,6 +33,20 @@ const EMITTER_TEXELS = 3;
 
 /** Width of the segment, emitter and index tables, in texels. */
 const TABLE_WIDTH = 256;
+
+/** Segments above which the transport grid uses finer cells, because coarse cells would hold too many of them. */
+const DENSE_SEGMENT_COUNT = 256;
+
+/**
+ * Transport grid cell edge, in mask blocks, for a scene of `segmentCount`
+ * segments.
+ *
+ * A cell decides which primitives a ray tests and never whether one is hit, so
+ * the choice cannot change the lit result. Coarse cells keep the grid and its
+ * walk short on sparse geometry; dense geometry overfills them, so it takes
+ * finer cells.
+ */
+export const transportCellBlocks = (segmentCount: number): number => (segmentCount > DENSE_SEGMENT_COUNT ? 4 : 8);
 
 /** Smallest world extent a grid cell may have, so a degenerate view cannot divide by zero. */
 const MIN_CELL = 1e-3;
@@ -249,7 +263,7 @@ export class TransportGeometry {
       // light along every ray that crossed the source and a non-finite one
       // would poison the table. Written as a positive test so that both are
       // left out, on the same terms the chain counts its sources by.
-      if (light.enabled && light.intensity > 0 && lightFalloff(light) > 0) {
+      if (light.enabled && isEmissive(light.intensity) && isEmissive(lightFalloff(light))) {
         placed.push(light);
       }
     }
@@ -369,7 +383,14 @@ export class TransportGeometry {
     }
   }
 
-  private _forEachCellOnSegment(ax: number, ay: number, bx: number, by: number, id: number, visit: (cell: number, id: number) => void): void {
+  private _forEachCellOnSegment(
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    id: number,
+    visit: (cell: number, id: number) => void,
+  ): void {
     if (!this._clipSegmentToGrid(ax, ay, bx, by)) {
       return;
     }
@@ -404,7 +425,14 @@ export class TransportGeometry {
     this._walkSegmentCells(startX, startY, deltaX, deltaY, id, visit);
   }
 
-  private _walkSegmentCells(startX: number, startY: number, deltaX: number, deltaY: number, id: number, visit: (cell: number, id: number) => void): void {
+  private _walkSegmentCells(
+    startX: number,
+    startY: number,
+    deltaX: number,
+    deltaY: number,
+    id: number,
+    visit: (cell: number, id: number) => void,
+  ): void {
     const stepX = deltaX > 0 ? 1 : -1;
     const stepY = deltaY > 0 ? 1 : -1;
     const startLineX = gridLine(startX);
@@ -571,7 +599,14 @@ export class TransportGeometry {
    * merely reaches outside keeps the part that does exist, so a wall running
    * off the edge of the field still blocks inside it.
    */
-  private _forEachCellIn(minX: number, minY: number, maxX: number, maxY: number, id: number, visit: (cell: number, id: number) => void): void {
+  private _forEachCellIn(
+    minX: number,
+    minY: number,
+    maxX: number,
+    maxY: number,
+    id: number,
+    visit: (cell: number, id: number) => void,
+  ): void {
     // `ceil - 1` rather than `floor` on the low edge: the two agree except
     // where the edge lands exactly on a cell boundary, and there the box
     // touches the cell on the other side of it too. A wall along a tile edge

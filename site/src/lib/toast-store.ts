@@ -39,6 +39,7 @@ export const showToast = (message: string, options: ShowToastOptions = {}): stri
   _notify();
 
   const duration = options.durationMs ?? DEFAULT_DURATION_MS;
+
   if (duration > 0) {
     setTimeout(() => dismissToast(id), duration);
   }
@@ -48,17 +49,20 @@ export const showToast = (message: string, options: ShowToastOptions = {}): stri
 
 export const dismissToast = (id: string): void => {
   const next = _toasts.filter(toast => toast.id !== id);
-  if (next.length === _toasts.length) return;
+
+  if (next.length === _toasts.length) {
+    return;
+  }
+
   _toasts = next;
   _notify();
 };
 
-export const getToasts = (): ReadonlyArray<ToastMessage> => {
-  return _toasts;
-};
+export const getToasts = (): ReadonlyArray<ToastMessage> => _toasts;
 
 export const subscribeToasts = (listener: ToastListener): (() => void) => {
   _listeners.add(listener);
+
   return () => _listeners.delete(listener);
 };
 

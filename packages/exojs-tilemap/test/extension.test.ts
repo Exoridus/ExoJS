@@ -7,9 +7,7 @@ import { tilemapExtension } from '../src/tilemapExtension';
 import { WebGl2TileChunkRenderer } from '../src/webgl2/WebGl2TileChunkRenderer';
 import { WebGpuTileChunkRenderer } from '../src/webgpu/WebGpuTileChunkRenderer';
 
-const fakeBackend = (backendType: RenderBackendType): RenderBackend => {
-  return { backendType } as unknown as RenderBackend;
-};
+const fakeBackend = (backendType: RenderBackendType): RenderBackend => ({ backendType }) as unknown as RenderBackend;
 
 describe('@codexo/exojs-tilemap root', () => {
   it('tilemapExtension has correct id', () => {

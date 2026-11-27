@@ -1,8 +1,8 @@
 ﻿import { encodeContainer } from '@codexo/exojs-build/asset-container';
 import type { MockInstance } from 'vitest';
 
-import { Asset } from '#assets/Asset';
-import type { AssetInput } from '#assets/AssetDefinitions';
+import type { CatalogEntry } from '#assets/AssetDefinitions';
+import type { LocatorAssetDescriptor } from '#assets/AssetDescriptor';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
 import { AssetCache } from '#assets/cache/AssetCache';
@@ -23,6 +23,7 @@ import { testAssetType } from './test-asset-type';
 const createCoreLoader = (options?: ConstructorParameters<typeof Loader>[0]): Loader => {
   const loader = new Loader(options);
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -32,8 +33,8 @@ const createCoreLoader = (options?: ConstructorParameters<typeof Loader>[0]): Lo
  * for its multi-alias/identity plumbing, and these tests are its coverage, so
  * they reach it through the implementation signature.
  */
-const loadRecord = (loader: Loader, record: Record<string, AssetInput>): LoadingQueue<Record<string, unknown>> =>
-  (loader as unknown as { load(entries: Record<string, AssetInput>): LoadingQueue<Record<string, unknown>> }).load(record);
+const loadRecord = (loader: Loader, record: Record<string, CatalogEntry>): LoadingQueue<Record<string, unknown>> =>
+  (loader as unknown as { load(entries: Record<string, CatalogEntry>): LoadingQueue<Record<string, unknown>> }).load(record);
 
 interface ResidencyInternals {
   _unloadOne(asset: unknown): void;
@@ -42,23 +43,25 @@ interface ResidencyInternals {
 
 /** The internal hard-reset path. Not public on `Loader`: it forgets every scope's
  *  claim, so only scope-aware `release()` is exposed to users. */
-const residencyOf = (loader: Loader): ResidencyInternals => {
-  return (loader as unknown as { _residency: ResidencyInternals })._residency;
-};
+const residencyOf = (loader: Loader): ResidencyInternals => (loader as unknown as { _residency: ResidencyInternals })._residency;
 
 /**
  * Hard-removes one canonical asset - the internal reset behaviour that
  * `Loader.unload(asset)` used to expose publicly. Kept as a test helper so the
  * bookkeeping stays covered now that no public verb reaches it.
  */
-const hardUnloadAsset = (loader: Loader, asset: Asset<unknown>): void => {
+const hardUnloadAsset = (loader: Loader, asset: LocatorAssetDescriptor): void => {
   const registry = (loader as unknown as { _typeRegistry: { resolveTypeName(name: string): unknown } })._typeRegistry;
-  const ctor = registry.resolveTypeName(asset.type);
+  const ctor = registry.resolveTypeName(asset.type as string);
 
-  if (!ctor) return;
+  if (!ctor) {
+    return;
+  }
 
-  const { type: _type, source, ...options } = asset._config;
-  const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string, options?: unknown): unknown })._canonicalize.bind(loader);
+  const { type: _type, source, ...options } = asset as LocatorAssetDescriptor & Readonly<Record<string, unknown>>;
+  const canonicalize = (
+    loader as unknown as { _canonicalize(type: unknown, source: string, options?: unknown): unknown }
+  )._canonicalize.bind(loader);
 
   residencyOf(loader)._unloadOne(canonicalize(ctor, source, Object.keys(options).length > 0 ? options : undefined));
 };
@@ -91,11 +94,19 @@ declare module '#assets/AssetDefinitions' {
  * caches exactly where the built-in text type does and cache-store assertions
  * keyed on that namespace keep working.
  */
-const bindTextAsset = (loader: Loader, create: (text: string) => string | Promise<string> = text => `resource:${text}`): { create: MockInstance } => {
+const bindTextAsset = (
+  loader: Loader,
+  create: (text: string) => string | Promise<string> = text => `resource:${text}`,
+): { create: MockInstance } => {
   const createSpy = vi.fn(create);
 
   loader._installAssetTypes([
-    testAssetType<string, string>({ id: 'text', token: TextAsset, extensions: ['txt'], create: async source => createSpy(source) as unknown as string }),
+    testAssetType<string, string>({
+      id: 'text',
+      token: TextAsset,
+      extensions: ['txt'],
+      create: async source => createSpy(source) as unknown as string,
+    }),
   ]);
 
   return { create: createSpy };
@@ -256,7 +267,7 @@ describe('Loader', () => {
     // A fetch that never settles keeps the adopted ref in its 'loading' state.
     global.fetch = vi.fn((): Promise<Response> => new Promise<Response>(() => {}));
 
-    const ref = loader.get(Asset.type('text', 'nope'));
+    const ref = loader.get({ type: 'text', source: 'nope' });
 
     expect(ref.loadState).toBe('loading');
     expect(() => ref.value).toThrow("'loading'");
@@ -288,7 +299,7 @@ describe('Loader', () => {
     ]);
     mockFetch('raw');
 
-    const result = await loader.load(new Asset({ type: 'dummyAsset', source: 'thing.dat' }));
+    const result = await loader.load({ type: 'dummyAsset', source: 'thing.dat' });
 
     expect(result).toBeInstanceOf(DummyAsset);
     expect(result.value).toBe('raw');
@@ -387,8 +398,8 @@ describe('Loader', () => {
     mockFetch();
 
     const [first, second] = await Promise.all([
-      loader.load(new Asset({ type: 'firstType', source: 'shared.asset' })),
-      loader.load(new Asset({ type: 'secondType', source: 'shared.asset' })),
+      loader.load({ type: 'firstType', source: 'shared.asset' }),
+      loader.load({ type: 'secondType', source: 'shared.asset' }),
     ]);
 
     expect(first).toBeInstanceOf(FirstType);
@@ -409,7 +420,7 @@ describe('LoadingQueue progress tracking', () => {
     // 'mockAsset' is in AssetDefinitions (via declaration merge above) but we
     // deliberately do NOT call loader.registerAssetType() so that the runtime
     // has no constructor registered for it → "no constructor" rejection path.
-    const asset = new Asset({ type: 'mockAsset', source: 'test.dat' });
+    const asset = { type: 'mockAsset', source: 'test.dat' } as const;
 
     const queue = loader.load(asset);
     let lastProgress = queue.progress;
@@ -418,7 +429,7 @@ describe('LoadingQueue progress tracking', () => {
       lastProgress = p;
     });
 
-    await expect(queue).rejects.toThrow('No asset type "mockAsset" is installed');
+    await expect(queue).rejects.toThrow('no asset type "mockAsset" is installed');
     // Progress must have settled - pending must be 0
     expect(lastProgress.pending).toBe(0);
     expect(lastProgress.failed).toBe(1);
@@ -446,8 +457,8 @@ describe('LoadingQueue progress tracking', () => {
     ]);
     mockFetch();
 
-    const goodAsset = new Asset({ type: 'mockAsset', source: 'good.dat' });
-    const badAsset = new Asset({ type: 'mockAsset', source: 'bad.dat' });
+    const goodAsset = { type: 'mockAsset', source: 'good.dat' } as const;
+    const badAsset = { type: 'mockAsset', source: 'bad.dat' } as const;
 
     const queue = loadRecord(loader, { good: goodAsset, bad: badAsset });
     let lastProgress = queue.progress;
@@ -507,7 +518,11 @@ describe('Asset / Assets identity and alias semantics', () => {
   // stays observable.
   const bindMockAsset = (loader: Loader): void => {
     loader._installAssetTypes([
-      testAssetType<string, string>({ id: 'mockAsset', token: MockAssetType, create: async (_source, context) => `loaded:${context.source}` }),
+      testAssetType<string, string>({
+        id: 'mockAsset',
+        token: MockAssetType,
+        create: async (_source, context) => `loaded:${context.source}`,
+      }),
     ]);
   };
 
@@ -517,7 +532,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+    const hero = { type: 'mockAsset', source: 'images/hero.dat' } as const;
 
     await loadRecord(loader, { heroA: hero, heroB: hero });
 
@@ -536,8 +551,8 @@ describe('Asset / Assets identity and alias semantics', () => {
     mockFetch();
 
     await Promise.all([
-      loader.load(new Asset({ type: 'mockAsset', source: 'images/hero.dat' })),
-      loader.load(new Asset({ type: 'mockAsset', source: './images/sub/../hero.dat' })),
+      loader.load({ type: 'mockAsset', source: 'images/hero.dat' }),
+      loader.load({ type: 'mockAsset', source: './images/sub/../hero.dat' }),
     ]);
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -551,7 +566,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+    const hero = { type: 'mockAsset', source: 'images/hero.dat' } as const;
 
     await loader.load(hero);
 
@@ -568,7 +583,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+    const hero = { type: 'mockAsset', source: 'images/hero.dat' } as const;
 
     await loadRecord(loader, { heroA: hero, heroB: hero });
 
@@ -589,7 +604,8 @@ describe('Asset / Assets identity and alias semantics', () => {
     );
     const loader = createCoreLoader({ basePath: '/' });
     global.fetch = vi.fn(
-      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
+      async (): Promise<Response> =>
+        ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
     );
 
     const container = new Assets({
@@ -621,7 +637,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ type: 'mockAsset', source: 'hero.dat' });
+    const hero = { type: 'mockAsset', source: 'hero.dat' } as const;
 
     await loadRecord(loader, { a: hero, b: hero, c: hero });
 
@@ -679,7 +695,10 @@ describe('a custom asset type - acquisition, identity and caching', () => {
   };
 
   /** Installs `richAsset` with the given factory body, over the default text codec. */
-  const installRich = (loader: Loader, create: (source: string, context: { source: string; resourceKey: string }) => Promise<string>): void => {
+  const installRich = (
+    loader: Loader,
+    create: (source: string, context: { source: string; resourceKey: string }) => Promise<string>,
+  ): void => {
     loader._installAssetTypes([testAssetType<string, string>({ id: 'richAsset', token: RichAsset, create: create as never })]);
   };
 
@@ -694,7 +713,7 @@ describe('a custom asset type - acquisition, identity and caching', () => {
       return 'ok';
     });
 
-    await loader.load(new Asset({ type: 'richAsset', source: 'a.json', format: 'x' }));
+    await loader.load({ type: 'richAsset', source: 'a.json', format: 'x' });
 
     // The type's own id names it, not a per-session ordinal: the key has to mean
     // the same thing across reloads for a persistent cache to use it.
@@ -707,7 +726,7 @@ describe('a custom asset type - acquisition, identity and caching', () => {
 
     installRich(loader, async source => source);
 
-    const result = await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    const result = await loader.load({ type: 'richAsset', source: 'file.txt', format: 'txt' });
 
     expect(result).toBe('hello world');
     expect(global.fetch).toHaveBeenCalledWith('/assets/file.txt', expect.anything());
@@ -719,9 +738,9 @@ describe('a custom asset type - acquisition, identity and caching', () => {
 
     installRich(loader, async source => source);
 
-    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load({ type: 'richAsset', source: 'file.txt', format: 'txt' });
     vi.mocked(global.fetch).mockClear();
-    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load({ type: 'richAsset', source: 'file.txt', format: 'txt' });
 
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -743,7 +762,7 @@ describe('a custom asset type - acquisition, identity and caching', () => {
       }),
     ]);
 
-    await expect(loader.load(new Asset({ type: 'richAsset', source: 'data.json', format: 'json' }))).resolves.toBe('42');
+    await expect(loader.load({ type: 'richAsset', source: 'data.json', format: 'json' })).resolves.toBe('42');
   });
 
   test('a resource discriminator separates two assets that share one source', async () => {
@@ -765,8 +784,8 @@ describe('a custom asset type - acquisition, identity and caching', () => {
       }),
     ]);
 
-    const tmx = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tmx' });
-    const json = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tiled-json' });
+    const tmx = { type: 'richAsset', source: 'map.tmx', format: 'tmx' } as const;
+    const json = { type: 'richAsset', source: 'map.tmx', format: 'tiled-json' } as const;
 
     const [resTmx, resJson] = await Promise.all([loader.load(tmx), loader.load(json)]);
 
@@ -793,8 +812,8 @@ describe('a custom asset type - acquisition, identity and caching', () => {
       }),
     ]);
 
-    const a1 = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
-    const a2 = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
+    const a1 = { type: 'richAsset', source: 'shared.dat', format: 'x' } as const;
+    const a2 = { type: 'richAsset', source: 'shared.dat', format: 'x' } as const;
 
     const [r1, r2] = await Promise.all([loader.load(a1), loader.load(a2)]);
 
@@ -845,7 +864,7 @@ describe('a custom asset type caches under its own namespace', () => {
 
     installRich(loader);
 
-    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load({ type: 'richAsset', source: 'file.txt', format: 'txt' });
 
     expect(saves()).toContainEqual(contextTextKey('richAsset', '/file.txt'));
   });
@@ -861,8 +880,8 @@ describe('a custom asset type caches under its own namespace', () => {
       testAssetType<string, string>({ id: 'otherAsset', token: OtherAsset, create: async source => `other:${source}` }),
     ]);
 
-    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
-    await loader.load(new Asset({ type: 'otherAsset', source: 'file.txt' } as never));
+    await loader.load({ type: 'richAsset', source: 'file.txt', format: 'txt' });
+    await loader.load({ type: 'otherAsset', source: 'file.txt' } as never);
 
     expect(saves()).toContainEqual(contextTextKey('richAsset', '/file.txt'));
     expect(saves()).toContainEqual(contextTextKey('otherAsset', '/file.txt'));
@@ -876,7 +895,7 @@ describe('a custom asset type caches under its own namespace', () => {
 
     installRich(first);
 
-    await first.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await first.load({ type: 'richAsset', source: 'file.txt', format: 'txt' });
     first.destroy();
 
     // A second loader shares the store but holds no resident resources, so the
@@ -887,7 +906,7 @@ describe('a custom asset type caches under its own namespace', () => {
 
     installRich(second);
 
-    const value = await second.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    const value = await second.load({ type: 'richAsset', source: 'file.txt', format: 'txt' });
 
     expect(value).toBe('cached-text');
     expect(global.fetch).not.toHaveBeenCalled();
@@ -912,8 +931,8 @@ describe('identity discrimination — one source, several resource identities', 
       }),
     ]);
 
-    const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
-    const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
+    const tmxMap = { type: 'richAsset', source: 'map.dat', format: 'tmx' } as const;
+    const rpgMap = { type: 'richAsset', source: 'map.dat', format: 'rpg-maker' } as const;
 
     await loadRecord(loader, { tmxA: tmxMap, tmxB: tmxMap, rpgA: rpgMap });
 
@@ -933,10 +952,15 @@ describe('identity discrimination — one source, several resource identities', 
     const loader = new Loader({ basePath: '/' });
 
     loader._installAssetTypes([
-      testAssetType<string, string>({ id: 'richAsset', token: RichAsset, acquires: false, create: async (_source, context) => `result:${context.source}` }),
+      testAssetType<string, string>({
+        id: 'richAsset',
+        token: RichAsset,
+        acquires: false,
+        create: async (_source, context) => `result:${context.source}`,
+      }),
     ]);
 
-    const asset = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
+    const asset = { type: 'richAsset', source: 'shared.dat', format: 'x' } as const;
 
     await loadRecord(loader, { a: asset, b: asset });
 
@@ -963,8 +987,8 @@ describe('identity discrimination — one source, several resource identities', 
       }),
     ]);
 
-    const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
-    const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
+    const tmxMap = { type: 'richAsset', source: 'map.dat', format: 'tmx' } as const;
+    const rpgMap = { type: 'richAsset', source: 'map.dat', format: 'rpg-maker' } as const;
 
     await loadRecord(loader, { tmxA: tmxMap, rpgA: rpgMap });
 
@@ -1017,7 +1041,9 @@ describe('keyFor()', () => {
   });
 
   const mockFetch = (): void => {
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+    global.fetch = vi.fn(
+      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response,
+    );
   };
 
   test('returns the type + first alias for a loaded object resource', async () => {
@@ -1028,7 +1054,7 @@ describe('keyFor()', () => {
     ]);
     mockFetch();
 
-    const result = await loader.load(new Asset({ type: 'dummyAsset', source: 'thing.dat' }));
+    const result = await loader.load({ type: 'dummyAsset', source: 'thing.dat' });
 
     expect(loader.keyFor(result)).toEqual({ type: DummyAsset, source: 'thing.dat' });
   });
@@ -1048,7 +1074,7 @@ describe('LoaderScope.release() edge cases', () => {
   test('release(asset) is a no-op when the asset type was never registered', () => {
     const loader = new Loader({ basePath: '/' });
     const scope = loader.createScope();
-    const orphan = new Asset({ type: 'mockAsset', source: 'x.dat' });
+    const orphan = { type: 'mockAsset', source: 'x.dat' } as const;
 
     expect(() => scope.release(orphan)).not.toThrow();
   });
@@ -1058,10 +1084,15 @@ describe('LoaderScope.release() edge cases', () => {
     const scope = loader.createScope();
 
     loader._installAssetTypes([
-      testAssetType<string, string>({ id: 'mockAsset', token: MockAssetType, acquires: false, create: async (_source, context) => `loaded:${context.source}` }),
+      testAssetType<string, string>({
+        id: 'mockAsset',
+        token: MockAssetType,
+        acquires: false,
+        create: async (_source, context) => `loaded:${context.source}`,
+      }),
     ]);
 
-    const neverLoaded = new Asset({ type: 'mockAsset', source: 'never.dat' });
+    const neverLoaded = { type: 'mockAsset', source: 'never.dat' } as const;
 
     expect(() => scope.release(neverLoaded)).not.toThrow();
     expect(() => scope.release(neverLoaded)).not.toThrow();
@@ -1104,7 +1135,9 @@ describe('basePath / fetchOptions property accessors', () => {
     expect(loader.basePath).toBe('/b/');
 
     bindTextAsset(loader);
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+    global.fetch = vi.fn(
+      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response,
+    );
 
     await loader.load('demo.txt');
 
@@ -1120,7 +1153,9 @@ describe('basePath / fetchOptions property accessors', () => {
     expect(loader.fetchOptions).toEqual({ mode: 'no-cors' });
 
     bindTextAsset(loader);
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+    global.fetch = vi.fn(
+      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response,
+    );
 
     await loader.load('demo.txt');
 
@@ -1137,7 +1172,9 @@ describe('absolute URL passthrough', () => {
     const loader = new Loader({ basePath: '/assets/' });
 
     bindTextAsset(loader);
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+    global.fetch = vi.fn(
+      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response,
+    );
 
     await loader.load('https://cdn.example.com/x.txt');
 
@@ -1159,7 +1196,12 @@ describe('hasLoadable() / hasAssetType() / hasExtension()', () => {
     expect(loader.hasExtension('probe')).toBe(false);
 
     loader._installAssetTypes([
-      testAssetType<string, ProbeAsset>({ id: 'probeType', token: ProbeAsset, extensions: ['PROBE'], create: async () => new ProbeAsset() }),
+      testAssetType<string, ProbeAsset>({
+        id: 'probeType',
+        token: ProbeAsset,
+        extensions: ['PROBE'],
+        create: async () => new ProbeAsset(),
+      }),
     ]);
 
     expect(loader.hasLoadable(ProbeAsset)).toBe(true);
@@ -1218,7 +1260,7 @@ describe('installing an asset type directly on a loader', () => {
       }),
     ]);
 
-    const result = (await loader.load(new Asset({ type: 'boundAsset', source: 'thing.bin' }))) as BoundAsset;
+    const result = (await loader.load({ type: 'boundAsset', source: 'thing.bin' })) as BoundAsset;
 
     expect(result).toBeInstanceOf(BoundAsset);
     expect(result.value).toBe('thing.bin');
@@ -1242,7 +1284,7 @@ describe('installing an asset type directly on a loader', () => {
       }),
     ]);
 
-    await loader.load(new Asset({ type: 'boundAsset', source: 'thing.bin', scale: 3 }));
+    await loader.load({ type: 'boundAsset', source: 'thing.bin', scale: 3 });
 
     expect(receivedOptions).toEqual({ scale: 3 });
   });
@@ -1295,8 +1337,8 @@ describe('installing an asset type directly on a loader', () => {
       }),
     ]);
 
-    const a = new Asset({ type: 'boundAsset', source: 'shared.dat', scale: 2 });
-    const b = new Asset({ type: 'boundAsset', source: 'shared.dat', scale: 2 });
+    const a = { type: 'boundAsset', source: 'shared.dat', scale: 2 } as const;
+    const b = { type: 'boundAsset', source: 'shared.dat', scale: 2 } as const;
 
     await Promise.all([loader.load(a), loader.load(b)]);
 
@@ -1306,12 +1348,15 @@ describe('installing an asset type directly on a loader', () => {
   test('a codec that reads bytes powers loadContainer() for the type', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader._installAssetTypes([testAssetType<string, BoundAsset>({ id: 'boundAsset', token: BoundAsset, create: async source => new BoundAsset(source) })]);
+    loader._installAssetTypes([
+      testAssetType<string, BoundAsset>({ id: 'boundAsset', token: BoundAsset, create: async source => new BoundAsset(source) }),
+    ]);
 
     const container = encodeContainer([{ source: 'x.dat', type: 'boundAsset', bytes: new TextEncoder().encode('hi') }]);
 
     global.fetch = vi.fn(
-      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
+      async (): Promise<Response> =>
+        ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
     );
 
     await loader.loadContainer('pack.exoa');
@@ -1367,7 +1412,8 @@ describe('loadContainer()', () => {
 
   const mockContainerFetch = (container: ArrayBuffer): void => {
     global.fetch = vi.fn(
-      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
+      async (): Promise<Response> =>
+        ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
     );
   };
 
@@ -1382,9 +1428,9 @@ describe('loadContainer()', () => {
     const loader = createCoreLoaderLocal();
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Asset.type('json', 'data/level.json')).value).toEqual({ score: 42 });
-    expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'data/blob.bin')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(loader.get({ type: 'json', source: 'data/level.json' }).value).toEqual({ score: 42 });
+    expect(loader.get({ type: 'text', source: 'docs/readme.txt' }).value).toBe('hello world');
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'data/blob.bin' }).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 
   test('throws on an unknown asset type and stores nothing', async () => {
@@ -1421,13 +1467,54 @@ describe('loadContainer()', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('destroy()', () => {
+  test('a reentrant factory teardown and repeated destroy release the owned cache once', () => {
+    const store = createCacheStoreDouble();
+    const loader = new Loader({ cache: store });
+    const destroy = vi.fn(() => loader.destroy());
+
+    loader._installAssetTypes([testAssetType({ id: 'reentrant', create: async () => 'unused', destroy })]);
+    loader.destroy();
+    loader.destroy();
+
+    expect(store.destroy).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('factory failure does not leave later factories, resident assets or signals alive', async () => {
+    const loader = createCoreLoader();
+    const failure = new Error('factory teardown failed');
+    const second = vi.fn();
+
+    loader._installAssetTypes([
+      testAssetType({ id: 'dummyAsset', token: DummyAsset, acquires: false, create: async () => 'resident' }),
+      testAssetType({
+        id: 'throwing',
+        create: async () => 'unused',
+        destroy: () => {
+          throw failure;
+        },
+      }),
+      testAssetType({ id: 'later', create: async () => 'unused', destroy: second }),
+    ]);
+    loader.onLoaded.add(() => {});
+
+    await loader.load({ type: 'dummyAsset', source: 'resident.dat' });
+    expect(loader.stats().ready).toBe(1);
+    expect(() => loader.destroy()).toThrow(failure);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(loader.stats().ready).toBe(0);
+    expect(loader.onLoaded.count).toBe(0);
+  });
+
   test('destroys cache stores, calls destroy() on every installed factory, and clears signals', () => {
     class DestroyAsset {}
     const store = createCacheStoreDouble();
     const factoryDestroy = vi.fn();
     const loader = new Loader({ basePath: '/', cache: store });
 
-    loader._installAssetTypes([testAssetType<string, string>({ id: 'destroyAsset', token: DestroyAsset, create: async () => 'x', destroy: factoryDestroy })]);
+    loader._installAssetTypes([
+      testAssetType<string, string>({ id: 'destroyAsset', token: DestroyAsset, create: async () => 'x', destroy: factoryDestroy }),
+    ]);
     loader.onLoaded.add(() => {});
 
     loader.destroy();
@@ -1490,7 +1577,9 @@ describe('destroy()', () => {
     const factoryDestroy = vi.fn(() => order.push('factory'));
     const loader = new Loader({ basePath: '/', cache: store });
 
-    loader._installAssetTypes([testAssetType<string, string>({ id: 'orderAsset', token: OrderAsset, create: async () => 'x', destroy: factoryDestroy })]);
+    loader._installAssetTypes([
+      testAssetType<string, string>({ id: 'orderAsset', token: OrderAsset, create: async () => 'x', destroy: factoryDestroy }),
+    ]);
 
     loader.destroy();
 
@@ -1519,7 +1608,7 @@ describe('handler load() rejection is wrapped with url + cause', () => {
       }),
     ]);
 
-    const asset = new Asset({ type: 'richAsset', source: 'x.json', format: 'x' });
+    const asset = { type: 'richAsset', source: 'x.json', format: 'x' } as const;
     const error = await loader.load(asset).then(
       () => {
         throw new Error('expected the load to reject');
@@ -1561,7 +1650,7 @@ describe('Asset-based load() — extra config fields as handler options', () => 
       }),
     ]);
 
-    await loader.load(new Asset({ type: 'mockAsset', source: 'extra.dat', format: 'tiled' }));
+    await loader.load({ type: 'mockAsset', source: 'extra.dat', format: 'tiled' });
 
     expect(receivedOptions[0]).toMatchObject({ format: 'tiled' });
   });
@@ -1578,7 +1667,9 @@ describe('Loader constructor — cache option as an array of stores', () => {
     const loader = new Loader({ basePath: '/', cache: [storeA, storeB] });
 
     bindTextAsset(loader);
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+    global.fetch = vi.fn(
+      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response,
+    );
 
     await loader.load('demo.txt');
 
@@ -1594,9 +1685,11 @@ describe('internal-reset-during-in-flight identity cleanup on rejection', () => 
     const loader = new Loader({ basePath: '/' });
     const deferred = createDeferred<unknown>();
 
-    loader._installAssetTypes([testAssetType<string, unknown>({ id: 'richAsset', token: RichAsset, acquires: false, create: async () => deferred.promise })]);
+    loader._installAssetTypes([
+      testAssetType<string, unknown>({ id: 'richAsset', token: RichAsset, acquires: false, create: async () => deferred.promise }),
+    ]);
 
-    const asset = new Asset({ type: 'richAsset', source: 'x.dat', format: 'x' });
+    const asset = { type: 'richAsset', source: 'x.dat', format: 'x' } as const;
     const pending = loader.load(asset);
 
     // Reset while still in flight: this clears `_aliases` for this
@@ -1617,10 +1710,12 @@ describe('internal unloadAll() with no type argument', () => {
     materializeAssetTypes(loader, [
       testAssetType<string, DummyAsset>({ id: 'dummyAsset', token: DummyAsset, leaf: 'none', create: async text => new DummyAsset(text) }),
     ]);
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+    global.fetch = vi.fn(
+      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response,
+    );
 
     await loader.load('a.txt');
-    await loader.load(new Asset({ type: 'dummyAsset', source: 'b.dat' }));
+    await loader.load({ type: 'dummyAsset', source: 'b.dat' });
 
     expect(loader._peekResource(TextAsset, 'a.txt')).not.toBeNull();
     expect(loader._peekResource(DummyAsset, 'b.dat')).not.toBeNull();
@@ -1637,7 +1732,12 @@ describe('load({ alias: config }) — plain object values are auto-wrapped in an
     const loader = new Loader({ basePath: '/' });
 
     loader._installAssetTypes([
-      testAssetType<string, string>({ id: 'mockAsset', token: MockAssetType, acquires: false, create: async (_source, context) => `loaded:${context.source}` }),
+      testAssetType<string, string>({
+        id: 'mockAsset',
+        token: MockAssetType,
+        acquires: false,
+        create: async (_source, context) => `loaded:${context.source}`,
+      }),
     ]);
 
     await loadRecord(loader, { hero: { type: 'mockAsset', source: 'hero.dat' } });
@@ -1670,7 +1770,7 @@ describe('non-Error throws are stringified when wrapping fetch/handler failures'
       }),
     ]);
 
-    const asset = new Asset({ type: 'richAsset', source: 'y.json', format: 'y' });
+    const asset = { type: 'richAsset', source: 'y.json', format: 'y' } as const;
 
     await expect(loader.load(asset)).rejects.toThrow(/Failed to load "y\.json" from "\/assets\/y\.json": plain string failure/);
   });
@@ -1679,7 +1779,9 @@ describe('non-Error throws are stringified when wrapping fetch/handler failures'
 describe('bare-path descriptor normalization', () => {
   /** Installs `TextAsset` as the app's `text` type so a re-pointed suffix has somewhere to land. */
   const bindTextType = (loader: Loader, result = 'overridden'): void => {
-    loader._installAssetTypes([testAssetType<string, string>({ id: 'text', token: TextAsset, acquires: false, create: async () => result })]);
+    loader._installAssetTypes([
+      testAssetType<string, string>({ id: 'text', token: TextAsset, acquires: false, create: async () => result }),
+    ]);
   };
 
   test('get() resolves a bare path through the app-local type override, not the global default', async () => {
@@ -1717,11 +1819,11 @@ describe('bare-path descriptor normalization', () => {
     expect(() => loader.load('config.json')).toThrow(/no installed asset type claims any extension of "config\.json"/);
   });
 
-  test('an unresolvable suffix names Asset.type() in its guidance', () => {
+  test('an unresolvable suffix names a descriptor in its guidance', () => {
     const loader = new Loader({ basePath: '/' });
 
     expect(() => loader.get('theme.custom' as never)).toThrow(/no installed asset type claims any extension of "theme\.custom"/);
-    expect(() => loader.get('theme.custom' as never)).toThrow(/Asset\.type\(type, "theme\.custom"\)/);
+    expect(() => loader.get('theme.custom' as never)).toThrow(/\{ type, source: "theme\.custom" \}/);
   });
 
   test('the longest registered suffix wins over its bare tail', async () => {
@@ -1735,27 +1837,25 @@ describe('bare-path descriptor normalization', () => {
     expect(loader._peekResource(TextAsset, 'plain.json')).toBeNull();
   });
 
-  test('rejects the removed load(path, options) call shape instead of silently dropping options', () => {
+  test('rejects per-asset options passed as load options instead of silently dropping them', () => {
     const loader = new Loader({ basePath: '/' });
     bindTextType(loader);
     loader.registerType('txt', 'text');
 
-    const legacyLoad = loader.load as unknown as (path: string, options: object) => unknown;
+    const looseLoad = loader.load as unknown as (input: unknown, options: object) => unknown;
 
-    expect(() => legacyLoad.call(loader, 'notes.txt', { priority: LoadPriority.Background })).toThrow(/load\(path, options\) is not supported/);
-    expect(() => legacyLoad.call(loader, 'notes.txt', { priority: LoadPriority.Background })).toThrow(/Asset\.type\(type, path, options\)/);
+    expect(() => looseLoad.call(loader, 'notes.txt', { textureOptions: {} })).toThrow(/only takes LoadOptions/);
+    expect(() => looseLoad.call(loader, { type: 'text', source: 'notes.txt' }, { delimiter: ',' })).toThrow(
+      /Per-asset options belong on the descriptor/,
+    );
   });
 
-  test('rejects second-argument options for Asset.type() descriptors instead of silently dropping them', () => {
+  test('rejects second-argument options for descriptors on get()', () => {
     const loader = new Loader();
-    const descriptor = Asset.type('json', 'config.json');
-    const descriptorLoad = loader.load as unknown as (asset: typeof descriptor, options: object) => unknown;
+    const descriptor = { type: 'json', source: 'config.json' } as const;
     const descriptorGet = loader.get as unknown as (asset: typeof descriptor, options: object) => unknown;
 
-    expect(() => descriptorLoad.call(loader, descriptor, { priority: LoadPriority.Background })).toThrow(
-      /load\(Asset\.type\(\.\.\.\), options\) is not supported/,
-    );
-    expect(() => descriptorGet.call(loader, descriptor, { delimiter: ',' })).toThrow(/get\(Asset\.type\(\.\.\.\), options\) is not supported/);
+    expect(() => descriptorGet.call(loader, descriptor, { delimiter: ',' })).toThrow(/get\(descriptor, options\) is not supported/);
   });
 });
 
@@ -1795,6 +1895,26 @@ describe('bare-path loading for non-leaf resource types', () => {
     await expect(loader.load('fonts/Roboto.woff2' as never)).resolves.toBe('face');
     // The filename (minus directory, extension and query) becomes the family.
     expect(received).toEqual({ family: 'Roboto' });
+  });
+
+  test('peek(path) finds a font that load(path) stored with its implied family', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    loader._installAssetTypes([
+      testAssetType<string, string, { family: string }>({
+        id: 'font',
+        token: FontAsset,
+        extensions: ['woff2'],
+        leaf: 'none',
+        acquires: false,
+        resourceIdentity: request => JSON.stringify(request.options ?? null),
+        create: async () => 'face',
+      }),
+    ]);
+
+    await loader.load('fonts/Roboto.woff2' as never);
+
+    expect(loader.peek('fonts/Roboto.woff2' as never)).toBe('face');
   });
 
   test('load(path) for the font type strips a query string before inferring the family', async () => {
@@ -1870,7 +1990,13 @@ describe('value-kind leaves for declaration-merged package types', () => {
     const loader = new Loader({ basePath: '/' });
 
     materializeAssetTypes(loader, [
-      testAssetType<string, string>({ id: 'packageLeaf', token: PackageLeafAsset, extensions: ['pkgleaf'], acquires: false, create: async () => 'payload' }),
+      testAssetType<string, string>({
+        id: 'packageLeaf',
+        token: PackageLeafAsset,
+        extensions: ['pkgleaf'],
+        acquires: false,
+        create: async () => 'payload',
+      }),
     ]);
 
     const leaf = loader.get('level.pkgleaf' as never);
@@ -1879,14 +2005,20 @@ describe('value-kind leaves for declaration-merged package types', () => {
     await expect((leaf as AssetRef<string>).loaded).resolves.toBe('payload');
   });
 
-  test('the same kind reached through Asset.type() also yields an AssetRef', async () => {
+  test('the same kind reached through a descriptor also yields an AssetRef', async () => {
     const loader = new Loader({ basePath: '/' });
 
     materializeAssetTypes(loader, [
-      testAssetType<string, string>({ id: 'packageLeaf', token: PackageLeafAsset, extensions: ['pkgleaf'], acquires: false, create: async () => 'payload' }),
+      testAssetType<string, string>({
+        id: 'packageLeaf',
+        token: PackageLeafAsset,
+        extensions: ['pkgleaf'],
+        acquires: false,
+        create: async () => 'payload',
+      }),
     ]);
 
-    const leaf = loader.get(Asset.type('packageLeaf', 'level.pkgleaf'));
+    const leaf = loader.get({ type: 'packageLeaf', source: 'level.pkgleaf' });
 
     expect(leaf).toBeInstanceOf(AssetRef);
   });

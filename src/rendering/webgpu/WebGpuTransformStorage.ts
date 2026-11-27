@@ -40,8 +40,11 @@ export class WebGpuTransformStorage {
   };
 
   /**
-   * Underlying shared transform buffer. Exposed for internal stats / tests
-   * (write, skip and upload counters); not part of any public surface.
+   * The shared, frame-scoped CPU transform buffer this instance uploads from.
+   * Production code reaches through it for the plan handles - `begin` (frame
+   * reset), `rewindTo` / `frameHash` (nested-plan isolation) and `count` - and
+   * the tests read its write, skip and upload counters. Not part of any public
+   * surface.
    * @internal
    */
   public get buffer(): TransformBuffer {
@@ -154,8 +157,20 @@ export class WebGpuTransformStorage {
       if (this._needsFullUpload) {
         // Post-grow: the new GPUBuffers are empty; upload the full [0, snapshot.count)
         // range so rows already consumed by earlier flushes this frame are present.
-        device.queue.writeBuffer(this._storageBuffer!, 0, this._buffer.data.buffer, this._buffer.data.byteOffset, snapshot.count * slotBytes);
-        device.queue.writeBuffer(this._tintStorageBuffer!, 0, this._buffer.tintData.buffer, this._buffer.tintData.byteOffset, snapshot.count * tintSlotBytes);
+        device.queue.writeBuffer(
+          this._storageBuffer!,
+          0,
+          this._buffer.data.buffer,
+          this._buffer.data.byteOffset,
+          snapshot.count * slotBytes,
+        );
+        device.queue.writeBuffer(
+          this._tintStorageBuffer!,
+          0,
+          this._buffer.tintData.buffer,
+          this._buffer.tintData.byteOffset,
+          snapshot.count * tintSlotBytes,
+        );
         this._buffer.recordUpload(snapshot.count);
         this._accountant?.recordBufferUpload(snapshot.count * slotBytes + snapshot.count * tintSlotBytes);
         this._needsFullUpload = false;

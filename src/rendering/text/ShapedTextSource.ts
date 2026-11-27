@@ -1,6 +1,8 @@
+import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from '#rendering/webgpu/storageLimits';
+
 import { applyCanvasTextState } from './canvasTextState';
 import type { AtlasMode } from './GlyphAtlas';
-import { AtlasPage, claimSolidTexel, SDF_RADIUS } from './GlyphAtlas';
+import { AtlasPage, claimSolidTexel, SDF_RADIUS, sdfRasterSpan } from './GlyphAtlas';
 import { GlyphSdf } from './GlyphSdf';
 import type { ShapedTextMetrics } from './ShapedTextMetrics';
 import type { LineShaper } from './shaping';
@@ -11,13 +13,19 @@ type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 const makeMeasureCtx = (): Ctx2D => {
   if (typeof OffscreenCanvas !== 'undefined') {
     const ctx = new OffscreenCanvas(1, 1).getContext('2d');
-    if (!ctx) throw new Error('ShapedTextSource: could not obtain OffscreenCanvas 2D context.');
+
+    if (!ctx) {
+      throw new Error('ShapedTextSource: could not obtain OffscreenCanvas 2D context.');
+    }
 
     return ctx;
   }
 
   const ctx = document.createElement('canvas').getContext('2d');
-  if (!ctx) throw new Error('ShapedTextSource: could not obtain canvas 2D context.');
+
+  if (!ctx) {
+    throw new Error('ShapedTextSource: could not obtain canvas 2D context.');
+  }
 
   return ctx;
 };
@@ -41,6 +49,8 @@ export interface ShapedTextSourceOptions {
   mode?: AtlasMode;
   sdfRadius?: number;
   pixelRatio?: number;
+  /** Upper bound on page dimensions in the current renderer. @internal */
+  maxTileSize?: number;
   direction?: 'ltr' | 'rtl';
   letterSpacing?: number;
 }
@@ -73,7 +83,8 @@ export class ShapedTextSource implements LineShaper {
   private readonly _mode: AtlasMode;
   private readonly _sdfRadius: number;
   private readonly _pixelRatio: number;
-  private readonly _rasterSdfRadius: number;
+  private readonly _maxTileSize: number;
+  private readonly _rasterSpan: { buffer: number; radius: number };
   private readonly _direction: 'ltr' | 'rtl';
   private readonly _letterSpacing: number;
 
@@ -96,12 +107,13 @@ export class ShapedTextSource implements LineShaper {
     this._mode = options.mode ?? 'sdf';
     this._sdfRadius = options.sdfRadius ?? SDF_RADIUS;
     this._pixelRatio = options.pixelRatio ?? 1;
+    this._maxTileSize = options.maxTileSize ?? WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D;
     this._direction = options.direction ?? 'ltr';
     this._letterSpacing = options.letterSpacing ?? 0;
     // The distance field has to grow with the raster grid or its reach would
     // shrink to `sdfRadius / pixelRatio` logical pixels, silently shortening
     // every outline and shadow as the density rises.
-    this._rasterSdfRadius = Math.max(1, Math.round(this._sdfRadius * this._pixelRatio));
+    this._rasterSpan = sdfRasterSpan(this._sdfRadius, this._pixelRatio);
   }
 
   /** The pages the current layout's lines were rasterized into. */
@@ -119,7 +131,9 @@ export class ShapedTextSource implements LineShaper {
    * are the ones the node still displays; everything else is released.
    */
   public beginLayout(): void {
-    if (this._repackPending) this._repack();
+    if (this._repackPending) {
+      this._repack();
+    }
 
     this._generation++;
   }
@@ -195,9 +209,10 @@ export class ShapedTextSource implements LineShaper {
         fontWeight: this._font.fontWeight ?? 'normal',
         fontStyle: this._font.fontStyle ?? 'normal',
         fontVariant: this._font.fontVariant ?? 'normal',
-        buffer: this._rasterSdfRadius,
-        radius: this._rasterSdfRadius,
+        buffer: this._rasterSpan.buffer,
+        radius: this._rasterSpan.radius,
         cutoff: 0.5,
+        maxTileSize: this._maxTileSize,
         direction: this._direction,
         letterSpacing: this._letterSpacing * this._pixelRatio,
       });
@@ -209,7 +224,7 @@ export class ShapedTextSource implements LineShaper {
 
   private _rasterizeSdf(line: string, fontSize: number): GlyphInfo {
     const ratio = this._pixelRatio;
-    const result = this._getSdf(this._rasterFontSize(fontSize)).draw(line);
+    const result = this._getSdf(this._rasterFontSize(fontSize)).draw(line, ratio);
     const { page, slot } = this._allocateSlot(result.width, result.height, line, fontSize);
 
     page.writeSdf(result.data, slot.x, slot.y, result.width, result.height);
@@ -217,6 +232,15 @@ export class ShapedTextSource implements LineShaper {
     return {
       x: slot.x,
       y: slot.y,
+      fill:
+        result.fill === null
+          ? null
+          : {
+              x: result.fill.x / ratio,
+              y: result.fill.y / ratio,
+              width: result.fill.width / ratio,
+              height: result.fill.height / ratio,
+            },
       width: result.width / ratio,
       height: result.height / ratio,
       // The logical measurement, not the raster one: layout has to break in the
@@ -228,8 +252,8 @@ export class ShapedTextSource implements LineShaper {
       uvTop: slot.y / page.height,
       uvRight: (slot.x + result.width) / page.width,
       uvBottom: (slot.y + result.height) / page.height,
-      xBearing: -result.glyphLeft / ratio,
-      yBearing: -result.glyphTop / ratio,
+      xBearing: result.xBearing / ratio,
+      yBearing: result.yBearing / ratio,
     };
   }
 
@@ -244,10 +268,14 @@ export class ShapedTextSource implements LineShaper {
     const metrics = ctx.measureText(line);
 
     const ascent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? rasterSize * 0.8,
+      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ??
+        metrics.actualBoundingBoxAscent ??
+        rasterSize * 0.8,
     );
     const descent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? rasterSize * 0.2,
+      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ??
+        metrics.actualBoundingBoxDescent ??
+        rasterSize * 0.2,
     );
     const bbLeft = Math.max(0, Math.ceil(metrics.actualBoundingBoxLeft ?? 0));
     const bbRight = Math.max(0, Math.ceil(metrics.actualBoundingBoxRight ?? metrics.width));
@@ -286,12 +314,20 @@ export class ShapedTextSource implements LineShaper {
     for (const page of this._pages) {
       const slot = page.insert(w, h);
 
-      if (slot !== null) return { page, slot };
+      if (slot !== null) {
+        return { page, slot };
+      }
     }
 
     // A page is sized to hold the line that overflowed the previous ones, so a
     // single long line always fits rather than failing the way a fixed-size
     // glyph page does.
+    if (w > this._maxTileSize || h > this._maxTileSize) {
+      throw new RangeError(
+        `ShapedTextSource: ${w}x${h}px tile at pixelRatio ${this._pixelRatio} exceeds the ${this._maxTileSize}px atlas page.`,
+      );
+    }
+
     const page = this._addPage(Math.max(defaultPageWidth, w), Math.max(defaultPageHeight, h));
     const slot = page.insert(w, h);
 

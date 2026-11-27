@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
+import { raceWithTimeout } from '../../shared/timeout';
 import { phaserCovers } from '../coverage';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_STEP, particleSeedAt } from '../particles';
@@ -16,14 +17,31 @@ import {
   TEXT_FONT_SIZE,
 } from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
-import { isTilemap, isTilemapEditing, TILE_SIZE, tileIdAt, tilemapCameraAt, tilemapCameraFrameFor, tilemapEditsAt, tilemapExtent } from '../tilemap';
-import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, pointerQueriesPerFrame, textForLeaf } from '../traits';
+import {
+  isTilemap,
+  isTilemapEditing,
+  TILE_SIZE,
+  tileIdAt,
+  tilemapCameraAt,
+  tilemapCameraFrameFor,
+  tilemapEditsAt,
+  tilemapExtent,
+} from '../tilemap';
+import {
+  hasFullViewportLeaves,
+  isChurning,
+  isTextArchetype,
+  isTextUpdating,
+  leafAlpha,
+  pointerQueriesPerFrame,
+  textForLeaf,
+} from '../traits';
 import { GRID_MARGIN, gridLayout, gridPosition, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
  * Phaser 4.2 arm of the rendering benchmark.
  *
- * Builds the byte-for-byte same scene the ExoJS and Pixi arms build
+ * Builds the same neutral scene the ExoJS and Pixi arms build
  * (`adapters/exojs.ts`, `adapters/pixi.ts`) and mutates the identical leaf set
  * selected by the shared `selectMutationIndices`, exposing the result through
  * {@link EngineAdapter.mutationSignature} so the harness's cross-arm determinism
@@ -57,6 +75,8 @@ const SCENE_KEY = 'bench';
 const GLYPH_TEXTURE_KEY = `${SCENE_KEY}-glyphs`;
 /** BitmapFont cache key the parsed retro font is registered under. */
 const GLYPH_FONT_KEY = `${SCENE_KEY}-font`;
+/** Bound scene startup, including the asynchronous default texture loads. */
+const INITIALIZATION_TIMEOUT_MS = 10_000;
 
 /**
  * A pre-selected leaf and its resting grid position - the only nodes `mutate`
@@ -110,6 +130,35 @@ const installGlyphFont = (game: Phaser.Game, scene: Phaser.Scene): void => {
   game.cache.bitmapFont.add(GLYPH_FONT_KEY, entry);
 };
 
+/** Release renderer resources before texture readiness creates its drawing context. */
+const releaseUnreadyRenderer = (renderer: Phaser.Renderer.WebGL.WebGLRenderer | null): void => {
+  if (renderer === null) {
+    return;
+  }
+
+  // Phaser 4.2.1's destroy first reads baseDrawingContext.resize, but that
+  // context does not exist before READY. Perform its remaining resource release
+  // directly, without booting a context or losing the harness-owned WebGL2 one.
+  renderer.canvas.removeEventListener('webglcontextlost', renderer.contextLostHandler as EventListener, false);
+  renderer.canvas.removeEventListener('webglcontextrestored', renderer.contextRestoredHandler as EventListener, false);
+
+  for (const wrappers of [
+    renderer.glBufferWrappers,
+    renderer.glFramebufferWrappers,
+    renderer.glProgramWrappers,
+    renderer.glTextureWrappers,
+  ]) {
+    for (const wrapper of wrappers) {
+      wrapper.destroy();
+    }
+
+    wrappers.length = 0;
+  }
+
+  renderer.removeAllListeners();
+  Object.assign(renderer, { extensions: {}, gl: null, game: null, canvas: null, contextLost: true, spector: null });
+};
+
 export const createPhaserAdapter = (): EngineAdapter => {
   let game: Phaser.Game | null = null;
   let scene: Phaser.Scene | null = null;
@@ -125,6 +174,23 @@ export const createPhaserAdapter = (): EngineAdapter => {
   let textUpdating = false;
   /** Characters per text leaf of the built archetype; `0` when it has no text. */
   let textGlyphs = 0;
+
+  const releaseSprites = (): void => {
+    root?.destroy();
+    root = null;
+
+    for (const key of textureKeys) {
+      game?.textures.remove(key);
+    }
+
+    textureKeys = [];
+    mutableLeaves = [];
+    mutableIndices = [];
+    rebuildLeaf = null;
+    churning = false;
+    textUpdating = false;
+    textGlyphs = 0;
+  };
 
   /** The tilemap scene's layer and map, or `null` for every other archetype. */
   let tileLayer: Phaser.Tilemaps.TilemapGPULayer | null = null;
@@ -326,8 +392,63 @@ export const createPhaserAdapter = (): EngineAdapter => {
 
   /** Drop the picking scene so a rebuild (or teardown) leaks nothing. */
   const releasePicking = (): void => {
+    if (pickingSpec !== null && root !== null) {
+      root.destroy();
+      root = null;
+
+      // The stopped game loop never drains the removals queued by destroy.
+      // Release those input references before another archetype uses the scene.
+      (scene!.input as unknown as { preUpdate(): void }).preUpdate();
+      game!.textures.remove(`${SCENE_KEY}-pick`);
+    }
+
     pickPointer = null;
     pickingSpec = null;
+  };
+
+  const teardown = (): void => {
+    releaseTilemap();
+    releaseParticles();
+    releasePicking();
+    releaseSprites();
+
+    if (game !== null) {
+      if (game.scene.isBooted) {
+        // Destruction is normally consumed by the next step. The harness stops
+        // the loop, so consume it now while preserving its shared canvas.
+        game.destroy(false);
+        game.step(0, 0);
+      } else {
+        // Before READY, Phaser 4.2.1's SceneManager and TextureManager destroy
+        // methods assume a system scene and stamp that do not exist yet.
+        // Release the booted resources without starting those missing systems.
+        const textures = game.textures;
+
+        textures.removeAllListeners();
+        // Default-image onload handlers can arrive after this game is released.
+        // They already accept a null result from create, so cancel allocation
+        // only on this disposed manager without changing Phaser's prototype.
+        textures.create = () => null;
+        game.events.off(Phaser.Core.Events.DESTROY, textures.destroy, textures);
+
+        for (const texture of Object.values(textures.list)) {
+          texture.destroy();
+        }
+
+        Phaser.Display.Canvas.CanvasPool.remove(textures);
+        (textures as unknown as { game: null }).game = null;
+        game.events.emit(Phaser.Core.Events.DESTROY);
+        game.events.removeAllListeners();
+        // preBoot can capture the game before its renderer has been allocated.
+        releaseUnreadyRenderer(game.renderer as Phaser.Renderer.WebGL.WebGLRenderer | null);
+        game.domContainer?.remove();
+        game.loop.destroy();
+      }
+
+      game = null;
+    }
+
+    scene = null;
   };
 
   return {
@@ -355,48 +476,75 @@ export const createPhaserAdapter = (): EngineAdapter => {
         throw new Error('Phaser requires a WebGL2 context for this arm.');
       }
 
-      await new Promise<void>(resolve => {
-        game = new Phaser.Game({
-          // Force WebGL and pass the already-created WebGL2 context. Phaser's
-          // public type incorrectly calls this CanvasRenderingContext2D, but its
-          // WebGLRenderer reads the value as the renderer context at runtime.
-          type: Phaser.WEBGL,
-          canvas,
-          context: context as unknown as CanvasRenderingContext2D,
-          width: VIEWPORT_WIDTH,
-          height: VIEWPORT_HEIGHT,
-          backgroundColor: '#000000',
-          // Fixed backing store; never let Phaser's Scale Manager resize the
-          // shared harness canvas out from under the fixed 1280x720 viewport.
-          scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
-          render: { antialias: false, powerPreference: 'high-performance', clearBeforeRender: true, transparent: false, pixelArt: true },
-          // Silence / disable every subsystem not under test: the boot banner,
-          // audio, and all input listeners. Physics is off by default (no
-          // `physics` config). The render loop is halted below.
-          banner: false,
-          audio: { noAudio: true },
-          // Mouse input stays ON although the harness dispatches no events: the
-          // input plugin is what registers an interactive object, and with it
-          // off the picking archetype's hit test searches an empty list and
-          // reports a very fast nothing. The loop is stopped, so no input is
-          // processed per frame and no other archetype pays for this.
-          input: { keyboard: false, mouse: true, touch: false, gamepad: false },
-          disableContextMenu: true,
-          autoFocus: false,
-          // The scene's `create` fires once the scene reaches RUNNING; resolve
-          // init then (the scene ref is fetched by key afterwards).
-          scene: { key: SCENE_KEY, create: () => resolve() },
-        });
-      });
+      try {
+        const initialized = await raceWithTimeout(
+          new Promise<boolean>(resolve => {
+            game = new Phaser.Game({
+              // Force WebGL and pass the already-created WebGL2 context. Phaser's
+              // public type incorrectly calls this CanvasRenderingContext2D, but its
+              // WebGLRenderer reads the value as the renderer context at runtime.
+              type: Phaser.WEBGL,
+              canvas,
+              context: context as unknown as CanvasRenderingContext2D,
+              callbacks: {
+                preBoot: bootingGame => {
+                  // A boot error can prevent the constructor from returning.
+                  // Keep its resource owner available to the failure cleanup.
+                  game = bootingGame;
+                },
+              },
+              width: VIEWPORT_WIDTH,
+              height: VIEWPORT_HEIGHT,
+              backgroundColor: '#000000',
+              // Fixed backing store; never let Phaser's Scale Manager resize the
+              // shared harness canvas out from under the fixed 1280x720 viewport.
+              scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
+              render: {
+                antialias: false,
+                powerPreference: 'high-performance',
+                clearBeforeRender: true,
+                transparent: false,
+                pixelArt: true,
+              },
+              // Silence / disable every subsystem not under test: the boot banner,
+              // audio, and all input listeners. Physics is off by default (no
+              // `physics` config). The render loop is halted below.
+              banner: false,
+              audio: { noAudio: true },
+              // Mouse input stays ON although the harness dispatches no events: the
+              // input plugin is what registers an interactive object, and with it
+              // off the picking archetype's hit test searches an empty list and
+              // reports a very fast nothing. The loop is stopped, so no input is
+              // processed per frame and no other archetype pays for this.
+              input: { keyboard: false, mouse: true, touch: false, gamepad: false },
+              disableContextMenu: true,
+              autoFocus: false,
+              // The scene's `create` fires once the scene reaches RUNNING; resolve
+              // init then (the scene ref is fetched by key afterwards).
+              scene: { key: SCENE_KEY, create: () => resolve(true) },
+            });
+          }),
+          INITIALIZATION_TIMEOUT_MS,
+          false,
+        );
 
-      // Halt Phaser's own requestAnimationFrame loop; the harness drives frames.
-      game!.loop.stop();
+        if (!initialized) {
+          throw new Error(`Phaser scene initialization timed out after ${INITIALIZATION_TIMEOUT_MS} ms.`);
+        }
 
-      if (game!.context !== context) {
-        throw new Error('Phaser did not retain the injected WebGL2 context.');
+        // Halt Phaser's own requestAnimationFrame loop; the harness drives frames.
+        game!.loop.stop();
+
+        if (game!.context !== context) {
+          throw new Error('Phaser did not retain the injected WebGL2 context.');
+        }
+
+        scene = game!.scene.getScene(SCENE_KEY);
+      } catch (error) {
+        teardown();
+
+        throw error;
       }
-
-      scene = game!.scene.getScene(SCENE_KEY);
     },
 
     buildScene(spec: ArchetypeSpec, nodeCount: number, seed: number): void {
@@ -407,6 +555,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
       releaseTilemap();
       releaseParticles();
       releasePicking();
+      releaseSprites();
 
       if (isParticles(spec)) {
         buildParticleScene(spec, nodeCount);
@@ -429,8 +578,6 @@ export const createPhaserAdapter = (): EngineAdapter => {
       }
 
       const textures = game.textures;
-
-      textureKeys = [];
 
       for (let t = 0; t < spec.textureCount; t++) {
         const key = `${SCENE_KEY}-tex-${t}`;
@@ -490,7 +637,8 @@ export const createPhaserAdapter = (): EngineAdapter => {
       }
 
       /** Resting grid position of leaf `index`, from the shared layout helpers. */
-      const leafPosition = (index: number): { x: number; y: number } => (overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN));
+      const leafPosition = (index: number): { x: number; y: number } =>
+        overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN);
 
       /** Build (but do not parent) the leaf at global index `index`; reused by the churn mutation. */
       const makeLeaf = (index: number): Phaser.GameObjects.Sprite | Phaser.GameObjects.BitmapText => {
@@ -678,31 +826,6 @@ export const createPhaserAdapter = (): EngineAdapter => {
       renderer.postRender();
     },
 
-    teardown(): void {
-      releaseTilemap();
-      releaseParticles();
-      releasePicking();
-
-      if (game !== null) {
-        // `destroy` only FLAGS pending destruction (normally consumed by the next
-        // game step); since the loop is stopped, drive one explicit `step` - which
-        // runs `runDestroy` immediately when `pendingDestroy` is set - so the
-        // WebGL context and scene are released now rather than leaking across
-        // cells. `removeCanvas: false` keeps the harness-owned canvas in the DOM.
-        game.destroy(false);
-        game.step(0, 0);
-        game = null;
-      }
-
-      scene = null;
-      root = null;
-      textureKeys = [];
-      mutableLeaves = [];
-      mutableIndices = [];
-      rebuildLeaf = null;
-      churning = false;
-      textUpdating = false;
-      textGlyphs = 0;
-    },
+    teardown,
   };
 };

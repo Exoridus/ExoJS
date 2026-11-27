@@ -16,11 +16,13 @@ import { DebugLayer } from './DebugLayer';
 // ---------------------------------------------------------------------------
 
 const panelW = 260;
-const panelH = 160;
 const panelPad = 8;
 const lineH = 14;
 const textSize = 11;
 const maxEntries = 10;
+// Cursor row, header row, the entries and the overflow row.
+const totalLines = maxEntries + 3;
+const panelH = panelPad * 2 + totalLines * lineH;
 
 // Semi-transparent dark background.
 const bgColor = new Color(0, 0, 0, 0.7);
@@ -30,7 +32,9 @@ const textColor = Color.white.clone();
 
 /**
  * Debug layer that shows a screen-space panel (top-right corner) listing all
- * RenderNodes under the current pointer position, sorted by zIndex descending.
+ * RenderNodes under the current pointer position, topmost first: UI before
+ * world nodes, and each layer in the order it paints, so a node's `zIndex`
+ * only ranks it among its siblings and a child lists above its container.
  * Screen-space.
  */
 export class PointerStackLayer extends DebugLayer {
@@ -50,7 +54,7 @@ export class PointerStackLayer extends DebugLayer {
   /**
    * Lazily initialize the panel on first call, reposition it to the
    * top-right corner, and populate text lines with the current pointer
-   * stack (up to 10 entries, sorted by zIndex descending).
+   * stack (up to 10 entries, topmost first).
    */
   public override update(_delta: Seconds): void {
     if (this._root === null) {
@@ -72,11 +76,13 @@ export class PointerStackLayer extends DebugLayer {
     // Update text nodes.
     for (let i = 0; i < this._lines.length; i++) {
       const lineNode = this._lines[i];
+
       if (lineNode === undefined) {
         continue;
       }
 
       const line = lines[i];
+
       if (line !== undefined) {
         lineNode.text = line;
         lineNode.visible = true;
@@ -121,9 +127,7 @@ export class PointerStackLayer extends DebugLayer {
     this._root = new Container();
     this._root.addChild(this._bg);
 
-    // Pre-allocate enough Text nodes for header + entries.
-    const totalLines = maxEntries + 2; // header row + cursor row + entries
-
+    // Pre-allocate enough Text nodes for every row, including the overflow one.
     for (let i = 0; i < totalLines; i++) {
       const t = new Text('', style);
 
@@ -144,23 +148,30 @@ export class PointerStackLayer extends DebugLayer {
 
     const { x: sx, y: sy } = pos;
 
-    // The pointer x/y is canvas-relative. InteractionSystem passes this
-    // directly to node.contains(), so we do the same.
-    const worldX = sx;
-    const worldY = sy;
-
     const lines: string[] = [];
 
     lines.push(`Cursor: (${sx.toFixed(0)}, ${sy.toFixed(0)})`);
     lines.push('Stack (top→bottom):');
 
     // Collect all visible RenderNodes whose contains() returns true.
-    const root = this._app.scenes.currentScene?.root;
-    const stack: RenderNode[] = [];
+    const scene = this._app.scenes.currentScene;
+    const root = scene?.root;
+    let stack: RenderNode[] = [];
 
     if (root) {
-      this._collectContaining(root, worldX, worldY, stack);
-      stack.sort((a, b) => b.zIndex - a.zIndex);
+      const world = this._app.rendering.view.screenToWorld(sx, sy, this._app.width, this._app.height);
+
+      this._collectContaining(root, world.x, world.y, stack);
+    }
+
+    const uiRoot = scene?._peekUI();
+
+    if (uiRoot) {
+      const ui = this._app.rendering.screenView.screenToWorld(sx, sy, this._app.width, this._app.height);
+      const uiStack: RenderNode[] = [];
+
+      this._collectContaining(uiRoot, ui.x, ui.y, uiStack);
+      stack = [...uiStack, ...stack];
     }
 
     const shown = stack.slice(0, maxEntries);
@@ -184,21 +195,61 @@ export class PointerStackLayer extends DebugLayer {
     return lines;
   }
 
-  private _collectContaining(node: RenderNode, x: number, y: number, result: RenderNode[]): void {
-    if (!node.visible) {
-      return;
+  /** Collect the visible nodes under the point, topmost first. */
+  private _collectContaining(root: RenderNode, x: number, y: number, result: RenderNode[]): void {
+    const slots: Array<RenderNode | null> = [];
+
+    if (root.visible) {
+      this._collectSubtree(root, x, y, slots);
     }
 
-    if (node.contains(x, y)) {
-      result.push(node);
-    }
+    // The walk visits nodes in the order they paint, so the last one is on top.
+    for (let i = slots.length - 1; i >= 0; i--) {
+      const node = slots[i];
 
-    const container = node as Partial<{ children: RenderNode[] }>;
-
-    if (Array.isArray(container.children)) {
-      for (const child of container.children) {
-        this._collectContaining(child, x, y, result);
+      if (node !== null && node !== undefined) {
+        result.push(node);
       }
     }
+  }
+
+  /** Collect the visible subtree under the point into `slots` and return `node.contains(x, y)`. */
+  private _collectSubtree(node: RenderNode, x: number, y: number, slots: Array<RenderNode | null>): boolean {
+    const slot = slots.length;
+    // A plain container hits wherever any child does, so its answer falls out of
+    // the walk below; calling its contains() would walk the same subtree again.
+    const derived = node instanceof Container && node.hitArea === null && node.contains === Container.prototype.contains;
+    const children = this._childrenInPaintOrder(node);
+    let childHit = false;
+
+    slots.push(node);
+
+    if (children !== null) {
+      for (const child of children) {
+        // A hidden child is not listed, but still counts towards its container's hit.
+        const hit: boolean = child.visible ? this._collectSubtree(child, x, y, slots) : derived && !childHit && child.contains(x, y);
+
+        childHit ||= hit;
+      }
+    }
+
+    const hit = derived ? childHit : node.contains(x, y);
+
+    if (!hit) {
+      slots[slot] = null;
+    }
+
+    return hit;
+  }
+
+  /** A node's children in the order the renderer paints them: stable by `zIndex`, then document order. */
+  private _childrenInPaintOrder(node: RenderNode): readonly RenderNode[] | null {
+    if (node instanceof Container) {
+      return node._childrenInPaintOrder();
+    }
+
+    const children = (node as Partial<{ children: readonly RenderNode[] }>).children;
+
+    return children === undefined ? null : [...children].sort((a, b) => a.zIndex - b.zIndex);
   }
 }

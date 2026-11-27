@@ -204,6 +204,7 @@ describe('Application.onFrame', () => {
     };
     rawApp['scenes'] = sceneDirector;
     rawApp['input'] = { _prepareFrame: vi.fn(), _finishInteractionFrame: vi.fn() };
+    rawApp['_inputTickClock'] = { open: vi.fn(), close: vi.fn(), retire: vi.fn() };
     rawApp['interaction'] = { _prepareFrame: vi.fn() };
     rawApp['_audio'] = { _prepareFrame: vi.fn() };
     rawApp['tweens'] = { _prepareFrame: vi.fn() };

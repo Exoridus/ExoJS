@@ -28,6 +28,10 @@ const TEXT_COUNTS = [200, 1_000, 5_000] as const;
  */
 const DYNAMIC_ALL_COUNTS = [1_000, 10_000, 100_000] as const;
 
+/** Common load ladder for the flat scene's dirty-rate sweep. */
+const DIRTY_RATE_COUNTS = [1_000, 10_000, 25_000] as const;
+const DIRTY_RATES = [0, 1, 10, 25, 50, 75, 100] as const;
+
 /**
  * Layer counts for `fill-layers`. The load is full-screen layers, not scene
  * nodes, so the ladder is three steps of a few dozen rather than thousands: 8 is
@@ -211,6 +215,20 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 1,
     cullingEnabled: false,
   },
+  // Keep the scene flat and change only the nominal mutation probability. The
+  // canonical selector uses one seeded threshold draw per leaf, so lower rates
+  // select subsets of higher rates while the realized count can differ from
+  // nodeCount * rate. These IDs preserve the older nested workload definitions.
+  ...DIRTY_RATES.map((rate): ArchetypeSpec => ({
+    id: `dirty-${rate}`,
+    category: 'node-scaling',
+    crossArm: true,
+    nodeCounts: DIRTY_RATE_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: rate / 100,
+    cullingEnabled: false,
+  })),
   {
     id: 'deep-hierarchy',
     category: 'node-scaling',
@@ -482,11 +500,12 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // draws quads, and none of them pays for layout or glyph lookup. All four arms
   // have real text nodes, so these two rows carry full cross-arm meaning.
   //
-  // The pair differs in exactly ONE field - `textUpdate` - so the delta between
-  // them is the cost of invalidating a laid-out string and nothing else.
-  // `text-static` lays out once at build time and then only draws; `text-dynamic`
-  // re-sets a quarter of its leaves' strings every frame, which is the shape a
-  // real HUD produces (a few counters change, the rest of the labels do not).
+  // `text-static` lays out once at build time and never mutates; `text-dynamic`
+  // sets `mutationFraction: 0.25` and `textUpdate`, so each selected leaf has its
+  // string re-set every frame rather than moved - the shape a real HUD produces
+  // (a few counters change, the rest of the labels do not). The delta between the
+  // rows covers string generation, the setter and the resulting re-layout; the
+  // selection machinery itself is measured separately by `dynamic-heavy`.
   // A fraction of 1 was rejected: re-laying out every label in the scene every
   // frame is not a workload anything ships, and at the top step it would abort on
   // every arm, replacing three comparable rows with three aborts.
@@ -584,18 +603,6 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     cullingEnabled: false,
     filterChainDepth: 4,
   },
-  // NESTED CLIPPING. One axis-aligned rectangle mask per spine container, each
-  // inset inside its parent's rect so no level is a no-op. Both arms implement an
-  // unrotated rect mask as GPU scissor/clip state, so the row measures the
-  // nesting rather than one arm's intermediate-target policy.
-  //
-  // Shares the render-target machinery of the filter rows and the same coverage
-  // exclusion; otherwise identical to `static-heavy` at depth 4.
-  //
-  // The nesting depth is one greater than the mask depth on purpose: the scene
-  // root stays unmasked so the Pixi arm has somewhere to host its mask sources
-  // (a Pixi mask source parented under the container it masks would be clipped by
-  // its own mask), and both arms therefore clip spine levels 1..3.
   // BLOOM-SHAPED MULTIPASS. The composite a real post-processing stack renders,
   // which no `filter-chain-*` row reaches: the scene is captured into an
   // off-screen target, that capture is blurred DOWN into a half-resolution
@@ -624,6 +631,18 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     cullingEnabled: false,
     compositeBlurStrength: 2,
   },
+  // NESTED CLIPPING. One axis-aligned rectangle mask per spine container, each
+  // inset inside its parent's rect so no level is a no-op. Both arms implement an
+  // unrotated rect mask as GPU scissor/clip state, so the row measures the
+  // nesting rather than one arm's intermediate-target policy.
+  //
+  // Shares the render-target machinery of the filter rows and the same coverage
+  // exclusion; otherwise identical to `static-heavy` at depth 4.
+  //
+  // The nesting depth is one greater than the mask depth on purpose: the scene
+  // root stays unmasked so the Pixi arm has somewhere to host its mask sources
+  // (a Pixi mask source parented under the container it masks would be clipped by
+  // its own mask), and both arms therefore clip spine levels 1..3.
   {
     id: 'mask-clip',
     category: 'render-targets',
@@ -635,9 +654,6 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     cullingEnabled: false,
     maskDepth: 3,
   },
-  // `mask-clip` with every rect moving each frame: the delta against the row
-  // above is what an effect change alone costs the retained products around
-  // it, which is the shape of every scrolling clip.
   // TILEMAPS. The one scene shape practically every 2D game has and that no
   // sprite archetype describes: a world far larger than the viewport, drawn
   // through a dedicated tile path rather than one node per tile.
@@ -838,6 +854,9 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     cullingEnabled: false,
     layoutPassesPerFrame: LAYOUT_PASSES_PER_FRAME,
   },
+  // `mask-clip` with every rect moving each frame: the delta against the row
+  // above is what an effect change alone costs the retained products around
+  // it, which is the shape of every scrolling clip.
   {
     id: 'mask-clip-animated',
     category: 'render-targets',
@@ -858,9 +877,17 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
  * frames must not be presented as equal in confidence to one over 120.
  */
 export const timedFramesFor = (nodeCount: number): number => {
-  if (nodeCount >= 100_000) return 30;
-  if (nodeCount >= 25_000) return 60;
-  if (nodeCount >= 5_000) return 90;
+  if (nodeCount >= 100_000) {
+    return 30;
+  }
+
+  if (nodeCount >= 25_000) {
+    return 60;
+  }
+
+  if (nodeCount >= 5_000) {
+    return 90;
+  }
 
   return 120;
 };
@@ -876,8 +903,13 @@ export const timedFramesFor = (nodeCount: number): number => {
  * without touching the timed-frame budget the report already labels honestly.
  */
 export const warmupFramesFor = (nodeCount: number): number => {
-  if (nodeCount >= 100_000) return 40;
-  if (nodeCount >= 25_000) return 25;
+  if (nodeCount >= 100_000) {
+    return 40;
+  }
+
+  if (nodeCount >= 25_000) {
+    return 25;
+  }
 
   return 10;
 };
@@ -888,12 +920,16 @@ export const buildMatrix = (adapters: readonly EngineAdapter[], backends: readon
 
   for (const adapter of adapters) {
     for (const backend of backends) {
-      if (!adapter.supports(backend)) continue;
+      if (!adapter.supports(backend)) {
+        continue;
+      }
 
       for (const archetype of ARCHETYPES) {
         // Arms that are a variant of another arm cover only the archetypes
         // where the variation is the point (see `EngineAdapter.coversArchetype`).
-        if (adapter.coversArchetype?.(archetype) === false) continue;
+        if (adapter.coversArchetype?.(archetype) === false) {
+          continue;
+        }
 
         for (const nodeCount of archetype.nodeCounts) {
           cells.push({

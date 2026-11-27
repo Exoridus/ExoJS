@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 89,
+  "memberCount": 91,
   "counts": {
     "constructors": 0,
     "methods": 53,
-    "properties": 36,
+    "properties": 38,
     "events": 0
   },
   "sections": [
@@ -2211,7 +2211,7 @@
             }
           ],
           "returnType": "surface",
-          "description": "Whether surface is a canvas element in a document, and so carries the DOM affordances (style, layout box, event target, parent element) that an OffscreenCanvas does not. Realm-safe: HTMLCanvasElement is not defined in a worker, where the answer is always false."
+          "description": "Whether surface is a canvas element in a document, and so carries the DOM affordances (style, layout box, event target, parent element) that an OffscreenCanvas does not. A canvas from another frame's document qualifies; in a worker the answer is always false."
         },
         {
           "name": "isPowerOfTwo",
@@ -2258,7 +2258,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Return true when value is a non-zero power of two."
+          "description": "Return true when value is a positive integer power of two (1, 2, 4, ...)."
         },
         {
           "name": "keyboardChannelFromCode",
@@ -3407,6 +3407,27 @@
       "title": "Constants",
       "members": [
         {
+          "name": "audioStreamType",
+          "signature": "audioStreamType: AudioStreamAssetType",
+          "signatureTokens": [
+            {
+              "text": "audioStreamType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioStreamAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in audioStream asset type."
+        },
+        {
           "name": "binarySourceCodec",
           "signature": "binarySourceCodec: AssetSourceCodec<ArrayBuffer>",
           "signatureTokens": [
@@ -3459,6 +3480,39 @@
           "params": [],
           "returnType": null,
           "description": "The built-in binary asset type."
+        },
+        {
+          "name": "blobSourceCodec",
+          "signature": "blobSourceCodec: AssetSourceCodec<Blob>",
+          "signatureTokens": [
+            {
+              "text": "blobSourceCodec",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetSourceCodec",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Blob",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "A Blob, kept and handed on unchanged. The browser may hold its data out of the JavaScript heap, which suits media and other large payloads."
         },
         {
           "name": "bmFontType",
@@ -3599,7 +3653,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The asset types every Application installs. The set is fixed at build time and cannot be added to or replaced at runtime: a type an application brings of its own is installed alongside these, on that application only. Their ids are short rather than reverse-DNS because the engine owns them, and because they double as the cache namespaces a persistent store writes under. A type is listed unconditionally even where the browser API behind it may be absent. Constructing the type touches nothing; only loading an asset of it does, and a missing API should fail that load rather than silently make the type unknown - which is what a conditional list did, leaving the type-level suffix table claiming a type the runtime had never installed."
+          "description": "The asset types every Application installs. An application can add its own definitions and replace a constructor-bound factory before its first request. Their ids are short rather than reverse-DNS because the engine owns them, and because they double as the cache namespaces a persistent store writes under. A type is listed unconditionally even where the browser API behind it may be absent. Constructing the type touches nothing; only loading an asset of it does, and a missing API should fail that load rather than silently make the type unknown - which is what a conditional list did, leaving the type-level suffix table claiming a type the runtime had never installed."
         },
         {
           "name": "csvType",
@@ -3645,7 +3699,7 @@
         },
         {
           "name": "defaultUITheme",
-          "signature": "defaultUITheme: UITheme",
+          "signature": "defaultUITheme: Required<UITheme>",
           "signatureTokens": [
             {
               "text": "defaultUITheme",
@@ -3656,13 +3710,25 @@
               "kind": "punctuation"
             },
             {
+              "text": "Required",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "UITheme",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The theme a UI layer uses until one is assigned. It reproduces the widgets' built-in look, so assigning a patch changes only what the patch names."
+          "description": "Asset-free dark surfaces, readable typography and mint interaction accents."
         },
         {
           "name": "fontType",
@@ -3974,7 +4040,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Signal that dispatches once the global AudioContext enters the running state. Handles browser autoplay-policy by listening for user-interaction events (mousedown, touchstart, touchend) and resuming a suspended context automatically. Dispatches once per run of the context: on the first unlock, and again on every later locked-to-running edge, so an object constructed while the context sits suspended (an iOS audio-session interruption, a bfcache restore, ...) still gets its setup callback. Handlers subscribed while the context is already running do not receive a dispatch for that run - check isAudioContextReady first and set up directly when it returns true, then subscribe only for the locked case and unsubscribe on the first dispatch."
+          "description": "Signal that dispatches once the global AudioContext enters the running state. Handles browser autoplay-policy by listening for user-interaction events (pointer press and release, mousedown, touchstart, touchend, keydown) in the capture phase and resuming a suspended context automatically. Dispatches once per run of the context: on the first unlock, and again on every later locked-to-running edge, so an object constructed while the context sits suspended (an iOS audio-session interruption, a bfcache restore, ...) still gets its setup callback. Handlers subscribed while the context is already running do not receive a dispatch for that run - check isAudioContextReady first and set up directly when it returns true, then subscribe only for the locked case and unsubscribe on the first dispatch."
         },
         {
           "name": "onAudioPlaybackBlocked",
@@ -4040,7 +4106,7 @@
         },
         {
           "name": "SERIALIZATION_VERSION",
-          "signature": "SERIALIZATION_VERSION: 2",
+          "signature": "SERIALIZATION_VERSION: 4",
           "signatureTokens": [
             {
               "text": "SERIALIZATION_VERSION",
@@ -4051,13 +4117,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "2",
+              "text": "4",
               "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Current scene-serialization format version. Written into every SerializedScene and checked on deserialize so saved data can outlive the code that produced it (see the migration chain in migrate)."
+          "description": "Current scene-serialization format version. Written into every SerializedScene and SerializedPrefab. Both readers require this version."
         },
         {
           "name": "soundType",

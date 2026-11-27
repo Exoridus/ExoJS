@@ -16,7 +16,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { openingLoad, physicsCards, renderingCards } from '../../site/src/lib/bench-cards';
-import { benchProfiles, formatMs, isQuantitative, outcomeOf, type ProfileCell, publishedMs, type TimerCheck } from '../../site/src/lib/bench-profiles';
+import {
+  benchProfiles,
+  formatMs,
+  isQuantitative,
+  outcomeOf,
+  type ProfileCell,
+  publishedMs,
+  type TimerCheck,
+} from '../../site/src/lib/bench-profiles';
 
 /** A cell whose competitor arm reported `ms` under the given timer verdict. */
 const cellOf = (ms: number, timer: TimerCheck, comparable = true): ProfileCell => ({
@@ -110,7 +118,10 @@ describe('a real measurement', () => {
 
 describe('every published profile', () => {
   const loads = benchProfiles
-    .flatMap(document => [...(['webgl2', 'webgpu'] as const).flatMap(backend => renderingCards(document, backend)), ...physicsCards(document)])
+    .flatMap(document => [
+      ...(['webgl2', 'webgpu'] as const).flatMap(backend => renderingCards(document, backend)),
+      ...physicsCards(document),
+    ])
     .flatMap(card => card.loads);
 
   it('publishes at least one load to check', () => {
@@ -154,7 +165,9 @@ describe('every published profile', () => {
   });
 
   it('opens every card on a load it actually carries', () => {
-    for (const card of benchProfiles.flatMap(document => (['webgl2', 'webgpu'] as const).flatMap(backend => renderingCards(document, backend)))) {
+    for (const card of benchProfiles.flatMap(document =>
+      (['webgl2', 'webgpu'] as const).flatMap(backend => renderingCards(document, backend)),
+    )) {
       expect(openingLoad(card)).toBeDefined();
     }
   });

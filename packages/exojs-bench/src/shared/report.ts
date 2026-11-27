@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describePlan, isRunPlanMeta, isSamePlan, type RunPlanMeta } from '../suite/plan';
 import type { LibraryProvenance } from './provenance';
 import type { BaseCellResult } from './result';
 
@@ -28,8 +29,16 @@ export const formatMs = (value: number | null): string => (value === null ? 'n/a
 /** Formats a structural counter: integers stay integers, uneven per-step/frame totals keep two decimals. */
 export const formatCount = (value: number): string => (Number.isInteger(value) ? String(value) : value.toFixed(2));
 
-/** Escapes a CSV field, quoting when it holds a comma, quote or newline. */
-export const csvField = (value: string): string => (/[",\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value);
+/** Escapes a CSV field, quoting when it holds a comma, quote, carriage return or newline. */
+export const csvField = (value: string): string => (/[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value);
+
+/**
+ * Escapes a Markdown table cell. Line breaks collapse to one space before pipes
+ * are escaped: a break inside a cell ends the row, so every later column would
+ * shift. Playwright evaluate errors carry multi-line stacks, which is exactly
+ * the note a failed cell records.
+ */
+export const markdownCell = (value: string): string => value.replaceAll(/\r?\n|\r/g, ' ').replaceAll('|', '\\|');
 
 /**
  * A spec's identity as a string: every field in a fixed key order, so two
@@ -54,7 +63,10 @@ const specKey = (spec: object): string => JSON.stringify(Object.fromEntries(Obje
  * the old value in place under the new stamp, and the `results.md` table does
  * not flag it. Delete `results.json` before a run that must stand on its own.
  */
-export const mergeCellResults = <TResult extends BaseCellResult<object>>(existing: readonly TResult[], incoming: readonly TResult[]): TResult[] => {
+export const mergeCellResults = <TResult extends BaseCellResult<object>>(
+  existing: readonly TResult[],
+  incoming: readonly TResult[],
+): TResult[] => {
   const merged = [...existing];
   const indexByKey = new Map(existing.map((result, index) => [specKey(result.spec), index]));
 
@@ -99,23 +111,102 @@ export const mergeLibraries = (existing: readonly LibraryProvenance[], incoming:
 };
 
 /**
- * The report `outDir` already holds, parsed, or `undefined` when there is none.
- * A `results.json` that exists but does not parse is an error rather than a
- * fresh start: replacing it would discard whatever the file still held, and the
- * caller could not tell that from an empty directory.
+ * The plan identity of a merged report.
+ *
+ * Cells measured under different plans, or under a published plan and an
+ * exploratory narrowing of it, answer different questions, so the merge refuses
+ * instead of stamping one identity onto both. Data without a recorded plan only
+ * merges with other such data.
  */
-export const readExistingReport = <TData>(outDir: string): TData | undefined => {
+export const mergePlan = (existing: RunPlanMeta | undefined, incoming: RunPlanMeta | undefined): RunPlanMeta | undefined => {
+  if (!isSamePlan(existing, incoming)) {
+    throw new Error(
+      `refusing to merge a run into a report with a different plan identity (existing: ${describePlan(existing)}; incoming: ${describePlan(incoming)}); write to a separate output directory or move the existing report aside`,
+    );
+  }
+
+  return incoming;
+};
+
+/** Trailing CSV columns naming the plan every row was measured under; empty for data without a recorded plan. */
+export const PLAN_CSV_HEADER = ['planId', 'planRevision', 'planHash', 'planSuite', 'planExploratory'] as const;
+
+/** The {@link PLAN_CSV_HEADER} values for one row. */
+export const planCsvFields = (plan: RunPlanMeta | undefined): string[] =>
+  plan === undefined
+    ? PLAN_CSV_HEADER.map(() => '')
+    : [plan.planId, String(plan.planRevision), plan.planHash, plan.suite, String(plan.exploratory)];
+
+/** Markdown lines stating the plan identity, or that none was recorded. */
+export const planMarkdownLines = (plan: RunPlanMeta | undefined): string[] => ['## Plan', '', `- ${describePlan(plan)}`, ''];
+
+/**
+ * The report `outDir` already holds, parsed and shape-checked, or `undefined`
+ * when there is none.
+ *
+ * A `results.json` that exists but does not parse - or parses into a value this
+ * report cannot read - is an error rather than a fresh start: replacing it would
+ * discard whatever the file still held, and the caller could not tell that from
+ * an empty directory. A bare cast would accept a foreign artefact and fail later
+ * with an opaque TypeError, after the run had already been measured.
+ */
+export const readExistingReport = <TData>(outDir: string, isShape: (value: unknown) => value is TData): TData | undefined => {
   const path = join(outDir, 'results.json');
 
   if (!existsSync(path)) {
     return undefined;
   }
 
+  let parsed: unknown;
+
   try {
-    return JSON.parse(readFileSync(path, 'utf8')) as TData;
+    parsed = JSON.parse(readFileSync(path, 'utf8'));
   } catch (error) {
     throw new Error(`could not parse the existing ${path}; move it aside before writing a new report`, { cause: error });
   }
+
+  if (!isShape(parsed)) {
+    throw new Error(`the existing ${path} does not have this report's shape; move it aside before writing a new report`);
+  }
+
+  return parsed;
+};
+
+/**
+ * Refuses, before anything is measured, a run whose plan identity differs from
+ * the report `outDir` already holds. The same check runs again when the report
+ * is written, but by then the whole matrix has been measured and only the
+ * checkpoint files would survive.
+ */
+export const assertPlanCompatibleWithExisting = (outDir: string, plan: RunPlanMeta): void => {
+  const existing = readExistingReport<{ plan?: RunPlanMeta }>(outDir, isReportShape);
+
+  if (existing !== undefined && !isSamePlan(existing.plan, plan)) {
+    throw new Error(
+      `${join(outDir, 'results.json')} was measured under a different plan identity (existing: ${describePlan(existing.plan)}; this run: ${describePlan(plan)}); refusing to start, because the run would be rejected only after measuring and leave just checkpoint.jsonl and checkpoint.json in ${outDir}. Pass --out=<another directory> or move results.json aside.`,
+    );
+  }
+};
+
+/**
+ * Whether a parsed value carries the shape every benchmark report holds: a
+ * provenance stamp (an array in the rendering domain, one object in physics),
+ * the library arms and the results. The cell and provenance fields themselves
+ * are the domain's own.
+ */
+export const isReportShape = <T>(value: unknown): value is T => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as { provenance?: unknown; libraries?: unknown; results?: unknown; plan?: unknown };
+
+  return (
+    (record.plan === undefined || isRunPlanMeta(record.plan)) &&
+    (Array.isArray(record.provenance) || (typeof record.provenance === 'object' && record.provenance !== null)) &&
+    Array.isArray(record.libraries) &&
+    Array.isArray(record.results)
+  );
 };
 
 /** The three rendered report artifacts, already formatted by the domain. */

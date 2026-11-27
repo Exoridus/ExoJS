@@ -31,4 +31,4 @@ cmake --build basis-build --parallel
 
 Copy `basis-build/basis_transcoder.wasm` unchanged, and append `\nexport default BASIS;\n` to `basis-build/basis_transcoder.js` when saving it as `basis_transcoder.mjs`. KTX2 and KTX2_ZSTANDARD stay enabled, as do the upstream transcoder feature definitions. Rebuilding the runtime is a maintainer operation; package consumers receive the ready-to-use worker and WASM.
 
-The shipped SHA-256 values are `82714141df3dca7f77f45027f8dfba9217140f4594a871e25ad0094aae543434` for `basis_transcoder.mjs` and `8ea3599c891965c651eae9495bf90a19be797db908ad739ea7db044f5ce8eb89` for `basis_transcoder.wasm`.
+The shipped SHA-256 values are `e25315fe59816c524b6b45f46083ebc6ffb1ca4e713387bae2cfd395525be221` for `basis_transcoder.mjs` and `8ea3599c891965c651eae9495bf90a19be797db908ad739ea7db044f5ce8eb89` for `basis_transcoder.wasm`.

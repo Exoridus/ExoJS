@@ -1,4 +1,4 @@
-import { AnimatedSprite, Ease, type ObservableVector, Scene, Sprite, type Tween } from '@codexo/exojs';
+import { type AnimatedSprite, Ease, type ObservableVector, Scene, Sprite, type Tween } from '@codexo/exojs';
 
 class Level extends Scene {
   private sprite!: Sprite;

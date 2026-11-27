@@ -67,6 +67,10 @@ npx --package @codexo/exojs-cli exo assets pack assets/level1.json --manifest di
 
 A pack file named after its own hash changes its URL exactly when its bytes change, so it can be served with an immutable cache lifetime, and the manifest is the one URL a client has to re-read. Packing each pack in its own invocation builds one manifest holding all of them; the pack is named after the description's optional `"name"`, or after the `output` file's stem. A pack file that a re-pack replaces is left on disk, because a deployment still serving the previous manifest is still handing out that name. The engine reads the manifest with `loader.loadManifest(url)` and loads a pack with `loader.loadContainer(manifest.pack('level1'))`.
 
+Concurrent pack commands targeting the same manifest serialize their updates. Each successful invocation preserves the other pack names; for the same name, the last committed update wins. Complete pack bytes are published before the manifest points at them. The command waits up to ten seconds for another writer, then fails with the lock path rather than overwriting its work.
+
+Coordination is for cooperating processes on one host, in the same process namespace, using a local filesystem. The adjacent `<manifest>.lock` directory records its owner's hostname and PID. A later invocation recovers a lock only when that local PID is proven absent; elapsed time alone never makes a lock stale. A foreign host, inaccessible process, reused live PID or unrecognizable owner record requires inspection before manual cleanup. A killed process can leave uniquely named `.tmp` files or private `.lock-*` directories; subsequent commands ignore them. Remove such leftovers only after confirming their writer has stopped. Network filesystems, cross-host writers and power-loss durability are outside this coordination contract.
+
 ## Versioning
 
 This package is versioned independently of the engine. It is installed once and never pinned to an engine release, so its version says nothing about which `@codexo/exojs` a project uses.

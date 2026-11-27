@@ -5,7 +5,14 @@ import { TileProjection } from './TileProjection';
 import type { TileSet } from './TileSet';
 import type { TileProperties } from './types';
 import type { PackedTile, ResolvedTile } from './types';
-import { packTile, unpackTile, validateInteger, validateNonNegativeInteger, validatePairedDimensions, validatePositiveInteger } from './types';
+import {
+  packTile,
+  unpackTile,
+  validateInteger,
+  validateNonNegativeInteger,
+  validatePairedDimensions,
+  validatePositiveInteger,
+} from './types';
 import { tileToChunkCoord, tileToLocalInChunk } from './types';
 
 /**
@@ -130,9 +137,11 @@ const resolveParallaxScale = (value = 1): number => {
  */
 const validateTileLayerOptions = (options: TileLayerOptions): ResolvedTileLayerOptions => {
   validateNonNegativeInteger(options.id, 'layer.id');
+
   if (!options.name || typeof options.name !== 'string') {
     throw new Error('TileLayer name must be a non-empty string.');
   }
+
   validatePairedDimensions(options.width, options.height, 'TileLayer', 'layer');
   validatePositiveInteger(options.tileWidth, 'layer.tileWidth');
   validatePositiveInteger(options.tileHeight, 'layer.tileHeight');
@@ -147,18 +156,21 @@ const validateTileLayerOptions = (options: TileLayerOptions): ResolvedTileLayerO
   }
 
   const opacity = options.opacity ?? 1;
-  if (typeof opacity !== 'number' || opacity < 0 || opacity > 1) {
+
+  if (typeof opacity !== 'number' || !Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
     throw new Error(`TileLayer opacity must be 0..1 (got ${opacity}).`);
   }
 
   const offsetX = options.offsetX ?? 0;
   const offsetY = options.offsetY ?? 0;
+
   if (!Number.isFinite(offsetX) || !Number.isFinite(offsetY)) {
     throw new Error('TileLayer offset must be finite numbers.');
   }
 
   const parallaxX = options.parallaxX ?? 1;
   const parallaxY = options.parallaxY ?? 1;
+
   if (!Number.isFinite(parallaxX) || !Number.isFinite(parallaxY)) {
     throw new Error('TileLayer parallax must be finite numbers.');
   }
@@ -166,6 +178,18 @@ const validateTileLayerOptions = (options: TileLayerOptions): ResolvedTileLayerO
   const parallaxScale = resolveParallaxScale(options.parallaxScale);
 
   return { chunkWidth, chunkHeight, opacity, offsetX, offsetY, parallaxX, parallaxY, parallaxScale };
+};
+
+// An end coordinate past 2^53 stops advancing in the fill loops (`tx++` no longer changes `tx`), so it must be rejected up front.
+const validateRect = (x: number, y: number, w: number, h: number): void => {
+  validateInteger(x, 'x');
+  validateInteger(y, 'y');
+  validateInteger(w, 'w');
+  validateInteger(h, 'h');
+
+  if (!Number.isSafeInteger(x + w) || !Number.isSafeInteger(y + h)) {
+    throw new Error('The rectangle must end at a safe integer coordinate.');
+  }
 };
 
 /**
@@ -215,11 +239,16 @@ export class TileLayer {
 
   /** Pixel width, or `undefined` if unbounded. */
   public get pixelWidth(): number | undefined {
-    return this.width === undefined || this.height === undefined ? undefined : this.projection.getBounds(0, 0, this.width, this.height).width;
+    return this.width === undefined || this.height === undefined
+      ? undefined
+      : this.projection.getBounds(0, 0, this.width, this.height).width;
   }
+
   /** Pixel height, or `undefined` if unbounded. */
   public get pixelHeight(): number | undefined {
-    return this.width === undefined || this.height === undefined ? undefined : this.projection.getBounds(0, 0, this.width, this.height).height;
+    return this.width === undefined || this.height === undefined
+      ? undefined
+      : this.projection.getBounds(0, 0, this.width, this.height).height;
   }
 
   /** Visibility flag (mutable). */
@@ -262,8 +291,9 @@ export class TileLayer {
 
   /**
    * Monotonic layer revision counter.
-   * Increments on every cell mutation that actually changes a stored value.
-   * Does NOT increment on no-op writes or failed mutations.
+   * Increments once per mutation call that changes at least one stored value,
+   * and once when a chunk is adopted or evicted. No-op writes and failed
+   * mutations do NOT increment.
    */
   private _revision = 0;
 
@@ -285,9 +315,11 @@ export class TileLayer {
     this.tileWidth = options.tileWidth;
     this.tileHeight = options.tileHeight;
     this.projection = options.projection ?? new TileProjection({ tileWidth: options.tileWidth, tileHeight: options.tileHeight });
+
     if (this.projection.tileWidth !== this.tileWidth || this.projection.tileHeight !== this.tileHeight) {
       throw new Error('Projection tile dimensions must match the layer or map.');
     }
+
     this.tilesets = options.tilesets;
     this.visible = options.visible ?? true;
     this.opacity = opacity;
@@ -309,7 +341,10 @@ export class TileLayer {
    * @advanced
    */
   public inBounds(tx: number, ty: number): boolean {
-    if (this.width === undefined || this.height === undefined) return true;
+    if (this.width === undefined || this.height === undefined) {
+      return true;
+    }
+
     return tx >= 0 && tx < this.width && ty >= 0 && ty < this.height;
   }
 
@@ -318,7 +353,10 @@ export class TileLayer {
    * `null` if the layer is unbounded (any signed chunk coordinate is valid).
    */
   public chunkRange(): ChunkRange | null {
-    if (this.width === undefined || this.height === undefined) return null;
+    if (this.width === undefined || this.height === undefined) {
+      return null;
+    }
+
     return {
       minCx: 0,
       minCy: 0,
@@ -357,23 +395,30 @@ export class TileLayer {
     this._checkDestroyed();
     const key = this._chunkKey(cx, cy);
     let chunk = this._chunks.get(key);
+
     if (!chunk) {
       const range = this.chunkRange();
       let cw = this.chunkWidth;
       let ch = this.chunkHeight;
+
       if (range !== null && this.width !== undefined && this.height !== undefined) {
         if (cx < range.minCx || cx > range.maxCx || cy < range.minCy || cy > range.maxCy) {
-          throw new Error(`Chunk (${cx}, ${cy}) outside layer chunk range ` + `[${range.minCx}..${range.maxCx}, ${range.minCy}..${range.maxCy}].`);
+          throw new Error(
+            `Chunk (${cx}, ${cy}) outside layer chunk range ` + `[${range.minCx}..${range.maxCx}, ${range.minCy}..${range.maxCy}].`,
+          );
         }
+
         // Compute the actual tile dimensions for this chunk (edge chunks may be smaller).
         const startTx = cx * this.chunkWidth;
         const startTy = cy * this.chunkHeight;
         cw = Math.min(this.chunkWidth, this.width - startTx);
         ch = Math.min(this.chunkHeight, this.height - startTy);
       }
+
       chunk = new TileChunk(cx, cy, cw, ch);
       this._chunks.set(key, chunk);
     }
+
     return chunk;
   }
 
@@ -407,9 +452,14 @@ export class TileLayer {
   public _evictChunk(cx: number, cy: number): boolean {
     this._checkDestroyed();
     const key = this._chunkKey(cx, cy);
-    if (!this._chunks.delete(key)) return false;
+
+    if (!this._chunks.delete(key)) {
+      return false;
+    }
+
     this._revision++;
     this._notifyStructural({ cx, cy, chunk: null });
+
     return true;
   }
 
@@ -435,7 +485,10 @@ export class TileLayer {
   }
 
   private _notifyStructural(event: ChunkStructuralEvent): void {
-    if (this._structuralListeners === null) return;
+    if (this._structuralListeners === null) {
+      return;
+    }
+
     for (const listener of this._structuralListeners) {
       listener(event);
     }
@@ -449,6 +502,7 @@ export class TileLayer {
   public loadedChunks(): IterableIterator<ReadonlyTileChunk> {
     const entries = [...this._chunks.values()];
     entries.sort((a, b) => a.cy - b.cy || a.cx - b.cx);
+
     return entries[Symbol.iterator]();
   }
 
@@ -461,11 +515,20 @@ export class TileLayer {
   public getRawTileAt(tx: number, ty: number): PackedTile {
     validateInteger(tx, 'tx');
     validateInteger(ty, 'ty');
-    if (!this.inBounds(tx, ty)) return 0;
+
+    if (!this.inBounds(tx, ty)) {
+      return 0;
+    }
+
     const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
     const chunk = this._chunks.get(this._chunkKey(cx, cy));
-    if (!chunk) return 0;
+
+    if (!chunk) {
+      return 0;
+    }
+
     const { lx, ly } = tileToLocalInChunk(tx, ty, this.chunkWidth, this.chunkHeight);
+
     return chunk.getRawAt(lx, ly);
   }
 
@@ -475,12 +538,27 @@ export class TileLayer {
    */
   public getTileAt(tx: number, ty: number): ResolvedTile | null {
     const packed = this.getRawTileAt(tx, ty);
-    if (packed === 0) return null;
+
+    if (packed === 0) {
+      return null;
+    }
+
     const decoded = unpackTile(packed);
-    if (!decoded) return null;
-    if (decoded.tilesetIndex >= this.tilesets.length) return null;
+
+    if (!decoded) {
+      return null;
+    }
+
+    if (decoded.tilesetIndex >= this.tilesets.length) {
+      return null;
+    }
+
     const tileset = this.tilesets[decoded.tilesetIndex]!;
-    if (decoded.localTileId >= tileset.tileCount) return null;
+
+    if (decoded.localTileId < 0 || decoded.localTileId >= tileset.tileCount) {
+      return null;
+    }
+
     return {
       tileset,
       localTileId: decoded.localTileId,
@@ -498,13 +576,19 @@ export class TileLayer {
     if (!tile?.tileset) {
       throw new Error('setTileAt requires a valid ResolvedTile.');
     }
+
     const tilesetIndex = this.tilesets.indexOf(tile.tileset);
+
     if (tilesetIndex === -1) {
       throw new Error(`Tileset "${tile.tileset.name}" is not available to layer "${this.name}".`);
     }
+
     if (tile.localTileId < 0 || tile.localTileId >= tile.tileset.tileCount) {
-      throw new Error(`localTileId ${tile.localTileId} out of range for tileset "${tile.tileset.name}" ` + `(max ${tile.tileset.tileCount - 1}).`);
+      throw new Error(
+        `localTileId ${tile.localTileId} out of range for tileset "${tile.tileset.name}" ` + `(max ${tile.tileset.tileCount - 1}).`,
+      );
     }
+
     return packTile(tilesetIndex, tile.localTileId, tile.transform);
   }
 
@@ -518,14 +602,19 @@ export class TileLayer {
     this._checkDestroyed();
     validateInteger(tx, 'tx');
     validateInteger(ty, 'ty');
+
     if (!this.inBounds(tx, ty)) {
-      const boundsMsg = this.width !== undefined && this.height !== undefined ? `[0..${this.width - 1}, 0..${this.height - 1}]` : '[unbounded]';
+      const boundsMsg =
+        this.width !== undefined && this.height !== undefined ? `[0..${this.width - 1}, 0..${this.height - 1}]` : '[unbounded]';
+
       throw new Error(`setTileAt (${tx}, ${ty}) out of bounds ${boundsMsg}.`);
     }
+
     const packed = this._validateTileRef(tile);
     const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
     const chunk = this._ensureChunk(cx, cy);
     const { lx, ly } = tileToLocalInChunk(tx, ty, this.chunkWidth, this.chunkHeight);
+
     if (chunk._setRawAt(lx, ly, packed)) {
       this._revision++;
     }
@@ -541,14 +630,23 @@ export class TileLayer {
     this._checkDestroyed();
     validateInteger(tx, 'tx');
     validateInteger(ty, 'ty');
+
     if (!this.inBounds(tx, ty)) {
-      const boundsMsg = this.width !== undefined && this.height !== undefined ? `[0..${this.width - 1}, 0..${this.height - 1}]` : '[unbounded]';
+      const boundsMsg =
+        this.width !== undefined && this.height !== undefined ? `[0..${this.width - 1}, 0..${this.height - 1}]` : '[unbounded]';
+
       throw new Error(`clearTileAt (${tx}, ${ty}) out of bounds ${boundsMsg}.`);
     }
+
     const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
     const chunk = this._chunks.get(this._chunkKey(cx, cy));
-    if (!chunk) return; // no chunk = already empty
+
+    if (!chunk) {
+      return;
+    } // no chunk = already empty
+
     const { lx, ly } = tileToLocalInChunk(tx, ty, this.chunkWidth, this.chunkHeight);
+
     if (chunk._setRawAt(lx, ly, 0)) {
       this._revision++;
     }
@@ -562,20 +660,30 @@ export class TileLayer {
    */
   public fillRect(x: number, y: number, w: number, h: number, tile: ResolvedTile): void {
     this._checkDestroyed();
+    validateRect(x, y, w, h);
+
     const packed = this._validateTileRef(tile);
     let changed = false;
+
     for (let ty = y; ty < y + h; ty++) {
       for (let tx = x; tx < x + w; tx++) {
-        if (!this.inBounds(tx, ty)) continue;
+        if (!this.inBounds(tx, ty)) {
+          continue;
+        }
+
         const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
         const chunk = this._ensureChunk(cx, cy);
         const { lx, ly } = tileToLocalInChunk(tx, ty, this.chunkWidth, this.chunkHeight);
+
         if (chunk._setRawAt(lx, ly, packed)) {
           changed = true;
         }
       }
     }
-    if (changed) this._revision++;
+
+    if (changed) {
+      this._revision++;
+    }
   }
 
   /**
@@ -584,20 +692,34 @@ export class TileLayer {
    */
   public clearRect(x: number, y: number, w: number, h: number): void {
     this._checkDestroyed();
+    validateRect(x, y, w, h);
+
     let changed = false;
+
     for (let ty = y; ty < y + h; ty++) {
       for (let tx = x; tx < x + w; tx++) {
-        if (!this.inBounds(tx, ty)) continue;
+        if (!this.inBounds(tx, ty)) {
+          continue;
+        }
+
         const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
         const chunk = this._chunks.get(this._chunkKey(cx, cy));
-        if (!chunk) continue;
+
+        if (!chunk) {
+          continue;
+        }
+
         const { lx, ly } = tileToLocalInChunk(tx, ty, this.chunkWidth, this.chunkHeight);
+
         if (chunk._setRawAt(lx, ly, 0)) {
           changed = true;
         }
       }
     }
-    if (changed) this._revision++;
+
+    if (changed) {
+      this._revision++;
+    }
   }
 
   // ── Iteration ─────────────────────────────────────────────────────────
@@ -608,6 +730,8 @@ export class TileLayer {
    * @advanced
    */
   public *tilesInRect(x: number, y: number, w: number, h: number): Generator<{ tx: number; ty: number; tile: ResolvedTile }> {
+    validateRect(x, y, w, h);
+
     const startCx = Math.floor(x / this.chunkWidth);
     const endCx = Math.floor((x + w - 1) / this.chunkWidth);
     const startCy = Math.floor(y / this.chunkHeight);
@@ -616,7 +740,10 @@ export class TileLayer {
     for (let cy = startCy; cy <= endCy; cy++) {
       for (let cx = startCx; cx <= endCx; cx++) {
         const chunk = this._chunks.get(this._chunkKey(cx, cy));
-        if (!chunk || chunk.empty) continue;
+
+        if (!chunk || chunk.empty) {
+          continue;
+        }
 
         const chunkStartTx = cx * this.chunkWidth;
         const chunkStartTy = cy * this.chunkHeight;
@@ -628,12 +755,27 @@ export class TileLayer {
         for (let ly = minLy; ly <= maxLy; ly++) {
           for (let lx = minLx; lx <= maxLx; lx++) {
             const packed = chunk.getRawAt(lx, ly);
-            if (packed === 0) continue;
+
+            if (packed === 0) {
+              continue;
+            }
+
             const decoded = unpackTile(packed);
-            if (!decoded) continue;
-            if (decoded.tilesetIndex >= this.tilesets.length) continue;
+
+            if (!decoded) {
+              continue;
+            }
+
+            if (decoded.tilesetIndex >= this.tilesets.length) {
+              continue;
+            }
+
             const tileset = this.tilesets[decoded.tilesetIndex]!;
-            if (decoded.localTileId >= tileset.tileCount) continue;
+
+            if (decoded.localTileId < 0 || decoded.localTileId >= tileset.tileCount) {
+              continue;
+            }
+
             yield {
               tx: chunkStartTx + lx,
               ty: chunkStartTy + ly,
@@ -652,6 +794,7 @@ export class TileLayer {
   /** Display layer translation expressed as a logical simulation-space vector. */
   public get logicalOffset(): { x: number; y: number } {
     const p = this.projection;
+
     return p.pixelToLogical(p.originX + this.offsetX, p.originY + this.offsetY);
   }
 
@@ -664,6 +807,7 @@ export class TileLayer {
    */
   public tileToPixel(tx: number, ty: number): { x: number; y: number } {
     const point = this.projection.tileToPixel(tx, ty);
+
     return { x: point.x + this.offsetX, y: point.y + this.offsetY };
   }
 
@@ -681,8 +825,9 @@ export class TileLayer {
 
   /**
    * Monotonic layer revision counter.
-   * Increments on every cell mutation that changes a stored value.
-   * No-op writes and failed mutations do NOT increment.
+   * Increments once per mutation call that changes at least one stored value,
+   * and once when a chunk is adopted or evicted. No-op writes and failed
+   * mutations do NOT increment.
    * @advanced
    */
   public get revision(): number {
@@ -706,25 +851,40 @@ export class TileLayer {
    * Idempotent.
    */
   public destroy(): void {
-    if (this._destroyed) return;
+    if (this._destroyed) {
+      return;
+    }
+
     this._destroyed = true;
+
+    // Observers drop the nodes they built for these chunks, then lose their
+    // subscription: nothing will ever be notified by a destroyed layer again.
+    for (const chunk of [...this._chunks.values()]) {
+      this._notifyStructural({ cx: chunk.cx, cy: chunk.cy, chunk: null });
+    }
+
+    this._structuralListeners = null;
     this._chunks.clear();
   }
 
   /**
    * Total number of non-empty tiles across all chunks.
-   * Walk is cheap for dense layers; sparse layers benefit from empty-chunk fast path.
+   * O(total cells in all loaded chunks); empty chunks are not skipped.
    * @advanced
    */
   public countNonEmptyTiles(): number {
     let count = 0;
+
     for (const chunk of this._chunks.values()) {
       for (let ly = 0; ly < chunk.height; ly++) {
         for (let lx = 0; lx < chunk.width; lx++) {
-          if (chunk.getRawAt(lx, ly) !== 0) count++;
+          if (chunk.getRawAt(lx, ly) !== 0) {
+            count++;
+          }
         }
       }
     }
+
     return count;
   }
 }

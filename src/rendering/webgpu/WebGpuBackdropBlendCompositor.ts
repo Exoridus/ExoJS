@@ -1,13 +1,14 @@
 /// <reference types="@webgpu/types" />
 
-import { Matrix } from '#math/Matrix';
+import type { Matrix } from '#math/Matrix';
+import { packAffineMat4 } from '#rendering/affinePacking';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 
 import { getWebGpuBlendState } from './blendState';
 import compositorShaderSourceModule from './shaders/backdrop-blend-compositor.wgsl';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 
 /** WGSL source for the backdrop-blend compositor pipeline. @internal */
@@ -19,12 +20,12 @@ const vertexStrideBytes = 16;
 // 16 floats per mat4x4 projection uniform.
 const projectionUniformBytes = 64;
 
-// mode (u32) + opaqueBackdrop (f32), padded to the 16-byte uniform alignment.
+// mode (u32) + opaqueBackdrop (f32) + capture origin (vec2).
 const blendUniformBytes = 16;
 
 /**
  * Single-quad backdrop-aware blend compositor used by
- * `WebGpuBackend.composeWithBackdropBlend` (spike: invoked directly). Captures
+ * `WebGpuBackend.composeWithBackdropBlend`. Captures
  * the active target's `[x, y, width, height]` region into a compositor-owned
  * texture via `copyTextureToTexture`, samples the premultiplied source (group 1,
  * slot 0) and captured backdrop (slot 2), computes the W3C blend for the
@@ -50,7 +51,7 @@ export class WebGpuBackdropBlendCompositor {
   private readonly _blendData: ArrayBuffer = new ArrayBuffer(blendUniformBytes);
   private readonly _blendModeView: Uint32Array = new Uint32Array(this._blendData, 0, 1);
   private readonly _blendOpaqueView: Float32Array = new Float32Array(this._blendData, 4, 1);
-  private readonly _projectionMatrix: Matrix = new Matrix();
+  private readonly _blendOriginView = new Float32Array(this._blendData, 8, 2);
   private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
   private _device: GPUDevice | null = null;
@@ -67,8 +68,9 @@ export class WebGpuBackdropBlendCompositor {
   private _blendBindGroup: GPUBindGroup | null = null;
   private _backdropSampler: GPUSampler | null = null;
 
-  // Compositor-owned capture target, re-allocated when the region size or the
-  // target format changes (see class doc for why a pooled RT cannot be used).
+  // Compositor-owned capture target, re-allocated when the region outgrows it or
+  // the target format changes (see the class doc for why a pooled RT cannot be
+  // used). It may be larger than the captured region - see `_ensureBackdrop`.
   private _backdropTexture: GPUTexture | null = null;
   private _backdropView: GPUTextureView | null = null;
   private _backdropWidth = 0;
@@ -195,7 +197,15 @@ export class WebGpuBackdropBlendCompositor {
    * blended source over the untouched backdrop with normal premultiplied
    * source-over.
    */
-  public compose(manager: WebGpuBackend, source: Texture | RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): void {
+  public compose(
+    manager: WebGpuBackend,
+    source: Texture | RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    blendMode: BlendModes,
+  ): void {
     if (this._device === null) {
       throw new Error('WebGpuBackdropBlendCompositor: not connected.');
     }
@@ -209,16 +219,26 @@ export class WebGpuBackdropBlendCompositor {
 
     // Clears/draws are deferred on WebGPU; flush so the target texture holds the
     // real backdrop before the standalone copy below reads it.
-    manager.flush();
+    manager.flushPending();
 
     const format = manager.renderTargetFormat;
     const attachment = manager._getAttachmentPixelSize(target);
-    const scaleX = target.root && target.width > 0 ? attachment.width / target.width : 1;
-    const scaleY = target.root && target.height > 0 ? attachment.height / target.height : 1;
-    const ox = Math.max(0, Math.floor(x * scaleX));
-    const oy = Math.max(0, Math.floor(y * scaleY));
-    const cw = Math.max(0, Math.min(Math.round(width * scaleX), attachment.width - ox));
-    const ch = Math.max(0, Math.min(Math.round(height * scaleY), attachment.height - oy));
+    const viewport = manager._snapViewport;
+    const projection = manager.view.getTransform();
+    const originX = viewport.x + ((projection.a * x + projection.b * y + projection.x + 1) * viewport.width) / 2;
+    const originY = viewport.y + ((1 - projection.c * x - projection.d * y - projection.y) * viewport.height) / 2;
+    const dxX = (projection.a * width * viewport.width) / 2;
+    const dyX = (projection.b * height * viewport.width) / 2;
+    const dxY = (-projection.c * width * viewport.height) / 2;
+    const dyY = (-projection.d * height * viewport.height) / 2;
+    const rawX = Math.floor(originX + Math.min(0, dxX) + Math.min(0, dyX));
+    const rawY = Math.floor(originY + Math.min(0, dxY) + Math.min(0, dyY));
+    const captureWidth = Math.max(1, Math.ceil(originX + Math.max(0, dxX) + Math.max(0, dyX)) - rawX);
+    const captureHeight = Math.max(1, Math.ceil(originY + Math.max(0, dxY) + Math.max(0, dyY)) - rawY);
+    const ox = Math.max(0, rawX);
+    const oy = Math.max(0, rawY);
+    const cw = Math.max(0, Math.min(attachment.width, rawX + captureWidth) - ox);
+    const ch = Math.max(0, Math.min(attachment.height, rawY + captureHeight) - oy);
 
     if (cw <= 0 || ch <= 0) {
       return;
@@ -241,21 +261,36 @@ export class WebGpuBackdropBlendCompositor {
     // A root target is a fully covered backdrop only while the canvas composites
     // opaquely; under `alphaMode: 'premultiplied'` its captured alpha is real and
     // must be honoured. Offscreen targets always carry real alpha.
+    this._blendOriginView[0] = ox;
+    this._blendOriginView[1] = oy;
     this._drawBlend(manager, source, backdropView, x, y, width, height, blendMode, target.opaqueDestination);
   }
 
   private _ensureBackdrop(device: GPUDevice, width: number, height: number, format: GPUTextureFormat): GPUTextureView {
-    if (this._backdropTexture === null || this._backdropWidth !== width || this._backdropHeight !== height || this._backdropFormat !== format) {
+    if (this._backdropTexture === null || this._backdropFormat !== format || this._backdropWidth < width || this._backdropHeight < height) {
+      // Grow in steps rather than to the exact request. An animated region -
+      // the case this capture exists for - changes its pixel extent every
+      // frame, and destroying plus recreating a GPU texture to gain one row
+      // costs more than the unused rows the step leaves behind. The shader
+      // normalises its sample coordinates by `textureDimensions`, so the
+      // captured region stays correct in the top-left corner of a larger
+      // allocation, and the copy still transfers exactly `width` x `height`.
+      // Growing beyond the device limit would invalidate an otherwise legal
+      // capture near the maximum texture size (e.g. 6K -> 7K on an 8K device).
+      const maxDimension = device.limits.maxTextureDimension2D;
+      const allocatedWidth = Math.min(maxDimension, Math.max(width, Math.ceil(this._backdropWidth * 1.5)));
+      const allocatedHeight = Math.min(maxDimension, Math.max(height, Math.ceil(this._backdropHeight * 1.5)));
+
       this._backdropTexture?.destroy();
       this._backdropTexture = device.createTexture({
         label: 'backdrop-blend:texture',
-        size: { width, height },
+        size: { width: allocatedWidth, height: allocatedHeight },
         format,
         usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
       });
       this._backdropView = this._backdropTexture.createView();
-      this._backdropWidth = width;
-      this._backdropHeight = height;
+      this._backdropWidth = allocatedWidth;
+      this._backdropHeight = allocatedHeight;
       this._backdropFormat = format;
     }
 
@@ -303,7 +338,7 @@ export class WebGpuBackdropBlendCompositor {
     // outermost), so the compositor may draw into a stencil-enabled pass. Select
     // the matching pipeline variant - a stencil-free pipeline is incompatible
     // with the pass's depth/stencil attachment.
-    const stencil = manager.passCoordinator.stencilActive;
+    const stencil = manager.passCoordinator.stencilMode;
     const pipeline = this._getOrCreatePipeline(targetFormat, stencil);
 
     // The blend math is in the shader; composite the blended source over the
@@ -325,8 +360,8 @@ export class WebGpuBackdropBlendCompositor {
     manager.passCoordinator.endPass();
   }
 
-  private _getOrCreatePipeline(format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const key = `${format}|${stencil ? 's' : 'n'}`;
+  private _getOrCreatePipeline(format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline {
+    const key = `${format}|${stencil}`;
     const cached = this._pipelines.get(key);
 
     if (cached !== undefined) {
@@ -365,8 +400,8 @@ export class WebGpuBackdropBlendCompositor {
       primitive: { topology: 'triangle-list' },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = device.createRenderPipeline(descriptor);
@@ -405,29 +440,6 @@ export class WebGpuBackdropBlendCompositor {
   }
 
   private _writeProjectionMatrix(viewMatrix: Matrix): void {
-    // Pack the 3x3 affine view matrix into a 4x4 column-major mat4x4 for WGSL.
-    const m = this._projectionMatrix.copy(viewMatrix);
-    const data = this._projectionData;
-
-    // col 0
-    data[0] = m.a;
-    data[1] = m.c;
-    data[2] = 0;
-    data[3] = 0;
-    // col 1
-    data[4] = m.b;
-    data[5] = m.d;
-    data[6] = 0;
-    data[7] = 0;
-    // col 2
-    data[8] = 0;
-    data[9] = 0;
-    data[10] = 1;
-    data[11] = 0;
-    // col 3
-    data[12] = m.x;
-    data[13] = m.y;
-    data[14] = 0;
-    data[15] = 1;
+    packAffineMat4(viewMatrix, this._projectionData);
   }
 }

@@ -18,8 +18,20 @@ export interface Renderer<Runtime extends RenderBackend = RenderBackend, Target 
 
   /** Acquire GPU resources from `backend` and prepare for rendering. */
   connect(backend: Runtime): void;
-  /** Release all GPU resources held by this renderer. */
+  /**
+   * Release the GPU resources acquired in `connect`. The registry may call it
+   * again after a later `connect`, so it must not release anything that
+   * outlives a single connection.
+   */
   disconnect(): void;
+  /**
+   * Release everything the renderer still owns after the final `disconnect`,
+   * such as CPU-side buffers and subscriptions.
+   *
+   * Called by {@link RendererRegistry.destroy} exactly once per renderer, after
+   * `disconnect`. Renderers that hold nothing beyond their connection may omit it.
+   */
+  destroy?(): void;
   /** Record a single drawable into the current batch. */
   render(drawable: Target): void;
   /** Submit all batched draw calls to the GPU. */

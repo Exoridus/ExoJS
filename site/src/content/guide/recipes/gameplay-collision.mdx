@@ -11,7 +11,17 @@ import Callout from '../../../components/Callout.astro';
 
 ExoJS provides a geometry-based collision system built on shape primitives and the Separating Axis Theorem (SAT). Every shape implements the `Collidable` interface, giving you three levels of collision query: boolean overlap (`intersectsWith`), penetration response (`collidesWith`), and point containment (`contains`). A [`Quadtree`](/ExoJS/en/api/quadtree/) provides spatial partitioning for broad-phase culling when you have many objects.
 
-This is not a physics engine — there are no rigid bodies, no friction, no constraint solvers. It answers "are these two things touching?" and "how far do I push them apart?" You build physics, overlap triggers, and hit detection on top.
+These Core geometry queries do not simulate rigid bodies, friction, or constraints. The optional `@codexo/exojs/physics` subpath provides those simulation features. It answers "are these two things touching?" and "how far do I push them apart?" You build physics, overlap triggers, and hit detection on top.
+
+## Enemies and physics sensors
+
+Use a scene-owned PhysicsWorld when enemies participate in simulation or sensor events. This complete program loads round artwork for a controllable wooden player and stationary metal enemies, then uses component-owned bodies and a single sensor dispatcher. Install the demo-assets package, click or tab to the mounted canvas, and move with WASD.
+
+<SourceSnippet source="examples/guides/gameplay-collision/enemy-sensors.ts" region="enemy-sensors" language="ts" title="Mutual collision masks, collider identity, damage, and despawn" />
+
+Both masks admit the other category. Sensors report an enter without blocking motion. The map uses collider identity and removes its entry before node destruction; the component removes/destroys its body with that node. The world and its signal live in the same scene, so teardown ends the subscription. A handler attached to a longer-lived application world must instead be explicitly removed by its scene. For many enemies, keep one dispatcher rather than one world listener per enemy.
+
+Events occur per collider pair. This recipe has one collider per actor; a multi-collider player needs an explicit damage/overlap deduplication rule. Do not rely on a final exit callback at world destruction. [Physics and scene ownership](/ExoJS/en/guide/physics/physics-basics/#collision-filters) defines the group overrides, defaults, query behavior, and the distinction between a binding and body ownership.
 
 ## The shape primitives
 
@@ -51,8 +61,8 @@ All shape-pair combinations are supported for boolean overlap — rectangle-rect
 | Field | Type | Meaning |
 |-------|------|---------|
 | `overlap` | `number` | Penetration depth (positive) |
-| `projectionN` | `Vector` | Unit normal of the minimum-translation axis |
-| `projectionV` | `Vector` | MTV = `projectionN × overlap` — the push-out vector |
+| `projectionN` | `Vector` | Unit normal of the minimum-translation axis, pointing from shapeA (the caller) toward shapeB (the argument) |
+| `projectionV` | `Vector` | Translation along the collision axis (`projectionN × overlap`); move B by `+projectionV` or A by `-projectionV` (approximate for ellipse pairs) |
 | `shapeAinB` | `boolean` | `true` if A is fully inside B |
 | `shapeBinA` | `boolean` | `true` if B is fully inside A |
 | `shapeA` | `Collidable` | Reference to the first shape |
@@ -72,7 +82,7 @@ Supported response pairs in the current implementation:
 
 ## Resolving collisions: using projectionV
 
-`projectionV` is the minimum-translation vector (MTV): the smallest displacement that separates the two shapes. Move the caller by `projectionV` and the shapes no longer overlap.
+`projectionV` is the displacement computed along the selected collision axis, pointing from the caller (`shapeA`) toward the argument (`shapeB`). Add it to B or subtract it from A to move the shapes apart. For exact shape pairs, this separates them completely; ellipse responses use an approximate axis and depth, so residual overlap may remain. Swapping operands negates the vector except in ambiguous cases such as coincident centres.
 
 <SourceSnippet
   source="examples/guides/gameplay-collision/collision-response.ts"
@@ -103,7 +113,9 @@ For two-way separation (two dynamic objects), split the MTV:
   title="examples/guides/gameplay-collision/shape-queries.ts"
 />
 
-The sign convention: `projectionN` points **from shapeB toward shapeA** (away from the surface the caller is being pushed out of).
+The sign convention: `projectionN` points **from shapeA (the caller) toward shapeB (the argument)**, i.e. into the surface the caller is being pushed out of. A player standing on a floor therefore sees `projectionN.y > 0` (y grows downward), and a ceiling hit gives `projectionN.y < 0`. For coincident centres or equally deep axes the direction is a fixed choice that does not flip with the operand order.
+
+The push-out is exact (the shapes touch afterwards, even when one contains the other) for Rectangle/Rectangle, Circle/Circle, Circle/Rectangle, Circle/Polygon and the Rectangle/Polygon/rotated-node SAT pairs. Every pair involving an `Ellipse` is an approximation: the direction is still A to B and the overlap shrinks, but a small residual overlap can remain, so test again after resolving if you need exact contact.
 
 <Callout type="info" title="Discrete checks tunnel past fast movers">
 `intersectsWith` and `collidesWith` only test the shapes at their current position, so a fast mover can pass straight through a thin wall between frames. For high speeds, sweep the motion with the `Sweep.*` helpers instead of a point-in-time overlap test.
@@ -140,7 +152,7 @@ box.setPosition(200, 200);
 if (hero.intersectsWith(box)) {
     const response = hero.collidesWith(box);
     if (response) {
-        hero.move(response.projectionV.x, response.projectionV.y);
+        hero.move(-response.projectionV.x, -response.projectionV.y);
     }
 }
 ```
@@ -268,4 +280,4 @@ Two animated sprites with collision detection — rotation, scale, and containme
 
 ## Where to go next
 
-The next recipe, [Orb Dodge](/ExoJS/en/guide/recipes/build-orb-dodge/), is the capstone — it wires scenes, input, graphics, and collision into a complete playable game with spawning, scoring, and a restart flow.
+The next recipe, [Collect & Survive](/ExoJS/en/guide/recipes/build-orb-dodge/), is the capstone — it wires scenes, input, graphics, and collision into a complete playable game with spawning, scoring, and a restart flow.

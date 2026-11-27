@@ -128,7 +128,12 @@ const createByteBackend = (): ByteBackendHarness => {
     // Bytes are stored once, owned by the INNERMOST capture's bundle;
     // one shared instruction is appended to every active set.
     const owner = captures[captures.length - 1]!;
-    const payload: ModelPayload = { bundle: owner.bundle, blend: batch.blend, instanceCount: batch.instanceCount, bytes: batch.bytes.slice() };
+    const payload: ModelPayload = {
+      bundle: owner.bundle,
+      blend: batch.blend,
+      instanceCount: batch.instanceCount,
+      bytes: batch.bytes.slice(),
+    };
     const instruction: RetainedBatchInstruction = {
       kind: RetainedInstructionKind.Batch,
       bundle: owner.bundle,

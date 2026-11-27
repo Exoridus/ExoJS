@@ -59,7 +59,7 @@ export interface SpatialSmoothingSettings {
   smoothing: number;
   /**
    * Position jump (world units) treated as a teleport: the param snaps with
-   * `setValueAtTime` instead of ramping. Default
+   * `setValueAtTime` instead of ramping. `0` disables automatic teleport detection. Default
    * {@link DEFAULT_TELEPORT_THRESHOLD}.
    *
    * Measured on the **source-to-listener offset**, not on either absolute
@@ -137,13 +137,19 @@ export class SmoothedAudioParam {
     // Reject NaN/±Infinity outright - never scheduled on the live AudioParam
     // (a real browser throws on `setTargetAtTime(NaN, ...)`) and never recorded
     // as `_last`, so an invalid tick can't poison every subsequent write.
-    if (!Number.isFinite(value)) return;
+    if (!Number.isFinite(value)) {
+      return;
+    }
 
     if (this._hasWritten && Math.abs(value - this._last) < POSITION_EPSILON) {
       return;
     }
 
-    if (!this._hasWritten || settings.smoothing <= 0 || Math.abs(value - this._last) > settings.teleportThreshold) {
+    if (
+      !this._hasWritten ||
+      settings.smoothing <= 0 ||
+      (settings.teleportThreshold !== 0 && Math.abs(value - this._last) > settings.teleportThreshold)
+    ) {
       param.cancelScheduledValues(now);
       param.setValueAtTime(value, now);
     } else {
@@ -193,14 +199,14 @@ export const createVelocitySample = (): VelocitySample => ({ lastPosition: null,
  * {@link AudioListener} so both sides of a Doppler calculation resolve
  * "auto-derived velocity" the same way.
  *
- * Below {@link POSITION_EPSILON} of movement, the sample is treated as
- * stationary and is skipped entirely - the previously derived velocity is
- * retained rather than snapped to zero, mirroring {@link SmoothedAudioParam}'s
- * own stationary-skip. This means a source that stops moving keeps its last
- * Doppler shift for one more tick instead of instantly zeroing it, and it
- * means a real movement is never lost to a same-timestamp sample (see
- * {@link MIN_VELOCITY_DT}) - the *next* distinctly-different position still
- * measures its delta against the last position that was actually recorded.
+ * Below {@link POSITION_EPSILON} of movement the sample is treated as
+ * stationary: once `now` has advanced, the derived velocity is zeroed and the
+ * recorded position and time advance with it, so a source that stops moving
+ * loses its last Doppler shift on that tick instead of coasting on it. Two
+ * samples on the same `now` change nothing; a real movement uses the
+ * {@link MIN_VELOCITY_DT} floor instead of a zero interval, so the *next*
+ * distinctly-different position still measures its delta against the last
+ * recorded one.
  */
 export const deriveVelocity = (sample: VelocitySample, x: number, y: number, now: number): void => {
   if (sample.lastPosition === null) {
@@ -208,11 +214,13 @@ export const deriveVelocity = (sample: VelocitySample, x: number, y: number, now
     sample.y = 0;
     sample.lastPosition = { x, y };
     sample.lastTime = now;
+
     return;
   }
 
   const dx = x - sample.lastPosition.x;
   const dy = y - sample.lastPosition.y;
+
   if (Math.hypot(dx, dy) < POSITION_EPSILON) {
     if (now > sample.lastTime) {
       sample.x = 0;
@@ -225,6 +233,7 @@ export const deriveVelocity = (sample: VelocitySample, x: number, y: number, now
       sample.lastPosition.y = y;
       sample.lastTime = now;
     }
+
     return;
   }
 

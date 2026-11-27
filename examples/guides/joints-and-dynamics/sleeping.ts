@@ -1,4 +1,4 @@
-import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:sleeping
 const world = new PhysicsWorld({

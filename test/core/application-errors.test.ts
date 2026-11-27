@@ -19,8 +19,28 @@ const createReporter = (): { reporter: ApplicationErrorReporter; onError: Signal
 };
 
 describe('ApplicationErrorReporter', () => {
+  test('a throwing error observer does not prevent subsequent observers or the fatal-frame decision', () => {
+    const onError = new Signal<[error: Error]>();
+    const received: Error[] = [];
+    const failure = new Error('frame failed');
+
+    onError.add(() => {
+      throw new Error('observer failed');
+    });
+    onError.add(error => received.push(error));
+
+    const reporter = new ApplicationErrorReporter(onError, null);
+
+    for (let attempt = 1; attempt <= maxConsecutiveFrameErrors; attempt++) {
+      expect(reporter.recordFrameError(failure)).toBe(attempt === maxConsecutiveFrameErrors);
+    }
+
+    expect(received).toEqual([failure, failure, failure]);
+    expect(reporter.recent).toHaveLength(maxConsecutiveFrameErrors);
+  });
+
   beforeEach(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -70,7 +90,9 @@ describe('ApplicationErrorReporter', () => {
     const { reporter } = createReporter();
 
     for (let attempt = 0; attempt < maxConsecutiveFrameErrors * 2; attempt++) {
-      reporter.recordRenderError(new RenderError({ code: 'validation', backendType: RenderBackendType.WebGpu, message: 'validation failed' }));
+      reporter.recordRenderError(
+        new RenderError({ code: 'validation', backendType: RenderBackendType.WebGpu, message: 'validation failed' }),
+      );
     }
 
     expect(reporter.recordFrameError(new Error('first frame failure'))).toBe(false);
@@ -79,7 +101,9 @@ describe('ApplicationErrorReporter', () => {
   test('a render error carries its machine-readable code into the history', () => {
     const { reporter } = createReporter();
 
-    reporter.recordRenderError(new RenderError({ code: 'validation', backendType: RenderBackendType.WebGpu, message: 'validation failed' }));
+    reporter.recordRenderError(
+      new RenderError({ code: 'validation', backendType: RenderBackendType.WebGpu, message: 'validation failed' }),
+    );
 
     expect(reporter.recent[0]?.code).toBe('validation');
   });
@@ -88,7 +112,9 @@ describe('ApplicationErrorReporter', () => {
     const { reporter } = createReporter();
     const consoleError = vi.mocked(console.error);
 
-    reporter.recordRenderError(new RenderError({ code: 'validation', backendType: RenderBackendType.WebGpu, message: 'validation failed' }));
+    reporter.recordRenderError(
+      new RenderError({ code: 'validation', backendType: RenderBackendType.WebGpu, message: 'validation failed' }),
+    );
 
     expect(consoleError).not.toHaveBeenCalled();
 

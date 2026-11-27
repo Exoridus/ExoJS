@@ -168,7 +168,8 @@ const wgslVertexStagePattern = /@vertex\b/;
 const stripComments = (source: string): string => source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/\/\/[^\n]*/g, '');
 
 /** Prepend the default vertex stage to a module that declares none. */
-const withWgslVertexStage = (source: string): string => (wgslVertexStagePattern.test(stripComments(source)) ? source : `${defaultWgslVertexSource}\n${source}`);
+const withWgslVertexStage = (source: string): string =>
+  wgslVertexStagePattern.test(stripComments(source)) ? source : `${defaultWgslVertexSource}\n${source}`;
 
 /**
  * Build the {@link Shader} behind a filter pass: fills in the default
@@ -190,7 +191,10 @@ const withWgslVertexStage = (source: string): string => (wgslVertexStagePattern.
  * ```
  * @advanced
  */
-export const createFilterShader = <const F extends UniformFields | undefined = undefined, const B extends UniformBlockRecord | undefined = undefined>(
+export const createFilterShader = <
+  const F extends UniformFields | undefined = undefined,
+  const B extends UniformBlockRecord | undefined = undefined,
+>(
   options: ShaderFilterSourceOptions & UniformSchemaOptions<F, B>,
 ): Shader<F, B> => {
   const autoUpgrade = options.autoUpgrade !== false;
@@ -339,9 +343,13 @@ export const createFilterShader = <const F extends UniformFields | undefined = u
  * Without a declaration the source keeps today's contract: anything in
  * {@link uniforms} is bound after the auto-binds, GLSL resolves them by name
  * with texture uniforms claiming slots 1..N, and WGSL packs every non-texture
- * uniform into one buffer at `@group(1) @binding(0)`, each in a 16-byte slot
- * **in declaration order**, binding texture uniforms from `@group(1) @binding(1)`
- * onwards, each followed by its sampler.
+ * uniform into one buffer at `@group(1) @binding(0)`, each in a 16-byte slot in
+ * the order the record holds them. An existing name keeps its slot for the
+ * pass's life, and the record order is the layout order, so pass values in the
+ * order the WGSL declares them. A name added later appends a slot at the end and
+ * cannot move the slots before it, but it is not part of the pipeline's declared
+ * layout. Texture uniforms follow from `@group(1) @binding(1)` onwards, each
+ * followed by its sampler.
  *
  * ## Missing sources
  *
@@ -350,7 +358,10 @@ export const createFilterShader = <const F extends UniformFields | undefined = u
  * other one - before it compiles or allocates anything.
  * @stable
  */
-export class ShaderFilter<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> extends Filter {
+export class ShaderFilter<
+  F extends UniformFields | undefined = undefined,
+  B extends UniformBlockRecord | undefined = undefined,
+> extends Filter {
   /**
    * Build a filter from an existing {@link Shader}, so one source can back
    * several filters. The source must already carry complete sources per language
@@ -528,13 +539,20 @@ export class ShaderFilter<F extends UniformFields | undefined = undefined, B ext
 
   private _assertRawUniforms(): void {
     if (this._bindings.blocks.length > 0) {
-      throw new Error('ShaderFilter.setUniform is not available on a shader source that declares uniforms; write through `filter.uniforms` instead.');
+      throw new Error(
+        'ShaderFilter.setUniform is not available on a shader source that declares uniforms; write through `filter.uniforms` instead.',
+      );
     }
   }
 }
 
 /** Write the caller's starting values into the freshly built blocks. */
-const applyInitialFilterValues = (blocks: readonly UniformBlockData[], implicit: boolean, uniforms: unknown, uniformBlocks: unknown): void => {
+const applyInitialFilterValues = (
+  blocks: readonly UniformBlockData[],
+  implicit: boolean,
+  uniforms: unknown,
+  uniformBlocks: unknown,
+): void => {
   if (implicit) {
     if (uniforms !== undefined) {
       blocks[0]!._setValues(uniforms as Record<string, unknown>);

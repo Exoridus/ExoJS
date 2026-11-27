@@ -74,7 +74,14 @@ describe('MeshParticles', () => {
     const mode = new MeshParticles({ geometry: makeTriangle() });
 
     expect(mode.dataLayout.stride).toBe(40);
-    expect(mode.dataLayout.attributes.map(attribute => attribute.name)).toEqual(['a_position', 'a_scale', 'a_rotation', 'a_color', 'a_uvMin', 'a_uvMax']);
+    expect(mode.dataLayout.attributes.map(attribute => attribute.name)).toEqual([
+      'a_position',
+      'a_scale',
+      'a_rotation',
+      'a_color',
+      'a_uvMin',
+      'a_uvMax',
+    ]);
   });
 
   it('builds one 40-byte instance per live particle', () => {
@@ -151,6 +158,46 @@ describe('MeshParticles', () => {
     expect(Array.from(table.subarray(0, 8))).toEqual([-4, -4, 0, 0, 4, -4, 0, 0]);
   });
 
+  it('zero-fills the missing component of a scalar UV attribute instead of reading its neighbour', () => {
+    const mesh = new Geometry({
+      attributes: [
+        { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+        { name: 'a_uv', size: 1, type: 'f32', normalized: false, offset: 8 },
+        { name: 'weight', size: 1, type: 'f32', normalized: false, offset: 12 },
+      ],
+      vertexData: new Float32Array([2, 3, 0.25, 99]),
+      stride: 16,
+    });
+    const mode = new MeshParticles({ geometry: mesh });
+
+    expect(Array.from(mode.vertexGeometry.vertexData as Float32Array)).toEqual([2, 3, 0.25, 0]);
+    mode.destroy();
+    mesh.destroy();
+  });
+
+  it('does not read past a scalar UV attribute at the end of the vertex buffer', () => {
+    const data = new ArrayBuffer(10);
+    const view = new DataView(data);
+
+    view.setFloat32(0, 2, true);
+    view.setFloat32(4, 3, true);
+    view.setUint16(8, 65535, true);
+
+    const mesh = new Geometry({
+      attributes: [
+        { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+        { name: 'a_uv', size: 1, type: 'u16', normalized: true, offset: 8 },
+      ],
+      vertexData: data,
+      stride: 10,
+    });
+    const mode = new MeshParticles({ geometry: mesh });
+
+    expect(Array.from(mode.vertexGeometry.vertexData as Float32Array)).toEqual([2, 3, 1, 0]);
+    mode.destroy();
+    mesh.destroy();
+  });
+
   it('re-reads the mesh after an in-place mutation', () => {
     const mesh = makeTriangle();
     const mode = new MeshParticles({ geometry: mesh });
@@ -164,5 +211,46 @@ describe('MeshParticles', () => {
     expect((mode.vertexGeometry.vertexData as Float32Array)[0]).toBe(32);
     // A bumped version is what tells the executors to re-upload the buffer.
     expect(mode.vertexGeometry.version).toBeGreaterThan(before);
+  });
+
+  it('refreshes the vertex count when an unindexed source grows and shrinks', () => {
+    const mesh = makeTriangle();
+    const mode = new MeshParticles({ geometry: mesh });
+    const system = new ParticleSystem({ capacity: 1 });
+
+    mesh.vertexData = new Float32Array(8 * 4);
+    mesh.invalidate();
+    mode.build(system, system._storage);
+
+    expect(mode.vertexGeometry.vertexCount).toBe(8);
+    expect(mode.vertexGeometry.indexCount).toBe(8);
+
+    mesh.vertexData = new Float32Array(3 * 4);
+    mesh.invalidate();
+    mode.build(system, system._storage);
+
+    expect(mode.vertexGeometry.vertexCount).toBe(3);
+    expect(mode.vertexGeometry.indices).toBeNull();
+    expect(mode.vertexGeometry.indexCount).toBe(3);
+
+    mode.destroy();
+    mesh.destroy();
+    system.destroy();
+  });
+
+  it('rejects a vertex shrink that leaves source indices outside the mesh on every retry', () => {
+    const mesh = makeTriangle(true);
+    const mode = new MeshParticles({ geometry: mesh });
+    const system = new ParticleSystem({ capacity: 1 });
+
+    mesh.vertexData = new Float32Array(2 * 4);
+    mesh.invalidate();
+
+    expect(() => mode.build(system, system._storage)).toThrow(/index.*out of range/i);
+    expect(() => mode.build(system, system._storage)).toThrow(/index.*out of range/i);
+
+    mode.destroy();
+    mesh.destroy();
+    system.destroy();
   });
 });

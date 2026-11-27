@@ -50,6 +50,7 @@ beforeAll(() => {
 
 afterAll(() => {
   (globalThis as { FontFace?: unknown }).FontFace = originalFontFace;
+
   if (originalDocumentFonts === undefined) {
     Reflect.deleteProperty(document, 'fonts');
   } else {
@@ -86,7 +87,9 @@ describe('FontFactory', () => {
   test('rejects clearly when family is missing from options', async () => {
     const factory = new FontFactory();
 
-    await expect(factory.create(new ArrayBuffer(8), factoryContext({} as unknown as FontAssetOptions))).rejects.toThrow('requires a "family" option');
+    await expect(factory.create(new ArrayBuffer(8), factoryContext({} as unknown as FontAssetOptions))).rejects.toThrow(
+      'requires a "family" option',
+    );
   });
 
   test('create() resolves with a FontFace and registers it with document.fonts by default', async () => {
@@ -124,7 +127,9 @@ describe('FontFactory', () => {
     shouldFailToLoad = true;
     const factory = new FontFactory();
 
-    await expect(factory.create(new ArrayBuffer(8), factoryContext({ family: 'TestFont' }))).rejects.toThrow('Invalid font data in ArrayBuffer');
+    await expect(factory.create(new ArrayBuffer(8), factoryContext({ family: 'TestFont' }))).rejects.toThrow(
+      'Invalid font data in ArrayBuffer',
+    );
   });
 
   test('destroy() removes every registered font face from document.fonts', async () => {

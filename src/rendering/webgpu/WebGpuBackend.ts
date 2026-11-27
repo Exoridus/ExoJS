@@ -9,12 +9,17 @@ import type { TextureSource } from '#core/types';
 import { type Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
-import { get2dContext, getWebGpuContext, type RenderSurface } from '#platform/RenderSurface';
+import { get2dContext, getWebGpuContext, hasDomBrand, type RenderSurface } from '#platform/RenderSurface';
 import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLiveResource';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import { dataTextureBytesPerPixel, estimateCompressedTextureBytes, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import {
+  dataTextureBytesPerPixel,
+  estimateCompressedTextureBytes,
+  estimateTextureBytes,
+  GpuResourceAccountant,
+} from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { assertBatchSingleAttachment, assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
@@ -43,10 +48,15 @@ import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexturePool } from '#rendering/RenderTexturePool';
 import { compressedPayloadOf } from '#rendering/texture/compressedPayload';
-import { compressedBlockLayout, compressedBlocksAcross, compressedBlocksDown, type CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
+import {
+  compressedBlockLayout,
+  compressedBlocksAcross,
+  compressedBlocksDown,
+  type CompressedTextureFormat,
+} from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { DepthTexture } from '#rendering/texture/DepthTexture';
-import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { markClearCoverage, releaseOpaqueContent, RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
 import type { BlendModes, ColorTextureFormat } from '#rendering/types';
@@ -121,6 +131,7 @@ interface ManagedWebGpuTextureState {
   hasContent: boolean;
   /** GPU bytes currently booked for this texture's storage with the resource accountant. */
   accountedBytes: number;
+  sharedBitmap?: SharedWebGpuBitmap;
   /**
    * Reusable packing buffer for a partial `DataTexture` upload (see
    * `_syncTexture`'s partial branch), sized to the largest region packed so
@@ -156,6 +167,18 @@ interface ManagedWebGpuTextureState {
    * 1000-flush frame.
    */
   binding: { view: GPUTextureView; sampler: GPUSampler };
+}
+
+interface SharedWebGpuBitmap {
+  readonly bitmap: ImageBitmap;
+  readonly texture: GPUTexture;
+  readonly view: GPUTextureView;
+  readonly format: GPUTextureFormat;
+  readonly mipLevelCount: number;
+  readonly normalize: boolean;
+  readonly accountedBytes: number;
+  owners: number;
+  uploaded: boolean;
 }
 
 interface PixelClipBoundsState {
@@ -236,7 +259,11 @@ export class WebGpuBackend implements RenderBackend {
   private _recoveryAttempt = 0;
   private _maxRecoveryAttempts = 5;
   private _recoveryBackoffMs = 100;
-  private readonly _textureStates: Map<Texture | RenderTexture, ManagedWebGpuTextureState> = new Map<Texture | RenderTexture, ManagedWebGpuTextureState>();
+  private readonly _textureStates: Map<Texture | RenderTexture, ManagedWebGpuTextureState> = new Map<
+    Texture | RenderTexture,
+    ManagedWebGpuTextureState
+  >();
+  private _sharedBitmaps = new WeakMap<ImageBitmap, Set<SharedWebGpuBitmap>>();
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
   /**
@@ -259,6 +286,7 @@ export class WebGpuBackend implements RenderBackend {
   private _clipDepth = 0;
   /** Scratch for the incoming rect before it is intersected into its slot. */
   private readonly _clipPixelScratch: PixelClipBoundsState = { x: 0, y: 0, width: 0, height: 0 };
+  private _scissorScratch: PixelClipBoundsState | null = null;
   private readonly _clipPointA: Vector = new Vector();
   private readonly _clipPointB: Vector = new Vector();
   private readonly _maskCompositor: WebGpuMaskCompositor = new WebGpuMaskCompositor();
@@ -294,13 +322,12 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _snapViewportRect = { x: 0, y: 0, width: 0, height: 0 };
   /** Reused record handed out by `_getAttachmentPixelSize` - see the contract there. */
   private readonly _attachmentPixelSize = { width: 0, height: 0 };
-  /** Reused colour attachment + its clear value - see `createColorAttachment`. */
-  private readonly _clearValue = { r: 0, g: 0, b: 0, a: 0 };
   /** Reused scratch for the linear-decoded clear color on an `Rgba8Srgb` target - see `createColorAttachment`. */
   private readonly _clearColorLinearScratch = new Float32Array(4);
+  /** Reused colour attachment + its clear value - see `createColorAttachment`. */
   private readonly _colorAttachment: GPURenderPassColorAttachment = {
     view: undefined as unknown as GPUTextureView,
-    clearValue: this._clearValue,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
     loadOp: 'load',
     storeOp: 'store',
   };
@@ -321,8 +348,18 @@ export class WebGpuBackend implements RenderBackend {
   private _renderer: Renderer | null = null;
   private _renderGroupTransform: Matrix | null = null;
   private _renderGroupTransformId = 0;
-  private _texture: Texture | RenderTexture | null = null;
   private _clearRequested = false;
+  /**
+   * The colour a pending {@link clear} request was made with. A clear only
+   * executes as the load op of the next pass, and the persistent clear colour
+   * can change before that pass opens - a child pass restores its parent's
+   * colour on exit - so the request keeps its own.
+   */
+  private readonly _requestedClearColor = new Color();
+  /** The clear colour the pass being opened resolves against - see {@link _requestedClearColor}. */
+  private _passClearColor: Color = this._clearColor;
+  /** Targets whose `_opaqueContent` this frame set - dropped again at the next frame start. */
+  private readonly _opaqueClearedTargets: RenderTarget[] = [];
   private _hasPresentedFrame = false;
   private readonly _nativeReplayFrame = { id: 0, remainingBuilds: 32 };
   private readonly _stats: RenderStats = createRenderStats();
@@ -616,9 +653,14 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public initialize(): Promise<this> {
+    if (this._destroyed) {
+      return Promise.reject(new Error('Cannot initialize a destroyed WebGPU backend.'));
+    }
+
     if (!this._initializePromise) {
       this._initializePromise = this._initialize().catch((error: unknown) => {
         this._initializePromise = null;
+
         throw error;
       });
     }
@@ -634,6 +676,7 @@ export class WebGpuBackend implements RenderBackend {
     // previously reset per render() call in _beginDrawPlan).
     this._getTransformStorage().buffer.begin();
     this._gpuTimer?.beginFrame();
+    releaseOpaqueContent(this._opaqueClearedTargets);
 
     // Frame start rather than frame end: a map never settles in the task that
     // requested it, so polling here is what lets a read requested in one
@@ -777,6 +820,7 @@ export class WebGpuBackend implements RenderBackend {
     if (store !== null) {
       store.owner = owner;
       this._persistentStores.add(store);
+      store.onDestroyed = () => this._persistentStores.delete(store);
     }
 
     return store;
@@ -819,7 +863,12 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /** @internal */
-  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+  public _rekeyPersistentSlots(
+    bundle: PersistentSlotBundle,
+    source: RenderRootSource,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean {
     const store = bundle as WebGpuPersistentSlotStore;
     const owner = store.owner;
 
@@ -930,7 +979,10 @@ export class WebGpuBackend implements RenderBackend {
       const unbalanced = this._passCoordinatorInstance.unbalancedStencilClips();
 
       if (unbalanced > 0) {
+        // The open pass was recorded with the leaked attachment; end it before the mode resets.
+        this._flushActiveRendererAndEndPass();
         this._passCoordinatorInstance.resetStencil();
+
         throw new Error(`Unbalanced stencil clip stack at end of frame (${unbalanced} unpopped clip(s)).`);
       }
     }
@@ -939,6 +991,7 @@ export class WebGpuBackend implements RenderBackend {
   public draw(drawable: Drawable): this {
     if (this._deviceLost || this._device === null) {
       this._activeDrawCommand = null;
+
       return this;
     }
 
@@ -965,9 +1018,16 @@ export class WebGpuBackend implements RenderBackend {
     return this;
   }
 
-  public drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number, instances: InstanceDataView | null = null): this {
+  public drawInstanced(
+    mesh: Mesh,
+    transforms: readonly Matrix[],
+    tints: readonly Color[],
+    count: number,
+    instances: InstanceDataView | null = null,
+  ): this {
     if (count <= 0 || mesh.vertexCount === 0 || this._deviceLost || this._device === null) {
       this._activeDrawCommand = null;
+
       return this;
     }
 
@@ -1039,6 +1099,16 @@ export class WebGpuBackend implements RenderBackend {
     assertLiveRenderTarget(nextRenderTarget);
 
     if (this._renderTarget !== nextRenderTarget) {
+      if (isMultiAttachmentTarget(nextRenderTarget) && nextRenderTarget.attachments.length > this.maxColorAttachments) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGpu,
+          message:
+            `This device accepts ${this.maxColorAttachments} colour attachment(s), but the target declares ` +
+            `${nextRenderTarget.attachments.length}. Check backend.maxColorAttachments.`,
+        });
+      }
+
       this._flushActiveRendererAndEndPass();
 
       if (this._renderTarget !== this._rootRenderTarget) {
@@ -1049,16 +1119,6 @@ export class WebGpuBackend implements RenderBackend {
       this._multiAttachmentTarget = isMultiAttachmentTarget(nextRenderTarget);
       this._stats.renderTargetChanges++;
 
-      if (this._multiAttachmentTarget && (nextRenderTarget as MultiRenderTarget).attachments.length > this.maxColorAttachments) {
-        throw new RenderError({
-          code: 'unsupported-format',
-          backendType: RenderBackendType.WebGpu,
-          message:
-            `This device accepts ${this.maxColorAttachments} colour attachment(s), but the target declares ` +
-            `${(nextRenderTarget as MultiRenderTarget).attachments.length}. Check backend.maxColorAttachments.`,
-        });
-      }
-
       if (nextRenderTarget !== this._rootRenderTarget) {
         this._subscribeRenderTarget(nextRenderTarget);
       }
@@ -1068,6 +1128,10 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public pushScissorRect(bounds: Rectangle): this {
+    if (this._deviceLost || this._device === null) {
+      return this;
+    }
+
     this._flushActiveRendererAndEndPass();
 
     const depth = this._clipDepth;
@@ -1099,7 +1163,11 @@ export class WebGpuBackend implements RenderBackend {
     blendMode: BlendModes,
   ): this {
     if (this._multiAttachmentTarget) {
-      assertSingleAttachmentCompose('Alpha-mask compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGpu);
+      assertSingleAttachmentCompose(
+        'Alpha-mask compositing',
+        (this._renderTarget as MultiRenderTarget).attachments.length,
+        RenderBackendType.WebGpu,
+      );
     }
 
     if (width <= 0 || height <= 0) {
@@ -1129,7 +1197,11 @@ export class WebGpuBackend implements RenderBackend {
 
   public composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this {
     if (this._multiAttachmentTarget) {
-      assertSingleAttachmentCompose('Backdrop-blend compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGpu);
+      assertSingleAttachmentCompose(
+        'Backdrop-blend compositing',
+        (this._renderTarget as MultiRenderTarget).attachments.length,
+        RenderBackendType.WebGpu,
+      );
     }
 
     if (width <= 0 || height <= 0) {
@@ -1178,7 +1250,7 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public popScissorRect(): this {
-    if (this._clipDepth === 0) {
+    if (this._deviceLost || this._device === null || this._clipDepth === 0) {
       return this;
     }
 
@@ -1217,6 +1289,9 @@ export class WebGpuBackend implements RenderBackend {
     return this;
   }
 
+  /**
+   * Current clip in target pixels, or `null` without an active clip. The returned rect is reused by every call: read it immediately and do not retain it.
+   */
   public getScissorRect(): PixelClipBoundsState | null {
     if (this._clipDepth === 0) {
       return null;
@@ -1227,12 +1302,14 @@ export class WebGpuBackend implements RenderBackend {
     const scaleX = this._renderTarget.root && this._renderTarget.width > 0 ? this._canvas.width / this._renderTarget.width : 1;
     const scaleY = this._renderTarget.root && this._renderTarget.height > 0 ? this._canvas.height / this._renderTarget.height : 1;
 
-    return {
-      x: Math.floor(clip.x * scaleX),
-      y: Math.floor(clip.y * scaleY),
-      width: Math.max(0, Math.round(clip.width * scaleX)),
-      height: Math.max(0, Math.round(clip.height * scaleY)),
-    };
+    const rect = (this._scissorScratch ??= { x: 0, y: 0, width: 0, height: 0 });
+
+    rect.x = Math.floor(clip.x * scaleX);
+    rect.y = Math.floor(clip.y * scaleY);
+    rect.width = Math.max(0, Math.round(clip.width * scaleX));
+    rect.height = Math.max(0, Math.round(clip.height * scaleY));
+
+    return rect;
   }
 
   public getColorFormatCapabilities(format: ColorTextureFormat): ColorFormatCapabilities {
@@ -1242,7 +1319,11 @@ export class WebGpuBackend implements RenderBackend {
       case TextureFormat.Rgba16F:
         return colorFormatCapabilities(true, true, true);
       case TextureFormat.Rgba32F:
-        return colorFormatCapabilities(true, this._deviceFeatureEnabled('float32-filterable'), this._deviceFeatureEnabled('float32-blendable'));
+        return colorFormatCapabilities(
+          true,
+          this._deviceFeatureEnabled('float32-filterable'),
+          this._deviceFeatureEnabled('float32-blendable'),
+        );
     }
   }
 
@@ -1255,11 +1336,13 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
-   * No-op: nothing this backend renders into is ever multisampled, so there is
-   * no multisample storage to publish. A `RenderTarget.sampleCount` above `1`
-   * stays inert here for the reason {@link colorFormatCapabilities} records -
-   * WebGPU has no antialias request to honor and no pipeline carrying a sample
-   * count - rather than resolving an attachment that does not exist.
+   * Clears the requested sample count rather than resolving anything: nothing
+   * this backend renders into is ever multisampled, so there is no multisample
+   * storage to publish. A `RenderTarget.sampleCount` above `1` is reset to `1`
+   * for the reason {@link colorFormatCapabilities} records - WebGPU has no
+   * antialias request to honor and no pipeline carrying a sample count - and
+   * leaving the field at the requested value would advertise storage that does
+   * not exist.
    */
   public resolveRenderTarget(target: RenderTarget): void {
     if (target.sampleCount > 1) {
@@ -1267,11 +1350,32 @@ export class WebGpuBackend implements RenderBackend {
     }
   }
 
-  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType?: 'uint8'): Promise<Uint8ClampedArray>;
+  public readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType?: 'uint8',
+  ): Promise<Uint8ClampedArray>;
   public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: 'float32'): Promise<Float32Array>;
-  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType): Promise<PixelArray>;
-  public async readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType = 'uint8'): Promise<PixelArray> {
-    this.flush();
+  public readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType: PixelDataType,
+  ): Promise<PixelArray>;
+  public async readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType: PixelDataType = 'uint8',
+  ): Promise<PixelArray> {
+    this.flushPending();
 
     const texture = this._syncTexture(source).texture;
     // `copyTextureToBuffer` wants every row to start on a 256-byte boundary,
@@ -1305,7 +1409,15 @@ export class WebGpuBackend implements RenderBackend {
     }
   }
 
-  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number, dataType?: 'uint8'): PixelReadback;
+  public createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType?: 'uint8',
+  ): PixelReadback;
   public createPixelReadback(
     source: RenderTexture,
     x: number,
@@ -1372,9 +1484,16 @@ export class WebGpuBackend implements RenderBackend {
     // Only flush the open batch when the view actually changes. The unconditional
     // flush forced one draw call per render() call (each render() re-applies the
     // same camera view), defeating cross-call batching.
-    if (this._renderTarget.view !== view) {
-      this._flushActiveRendererAndEndPass();
+    try {
+      if (this._renderTarget.view !== view) {
+        this._flushActiveRendererAndEndPass();
+      }
+    } catch (error) {
+      this._passCoordinatorInstance?.discardPass();
+
+      throw error;
     }
+
     this._renderTarget.setView(view);
 
     return this;
@@ -1399,6 +1518,9 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     this._clearRequested = true;
+    this._requestedClearColor.copy(this._clearColor);
+    // A load-op clear always covers the whole attachment; scissor never applies.
+    markClearCoverage(this._renderTarget, this._clearColor.a >= 1, this._opaqueClearedTargets);
 
     return this;
   }
@@ -1410,19 +1532,26 @@ export class WebGpuBackend implements RenderBackend {
     return this;
   }
 
+  /**
+   * Submit the queued draws and end the open pass without closing the frame's
+   * GPU timing window. For work that needs the target contents mid-frame; the
+   * frame-end {@link flush} would otherwise leave every later pass untimed.
+   * @internal
+   */
+  public flushPending(): this {
+    if (this._device && this._context) {
+      this._flushActiveRendererAndEndPass();
+    }
+
+    return this;
+  }
+
   public flush(): this {
     if (!this._device || !this._context) {
       return this;
     }
 
-    if (this._renderer) {
-      this._flushActiveRendererAndEndPass();
-    } else if (this._clearRequested) {
-      // No active renderer but a clear is pending: open an empty coordinator
-      // pass so createColorAttachment consumes the clear state once.
-      this.passCoordinator.acquirePass();
-      this.passCoordinator.endPass();
-    }
+    this._flushActiveRendererAndEndPass();
 
     if (this._gpuTimer !== null) {
       // After the passes above have been submitted, so the resolve this queues
@@ -1510,6 +1639,7 @@ export class WebGpuBackend implements RenderBackend {
     for (const target of [...this._renderTargetDestroyHandlers.keys()]) {
       this._unsubscribeRenderTarget(target);
     }
+
     this._context?.unconfigure();
     this._context = null;
     this._device = null;
@@ -1519,12 +1649,12 @@ export class WebGpuBackend implements RenderBackend {
     this._clearRequested = false;
     this._hasPresentedFrame = false;
     this._deviceLost = false;
-    this._texture = null;
     this._mipmapResources.clear();
     this._textureNormalizer?.reset();
     this._textureNormalizer = null;
     this._renderTarget = this._rootRenderTarget;
     this._clearColor.destroy();
+    this._requestedClearColor.destroy();
     this._rootRenderTarget.destroy();
 
     // Last, so every buffer/texture destroy above still ran against a live
@@ -1539,15 +1669,14 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
+   * Resolve the pass attachment for colour slot `index` of the bound target.
+   *
    * **The returned record is reused**, including its nested `clearValue`. The
    * one caller (`WebGpuPassCoordinator.acquirePass`) hands it straight to
    * `beginRenderPass`, which reads the descriptor synchronously - so nothing
    * ever needs it to survive the call. An effect-heavy frame opens hundreds of
    * passes (501 on `filter/color 100`), and two fresh records per pass was one
    * of the larger remaining per-pass costs.
-   */
-  /**
-   * Resolve the pass attachment for colour slot `index` of the bound target.
    *
    * The load op is resolved once, on slot 0: it answers whether this target has
    * already been drawn into this frame, which is a property of the target, and the
@@ -1581,33 +1710,39 @@ export class WebGpuBackend implements RenderBackend {
       }
 
       this._loadOpForPass = this.passCoordinator.resolveLoad(renderTarget, this._clearRequested);
+      this._passClearColor = this._clearRequested ? this._requestedClearColor : this._clearColor;
       this._clearRequested = false;
-
-      const clearValue = this._clearValue;
-
-      // An `Rgba8Srgb` attachment write - including a clear - hardware-encodes
-      // its input, exactly as a fragment shader output does. `Color`'s RGB
-      // fields are sRGB-authored bytes, so an unconverted clear value would be
-      // hardware-encoded a SECOND time - decode first so a clear and an
-      // authored draw of the same nominal color agree.
-      if (renderTarget instanceof RenderTexture && renderTarget.format === TextureFormat.Rgba8Srgb) {
-        this._clearColor.writeLinear(this._clearColorLinearScratch);
-        clearValue.r = this._clearColorLinearScratch[0]!;
-        clearValue.g = this._clearColorLinearScratch[1]!;
-        clearValue.b = this._clearColorLinearScratch[2]!;
-        clearValue.a = this._clearColorLinearScratch[3]!;
-      } else {
-        clearValue.r = this._clearColor.r / 255;
-        clearValue.g = this._clearColor.g / 255;
-        clearValue.b = this._clearColor.b / 255;
-        clearValue.a = this._clearColor.a;
-      }
     }
 
     const attachment = index === 0 ? this._colorAttachment : this._extraAttachment(index);
 
     attachment.view = view;
     attachment.loadOp = this._loadOpForPass;
+
+    if (this._loadOpForPass === 'clear') {
+      const clearValue = attachment.clearValue as GPUColorDict;
+      const slotTarget = multi !== null ? multi.attachment(index) : renderTarget;
+      const clearColor = this._passClearColor;
+
+      // An `Rgba8Srgb` attachment write - including a clear - hardware-encodes
+      // its input, exactly as a fragment shader output does. `Color`'s RGB
+      // fields are sRGB-authored bytes, so an unconverted clear value would be
+      // hardware-encoded a SECOND time - decode first so a clear and an
+      // authored draw of the same nominal color agree. Resolved per slot: the
+      // attachments of one multi-attachment target may mix formats.
+      if (slotTarget instanceof RenderTexture && slotTarget.format === TextureFormat.Rgba8Srgb) {
+        clearColor.writeLinear(this._clearColorLinearScratch);
+        clearValue.r = this._clearColorLinearScratch[0]!;
+        clearValue.g = this._clearColorLinearScratch[1]!;
+        clearValue.b = this._clearColorLinearScratch[2]!;
+        clearValue.a = this._clearColorLinearScratch[3]!;
+      } else {
+        clearValue.r = clearColor.r / 255;
+        clearValue.g = clearColor.g / 255;
+        clearValue.b = clearColor.b / 255;
+        clearValue.a = clearColor.a;
+      }
+    }
 
     return attachment;
   }
@@ -1623,7 +1758,7 @@ export class WebGpuBackend implements RenderBackend {
 
     const attachment: GPURenderPassColorAttachment = {
       view: undefined as unknown as GPUTextureView,
-      clearValue: this._clearValue,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
       loadOp: 'load',
       storeOp: 'store',
     };
@@ -1719,6 +1854,18 @@ export class WebGpuBackend implements RenderBackend {
     return size;
   }
 
+  /**
+   * The `(view, sampler)` pair to bind for `texture`, resolving and uploading
+   * its content first.
+   *
+   * **The default path returns a record owned by the texture and rewritten on
+   * the next resolution of that texture.** Read `view` and `sampler` before
+   * resolving another binding; keep the two fields, not the record. A
+   * `samplerOverride` returns a freshly allocated pair instead, because one
+   * texture can be bound under several sampling states in a single batch.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
   public getTextureBinding(
     texture: Texture | RenderTexture,
     samplerOverride: SamplerOptions | null = null,
@@ -1737,7 +1884,10 @@ export class WebGpuBackend implements RenderBackend {
       // fresh record costs nothing measurable; giving them the state's own
       // record would mean the default path and an override path could not be
       // resolved in the same batch.
-      return { view: state.view, sampler: this._getSampler(samplerOverride.scaleMode, samplerOverride.wrapMode, this.isNonFilterableTexture(texture)) };
+      return {
+        view: state.view,
+        sampler: this._getSampler(samplerOverride.scaleMode, samplerOverride.wrapMode, this.isNonFilterableTexture(texture)),
+      };
     }
 
     // Refreshed in place: `_syncTexture` may have replaced the GPU texture (and
@@ -1799,14 +1949,32 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     // Compressed bytes cannot be normalized at upload; their DFD association governs the sample instead.
-    if (texture.compressed !== null) return texture.colorSpace !== 'none';
-    if (!texture.premultiplyAlpha) return false;
+    if (texture.compressed !== null) {
+      return texture.colorSpace !== 'none';
+    }
+
+    if (!texture.premultiplyAlpha) {
+      return false;
+    }
 
     return !this._needsColorNormalization(texture);
   }
 
-  /** Part of the renderer SDK contract for extension renderers. */
-  public getTransformStorageBuffer(minCount: number): { readonly buffer: GPUBuffer; readonly tintBuffer: GPUBuffer; readonly count: number } {
+  /**
+   * The shared transform and tint storage buffers, grown to hold at least
+   * `minCount` slots.
+   *
+   * **The returned record is reused** and rewritten by the next call on this
+   * backend, and a growth destroys the buffers an earlier result named. Bind
+   * its fields where the call is made; copy them if they must outlive it.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
+  public getTransformStorageBuffer(minCount: number): {
+    readonly buffer: GPUBuffer;
+    readonly tintBuffer: GPUBuffer;
+    readonly count: number;
+  } {
     return this._getTransformStorage().getBuffer(this.device, minCount, this._accountant);
   }
 
@@ -1854,8 +2022,8 @@ export class WebGpuBackend implements RenderBackend {
     // directly - no flip (unlike WebGL2's bottom-left `gl.viewport`).
     rect.x = Math.floor(vp.x * width);
     rect.y = Math.floor(vp.y * height);
-    rect.width = Math.max(1, Math.round(vp.width * width));
-    rect.height = Math.max(1, Math.round(vp.height * height));
+    rect.width = Math.max(0, Math.round(vp.width * width));
+    rect.height = Math.max(0, Math.round(vp.height * height));
 
     return rect;
   }
@@ -1880,6 +2048,12 @@ export class WebGpuBackend implements RenderBackend {
 
   private _flushActiveRendererAndEndPass(): void {
     this._renderer?.flush();
+
+    if (this._clearRequested) {
+      // Consume an empty renderer's clear before a target or pass-state change.
+      this.passCoordinator.acquirePass();
+    }
+
     // Ending the active GPU pass - and thus `queue.submit` - is centralized here
     // so it happens only at genuine boundaries (render-target / view / scissor /
     // stencil change, compositor, execute, plan / frame end), NOT once per batch
@@ -2332,7 +2506,13 @@ export class WebGpuBackend implements RenderBackend {
 
       payload.renderer.rebaseRetainedNodeIndices(batch.bytes, base);
 
-      device.queue.writeBuffer(bundle.instanceBuffer!, batch.byteOffset, batch.bytes.buffer, batch.bytes.byteOffset, batch.bytes.byteLength);
+      device.queue.writeBuffer(
+        bundle.instanceBuffer!,
+        batch.byteOffset,
+        batch.bytes.buffer,
+        batch.bytes.byteOffset,
+        batch.bytes.byteLength,
+      );
       stampRetainedBatchGeneration(batch.instruction);
     }
 
@@ -2432,6 +2612,8 @@ export class WebGpuBackend implements RenderBackend {
       throw this._createInitializationError('Failed to request a WebGPU adapter.', error);
     }
 
+    this._assertInitializationActive();
+
     if (adapter === null) {
       throw new Error('Could not acquire a WebGPU adapter.');
     }
@@ -2441,6 +2623,8 @@ export class WebGpuBackend implements RenderBackend {
     try {
       device = await this._requestDeviceFrom(adapter);
     } catch (error) {
+      this._assertInitializationActive();
+
       // Each adapter can create only one device, so retry against a fresh one.
 
       try {
@@ -2448,6 +2632,8 @@ export class WebGpuBackend implements RenderBackend {
       } catch (retryError) {
         throw this._createInitializationError('Failed to request a WebGPU adapter.', retryError);
       }
+
+      this._assertInitializationActive();
 
       if (adapter === null) {
         throw new Error('Could not acquire a WebGPU adapter.', { cause: error });
@@ -2458,6 +2644,11 @@ export class WebGpuBackend implements RenderBackend {
       } catch (retryError) {
         throw this._createInitializationError('Failed to request a WebGPU device.', retryError);
       }
+    }
+
+    if (this._destroyed) {
+      device?.destroy();
+      this._assertInitializationActive();
     }
 
     if (device === null) {
@@ -2524,6 +2715,11 @@ export class WebGpuBackend implements RenderBackend {
     this.rendererRegistry.connect(this);
     this.resize(this._rootRenderTarget.width, this._rootRenderTarget.height);
 
+    // A request made before the device existed could not create a timer then.
+    if (this._gpuTimingRequested) {
+      this.setGpuTimingEnabled(true);
+    }
+
     // Kick off async pipeline pre-warm for any renderer that supports
     // it. Each renderer creates its full set of (blendMode × format)
     // pipelines via createRenderPipelineAsync in parallel, so the first
@@ -2533,8 +2729,15 @@ export class WebGpuBackend implements RenderBackend {
     const prewarmFormats: readonly GPUTextureFormat[] = [this.format, managedTextureFormat];
 
     await this._prewarmRendererPipelines(prewarmFormats);
+    this._assertInitializationActive();
 
     return this;
+  }
+
+  private _assertInitializationActive(): void {
+    if (this._destroyed) {
+      throw new Error('Cannot initialize a destroyed WebGPU backend.');
+    }
   }
 
   private _subscribeToDeviceLoss(): void {
@@ -2694,6 +2897,7 @@ export class WebGpuBackend implements RenderBackend {
     this._textureDestroyHandlers.clear();
     this._textureReleaseHandlers.clear();
     this._textureStates.clear();
+    this._sharedBitmaps = new WeakMap();
     this._samplers.clear();
 
     // Recycled RenderTexture pool: drop entries - their backing GPUTexture
@@ -2726,6 +2930,7 @@ export class WebGpuBackend implements RenderBackend {
     // Same for the normalization pass: its staging textures, pipeline and uniform
     // buffers are all dead handles, and the recovered device gets fresh ones.
     this._textureNormalizer?.reset();
+    this._textureNormalizer = null;
     this._transformStorage?.destroy();
     this._transformStorage = null;
     this._activeDrawCommand = null;
@@ -2936,7 +3141,8 @@ export class WebGpuBackend implements RenderBackend {
       code = 'out-of-memory';
     }
 
-    const message = typeof (error as { message?: unknown } | null)?.message === 'string' ? (error as { message: string }).message : String(error);
+    const message =
+      typeof (error as { message?: unknown } | null)?.message === 'string' ? (error as { message: string }).message : String(error);
 
     this._reportRenderError(
       new RenderError({
@@ -3096,68 +3302,111 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _getTextureState(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
-    let state = this._textureStates.get(texture);
+    const existing = this._textureStates.get(texture);
 
-    if (!state) {
-      const format = this._getGpuTextureFormat(texture);
-      const gpuTexture = this.device.createTexture({
-        label: 'backend:texture',
-        size: {
-          width: Math.max(texture.width, 1),
-          height: Math.max(texture.height, 1),
-        },
-        format,
-        mipLevelCount: this._getMipLevelCount(texture),
-        usage: this._getTextureUsage(texture),
-      });
-
-      const mipLevelCount = this._getMipLevelCount(texture);
-
-      const view = gpuTexture.createView();
-      const nonFilterable = this.isNonFilterableTexture(texture);
-      const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
-      const sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
-
-      state = {
-        texture: gpuTexture,
-        view,
-        sampler,
-        samplerKey,
-        version: -1,
-        width: texture.width,
-        height: texture.height,
-        mipLevelCount,
-        format,
-        hasContent: false,
-        accountedBytes: 0,
-        partialUploadScratch: null,
-        partialUploadView: null,
-        contiguousUploadView: null,
-        binding: { view, sampler },
-      };
-
-      state.accountedBytes = this._accountant.reallocate(0, this._estimateTextureBytes(texture, mipLevelCount));
-
-      const destroyHandler = (): void => {
-        this._evictTexture(texture);
-      };
-
-      texture.addDestroyListener(destroyHandler);
-      this._textureDestroyHandlers.set(texture, destroyHandler);
-
-      if (texture instanceof Texture) {
-        const releaseHandler = (): void => {
-          this._evictTexture(texture, false);
-        };
-
-        texture.addReleaseListener(releaseHandler);
-        this._textureReleaseHandlers.set(texture, releaseHandler);
-      }
-
-      this._textureStates.set(texture, state);
+    if (existing !== undefined) {
+      return existing;
     }
 
+    const state = this._createTextureState(texture);
+
+    if (!this._textureDestroyHandlers.has(texture)) {
+      const destroyHandler = (): void => this._evictTexture(texture);
+      texture.addDestroyListener(destroyHandler);
+      this._textureDestroyHandlers.set(texture, destroyHandler);
+    }
+
+    if (texture instanceof Texture) {
+      const releaseHandler = (): void => this._evictTexture(texture, false);
+      texture.addReleaseListener(releaseHandler);
+      this._textureReleaseHandlers.set(texture, releaseHandler);
+    }
+
+    this._textureStates.set(texture, state);
+
     return state;
+  }
+
+  private _createTextureState(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
+    const format = this._getGpuTextureFormat(texture);
+    const mipLevelCount = this._getMipLevelCount(texture);
+    const bitmap = texture instanceof Texture ? texture._decodedAssetBitmap : null;
+    const shareable = bitmap !== null && bitmap.width > 0 && bitmap.width === texture.width && bitmap.height === texture.height;
+    const normalize = shareable && texture instanceof Texture && this._needsColorNormalization(texture);
+    let variants = shareable ? this._sharedBitmaps.get(bitmap) : undefined;
+    let sharedBitmap: SharedWebGpuBitmap | undefined;
+
+    if (variants !== undefined) {
+      for (const entry of variants) {
+        if (entry.format === format && entry.mipLevelCount === mipLevelCount && entry.normalize === normalize) {
+          sharedBitmap = entry;
+
+          break;
+        }
+      }
+    }
+
+    const gpuTexture =
+      sharedBitmap?.texture ??
+      this.device.createTexture({
+        label: 'backend:texture',
+        size: { width: Math.max(texture.width, 1), height: Math.max(texture.height, 1) },
+        format,
+        mipLevelCount,
+        usage: this._getTextureUsage(texture),
+      });
+    const view = sharedBitmap?.view ?? gpuTexture.createView();
+    const accountedBytes =
+      sharedBitmap === undefined ? this._accountant.reallocate(0, this._estimateTextureBytes(texture, mipLevelCount)) : 0;
+
+    if (shareable && sharedBitmap === undefined) {
+      if (variants === undefined) {
+        variants = new Set();
+        this._sharedBitmaps.set(bitmap, variants);
+      }
+
+      sharedBitmap = { bitmap, texture: gpuTexture, view, format, mipLevelCount, normalize, accountedBytes, owners: 0, uploaded: false };
+      variants.add(sharedBitmap);
+    }
+
+    const nonFilterable = this.isNonFilterableTexture(texture);
+    const sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
+
+    if (sharedBitmap !== undefined) {
+      sharedBitmap.owners++;
+    }
+
+    return {
+      texture: gpuTexture,
+      view,
+      sampler,
+      samplerKey: this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable),
+      version: -1,
+      width: texture.width,
+      height: texture.height,
+      mipLevelCount,
+      format,
+      hasContent: false,
+      accountedBytes: sharedBitmap === undefined ? accountedBytes : 0,
+      partialUploadScratch: null,
+      partialUploadView: null,
+      contiguousUploadView: null,
+      binding: { view, sampler },
+      ...(sharedBitmap === undefined ? {} : { sharedBitmap }),
+    };
+  }
+
+  private _freeTextureStorage(state: ManagedWebGpuTextureState): void {
+    const shared = state.sharedBitmap;
+
+    if (shared === undefined) {
+      state.texture.destroy();
+      this._accountant.free(state.accountedBytes);
+    } else if (--shared.owners === 0) {
+      this._sharedBitmaps.get(shared.bitmap)?.delete(shared);
+      shared.texture.destroy();
+      this._accountant.free(shared.accountedBytes);
+    }
   }
 
   /**
@@ -3235,7 +3484,7 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * Return a packing scratch view sized exactly `length`, backed by
    * `state.partialUploadScratch` (grown on demand, never shrunk, kind-matched
-   * to `source`). Reusing this buffer across every partial `DataTexture`
+   * to `format`). Reusing this buffer across every partial `DataTexture`
    * upload - instead of allocating a fresh temporary array per sync - is what
    * keeps a barrier-heavy scene's per-frame CPU garbage flat instead of
    * scaling with flush count: each flush's transform (and separate tint) sync
@@ -3252,8 +3501,12 @@ export class WebGpuBackend implements RenderBackend {
    * bytes either way and does not depend on every implementation matching the
    * spec's upper bound.
    */
-  private _acquirePartialUploadScratch(state: ManagedWebGpuTextureState, source: Float32Array | Uint8Array, length: number): Float32Array | Uint8Array {
-    const isFloat = source instanceof Float32Array;
+  private _acquirePartialUploadScratch(
+    state: ManagedWebGpuTextureState,
+    format: DataTextureFormat,
+    length: number,
+  ): Float32Array | Uint8Array {
+    const isFloat = format === TextureFormat.R32F || format === TextureFormat.Rgba32F;
     let scratch = state.partialUploadScratch;
 
     if (scratch === null || scratch.length < length || isFloat !== scratch instanceof Float32Array) {
@@ -3343,10 +3596,30 @@ export class WebGpuBackend implements RenderBackend {
       texture.compressed === null &&
       (texture.source === null || texture.width === 0 || texture.height === 0);
 
-    const state = this._getTextureState(texture);
+    let state = this._getTextureState(texture);
     const compressedPayload = compressedPayloadOf(texture);
     const textureVersion = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
     const mipLevelCount = this._getMipLevelCount(texture);
+    const shared = state.sharedBitmap;
+
+    if (
+      shared !== undefined &&
+      texture instanceof Texture &&
+      state.version !== textureVersion &&
+      (shared.bitmap !== texture._decodedAssetBitmap ||
+        shared.bitmap.width !== texture.width ||
+        shared.bitmap.height !== texture.height ||
+        shared.mipLevelCount !== mipLevelCount ||
+        shared.format !== this._getGpuTextureFormat(texture) ||
+        shared.normalize !== this._needsColorNormalization(texture))
+    ) {
+      // A descriptor's upload settings can change independently of the other owners.
+      const previous = state;
+      state = this._createTextureState(texture);
+      this._textureStates.set(texture, state);
+      this._freeTextureStorage(previous);
+    }
+
     this._assertTextureFilterable(texture, texture.scaleMode);
     const nonFilterable = this.isNonFilterableTexture(texture);
     const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
@@ -3356,10 +3629,17 @@ export class WebGpuBackend implements RenderBackend {
       state.sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
     }
 
-    if (!awaitingSource && state.version !== textureVersion) {
+    if (state.sharedBitmap?.uploaded === true) {
+      state.version = textureVersion;
+    } else if (!awaitingSource && state.version !== textureVersion) {
       const gpuFormat = this._getGpuTextureFormat(texture);
 
-      if (state.width !== texture.width || state.height !== texture.height || state.mipLevelCount !== mipLevelCount || state.format !== gpuFormat) {
+      if (
+        state.width !== texture.width ||
+        state.height !== texture.height ||
+        state.mipLevelCount !== mipLevelCount ||
+        state.format !== gpuFormat
+      ) {
         state.texture.destroy();
 
         const resizedTexture = this.device.createTexture({
@@ -3428,7 +3708,7 @@ export class WebGpuBackend implements RenderBackend {
             // so it is the common case rather than a corner one.
             subBuffer = this._acquireContiguousUploadView(state, texture.buffer, region.y * rowChannels, length);
           } else {
-            subBuffer = this._acquirePartialUploadScratch(state, texture.buffer, length);
+            subBuffer = this._acquirePartialUploadScratch(state, format, length);
 
             for (let row = 0; row < region.height; row++) {
               const sourceStart = (region.y + row) * rowChannels + region.x * channels;
@@ -3527,7 +3807,8 @@ export class WebGpuBackend implements RenderBackend {
           });
         }
 
-        const canvasReadbackContext = canvasSource !== null && this._canvasExternalImageCopySupported !== true ? get2dContext(canvasSource) : null;
+        const canvasReadbackContext =
+          canvasSource !== null && this._canvasExternalImageCopySupported !== true ? get2dContext(canvasSource) : null;
 
         if (this._needsColorNormalization(texture)) {
           // The Safari canvas workaround and the normalization pass both need CPU
@@ -3575,6 +3856,10 @@ export class WebGpuBackend implements RenderBackend {
       }
 
       state.version = textureVersion;
+
+      if (state.sharedBitmap !== undefined) {
+        state.sharedBitmap.uploaded = true;
+      }
     }
 
     return state;
@@ -3652,14 +3937,8 @@ export class WebGpuBackend implements RenderBackend {
         this._flushActiveRendererAndEndPass();
       }
 
-      state.texture.destroy();
-      this._accountant.free(state.accountedBytes);
-      state.accountedBytes = 0;
+      this._freeTextureStorage(state);
       this._textureStates.delete(texture);
-    }
-
-    if (this._texture === texture) {
-      this._texture = null;
     }
   }
 
@@ -3759,7 +4038,11 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _assertTextureFilterable(texture: Texture | RenderTexture, scaleMode: ScaleModes): void {
-    if (!scaleModeRequiresLinearFiltering(scaleMode) || !isFloat32Texture(texture) || this.getColorFormatCapabilities(TextureFormat.Rgba32F).filterable) {
+    if (
+      !scaleModeRequiresLinearFiltering(scaleMode) ||
+      !isFloat32Texture(texture) ||
+      this.getColorFormatCapabilities(TextureFormat.Rgba32F).filterable
+    ) {
       return;
     }
 
@@ -3835,19 +4118,24 @@ export class WebGpuBackend implements RenderBackend {
     if (texture instanceof DepthTexture) {
       return depthAttachmentFormat;
     }
+
     if (texture instanceof DataTexture) {
       // `instanceof DataTexture` erases the generic, widening `format` to `any`;
       // the class invariant guarantees it is a `DataTextureFormat`.
       const format: DataTextureFormat = texture.format;
+
       return webgpuDataTextureFormat(format).gpuFormat;
     }
+
     if (texture instanceof RenderTexture) {
       return webgpuColorTextureFormat(texture.format);
     }
+
     const compressed = compressedPayloadOf(texture);
 
     if (compressed !== null) {
       const gpuFormat = this._compressedFormats.gpuFormats.get(compressed.format);
+
       if (gpuFormat === undefined) {
         throw new RenderError({
           code: 'unsupported-format',
@@ -3855,8 +4143,10 @@ export class WebGpuBackend implements RenderBackend {
           message: `This device cannot sample the compressed texture format "${compressed.format}". Declare an asset variant this device supports, or check backend.supportedTextureFormats before constructing the texture.`,
         });
       }
+
       return gpuFormat;
     }
+
     return texture.colorSpace === 'srgb' ? 'rgba8unorm-srgb' : managedTextureFormat;
   }
 
@@ -3920,6 +4210,7 @@ export class WebGpuBackend implements RenderBackend {
       // `instanceof DataTexture` erases the generic, widening `format` to `any`;
       // the class invariant guarantees it is a `DataTextureFormat`.
       const format: DataTextureFormat = texture.format;
+
       return dataTextureBytesPerPixel(format);
     }
 
@@ -4123,8 +4414,7 @@ interface WebGpuDataTextureFormatInfo {
  * kinds qualify; an image, bitmap or video frame does not.
  */
 const isCanvasTextureSource = (source: TextureSource): source is HTMLCanvasElement | OffscreenCanvas =>
-  (typeof HTMLCanvasElement !== 'undefined' && source instanceof HTMLCanvasElement) ||
-  (typeof OffscreenCanvas !== 'undefined' && source instanceof OffscreenCanvas);
+  hasDomBrand(source, 'HTMLCanvasElement') || hasDomBrand(source, 'OffscreenCanvas');
 
 /**
  * Map a {@link RenderTexture} color format to its WebGPU render-target format.

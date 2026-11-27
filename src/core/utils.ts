@@ -1,5 +1,6 @@
 import { Size } from '#math/Size';
 import type { PlatformEvent } from '#platform/PlatformAdapter';
+import { hasDomBrand } from '#platform/RenderSurface';
 
 import type { TextureSource } from './types';
 
@@ -11,6 +12,7 @@ interface CanvasSourceWithDisplaySize {
 }
 
 const codecNotSupportedPattern = /^no$/;
+const svgNamespace = 'http://www.w3.org/2000/svg';
 
 let internalAudioElement: HTMLAudioElement | null = null;
 let internalCanvasElement: HTMLCanvasElement | null = null;
@@ -97,7 +99,9 @@ export const supportsPointerEvents: boolean = typeof PointerEvent !== 'undefined
  * @param userAgent - The UA string to classify.
  */
 export const isWebKitUserAgent = (userAgent: string): boolean =>
-  userAgent.includes('AppleWebKit') && userAgent.includes('Safari/') && !['Chrome', 'Chromium', 'Edg/'].some(token => userAgent.includes(token));
+  userAgent.includes('AppleWebKit') &&
+  userAgent.includes('Safari/') &&
+  !['Chrome', 'Chromium', 'Edg/'].some(token => userAgent.includes(token));
 
 /**
  * Lazy-cached probe for the third `EventListenerOptions` argument to
@@ -153,6 +157,7 @@ export const vibrate = (pattern: VibratePattern): boolean => {
   if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') {
     return false;
   }
+
   return navigator.vibrate(pattern);
 };
 
@@ -186,7 +191,8 @@ export const removeArrayItems = <T = unknown>(array: T[], startIndex: number, am
  * strings as playable on a transient `<audio>` element. Use to gate format
  * selection (e.g. prefer OGG, fall back to MP3).
  */
-export const supportsCodec = (...codecs: string[]): boolean => codecs.some(codec => getAudioElement().canPlayType(codec).replace(codecNotSupportedPattern, ''));
+export const supportsCodec = (...codecs: string[]): boolean =>
+  codecs.some(codec => getAudioElement().canPlayType(codec).replace(codecNotSupportedPattern, ''));
 
 /**
  * Resolve the natural pixel dimensions of any `CanvasImageSource`. Returns
@@ -196,19 +202,16 @@ export const supportsCodec = (...codecs: string[]): boolean => codecs.some(codec
 export const getCanvasSourceSize = (source: CanvasImageSource): Size => {
   const dynamicSource = source as CanvasSourceWithDisplaySize;
 
-  // The `instanceof` checks are guarded on the constructor rather than written
-  // bare: a worker realm defines none of the document element types, and an
-  // unguarded reference to one is a ReferenceError, not a `false`.
-  if (typeof HTMLImageElement !== 'undefined' && source instanceof HTMLImageElement) {
+  if (hasDomBrand(source, 'HTMLImageElement')) {
     return Size.temp.set(source.naturalWidth, source.naturalHeight);
   }
 
-  if (typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement) {
+  if (hasDomBrand(source, 'HTMLVideoElement')) {
     return Size.temp.set(source.videoWidth, source.videoHeight);
   }
 
-  if (typeof SVGElement !== 'undefined' && source instanceof SVGElement) {
-    return Size.temp.copy(source.getBoundingClientRect());
+  if ((source as Partial<Element>).namespaceURI === svgNamespace) {
+    return Size.temp.copy((source as SVGElement).getBoundingClientRect());
   }
 
   if (typeof dynamicSource.displayWidth === 'number' && typeof dynamicSource.displayHeight === 'number') {

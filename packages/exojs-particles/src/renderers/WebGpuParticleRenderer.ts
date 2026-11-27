@@ -7,7 +7,7 @@ import { isSampleableTexture } from '@codexo/exojs/renderer-sdk';
 import { Texture } from '@codexo/exojs/renderer-sdk';
 import { AbstractWebGpuRenderer } from '@codexo/exojs/renderer-sdk';
 import { getWebGpuBlendState } from '@codexo/exojs/renderer-sdk';
-import { stencilContentDepthStencilState } from '@codexo/exojs/renderer-sdk';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleSystem } from '#ParticleSystem';
 import { assertVertexGeometryCompatible } from '#renderModes/ParticleBufferLayout';
@@ -58,7 +58,9 @@ const resolveVertexFormat = (attribute: GeometryAttribute): GPUVertexFormat => {
   const format = vertexFormatsByKey[`${normalized ? 'n' : ''}${attribute.type}x${attribute.size}`];
 
   if (format === undefined) {
-    throw new Error(`WebGpuParticleRenderer: attribute "${attribute.name}" (${attribute.type} x${attribute.size}) has no WebGPU vertex format.`);
+    throw new Error(
+      `WebGpuParticleRenderer: attribute "${attribute.name}" (${attribute.type} x${attribute.size}) has no WebGPU vertex format.`,
+    );
   }
 
   return format;
@@ -83,9 +85,10 @@ interface ParticleModeResources {
   readonly topology: GPUPrimitiveTopology;
   readonly stripIndexFormat: GPUIndexFormat | undefined;
   readonly indexBuffer: GPUBuffer | null;
+  readonly indexData: Uint8Array | null;
   readonly indexFormat: GPUIndexFormat;
   /** Indices (or vertices, when the geometry carries none) per drawn element. */
-  readonly indexCount: number;
+  indexCount: number;
   readonly instanced: boolean;
   readonly pipelines: Map<string, GPURenderPipeline>;
   vertexBuffer: GPUBuffer | null;
@@ -151,6 +154,13 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
   private _device: GPUDevice | null = null;
   private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
   private _textureBindGroupLayout: GPUBindGroupLayout | null = null;
+  /**
+   * Texture bind groups by resolved view and then sampler. The view can be
+   * replaced by an upload on any `getTextureBinding` call, so it is the key
+   * rather than the texture; weak keys let a replaced view collect instead of
+   * pinning every texture ever drawn.
+   */
+  private readonly _textureBindGroups = new WeakMap<GPUTextureView, WeakMap<GPUSampler, GPUBindGroup>>();
   private _pipelineLayout: GPUPipelineLayout | null = null;
   private _uniformBuffer: GPUBuffer | null = null;
   private _uniformBindGroup: GPUBindGroup | null = null;
@@ -192,19 +202,21 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       return;
     }
 
-    backend.setBlendMode(system.blendMode);
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? system.blendMode;
+
+    backend.setBlendMode(blendMode);
     const drawCallIndex = this._drawCallCount++;
     const drawCall = this._drawCalls[drawCallIndex];
 
     if (drawCall) {
       drawCall.system = system;
       drawCall.texture = texture;
-      drawCall.blendMode = system.blendMode;
+      drawCall.blendMode = blendMode;
     } else {
       this._drawCalls.push({
         system,
         texture,
-        blendMode: system.blendMode,
+        blendMode,
       });
     }
   }
@@ -232,7 +244,9 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         backend.passCoordinator.acquirePass();
         backend.passCoordinator.endPass();
       }
+
       this._drawCallCount = 0;
+
       return;
     }
 
@@ -324,6 +338,31 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     this._drawCallCount = 0;
   }
 
+  /** The bind group for one resolved (view, sampler) pair, created once. */
+  private _textureBindGroup(device: GPUDevice, view: GPUTextureView, sampler: GPUSampler): GPUBindGroup {
+    let bySampler = this._textureBindGroups.get(view);
+
+    if (bySampler === undefined) {
+      bySampler = new WeakMap();
+      this._textureBindGroups.set(view, bySampler);
+    }
+
+    let bindGroup = bySampler.get(sampler);
+
+    if (bindGroup === undefined) {
+      bindGroup = device.createBindGroup({
+        layout: this._textureBindGroupLayout!,
+        entries: [
+          { binding: 0, resource: view },
+          { binding: 1, resource: sampler },
+        ],
+      });
+      bySampler.set(sampler, bindGroup);
+    }
+
+    return bindGroup;
+  }
+
   /**
    * Append one system's draw at the open pass's cursors and record it, leaving
    * the pass open. Ends (submits) the pass first only where appending cannot
@@ -383,26 +422,16 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     // Sized to the pre-split pass totals, not to what remains after it.
     this._ensureUniformCapacity(device, targetUniformSlots);
 
-    const pipeline = this._getPipeline(resources, drawCall.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+    const pipeline = this._getPipeline(resources, drawCall.blendMode, backend.renderTargetFormat, coordinator.stencilMode);
     const textureBinding = backend.getTextureBinding(drawCall.texture, mode.material.sampler);
-    const textureBindGroup = device.createBindGroup({
-      layout: this._textureBindGroupLayout!,
-      entries: [
-        {
-          binding: 0,
-          resource: textureBinding.view,
-        },
-        {
-          binding: 1,
-          resource: textureBinding.sampler,
-        },
-      ],
-    });
+    const textureBindGroup = this._textureBindGroup(device, textureBinding.view, textureBinding.sampler);
 
     this._writeUniformData(backend, system, drawCall.texture);
 
     const vertexBuffer =
-      gpuState !== null ? gpuState.instanceBuffer : this._uploadModeData(device, resources, mode, targetVertexBytes, vertexByteOffset, drawCount);
+      gpuState !== null
+        ? gpuState.instanceBuffer
+        : this._uploadModeData(device, resources, mode, targetVertexBytes, vertexByteOffset, drawCount);
 
     device.queue.writeBuffer(
       this._uniformBuffer!,
@@ -589,11 +618,12 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     // both on its layout instead.
     const indices = meshGeometry !== null ? meshGeometry.indices : layout.indices;
     let indexBuffer: GPUBuffer | null = null;
+    let indexData: Uint8Array | null = null;
 
     if (indices !== null) {
       // Padded to a 4-byte multiple, which `queue.writeBuffer` requires and a
       // 16-bit index list of odd length does not satisfy on its own.
-      const indexData = new Uint8Array(Math.ceil(indices.byteLength / 4) * 4);
+      indexData = new Uint8Array(Math.ceil(indices.byteLength / 4) * 4);
 
       indexData.set(new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength));
 
@@ -631,7 +661,13 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         size: Math.ceil(meshData.byteLength / 4) * 4,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
-      device.queue.writeBuffer(meshBuffer, 0, meshData instanceof Float32Array ? meshData.buffer : meshData, 0, meshData.byteLength);
+      device.queue.writeBuffer(
+        meshBuffer,
+        0,
+        meshData instanceof Float32Array ? meshData.buffer : meshData,
+        meshData instanceof Float32Array ? meshData.byteOffset : 0,
+        meshData.byteLength,
+      );
     }
 
     return {
@@ -655,6 +691,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       // Required by WebGPU for indexed strip draws, and forbidden otherwise.
       stripIndexFormat: indexedStrip ? indexFormat : undefined,
       indexBuffer,
+      indexData,
       indexFormat,
       indexCount: meshGeometry !== null ? meshGeometry.indexCount : layout.indexCount,
       instanced: mode.instanced,
@@ -679,8 +716,33 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
     const meshData = meshGeometry.vertexData;
 
+    if (meshData.byteLength > resources.meshBuffer.size) {
+      const grown = device.createBuffer({
+        size: Math.ceil(meshData.byteLength / 4) * 4,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+
+      resources.meshBuffer.destroy();
+      resources.meshBuffer = grown;
+    }
+
+    device.queue.writeBuffer(
+      resources.meshBuffer,
+      0,
+      meshData instanceof Float32Array ? meshData.buffer : meshData,
+      meshData instanceof Float32Array ? meshData.byteOffset : 0,
+      meshData.byteLength,
+    );
+
+    const indices = meshGeometry.indices;
+
+    if (indices !== null && resources.indexBuffer !== null && resources.indexData !== null) {
+      resources.indexData.set(new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength));
+      device.queue.writeBuffer(resources.indexBuffer, 0, resources.indexData.buffer, 0, resources.indexData.byteLength);
+    }
+
+    resources.indexCount = meshGeometry.indexCount;
     resources.meshVersion = meshGeometry.version;
-    device.queue.writeBuffer(resources.meshBuffer, 0, meshData instanceof Float32Array ? meshData.buffer : meshData, 0, meshData.byteLength);
   }
 
   private _destroyResources(resources: ParticleModeResources): void {
@@ -840,8 +902,13 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     u[43] = uvMaxY;
   }
 
-  private _getPipeline(resources: ParticleModeResources, blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const pipelineKey = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
+  private _getPipeline(
+    resources: ParticleModeResources,
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil: WebGpuStencilMode,
+  ): GPURenderPipeline {
+    const pipelineKey = `${blendMode}:${format}:${stencil}`;
     const existingPipeline = resources.pipelines.get(pipelineKey);
 
     if (existingPipeline) {
@@ -876,8 +943,8 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
           : { topology: resources.topology, stripIndexFormat: resources.stripIndexFormat },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = this._device!.createRenderPipeline(descriptor);

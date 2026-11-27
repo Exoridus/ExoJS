@@ -2,7 +2,7 @@ import { packedGroupChanged } from '#rendering/affinePacking';
 import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
-import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
+import { computeShaderOffset, computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
@@ -46,8 +46,14 @@ const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 // ---------------------------------------------------------------------------
 
 const repeatModeToWrap = (mode: RepeatMode): WrapModes => {
-  if (mode === 'repeat') return WrapModes.Repeat;
-  if (mode === 'mirror-repeat') return WrapModes.MirroredRepeat;
+  if (mode === 'repeat') {
+    return WrapModes.Repeat;
+  }
+
+  if (mode === 'mirror-repeat') {
+    return WrapModes.MirroredRepeat;
+  }
+
   return WrapModes.ClampToEdge;
 };
 
@@ -63,7 +69,10 @@ interface RendererConnection {
 }
 
 /** Shared geometry batches for scalable sprites, with a separate whole-texture repeating path. @internal */
-export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSliceSprite | RepeatingSprite> implements WebGl2RetainedBatchReplayer {
+export class WebGl2ScalableSpriteRenderer
+  extends AbstractWebGl2Renderer<NineSliceSprite | RepeatingSprite>
+  implements WebGl2RetainedBatchReplayer
+{
   /**
    * NineSlice and atlas repeating geometry share the retained instance layout.
    * Whole-texture repeating uses a distinct stride and sampler state, so it
@@ -137,6 +146,7 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
 
   private readonly _transformUnitScratch = new Int32Array([transformTextureUnit]);
   private readonly _textureUnitScratch = new Int32Array([0]);
+  private readonly _premultiplySampleScratch = new Int32Array(1);
   private _shaderView: unknown = null;
   private _shaderViewId = -1;
   private _geoView: unknown = null;
@@ -189,7 +199,9 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
 
       const geometryOverflow = repeating === null && this._geoQuadCount + sprite.quads.length > this._batchSize;
 
-      if (pathChanged || texChanged || blendChanged || modeChanged || geometryOverflow) {
+      const shaderOverflow = strategy === 'shader' && this._shaderQuadCount >= this._batchSize;
+
+      if (pathChanged || texChanged || blendChanged || modeChanged || geometryOverflow || shaderOverflow) {
         this.flush();
       }
     }
@@ -251,16 +263,12 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
 
     const tilingX = computeShaderTiling(srcW, destW, sprite.modeX, sprite.fitX);
     const tilingY = computeShaderTiling(srcH, destH, sprite.modeY, sprite.fitY);
-    const offsetU = sprite.offsetX / (srcW > 0 ? srcW : 1);
-    const offsetV = sprite.offsetY / (srcH > 0 ? srcH : 1);
+    const offsetU = computeShaderOffset(srcW, sprite.offsetX, sprite.modeX);
+    const offsetV = computeShaderOffset(srcH, sprite.offsetY, sprite.modeY);
 
     // When flipY, negate tilingY and start from tilingY so V runs top→bottom.
     const uvParamY = flipY ? -tilingY : tilingY;
     const uvParamW = flipY ? tilingY + offsetV : offsetV;
-
-    if (this._shaderQuadCount >= this._batchSize) {
-      this.flush();
-    }
 
     const idx = this._shaderQuadCount * shaderWordsPerInstance;
     const f32 = this._shaderF32;
@@ -308,6 +316,7 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
         if (nodeIndex > this._maxNodeIndex) {
           this._maxNodeIndex = nodeIndex;
         }
+
         continue;
       }
 
@@ -355,6 +364,7 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
 
     if (backend === null) {
       this._resetBatchState();
+
       return;
     }
 
@@ -375,13 +385,19 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
     const groupTransform = backend.renderGroupTransform;
     const groupData = groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3;
 
-    if (this._shaderPathShader.uniforms.has('u_group') && (!this._hasWrittenShaderGroup || packedGroupChanged(groupData, this._writtenShaderGroupData, 0))) {
+    if (
+      this._shaderPathShader.uniforms.has('u_group') &&
+      (!this._hasWrittenShaderGroup || packedGroupChanged(groupData, this._writtenShaderGroupData, 0))
+    ) {
       this._shaderPathShader.getUniform('u_group').setValue(groupData);
       this._writtenShaderGroupData.set(groupData);
       this._hasWrittenShaderGroup = true;
     }
 
-    if (this._geoPathShader.uniforms.has('u_group') && (!this._hasWrittenGeoGroup || packedGroupChanged(groupData, this._writtenGeoGroupData, 0))) {
+    if (
+      this._geoPathShader.uniforms.has('u_group') &&
+      (!this._hasWrittenGeoGroup || packedGroupChanged(groupData, this._writtenGeoGroupData, 0))
+    ) {
       this._geoPathShader.getUniform('u_group').setValue(groupData);
       this._writtenGeoGroupData.set(groupData);
       this._hasWrittenGeoGroup = true;
@@ -408,7 +424,9 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
     const buf = this._shaderBuf;
     const vao = this._shaderVao;
 
-    if (!conn || !buf || !vao || this._shaderQuadCount === 0) return;
+    if (!conn || !buf || !vao || this._shaderQuadCount === 0) {
+      return;
+    }
 
     const gl = conn.gl;
     const texture = this._currentTexture;
@@ -425,6 +443,8 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
     backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
     this._shaderPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
     this._shaderPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    this._premultiplySampleScratch[0] = texture !== null && backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+    this._shaderPathShader.getUniform('u_premultiplySample').setValue(this._premultiplySampleScratch);
     this._shaderPathShader.sync();
 
     backend.bindVertexArrayObject(vao);
@@ -434,8 +454,7 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Unbind sampler so subsequent draws use the texture's own wrap params.
-    gl.bindSampler(0, null);
+    backend.unbindMaterialSampler(0);
 
     this._shaderQuadCount = 0;
   }
@@ -445,13 +464,18 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
     const buf = this._geoBuf;
     const vao = this._geoVao;
 
-    if (!conn || !buf || !vao || this._geoQuadCount === 0) return;
+    if (!conn || !buf || !vao || this._geoQuadCount === 0) {
+      return;
+    }
 
-    backend.bindTexture(this._currentTexture, 0);
+    const texture = this._currentTexture;
+    backend.bindTexture(texture, 0);
     backend.setBlendMode(this._currentBlendMode);
     backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
     this._geoPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
     this._geoPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    this._premultiplySampleScratch[0] = texture !== null && backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+    this._geoPathShader.getUniform('u_premultiplySample').setValue(this._premultiplySampleScratch);
     this._geoPathShader.sync();
 
     backend.bindVertexArrayObject(vao);
@@ -573,7 +597,8 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
     this._stageGeoReplayUniforms(backend);
 
     // In-bounds: the geometry path records exactly one base texture (slot 0).
-    backend.bindTexture(payload.textures[0]!, 0);
+    const texture = payload.textures[0]!;
+    backend.bindTexture(texture, 0);
 
     // The group-owned transform texture replaces the shared frame buffer on the
     // SAME unit/sampler - zero GLSL changes. The next live flush
@@ -582,6 +607,8 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
 
     this._geoPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
     this._geoPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    this._premultiplySampleScratch[0] = backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+    this._geoPathShader.getUniform('u_premultiplySample').setValue(this._premultiplySampleScratch);
     this._geoPathShader.sync();
 
     backend.bindVertexArrayObject(vao);
@@ -636,10 +663,16 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
     // below 0x10000, so three of them pack into one integer below 2^53.
     const key = (wrapS * 0x10000 + wrapT) * 0x10000 + scaleMode;
     const existing = this._samplers.get(key);
-    if (existing !== undefined) return existing;
+
+    if (existing !== undefined) {
+      return existing;
+    }
 
     const sampler = gl.createSampler();
-    if (sampler === null) throw new Error('WebGl2ScalableSpriteRenderer: could not create sampler.');
+
+    if (sampler === null) {
+      throw new Error('WebGl2ScalableSpriteRenderer: could not create sampler.');
+    }
 
     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_S, wrapS);
     gl.samplerParameteri(sampler, gl.TEXTURE_WRAP_T, wrapT);
@@ -647,6 +680,7 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
     gl.samplerParameteri(sampler, gl.TEXTURE_MIN_FILTER, scaleMode);
 
     this._samplers.set(key, sampler);
+
     return sampler;
   }
 
@@ -673,8 +707,26 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
     this._shaderVao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
       .addAttribute(this._shaderBuf, this._shaderPathShader.getAttribute('a_quadBounds'), gl.FLOAT, false, shaderStrideBytes, 0, false, 1)
       .addAttribute(this._shaderBuf, this._shaderPathShader.getAttribute('a_uvParams'), gl.FLOAT, false, shaderStrideBytes, 16, false, 1)
-      .addAttribute(this._shaderBuf, this._shaderPathShader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, shaderStrideBytes, 32, false, 1)
-      .addAttribute(this._shaderBuf, this._shaderPathShader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, shaderStrideBytes, 36, true, 1)
+      .addAttribute(
+        this._shaderBuf,
+        this._shaderPathShader.getAttribute('a_color'),
+        gl.UNSIGNED_BYTE,
+        true,
+        shaderStrideBytes,
+        32,
+        false,
+        1,
+      )
+      .addAttribute(
+        this._shaderBuf,
+        this._shaderPathShader.getAttribute('a_nodeIndex'),
+        gl.UNSIGNED_INT,
+        false,
+        shaderStrideBytes,
+        36,
+        true,
+        1,
+      )
       .connect(this._createVaoRuntime(conn, 'shader'));
 
     // Geometry-path VAO (packed unorm16 UVs, same layout as NineSlice)
@@ -699,6 +751,7 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
         gl.deleteSampler(sampler);
       }
     }
+
     this._samplers.clear();
 
     this._shaderPathShader.destroy();
@@ -745,7 +798,10 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
 
   private _createBufRuntime(conn: RendererConnection, _kind: string): WebGl2RenderBufferRuntime {
     const handle = conn.gl.createBuffer();
-    if (handle === null) throw new Error('WebGl2ScalableSpriteRenderer: could not create render buffer.');
+
+    if (handle === null) {
+      throw new Error('WebGl2ScalableSpriteRenderer: could not create render buffer.');
+    }
 
     return {
       bind: (buffer): void => {
@@ -756,6 +812,7 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
         const state = conn.buffers.get(buffer);
 
         gl.bindBuffer(buffer.type, handle);
+
         if (state && state.dataByteLength >= buffer.uploadByteLength) {
           uploadBufferRange(gl, buffer, offset);
         } else {
@@ -788,14 +845,17 @@ export class WebGl2ScalableSpriteRenderer extends AbstractWebGl2Renderer<NineSli
               attr.buffer.bind();
               lastBuffer = attr.buffer;
             }
+
             if (attr.integer) {
               gl.vertexAttribIPointer(attr.location, attr.size, attr.type, attr.stride, attr.start);
             } else {
               gl.vertexAttribPointer(attr.location, attr.size, attr.type, attr.normalized, attr.stride, attr.start);
             }
+
             gl.enableVertexAttribArray(attr.location);
             gl.vertexAttribDivisor(attr.location, attr.divisor);
           }
+
           appliedVersion = vao.version;
         }
       },

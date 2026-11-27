@@ -8,12 +8,15 @@
 // whichever config file happens to be nearest to it on disk.
 
 import js from '@eslint/js';
+import stylistic from '@stylistic/eslint-plugin';
 import security from 'eslint-plugin-security';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import unusedImports from 'eslint-plugin-unused-imports';
 import unicorn from 'eslint-plugin-unicorn';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+
+import { authoringStyleConfig } from './style.js';
 
 /**
  * The language baseline every ExoJS config starts from: core JavaScript
@@ -35,6 +38,7 @@ export function languageBaselineConfig({ tsconfigRootDir }) {
     // blocks, so the individual profiles carry rules only.
     {
       plugins: {
+        '@stylistic': stylistic,
         'simple-import-sort': simpleImportSort,
         'unused-imports': unusedImports,
         security,
@@ -99,7 +103,10 @@ export function languageBaselineConfig({ tsconfigRootDir }) {
         'getter-return': 'error',
         'no-class-assign': 'error',
         'no-const-assign': 'error',
-        'no-dupe-args': 'error',
+        // ECMAScript modules reject duplicate parameters and octal literals at parse time.
+        // Keep the lint layer for semantics the parser cannot enforce.
+        'no-dupe-args': 'off',
+        'no-octal': 'off',
         'no-dupe-keys': 'error',
         'no-func-assign': 'error',
         'no-import-assign': 'error',
@@ -127,6 +134,7 @@ export function languageBaselineConfig({ tsconfigRootDir }) {
  */
 export function nodeToolingConfig({ files }) {
   return [
+    ...authoringStyleConfig({ files }),
     {
       files,
       ...tseslint.configs.disableTypeChecked,

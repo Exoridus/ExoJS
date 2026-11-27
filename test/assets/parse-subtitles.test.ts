@@ -11,6 +11,7 @@ import { parseSubtitles, subtitleFormatOf } from '#assets/factories/parseSubtitl
 class MockVTTCue {
   public vertical: '' | 'rl' | 'lr' = '';
   public line: number | 'auto' = 'auto';
+  public snapToLines = true;
   public lineAlign: 'start' | 'center' | 'end' = 'start';
   public position: number | 'auto' = 'auto';
   public positionAlign: 'auto' | 'line-left' | 'center' | 'line-right' = 'auto';
@@ -76,7 +77,31 @@ Second cue`;
 
       expect(cues[1]!.align).toBe('end');
       expect(cues[1]!.line).toBe(10);
+      expect(cues[1]!.snapToLines).toBe(false);
       expect(cues[1]!.lineAlign).toBe('start');
+    });
+
+    test.each([0, 12.5, 80, 100])('uses percentage positioning for line:%s', line => {
+      const [cue] = parseSubtitles({ fmt: 'vtt', text: `WEBVTT\n\n00:00:01.000 --> 00:00:02.000 line:${line}%,center\nText` });
+
+      expect(cue!.line).toBe(line);
+      expect(cue!.snapToLines).toBe(false);
+      expect(cue!.lineAlign).toBe('center');
+    });
+
+    test.each([3, -2, 1.5])('uses line counting for a bare line:%s after a percentage', line => {
+      const [cue] = parseSubtitles({ fmt: 'vtt', text: `WEBVTT\n\n00:00:01.000 --> 00:00:02.000 line:80% line:${line},end\nText` });
+
+      expect(cue!.line).toBe(line);
+      expect(cue!.snapToLines).toBe(true);
+      expect(cue!.lineAlign).toBe('end');
+    });
+
+    test.each(['', 'line:auto'])('preserves default line positioning with settings "%s"', settings => {
+      const [cue] = parseSubtitles({ fmt: 'vtt', text: `WEBVTT\n\n00:00:01.000 --> 00:00:02.000 ${settings}\nText` });
+
+      expect(cue!.line).toBe('auto');
+      expect(cue!.snapToLines).toBe(true);
     });
 
     test('ignores unknown or malformed settings tokens without throwing', () => {
@@ -221,6 +246,7 @@ spanning two lines`;
       expect(cues[0]!.endTime).toBe(2.5);
       expect(cues[0]!.text).toBe('Hello there');
       expect(cues[1]!.text).toBe('Second cue\nspanning two lines');
+      expect(cues.every(cue => cue.line === 'auto' && cue.snapToLines)).toBe(true);
     });
 
     test('handles blocks without a leading numeric index', () => {

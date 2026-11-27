@@ -1,6 +1,6 @@
 import type { RenderingContext } from '@codexo/exojs';
 import { Color, getAudioContext, Graphics, Scene, Text } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 
 const BAR_COUNT = 32;
 
@@ -28,7 +28,10 @@ export class AudioReactiveScene extends Scene {
     this.addChild(this._bars);
 
     const onTap = (): void => {
-      if (this._started) return;
+      if (this._started) {
+        return;
+      }
+
       this._started = true;
       this._prompt.visible = false;
 

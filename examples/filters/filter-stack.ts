@@ -9,9 +9,10 @@ import {
   ShaderFilter,
   Sprite,
 } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, mountControls, toggle } from '@examples/runtime';
 
-const PRIMARY_RAMP = assets.technical.color.primaryRamp;
+const PRIMARY_RAMP = assets.primaryRamp;
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; in vec2 vUv; out vec4 fragColor;
@@ -26,7 +27,7 @@ class FilterStackScene extends Scene {
   // The filter chain is applied in this fixed order; each entry can be toggled.
   private active = { blur: true, tint: true, custom: true };
   private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
     const app = this.app;
@@ -36,9 +37,9 @@ class FilterStackScene extends Scene {
       .setAnchor(0.5)
       .setScale(4)
       .setPosition(width / 2, height / 2);
-    this.blur = new BlurFilter({ strength: 2 });
-    this.tint = new ColorMatrixFilter().tint(new Color(140, 210, 255));
-    this.custom = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
+    this.blur = this.track(new BlurFilter({ strength: 2 }));
+    this.tint = this.track(new ColorMatrixFilter().tint(new Color(140, 210, 255)));
+    this.custom = this.track(new ShaderFilter({ glsl: { fragment: glsl }, wgsl }));
     this.rebuild();
 
     this.hud = mountControls({
@@ -48,28 +49,16 @@ class FilterStackScene extends Scene {
       hint: 'Filters compose in order: Blur → Tint → Custom. Toggle any subset.',
     });
 
-    this.panel = mountControlPanel({ title: 'Layers' });
-    this.panel.addToggle({
-      label: 'Blur',
-      value: this.active.blur,
-      onChange: on => {
-        this.active.blur = on;
-        this.rebuild();
+    this.panel = demoPanel({
+      scene: this,
+      title: 'Layers',
+      controls: {
+        blur: toggle('Blur', this.active.blur),
+        tint: toggle('Tint', this.active.tint),
+        custom: toggle('Custom', this.active.custom),
       },
-    });
-    this.panel.addToggle({
-      label: 'Tint',
-      value: this.active.tint,
-      onChange: on => {
-        this.active.tint = on;
-        this.rebuild();
-      },
-    });
-    this.panel.addToggle({
-      label: 'Custom',
-      value: this.active.custom,
-      onChange: on => {
-        this.active.custom = on;
+      onChange: (_key, _value, values) => {
+        this.active = { ...values };
         this.rebuild();
       },
     });
@@ -78,9 +67,17 @@ class FilterStackScene extends Scene {
   private rebuild(): void {
     const filters = [];
 
-    if (this.active.blur) filters.push(this.blur);
-    if (this.active.tint) filters.push(this.tint);
-    if (this.active.custom) filters.push(this.custom);
+    if (this.active.blur) {
+      filters.push(this.blur);
+    }
+
+    if (this.active.tint) {
+      filters.push(this.tint);
+    }
+
+    if (this.active.custom) {
+      filters.push(this.custom);
+    }
 
     this.sprite.filters = filters;
     this.hud?.setStatus(this.statusText());

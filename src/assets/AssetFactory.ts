@@ -12,11 +12,12 @@ import type { LoaderScope } from './LoaderScope';
  * deduplicated font itself has.
  *
  * It is deliberately narrower than the scope backing it: a factory may acquire
- * dependencies, but not release them, tear the scope down, or unpack a
- * container into it. Those decisions belong to whoever owns the resource.
+ * dependencies, but not release them, tear the scope down, open a child scope,
+ * or unpack a container into it. Those decisions belong to whoever owns the
+ * resource.
  * @advanced
  */
-export type AssetDependencyScope = Pick<LoaderScope, 'get' | 'load' | 'createScope'>;
+export type AssetDependencyScope = Pick<LoaderScope, 'get' | 'load'>;
 
 /**
  * What a factory is told about the one resource it is building.
@@ -45,6 +46,8 @@ export interface AssetFactoryContext<Options = undefined> {
    * A reference the asset itself carries - a font's page image, an atlas's
    * sheet - is relative to this, not to the resolved URL: resolving it here and
    * loading the result would apply the loader's base path to it a second time.
+   * Empty for a descriptor whose source is not a string: such a source is the
+   * factory's first argument, and there is no locator to resolve against.
    */
   readonly source: string;
   /** The canonical locator the source data was acquired from. */
@@ -85,7 +88,20 @@ export interface AssetFactory<Source, Resource, Options = undefined> {
    * `document.fonts`, a GPU buffer, a worker. A decoded `AudioBuffer`, a parsed
    * object or a compiled `WebAssembly.Module` needs nothing.
    *
+   * For a locator-backed asset with a seamless leaf, eviction passes the handle
+   * consumers hold while it still carries its payload. Its load state is already
+   * re-armed, so a synchronous claim observes a fresh load cycle; the leaf's
+   * `evict` runs right after and preserves that cycle's pending promise.
+   * The handle outlives the eviction and is filled again by the next
+   * claim, so free only what it holds - never destroy the handle itself. A direct
+   * request passes the original factory result and has no handle to refill. A
+   * result that never reached a consumer (its load was cancelled or unloaded
+   * while in flight) is passed here as well, so the same code has to be safe
+   * for both.
+   *
    * Must be synchronous, and must tolerate a resource that was already released.
+   * A disposer that throws during an eviction is logged, and the eviction
+   * completes regardless.
    */
   dispose?(resource: Resource): void;
   /**

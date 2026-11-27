@@ -111,6 +111,7 @@ const loadApplicationHarness = async (
     update: vi.fn(),
     change: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
+    _dispose: vi.fn().mockResolvedValue(undefined),
   };
   const inputSystem = {
     update: vi.fn(),
@@ -253,6 +254,7 @@ describe('Application', () => {
     rawApp['systems'] = systems;
     rawApp['scenes'] = sceneDirector;
     rawApp['input'] = { _prepareFrame: vi.fn(), _finishInteractionFrame: vi.fn() };
+    rawApp['_inputTickClock'] = { open: vi.fn(), close: vi.fn(), retire: vi.fn() };
     rawApp['interaction'] = { _prepareFrame: vi.fn() };
     rawApp['_audio'] = { _prepareFrame: vi.fn() };
     rawApp['tweens'] = { _prepareFrame: vi.fn() };
@@ -365,6 +367,38 @@ describe('Application', () => {
       expect(webglManager.initialize).toHaveBeenCalledTimes(1);
       expect(sceneDirector.change).toHaveBeenCalledTimes(1);
       expect(app.backend).toBe(webglManager);
+    } finally {
+      restoreGpu();
+      rafSpy.mockRestore();
+    }
+  });
+
+  test('auto backend does not create a fallback after destroy while WebGPU initializes', async () => {
+    const restoreGpu = setNavigatorGpu({});
+    let failInitialize: (error: Error) => void = () => {};
+    const webgpuInitialize = vi.fn(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          failInitialize = reject;
+        }),
+    );
+    const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+
+    try {
+      const { Application, ApplicationState, BackendMock, sceneDirector } = await loadApplicationHarness({ webgpuInitialize });
+      const app = new Application({ backend: { type: 'auto' } });
+      const startPromise = app.start(DummyScene).catch(() => undefined);
+
+      await app.destroy();
+
+      failInitialize(new Error('late WebGPU initialization failure'));
+
+      await startPromise;
+
+      expect(app.state).toBe(ApplicationState.Destroyed);
+      expect(BackendMock).not.toHaveBeenCalled();
+      expect(sceneDirector.change).not.toHaveBeenCalled();
+      expect(rafSpy).not.toHaveBeenCalled();
     } finally {
       restoreGpu();
       rafSpy.mockRestore();
@@ -622,6 +656,10 @@ describe('Application', () => {
     rawApp['platform'] = { now: () => 0, requestFrame: vi.fn().mockReturnValue(99), cancelFrame: cancelSpy };
     rawApp['_state'] = ApplicationState.Running;
     rawApp['scenes'] = sceneDirector;
+    rawApp['_inputTickClock'] = { open: vi.fn(), close: vi.fn(), retire: vi.fn() };
+    const errors = { report: vi.fn() };
+
+    rawApp['_errors'] = errors;
 
     // A real scheduler rather than a double: this spec is about `stop()`
     // reaching the pending frame request and both running clocks, which are
@@ -643,6 +681,7 @@ describe('Application', () => {
     expect(activeClockStop).toHaveBeenCalledTimes(1);
     expect(frameClockStop).toHaveBeenCalledTimes(1);
     expect(app.state).toBe(ApplicationState.Stopped);
+    expect(errors.report).toHaveBeenCalledWith(sceneTeardownError, false, true);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       '%c[ExoJS][Application]',
       expect.stringContaining('color'),

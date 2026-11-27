@@ -9,15 +9,14 @@ const createAttributes = (): readonly GeometryAttribute[] => [
 
 const createVertexData = (): Float32Array => new Float32Array([-10, -20, 0, 0, 30, -20, 1, 0, 30, 50, 1, 1, -10, 50, 0, 1]);
 
-const createGeometry = (options: Partial<GeometryOptions> = {}): Geometry => {
-  return new Geometry({
+const createGeometry = (options: Partial<GeometryOptions> = {}): Geometry =>
+  new Geometry({
     attributes: createAttributes(),
     vertexData: createVertexData(),
     stride: 16,
     indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
     ...options,
   });
-};
 
 describe('Geometry', () => {
   test('defaults usage to static', () => {
@@ -125,6 +124,21 @@ describe('Geometry', () => {
         attributes: [{ name: 'a_uv', size: 2, type: 'f32', normalized: false, offset: 0 }],
       }),
     ).toThrow(/requires a position attribute/);
+  });
+
+  test('a detached dispose callback is not run by destroy', () => {
+    const geometry = createGeometry();
+    const kept = vi.fn();
+    const detached = vi.fn();
+
+    geometry._onDispose(kept);
+    geometry._onDispose(detached);
+    geometry._offDispose(detached);
+
+    geometry.destroy();
+
+    expect(kept).toHaveBeenCalledTimes(1);
+    expect(detached).not.toHaveBeenCalled();
   });
 
   test('destroy runs registered dispose callbacks once', () => {

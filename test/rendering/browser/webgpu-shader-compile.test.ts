@@ -41,6 +41,7 @@ import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { crtShader } from '#rendering/filters/CrtFilter';
 import { displacementShader } from '#rendering/filters/DisplacementFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
@@ -52,10 +53,16 @@ import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/
 import { instancedMeshShaderSource, meshShaderSource } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { outputPassShaderSource } from '#rendering/webgpu/WebGpuOutputPass';
 import { scalableSpriteShaderSource } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
-import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import {
+  buildPersistentSpriteShaderSource,
+  buildSpriteShaderSource,
+  spriteBatchTextureSlotTiers,
+} from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
+import { textureNormalizeWgsl } from '#rendering/webgpu/WebGpuTextureNormalizer';
 
+import { galleryDissolveShader } from '../../../examples/shared/gallery-transitions';
 import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
 import { transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
@@ -70,9 +77,11 @@ interface ShaderEntry {
 // the composition is the only whole program there is to compile.
 const composedCascade = transportCascadeShader(cascadeUniforms);
 const composedGather = transportGatherShader(gatherUniforms);
+const composedNormalGather = transportGatherShader(gatherUniforms, true);
 
 const shaders: readonly ShaderEntry[] = [
   { name: 'WebGpuBackend mipmap pipeline', source: mipmapWgsl },
+  { name: 'WebGpuTextureNormalizer', source: textureNormalizeWgsl },
   { name: 'WebGpuBackdropBlendCompositor', source: backdropBlendCompositorWgsl },
   { name: 'WebGpuMaskCompositor', source: maskCompositorWgsl },
   { name: 'WebGpuMeshRenderer (default)', source: meshShaderSource },
@@ -83,7 +92,10 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'WebGpuScalableSpriteRenderer (combined)', source: scalableSpriteShaderSource },
   // The sprite shader is generated per slot tier from the device limits
   // Every tier that can ever ship is compiled here.
-  ...spriteBatchTextureSlotTiers.map(tier => ({ name: `WebGpuSpriteRenderer (${tier} texture slots)`, source: buildSpriteShaderSource(tier) })),
+  ...spriteBatchTextureSlotTiers.map(tier => ({
+    name: `WebGpuSpriteRenderer (${tier} texture slots)`,
+    source: buildSpriteShaderSource(tier),
+  })),
   // The persistent-indexed variant is generated for the same tiers: same
   // fragment stage and same shared vertex core, fed from slot-addressed storage.
   ...spriteBatchTextureSlotTiers.map(tier => ({
@@ -99,7 +111,9 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'BloomFilter (generated uniform block)', source: bloomThresholdShader._resolveWgsl(filterUniformGroup)! },
   { name: 'BlurFilter (generated uniform block)', source: blurShader._resolveWgsl(filterUniformGroup)! },
   { name: 'ColorMatrixFilter (generated uniform block)', source: colorMatrixShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'CrtFilter (generated uniform block)', source: crtShader._resolveWgsl(filterUniformGroup)! },
   { name: 'DropShadowFilter (generated uniform block)', source: dropShadowShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'transition gallery dissolve (generated uniform block)', source: galleryDissolveShader._resolveWgsl(filterUniformGroup)! },
   { name: 'DisplacementFilter (generated uniform block)', source: displacementShader._resolveWgsl(filterUniformGroup)! },
   { name: 'LutFilter 3D (generated uniform block)', source: lut3dShaderSource._resolveWgsl(filterUniformGroup)! },
   { name: 'LutFilter 1D (generated uniform block)', source: lutRgb1dShaderSource._resolveWgsl(filterUniformGroup)! },
@@ -108,12 +122,17 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'lighting shadow march (generated uniform block)', source: shadowMarchShader._resolveWgsl(filterUniformGroup)! },
   { name: 'lighting radiance cascade (composed, generated uniform block)', source: composedCascade._resolveWgsl(filterUniformGroup)! },
   { name: 'lighting radiance gather (composed, generated uniform block)', source: composedGather._resolveWgsl(filterUniformGroup)! },
+  {
+    name: 'lighting radiance gather with normals (composed, generated uniform block)',
+    source: composedNormalGather._resolveWgsl(filterUniformGroup)!,
+  },
 ];
 
 // On the software (SwiftShader) adapter the WebGPU device can drop
 // mid-test; treat that as an unavailable-adapter skip rather than a failure,
 // matching every other WebGPU browser spec in this directory.
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const requestTestDevice = async (): Promise<GPUDevice> => {
   const adapter = await navigator.gpu.requestAdapter();

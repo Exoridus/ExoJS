@@ -1,12 +1,14 @@
 ---
-import { getCollection } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
+import { getCollection } from 'astro:content';
+
 import ApiSymbolPage from '../../../components/pages/ApiSymbolPage.astro';
 
-export async function getStaticPaths() {
-    const apiEntries = await getCollection('api');
-    return apiEntries.map((entry: CollectionEntry<'api'>) => ({ params: { symbol: entry.id } }));
-}
+export const getStaticPaths = async () => {
+  const apiEntries = await getCollection('api');
+
+  return apiEntries.map((entry: CollectionEntry<'api'>) => ({ params: { symbol: entry.id } }));
+};
 
 const symbol = (Astro.params as Record<string, string | undefined>).symbol ?? '';
 ---

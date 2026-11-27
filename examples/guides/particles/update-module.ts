@@ -1,4 +1,4 @@
-import { type ParticleBatch, UpdateModule } from '@codexo/exojs-particles';
+import { type ParticleBatch, UpdateModule } from '@codexo/exojs/particles';
 
 // #region guide:sway-module
 class Sway extends UpdateModule {

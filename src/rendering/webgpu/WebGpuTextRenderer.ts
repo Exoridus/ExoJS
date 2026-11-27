@@ -34,26 +34,17 @@ import {
 } from './retainedGroupResources';
 import textShaderTemplate from './shaders/text.wgsl';
 import { packSnapViewport } from './snapViewport';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import { type WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
 import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 
-// ── Node data layout (identical to WebGl2TextRenderer) ───────────────────────
+// ── Node data layout ────────────────────────────────────────────────────────
 //
-// Storage buffer: array<vec4<f32>> - 10 entries per node.
-//
-// [ni*10+0]: (a,  c,  0,  tx)   transform col 0+2
-// [ni*10+1]: (b,  d,  0,  ty)   transform col 1+2
-// [ni*10+2]: (r,  g,  b,  a )   fillColor
-// [ni*10+3]: (r,  g,  b,  a )   outlineColor
-// [ni*10+4]: (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
-// [ni*10+5]: (r,  g,  b,  a )   shadowColor
-// [ni*10+6]: (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
-// [ni*10+7]: (r,  g,  b,  a )   gradientTop
-// [ni*10+8]: (r,  g,  b,  a )   gradientBottom
-// [ni*10+9]: (minX, minY, w, h) text block bounds
+// Storage buffer: array<vec4<f32>>, `textNodeDataTexels` entries per node,
+// byte-identical to WebGl2TextRenderer's data texture rows. The layout is
+// documented once, at `packTextNodeData` in `#rendering/text/nodeDataPacker`.
 
 const nodeFloats = textNodeDataFloats;
 
@@ -65,7 +56,7 @@ const nodeFloats = textNodeDataFloats;
 const rowsPerPatchBlock = 16;
 
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + packed node/atlas u32
-const vertexStrideBytes = 20;
+const vertexStrideBytes = 28;
 const vertexStrideWords = vertexStrideBytes / 4;
 // Word offset of the per-vertex node index within one vertex.
 const nodeIndexWord = 4;
@@ -149,14 +140,15 @@ interface TextRetainedRendererData {
 
 /**
  * Per-bundle Text replay state (retained-batch opt-in), parked on
- * {@link WebGpuRetainedGroupBundle.rendererReplayState} so it shares the
+ * {@link WebGpuRetainedGroupBundle.rendererReplayStates} so it shares the
  * bundle's grow-only / explicitly-freed lifecycle - mirrors Mesh's
  * `MeshRetainedReplayState`. Holds Text's OWN persistent per-node data buffer
  * (same 10-vec4/node layout the live path uses) and FrameUniforms buffer,
  * since Text's row format differs from both the shared `TransformBuffer` row
- * layout AND the shared 128-byte group UBO {@link WebGpuRetainedGroupBundle}
- * itself owns (Text's `FrameUniforms` is a 96-byte mat3x3 pair, not the
- * mat4x4 pair every other retained renderer's shared UBO uses).
+ * layout AND the shared group UBO {@link WebGpuRetainedGroupBundle} itself
+ * owns. Text's per-node row is 20 vec4 and its frame block is 112 bytes - a
+ * projection/group mat3x3 pair plus the device-pixel snap viewport - not the
+ * 144-byte mat4x4 block every other retained renderer shares.
  *
  * A bundle can hold at most ONE recorded Text batch per capture (`flush()`
  * poisons rather than recording a second one) - so this state is a single
@@ -254,7 +246,10 @@ export const textShaderSource = `${colorShaderSourcesWgsl}${fillShaderSource(tex
  * batched by compatible shader/page classes with up to eight atlas textures
  * per draw.
  */
-export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText> implements WebGpuRetainedBatchReplayer, OwnTransformRowPatcher {
+export class WebGpuTextRenderer
+  extends AbstractWebGpuRenderer<Text | BitmapText>
+  implements WebGpuRetainedBatchReplayer, OwnTransformRowPatcher
+{
   /**
    * Text packs its world transform into its own per-node data buffer and never
    * reads the shared transform storage, so the plan player skips writing
@@ -363,7 +358,9 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   // ── Public API ──────────────────────────────────────────────────────────────
 
   public render(node: Text | BitmapText): void {
-    if (!this._device) throw new Error('WebGpuTextRenderer is not connected to a backend.');
+    if (!this._device) {
+      throw new Error('WebGpuTextRenderer is not connected to a backend.');
+    }
 
     if (node instanceof Text) {
       this._collectText(node);
@@ -375,6 +372,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   public flush(): void {
     if (this._pendingQuads.length === 0) {
       this._resetFrameState();
+
       return;
     }
 
@@ -394,13 +392,29 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // different pipeline variant.
     this._pendingQuads.sort((a, b) => {
       const bc = a.blendMode - b.blendMode;
-      if (bc !== 0) return bc;
+
+      if (bc !== 0) {
+        return bc;
+      }
+
       const sc = a.shaderType.localeCompare(b.shaderType);
-      if (sc !== 0) return sc;
+
+      if (sc !== 0) {
+        return sc;
+      }
+
       const wc = a.atlasTexture.width - b.atlasTexture.width;
-      if (wc !== 0) return wc;
+
+      if (wc !== 0) {
+        return wc;
+      }
+
       const hc = a.atlasTexture.height - b.atlasTexture.height;
-      if (hc !== 0) return hc;
+
+      if (hc !== 0) {
+        return hc;
+      }
+
       return (this._textureKeyMap.get(a.atlasTexture) ?? 0) - (this._textureKeyMap.get(b.atlasTexture) ?? 0);
     });
 
@@ -427,10 +441,12 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     let totalV = 0,
       totalI = 0;
+
     for (const pq of quads) {
       totalV += pq.quads.quadCount * 4;
       totalI += pq.quads.indices.length;
     }
+
     this._ensureVertexCapacity(totalV);
     this._ensureIndexCapacity(totalI);
 
@@ -447,10 +463,16 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
       while (qj < quads.length) {
         const pq = quads[qj]!;
-        if (!sharesAtlasBatchClass(first, pq)) break;
+
+        if (!sharesAtlasBatchClass(first, pq)) {
+          break;
+        }
 
         if (!atlasSlots.has(pq.atlasTexture)) {
-          if (atlasTextures.length === textAtlasTextureSlots) break;
+          if (atlasTextures.length === textAtlasTextureSlots) {
+            break;
+          }
+
           atlasSlots.set(pq.atlasTexture, atlasTextures.length);
           atlasTextures.push(pq.atlasTexture);
         }
@@ -476,6 +498,9 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
           this._float32View[w + 1] = vertices[vp + 1]!;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
+          const opposite = (v ^ 2) * 2;
+          this._float32View[w + 5] = uvs[opposite]!;
+          this._float32View[w + 6] = uvs[opposite + 1]!;
           // Four vertices per quad, so the flag is read once per quad.
           this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot, decorations[v >> 2] === 1);
         }
@@ -586,7 +611,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     device.queue.writeBuffer(this._indexBuffer!, indexBase, this._indexData.buffer, 0, flushIndexBytes);
 
     const format = backend.renderTargetFormat;
-    const stencil = coordinator.stencilActive;
+    const stencil = coordinator.stencilMode;
     const frameBindGroup = this._getFrameBindGroup(device);
 
     // The pass survives a renderer switch, so it can still hold another
@@ -621,6 +646,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     let lastShaderType: ShaderType | null = null;
     let lastBlendMode: BlendModes | null = null;
+
     for (const batch of batches) {
       if (batch.shaderType !== lastShaderType || batch.blendMode !== lastBlendMode) {
         pass.setPipeline(this._getPipeline(batch.shaderType, batch.blendMode, format, stencil));
@@ -628,6 +654,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
         lastShaderType = batch.shaderType;
         lastBlendMode = batch.blendMode;
       }
+
       pass.setBindGroup(1, this._getTexBindGroup(device, backend, batch.atlasTextures));
       pass.drawIndexed(batch.indexCount, 1, batch.firstIndex, 0, 0);
       coordinator.markPassDraws();
@@ -673,8 +700,15 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    */
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
     const device = this._device;
-    if (!device || !this._shaderModule || !this._pipelineLayout) return;
-    if (typeof device.createRenderPipelineAsync !== 'function') return;
+    const pipelineLayout = this._pipelineLayout;
+
+    if (!device || !this._shaderModule || !pipelineLayout) {
+      return;
+    }
+
+    if (typeof device.createRenderPipelineAsync !== 'function') {
+      return;
+    }
 
     const shaderTypes: ShaderType[] = ['sdf', 'msdf', 'color'];
     const promises: Array<Promise<void>> = [];
@@ -682,16 +716,21 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     for (const shaderType of shaderTypes) {
       for (const format of formats) {
         // Prewarm only the no-clip variant (matches the _getPipeline cache key
-        // for stencil = false); stencil variants compile lazily under a clip.
+        // for stencil = WebGpuStencilMode.None); stencil variants compile lazily under a clip.
         // Likewise only the default blend mode: text away from `Normal` is rare
         // enough that three more compiles per format per mode would cost more
         // than the first draw it saves.
-        const key = `${shaderType}:${BlendModes.Normal}:${format}:n`;
-        if (this._pipelines.has(key)) continue;
+        const key = `${shaderType}:${BlendModes.Normal}:${format}:${WebGpuStencilMode.None}`;
+
+        if (this._pipelines.has(key)) {
+          continue;
+        }
 
         promises.push(
           device.createRenderPipelineAsync(this._buildPipelineDescriptor(shaderType, BlendModes.Normal, format)).then(pipeline => {
-            this._pipelines.set(key, pipeline);
+            if (this._device === device && this._pipelineLayout === pipelineLayout) {
+              this._pipelines.set(key, pipeline);
+            }
           }),
         );
       }
@@ -823,49 +862,69 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // Before the layout pass, not after: this is what a node with no explicit
     // `pixelRatio` inherits, and the pass it drives is the one that resolves
     // which atlas the node rasterizes into.
-    node._setSurfacePixelRatio(this.getBackend().surfacePixelRatio);
+    const backend = this.getBackend();
+    node._setSurfacePixelRatio(backend.surfacePixelRatio, backend.maxTextureSize);
     node.syncDirty();
     const { pageQuads, textPages: pages } = node;
-    if (pageQuads.length === 0 || pages.length === 0) return;
+
+    if (pageQuads.length === 0 || pages.length === 0) {
+      return;
+    }
 
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = node.colorGlyphs ? 'color' : 'sdf';
-    const blendMode = node.blendMode;
+    const blendMode = this.getBackend().activeDrawCommand?.material.blendMode ?? node.blendMode;
 
     for (const batch of pageQuads) {
       const page = pages[batch.pageIndex];
-      if (page === undefined) continue;
+
+      if (page === undefined) {
+        continue;
+      }
+
       this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: page.texture, blendMode });
     }
   }
 
   private _collectBitmapText(node: BitmapText): void {
     const { pageQuads, textures, msdf } = node;
-    if (pageQuads.length === 0) return;
+
+    if (pageQuads.length === 0) {
+      return;
+    }
 
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = msdf ? 'msdf' : 'color';
-    const blendMode = node.blendMode;
+    const blendMode = this.getBackend().activeDrawCommand?.material.blendMode ?? node.blendMode;
 
     for (const batch of pageQuads) {
       const tex = textures[batch.pageIndex];
-      if (tex === undefined) continue;
+
+      if (tex === undefined) {
+        continue;
+      }
+
       this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: tex, blendMode });
     }
   }
 
   private _assignNodeIndex(node: Text | BitmapText): number {
     const existing = this._nodeIndexMap.get(node);
-    if (existing !== undefined) return existing;
+
+    if (existing !== undefined) {
+      return existing;
+    }
 
     const idx = this._nodeCount++;
 
     if (idx > textNodeIndexMask) {
       throw new Error(`WebGpuTextRenderer: node index ${idx} exceeds the 24-bit packed vertex limit.`);
     }
+
     this._nodeIndexMap.set(node, idx);
     this._ensureNodeCapacity(idx + 1);
     this._packNodeData(idx, node);
+
     return idx;
   }
 
@@ -891,7 +950,11 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     if (requiredBytes > this._nodeBufferCapacity) {
       let newCap = this._nodeBufferCapacity;
-      while (newCap < requiredBytes) newCap *= 2;
+
+      while (newCap < requiredBytes) {
+        newCap *= 2;
+      }
+
       this._nodeBuffer?.destroy();
       this._nodeBuffer = device.createBuffer({
         label: 'WebGpuTextRenderer/nodes',
@@ -910,10 +973,16 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   }
 
   private _ensureGpuVertexBuffer(device: GPUDevice, requiredBytes: number): void {
-    if (requiredBytes <= this._vertexBufferCapacity) return;
+    if (requiredBytes <= this._vertexBufferCapacity) {
+      return;
+    }
 
     let newCap = this._vertexBufferCapacity;
-    while (newCap < requiredBytes) newCap *= 2;
+
+    while (newCap < requiredBytes) {
+      newCap *= 2;
+    }
+
     this._vertexBuffer?.destroy();
     this._vertexBuffer = device.createBuffer({
       label: 'WebGpuTextRenderer/vertices',
@@ -924,10 +993,16 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   }
 
   private _ensureGpuIndexBuffer(device: GPUDevice, requiredBytes: number): void {
-    if (requiredBytes <= this._indexBufferCapacity) return;
+    if (requiredBytes <= this._indexBufferCapacity) {
+      return;
+    }
 
     let newCap = this._indexBufferCapacity;
-    while (newCap < requiredBytes) newCap *= 2;
+
+    while (newCap < requiredBytes) {
+      newCap *= 2;
+    }
+
     this._indexBuffer?.destroy();
     this._indexBuffer = device.createBuffer({
       label: 'WebGpuTextRenderer/indices',
@@ -945,7 +1020,11 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * totals, not this flush's deltas.
    */
   private _flushAppendWouldGrow(vertexBytes: number, indexBytes: number, nodeCount: number): boolean {
-    return vertexBytes > this._vertexBufferCapacity || indexBytes > this._indexBufferCapacity || nodeCount * nodeFloats * 4 > this._nodeBufferCapacity;
+    return (
+      vertexBytes > this._vertexBufferCapacity ||
+      indexBytes > this._indexBufferCapacity ||
+      nodeCount * nodeFloats * 4 > this._nodeBufferCapacity
+    );
   }
 
   /** Drop the pass association so the next flush restarts every cursor. */
@@ -960,6 +1039,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     if (!this._frameBindGroupDirty && this._frameBindGroup !== null) {
       return this._frameBindGroup;
     }
+
     this._frameBindGroup = device.createBindGroup({
       label: 'WebGpuTextRenderer/frame-bind-group',
       layout: this._frameBindGroupLayout!,
@@ -969,6 +1049,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       ],
     });
     this._frameBindGroupDirty = false;
+
     return this._frameBindGroup;
   }
 
@@ -1001,9 +1082,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     }
 
     for (const cached of cachedEntries) {
-      if (!cached.textures.every((texture, slot) => texture === resolvedTextures[slot])) continue;
+      if (!cached.textures.every((texture, slot) => texture === resolvedTextures[slot])) {
+        continue;
+      }
 
-      const bindingChanged = cached.views.some((view, slot) => view !== bindings[slot]!.view || cached.samplers[slot] !== bindings[slot]!.sampler);
+      const bindingChanged = cached.views.some(
+        (view, slot) => view !== bindings[slot]!.view || cached.samplers[slot] !== bindings[slot]!.sampler,
+      );
 
       if (bindingChanged) {
         cached.views = bindings.map(binding => binding.view);
@@ -1023,7 +1108,9 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       group,
     });
 
-    if (cachedEntries.length > maxTextureSetsPerAnchor) cachedEntries.shift();
+    if (cachedEntries.length > maxTextureSetsPerAnchor) {
+      cachedEntries.shift();
+    }
 
     return group;
   }
@@ -1041,18 +1128,33 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
   // ── Pipeline helpers ─────────────────────────────────────────────────────
 
-  private _getPipeline(shaderType: ShaderType, blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const key = `${shaderType}:${blendMode}:${format}:${stencil ? 's' : 'n'}`;
+  private _getPipeline(
+    shaderType: ShaderType,
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil: WebGpuStencilMode,
+  ): GPURenderPipeline {
+    const key = `${shaderType}:${blendMode}:${format}:${stencil}`;
     const existing = this._pipelines.get(key);
-    if (existing) return existing;
+
+    if (existing) {
+      return existing;
+    }
 
     const pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(shaderType, blendMode, format, stencil));
     this._pipelines.set(key, pipeline);
+
     return pipeline;
   }
 
-  private _buildPipelineDescriptor(shaderType: ShaderType, blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
+  private _buildPipelineDescriptor(
+    shaderType: ShaderType,
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil = WebGpuStencilMode.None,
+  ): GPURenderPipelineDescriptor {
     let fragEntry: string;
+
     if (shaderType === 'sdf') {
       fragEntry = 'fragmentSdf';
     } else if (shaderType === 'msdf') {
@@ -1075,6 +1177,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
               { shaderLocation: 0, offset: 0, format: 'float32x2' },
               { shaderLocation: 1, offset: 8, format: 'float32x2' },
               { shaderLocation: 2, offset: 16, format: 'uint32' },
+              { shaderLocation: 3, offset: 20, format: 'float32x2' },
             ],
           },
         ],
@@ -1093,8 +1196,8 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       primitive: { topology: 'triangle-list' },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     return descriptor;
@@ -1103,22 +1206,40 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   // ── Capacity helpers ─────────────────────────────────────────────────────
 
   private _ensureVertexCapacity(vertexCount: number): void {
-    if (vertexCount <= this._vertexCapacity) return;
-    while (this._vertexCapacity < vertexCount) this._vertexCapacity *= 2;
+    if (vertexCount <= this._vertexCapacity) {
+      return;
+    }
+
+    while (this._vertexCapacity < vertexCount) {
+      this._vertexCapacity *= 2;
+    }
+
     this._vertexData = new ArrayBuffer(this._vertexCapacity * vertexStrideBytes);
     this._float32View = new Float32Array(this._vertexData);
     this._uint32View = new Uint32Array(this._vertexData);
   }
 
   private _ensureIndexCapacity(indexCount: number): void {
-    if (indexCount <= this._indexCapacity) return;
-    while (this._indexCapacity < indexCount) this._indexCapacity *= 2;
+    if (indexCount <= this._indexCapacity) {
+      return;
+    }
+
+    while (this._indexCapacity < indexCount) {
+      this._indexCapacity *= 2;
+    }
+
     this._indexData = new Uint32Array(this._indexCapacity);
   }
 
   private _ensureNodeCapacity(nodeCount: number): void {
-    if (nodeCount <= this._nodeCapacity) return;
-    while (this._nodeCapacity < nodeCount) this._nodeCapacity *= 2;
+    if (nodeCount <= this._nodeCapacity) {
+      return;
+    }
+
+    while (this._nodeCapacity < nodeCount) {
+      this._nodeCapacity *= 2;
+    }
+
     const next = new Float32Array(this._nodeCapacity * nodeFloats);
     next.set(this._nodeDataArray);
     this._nodeDataArray = next;
@@ -1185,7 +1306,10 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const batch = batches[0]!;
     const vertexByteLength = batch.vertexCount * vertexStrideBytes;
     // Copy: `_vertexData`/`_nodeDataArray` are reused (overwritten) next flush.
-    const vertexBytes = this._vertexData.slice(batch.firstVertex * vertexStrideBytes, batch.firstVertex * vertexStrideBytes + vertexByteLength);
+    const vertexBytes = this._vertexData.slice(
+      batch.firstVertex * vertexStrideBytes,
+      batch.firstVertex * vertexStrideBytes + vertexByteLength,
+    );
     const nodeData = this._nodeDataArray.slice(0, this._nodeCount * nodeFloats);
     const drawables = [...this._nodeIndexMap.keys()];
 
@@ -1320,10 +1444,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    const nativePipeline = this._getPipeline(data.shaderType, payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+    const nativePipeline = this._getPipeline(data.shaderType, payload.blendMode, backend.renderTargetFormat, coordinator.stencilMode);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
-    if (!nativeCompatible) bundle.nativeReplay.skipPass();
+
+    if (!nativeCompatible) {
+      bundle.nativeReplay.skipPass();
+    }
 
     if (
       !nativeCompatible ||
@@ -1374,7 +1501,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       return false;
     }
 
-    const state = bundle.rendererReplayState;
+    const state = bundle.rendererReplayStates.get(this);
 
     if (!(state instanceof TextRetainedReplayState) || state.nodeDataBuffer === null) {
       return false;
@@ -1395,11 +1522,11 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   }
 
   private _getTextReplayState(bundle: WebGpuRetainedGroupBundle, device: GPUDevice): TextRetainedReplayState {
-    const existing = bundle.rendererReplayState;
+    const existing = bundle.rendererReplayStates.get(this);
     const state = existing instanceof TextRetainedReplayState ? existing : new TextRetainedReplayState();
 
     if (existing !== state) {
-      bundle.rendererReplayState = state;
+      bundle.rendererReplayStates.set(this, state);
     }
 
     if (state.uniformBuffer === null) {
@@ -1420,7 +1547,9 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     if (state.nodeDataBuffer === null || state.nodeDataCapacity < requiredBytes) {
       let capacity = Math.max(state.nodeDataCapacity, nodeFloats * 4);
 
-      while (capacity < requiredBytes) capacity *= 2;
+      while (capacity < requiredBytes) {
+        capacity *= 2;
+      }
 
       state.nodeDataBuffer?.destroy();
       state.nodeDataBuffer = device.createBuffer({
@@ -1485,7 +1614,9 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     let capacity = Math.max(this._retainedQuadIndexCapacity, initialRetainedQuadCapacity);
 
-    while (capacity < quadCount) capacity *= 2;
+    while (capacity < quadCount) {
+      capacity *= 2;
+    }
 
     const indices = new Uint32Array(capacity * 6);
 

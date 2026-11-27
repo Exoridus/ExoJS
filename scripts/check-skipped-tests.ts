@@ -14,8 +14,8 @@
  * The gate reads EVERY JUnit report under `test-results/*.junit.xml` - not
  * just the unit lane - and compares the summed skips per suite file against
  * `skipped-tests-baseline.json`. Each CI test suite (unit, webgl, webgl-build,
- * webgl-assets, webgl-core, webgpu, webgpu-media, firefox, audio, tilemap)
- * writes its own JUnit file; a dedicated `skip-budget` CI job downloads all of
+ * webgl-assets, webgl-core, webgpu, webgpu-media, firefox, audio, tilemap,
+ * and the build job's `release-dist` project) writes its own JUnit file; a dedicated `skip-budget` CI job downloads all of
  * them into `test-results/` before running this script, so the budget is ONE
  * global number per suite file, not one per lane - a file's runtime skips in
  * the WebGPU lane and its static skips in the unit lane land in the same
@@ -48,7 +48,7 @@ const DEFAULT_REPORT_DIR = 'test-results';
 const DEFAULT_REPORT_GLOB = `${DEFAULT_REPORT_DIR}/*.junit.xml`;
 
 const BASELINE_NOTE =
-  "Per-file budget of skipped tests, measured as the SUM across every CI test lane (unit + webgl + webgl-build + webgl-assets + webgl-core + webgpu + webgpu-media + firefox + audio + tilemap), aggregated from each lane's own JUnit report — one global budget, not one per lane. Skipping more than the budget fails `pnpm test:skips`, and so does any skip in a file with no budget — a conditional test (including a runtime `ctx.skip(...)`) must be a reviewed entry, not a quiet default. Skipping fewer only prints a note, because the count depends on which lanes actually ran (a local partial run, or a local `dist/` that unskips the production-stripping checks). Run `pnpm test:skips:update-baseline` against a full set of lane reports to record a change.";
+  "Per-file budget of skipped tests, measured as the SUM across every CI test lane (unit + webgl + webgl-build + webgl-assets + webgl-core + webgpu + webgpu-media + firefox + audio + tilemap + the build job), aggregated from each lane's own JUnit report — one global budget, not one per lane. Skipping more than the budget fails `pnpm test:skips`, and so does any skip in a file with no budget — a conditional test (including a runtime `ctx.skip(...)`) must be a reviewed entry, not a quiet default. Skipping fewer only prints a note, because the count depends on which lanes actually ran (a local partial run, or a local `dist/` that unskips the production-stripping checks). Run `pnpm test:skips:update-baseline` against a full set of lane reports to record a change.";
 
 interface Baseline {
   note: string;
@@ -117,7 +117,9 @@ const readSkips = (xml: string): Record<string, number> => {
     const name = /\bname="([^"]*)"/.exec(attributes)?.[1];
     const skipped = Number(/\bskipped="(\d+)"/.exec(attributes)?.[1] ?? '0');
 
-    if (name === undefined || skipped === 0) continue;
+    if (name === undefined || skipped === 0) {
+      continue;
+    }
 
     skips[name] = (skips[name] ?? 0) + skipped;
   }
@@ -137,7 +139,9 @@ const readSkippedNames = (xml: string): Record<string, string[]> => {
   for (const suite of xml.split('<testsuite ').slice(1)) {
     const file = /\bname="([^"]*)"/.exec(suite)?.[1];
 
-    if (file === undefined) continue;
+    if (file === undefined) {
+      continue;
+    }
 
     for (const [, testName] of suite.matchAll(/<testcase\s[^>]*?\bname="([^"]*)"[^>]*>\s*<skipped/g)) {
       (names[file] ??= []).push(testName!);
@@ -147,7 +151,7 @@ const readSkippedNames = (xml: string): Record<string, string[]> => {
   return names;
 };
 
-const mergeSkips = (perFile: readonly Record<string, number>[]): Record<string, number> => {
+const mergeSkips = (perFile: ReadonlyArray<Record<string, number>>): Record<string, number> => {
   const merged: Record<string, number> = {};
 
   for (const skips of perFile) {
@@ -188,7 +192,9 @@ const perFileSkips = paths.map(path => {
 
 const actual = mergeSkips(perFileSkips.map(report => report.skips));
 const skippedNames = perFileSkips.reduce<Record<string, string[]>>((merged, report) => {
-  for (const [file, names] of Object.entries(report.names)) (merged[file] ??= []).push(...names);
+  for (const [file, names] of Object.entries(report.names)) {
+    (merged[file] ??= []).push(...names);
+  }
 
   return merged;
 }, {});
@@ -206,19 +212,23 @@ if (UPDATE_BASELINE) {
 }
 
 const baseline = readBaseline();
-const regressions: { file: string; budget: number; actual: number }[] = [];
-const improvements: { file: string; budget: number; actual: number }[] = [];
+const regressions: Array<{ file: string; budget: number; actual: number }> = [];
+const improvements: Array<{ file: string; budget: number; actual: number }> = [];
 
 for (const [file, count] of Object.entries(actual)) {
   const budget = baseline.files[file] ?? 0;
 
-  if (count > budget) regressions.push({ file, budget, actual: count });
+  if (count > budget) {
+    regressions.push({ file, budget, actual: count });
+  }
 }
 
 for (const [file, budget] of Object.entries(baseline.files)) {
   const count = actual[file] ?? 0;
 
-  if (count < budget) improvements.push({ file, budget, actual: count });
+  if (count < budget) {
+    improvements.push({ file, budget, actual: count });
+  }
 }
 
 if (regressions.length > 0) {
@@ -227,7 +237,9 @@ if (regressions.length > 0) {
 
     console.error(`  ${file}: ${count} skipped test(s), ${reason}.`);
 
-    for (const name of [...new Set(skippedNames[file] ?? [])].slice(0, 5)) console.error(`    skipped: ${name}`);
+    for (const name of [...new Set(skippedNames[file] ?? [])].slice(0, 5)) {
+      console.error(`    skipped: ${name}`);
+    }
   }
 
   fail(

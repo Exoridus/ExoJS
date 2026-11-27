@@ -29,6 +29,7 @@ describe('buildMelFilterbank', () => {
 
   it('each band has non-negative weights', () => {
     const fb = buildMelFilterbank(BANDS, 80, 8000, FFT_SIZE, SAMPLE_RATE);
+
     for (const band of fb) {
       for (const w of band.weights) {
         expect(w).toBeGreaterThanOrEqual(0);
@@ -38,6 +39,7 @@ describe('buildMelFilterbank', () => {
 
   it('startBin <= peakBin <= endBin for each band', () => {
     const fb = buildMelFilterbank(BANDS, 80, 8000, FFT_SIZE, SAMPLE_RATE);
+
     for (const band of fb) {
       expect(band.startBin).toBeLessThanOrEqual(band.peakBin);
       expect(band.peakBin).toBeLessThanOrEqual(band.endBin);
@@ -46,6 +48,7 @@ describe('buildMelFilterbank', () => {
 
   it('bands are ordered (each startBin >= previous startBin)', () => {
     const fb = buildMelFilterbank(BANDS, 80, 8000, FFT_SIZE, SAMPLE_RATE);
+
     for (let i = 1; i < fb.length; i++) {
       expect(fb[i].startBin).toBeGreaterThanOrEqual(fb[i - 1].startBin);
     }
@@ -58,7 +61,10 @@ describe('computeMelBands', () => {
     const mag = new Float32Array(1024).fill(1);
     const out = new Float32Array(24);
     computeMelBands(mag, fb, out);
-    for (const v of out) expect(v).toBeGreaterThanOrEqual(0);
+
+    for (const v of out) {
+      expect(v).toBeGreaterThanOrEqual(0);
+    }
   });
 
   it('zero input magnitude yields near-zero output', () => {
@@ -66,7 +72,10 @@ describe('computeMelBands', () => {
     const mag = new Float32Array(1024).fill(0);
     const out = new Float32Array(24);
     computeMelBands(mag, fb, out);
-    for (const v of out) expect(v).toBeCloseTo(0, 3);
+
+    for (const v of out) {
+      expect(v).toBeCloseTo(0, 3);
+    }
   });
 
   it('allocates its own output array when none is supplied', () => {

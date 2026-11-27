@@ -12,11 +12,12 @@ import type { SweepHit } from './collision/sweep';
 import { canSweep, sweepProxies } from './collision/sweep';
 import { bodyPairKey, type ContactRecord } from './ContactGraph';
 import type { ContactModifier } from './ContactModifier';
+import { dispatchContactEvents } from './dispatchContactEvents';
 import type { CollisionEvent, SensorEvent } from './events';
 import { type Joint, softConstraint } from './joints/Joint';
 import type { BodyOwner } from './PhysicsBody';
 import { PhysicsBody } from './PhysicsBody';
-import type { QueryFilter, RayHit } from './query/QueryEngine';
+import type { QueryFilter, RayHit, ShapeCastHit, ShapeCastOptions } from './query/QueryEngine';
 import { QueryEngine } from './query/QueryEngine';
 import type { AnyShape } from './shapes/AnyShape';
 import { sleepPenetrationTolerance, sleepPushOutProgressSpeed } from './solver/tolerances';
@@ -48,6 +49,12 @@ const clampAlpha = (alpha: number): number => {
   }
 
   return alpha < 1 ? alpha : 1;
+};
+
+const assertDestructionOwner = (body: PhysicsBody, owner: BodyOwner): void => {
+  if (body._isForeignTo(owner)) {
+    throw new Error('PhysicsWorld: cannot destroy a body or collider owned by another world.');
+  }
 };
 
 /**
@@ -166,11 +173,35 @@ const isUnresolved = (record: ContactRecord, dt: number): boolean => {
   return false;
 };
 
+/**
+ * Something that resolves its body's motion at the start of every fixed step,
+ * against the geometry as the step finds it.
+ * @internal
+ */
+export interface StepController {
+  /**
+   * `true` while the controller reads other bodies' velocities for the step
+   * about to run (a character carried by a moving platform). Such controllers
+   * resolve after every other controller, so a platform moved by a controller
+   * of its own has its velocity for the step set before it is read.
+   */
+  readonly _followsOthers: boolean;
+  _beforeStep(fixedDelta: number): void;
+  /** Runs once the step has moved every body and re-synced collider geometry. */
+  _afterStep(): void;
+}
+
 /** Construction options for a {@link PhysicsWorld}. */
 export interface PhysicsWorldOptions {
   /** Gravity in px/s² (+Y down). Integrated each sub-step. Default `(0, 0)`. */
   gravity?: Readonly<PointLike>;
-  /** Fixed timestep in seconds. Default `1 / 60`. */
+  /**
+   * Fixed timestep in seconds. Default `1 / 60`.
+   *
+   * A world registered as a system steps once per host fixed step and must
+   * use the host's duration - pass `app.fixedTimeStep`. A mismatch throws on
+   * the first step; see {@link PhysicsWorld.fixedUpdate}.
+   */
   fixedDelta?: number;
   /** Maximum fixed steps per `step` call (spiral-of-death guard). Default `8`. */
   maxSubSteps?: number;
@@ -198,18 +229,18 @@ export interface PhysicsWorldOptions {
    * to the latest one, which smooths motion when the fixed rate is below the
    * frame rate. Default `false`.
    *
-   * The blend factor comes from {@link frameAlphaSource}; a world driven as a
-   * `System` has to supply one.
+   * The blend factor comes from {@link frameAlphaSource}; a world registered
+   * as a system has to supply one.
    */
   interpolation?: boolean;
   /**
    * Where interpolated bindings read their blend factor, in `[0, 1)`.
    *
    * Defaults to this world's own accumulator - correct when the world is driven
-   * with {@link PhysicsWorld.step}, which is what advances it. A world driven as
-   * a `System` goes through {@link PhysicsWorld.fixedUpdate} and bypasses that
-   * accumulator entirely, so the host owns the fraction: pass
-   * `() => app.frameAlpha`.
+   * with {@link PhysicsWorld.step}, which is what advances it. A world
+   * registered as a system is stepped by its host and has no fraction of its
+   * own: pass the host's, `() => app.frameAlpha`. Without one, a hosted world
+   * presents the latest step unsmoothed and development builds warn.
    */
   frameAlphaSource?: () => number;
   /** Linear speed at or below which a body is a sleep candidate, px/s. Default `5`. */
@@ -256,11 +287,13 @@ export interface AttachOptions {
 /**
  * The collision/query world: owns bodies, colliders, the detection backend,
  * bindings, the query engine and the fixed-step accumulator. Stepped by the
- * caller (commonly from a `Scene.update`), each fixed sub-step it integrates
- * body velocities, runs broad- and narrow-phase detection, solves contacts and
- * integrates positions, then fires immutable contact/sensor events and writes
- * bound node transforms. It holds **no module-level state**, so any number of
- * worlds run in isolation.
+ * caller (commonly from a `Scene.update`): each fixed step runs broad- and
+ * narrow-phase detection once, then sub-steps that integrate body velocities,
+ * solve contacts and integrate positions; the step then fires immutable
+ * contact/sensor events. Bound node transforms are not written per sub-step:
+ * a manual step presents them once when it returns, while a hosted fixed
+ * step defers to the variable update, which presents interpolated transforms. It holds
+ * **no module-level state**, so any number of worlds run in isolation.
  *
  * The dynamics are a native, warm-started **TGS-Soft** solver (Box2D-v3 "soft
  * step"): each fixed step runs detection once, then several sub-steps, each
@@ -371,8 +404,9 @@ export class PhysicsWorld implements BodyOwner {
   /**
    * Supplies the `[0, 1)` blend factor for interpolated bindings. Defaults to
    * this world's own accumulator; point it at the host's own fraction
-   * (`() => app.frameAlpha`) when the world runs as a `System`, because
-   * {@link fixedUpdate} never advances the local accumulator.
+   * (`() => app.frameAlpha`) when the world runs as a system, because
+   * {@link fixedUpdate} never advances the local accumulator. The default
+   * presents a hosted world's latest step as it stands.
    */
   public frameAlphaSource: () => number;
 
@@ -415,6 +449,7 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _bindings = new BindingRegistry();
   private readonly _query: QueryEngine;
   private readonly _commands: Array<() => void> = [];
+  private readonly _stepControllers: StepController[] = [];
   /** Colliders with a deferred removal queued but not yet applied; see {@link assertBodyKeepsItsMass}. */
   private readonly _pendingColliderRemovals = new Set<Collider>();
   /**
@@ -431,8 +466,7 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _islandParent: number[] = [];
   /** Pooled per-island minimum sleep time, indexed by union-find root. */
   private readonly _islandMinSleep: number[] = [];
-  /** Pooled scratch for the CCD pass (clamp target, per-pair sweep hit, best hit, swept AABB) - keeps the sweep allocation-free. */
-  private readonly _ccdClampPosition = { x: 0, y: 0 };
+  /** Pooled scratch for the CCD pass (per-pair sweep hit, best hit, swept AABB) - keeps the sweep allocation-free. */
   private readonly _ccdSweepHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
   private readonly _ccdBestHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
   private readonly _ccdSweptAabb: AabbLike = createAabb();
@@ -460,6 +494,12 @@ export class PhysicsWorld implements BodyOwner {
    */
   public _ccdBroadPhaseCandidates = 0;
 
+  /**
+   * @internal - counts the {@link step} and {@link fixedUpdate} calls that
+   * advanced the simulation. A movement command records it, which is how a
+   * command lasts exactly until the call that consumed it.
+   */
+  public _stepEpoch = 0;
   private _nextBodyId = 1;
   private _nextColliderId = 1;
   private _dispatching = false;
@@ -487,7 +527,7 @@ export class PhysicsWorld implements BodyOwner {
     this.timeToSleep = options.timeToSleep ?? 0.5;
     this.contactModifier = options.contactModifier ?? null;
     this.interpolation = options.interpolation ?? false;
-    this.frameAlphaSource = options.frameAlphaSource ?? (() => this.timeStepper.alpha);
+    this.frameAlphaSource = options.frameAlphaSource ?? this.timeStepper._ownAlpha;
     this._query = new QueryEngine(this._detectionColliders, this._backend.spatialIndex);
     this._backend.contactGraph._useUncollidablePairs(this._uncollidableJointPairs);
   }
@@ -557,9 +597,10 @@ export class PhysicsWorld implements BodyOwner {
    * Convenience: create a body carrying a single collider, add it to the world
    * and bind it to `node` in one call. The node tracks `body.position` after each
    * step. Returns the body. Equivalent to `new PhysicsBody(...)` + `add` + `bind`.
+   * If binding fails, the newly created body and collider are destroyed with the usual callback deferral.
    *
    * When `options.position`/`options.angle` are omitted, the body starts at
-   * `node`'s current WORLD position/rotation (via `getWorldTransform()`,
+   * `node`'s current WORLD position pivot/rotation (including its origin and
    * composed through any transform-group boundary) rather than `(0, 0)` -
    * otherwise a body attached to an already-placed node would visibly "teleport"
    * to the origin on the next step. Pass `position`/`angle` explicitly to override.
@@ -586,7 +627,14 @@ export class PhysicsWorld implements BodyOwner {
     });
 
     this.add(body);
-    this.bind(body, node);
+
+    try {
+      this.bind(body, node);
+    } catch (error) {
+      this.destroyBody(body);
+
+      throw error;
+    }
 
     return body;
   }
@@ -644,8 +692,11 @@ export class PhysicsWorld implements BodyOwner {
    * Destroy a body and its colliders. Every dynamic body touching it is woken,
    * so anything that was resting on the destroyed body falls once its support is
    * gone. Deferred when called inside a callback.
+   * Rejects bodies owned by another world before changing either world.
    */
   public destroyBody(body: PhysicsBody): void {
+    assertDestructionOwner(body, this);
+
     this._pendingBodyRemovals.delete(body);
     this._defer(() => this._removeBody(body));
   }
@@ -654,8 +705,11 @@ export class PhysicsWorld implements BodyOwner {
    * Destroy a single collider, recomputing its body's mass. Wakes every dynamic
    * body touching it, the same way {@link destroyBody} does. Deferred when
    * called inside a callback.
+   * Rejects colliders owned by another world before changing either world.
    */
   public destroyCollider(collider: Collider): void {
+    assertDestructionOwner(collider.body, this);
+
     // Checked here rather than in the deferred removal so the error surfaces at
     // the call site that caused it, not out of the middle of a `step()`.
     assertBodyKeepsItsMass(collider, this._pendingColliderRemovals);
@@ -775,29 +829,25 @@ export class PhysicsWorld implements BodyOwner {
   // ── stepping ───────────────────────────────────────────────────────────
 
   /**
-   * Advance the world by `frameDeltaSeconds`. Accumulates into fixed steps; each
-   * fixed step runs detection once, then a TGS-Soft sub-step loop (integrate
-   * gravity, solve contacts with a soft bias, integrate positions, relax) and a
-   * restitution pass, then writes the accumulated motion into each body. Finally
-   * dispatches events and writes bound node transforms.
+   * Advance the world by `frameDeltaSeconds` on its own clock. Accumulates into
+   * fixed steps of {@link PhysicsWorldOptions.fixedDelta}; each fixed step runs
+   * detection once, then a TGS-Soft sub-step loop (integrate gravity, solve
+   * contacts with a soft bias, integrate positions, relax) and a restitution
+   * pass, then writes the accumulated motion into each body. Finally dispatches
+   * events and presents bound nodes.
    *
-   * **Prefer registering the world as a system instead**
-   * (`app.systems.add(world, { order: SystemOrder.Physics })` or the scene
-   * equivalent) so {@link fixedUpdate} drives stepping directly from the
-   * engine's own fixed-timestep scheduler - one call per fixed step, no
-   * accumulator duplication. `step` remains available here for manual/advanced
-   * driving (e.g. a fixed-but-non-standard rate, or stepping outside the
-   * normal frame loop entirely): pass any delta and this accumulator converts
-   * it into the right number of fixed sub-steps (0, 1, or several, clamped by
-   * {@link PhysicsWorldOptions.maxSubSteps}).
+   * **In a scene, prefer registering the world as the scene's system instead**
+   * (`this.systems.add(world, { order: SystemOrder.Physics })`), so
+   * {@link fixedUpdate} steps it on the application's fixed-step clock. `step`
+   * is the manual path for a world with no host: pass any delta and the
+   * accumulator converts it into 0, 1 or several fixed steps, at most
+   * {@link PhysicsWorldOptions.maxSubSteps}, dropping the backlog beyond that.
+   * A world is driven one way or the other; a registered world that is also
+   * stepped by hand advances twice, which development builds report.
    *
-   * Either way the simulation is frame-rate independent and deterministic -
-   * the same sequence of deltas replays identically. `timeStepper.alpha`
-   * (`[0, 1)`) is the leftover sub-step fraction after this call, for callers
-   * that want to interpolate a bound node's rendered position between the last
-   * two fixed states instead of snapping to the latest one (bindings do not do
-   * this automatically - {@link bind} always writes the latest fixed-step
-   * transform verbatim).
+   * The same sequence of deltas replays identically. `timeStepper.alpha`
+   * (`[0, 1)`) is the leftover fraction of a step after this call, which an
+   * interpolating world uses by default to place bound nodes.
    */
   public step(frameDeltaSeconds: number): void {
     this._assertAlive();
@@ -816,6 +866,11 @@ export class PhysicsWorld implements BodyOwner {
 
       for (let step = 0; step < steps; step++) {
         this._stepOnce(h, subStepCount, gravityX, gravityY, contactHertz, dampingRatio, hasJoints, hasBullets);
+
+        // Commands span this entire advance. Its final callbacks issue commands
+        // for the next advance, after the current commands have expired.
+        this._stepEpoch += step === steps - 1 ? 1 : 0;
+
         this._dispatchEvents();
       }
     }
@@ -827,27 +882,35 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   /**
-   * Advance by exactly one fixed step, driven directly by the engine's own
-   * fixed-timestep scheduler when this world is registered as a `System`
-   * (`app.systems.add(world, { order: SystemOrder.Physics })` or the scene
-   * equivalent) - bypasses {@link timeStepper}'s variable-delta accumulator
-   * entirely, since the caller has already decided exactly when a fixed step
-   * occurs. Prefer this over manual {@link step} once the world is
-   * system-registered; `step` remains available for advanced manual driving.
-   * Always advances by exactly {@link timeStepper}'s configured `fixedDelta`,
-   * regardless of the caller's actual fixed-step interval - if the engine's
-   * `Application.fixedTimeStep` doesn't match this world's `fixedDelta`, the
-   * simulation stays deterministic but runs at the wrong wall-clock speed
-   * relative to real time.
+   * Advance by exactly one fixed step on the host's clock. Called by the system
+   * registry the world is registered with (`scene.systems` or `app.systems`),
+   * once per host fixed step; the world's own accumulator is not involved.
+   *
+   * `step` must equal this world's {@link PhysicsWorldOptions.fixedDelta}:
+   * construct a hosted world with `fixedDelta: app.fixedTimeStep`. A step that
+   * differs by more than 1e-9 relative to fixedDelta, or is not a positive finite
+   * number, throws before anything in the world changes - no body, controller,
+   * contact or queued command is touched - because simulating `fixedDelta` per
+   * host step would run the world faster or slower than its host.
    */
-  public fixedUpdate(_step: Seconds): void {
+  public fixedUpdate(step: Seconds): void {
     this._assertAlive();
 
     const subStepCount = this.subStepCount;
-    const h = this.timeStepper.fixedDelta / subStepCount;
+    const h = this.timeStepper._hostStep(step) / subStepCount;
 
-    this._stepOnce(h, subStepCount, this.gravity.x, this.gravity.y, this.contactHertz, this.dampingRatio, this._joints.length > 0, this._hasBullets());
+    this._stepOnce(
+      h,
+      subStepCount,
+      this.gravity.x,
+      this.gravity.y,
+      this.contactHertz,
+      this.dampingRatio,
+      this._joints.length > 0,
+      this._hasBullets(),
+    );
 
+    this._stepEpoch++;
     this._dispatchEvents();
 
     // Interpolated presentation is a per-FRAME job and moves to `update`; this
@@ -869,7 +932,7 @@ export class PhysicsWorld implements BodyOwner {
     this._assertAlive();
 
     if (this.interpolation) {
-      this._bindings.syncInterpolated(clampAlpha(this.frameAlphaSource()));
+      this._bindings.syncInterpolated(clampAlpha(this.timeStepper._readAlpha(this.frameAlphaSource)));
     }
   }
 
@@ -892,6 +955,11 @@ export class PhysicsWorld implements BodyOwner {
     hasJoints: boolean,
     hasBullets: boolean,
   ): void {
+    // Controllers cast against the geometry the previous step left behind and
+    // only set velocities, so one index sync serves all of them and the step
+    // below integrates exactly the motion they resolved.
+    const followers = this._stepControllers.length > 0 && this._runControllersBeforeStep();
+
     // Detection runs once per fixed step (collider geometry is already current
     // from the previous frame's finalize / attach / setTransform). TGS-Soft
     // reuses the manifolds across the sub-steps below.
@@ -972,6 +1040,49 @@ export class PhysicsWorld implements BodyOwner {
     if (hasBullets) {
       this._advanceBullets();
     }
+
+    if (followers) {
+      this._runControllersAfterStep();
+    }
+  }
+
+  /**
+   * Resolves every controller's motion for the step about to run, the ones
+   * that follow other bodies last. Returns whether any of them follows.
+   */
+  private _runControllersBeforeStep(): boolean {
+    const fixedDelta = this.timeStepper.fixedDelta;
+    let followers = false;
+
+    this._query._syncIndex();
+
+    for (const controller of this._stepControllers) {
+      if (controller._followsOthers) {
+        followers = true;
+      } else {
+        controller._beforeStep(fixedDelta);
+      }
+    }
+
+    if (followers) {
+      for (const controller of this._stepControllers) {
+        if (controller._followsOthers) {
+          controller._beforeStep(fixedDelta);
+        }
+      }
+    }
+
+    return followers;
+  }
+
+  private _runControllersAfterStep(): void {
+    this._query._syncIndex();
+
+    for (const controller of this._stepControllers) {
+      if (controller._followsOthers) {
+        controller._afterStep();
+      }
+    }
   }
 
   /**
@@ -1042,19 +1153,90 @@ export class PhysicsWorld implements BodyOwner {
     this._query.forEachAabbHit(bounds, filter, callback);
   }
 
-  /** Nearest collider hit by the ray, or `null`. */
+  /** Nearest collider entry hit by the ray, or `null`. Solids containing the origin are ignored. */
   public rayCast(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: QueryFilter, maxDistance?: number): RayHit | null {
     return this._query.rayCast(origin, direction, filter, maxDistance);
   }
 
-  /** All collider hits along the ray, sorted by distance. Writes into `out` (cleared) if given. */
-  public rayCastAll(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: QueryFilter, out?: RayHit[], maxDistance?: number): RayHit[] {
+  /** All collider entry hits along the ray, sorted by distance. Solids containing the origin are ignored. Writes into `out` (cleared) if given. */
+  public rayCastAll(
+    origin: Readonly<PointLike>,
+    direction: Readonly<PointLike>,
+    filter?: QueryFilter,
+    out?: RayHit[],
+    maxDistance?: number,
+  ): RayHit[] {
     return this._query.rayCastAll(origin, direction, filter, out, maxDistance);
   }
 
   /** Colliders overlapping `shape` placed at `position`/`angle`. Fresh array. */
   public overlapShape(shape: AnyShape, position: Readonly<PointLike>, filter?: QueryFilter, angle?: number): Collider[] {
     return this._query.overlapShape(shape, position, filter, angle);
+  }
+
+  /**
+   * Translates `shape` from `position` by `displacement` and returns the first
+   * collider in its way, or `null` when the whole motion is free. The cast is
+   * exact and translation-only, the same sweep {@link PhysicsBody.isBullet}
+   * relies on, so thin geometry cannot be skipped however long the motion is.
+   *
+   * Static, kinematic and dynamic colliders block alike, at their current
+   * placement. Sensors block only with {@link ShapeCastOptions.includeSensors}.
+   * Chains stay one-sided: a shape crossing a chain from its back face passes.
+   *
+   * A collider the shape already overlaps or touches at `position` is reported with
+   * {@link ShapeCastHit.initialOverlap} set and fraction `0` - but only when the
+   * displacement does not lead out of it, so a shape resting against a wall
+   * can still cast along it or away from it. With a zero displacement the cast
+   * reports the deepest such overlap, or `null`.
+   *
+   * Pass `out` to reuse a hit object; the cast then allocates nothing.
+   *
+   * @throws TypeError for a segment or chain, which enclose no area to cast.
+   * @throws RangeError for a non-finite position or displacement.
+   *
+   * @example
+   * ```ts
+   * const hit = world.shapeCast(new CircleShape(8), body.position, { x: 0, y: 120 }, { exclude: [body] });
+   *
+   * if (hit !== null && !hit.initialOverlap) {
+   *   console.log(`ground ${hit.distance}px below, normal`, hit.normal);
+   * }
+   * ```
+   */
+  public shapeCast(
+    shape: AnyShape,
+    position: Readonly<PointLike>,
+    displacement: Readonly<PointLike>,
+    options?: ShapeCastOptions,
+    out?: ShapeCastHit,
+  ): ShapeCastHit | null {
+    this._assertAlive();
+
+    return this._query.shapeCast(shape, position, displacement, options, out);
+  }
+
+  /** @internal - the query engine, for controllers that cast bodies through it. */
+  public get _queries(): QueryEngine {
+    return this._query;
+  }
+
+  /** @internal - run `controller` at the start of every fixed step until it is removed. */
+  public _addStepController(controller: StepController): void {
+    this._assertAlive();
+
+    if (!this._stepControllers.includes(controller)) {
+      this._stepControllers.push(controller);
+    }
+  }
+
+  /** @internal */
+  public _removeStepController(controller: StepController): void {
+    const index = this._stepControllers.indexOf(controller);
+
+    if (index !== -1) {
+      this._stepControllers.splice(index, 1);
+    }
   }
 
   /**
@@ -1105,6 +1287,7 @@ export class PhysicsWorld implements BodyOwner {
     this._joints.length = 0;
     this._uncollidableJointPairs.clear();
     this._commands.length = 0;
+    this._stepControllers.length = 0;
     this._pendingBodyRemovals.clear();
     this._pendingJoints.clear();
     this._bindings.clear();
@@ -1160,39 +1343,13 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   private _dispatchEvents(): void {
-    const graph = this._backend.contactGraph;
-
     this._dispatching = true;
 
-    // Pairs ended by a removal since the last dispatch go first, so an end
-    // always precedes a new start of the same pair.
-    for (const event of graph.removalCollisionEnd) {
-      this.onCollisionEnd.dispatch(event);
+    try {
+      dispatchContactEvents(this._backend.contactGraph, this);
+    } finally {
+      this._dispatching = false;
     }
-
-    for (const event of graph.removalSensorExit) {
-      this.onSensorExit.dispatch(event);
-    }
-
-    graph.clearRemovalEnds();
-
-    for (const event of graph.collisionEnd) {
-      this.onCollisionEnd.dispatch(event);
-    }
-
-    for (const event of graph.sensorExit) {
-      this.onSensorExit.dispatch(event);
-    }
-
-    for (const event of graph.collisionStart) {
-      this.onCollisionStart.dispatch(event);
-    }
-
-    for (const event of graph.sensorEnter) {
-      this.onSensorEnter.dispatch(event);
-    }
-
-    this._dispatching = false;
   }
 
   /**
@@ -1425,9 +1582,9 @@ export class PhysicsWorld implements BodyOwner {
   /**
    * Shape-cast each bullet's colliders along this fixed step's motion against
    * every other body's colliders; if any would cross one, clamp the body at the
-   * earliest impact and resolve it about the surface normal (a slide for a
-   * non-bouncy body, an elastic reflection as restitution → 1) so it cannot
-   * tunnel. The sweep is an exact translation-only cast of the full shapes
+   * earliest impact and exchange a mass-weighted normal impulse with the
+   * target, using their relative velocity and combined restitution. The sweep
+   * is an exact translation-only cast of the full shapes
    * (Minkowski ray for circles, swept SAT for polygon pairs) - the step's
    * rotation is applied before the sweep, not swept through. Pairs already
    * overlapping at the start of the step are skipped: the discrete solver owns
@@ -1446,10 +1603,8 @@ export class PhysicsWorld implements BodyOwner {
       }
 
       // The step's centre-of-mass motion; every collider translated by it too.
-      const newX = body.worldCenterOfMassX;
-      const newY = body.worldCenterOfMassY;
-      const dx = newX - body._ccdPrevX;
-      const dy = newY - body._ccdPrevY;
+      const dx = body.worldCenterOfMassX - body._ccdPrevX;
+      const dy = body.worldCenterOfMassY - body._ccdPrevY;
       const distance = Math.hypot(dx, dy);
 
       if (distance < 1e-6) {
@@ -1471,26 +1626,23 @@ export class PhysicsWorld implements BodyOwner {
       if (clampDistance < distance) {
         const pullBack = (clampDistance - distance) / distance;
 
-        this._ccdClampPosition.x = body.x + dx * pullBack;
-        this._ccdClampPosition.y = body.y + dy * pullBack;
-        body.setTransform(this._ccdClampPosition, body.angle);
+        body._correctPosition(dx * pullBack, dy * pullBack);
 
         // The clamp pulled this body back behind the pose the index was synced
         // from; refresh just its own leaves so a later bullet's query still sees it.
         this._backend.spatialIndex?.sync(this._detectionLeavesOf(body));
       }
 
-      // Reflect about the true surface normal: a slide for a non-bouncy body
-      // (restitution 0), an elastic bounce as restitution → 1. The body's own
-      // restitution combines (max) with the surface's, matching the contact solver.
-      const vn = body.linearVelocityX * best.normalX + body.linearVelocityY * best.normalY;
+      const other = blocked.body;
+      const vn =
+        (body.linearVelocityX - other.linearVelocityX) * best.normalX + (body.linearVelocityY - other.linearVelocityY) * best.normalY;
 
       if (vn < 0) {
         const restitution = vn < -ccdRestitutionThreshold ? Math.max(this._bulletRestitution(body), blocked.restitution) : 0;
-        const impulse = -(1 + restitution) * vn;
+        const impulse = (-(1 + restitution) * vn) / (body.invMass + other.invMass);
 
-        body.linearVelocityX += impulse * best.normalX;
-        body.linearVelocityY += impulse * best.normalY;
+        body.applyImpulse(impulse * best.normalX, impulse * best.normalY);
+        other.applyImpulse(-impulse * best.normalX, -impulse * best.normalY);
       }
     }
   }
@@ -1589,7 +1741,12 @@ export class PhysicsWorld implements BodyOwner {
     return restitution;
   }
 
-  /** Run `command` now, or queue it when inside an event dispatch (deferred to end of step). */
+  /**
+   * Run `command` now, or queue it while inside an event dispatch. The queue is
+   * drained once per `step`/`fixedUpdate` call, after every fixed step that call
+   * ran, so a command issued from a callback of a multi-step advance applies at
+   * the end of that advance rather than between its steps.
+   */
   private _defer(command: () => void): void {
     if (this._dispatching) {
       this._commands.push(command);
@@ -1627,6 +1784,8 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   private _removeBody(body: PhysicsBody): void {
+    assertDestructionOwner(body, this);
+
     const index = this._bodies.indexOf(body);
 
     if (index === -1) {
@@ -1691,6 +1850,8 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   private _removeCollider(collider: Collider): void {
+    assertDestructionOwner(collider.body, this);
+
     this._detachCollider(collider);
     this._backend.contactGraph.sealRemovalEnds();
     collider.body._removeCollider(collider);

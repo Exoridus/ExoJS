@@ -5,6 +5,19 @@ import { _resetHello, createConsoleSink, hello, type LogEntry, Logger, logger, L
 // ---------------------------------------------------------------------------
 
 describe('Logger', () => {
+  test('a throwing sink does not interrupt later sinks or engine control flow', () => {
+    const instance = new Logger();
+    const received: LogEntry[] = [];
+
+    instance.addSink(() => {
+      throw new Error('sink failed');
+    });
+    instance.addSink(entry => received.push(entry));
+
+    expect(() => instance.error('original failure')).not.toThrow();
+    expect(received.map(entry => entry.message)).toEqual(['original failure']);
+  });
+
   let instance: Logger;
 
   beforeEach(() => {
@@ -155,7 +168,7 @@ describe('Logger', () => {
 
 describe('createConsoleSink', () => {
   test('routes Debug/Info severities to console.log', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const sink = createConsoleSink();
 
     sink({ severity: LogSeverity.Debug, message: 'dbg' });
@@ -166,7 +179,7 @@ describe('createConsoleSink', () => {
   });
 
   test('routes Warning severity to console.warn', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const sink = createConsoleSink();
 
     sink({ severity: LogSeverity.Warning, message: 'careful' });
@@ -176,7 +189,7 @@ describe('createConsoleSink', () => {
   });
 
   test('routes Error severity to console.error', () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const sink = createConsoleSink();
 
     sink({ severity: LogSeverity.Error, message: 'boom' });
@@ -186,7 +199,7 @@ describe('createConsoleSink', () => {
   });
 
   test('formats a bare [ExoJS] prefix with %c styling when source is absent', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const sink = createConsoleSink();
 
     sink({ severity: LogSeverity.Info, message: 'no source' });
@@ -196,7 +209,7 @@ describe('createConsoleSink', () => {
   });
 
   test('formats an [ExoJS][source] prefix when source is present', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const sink = createConsoleSink();
 
     sink({ severity: LogSeverity.Info, message: 'scoped', source: 'rendering' });
@@ -206,7 +219,7 @@ describe('createConsoleSink', () => {
   });
 
   test('forwards `error` as a trailing console argument', () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const sink = createConsoleSink();
     const err = new Error('oops');
 
@@ -217,7 +230,7 @@ describe('createConsoleSink', () => {
   });
 
   test('forwards `data` as a trailing console argument', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const sink = createConsoleSink();
 
     sink({ severity: LogSeverity.Debug, message: 'with data', data: { n: 1 } });
@@ -241,7 +254,7 @@ describe('hello', () => {
   });
 
   test('prints the version banner on the first call', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     hello();
 
@@ -251,7 +264,7 @@ describe('hello', () => {
   });
 
   test('includes the backend when provided', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     hello({ backend: 'webgl2' });
 
@@ -260,7 +273,7 @@ describe('hello', () => {
   });
 
   test('only prints once, even across repeated calls', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     hello();
     hello();
@@ -271,7 +284,7 @@ describe('hello', () => {
   });
 
   test('_resetHello allows the banner to print again', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     hello();
     _resetHello();
@@ -299,7 +312,7 @@ describe('logger singleton', () => {
     // In test builds `__DEV__` is `true`, so importing `#core/logging` has
     // already run `logger.addSink(createConsoleSink())` as a module side
     // effect. Exercise it end-to-end through the public API.
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     logger.error('singleton smoke test', { source: 'test', once: 'logging-test:singleton-smoke' });
 

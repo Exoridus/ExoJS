@@ -4,7 +4,7 @@
   "symbol": "EqualizerEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 13,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Three-band equalizer (low shelf / peaking mid / high shelf) built from a series chain of `BiquadFilterNode` instances. Gain values are in dB and clamped to ±40 dB. All six parameters (gains + frequencies) are adjustable at runtime via the corresponding setters; gain changes use a short exponential ramp to avoid clicks."
       ],
-      "importLine": "import { EqualizerEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { EqualizerEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

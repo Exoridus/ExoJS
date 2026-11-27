@@ -4,7 +4,7 @@ import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { SOURCE_QUAD_FLOATS } from '#rendering/sourceQuadRecord';
-import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 import { BlendModes } from '#rendering/types';
@@ -74,9 +74,21 @@ export const persistentPremultiplyMaskIndex = 36;
 export interface WebGpuPersistentSlotCapableRenderer {
   readonly _supportsPersistentSlots?: boolean;
   _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGpuBackend): WebGpuPersistentSlotStore | null;
-  _rekeyPersistentSlotStore(store: WebGpuPersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean;
+  _rekeyPersistentSlotStore(
+    store: WebGpuPersistentSlotStore,
+    source: RenderRootSource,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean;
   _writePersistentSlotRows(store: WebGpuPersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void;
-  _drawPersistentSlots(store: WebGpuPersistentSlotStore, order: Uint32Array, orderCount: number, offset: number, count: number, backend: WebGpuBackend): void;
+  _drawPersistentSlots(
+    store: WebGpuPersistentSlotStore,
+    order: Uint32Array,
+    orderCount: number,
+    offset: number,
+    count: number,
+    backend: WebGpuBackend,
+  ): void;
 }
 
 /**
@@ -171,9 +183,13 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
 
   private _device: GPUDevice | null = null;
   private _accountant: GpuResourceAccountant | null = null;
+  private _accountedUniformBytes = 0;
   private _accountedBytes = 0;
   private _accountedOrderBytes = 0;
   private _destroyed = false;
+
+  /** Invoked once when the store is destroyed; lets its owner stop tracking it. */
+  public onDestroyed: (() => void) | null = null;
 
   /**
    * The root's base textures, in the slot order the packed rows reference.
@@ -243,11 +259,15 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
   public connectDevice(device: GPUDevice, accountant: GpuResourceAccountant): void {
     this._device = device;
     this._accountant = accountant;
-    this._uniformBuffer ??= device.createBuffer({
-      label: 'sprite:persistent-uniform-buffer',
-      size: persistentUniformBytes,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
+
+    if (this._uniformBuffer === null) {
+      this._uniformBuffer = device.createBuffer({
+        label: 'sprite:persistent-uniform-buffer',
+        size: persistentUniformBytes,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      this._accountedUniformBytes = accountant.reallocate(0, persistentUniformBytes);
+    }
   }
 
   /**
@@ -350,8 +370,8 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
    * Deliberately takes offsets into typed arrays rather than a drawable: the
    * whole point of the source-side prepack is that an item entering the view is
    * never read out of the scene graph again, so this method must have no way to
-   * do so. The quad record's eight floats are already this store's quad layout -
-   * local bounds then UV - so they copy straight across.
+   * do so. The quad record's eight floats use this store's layout - local bounds
+   * then UV - with render-target orientation normalized for WebGPU.
    *
    * `textureIndex` overwrites the canonical transform row's spare fourth
    * component, which the shared packer leaves at zero and no other shader reads.
@@ -382,6 +402,15 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
 
     for (let i = 0; i < floatsPerQuadRecord; i++) {
       quadRecords[quadTarget + i] = quads[quadOffset + i]!;
+    }
+
+    const texture = this.textures[textureIndex];
+
+    // Canonical quads include RenderTexture's flip, but WebGPU attachments use top-down storage.
+    if (texture instanceof RenderTexture && texture.flipY) {
+      const top = quadRecords[quadTarget + 5]!;
+      quadRecords[quadTarget + 5] = quadRecords[quadTarget + 7]!;
+      quadRecords[quadTarget + 7] = top;
     }
 
     const tintTarget = slot * tintBytesPerSlot;
@@ -509,7 +538,8 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
       });
       this._orderCapacity = next;
       this._bindGroup = null;
-      this._accountedOrderBytes = this._accountant?.reallocate(this._accountedOrderBytes, next * orderBytesPerEntry) ?? next * orderBytesPerEntry;
+      this._accountedOrderBytes =
+        this._accountant?.reallocate(this._accountedOrderBytes, next * orderBytesPerEntry) ?? next * orderBytesPerEntry;
     }
 
     this._order.set(order.subarray(offset, offset + count), offset);
@@ -583,6 +613,8 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
     this.textures.length = 0;
     this.textureIndexOfHandle = new Uint8Array(0);
     this.spareTextureIndexOfHandle = new Uint8Array(0);
+    this.onDestroyed?.();
+    this.onDestroyed = null;
   }
 
   private _allocateSlotBuffers(slots: number): void {
@@ -642,6 +674,11 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
     if (this._accountedOrderBytes > 0) {
       this._accountant?.free(this._accountedOrderBytes);
       this._accountedOrderBytes = 0;
+    }
+
+    if (this._accountedUniformBytes > 0) {
+      this._accountant?.free(this._accountedUniformBytes);
+      this._accountedUniformBytes = 0;
     }
   }
 

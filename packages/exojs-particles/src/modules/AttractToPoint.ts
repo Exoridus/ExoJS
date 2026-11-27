@@ -44,7 +44,9 @@ export class AttractToPoint extends UpdateModule {
       const distSq = dx * dx + dy * dy;
       const dist = Math.sqrt(distSq);
 
-      if (dist < 1e-5) continue;
+      if (dist < 1e-5) {
+        continue;
+      }
 
       const k = falloff > 0 ? Math.min(1, dist / falloff) : 1;
       const a = (strength * k * dt) / dist;

@@ -1,0 +1,38 @@
+{
+  "name": "@codexo/exojs-particles",
+  "version": "0.19.1",
+  "description": "Compatibility shim that forwards to @codexo/exojs/particles. Since ExoJS v0.20, import from @codexo/exojs/particles.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Exoridus/ExoJS.git",
+    "directory": "packages/legacy/exojs-particles"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "@codexo/exojs": "0.19.x"
+  },
+  "devDependencies": {
+    "@codexo/exojs": "workspace:*"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

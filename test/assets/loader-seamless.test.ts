@@ -1,6 +1,5 @@
 import { expectTypeOf } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { AssetNetworkError } from '#assets/AssetNetworkError';
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
@@ -17,6 +16,7 @@ import { testAssetType } from './test-asset-type';
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -184,13 +184,13 @@ describe('Loader seamless get (Texture)', () => {
       }),
     ]);
 
-    await expect(loader.load(new Asset({ type: 'nullable', source: 'null' }))).resolves.toBeNull();
-    await expect(loader.load(new Asset({ type: 'nullable', source: 'undef' }))).resolves.toBeUndefined();
+    await expect(loader.load({ type: 'nullable', source: 'null' })).resolves.toBeNull();
+    await expect(loader.load({ type: 'nullable', source: 'undef' })).resolves.toBeUndefined();
     expect(calls).toBe(2);
 
     // Re-loading either source reads the stored nullish value instead of refetching.
-    await expect(loader.load(new Asset({ type: 'nullable', source: 'null' }))).resolves.toBeNull();
-    await expect(loader.load(new Asset({ type: 'nullable', source: 'undef' }))).resolves.toBeUndefined();
+    await expect(loader.load({ type: 'nullable', source: 'null' })).resolves.toBeNull();
+    await expect(loader.load({ type: 'nullable', source: 'undef' })).resolves.toBeUndefined();
     expect(calls).toBe(2);
   });
 
@@ -199,7 +199,9 @@ describe('Loader seamless get (Texture)', () => {
     const loader = createCoreLoader();
     const warnings: string[] = [];
     const removeSink = logger.addSink(entry => {
-      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+      if (entry.severity === LogSeverity.Warning) {
+        warnings.push(entry.message);
+      }
     });
 
     try {
@@ -243,7 +245,9 @@ describe('Loader seamless get (Texture)', () => {
     const loader = createCoreLoader();
     const warnings: string[] = [];
     const removeSink = logger.addSink(entry => {
-      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+      if (entry.severity === LogSeverity.Warning) {
+        warnings.push(entry.message);
+      }
     });
 
     try {
@@ -256,7 +260,7 @@ describe('Loader seamless get (Texture)', () => {
 
       expect(handle).toBe(loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Linear } }));
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toContain('the options this get() asked for were ignored');
+      expect(warnings[0]).toContain('conflicting options were ignored for the shared payload');
 
       // Once per source: a repeated conflict is the same mistake, not a new one.
       loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Linear } });
@@ -305,7 +309,9 @@ describe('Loader seamless get (Texture)', () => {
     const loader = createCoreLoader();
     const warnings: string[] = [];
     const removeSink = logger.addSink(entry => {
-      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+      if (entry.severity === LogSeverity.Warning) {
+        warnings.push(entry.message);
+      }
     });
 
     try {
@@ -326,7 +332,9 @@ describe('Loader seamless get (Texture)', () => {
 
     // The hard reset path is internal-only: it forgets every scope's claim, so
     // it is deliberately not reachable through the public surface.
-    (loader as unknown as { _residency: { _unloadOne(asset: unknown): void } })._residency._unloadOne(loader['_canonicalize'](Texture, 'ship.png'));
+    (loader as unknown as { _residency: { _unloadOne(asset: unknown): void } })._residency._unloadOne(
+      loader['_canonicalize'](Texture, 'ship.png'),
+    );
 
     await expect(handle.loaded).rejects.toThrow('unloaded while');
     expect(handle.loadState).toBe('failed');
@@ -468,7 +476,7 @@ describe('Loader seamless get (Texture)', () => {
     expect(errors).toEqual([{ alias: 'gone.png', error: rejected }]);
   });
 
-  test('an explicit Asset.type() load rejects and also dispatches onError', async () => {
+  test('an explicit a descriptor load rejects and also dispatches onError', async () => {
     mockFetch404();
     const loader = createCoreLoader();
     const errors: Array<{ alias: string; error: Error }> = [];
@@ -476,7 +484,7 @@ describe('Loader seamless get (Texture)', () => {
     loader.onError.add((_type, alias, error) => errors.push({ alias, error }));
 
     let rejected: unknown;
-    await loader.load(Asset.type('texture', 'explicit-gone.png')).catch(error => {
+    await loader.load({ type: 'texture', source: 'explicit-gone.png' }).catch(error => {
       rejected = error;
     });
 
@@ -558,7 +566,12 @@ describe('Loader seamless get (Texture)', () => {
 
     expect(() =>
       loader._installAssetTypes([
-        testAssetType<string, unknown>({ id: 'secondTexture', token: Texture, leaf: textureSeamlessAdapter, create: async source => source }),
+        testAssetType<string, unknown>({
+          id: 'secondTexture',
+          token: Texture,
+          leaf: textureSeamlessAdapter,
+          create: async source => source,
+        }),
       ]),
     ).toThrow('another installed type already uses');
   });

@@ -90,8 +90,6 @@ describe('SerializationRegistry constructor resolution (specificity ranking)', (
     global.register('GlobalLeaf', LeafNode, stub<LeafNode>());
 
     const app = new SerializationRegistry(global);
-    // A different type name for the same constructor is only legal across
-    // registries - `register` rejects it within one.
     app.register('AppLeaf', LeafNode, stub<LeafNode>());
 
     expect(app.resolveByNode(new LeafNode())?.typeName).toBe('AppLeaf');

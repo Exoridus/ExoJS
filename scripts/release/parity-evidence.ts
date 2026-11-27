@@ -67,9 +67,7 @@ export const parseEvidence = (json: string): EvidenceDocument => {
   return { stamps, rows };
 };
 
-export const readEvidence = (repoRoot: string): EvidenceDocument => {
-  return parseEvidence(readFileSync(`${repoRoot}/${EVIDENCE_PATH}`, 'utf8'));
-};
+export const readEvidence = (repoRoot: string): EvidenceDocument => parseEvidence(readFileSync(`${repoRoot}/${EVIDENCE_PATH}`, 'utf8'));
 
 /**
  * Why the evidence cannot be claimed for `head`, one line per guaranteed

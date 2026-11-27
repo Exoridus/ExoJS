@@ -39,7 +39,8 @@ const movingRightFrom = (world: PhysicsWorld, shape: ConstructorParameters<typeo
   colliderAt(world, shape, { x: 100, y });
 
 /** A vertical boundary/obstacle centred on `x = 50`. */
-const obstacleAt = (world: PhysicsWorld, shape: ConstructorParameters<typeof Collider>[0]['shape'], y = 0): Collider => colliderAt(world, shape, { x: 50, y });
+const obstacleAt = (world: PhysicsWorld, shape: ConstructorParameters<typeof Collider>[0]['shape'], y = 0): Collider =>
+  colliderAt(world, shape, { x: 50, y });
 
 describe('the sweep matrix', () => {
   it('casts every mass-bearing shape against every target shape', () => {
@@ -173,7 +174,13 @@ describe('sweep invariants across the matrix', () => {
 
     expect(sweepProxies(moving, 40, 0, obstacleAt(world, new SegmentShape(0, -20, 0, 20)), hit)).toBe(false);
     expect(
-      sweepProxies(colliderAt(world, new CapsuleShape(0, -10, 0, 10, 4), { x: 46, y: 0 }), 46, 0, obstacleAt(world, new SegmentShape(0, -20, 0, 20)), hit),
+      sweepProxies(
+        colliderAt(world, new CapsuleShape(0, -10, 0, 10, 4), { x: 46, y: 0 }),
+        46,
+        0,
+        obstacleAt(world, new SegmentShape(0, -20, 0, 20)),
+        hit,
+      ),
     ).toBe(true);
     expect(hit.t).toBeGreaterThan(0);
     expect(hit.t).toBeLessThanOrEqual(1);
@@ -269,7 +276,11 @@ describe('sweeping a chain', () => {
 
       world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [{ shape: flatFloor() }] }));
 
-      const ball = new PhysicsBody({ type: 'dynamic', position: { x: 0, y: -100 }, colliders: [{ shape: new CircleShape(5), density: 1 }] });
+      const ball = new PhysicsBody({
+        type: 'dynamic',
+        position: { x: 0, y: -100 },
+        colliders: [{ shape: new CircleShape(5), density: 1 }],
+      });
       ball.isBullet = bullet;
       world.add(ball);
       ball.linearVelocityY = 9000; // 150px per fixed step: no step lands near the floor, and one step crosses it
@@ -348,7 +359,11 @@ describe('sweeping the new shapes costs no per-step allocation', () => {
       world.add(new PhysicsBody({ type: 'static', position: { x, y: 0 }, colliders: [{ shape: wall(), restitution: 1 }] }));
     }
 
-    const body = new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: bullet(), density: 1, restitution: 1 }] });
+    const body = new PhysicsBody({
+      type: 'dynamic',
+      position: { x: 0, y: 0 },
+      colliders: [{ shape: bullet(), density: 1, restitution: 1 }],
+    });
     body.isBullet = true;
     world.add(body);
     body.linearVelocityX = 9000;

@@ -1,5 +1,5 @@
 import { Scene, type Seconds } from '@codexo/exojs';
-import { PhysicsWorld } from '@codexo/exojs-physics';
+import { PhysicsWorld } from '@codexo/exojs/physics';
 
 class VariableStepScene extends Scene {
   private readonly world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });

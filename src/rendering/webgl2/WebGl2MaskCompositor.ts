@@ -28,9 +28,10 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
  * Single-quad two-texture compositor used by `WebGl2Backend.composeWithAlphaMask`.
  *
  * Renders the content texture onto the active render target with each
- * output texel's alpha multiplied by the mask texture's alpha at the
- * same UV. Both textures are sampled with stretched-fit UVs over the
- * destination rectangle.
+ * output texel's components multiplied by the mask texture's alpha at the
+ * same UV - both the premultiplied RGB and the alpha are masked. Both
+ * textures are sampled with stretched-fit UVs over the destination
+ * rectangle.
  *
  * Intentionally not a {@link AbstractWebGl2Renderer} subclass: this
  * compositor is invoked directly by the system for non-Drawable
@@ -43,6 +44,7 @@ export class WebGl2MaskCompositor {
   private readonly _float32View: Float32Array = new Float32Array(this._vertexData);
   private readonly _contentSamplerSlot: Int32Array = new Int32Array([0]);
   private readonly _maskSamplerSlot: Int32Array = new Int32Array([1]);
+  private readonly _textureFlipY: Float32Array = new Float32Array(2);
   private _connection: MaskCompositorConnection | null = null;
 
   public connect(backend: WebGl2Backend): void {
@@ -57,30 +59,35 @@ export class WebGl2MaskCompositor {
       throw new Error('WebGl2MaskCompositor: could not create vertex array object.');
     }
 
-    this._shader.connect(createWebGl2ShaderProgram(gl));
-
     const bufferHandles = new Map<WebGl2RenderBuffer, WebGLBuffer>();
-    const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, quadIndices, BufferUsage.StaticDraw).connect(
-      this._createBufferRuntime(gl, bufferHandles),
-      backend.accountant,
-    );
-    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(gl, bufferHandles),
-      backend.accountant,
-    );
+    const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, quadIndices, BufferUsage.StaticDraw);
+    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw);
 
-    // Force shader finalize so getAttribute() below sees a populated
-    // attribute table; the async-compile path defers extraction until
-    // the first sync() call.
-    this._shader.sync();
+    try {
+      this._shader.connect(createWebGl2ShaderProgram(gl));
+      indexBuffer.connect(this._createBufferRuntime(gl, bufferHandles), backend.accountant);
+      vertexBuffer.connect(this._createBufferRuntime(gl, bufferHandles), backend.accountant);
 
-    const vao = new WebGl2VertexArrayObject()
-      .addIndex(indexBuffer)
-      .addAttribute(vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
-      .addAttribute(vertexBuffer, this._shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
-      .connect(this._createVaoRuntime(gl, vaoHandle));
+      // Force shader finalize so getAttribute() below sees a populated
+      // attribute table; the async-compile path defers extraction until
+      // the first sync() call.
+      this._shader.sync();
 
-    this._connection = { gl, vaoHandle, vao, indexBuffer, vertexBuffer, bufferHandles };
+      const vao = new WebGl2VertexArrayObject()
+        .addIndex(indexBuffer)
+        .addAttribute(vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
+        .addAttribute(vertexBuffer, this._shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
+        .connect(this._createVaoRuntime(gl, vaoHandle));
+
+      this._connection = { gl, vaoHandle, vao, indexBuffer, vertexBuffer, bufferHandles };
+    } catch (error) {
+      indexBuffer.destroy();
+      vertexBuffer.destroy();
+      gl.deleteVertexArray(vaoHandle);
+      this._shader.destroy();
+
+      throw error;
+    }
   }
 
   public disconnect(): void {
@@ -113,10 +120,6 @@ export class WebGl2MaskCompositor {
       throw new Error('WebGl2MaskCompositor: not connected.');
     }
 
-    // Update the quad vertices for this destination rect. UVs are 0..1
-    // mapped over (left, top) → (right, bottom) with an explicit Y-flip
-    // for render-texture sampling: the mask path samples textures
-    // already authored as RGBA in render-texture orientation.
     this._writeQuadVertices(x, y, x + width, y + height);
 
     // Bind the compositor program. Setting projection + sampler uniforms
@@ -129,6 +132,10 @@ export class WebGl2MaskCompositor {
     this._shader.getUniform('u_projection').setValue(projection);
     this._shader.getUniform('u_content').setValue(this._contentSamplerSlot);
     this._shader.getUniform('u_mask').setValue(this._maskSamplerSlot);
+    // Captured content and an authored mask can have opposite texture orientations.
+    this._textureFlipY[0] = content.flipY ? 1 : 0;
+    this._textureFlipY[1] = mask.flipY ? 1 : 0;
+    this._shader.getUniform('u_textureFlipY').setValue(this._textureFlipY);
     this._shader.sync();
 
     backend.bindTexture(content, 0);
@@ -142,9 +149,9 @@ export class WebGl2MaskCompositor {
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Reset the active texture unit to 0 to avoid leaking unit 1 into
-    // subsequent renderer state.
+    // Unbinding unit 1 leaves it active; later binds that omit a unit expect unit 0.
     backend.bindTexture(null, 1);
+    backend.setActiveTextureUnit(0);
   }
 
   private _writeQuadVertices(left: number, top: number, right: number, bottom: number): void {
@@ -215,7 +222,14 @@ export class WebGl2MaskCompositor {
               lastBuffer = attribute.buffer;
             }
 
-            gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+            gl.vertexAttribPointer(
+              attribute.location,
+              attribute.size,
+              attribute.type,
+              attribute.normalized,
+              attribute.stride,
+              attribute.start,
+            );
             gl.enableVertexAttribArray(attribute.location);
           }
 

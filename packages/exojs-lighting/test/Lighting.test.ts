@@ -23,14 +23,17 @@ import { LightmapLighting } from '../src/LightmapLighting';
 import { LineLight } from '../src/lights/LineLight';
 import { PointLight } from '../src/lights/PointLight';
 import { SpotLight } from '../src/lights/SpotLight';
+import { SunLight } from '../src/lights/SunLight';
 import { LitMaterial } from '../src/LitMaterial';
 import { NormalMap } from '../src/normals/NormalMap';
+import { PolygonOccluder } from '../src/occluders/PolygonOccluder';
 import { RadianceLighting } from '../src/RadianceLighting';
 
 const channels = 4;
 
 /** The packed texture the forward renderer publishes into. */
-const textureOf = (lighting: Lighting): (typeof ForwardBackend.prototype)['lightTexture'] => (lighting.backend as ForwardBackend).lightTexture;
+const textureOf = (lighting: Lighting): (typeof ForwardBackend.prototype)['lightTexture'] =>
+  (lighting.backend as ForwardBackend).lightTexture;
 
 /**
  * Enough of an application for a renderer that never draws here: a frame slot,
@@ -122,6 +125,27 @@ describe('Lighting', () => {
     expect(buffer[slot(lighting, 0, 0) + 2]).toBe(30);
   });
 
+  test.each([
+    { label: 'a sun', create: () => new SunLight() },
+    { label: 'a zero-radius point light', create: () => new PointLight({ radius: 0 }) },
+    { label: 'a negative-radius spot light', create: () => new SpotLight({ radius: -1 }) },
+  ])('$label does not consume the only forward slot ahead of a usable point light', ({ create }) => {
+    const lighting = new ForwardLighting({ maxLights: 1 });
+
+    lighting.add(create());
+    lighting.add(new PointLight({ radius: 45 }).setPosition(12, 34));
+    lighting.update();
+
+    const buffer = textureOf(lighting).buffer;
+    const offset = slot(lighting, 0, 0);
+
+    expect(lighting.activeLightCount).toBe(1);
+    expect(buffer[0]).toBe(1);
+    expect(Array.from(buffer.subarray(offset, offset + 3))).toEqual([12, 34, 45]);
+
+    lighting.destroy();
+  });
+
   test('lights beyond the renderer capacity are dropped rather than overwriting the last slot', () => {
     const lighting = new ForwardLighting({ maxLights: 2 });
 
@@ -147,6 +171,42 @@ describe('Lighting', () => {
 
     expect(buffer[cone + 2]).toBe(-1);
     expect(buffer[cone + 3]).toBe(-1);
+  });
+
+  test('forward packs a line as a rotated capsule, not a point with the whole reach', () => {
+    const lighting = new ForwardLighting({ maxLights: 1 });
+    const line = lighting.add(new LineLight({ length: 40, radius: 12, height: 16 }));
+
+    line.setPosition(32, 24);
+    lighting.update();
+
+    const buffer = textureOf(lighting).buffer;
+    const position = slot(lighting, 0, 0);
+    const shape = slot(lighting, 2, 0);
+
+    // The row-0 radius is measured from the segment. Its total bounding
+    // radius would have been 12 + 20 = 32, which is wrong for a fragment.
+    expect(buffer[position]).toBe(32);
+    expect(buffer[position + 1]).toBe(24);
+    expect(buffer[position + 2]).toBe(12);
+    expect(buffer[shape]).toBeCloseTo(1, 5);
+    expect(buffer[shape + 1]).toBeCloseTo(0, 5);
+    expect(buffer[shape + 2]).toBe(-2);
+    expect(buffer[shape + 3]).toBe(20);
+
+    line.rotation = 90;
+    lighting.update();
+    expect(buffer[shape]).toBeCloseTo(0, 5);
+    expect(buffer[shape + 1]).toBeCloseTo(-1, 5);
+    expect(buffer[shape + 2]).toBe(-2);
+    expect(buffer[shape + 3]).toBe(20);
+
+    line.length = 0;
+    lighting.update();
+    expect(buffer[shape + 3]).toBe(0);
+    expect(textureOf(lighting).height).toBe(3);
+
+    lighting.destroy();
   });
 
   test('a spot light aims along its own rotation and fades across its cone softness', () => {
@@ -270,6 +330,106 @@ describe('Lighting', () => {
     lighting.update();
 
     expect(regions).toEqual(['-36,-36,36,36']);
+  });
+
+  test('a finite line builds four independent CPU shadow rows and caches their origins', () => {
+    const lighting = new LightmapLighting(fakeApp(false), { ambient: Color.black });
+    const backend = lighting.backend as FrameLightingBackend;
+
+    backend.shadowFiller = 'cpu';
+    lighting.occludeFrom(
+      new PolygonOccluder([
+        { x: 38, y: 25 },
+        { x: 40, y: 25 },
+        { x: 40, y: 45 },
+        { x: 38, y: 45 },
+      ]),
+    );
+    const line = lighting.add(new LineLight({ length: 32, radius: 24, softness: 0 })).setPosition(32, 32);
+
+    try {
+      lighting.update();
+      expect(backend.activeLightCount).toBe(1);
+      expect(backend.shadowRowsRebuilt).toBe(4);
+      expect(backend.shadowBytesUploaded).toBeGreaterThan(0);
+
+      // Neither geometry nor emitter moved; no upload or shadow-row rebuild.
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(0);
+      expect(backend.shadowBytesUploaded).toBe(0);
+
+      line.rotation = 90;
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(4);
+
+      // A point-degenerate line must not read four rows past its allocation.
+      line.length = 0;
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(1);
+      expect(backend.activeLightCount).toBe(1);
+    } finally {
+      lighting.destroy();
+    }
+  });
+
+  test('a line that shrinks to a point and regrows rebuilds the rows another light reused meanwhile', () => {
+    const lighting = new LightmapLighting(fakeApp(false), { ambient: Color.black });
+    const backend = lighting.backend as FrameLightingBackend;
+
+    backend.shadowFiller = 'cpu';
+    lighting.occludeFrom(
+      new PolygonOccluder([
+        { x: 38, y: 25 },
+        { x: 40, y: 25 },
+        { x: 40, y: 45 },
+        { x: 38, y: 45 },
+      ]),
+    );
+    const line = lighting.add(new LineLight({ length: 32, radius: 24, softness: 0 })).setPosition(32, 32);
+
+    lighting.add(new PointLight({ radius: 24 })).setPosition(44, 32);
+
+    try {
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(5);
+
+      // The point light moves up into the line's second row.
+      line.length = 0;
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(2);
+
+      // Every line sample is rebuilt: rows 1-3 no longer hold what it traced there.
+      line.length = 32;
+      lighting.update();
+      expect(backend.shadowRowsRebuilt).toBe(5);
+    } finally {
+      lighting.destroy();
+    }
+  });
+
+  test('the GPU shadow marcher reserves four rows per finite line', () => {
+    const lighting = new LightmapLighting(fakeApp(true), { ambient: Color.black });
+    const backend = lighting.backend as FrameLightingBackend;
+
+    backend.shadowFiller = 'gpu';
+    lighting.occludeFrom(
+      new PolygonOccluder([
+        { x: 38, y: 25 },
+        { x: 40, y: 25 },
+        { x: 40, y: 45 },
+        { x: 38, y: 45 },
+      ]),
+    );
+    lighting.add(new LineLight({ length: 32, radius: 24 })).setPosition(32, 32);
+
+    try {
+      lighting.update();
+      expect(backend.activeLightCount).toBe(1);
+      expect(backend.shadowRowsRebuilt).toBe(4);
+      expect(backend.shadowFiller).toBe('gpu');
+    } finally {
+      lighting.destroy();
+    }
   });
 
   test('radiance asks for the field it traces rather than for the lights own reach', () => {
@@ -503,7 +663,7 @@ describe('Lighting', () => {
     expect(lighting.stopNormals(drawable)).toBe(false);
   });
 
-  test('radiance records a registered surface and takes no normals from it', () => {
+  test('radiance takes normals from a registered surface and draws the prepass ahead of the cascades', () => {
     const app = fakeApp();
     const lighting = new RadianceLighting(app, { ambient: Color.black });
     const drawable = {
@@ -517,12 +677,14 @@ describe('Lighting', () => {
     lighting.normalsFrom(drawable, new NormalMap(Texture.fromColor(Color.white, 1, { colorSpace: 'none' })));
     lighting.update();
 
-    // The gather averages a probe's rays into one arriving colour, so there is
-    // no incident direction a normal could be measured against. The surface
-    // stays registered - a renderer switch would read it - and no prepass is
-    // drawn for it.
     expect(lighting.surfaces).toHaveLength(1);
-    expect(lighting.activeSurfaceCount).toBe(0);
+    expect(lighting.activeSurfaceCount).toBe(1);
+
+    // The gather reads the normals while it builds the light field.
+    const labels = [...app.framePasses].map(pass => pass.label);
+
+    expect(labels.indexOf('lighting:normals')).toBeGreaterThanOrEqual(0);
+    expect(labels.indexOf('lighting:normals')).toBeLessThan(labels.indexOf('lighting:cascades'));
 
     lighting.destroy();
   });

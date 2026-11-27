@@ -15,17 +15,15 @@ import {
 
 const SOURCE = 'level.tmj';
 
-const baseLayer = (overrides: Record<string, unknown> = {}): Record<string, unknown> => {
-  return {
-    id: 1,
-    name: 'Layer',
-    visible: true,
-    opacity: 1,
-    x: 0,
-    y: 0,
-    ...overrides,
-  };
-};
+const baseLayer = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  id: 1,
+  name: 'Layer',
+  visible: true,
+  opacity: 1,
+  x: 0,
+  y: 0,
+  ...overrides,
+});
 
 describe('TiledFormatError', () => {
   it('formats the message with source and field path', () => {
@@ -61,7 +59,9 @@ describe('primitive validators — error message shape for each unmet expectatio
   });
 
   it('expectNonNegativeInteger throws when given a negative integer', () => {
-    expect(() => validateTiledAnimationFrameData({ tileid: -1, duration: 100 }, SOURCE, '')).toThrow(/expected a non-negative integer, got -1/);
+    expect(() => validateTiledAnimationFrameData({ tileid: -1, duration: 100 }, SOURCE, '')).toThrow(
+      /expected a non-negative integer, got -1/,
+    );
   });
 });
 
@@ -77,15 +77,31 @@ describe('validateTiledPropertyData', () => {
 
   it('parses int, float, bool, color, file, and object properties', () => {
     expect(validateTiledPropertyData({ name: 'hp', type: 'int', value: 10 }, SOURCE, '')).toMatchObject({ type: 'int', value: 10 });
-    expect(validateTiledPropertyData({ name: 'speed', type: 'float', value: 1.5 }, SOURCE, '')).toMatchObject({ type: 'float', value: 1.5 });
-    expect(validateTiledPropertyData({ name: 'solid', type: 'bool', value: true }, SOURCE, '')).toMatchObject({ type: 'bool', value: true });
-    expect(validateTiledPropertyData({ name: 'tint', type: 'color', value: '#ff0000ff' }, SOURCE, '')).toMatchObject({ type: 'color', value: '#ff0000ff' });
-    expect(validateTiledPropertyData({ name: 'sound', type: 'file', value: 'sfx/hit.wav' }, SOURCE, '')).toMatchObject({ type: 'file', value: 'sfx/hit.wav' });
+    expect(validateTiledPropertyData({ name: 'speed', type: 'float', value: 1.5 }, SOURCE, '')).toMatchObject({
+      type: 'float',
+      value: 1.5,
+    });
+    expect(validateTiledPropertyData({ name: 'solid', type: 'bool', value: true }, SOURCE, '')).toMatchObject({
+      type: 'bool',
+      value: true,
+    });
+    expect(validateTiledPropertyData({ name: 'tint', type: 'color', value: '#ff0000ff' }, SOURCE, '')).toMatchObject({
+      type: 'color',
+      value: '#ff0000ff',
+    });
+    expect(validateTiledPropertyData({ name: 'sound', type: 'file', value: 'sfx/hit.wav' }, SOURCE, '')).toMatchObject({
+      type: 'file',
+      value: 'sfx/hit.wav',
+    });
     expect(validateTiledPropertyData({ name: 'target', type: 'object', value: 7 }, SOURCE, '')).toMatchObject({ type: 'object', value: 7 });
   });
 
   it('parses a class property with nested members and propertytype', () => {
-    const result = validateTiledPropertyData({ name: 'stats', type: 'class', propertytype: 'Stats', value: { hp: 10, regen: { rate: 0.5 } } }, SOURCE, '');
+    const result = validateTiledPropertyData(
+      { name: 'stats', type: 'class', propertytype: 'Stats', value: { hp: 10, regen: { rate: 0.5 } } },
+      SOURCE,
+      '',
+    );
     expect(result).toEqual({
       name: 'stats',
       type: 'class',
@@ -96,7 +112,9 @@ describe('validateTiledPropertyData', () => {
 
   it('throws on an unknown property type', () => {
     expect(() => validateTiledPropertyData({ name: 'x', type: 'vector', value: 1 }, SOURCE, 'properties[0]')).toThrow(TiledFormatError);
-    expect(() => validateTiledPropertyData({ name: 'x', type: 'vector', value: 1 }, SOURCE, 'properties[0]')).toThrow(/unknown property type "vector"/);
+    expect(() => validateTiledPropertyData({ name: 'x', type: 'vector', value: 1 }, SOURCE, 'properties[0]')).toThrow(
+      /unknown property type "vector"/,
+    );
   });
 
   it('throws when the value does not match the declared type', () => {
@@ -174,7 +192,9 @@ describe('validateTiledObjectData', () => {
   });
 
   it('throws on an unknown text alignment value', () => {
-    expect(() => validateTiledObjectData({ ...base, text: { text: 'Hello', halign: 'middle' } }, SOURCE, '')).toThrow(/unknown horizontal alignment "middle"/);
+    expect(() => validateTiledObjectData({ ...base, text: { text: 'Hello', halign: 'middle' } }, SOURCE, '')).toThrow(
+      /unknown horizontal alignment "middle"/,
+    );
     expect(() => validateTiledObjectData({ ...base, text: { text: 'Hello', valign: 'baseline' } }, SOURCE, '')).toThrow(
       /unknown vertical alignment "baseline"/,
     );
@@ -185,7 +205,11 @@ describe('validateTiledObjectData', () => {
   });
 
   it('parses a template reference and properties', () => {
-    const result = validateTiledObjectData({ ...base, template: 'templates/tree.tx', properties: [{ name: 'hp', type: 'int', value: 3 }] }, SOURCE, '');
+    const result = validateTiledObjectData(
+      { ...base, template: 'templates/tree.tx', properties: [{ name: 'hp', type: 'int', value: 3 }] },
+      SOURCE,
+      '',
+    );
     expect(result.template).toBe('templates/tree.tx');
     expect(result.properties).toEqual([{ name: 'hp', type: 'int', propertytype: undefined, value: 3 }]);
   });
@@ -205,29 +229,35 @@ describe('validateTiledLayerData — tile layers', () => {
   });
 
   it('throws when both "data" and "chunks" are present', () => {
-    expect(() => validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: [1], chunks: [] }), SOURCE, 'layers[0]')).toThrow(
-      /has both "data" and "chunks"/,
-    );
+    expect(() =>
+      validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: [1], chunks: [] }), SOURCE, 'layers[0]'),
+    ).toThrow(/has both "data" and "chunks"/);
   });
 
   it('throws when neither "data" nor "chunks" is present', () => {
-    expect(() => validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1 }), SOURCE, 'layers[0]')).toThrow(/has neither "data" nor "chunks"/);
+    expect(() => validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1 }), SOURCE, 'layers[0]')).toThrow(
+      /has neither "data" nor "chunks"/,
+    );
   });
 
   it('throws on compressed tile layer data', () => {
-    expect(() => validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: [1], compression: 'zlib' }), SOURCE, 'layers[0]')).toThrow(
-      /compressed tile layer data is not supported/,
-    );
+    expect(() =>
+      validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: [1], compression: 'zlib' }), SOURCE, 'layers[0]'),
+    ).toThrow(/compressed tile layer data is not supported/);
   });
 
   it('throws on an unsupported encoding', () => {
-    expect(() => validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: 'AAAA', encoding: 'base64' }), SOURCE, 'layers[0]')).toThrow(
-      /unsupported tile layer encoding "base64"/,
-    );
+    expect(() =>
+      validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: 'AAAA', encoding: 'base64' }), SOURCE, 'layers[0]'),
+    ).toThrow(/unsupported tile layer encoding "base64"/);
   });
 
   it('accepts the "csv" encoding', () => {
-    const result = validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: [1], encoding: 'csv' }), SOURCE, 'layers[0]');
+    const result = validateTiledLayerData(
+      baseLayer({ type: 'tilelayer', width: 1, height: 1, data: [1], encoding: 'csv' }),
+      SOURCE,
+      'layers[0]',
+    );
     expect(result).toMatchObject({ type: 'tilelayer', data: [1] });
   });
 });
@@ -246,15 +276,19 @@ describe('validateTiledLayerData — object layers', () => {
   });
 
   it('throws on an unknown draworder', () => {
-    expect(() => validateTiledLayerData(baseLayer({ type: 'objectgroup', draworder: 'bottomup', objects: [] }), SOURCE, 'layers[0]')).toThrow(
-      /unknown draw order "bottomup"/,
-    );
+    expect(() =>
+      validateTiledLayerData(baseLayer({ type: 'objectgroup', draworder: 'bottomup', objects: [] }), SOURCE, 'layers[0]'),
+    ).toThrow(/unknown draw order "bottomup"/);
   });
 });
 
 describe('validateTiledLayerData — image layers', () => {
   it('parses an image layer with repeat flags', () => {
-    const result = validateTiledLayerData(baseLayer({ type: 'imagelayer', image: 'bg.png', repeatx: true, repeaty: false }), SOURCE, 'layers[0]');
+    const result = validateTiledLayerData(
+      baseLayer({ type: 'imagelayer', image: 'bg.png', repeatx: true, repeaty: false }),
+      SOURCE,
+      'layers[0]',
+    );
     expect(result).toMatchObject({ type: 'imagelayer', image: 'bg.png', repeatx: true, repeaty: false });
   });
 
@@ -277,9 +311,8 @@ describe('validateTiledLayerData — group layers', () => {
 });
 
 describe('checkTiledLayerInfiniteConsistency', () => {
-  const tileLayer = (extra: Record<string, unknown>): import('../src/data').TiledLayerData => {
-    return validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, ...extra }), SOURCE, 'layers[0]');
-  };
+  const tileLayer = (extra: Record<string, unknown>): import('../src/data').TiledLayerData =>
+    validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, ...extra }), SOURCE, 'layers[0]');
 
   it('accepts a finite tile layer with "data" on a finite map', () => {
     expect(() => checkTiledLayerInfiniteConsistency([tileLayer({ data: [1] })], false, SOURCE, 'layers')).not.toThrow();
@@ -306,7 +339,7 @@ describe('checkTiledLayerInfiniteConsistency', () => {
   });
 
   it('skips a hole in the layers array (defensive; a genuine sparse hole, not producible by JSON.parse)', () => {
-    const layers: import('../src/data').TiledLayerData[] = new Array(2) as import('../src/data').TiledLayerData[];
+    const layers: Array<import('../src/data').TiledLayerData> = new Array(2) as Array<import('../src/data').TiledLayerData>;
     layers[1] = tileLayer({ data: [1] });
     expect(() => checkTiledLayerInfiniteConsistency(layers, false, SOURCE, 'layers')).not.toThrow();
   });
@@ -354,19 +387,26 @@ describe('validateTiledTileData', () => {
   });
 
   it('throws when the objectgroup is not an object layer', () => {
-    expect(() => validateTiledTileData({ id: 0, objectgroup: baseLayer({ type: 'tilelayer', width: 0, height: 0, data: [] }) }, SOURCE, 'tiles[0]')).toThrow(
-      /expected an "objectgroup" layer, got "tilelayer"/,
-    );
+    expect(() =>
+      validateTiledTileData({ id: 0, objectgroup: baseLayer({ type: 'tilelayer', width: 0, height: 0, data: [] }) }, SOURCE, 'tiles[0]'),
+    ).toThrow(/expected an "objectgroup" layer, got "tilelayer"/);
   });
 });
 
 describe('validateTiledTilesetRefData', () => {
   it('parses an external tileset reference', () => {
-    expect(validateTiledTilesetRefData({ firstgid: 1, source: 'tiles.tsj' }, SOURCE, 'tilesets[0]')).toEqual({ firstgid: 1, source: 'tiles.tsj' });
+    expect(validateTiledTilesetRefData({ firstgid: 1, source: 'tiles.tsj' }, SOURCE, 'tilesets[0]')).toEqual({
+      firstgid: 1,
+      source: 'tiles.tsj',
+    });
   });
 
   it('parses an embedded tileset reference', () => {
-    const result = validateTiledTilesetRefData({ firstgid: 1, name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2 }, SOURCE, 'tilesets[0]');
+    const result = validateTiledTilesetRefData(
+      { firstgid: 1, name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2 },
+      SOURCE,
+      'tilesets[0]',
+    );
     expect(result).toMatchObject({ firstgid: 1, name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2 });
   });
 
@@ -375,13 +415,18 @@ describe('validateTiledTilesetRefData', () => {
   });
 
   it('throws when firstgid is not positive', () => {
-    expect(() => validateTiledTilesetRefData({ firstgid: 0, source: 'tiles.tsj' }, SOURCE, 'tilesets[0]')).toThrow(/expected a positive integer/);
+    expect(() => validateTiledTilesetRefData({ firstgid: 0, source: 'tiles.tsj' }, SOURCE, 'tilesets[0]')).toThrow(
+      /expected a positive integer/,
+    );
   });
 });
 
 describe('validateTiledTilesetFileData', () => {
   it('parses a standalone .tsj root object', () => {
-    const result = validateTiledTilesetFileData({ name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2, image: 'tiles.png' }, 'tiles.tsj');
+    const result = validateTiledTilesetFileData(
+      { name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2, image: 'tiles.png' },
+      'tiles.tsj',
+    );
     expect(result).toMatchObject({ name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2, image: 'tiles.png' });
   });
 

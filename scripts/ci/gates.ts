@@ -25,10 +25,11 @@
  * `dist/esm/index.d.ts`, so it can only run in a job that has the built dist.
  * That is why it cannot simply join the ungated typecheck job.
  */
-import { GATE_GROUP_NAMES, GATE_GROUPS, type GateGroup } from './gate-groups.ts';
-import { changedFilesBetween, selectLocalPolicy } from './local-policy.ts';
 import { readOutputOptions } from '../lib/output.ts';
 import { runCommand } from '../lib/run-command.ts';
+import { chunkFiles, formatRangeFiles, selectFormatScope } from './format-scope.ts';
+import { FAST_GATES, GATE_GROUP_NAMES, GATE_GROUPS, type GateGroup, orderGates } from './gate-groups.ts';
+import { changedFilesBetween, selectLocalPolicy } from './local-policy.ts';
 
 const groupNames = GATE_GROUP_NAMES;
 const outputOptions = readOutputOptions(process.argv.slice(2));
@@ -39,34 +40,95 @@ if (!requested) {
   process.exit(2);
 }
 
-if (requested !== 'all' && requested !== 'affected' && !groupNames.includes(requested as GateGroup)) {
-  console.error(`Unknown gate group '${requested}'. Known groups: all, affected, ${groupNames.join(', ')}`);
+const AFFECTED_MODES = ['affected', 'affected-fast', 'affected-rest'];
+const isAffected = AFFECTED_MODES.includes(requested);
+
+if (requested !== 'all' && !isAffected && !groupNames.includes(requested as GateGroup)) {
+  console.error(`Unknown gate group '${requested}'. Known groups: all, affected, affected-fast, affected-rest, ${groupNames.join(', ')}`);
   process.exit(2);
 }
 
-const selected = requested === 'all' || requested === 'affected' ? groupNames : [requested as GateGroup];
+const selected = requested === 'all' || isAffected ? groupNames : [requested as GateGroup];
 let scripts: readonly string[] = selected.flatMap(group => GATE_GROUPS[group]);
 let packageTypechecks: readonly string[] = [];
-if (requested === 'affected') {
+/** Set when a pushed range lets the format gate check only the files it touched. */
+let formatFiles: readonly string[] | undefined;
+let formatSkipped = false;
+
+if (isAffected) {
   const [base, head] = outputOptions.argv.slice(1);
+
+  if (base) {
+    process.env.EXOJS_SOURCE_HYGIENE_BASE ||= base;
+  }
+
   try {
     const policy = selectLocalPolicy(base && head ? changedFilesBetween(base, head) : []);
     scripts = policy.gates;
     packageTypechecks = policy.packageTypechecks;
+
+    // Only a resolved range narrows the format gate; the catch below keeps the whole-repository check.
+    if (base && head && scripts.includes('format:check')) {
+      const scope = selectFormatScope(formatRangeFiles(base, head));
+
+      formatSkipped = scope.mode === 'skip';
+      formatFiles = scope.mode === 'files' ? scope.files : undefined;
+    }
   } catch {
     // A missing or invalid range must run the complete static contract.
-    scripts = groupNames.flatMap(group => GATE_GROUPS[group]);
+    scripts = orderGates(groupNames.flatMap(group => GATE_GROUPS[group]));
+  }
+
+  // The pre-push hook runs `affected-fast`, rebuilds dist only if needed, then
+  // `affected-rest`; together they equal `affected`.
+  if (requested === 'affected-fast') {
+    scripts = scripts.filter(script => FAST_GATES.includes(script));
+    packageTypechecks = [];
+  } else if (requested === 'affected-rest') {
+    scripts = scripts.filter(script => !FAST_GATES.includes(script));
   }
 }
 
 if (outputOptions.mode !== 'silent') {
   console.log(
-    `Running ${scripts.length + packageTypechecks.length} gate(s) from ${requested === 'affected' ? 'pushed paths' : `group(s): ${selected.join(', ')}`}\n`,
+    `Running ${scripts.length + packageTypechecks.length} gate(s) from ${isAffected ? 'pushed paths' : `group(s): ${selected.join(', ')}`}\n`,
   );
 }
 
+/** `format:check` restricted to the files of the pushed range; same Oxfmt, config and ignore files as the full gate. */
+const runSelectiveFormat = async (files: readonly string[]): Promise<number> => {
+  for (const chunk of chunkFiles(files)) {
+    const result = await runCommand({
+      label: 'gates-format:check(changed)',
+      command: 'pnpm',
+      args: ['exec', 'oxfmt', '--check', '--no-error-on-unmatched-pattern', '--', ...chunk],
+      output: outputOptions.mode,
+    });
+
+    if (result.status !== 0) {
+      return result.status;
+    }
+  }
+
+  return 0;
+};
+
 const main = async (): Promise<void> => {
   for (const script of scripts) {
+    if (script === 'format:check' && (formatFiles || formatSkipped)) {
+      if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
+        console.log(`\n=== oxfmt --check on ${formatFiles?.length ?? 0} changed file(s) ===\n`);
+      }
+
+      const status = formatFiles ? await runSelectiveFormat(formatFiles) : 0;
+
+      if (status !== 0) {
+        process.exit(status);
+      }
+
+      continue;
+    }
+
     if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
       console.log(`\n=== pnpm ${script} ===\n`);
     }
@@ -83,16 +145,27 @@ const main = async (): Promise<void> => {
       if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
         console.error(`\nGate failed: pnpm ${script} (exit code ${result.status})`);
       }
+
       process.exit(result.status);
     }
   }
 
   for (const name of packageTypechecks) {
-    const result = await runCommand({ label: `gates-typecheck-${name}`, command: 'pnpm', args: ['--filter', name, 'typecheck'], output: outputOptions.mode });
-    if (result.status !== 0) process.exit(result.status);
+    const result = await runCommand({
+      label: `gates-typecheck-${name}`,
+      command: 'pnpm',
+      args: ['--filter', name, 'typecheck'],
+      output: outputOptions.mode,
+    });
+
+    if (result.status !== 0) {
+      process.exit(result.status);
+    }
   }
 
-  if (outputOptions.mode !== 'silent') console.log(`\nAll ${scripts.length + packageTypechecks.length} gate(s) passed.`);
+  if (outputOptions.mode !== 'silent') {
+    console.log(`\nAll ${scripts.length + packageTypechecks.length} gate(s) passed.`);
+  }
 };
 
 await main();

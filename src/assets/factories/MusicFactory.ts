@@ -1,8 +1,16 @@
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
-import { AudioStream } from '#audio/AudioStream';
+import { AudioStream, type AudioStreamReconnectOptions } from '#audio/AudioStream';
+import type { MediaAudio } from '#audio/MediaAudio';
+import { Music } from '#audio/Music';
 import type { PlaybackOptions } from '#core/types';
 
-import { attachMediaSource, detachMediaElement, type MediaAssetOptions, type MediaAssetSource, type MediaLoadMessages } from './mediaSource';
+import {
+  attachMediaSource,
+  detachMediaElement,
+  type MediaAssetOptions,
+  type MediaAssetSource,
+  type MediaLoadMessages,
+} from './mediaSource';
 import { ObjectUrlPool } from './ObjectUrlPool';
 
 const MESSAGES: MediaLoadMessages = {
@@ -19,12 +27,20 @@ export interface MusicAssetOptions extends MediaAssetOptions {
    * declared; unused by streamed media, whose type comes from the response.
    */
   mimeType?: string;
-  /** Initial playback settings forwarded to the {@link AudioStream} instance. */
+  /** Initial playback settings forwarded to the {@link Music} instance. */
   playbackOptions?: Partial<PlaybackOptions>;
 }
 
+/** Options accepted by an asset of the built-in `audioStream` type. */
+export interface AudioStreamAssetOptions extends MediaAssetOptions {
+  /** Initial playback settings forwarded to the {@link AudioStream} instance. */
+  playbackOptions?: Partial<PlaybackOptions>;
+  /** Reconnect policy after the connection breaks; `false` disables it. See {@link AudioStream}. */
+  reconnect?: AudioStreamReconnectOptions | false;
+}
+
 /**
- * Builds an {@link AudioStream} over an `<audio>` element, streaming from a URL
+ * Builds element-backed audio over an `<audio>` element, streaming from a URL
  * or reading data the application already owns.
  *
  * Every element it created is paused and detached when its asset is released,
@@ -33,13 +49,16 @@ export interface MusicAssetOptions extends MediaAssetOptions {
  * the buffered range, which re-reads the source.
  * @internal
  */
-export class MusicFactory implements AssetFactory<MediaAssetSource, AudioStream, MusicAssetOptions> {
+abstract class MediaAudioFactory<
+  Resource extends MediaAudio,
+  Options extends MediaAssetOptions & { mimeType?: string },
+> implements AssetFactory<MediaAssetSource, Resource, Options> {
   /** Each element this factory made, and the object URL it owns on that element's behalf. */
   private readonly _elements = new Map<HTMLMediaElement, string | undefined>();
   private readonly _objectUrls = new ObjectUrlPool();
 
-  public async create(source: MediaAssetSource, context: AssetFactoryContext<MusicAssetOptions>): Promise<AudioStream> {
-    const options = context.options ?? {};
+  public async create(source: MediaAssetSource, context: AssetFactoryContext<Options>): Promise<Resource> {
+    const options = (context.options ?? {}) as Options;
     const audio = document.createElement('audio');
     // A streamed element points at the URL; one built from data the application
     // owns points at an object URL this factory then owns on its behalf.
@@ -80,11 +99,11 @@ export class MusicFactory implements AssetFactory<MediaAssetSource, AudioStream,
       throw error;
     }
 
-    return new AudioStream(audio, options.playbackOptions);
+    return this._build(audio, options);
   }
 
-  /** Ends playback and the transfer behind a released stream, and frees its data. */
-  public dispose(resource: AudioStream): void {
+  /** Ends playback and the transfer behind a released resource, and frees its data. */
+  public dispose(resource: Resource): void {
     const audio = resource.audioElement;
 
     resource.destroy();
@@ -106,6 +125,22 @@ export class MusicFactory implements AssetFactory<MediaAssetSource, AudioStream,
 
     this._elements.clear();
     this._objectUrls.revokeAll();
+  }
+
+  protected abstract _build(audio: HTMLAudioElement, options: Options): Resource;
+}
+
+/** Builds {@link Music} for the built-in `music` type. @internal */
+export class MusicFactory extends MediaAudioFactory<Music, MusicAssetOptions> {
+  protected _build(audio: HTMLAudioElement, options: MusicAssetOptions): Music {
+    return new Music(audio, options.playbackOptions);
+  }
+}
+
+/** Builds {@link AudioStream} for the built-in `audioStream` type. @internal */
+export class AudioStreamFactory extends MediaAudioFactory<AudioStream, AudioStreamAssetOptions> {
+  protected _build(audio: HTMLAudioElement, options: AudioStreamAssetOptions): AudioStream {
+    return new AudioStream(audio, { ...options.playbackOptions, ...(options.reconnect !== undefined && { reconnect: options.reconnect }) });
   }
 }
 

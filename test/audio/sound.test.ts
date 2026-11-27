@@ -3,6 +3,7 @@ import type { MockInstance } from 'vitest';
 import { getAudioContext } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
 import { NoopVoice } from '#audio/NoopVoice';
+import type { Loopable, RatePitched, Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 
 interface MockBufferSourceNode {
@@ -82,6 +83,193 @@ describe('Sound', () => {
     sound.destroy();
   });
 
+  test('destroy() is a final, idempotent release', () => {
+    const factory = setupSourceFactorySpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+
+    sound.addSprite('hit', { start: 0, end: 1 });
+
+    const sprite = sound.sprite('hit');
+    const clip = sound.clip(0.5, 1);
+    const voice = system.play(sound);
+
+    sound.destroy();
+
+    expect(voice.ended).toBe(true);
+    expect(sound.destroyed).toBe(true);
+    expect(sound.audioBuffer).toBeNull();
+    expect(sound.hasSprite('hit')).toBe(false);
+    expect(() => system.play(sound)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(sprite)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(clip)).toThrow('Cannot play a destroyed Sound');
+    expect(() => sound.destroy()).not.toThrow();
+    expect(factory.sources.length).toBe(1);
+
+    factory.restore();
+  });
+
+  describe.each(['root', 'sprite', 'nested clip'] as const)('root destruction during %s eviction', kind => {
+    test.each([false, true])('skips the pending voice without allocating native nodes (replace=%s)', replace => {
+      const factory = setupSourceFactorySpy();
+      const system = new AudioSystem();
+      const root = new Sound(createAudioBufferStub(), { poolSize: 1 });
+      let sound = root;
+
+      if (kind === 'sprite') {
+        root.addSprite('hit', { start: 0, end: 1 });
+        sound = root.sprite('hit');
+      } else if (kind === 'nested clip') {
+        sound = root.clip(0, 1).clip(0.1, 0.5);
+      }
+
+      const first = system.play(sound);
+      const createGain = vi.spyOn(getAudioContext(), 'createGain');
+      first.onEnd.add(() => root.destroy());
+
+      try {
+        const pending = system.play(sound, { replace, bus: system.music });
+
+        expect(root.destroyed).toBe(true);
+        expect(sound.destroyed).toBe(true);
+        expect(root.audioBuffer).toBeNull();
+        expect(first.ended).toBe(true);
+        expect(pending).toBeInstanceOf(NoopVoice);
+        expect(pending.ended).toBe(true);
+        expect(pending.bus).toBe(system.music);
+        expect(factory.sources).toHaveLength(1);
+        expect(createGain).not.toHaveBeenCalled();
+      } finally {
+        system.destroy();
+        root.destroy();
+        factory.restore();
+      }
+    });
+  });
+
+  test.each([false, true])('destroying the sprite during eviction skips its voice and preserves borrowed audio (replace=%s)', replace => {
+    const factory = setupSourceFactorySpy();
+    const system = new AudioSystem();
+    const buffer = createAudioBufferStub();
+    const root = new Sound(buffer, { poolSize: 1 });
+    root.addSprite('hit', { start: 0, end: 1 });
+
+    const sprite = root.sprite('hit');
+    const rootVoice = system.play(root);
+    const first = system.play(sprite);
+    first.onEnd.add(() => sprite.destroy());
+
+    try {
+      const pending = system.play(sprite, { replace });
+
+      expect(sprite.destroyed).toBe(true);
+      expect(root.destroyed).toBe(false);
+      expect(root.audioBuffer).toBe(buffer);
+      expect(rootVoice.ended).toBe(false);
+      expect(first.ended).toBe(true);
+      expect(pending).toBeInstanceOf(NoopVoice);
+      expect(pending.ended).toBe(true);
+      expect(factory.sources).toHaveLength(2);
+
+      rootVoice.stop();
+      expect(system.play(root).ended).toBe(false);
+    } finally {
+      system.destroy();
+      root.destroy();
+      factory.restore();
+    }
+  });
+
+  test.each([false, true])('destroying a separate sprite during eviction leaves root playback available (replace=%s)', replace => {
+    const factory = setupSourceFactorySpy();
+    const system = new AudioSystem();
+    const buffer = createAudioBufferStub();
+    const root = new Sound(buffer, { poolSize: 1 });
+    root.addSprite('hit', { start: 0, end: 1 });
+
+    const sprite = root.sprite('hit');
+    const spriteVoice = system.play(sprite);
+    const first = system.play(root);
+    first.onEnd.add(() => sprite.destroy());
+
+    try {
+      const pending = system.play(root, { replace });
+
+      expect(spriteVoice.ended).toBe(true);
+      expect(root.destroyed).toBe(false);
+      expect(root.audioBuffer).toBe(buffer);
+      expect(first.ended).toBe(true);
+      expect(pending.ended).toBe(false);
+      expect(factory.sources).toHaveLength(3);
+    } finally {
+      system.destroy();
+      root.destroy();
+      factory.restore();
+    }
+  });
+
+  test('destroy() finishes root and sprite cleanup before rethrowing an onEnd error', () => {
+    const factory = setupSourceFactorySpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
+    sound.addSprite('hit', { start: 0, end: 1 });
+    sound.addSprite('tail', { start: 1, end: 2 });
+
+    const sprite = sound.sprite('hit');
+    const tailSprite = sound.sprite('tail');
+    const clip = sound.clip(0, 1);
+    const first = system.play(sound);
+    const second = system.play(sound);
+    const spriteFirst = system.play(sprite);
+    const spriteSecond = system.play(sprite);
+    const tailVoice = system.play(tailSprite);
+    const firstError = new Error('root onEnd failure');
+    const spriteError = new Error('sprite onEnd failure');
+
+    first.onEnd.add(() => {
+      throw firstError;
+    });
+    spriteFirst.onEnd.add(() => {
+      throw spriteError;
+    });
+
+    expect(factory.sources).toHaveLength(5);
+    expect(() => sound.destroy()).toThrow(firstError);
+
+    // Every voice is stopped, even when an earlier root or sprite callback throws.
+    for (const voice of [first, second, spriteFirst, spriteSecond, tailVoice]) {
+      expect(voice.ended).toBe(true);
+    }
+
+    for (const source of factory.sources) {
+      expect(source.stop).toHaveBeenCalledTimes(1);
+    }
+
+    expect(sound.destroyed).toBe(true);
+    expect(sound.audioBuffer).toBeNull();
+    expect(sound.hasSprite('hit')).toBe(false);
+    expect(sound.hasSprite('tail')).toBe(false);
+    expect((sound as unknown as { _spriteSounds: Map<string, Sound> })._spriteSounds.size).toBe(0);
+    expect(sprite.destroyed).toBe(true);
+    expect(tailSprite.destroyed).toBe(true);
+    expect(clip.destroyed).toBe(true);
+    expect(first.onEnd.count).toBe(0);
+    expect(spriteFirst.onEnd.count).toBe(0);
+    expect(() => system.play(sound)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(sprite)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(tailSprite)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(clip)).toThrow('Cannot play a destroyed Sound');
+
+    // An earlier onEnd failure must never leave destroy() half-completed.
+    expect(() => sound.destroy()).not.toThrow();
+
+    for (const source of factory.sources) {
+      expect(source.stop).toHaveBeenCalledTimes(1);
+    }
+
+    factory.restore();
+  });
+
   // system.play(sound, { replace: true }) stops the prior instance before starting a new one.
   test('system.play(sound, { replace: true }) stops prior instance before starting a new one', () => {
     const factory = setupSourceFactorySpy();
@@ -111,9 +299,38 @@ describe('Sound', () => {
     system.play(sound);
 
     expect(factory.sources.length).toBe(3);
+
     for (const src of factory.sources) {
       expect(src.stop).not.toHaveBeenCalled();
     }
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('voices of one sound keep their own play options and never rewrite the sound defaults', () => {
+    const factory = setupSourceFactorySpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(), { poolSize: 3, volume: 0.5, loop: false, playbackRate: 1 });
+
+    const loud = system.play(sound, { volume: 1, loop: true, playbackRate: 2 }) as Voice & Loopable & RatePitched;
+    const quiet = system.play(sound, { volume: 0.25 }) as Voice & Loopable & RatePitched;
+
+    expect(sound.volume).toBe(0.5);
+    expect(sound.loop).toBe(false);
+    expect(sound.playbackRate).toBe(1);
+    expect(loud.volume).toBe(1);
+    expect(quiet.volume).toBe(0.25);
+    expect(loud.loop).toBe(true);
+    expect(quiet.loop).toBe(false);
+    expect(loud.playbackRate).toBe(2);
+    expect(quiet.playbackRate).toBe(1);
+
+    quiet.stop();
+
+    expect(quiet.ended).toBe(true);
+    expect(loud.ended).toBe(false);
+    expect(factory.sources[0]!.stop).not.toHaveBeenCalled();
 
     factory.restore();
     sound.destroy();

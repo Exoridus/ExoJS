@@ -69,7 +69,10 @@ const createMockApp = (canvas: HTMLCanvasElement, scenes: MockScenes): Applicati
         pointerDistanceThreshold: 10,
       },
     },
-    _backingStoreToLogical: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({ x: backingStoreX, y: backingStoreY }),
+    _backingStoreToLogical: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({
+      x: backingStoreX,
+      y: backingStoreY,
+    }),
   }) as unknown as Application;
 
 const createInputSystem = (canvas?: HTMLCanvasElement): { im: InputSystem; canvas: HTMLCanvasElement; scenes: MockScenes } => {

@@ -193,6 +193,11 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
   private readonly _id: number;
   private readonly _disposeCallbacks = new Set<() => void>();
   private readonly _uniformValues: Record<string, UniformValue>;
+  private _bindKey = 0;
+  private _bindKeyDirty = true;
+  private _bindKeySampler: SamplerOptions | null = null;
+  private _bindKeyScaleMode: SamplerOptions['scaleMode'] | undefined;
+  private _bindKeyWrapMode: SamplerOptions['wrapMode'] | undefined;
   private readonly _textureValues: Record<string, Texture | RenderTexture>;
   private readonly _uniformsView: unknown;
   private readonly _uniformBlocksView: unknown;
@@ -270,7 +275,23 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
    * sampler state changes; drives bind-group/slot reuse.
    */
   public get bindKey(): number {
-    return deriveBindKey(this._id, this._uniformValues, this._textureValues, this.sampler);
+    const sampler = this.sampler;
+
+    // The sampler is public and mutable in place, so it is revalidated on every read; the binding maps only change through the view setters.
+    if (
+      this._bindKeyDirty ||
+      sampler !== this._bindKeySampler ||
+      sampler?.scaleMode !== this._bindKeyScaleMode ||
+      sampler?.wrapMode !== this._bindKeyWrapMode
+    ) {
+      this._bindKey = deriveBindKey(this._id, this._uniformValues, this._textureValues, sampler);
+      this._bindKeyDirty = false;
+      this._bindKeySampler = sampler;
+      this._bindKeyScaleMode = sampler?.scaleMode;
+      this._bindKeyWrapMode = sampler?.wrapMode;
+    }
+
+    return this._bindKey;
   }
 
   /**
@@ -282,7 +303,9 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
    */
   public setUniform(name: MaterialRawUniformName<F, B>, value: UniformValue): this {
     if (this._blocks.length > 0) {
-      throw new Error('Material.setUniform is not available on a shader source that declares uniforms; write through `material.uniforms` instead.');
+      throw new Error(
+        'Material.setUniform is not available on a shader source that declares uniforms; write through `material.uniforms` instead.',
+      );
     }
 
     if (!Object.prototype.hasOwnProperty.call(this._uniformValues, name)) {
@@ -314,11 +337,23 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
    * typical usage is to drop the reference.
    */
   public destroy(): void {
-    for (const callback of this._disposeCallbacks) {
-      callback();
-    }
+    const callbacks = [...this._disposeCallbacks];
 
     this._disposeCallbacks.clear();
+
+    const failures: unknown[] = [];
+
+    for (const callback of callbacks) {
+      try {
+        callback();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    if (failures.length > 0) {
+      throw failures[0];
+    }
   }
 
   /**
@@ -361,6 +396,10 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
           }
 
           this._uniformValues[name] = value;
+
+          if (textureSlot) {
+            this._bindKeyDirty = true;
+          }
         },
       });
     }
@@ -382,6 +421,7 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
           }
 
           this._textureValues[name] = value;
+          this._bindKeyDirty = true;
         },
       });
     }
@@ -400,7 +440,12 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
 export type AnyMaterial = Material<UniformFields | undefined, UniformBlockRecord | undefined>;
 
 /** Write the caller's starting values into the freshly built blocks. */
-const applyInitialBlockValues = (blocks: readonly UniformBlockData[], implicit: boolean, uniforms: unknown, uniformBlocks: unknown): void => {
+const applyInitialBlockValues = (
+  blocks: readonly UniformBlockData[],
+  implicit: boolean,
+  uniforms: unknown,
+  uniformBlocks: unknown,
+): void => {
   if (implicit) {
     if (uniforms !== undefined) {
       blocks[0]!._setValues(uniforms as Record<string, unknown>);

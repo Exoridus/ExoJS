@@ -30,7 +30,17 @@
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./oxlint": {
+      "types": "./dist/esm/oxlint.d.ts",
+      "import": "./dist/esm/oxlint.js",
+      "default": "./dist/esm/oxlint.js"
+    },
+    "./oxlint-engine": {
+      "types": "./dist/esm/oxlint-engine.d.ts",
+      "import": "./dist/esm/oxlint-engine.js",
+      "default": "./dist/esm/oxlint-engine.js"
+    }
   },
   "files": [
     "dist/esm/",

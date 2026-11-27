@@ -1,16 +1,22 @@
-import { type FunctionComponent, lazy, type Ref, Suspense, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { type CSSProperties, type FunctionComponent, lazy, type Ref, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
+import type { ExampleRendererStatus } from '../../../examples/shared/runtime';
 import { loadExampleSource } from '../lib/example-store';
+import { GUIDE_CHAPTERS } from '../lib/guide-structure';
+import { PreviewConsole } from '../lib/preview-console';
 import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry } from '../lib/types';
+import { buildPublicUrl } from '../lib/url-builder';
+import { buildExampleHref } from '../lib/url-state';
 import { type DiagnosticJumpEvent, DiagnosticsStrip } from './DiagnosticsStrip';
 import styles from './Editor.module.scss';
-import type { EditorCodeHandle, EditorCodeProps, EditorCursorEvent, EditorDiagnostic, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
+import type { EditorCodeHandle, EditorCodeProps, EditorDiagnostic, EditorRunStatus, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
 import { type CanvasSizeEvent, EditorPreview, type EditorPreviewHandle } from './EditorPreview';
-import { EditorStatusBar } from './EditorStatusBar';
-import { SidebarToggle, SwapButton } from './PlaygroundButtons';
+import { OutputPanel } from './OutputPanel';
+import { SidebarToggle } from './PlaygroundButtons';
 import { PreviewToolbar } from './PreviewToolbar';
 import { css, cx } from './react-utils';
+import { UsedAssets } from './UsedAssets';
 
 /**
  * Rendered in place of the editor while there is no DOM to attach Monaco to,
@@ -19,15 +25,14 @@ import { css, cx } from './react-utils';
 const ServerEditorCodeFallback: FunctionComponent<EditorCodeProps> = () => null;
 
 const EditorCode = lazy<FunctionComponent<EditorCodeProps>>(async () => {
-  if (typeof window === 'undefined') return { default: ServerEditorCodeFallback };
+  if (typeof window === 'undefined') {
+    return { default: ServerEditorCodeFallback };
+  }
+
   const mod = await import('./EditorCode');
+
   return { default: mod.EditorCode };
 });
-
-export interface EditorHandle {
-  openPreviewInTab(): void;
-  triggerReload(): void;
-}
 
 export type EditorLayout = 'split' | 'stacked';
 /** Which card sits next to the example list in the split layout. */
@@ -35,116 +40,134 @@ export type EditorOrder = 'preview-first' | 'editor-first';
 
 const LAYOUT_STORAGE_KEY = 'exo-playground-layout';
 const ORDER_STORAGE_KEY = 'exo-playground-order';
+const SPLIT_STORAGE_KEY = 'exo-playground-split';
 
 export interface EditorProps {
   activeExample: Example | null;
+  nextExample?: Example | null;
+  compact?: boolean;
   catalogLoadError: string | null;
-  ref?: Ref<EditorHandle>;
+  selectionError?: string | null;
+  onRetryCatalog?(): void;
+  onRecoverCurrent?(): void;
+  onSelectStartingExample?(): void;
   selectedVersionId: string;
   showSidebarToggle: boolean;
   sidebarOpen: boolean;
   sidebarToggleRef: Ref<HTMLButtonElement>;
   onToggleSidebar(): void;
+  onSelectExample?(path: string): void;
 }
 
 export const Editor = ({
   activeExample,
+  nextExample,
+  compact = false,
   catalogLoadError,
-  ref,
+  selectionError,
+  onRetryCatalog,
+  onRecoverCurrent,
+  onSelectStartingExample,
   selectedVersionId,
   showSidebarToggle,
   sidebarOpen,
   sidebarToggleRef,
   onToggleSidebar,
+  onSelectExample,
 }: EditorProps): JSX.Element => {
+  const [rendererStatus, setRendererStatus] = useState<ExampleRendererStatus | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [sourceCode, setSourceCode] = useState<string | null>(null);
   const [originalSourceCode, setOriginalSourceCode] = useState<string | null>(null);
   const [executionCode, setExecutionCode] = useState<string | null>(null);
+  const [executionModules, setExecutionModules] = useState<Record<string, string>>({});
   const [originalExecutionCode, setOriginalExecutionCode] = useState<string | null>(null);
+  const [sourceRetry, setSourceRetry] = useState(0);
   const [sourceLoadError, setSourceLoadError] = useState<PreviewErrorEntry | null>(null);
-  const [previewErrors, setPreviewErrors] = useState<PreviewErrorEntry[]>([]);
+  const [output] = useState(() => new PreviewConsole());
+  // Counts explicit runs, so running unchanged code still restarts the preview.
+  const [runId, setRunId] = useState(0);
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [previewExpanded, setPreviewExpanded] = useState(false);
-  const [cursorLine, setCursorLine] = useState(1);
-  const [cursorColumn, setCursorColumn] = useState(1);
-  const [selectionLength, setSelectionLength] = useState(0);
   const [dirty, setDirty] = useState(false);
+  const [runStatus, setRunStatus] = useState<EditorRunStatus>('idle');
   const [diagnostics, setDiagnostics] = useState<ReadonlyArray<EditorDiagnostic>>([]);
-  const [viewMode, setViewMode] = useState<'source' | 'compiled'>('source');
-  // Split (editor left, preview right) is the desktop default; the stored
-  // preference is applied after mount so SSR and first client render match.
-  // Below 1120px the CSS ignores the mode and always stacks.
-  const [layout, setLayout] = useState<EditorLayout>('split');
+  const [layout, setLayout] = useState<EditorLayout>('stacked');
   const [order, setOrder] = useState<EditorOrder>('preview-first');
+  const [splitPercent, setSplitPercent] = useState(55);
+  const [activeView, setActiveView] = useState<'demo' | 'code'>('demo');
+  const [codeContextOpen, setCodeContextOpen] = useState(false);
+  const [toolbarTarget, setToolbarTarget] = useState<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLElement | null>(null);
   const codeEditorRef = useRef<EditorCodeHandle | null>(null);
+  const codeFrameRef = useRef<HTMLElement | null>(null);
+  const [assetSources, setAssetSources] = useState<readonly string[] | null>(null);
   const previewRef = useRef<EditorPreviewHandle | null>(null);
   const previewFrameRef = useRef<HTMLElement | null>(null);
-  const loadKeyRef = useRef<string | null>(null);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      openPreviewInTab(): void {
-        previewRef.current?.openPreviewInTab();
-      },
-      triggerReload(): void {
-        codeEditorRef.current?.triggerRefresh();
-      },
-    }),
-    [],
-  );
+  const examplePath = activeExample?.path;
+  const exampleLanguage = activeExample?.language;
 
   useEffect(() => {
-    const path = activeExample?.path ?? null;
-    const loadKey = path && selectedVersionId ? `${selectedVersionId}::${path}` : null;
-    if (loadKey === loadKeyRef.current) return;
-    loadKeyRef.current = loadKey;
-
     // Reset the editor for the newly-selected example before loading its source
     // asynchronously below. This is a prop-change reset (not a render-derived
     // value); the React-idiomatic alternative - a `key` remount - would re-init
     // Monaco on every example switch, so we suppress the heuristic here instead.
-    /* eslint-disable @eslint-react/set-state-in-effect */
+    /* eslint-disable @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect */
+    setRendererStatus(null);
+    setRunStatus('idle');
     setSourceCode(null);
     setOriginalSourceCode(null);
     setExecutionCode(null);
+    setExecutionModules({});
     setOriginalExecutionCode(null);
     setSourceLoadError(null);
-    setPreviewErrors([]);
     setDiagnostics([]);
-    setViewMode('source');
-    /* eslint-enable @eslint-react/set-state-in-effect */
+    /* eslint-enable @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect */
 
-    if (!activeExample || !selectedVersionId) return;
+    if (!examplePath || !selectedVersionId) {
+      return;
+    }
 
     let cancelled = false;
+
     const load = async (): Promise<void> => {
       try {
-        if (activeExample.language === 'typescript') {
-          const tsPath = activeExample.path.replace(/\.js$/, '.ts');
+        if (exampleLanguage === 'typescript') {
+          const tsPath = examplePath.replace(/\.js$/, '.ts');
           const [tsSource, jsSource] = await Promise.all([
             loadExampleSource(selectedVersionId, tsPath),
-            loadExampleSource(selectedVersionId, activeExample.path),
+            loadExampleSource(selectedVersionId, examplePath),
           ]);
-          if (cancelled) return;
+
+          if (cancelled) {
+            return;
+          }
+
           setSourceCode(tsSource);
           setOriginalSourceCode(tsSource);
           setExecutionCode(jsSource);
           setOriginalExecutionCode(jsSource);
+
           return;
         }
 
-        const nextSource = await loadExampleSource(selectedVersionId, activeExample.path);
-        if (cancelled) return;
+        const nextSource = await loadExampleSource(selectedVersionId, examplePath);
+
+        if (cancelled) {
+          return;
+        }
+
         setSourceCode(nextSource);
         setOriginalSourceCode(nextSource);
         setExecutionCode(null);
         setOriginalExecutionCode(null);
       } catch (error) {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
+
         setSourceLoadError({
           summary: 'Failed to load example source',
           details: error instanceof Error ? error.message : String(error),
@@ -153,10 +176,23 @@ export const Editor = ({
     };
 
     void load();
+
     return () => {
       cancelled = true;
     };
-  }, [activeExample, selectedVersionId]);
+  }, [exampleLanguage, examplePath, selectedVersionId, sourceRetry]);
+
+  useEffect(() => () => output.dispose(), [output]);
+
+  useEffect(
+    () =>
+      output.subscribe(() => {
+        if (output.getSnapshot().exceptions > 0) {
+          setRunStatus('error');
+        }
+      }),
+    [output],
+  );
 
   // Runs once the first client render has matched the server's output, which is
   // the point from which the editor can differ from it safely.
@@ -166,24 +202,56 @@ export const Editor = ({
   }, []);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
-    // Applying a stored preference is the canonical "sync with external
-    // store on mount" effect.
-    // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
-    if (stored === 'split' || stored === 'stacked') setLayout(stored);
-    const storedOrder = window.localStorage.getItem(ORDER_STORAGE_KEY);
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
-    if (storedOrder === 'preview-first' || storedOrder === 'editor-first') setOrder(storedOrder);
+    try {
+      const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
+
+      // Applying a stored preference is the canonical "sync with external
+      // store on mount" effect.
+      if (stored === 'split' || stored === 'stacked') {
+        // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
+        setLayout(stored);
+      }
+
+      const storedOrder = window.localStorage.getItem(ORDER_STORAGE_KEY);
+
+      if (storedOrder === 'preview-first' || storedOrder === 'editor-first') {
+        // eslint-disable-next-line @eslint-react/set-state-in-effect
+        setOrder(storedOrder);
+      }
+
+      const storedSplit = window.localStorage.getItem(SPLIT_STORAGE_KEY);
+      const parsedSplit = storedSplit === null ? 55 : Number(storedSplit);
+
+      if (Number.isFinite(parsedSplit)) {
+        // eslint-disable-next-line @eslint-react/set-state-in-effect
+        setSplitPercent(Math.min(70, Math.max(35, parsedSplit)));
+      }
+    } catch {
+      // Storage can be unavailable in embedded or restricted browsing contexts.
+    }
   }, []);
+
+  const resizeSplit = (percent: number): void => {
+    const next = Math.min(70, Math.max(35, percent));
+    setSplitPercent(next);
+
+    try {
+      window.localStorage.setItem(SPLIT_STORAGE_KEY, String(next));
+    } catch {
+      // The current session remains usable without persisted preferences.
+    }
+  };
 
   const swapOrder = (): void => {
     setOrder(current => {
       const next: EditorOrder = current === 'preview-first' ? 'editor-first' : 'preview-first';
+
       try {
         window.localStorage.setItem(ORDER_STORAGE_KEY, next);
       } catch {
         // localStorage disabled - the swap still works for the session.
       }
+
       return next;
     });
   };
@@ -191,11 +259,13 @@ export const Editor = ({
   const toggleLayout = (): void => {
     setLayout(current => {
       const next: EditorLayout = current === 'split' ? 'stacked' : 'split';
+
       try {
         window.localStorage.setItem(LAYOUT_STORAGE_KEY, next);
       } catch {
         // localStorage disabled - the toggle still works for the session.
       }
+
       return next;
     });
   };
@@ -206,9 +276,17 @@ export const Editor = ({
 
   const syncExpandedWidth = useCallback((): void => {
     const frame = previewFrameRef.current;
-    if (!frame) return;
+
+    if (!frame) {
+      return;
+    }
+
     frame.style.removeProperty('margin-right');
-    if (!expandedActive) return;
+
+    if (!expandedActive) {
+      return;
+    }
+
     const rect = frame.getBoundingClientRect();
     const gap = 16;
     const extend = Math.max(0, window.innerWidth - rect.right - gap);
@@ -218,25 +296,27 @@ export const Editor = ({
   useEffect(() => {
     syncExpandedWidth();
     window.addEventListener('resize', syncExpandedWidth);
+
     return () => window.removeEventListener('resize', syncExpandedWidth);
   }, [syncExpandedWidth]);
 
   const onUpdateCode = (event: UpdateCodeEvent): void => {
+    setRendererStatus(null);
+    setRunId(id => id + 1);
     setSourceCode(event.code);
     setExecutionCode(event.executionCode ?? null);
+    setExecutionModules(event.executionModules ?? {});
   };
 
   const onResetCode = (_event: ResetCodeEvent): void => {
-    if (originalSourceCode === null) return;
-    setPreviewErrors([]);
+    if (originalSourceCode === null) {
+      return;
+    }
+
     setSourceCode(originalSourceCode);
     setExecutionCode(originalExecutionCode);
-  };
-
-  const onCursorChange = (event: EditorCursorEvent): void => {
-    setCursorLine(event.lineNumber);
-    setCursorColumn(event.column);
-    setSelectionLength(event.selectionLength);
+    setExecutionModules({});
+    setRunId(id => id + 1);
   };
 
   const onCanvasSize = useCallback((event: CanvasSizeEvent): void => {
@@ -245,80 +325,250 @@ export const Editor = ({
     setPreviewZoom(event.zoom);
   }, []);
 
+  const onRendererStatus = useCallback((status: ExampleRendererStatus | null): void => {
+    setRendererStatus(status);
+  }, []);
+
+  const onExecutionStatus = useCallback(
+    (status: 'updated' | 'error'): void => {
+      if (status === 'error' || output.getSnapshot().exceptions > 0) {
+        setRunStatus('error');
+
+        return;
+      }
+
+      setRunStatus(current => (current === 'running' ? 'updated' : current));
+    },
+    [output],
+  );
+
+  const showCode = (): void => {
+    setActiveView('code');
+
+    if (window.matchMedia('(min-width: 1120px)').matches && layout === 'stacked') {
+      toggleLayout();
+    }
+
+    requestAnimationFrame(() => {
+      (window.matchMedia('(min-width: 1120px)').matches ? rootRef : codeFrameRef).current?.scrollIntoView({ block: 'start' });
+      codeFrameRef.current?.focus({ preventScroll: true });
+    });
+  };
+
+  const showDemo = (): void => {
+    setActiveView('demo');
+    requestAnimationFrame(() => {
+      rootRef.current?.scrollIntoView({ block: 'start' });
+
+      if (compact) {
+        rootRef.current?.querySelector<HTMLButtonElement>('#demo-view-tab')?.focus({ preventScroll: true });
+      } else {
+        previewRef.current?.focusPreviewSurface();
+      }
+    });
+  };
+
   const onDiagnosticJump = (event: DiagnosticJumpEvent): void => {
-    codeEditorRef.current?.jumpToLine(event.lineNumber, event.column);
+    setActiveView('code');
+    requestAnimationFrame(() => codeEditorRef.current?.jumpToLine(event.lineNumber, event.column));
   };
 
   const combinedErrors = [
     ...(catalogLoadError ? [{ summary: 'Failed to load examples catalog', details: catalogLoadError }] : []),
     ...(sourceLoadError ? [sourceLoadError] : []),
-    ...previewErrors,
+    ...(selectionError ? [{ summary: 'Example unavailable', details: selectionError }] : []),
   ];
 
   if (!activeExample && combinedErrors.length > 0) {
-    return <section className={css(styles, 'root')}>{renderErrors(combinedErrors)}</section>;
+    return (
+      <section className={css(styles, 'root')}>
+        {renderErrors(combinedErrors)}
+        {catalogLoadError && (
+          <button type="button" onClick={onRetryCatalog}>
+            Retry examples catalog
+          </button>
+        )}
+        {selectionError && selectedVersionId && (
+          <button type="button" onClick={onSelectStartingExample}>
+            Open starting example
+          </button>
+        )}
+        <button type="button" onClick={onRecoverCurrent}>
+          Open current Playground
+        </button>
+      </section>
+    );
   }
 
   const availability = getExampleAvailability(activeExample);
-  const languageLabel = activeExample?.language === 'typescript' ? 'TypeScript' : 'JavaScript';
   const editorLanguage = activeExample?.language === 'typescript' ? 'typescript' : 'javascript';
   const displayPath = getDisplayPath(activeExample);
-  // The toggle only makes sense for a TS example - a "compiled" view of
-  // freeform JS scratch code would just be the same text back.
-  const canToggleView = editorLanguage === 'typescript';
-  const isCompiledView = canToggleView && viewMode === 'compiled';
-  const displayedLanguage = isCompiledView ? 'javascript' : editorLanguage;
-  // executionCode only reads null before the very first successful compile -
-  // once set, it holds the last successful compile even while a newer edit is
-  // still emitting (see getExecutionCode's contract in EditorCode.tsx), so this
-  // placeholder is a first-paint-only case.
-  const displayedSourceCode = isCompiledView ? (executionCode ?? '// Compiling…') : sourceCode;
-  const displayedSourcePath = isCompiledView ? (activeExample?.path ?? null) : displayPath;
+  const { status: feedbackStatus, message: runMessage } = getRunFeedback(runStatus, dirty, rendererStatus, sourceLoadError);
+  const contextCollapsible = compact && activeView === 'code';
+  const nextExampleLink = nextExample && onSelectExample && (
+    <a
+      className={css(styles, 'next-example')}
+      href={buildExampleHref(nextExample.path, selectedVersionId)}
+      onClick={event => {
+        if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+          event.preventDefault();
+          onSelectExample(nextExample.path);
+        }
+      }}
+    >
+      <span>Next experiment</span> {nextExample.title} <span aria-hidden="true">→</span>
+    </a>
+  );
 
-  const toggleViewMode = (): void => {
-    setViewMode(mode => (mode === 'source' ? 'compiled' : 'source'));
-  };
-
-  // The example list's toggle sits in the header of the card beside the list,
-  // and the swap in the header of the card on the right; stacked, the preview
-  // is the top card and nothing swaps.
-  const previewLeads = layout === 'stacked' || order === 'preview-first';
-  const sidebarToggle = showSidebarToggle ? <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} /> : null;
-  const swapButton = layout === 'split' ? <SwapButton onSwap={swapOrder} /> : null;
+  const sidebarToggle =
+    showSidebarToggle && !sidebarOpen ? <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} /> : null;
 
   return (
-    <section className={css(styles, 'root')} data-layout={layout} data-order={order}>
+    <section
+      ref={rootRef}
+      className={css(styles, 'root')}
+      data-layout={layout}
+      data-order={order}
+      data-active-view={activeView}
+      style={{ '--split-percent': `${splitPercent}%` } as CSSProperties}
+    >
+      {selectedVersionId && selectedVersionId !== 'current' && (
+        <p role="status">
+          Historical source and core runtime: {selectedVersionId}. Shared support and extensions come from this deployment. Version-specific
+          editor types may be unavailable.{' '}
+          <button type="button" onClick={onRecoverCurrent}>
+            Open current Playground
+          </button>
+        </p>
+      )}
+      {activeExample && (
+        <header className={css(styles, 'example-header')} data-example-header>
+          <div className={css(styles, 'example-heading')} data-header-row="primary">
+            {sidebarToggle}
+            <h1 title={activeExample.title}>{activeExample.title}</h1>
+            <button type="button" className={css(styles, 'code-link')} onClick={showCode}>
+              View code
+            </button>
+            <div className={css(styles, 'toolbar-slot')}>
+              <PreviewToolbar actionsRef={setToolbarTarget} />
+            </div>
+          </div>
+          <details className={css(styles, 'example-details')} data-example-context open={!contextCollapsible || codeContextOpen}>
+            <summary
+              className={css(styles, 'context-summary')}
+              hidden={!contextCollapsible}
+              onClick={event => {
+                event.preventDefault();
+                setCodeContextOpen(open => !open);
+              }}
+            >
+              Example context
+            </summary>
+            <div className={css(styles, 'example-context')} data-header-row="context">
+              <p className={css(styles, 'example-description')} title={activeExample.description}>
+                {activeExample.description}
+              </p>
+              {renderLearningLinks(activeExample, 1)}
+            </div>
+            {contextCollapsible && nextExampleLink && <div className={css(styles, 'context-next')}>{nextExampleLink}</div>}
+          </details>
+          <div className={css(styles, 'example-actions')}>
+            <div
+              className={css(styles, 'view-tabs')}
+              role="tablist"
+              aria-label="Example view"
+              onKeyDown={event => {
+                if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                  event.preventDefault();
+                  let next: 'demo' | 'code' = activeView === 'demo' ? 'code' : 'demo';
+
+                  if (event.key === 'Home') {
+                    next = 'demo';
+                  } else if (event.key === 'End') {
+                    next = 'code';
+                  }
+
+                  setActiveView(next);
+                  event.currentTarget.querySelector<HTMLButtonElement>(`#${next}-view-tab`)?.focus();
+                }
+              }}
+            >
+              <button
+                id="demo-view-tab"
+                type="button"
+                role="tab"
+                aria-selected={activeView === 'demo'}
+                aria-controls="playground-demo"
+                tabIndex={activeView === 'demo' ? 0 : -1}
+                onClick={() => setActiveView('demo')}
+              >
+                Demo
+              </button>
+              <button
+                id="code-view-tab"
+                type="button"
+                role="tab"
+                aria-selected={activeView === 'code'}
+                aria-controls="playground-code"
+                tabIndex={activeView === 'code' ? 0 : -1}
+                onClick={() => setActiveView('code')}
+              >
+                Code
+              </button>
+            </div>
+            {!contextCollapsible && nextExampleLink}
+          </div>
+          <div className={css(styles, 'run-feedback')} data-run-status={feedbackStatus}>
+            <p role="status" aria-live="polite">
+              {runMessage}
+            </p>
+            {activeView === 'code' && (feedbackStatus === 'updated' || feedbackStatus === 'running') && (
+              <button type="button" onClick={showDemo}>
+                Show demo
+              </button>
+            )}
+          </div>
+        </header>
+      )}
       <section
+        id="playground-demo"
         ref={previewFrameRef}
         className={cx(css(styles, 'preview-frame'), expandedActive && css(styles, 'preview-frame--expanded'))}
         aria-label="Example preview"
+        role={compact ? 'tabpanel' : undefined}
+        aria-labelledby={compact ? 'demo-view-tab' : undefined}
+        tabIndex={compact ? 0 : undefined}
       >
-        <PreviewToolbar
-          exampleTitle={activeExample?.title ?? ''}
-          capabilities={activeExample?.capabilities ?? []}
-          canvasWidth={canvasWidth}
-          canvasHeight={canvasHeight}
-          zoom={previewZoom}
-          selectedVersionId={selectedVersionId}
-          disabled={!sourceCode}
-          expanded={expandedActive}
-          layout={layout}
-          leading={previewLeads ? sidebarToggle : swapButton}
-          onReload={() => codeEditorRef.current?.triggerRefresh()}
-          onOpenTab={() => previewRef.current?.openPreviewInTab()}
-          onToggleExpand={() => setPreviewExpanded(value => !value)}
-          onToggleLayout={toggleLayout}
-        />
         <div className={css(styles, 'preview-surface')} data-preview-surface>
           <div className={css(styles, 'preview-component')}>
-            <EditorPreview
-              ref={previewRef}
-              sourceCode={executionCode ?? sourceCode}
-              exampleMeta={activeExample}
-              selectedVersionId={selectedVersionId}
-              onPreviewErrors={setPreviewErrors}
-              onCanvasSize={onCanvasSize}
-            />
+            {sourceLoadError ? (
+              <div role="alert">
+                <p>{sourceLoadError.summary}</p>
+                <p>{sourceLoadError.details}</p>
+                <button type="button" onClick={() => setSourceRetry(value => value + 1)}>
+                  Retry source
+                </button>
+                {selectedVersionId !== 'current' && (
+                  <button type="button" onClick={onRecoverCurrent}>
+                    Open current Playground
+                  </button>
+                )}
+              </div>
+            ) : (
+              <EditorPreview
+                ref={previewRef}
+                sourceCode={executionCode ?? sourceCode}
+                executionModules={executionModules}
+                runId={runId}
+                exampleMeta={activeExample}
+                selectedVersionId={selectedVersionId}
+                output={output}
+                onCanvasSize={onCanvasSize}
+                onRendererStatus={onRendererStatus}
+                onExecutionStatus={onExecutionStatus}
+                onAssets={setAssetSources}
+              />
+            )}
           </div>
           {!availability.available && (
             <div className={css(styles, 'unavailable-overlay')}>
@@ -327,16 +577,58 @@ export const Editor = ({
                 <line x1="12" y1="9" x2="12" y2="14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 <circle cx="12" cy="17.5" r="0.8" fill="currentColor" />
               </svg>
-              <p className={css(styles, 'unavailable-message')}>{availability.reason ?? 'This example is not available in the current browser.'}</p>
+              <p className={css(styles, 'unavailable-message')}>
+                {availability.reason ?? 'This example is not available in the current browser.'}
+              </p>
             </div>
           )}
         </div>
       </section>
+      <div
+        className={css(styles, 'split-divider')}
+        role="separator"
+        aria-label="Resize preview and editor"
+        aria-orientation="vertical"
+        aria-valuemin={35}
+        aria-valuemax={70}
+        aria-valuenow={Math.round(splitPercent)}
+        tabIndex={0}
+        onPointerDown={event => {
+          event.preventDefault();
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={event => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            const bounds = rootRef.current!.getBoundingClientRect();
+            resizeSplit(((event.clientX - bounds.left) / bounds.width) * 100);
+          }
+        }}
+        onPointerUp={event => event.currentTarget.releasePointerCapture(event.pointerId)}
+        onKeyDown={event => {
+          if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+            event.preventDefault();
+            const boundary = event.key === 'Home' ? 35 : 70;
+            const next = event.key === 'Home' || event.key === 'End' ? boundary : splitPercent + (event.key === 'ArrowRight' ? 2 : -2);
+            resizeSplit(next);
+          }
+        }}
+      />
       <div className={css(styles, 'diagnostics-slot')}>
         <DiagnosticsStrip diagnostics={diagnostics} onDiagnosticJump={onDiagnosticJump} />
       </div>
-      <div className={css(styles, 'errors-slot')}>{renderErrors(combinedErrors)}</div>
-      <section className={css(styles, 'editor-frame')} aria-label="Source editor">
+      <div className={css(styles, 'output-slot')}>
+        <OutputPanel output={output} systemErrors={combinedErrors} />
+      </div>
+      <section
+        id="playground-code"
+        ref={codeFrameRef}
+        tabIndex={compact ? 0 : -1}
+        className={css(styles, 'editor-frame')}
+        aria-label="Source editor"
+        role={compact ? 'tabpanel' : undefined}
+        aria-labelledby={compact ? 'code-view-tab' : undefined}
+      >
+        <UsedAssets sources={assetSources} />
         {/*
           Held back until after hydration. The lazy loader resolves to an empty
           component on the server and to Monaco in the browser, so rendering it
@@ -350,49 +642,157 @@ export const Editor = ({
         <Suspense fallback={null}>
           {!hydrated ? null : (
             <EditorCode
+              key={`${selectedVersionId}/${displayPath ?? 'loading'}`}
               ref={codeEditorRef}
-              leading={previewLeads ? swapButton : sidebarToggle}
-              sourceCode={displayedSourceCode}
-              sourcePath={displayedSourcePath}
-              language={displayedLanguage}
-              readOnly={isCompiledView}
-              canReset={Boolean(originalSourceCode && sourceCode !== originalSourceCode)}
+              toolbarTarget={toolbarTarget}
+              menuItems={
+                <details
+                  className={css(styles, 'preview-options')}
+                  onBlur={event => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      event.currentTarget.open = false;
+                    }
+                  }}
+                  onKeyDown={event => {
+                    if (event.key === 'Escape') {
+                      event.currentTarget.open = false;
+                      event.currentTarget.querySelector('summary')?.focus();
+                      event.stopPropagation();
+                    }
+                  }}
+                  onClick={event => {
+                    if ((event.target as HTMLElement).closest('button')) {
+                      event.currentTarget.open = false;
+                    }
+                  }}
+                >
+                  <summary>View</summary>
+                  <div role="group" aria-label="Preview and layout">
+                    <button type="button" data-layout-action onClick={toggleLayout}>
+                      {layout === 'stacked' ? 'Split view' : 'Demo above code'}
+                    </button>
+                    {layout === 'split' && (
+                      <button type="button" data-layout-action onClick={swapOrder}>
+                        Swap panes
+                      </button>
+                    )}
+                    <button type="button" onClick={() => previewRef.current?.openPreviewInTab()}>
+                      Open demo in new tab
+                    </button>
+                    {layout === 'stacked' && (
+                      <button type="button" onClick={() => setPreviewExpanded(value => !value)}>
+                        {expandedActive ? 'Normal demo size' : 'Expand demo'}
+                      </button>
+                    )}
+                    <p>
+                      {canvasWidth > 0 ? `${canvasWidth} x ${canvasHeight} | ${Math.round(previewZoom * 100)}% | ` : ''}exojs@
+                      {selectedVersionId}
+                      {rendererStatus?.actual ? ` | ${rendererStatus.actual}` : ''}
+                    </p>
+                  </div>
+                </details>
+              }
+              sourceCode={sourceCode}
+              originalSourceCode={originalSourceCode}
+              sourcePath={displayPath}
+              language={editorLanguage}
+              compiledCode={executionCode}
+              canReset={originalSourceCode !== null && (dirty || sourceCode !== originalSourceCode)}
               exampleTitle={activeExample?.title ?? 'Loading...'}
               selectedVersionId={selectedVersionId}
               onUpdateCode={onUpdateCode}
               onResetCode={onResetCode}
-              onCursorChange={onCursorChange}
+              onCursorChange={() => undefined}
               onDiagnostic={setDiagnostics}
               onDirty={setDirty}
+              onRunStatus={setRunStatus}
             />
           )}
         </Suspense>
-        <EditorStatusBar
-          line={cursorLine}
-          column={cursorColumn}
-          selectionLength={selectionLength}
-          dirty={dirty}
-          language={languageLabel}
-          viewMode={canToggleView ? viewMode : undefined}
-          onToggleViewMode={canToggleView ? toggleViewMode : undefined}
-        />
       </section>
     </section>
   );
 };
 
+const getRunFeedback = (
+  runStatus: EditorRunStatus,
+  dirty: boolean,
+  rendererStatus: ExampleRendererStatus | null,
+  sourceLoadError: PreviewErrorEntry | null,
+): { status: EditorRunStatus; message: string } => {
+  // Source and renderer recovery never overwrite the stored compile/module outcome.
+  const status = sourceLoadError || (rendererStatus?.phase === 'failed' && runStatus !== 'compiling') ? 'error' : runStatus;
+
+  return {
+    status,
+    message: sourceLoadError ? 'Example source could not be loaded.' : getRunMessage(status, dirty, Boolean(rendererStatus?.actual)),
+  };
+};
+
+const getRunMessage = (status: EditorRunStatus, dirty: boolean, ready: boolean): string => {
+  if (status === 'idle') {
+    if (dirty) {
+      return 'Changed — Run to update the demo';
+    }
+
+    return ready ? 'Ready to play' : 'Loading demo…';
+  }
+
+  return {
+    compiling: 'Compiling changes…',
+    running: 'Running code…',
+    updated: 'Demo updated',
+    error: 'Run failed. Check the editor and Output.',
+  }[status];
+};
+
+const renderLearningLinks = (example: Example, apiLimit = 3): JSX.Element | null => {
+  const path = example.path.replace(/\.js$/, '');
+  const chapter = GUIDE_CHAPTERS.find(chapter => chapter.examples.includes(path));
+
+  const apiLinks = example.apiLinks ?? chapter?.apiLinks ?? [];
+
+  if (!chapter && apiLinks.length === 0) {
+    return null;
+  }
+
+  const locale = typeof document !== 'undefined' && document.documentElement.lang === 'de' ? 'de' : 'en';
+
+  return (
+    <nav className={css(styles, 'learning-links')} aria-label="Learn about this example">
+      {chapter && <a href={buildPublicUrl(`${locale}/guide/${chapter.path}/`)}>Learn in the Guide</a>}
+      {apiLinks.slice(0, apiLimit).map(symbol => (
+        <a key={symbol} href={buildPublicUrl(`${locale}/api/${symbol}/`)}>
+          API:{' '}
+          {symbol
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join('')}
+        </a>
+      ))}
+    </nav>
+  );
+};
+
 const getDisplayPath = (example: Example | null): string | null => {
-  if (!example) return null;
+  if (!example) {
+    return null;
+  }
+
   if (example.language === 'typescript') {
     return example.path.replace(/\.js$/, '.ts');
   }
+
   return example.path;
 };
 
 const renderErrors = (errors: PreviewErrorEntry[]): JSX.Element | null => {
-  if (errors.length === 0) return null;
+  if (errors.length === 0) {
+    return null;
+  }
+
   return (
-    <details className={css(styles, 'error-panel')}>
+    <details open className={css(styles, 'error-panel')}>
       <summary className={css(styles, 'error-summary')}>
         <span className={css(styles, 'error-summary-label')}>Errors</span>
         <span className={css(styles, 'error-summary-count')}>{errors.length}</span>

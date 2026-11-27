@@ -9,7 +9,9 @@ describe('tween targets must be writable', () => {
     };
     const untyped = new Tween(target) as unknown as Tween<{ amount: number }>;
 
-    expect(() => untyped.to({ amount: 2 }, 1)).toThrow('Tween: property "amount" has a getter but no setter on the target, so it cannot be tweened.');
+    expect(() => untyped.to({ amount: 2 }, 1)).toThrow(
+      'Tween: property "amount" has a getter but no setter on the target, so it cannot be tweened.',
+    );
   });
 
   test('a getter-only property inherited from a class prototype is detected too', () => {

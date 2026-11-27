@@ -4,7 +4,10 @@ import type { Lighting } from '../Lighting';
 
 /** Options every light shares. Each field is also mutable afterwards. */
 export interface LightOptions {
-  /** Light colour. Alpha is ignored. Defaults to opaque white. */
+  /**
+   * Light colour. Alpha is ignored. Defaults to opaque white. A `Color` passed
+   * here is stored, not copied, so mutating it later changes this light.
+   */
   readonly color?: Color;
   /** Linear brightness multiplier. Defaults to `1`. */
   readonly intensity?: number;
@@ -15,30 +18,34 @@ export interface LightOptions {
    * It means a different quantity in each renderer, and the difference is
    * visible in a scene with depth:
    *
-   * - `lightmap` reads it as FILTER WIDTH. The light stays a point, and the
-   *   shadow term is averaged over a band of its angular shadow row, at most
-   *   three percent of a full turn. The edge widens with distance from the
-   *   LIGHT rather than from the wall, and it does not behave like a shadow
-   *   cast by a source of that size.
+   * - `lightmap` reads it as the angle of the WIDEST PENUMBRA. The light
+   *   stays a point, and the shadow term is averaged over a band of its
+   *   angular shadow row whose width follows the distance behind the wall:
+   *   the edge is sharp where the shadow leaves the wall and widens behind it,
+   *   reaching the full angle - at most three percent of a full turn - far
+   *   from it. That is the penumbra of a source whose size is that angle seen
+   *   from the wall. At `0` the edge is hard, smoothed across a pixel.
    * - `radiance` reads it as SOURCE SIZE. The emitter is given a width, and
    *   the penumbra follows from the geometry: it grows with the distance
    *   between the wall and what the shadow falls on.
    *
    * Neither adds a pass, so it is free of extra draws and can differ per
-   * light. Under `lightmap` the filter samples every bin under its kernel and
-   * spends between 7 and 23 texture fetches per shadowed fragment doing it,
-   * which also bounds the kernel at ten bins either side - see
-   * {@link LightingOptions.shadowResolution}.
+   * light. Under `lightmap` the filter reads every bin under its widest kernel
+   * once - 3 to 23 texture fetches per shadowed fragment, which bounds the
+   * kernel at ten bins either side - and only where the kernel meets a
+   * shadow's edge reads the bins under its actual width again, with a second
+   * texel for each bin a silhouette or a corner falls in: 69 at the very most.
+   * See {@link LightingOptions.shadowResolution}.
    */
   readonly softness?: number;
   /**
-   * Texture the light is shone through, sampled across its own bounding square
+   * Texture the light is shone through, sampled across its own bounding rectangle
    * - a window cross, leaf shade, a stained-glass pattern. Multiplied into the
    * light, so a transparent part of the cookie casts nothing and an opaque
    * white one changes nothing.
    *
-   * The square maps onto the texture's full `0..1`, turns with the light and
-   * scales with its radius, so the pattern stays fixed to the lamp rather than
+   * The rectangle maps onto the texture's full `0..1`, turns with the light and
+   * scales with its radius and segment length, so the pattern stays fixed to the lamp rather than
    * to the world. Wrapping is the texture's own business; a cookie meant to end
    * at its edge wants `ClampToEdge`.
    *

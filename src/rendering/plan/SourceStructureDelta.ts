@@ -19,14 +19,20 @@ import type { RetainedRootRepresentation } from './RetainedRootRepresentation';
 export interface SourceDeltaHost {
   readonly backend: RenderBackend;
   _discoverSourceScope(node: RenderNode): SourceScope | null;
-  _rederiveSourceScope(node: RenderNode, previous: SourceScope, cursor: number, epoch: number, targets: SourceDeltaTargets): SourceScope | null;
+  _rederiveSourceScope(
+    node: RenderNode,
+    previous: SourceScope,
+    cursor: number,
+    epoch: number,
+    targets: SourceDeltaTargets,
+  ): SourceScope | null;
   /** Whether the target the walk's content is played into is guaranteed fully covered. */
   _destinationOpaque(): boolean;
 }
 
 /** What a re-derivation may ask of the delta that started it. */
 export interface SourceDeltaTargets {
-  /** Whether `scope` is one the delta attributed a structural change to. */
+  /** Whether `scope` lies on a path that must be re-derived for a structural change. */
   isTarget(scope: SourceScope): boolean;
 }
 
@@ -55,6 +61,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
   /** Scopes this delta re-discovers, refilled per attempt so it allocates none. */
   private readonly _targets: SourceScope[] = [];
   private readonly _targetSet = new Set<SourceScope>();
+  private readonly _rederiveTargets = new Set<SourceScope>();
 
   /**
    * Settle the structure channel for one root.
@@ -103,6 +110,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
       // the whole subtree behind it alive until the next delta happens to run.
       this._targets.length = 0;
       this._targetSet.clear();
+      this._rederiveTargets.clear();
     }
   }
 
@@ -175,6 +183,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
 
     targets.length = 0;
     seen.clear();
+    this._rederiveTargets.clear();
 
     const attributed = source.dirtyIndex.readSince(cursor, DirtyChannel.Structure, marked => {
       const scope = source.scopeOfNode(marked);
@@ -193,11 +202,45 @@ export class SourceStructureDelta implements SourceDeltaTargets {
 
     this._pruneNestedTargets(source, root);
 
-    return source.dirtyIndex.readSince(cursor, DirtyChannel.Transform | DirtyChannel.Content | DirtyChannel.Tint, marked => {
-      const scope = source.scopeOfNode(marked);
+    // Carrying an unchanged intermediate group would hide a pruned target below it.
+    for (const target of seen) {
+      this._markRederived(source, root, target);
+    }
 
-      return scope === null || this._covers(source, scope, root);
-    });
+    // An uncovered effect change can turn a recorded group into a live barrier.
+    return source.dirtyIndex.readSince(
+      cursor,
+      DirtyChannel.Transform | DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect,
+      marked => {
+        const scope = source.scopeOfNode(marked);
+
+        if (scope === null) {
+          return true;
+        }
+
+        if (!this._covers(source, scope, root)) {
+          return false;
+        }
+
+        // A nested container with no mark of its own would be carried whole,
+        // leaving the marked item inside it unread.
+        this._markRederived(source, root, scope);
+
+        return true;
+      },
+    );
+  }
+
+  /** Make the walk re-read `scope` and every scope enclosing it instead of carrying them. */
+  private _markRederived(source: RenderRootSource, root: RenderNode, scope: SourceScope): void {
+    let current: SourceScope | null = scope;
+
+    while (current !== null && !this._rederiveTargets.has(current)) {
+      this._rederiveTargets.add(current);
+      const node = sourceScopeNode(current, root);
+      const parent = node === root ? null : node.parent;
+      current = parent === null ? null : source.scopeOfNode(parent);
+    }
   }
 
   /**
@@ -264,7 +307,13 @@ export class SourceStructureDelta implements SourceDeltaTargets {
    * at all, and the placement keys the parent derived when it recorded the
    * entry.
    */
-  private _rediscover(host: SourceDeltaHost, target: SourceScope, root: RenderNode, source: RenderRootSource, epoch: number): SourceScope | null {
+  private _rediscover(
+    host: SourceDeltaHost,
+    target: SourceScope,
+    root: RenderNode,
+    source: RenderRootSource,
+    epoch: number,
+  ): SourceScope | null {
     const node = sourceScopeNode(target, root);
 
     if (node === root) {
@@ -296,7 +345,13 @@ export class SourceStructureDelta implements SourceDeltaTargets {
    * one on the container as a matter of course, and nothing a container records
    * about its children lives in its own content.
    */
-  private _rederiveOrDiscover(host: SourceDeltaHost, node: RenderNode, target: SourceScope, source: RenderRootSource, epoch: number): SourceScope | null {
+  private _rederiveOrDiscover(
+    host: SourceDeltaHost,
+    node: RenderNode,
+    target: SourceScope,
+    source: RenderRootSource,
+    epoch: number,
+  ): SourceScope | null {
     const cursor = source.changeCursor;
 
     if (node._transformMarkSequence > cursor || node._tintMarkSequence > cursor) {
@@ -307,7 +362,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
   }
 
   public isTarget(scope: SourceScope): boolean {
-    return this._targetSet.has(scope);
+    return this._rederiveTargets.has(scope);
   }
 
   /**
@@ -339,7 +394,10 @@ export class SourceStructureDelta implements SourceDeltaTargets {
 
     const backend = host.backend as RenderBackend & PersistentSlotBackend;
 
-    if (!sourceShapeAllowsPersistentSlots(source) || backend._rekeyPersistentSlots?.(bundle, source, carried, previousHandleCount) !== true) {
+    if (
+      !sourceShapeAllowsPersistentSlots(source) ||
+      backend._rekeyPersistentSlots?.(bundle, source, carried, previousHandleCount) !== true
+    ) {
       representation.releasePersistentSlots();
     }
   }

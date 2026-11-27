@@ -6,6 +6,7 @@ import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuEncoded } from '
 import {
   backdropScene,
   bloom,
+  changingBloomScene,
   DARK,
   FAR_GLOW,
   INSIDE,
@@ -29,13 +30,19 @@ const withScene = async (
   const { root, texture } = blurScene(filters);
 
   try {
-    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) {
+      return;
+    }
+
     read(readWebGpuPixels(backend, BLUR_SCENE_SIZE));
   } finally {
     root.destroy();
     texture.destroy();
     backend.destroy();
-    for (const filter of filters) filter.destroy();
+
+    for (const filter of filters) {
+      filter.destroy();
+    }
   }
 };
 
@@ -48,7 +55,10 @@ const withPlateau = async (
   const { root, texture, filter } = plateauScene(levels);
 
   try {
-    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) {
+      return;
+    }
+
     read(readWebGpuPixels(backend, BLUR_SCENE_SIZE));
   } finally {
     root.destroy();
@@ -58,22 +68,74 @@ const withPlateau = async (
   }
 };
 
-const withBackdrop = async (ctx: { skip: (reason: string) => void }, read: (pixel: (x: number, y: number) => RgbaTuple) => void): Promise<void> => {
+const withBackdrop = async (
+  ctx: { skip: (reason: string) => void },
+  read: (pixel: (x: number, y: number) => RgbaTuple) => void,
+): Promise<void> => {
   const backend = await createWebGpuTestBackend(BLUR_SCENE_SIZE);
   const { root, textures, filter } = backdropScene();
 
   try {
-    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) {
+      return;
+    }
+
     read(readWebGpuPixels(backend, BLUR_SCENE_SIZE));
   } finally {
     root.destroy();
-    for (const texture of textures) texture.destroy();
+
+    for (const texture of textures) {
+      texture.destroy();
+    }
+
     backend.destroy();
     filter.destroy();
   }
 };
 
 describe('BloomFilter (WebGPU)', () => {
+  test('restores the halo after bypassing a settled scene', async ctx => {
+    const backend = await createWebGpuTestBackend(BLUR_SCENE_SIZE);
+    const { root, filtered, filter, redraw } = changingBloomScene();
+
+    const frames = async (): Promise<boolean> => {
+      for (let index = 0; index < 8; index++) {
+        redraw();
+
+        if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) {
+          return false;
+        }
+      }
+
+      return true;
+    };
+
+    try {
+      if (!(await frames())) {
+        return;
+      }
+
+      expect(readWebGpuPixels(backend, BLUR_SCENE_SIZE)(...NEAR_GLOW)[0]).toBeGreaterThan(16);
+      filtered.filters = [];
+
+      if (!(await frames())) {
+        return;
+      }
+
+      expect(readWebGpuPixels(backend, BLUR_SCENE_SIZE)(...NEAR_GLOW)[0]).toBe(0);
+      filtered.filters = [filter];
+
+      if (!(await frames())) {
+        return;
+      }
+
+      expect(readWebGpuPixels(backend, BLUR_SCENE_SIZE)(...NEAR_GLOW)[0]).toBeGreaterThan(16);
+    } finally {
+      root.destroy();
+      backend.destroy();
+    }
+  });
+
   test('grows a halo around the bright square that falls off with distance', async ctx => {
     await withScene(ctx, [bloom()], pixel => {
       const near = pixel(...NEAR_GLOW)[0]!;

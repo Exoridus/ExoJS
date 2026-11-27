@@ -31,6 +31,10 @@ describe('canonicalizeSource', () => {
     expect(canonicalizeSource('/assets/', '/other/hero.png')).toBe('url:/other/hero.png');
   });
 
+  test('an uppercase scheme is still an absolute URL', () => {
+    expect(canonicalizeSource('/assets/', 'HTTPS://cdn.example/hero.png')).toBe('url:HTTPS://cdn.example/hero.png');
+  });
+
   test('never rewrites the authority when collapsing an escaping ..', () => {
     expect(canonicalizeSource('/assets/', 'https://cdn.example/../../hero.png')).toBe('url:https://cdn.example/hero.png');
   });
@@ -66,7 +70,9 @@ describe('resourceKey', () => {
   test('a source that spells out a discriminator never composes that request key', () => {
     // Browsers accept an unencoded `|` in a query string, so a source may
     // legitimately look like "<source>|<discriminator>" already.
-    expect(resourceKey('texture', 'url:/a.png?v=1|mimeType=image/webp')).not.toBe(resourceKey('texture', 'url:/a.png?v=1', 'mimeType=image/webp'));
+    expect(resourceKey('texture', 'url:/a.png?v=1|mimeType=image/webp')).not.toBe(
+      resourceKey('texture', 'url:/a.png?v=1', 'mimeType=image/webp'),
+    );
   });
 
   test('escaping is itself unambiguous, so an escape sequence in a source stays distinct', () => {

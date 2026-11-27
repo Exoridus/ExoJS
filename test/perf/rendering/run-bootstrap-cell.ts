@@ -110,7 +110,10 @@ const sample = async (body: () => void): Promise<ProfileNode> => {
 
   body();
 
-  const { profile } = await post<{ profile: import('node:inspector').HeapProfiler.SamplingHeapProfile }>(session, 'HeapProfiler.stopSampling');
+  const { profile } = await post<{ profile: import('node:inspector').HeapProfiler.SamplingHeapProfile }>(
+    session,
+    'HeapProfiler.stopSampling',
+  );
   await post(session, 'HeapProfiler.disable');
   session.disconnect();
 
@@ -251,6 +254,7 @@ const phase = async (name: string, body: () => void): Promise<void> => {
  */
 if (wantCpu) {
   const timings: Record<string, number> = {};
+
   const time = (name: string, body: () => void): void => {
     const started = performance.now();
     body();

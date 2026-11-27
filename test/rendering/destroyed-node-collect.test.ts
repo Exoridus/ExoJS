@@ -69,6 +69,7 @@ const createTestBackend = (): RenderBackend => {
     },
     setView(v: View | null) {
       renderTarget.setView(v);
+
       return this;
     },
     setRenderTarget() {
@@ -123,6 +124,7 @@ const collectIds = (root: Container, backend: RenderBackend): string[] => {
   RenderPlanOptimizer.optimize(plan);
 
   const draws: DrawCommand[] = [];
+
   for (const pass of plan.passes) {
     gatherScopeDraws(pass.root, draws);
   }
@@ -197,7 +199,8 @@ const rootDir = resolve(import.meta.dirname!, '..', '..');
 
 const devToken = /(?<![a-zA-Z0-9_$])__DEV__(?![a-zA-Z0-9_$])/;
 
-const parseSource = (rel: string): ts.SourceFile => ts.createSourceFile(rel, readFileSync(resolve(rootDir, rel), 'utf8'), ts.ScriptTarget.ES2022, true);
+const parseSource = (rel: string): ts.SourceFile =>
+  ts.createSourceFile(rel, readFileSync(resolve(rootDir, rel), 'utf8'), ts.ScriptTarget.ES2022, true);
 
 /**
  * Whether `node` sits inside anything `__DEV__` can switch off - an

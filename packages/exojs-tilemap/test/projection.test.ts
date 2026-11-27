@@ -17,6 +17,7 @@ describe('isometric projection', () => {
 
   it('roundtrips signed fractional logical coordinates', () => {
     const p = projection();
+
     for (const x of [-256, -0.25, 0, 15.5, 1000]) {
       for (const y of [-127, -0.5, 0, 23.25, 512]) {
         const screen = p.logicalToPixel(x, y);
@@ -29,6 +30,7 @@ describe('isometric projection', () => {
 
   it('picks half-open cells on both diamond axes, including negative boundaries', () => {
     const p = projection();
+
     for (const tx of [-2, 0, 3]) {
       for (const ty of [-1, 0, 2]) {
         for (const [dx, dy, expectedX, expectedY] of [

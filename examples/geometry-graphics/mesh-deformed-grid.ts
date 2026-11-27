@@ -1,4 +1,5 @@
 import { Application, Color, FixedResolutionCanvasSizing, Mesh, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 const COLS = 16;
 const ROWS = 16;
@@ -14,6 +15,7 @@ const buildGrid = (): { vertices: Float32Array; uvs: Float32Array; indices: Uint
 
   let v = 0;
   let u = 0;
+
   for (let r = 0; r <= ROWS; r++) {
     for (let c = 0; c <= COLS; c++) {
       vertices[v++] = -half + c * stepX;
@@ -24,6 +26,7 @@ const buildGrid = (): { vertices: Float32Array; uvs: Float32Array; indices: Uint
   }
 
   let i = 0;
+
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const tl = r * (COLS + 1) + c;
@@ -42,7 +45,7 @@ const buildGrid = (): { vertices: Float32Array; uvs: Float32Array; indices: Uint
   return { vertices, uvs, indices };
 };
 
-const UV_GRID = assets.technical.filtering.uvGrid256;
+const UV_GRID = assets.uvGrid256;
 
 class MeshDeformedGridScene extends Scene {
   private restVertices!: Float32Array;

@@ -4,7 +4,7 @@
   "symbol": "RateSpawnConfig",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 9,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Spawn configuration for RateSpawn: the emission rate plus the shared per-property fields."
       ],
-      "importLine": "import { RateSpawnConfig } from '@codexo/exojs-particles'",
+      "importLine": "import { RateSpawnConfig } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

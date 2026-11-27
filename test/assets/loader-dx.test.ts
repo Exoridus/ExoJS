@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { AssetRef } from '#assets/AssetRef';
 import type { AssetInspection } from '#assets/AssetResidency';
 import { Assets } from '#assets/Assets';
@@ -13,7 +12,7 @@ import { testAssetType } from './test-asset-type';
 
 // A test-only asset type with no catalog leaf - the exact shape
 // `LoaderScope.release()` calls out (a resource loaded with
-// `load(Asset.type('bmFont', ...))`): it never goes through `createLeaf`,
+// `load({ type: 'bmFont', source })`): it never goes through `createLeaf`,
 // so it carries no `_assetMeta` stamp and is never adopted/registered in the
 // handle→key map either.
 declare module '#assets/AssetDefinitions' {
@@ -29,6 +28,7 @@ class DxNonLeafResource {
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -36,7 +36,8 @@ const originalFetch = global.fetch;
 
 const mockFetchImage = (): void => {
   global.fetch = vi.fn(
-    async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
+    async (): Promise<Response> =>
+      ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
   );
 };
 
@@ -45,7 +46,9 @@ const mockFetch404 = (): void => {
 };
 
 const mockFetchText = (text = 'raw'): void => {
-  global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => text }) as unknown as Response);
+  global.fetch = vi.fn(
+    async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => text }) as unknown as Response,
+  );
 };
 
 interface Deferred<T> {
@@ -58,6 +61,7 @@ const deferred = <T>(): Deferred<T> => {
   const promise = new Promise<T>(res => {
     resolve = res;
   });
+
   return { promise, resolve };
 };
 
@@ -87,7 +91,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
     ]);
 
     const scope = loader.createScope();
-    const asset = new Asset({ type: 'dxNonLeafAsset', source: 'thing.dat' });
+    const asset = { type: 'dxNonLeafAsset', source: 'thing.dat' } as const;
     const resource = await scope.load(asset);
 
     expect(loader.inspect()).toHaveLength(1);
@@ -132,7 +136,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
     const hasRow = (source: string): boolean => loader.inspect().some(row => row.aliases.includes(source));
 
     // 1. Asset descriptor.
-    const asset = new Asset({ type: 'texture', source: 'a.png' });
+    const asset = { type: 'texture', source: 'a.png' } as const;
     await scope.load(asset);
     expect(hasRow('a.png')).toBe(true);
     scope.release(asset);
@@ -145,10 +149,10 @@ describe('LoaderScope.release() fail-loud contract', () => {
     scope.release(catalog);
     expect(hasRow('b.png')).toBe(false);
 
-    // 3. (type, source) pair.
-    await scope.load(Asset.type('texture', 'c.png'));
+    // 3. Descriptor.
+    await scope.load({ type: 'texture', source: 'c.png' });
     expect(hasRow('c.png')).toBe(true);
-    scope.release(Texture, 'c.png');
+    scope.release({ type: Texture, source: 'c.png' });
     expect(hasRow('c.png')).toBe(false);
 
     // 4. An adopted seamless handle.
@@ -212,7 +216,13 @@ describe('Loader.inspect() snapshot contract', () => {
     const pending = deferred<string>();
     const loader = new Loader();
     loader._installAssetTypes([
-      testAssetType<string, string>({ id: 'text', token: TextAsset, extensions: ['txt'], acquires: false, create: async () => pending.promise }),
+      testAssetType<string, string>({
+        id: 'text',
+        token: TextAsset,
+        extensions: ['txt'],
+        acquires: false,
+        create: async () => pending.promise,
+      }),
     ]);
 
     const ref = loader.get('note.txt') as AssetRef<string>;
@@ -227,7 +237,17 @@ describe('Loader.inspect() snapshot contract', () => {
 
     const row = snapshot[0]!;
 
-    expect(Object.keys(row).sort()).toEqual(['aliases', 'background', 'canonicalKey', 'claims', 'inFlight', 'locator', 'owners', 'state', 'type']);
+    expect(Object.keys(row).sort()).toEqual([
+      'aliases',
+      'background',
+      'canonicalKey',
+      'claims',
+      'inFlight',
+      'locator',
+      'owners',
+      'state',
+      'type',
+    ]);
 
     for (const [field, value] of Object.entries(row)) {
       if (field === 'type') {
@@ -275,7 +295,13 @@ describe('Loader.inspect() snapshot contract', () => {
     const pending = deferred<string>();
     const loader = new Loader();
     loader._installAssetTypes([
-      testAssetType<string, string>({ id: 'text', token: TextAsset, extensions: ['txt'], acquires: false, create: async () => pending.promise }),
+      testAssetType<string, string>({
+        id: 'text',
+        token: TextAsset,
+        extensions: ['txt'],
+        acquires: false,
+        create: async () => pending.promise,
+      }),
     ]);
 
     const ref = loader.get('note.txt') as AssetRef<string>;
@@ -348,7 +374,7 @@ describe('Loader.inspect() snapshot contract', () => {
       bad: { type: 'text', source: 'note.txt', parse: () => Promise.resolve('nope') as unknown as string },
     });
 
-    await loader.load(catalog).catch(() => undefined);
+    await loader.load(catalog).catch(() => {});
 
     expect(catalog.bad.state).toBe('failed');
 
@@ -364,7 +390,7 @@ describe('Loader.inspect() snapshot contract', () => {
       bad: { type: 'text', source: 'note.txt', parse: () => Promise.resolve('nope') as unknown as string },
     });
 
-    await loader.load(catalog).catch(() => undefined);
+    await loader.load(catalog).catch(() => {});
     expect(catalog.bad.state).toBe('failed');
 
     // Re-claiming the same leaf (routinely: a second scene claiming the same
@@ -389,22 +415,26 @@ describe('Loader.inspect() snapshot contract', () => {
     const loader = new Loader();
     class FakeType {}
 
-    loader._installAssetTypes([testAssetType<string, string>({ id: 'fakeType', token: FakeType, acquires: false, create: async () => 'payload' })]);
+    loader._installAssetTypes([
+      testAssetType<string, string>({ id: 'fakeType', token: FakeType, acquires: false, create: async () => 'payload' }),
+    ]);
 
-    const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string): { key: string } })._canonicalize.bind(loader);
+    const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string): { key: string } })._canonicalize.bind(
+      loader,
+    );
     const asset = canonicalize(FakeType, 'bundled.bin');
     const residency = (
       loader as unknown as {
         _residency: {
           _claims: Map<string, { scopes: Set<LoaderScope>; pending: Map<LoaderScope, Set<unknown>>; asset: unknown }>;
           _resources: Map<string, { asset: unknown; value: unknown }>;
-          _backgroundQueue: Array<{ asset: unknown; options: unknown }>;
+          _backgroundQueue: Map<string, { asset: unknown; options: unknown }>;
         };
       }
     )._residency;
 
     residency._claims.set(asset.key, { scopes: new Set<LoaderScope>([loader.createScope({ name: 'scope' })]), pending: new Map(), asset });
-    residency._backgroundQueue.push({ asset, options: undefined });
+    residency._backgroundQueue.set(asset.key, { asset, options: undefined });
     residency._resources.set(asset.key, { asset, value: {} });
 
     const row = loader.inspect().find(r => r.aliases.includes('bundled.bin'));

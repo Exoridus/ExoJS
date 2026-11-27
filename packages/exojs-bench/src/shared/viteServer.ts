@@ -1,9 +1,11 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { srcConditions } from '@codexo/exojs-config/vitest';
+
+import { readLibraryProvenance } from './provenance';
 
 /** Minimal surface of the programmatic Vite dev server the callers consume. */
 export interface ViteDevServer {
@@ -33,9 +35,10 @@ const ENGINE_SRC = resolve(REPO_ROOT, 'src');
  * silently kept its default capacity instead of the one the cell asked for.
  */
 const SOURCE_PACKAGE_ALIASES: ReadonlyArray<{ find: string; replacement: string }> = [
-  { find: '@codexo/exojs-lighting', replacement: resolve(REPO_ROOT, 'packages/exojs-lighting/src/index.ts') },
-  { find: '@codexo/exojs-particles', replacement: resolve(REPO_ROOT, 'packages/exojs-particles/src/index.ts') },
-  { find: '@codexo/exojs-tilemap', replacement: resolve(REPO_ROOT, 'packages/exojs-tilemap/src/index.ts') },
+  { find: '@codexo/exojs/lighting', replacement: resolve(REPO_ROOT, 'packages/exojs-lighting/src/index.ts') },
+  { find: '@codexo/exojs/particles', replacement: resolve(REPO_ROOT, 'packages/exojs-particles/src/index.ts') },
+  { find: '@codexo/exojs/tilemap', replacement: resolve(REPO_ROOT, 'packages/exojs-tilemap/src/index.ts') },
+  { find: '@codexo/exojs/physics', replacement: resolve(REPO_ROOT, 'packages/exojs-physics/src/index.ts') },
   { find: '@codexo/exojs/renderer-sdk', replacement: resolve(ENGINE_SRC, 'renderer-sdk.ts') },
   { find: '@codexo/exojs/extensions', replacement: resolve(ENGINE_SRC, 'extensions/index.ts') },
   { find: '@codexo/exojs', replacement: resolve(ENGINE_SRC, 'index.ts') },
@@ -47,7 +50,10 @@ const SOURCE_PACKAGE_ALIASES: ReadonlyArray<{ find: string; replacement: string 
  * The benchmark package itself is deliberately absent: its adapters use `#*` to
  * reach engine modules.
  */
-const EXTENSION_SOURCE_ROOTS: readonly string[] = [resolve(REPO_ROOT, 'packages/exojs-particles'), resolve(REPO_ROOT, 'packages/exojs-tilemap')];
+const EXTENSION_SOURCE_ROOTS: readonly string[] = [
+  resolve(REPO_ROOT, 'packages/exojs-particles'),
+  resolve(REPO_ROOT, 'packages/exojs-tilemap'),
+];
 
 /**
  * Resolve `#...` specifiers to the ENGINE source - but only for importers
@@ -67,11 +73,15 @@ const engineHashImports = () => ({
       return null;
     }
 
-    if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(root))) {
+    if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(`${root}${sep}`))) {
       return null;
     }
 
-    return `${resolve(ENGINE_SRC, source.slice(1))}.ts`;
+    const target = `${resolve(ENGINE_SRC, source.slice(1))}.ts`;
+
+    // Named package imports must reach the package's own imports map, and the
+    // engine wildcard must never claim missing files or paths outside src.
+    return target.startsWith(`${ENGINE_SRC}${sep}`) && statSync(target, { throwIfNoEntry: false })?.isFile() ? target : null;
   },
 });
 
@@ -110,23 +120,19 @@ export const readEngineVersion = (): string => {
 /**
  * The subset of `arms` actually resolvable from this package, so Vite's
  * `optimizeDeps.include` only pre-bundles competitors that are present. A
- * competitor left unlinked (no `bench:setup`) is simply omitted rather than
+ * competitor that is not installed is simply omitted rather than
  * crashing esbuild's optimizer at server startup - an ExoJS-only run then needs
  * none of the competitor deps present.
  */
-const resolvableCompetitors = (arms: readonly string[]): string[] => {
-  const nodeRequire = createRequire(import.meta.url);
+const resolvableCompetitors = (arms: readonly string[]): string[] =>
+  readLibraryProvenance(arms)
+    .filter(library => !['not-installed', 'unreadable', 'unknown'].includes(library.version))
+    .map(library => library.name);
 
-  return arms.filter(name => {
-    try {
-      nodeRequire.resolve(name);
-
-      return true;
-    } catch {
-      return false;
-    }
-  });
-};
+/** Pixi's layout and tilemap extensions (and layout's yoga) are pre-bundled with it. */
+const competitorModules = (arms: readonly string[]): string[] => [
+  ...new Set([...arms, ...(arms.includes('pixi.js') ? ['@pixi/layout', '@pixi/tilemap', 'yoga-layout'] : [])]),
+];
 
 /**
  * Load Vite through the copy vitest already depends on. Vite is not a direct
@@ -286,7 +292,10 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // condition below, so the engine graph is measured exactly as it ships.
     // `.vert`/`.frag`/`.wgsl` specifiers carry their extension and are handled by
     // `realShaderPlugin`'s transform.
-    resolve: { alias: [...SOURCE_PACKAGE_ALIASES, { find: /^#(.*)\.(vert|frag|wgsl)$/, replacement: `${ENGINE_SRC}/$1.$2` }], conditions: srcConditions },
+    resolve: {
+      alias: [...SOURCE_PACKAGE_ALIASES, { find: /^#(.*)\.(vert|frag|wgsl)$/, replacement: `${ENGINE_SRC}/$1.$2` }],
+      conditions: srcConditions,
+    },
     ssr: { resolve: { conditions: srcConditions } },
     // `noDiscovery` keeps the automatic dep scanner OFF - it runs esbuild over
     // the whole import graph, which would choke on the engine's `.vert`/`.frag`
@@ -296,12 +305,17 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // pre-bundling, the browser's native ESM loader rejects them ("does not
     // provide an export named 'default'"). Explicitly `include` each RESOLVABLE
     // competitor so esbuild pre-bundles it and its CJS deps with interop, WITHOUT
-    // scanning the engine graph. A competitor that is not linked is omitted here
+    // scanning the engine graph. A competitor that is not installed is omitted here
     // (see `resolvableCompetitors`) rather than crashing the optimizer. Engine
     // source still resolves to local `.ts` files via the `#*` alias and is never
     // pre-bundled.
-    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors(libraryArms) },
-    define: { __DEV__: String(ENGINE_DEV_BUILD), __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline'), ...extraDefine },
+    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors(competitorModules(libraryArms)) },
+    define: {
+      __DEV__: String(ENGINE_DEV_BUILD),
+      __VERSION__: JSON.stringify(version),
+      __REVISION__: JSON.stringify('baseline'),
+      ...extraDefine,
+    },
     plugins: [engineHashImports(), realShaderPlugin, devGlobalsPlugin(version), ...extraPlugins],
   });
 

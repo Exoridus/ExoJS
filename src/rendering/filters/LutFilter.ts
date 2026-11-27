@@ -96,10 +96,10 @@ export const lut3dShaderSource = createFilterShader({
  * const filter = new LutFilter({ mode: '3d', size: 17 }).setLut(lut);
  * sprite.filters = [filter];
  *
- * // Animated per-channel curves - shift the ramp every frame:
+ * // Animated per-channel curves - rewrite the ramp every frame:
  * const ramp = LutFilter.identityLut1D();
- * const filter = new LutFilter({ mode: 'rgb1d' }).setLut(ramp);
- * // Replace `ramp.source` per frame with a shifted copy.
+ * const curves = new LutFilter({ mode: 'rgb1d' }).setLut(ramp);
+ * // Shift `ramp.buffer` per frame, then call `ramp.commit()` to upload it.
  * ```
  *
  * Runs on a {@link ShaderFilter} carrying both a GLSL and a WGSL source, so it
@@ -107,7 +107,11 @@ export const lut3dShaderSource = createFilterShader({
  */
 export class LutFilter extends Filter {
   /** Sampler defaults every generated or imported LUT texture uses. */
-  private static readonly _lutSamplerOptions = { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.ClampToEdge, generateMipMap: false } as const;
+  private static readonly _lutSamplerOptions = {
+    scaleMode: ScaleModes.Linear,
+    wrapMode: WrapModes.ClampToEdge,
+    generateMipMap: false,
+  } as const;
 
   /**
    * Build a 1D identity LUT (`N×1` texture with a smooth grayscale gradient).
@@ -185,10 +189,25 @@ export class LutFilter extends Filter {
   }
 
   private readonly _mode: LutMode;
-  private readonly _size: number;
+  private _size: number;
   private readonly _colorSpace: LutDomain;
   private readonly _shaderFilter: LutShaderFilter;
+  private readonly _lutSizeUniform: { value: number } | null = null;
   private _lut: Texture;
+  private _observedLut: Texture | null = null;
+  private readonly _onLutUpdate = (lut: Texture): void => {
+    // A preceding listener can replace or destroy this filter while the old
+    // texture is dispatching its update.
+    if (lut !== this._observedLut) {
+      return;
+    }
+
+    this._syncCubeSize(lut);
+    this.invalidate();
+  };
+
+  /** The identity LUT the constructor created, which this filter owns until a caller supplies another. */
+  private _ownedLut: Texture | null = null;
 
   public constructor(options: LutFilterOptions = {}) {
     super();
@@ -199,12 +218,24 @@ export class LutFilter extends Filter {
     const is3d = this._mode === '3d';
 
     this._lut = is3d ? LutFilter.identityLut3D(this._size) : LutFilter.identityLut1D();
+    this._ownedLut = this._lut;
 
     const domain = this._colorSpace === 'srgb' ? 1 : 0;
 
-    this._shaderFilter = is3d
-      ? ShaderFilter.from(lut3dShaderSource, { uniforms: { uDomain: domain, uLutSize: this._size }, textures: { uLut: this._lut } })
-      : ShaderFilter.from(lutRgb1dShaderSource, { uniforms: { uDomain: domain }, textures: { uLut: this._lut } });
+    if (is3d) {
+      const shaderFilter = ShaderFilter.from(lut3dShaderSource, {
+        uniforms: { uDomain: domain, uLutSize: this._size },
+        textures: { uLut: this._lut },
+      });
+
+      this._shaderFilter = shaderFilter;
+      this._lutSizeUniform = shaderFilter.uniforms.uLutSize;
+    } else {
+      this._shaderFilter = ShaderFilter.from(lutRgb1dShaderSource, { uniforms: { uDomain: domain }, textures: { uLut: this._lut } });
+    }
+
+    this._observedLut = this._lut;
+    this._lut._addUpdateListener(this._onLutUpdate);
   }
 
   /** The LUT mode this filter was constructed with. */
@@ -217,7 +248,7 @@ export class LutFilter extends Filter {
     return this._colorSpace;
   }
 
-  /** The cube edge size (3D only). For 1D this returns the constructor-time size hint. */
+  /** The cube edge size (3D only), following the LUT's valid dimensions. Empty or placeholder payloads preserve the current size. For 1D this returns the constructor-time size hint. */
   public get size(): number {
     return this._size;
   }
@@ -228,7 +259,9 @@ export class LutFilter extends Filter {
   }
 
   /**
-   * Replace the LUT texture. Returns `this` for chaining.
+   * Replace the LUT texture and invalidate cached owners. Returns `this` for chaining.
+   * Later payload updates also invalidate owners and refresh the 3D cube size
+   * once the texture has valid `N*N` by `N` dimensions.
    *
    * The LUT is sampled as numeric data in the filter's own colour domain, so
    * it must resolve to `colorSpace: 'none'`: `'srgb'` storage would apply its
@@ -243,8 +276,41 @@ export class LutFilter extends Filter {
     assertNumericLut(lut);
 
     this._lut = lut;
+
+    if (this._observedLut !== lut) {
+      this._observedLut?._removeUpdateListener(this._onLutUpdate);
+      this._observedLut = lut;
+      lut._addUpdateListener(this._onLutUpdate);
+    }
+
+    this._syncCubeSize(lut);
     this._shaderFilter._setTexture('uLut', lut);
+
+    if (this._ownedLut !== null && this._ownedLut !== lut) {
+      this._ownedLut.destroy();
+      this._ownedLut = null;
+    }
+
+    this.invalidate();
+
     return this;
+  }
+
+  private _syncCubeSize(lut: Texture): void {
+    if (this._lutSizeUniform === null) {
+      return;
+    }
+
+    const size = lut.height;
+
+    // Empty handles and placeholder images do not describe a cube yet. Keep
+    // the declared size until the payload supplies the N*N by N layout.
+    if (!Number.isInteger(size) || size < 2 || lut.width !== size * size) {
+      return;
+    }
+
+    this._size = size;
+    this._lutSizeUniform.value = this._size;
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
@@ -253,8 +319,12 @@ export class LutFilter extends Filter {
   }
 
   public override destroy(): void {
+    this._observedLut?._removeUpdateListener(this._onLutUpdate);
+    this._observedLut = null;
     super.destroy();
     this._shaderFilter.destroy();
+    this._ownedLut?.destroy();
+    this._ownedLut = null;
   }
 }
 

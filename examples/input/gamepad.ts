@@ -10,7 +10,6 @@ import {
   Scene,
   Text,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
 
 const AXES = [
   { name: 'Left X', channel: GamepadAxis.LeftStickX },
@@ -34,13 +33,12 @@ const BUTTONS = [
 
 class GamepadScene extends Scene {
   private pad!: Gamepad;
-  private axes: { name: string; binding: ReturnType<Gamepad['onActive']> }[] = [];
-  private buttons: { name: string; binding: ReturnType<Gamepad['onActive']> }[] = [];
+  private axes: Array<{ name: string; binding: ReturnType<Gamepad['onActive']> }> = [];
+  private buttons: Array<{ name: string; binding: ReturnType<Gamepad['onActive']> }> = [];
   private status!: Text;
   private axisText!: Text;
   private buttonText!: Text;
   private graphics = new Graphics();
-  private hud!: ReturnType<typeof mountControls>;
 
   override init(): void {
     this.pad = this.app.input.getGamepad(0);
@@ -49,11 +47,6 @@ class GamepadScene extends Scene {
     this.status = new Text('', { fillColor: Color.white, fontSize: 23 }).setPosition(260, 130);
     this.axisText = new Text('', { fillColor: new Color(125, 215, 255), fontSize: 23 }).setPosition(270, 450);
     this.buttonText = new Text('', { fillColor: new Color(255, 195, 125), fontSize: 21 }).setPosition(800, 240);
-    this.hud = mountControls({
-      title: 'Controller Inspector',
-      status: 'Slot 1 is waiting for a controller.',
-      hint: 'Axes and button values update live; disconnected state stays visible.',
-    });
   }
 
   override update(): void {
@@ -82,7 +75,7 @@ class GamepadScene extends Scene {
     for (const entry of [...this.axes, ...this.buttons]) {
       entry.binding.unbind();
     }
-    this.hud?.dispose();
+
     this.status?.destroy();
     this.axisText?.destroy();
     this.buttonText?.destroy();

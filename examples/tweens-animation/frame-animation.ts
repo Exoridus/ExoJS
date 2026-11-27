@@ -1,85 +1,86 @@
-import { AnimatedSprite, Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Spritesheet, type SpritesheetData } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
-
-const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'] as const;
-const WALK_FPS = 8;
+import {
+  ActionMap,
+  AnimatedSprite,
+  Application,
+  ButtonAction,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  type Rectangle,
+  Scene,
+  Spritesheet,
+} from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, slider, startExample } from '@examples/runtime';
 
 class FrameAnimationScene extends Scene {
   private sprite!: AnimatedSprite;
-  private hud!: ReturnType<typeof mountControls>;
-  private characterIndex = 0;
-  private playing = true;
+  private frames: Rectangle[] = [];
+  private readonly ground = this.track(new Graphics());
+  private readonly actions = new ActionMap({ pause: new ButtonAction(Keyboard.Space) });
+  private panel!: ReturnType<typeof demoPanel<{ fps: ReturnType<typeof slider> }>>;
 
   override async load(): Promise<void> {
-    const texture = this.loader.get('image/platformer-characters.png');
-    const data = (await this.loader.load(Asset.type('json', 'json/platformer-characters.json'))) as SpritesheetData;
+    const [texture, data] = await Promise.all([
+      this.loader.load(assets.platformerCharactersImage),
+      this.loader.load(assets.platformerCharactersAtlas),
+    ]);
+
+    if (this.lifecycleSignal.aborted) {
+      return;
+    }
+
     const sheet = new Spritesheet(texture, data);
-    const clips = Object.fromEntries(
-      CHARACTERS.map(character => [
-        character,
-        {
-          frames: ['a', 'b'].map(frame => sheet.getFrame(`character_${character}_walk_${frame}`)),
-          fps: WALK_FPS,
-        },
-      ]),
-    );
 
-    this.sprite = new AnimatedSprite(texture, clips)
-      .setAnchor(0.5)
-      .setScale(3)
-      .setPosition(this.app.width / 2, this.app.height / 2);
-    this.addChild(this.sprite);
-    this.sprite.onFrame.add((_clip, frame) => this.updateHud(frame));
-
-    this.hud = mountControls({
-      title: 'Sprite Animation',
-      controls: [
-        { keys: 'Right', action: 'change character' },
-        { keys: 'Space', action: 'pause / resume' },
-      ],
-      hint: 'AnimatedSprite plays named clips from a spritesheet. The scene tree advances it automatically.',
-    });
-    this.inputs.onTrigger(Keyboard.Space, () => {
-      this.playing = !this.playing;
-      if (this.playing) {
-        this.sprite.resume();
-      } else {
-        this.sprite.pause();
-      }
-      this.updateHud(this.sprite.currentFrame);
-    });
-    this.inputs.onTrigger(Keyboard.Right, () => this.selectCharacter());
-    this.sprite.play(CHARACTERS[0]);
+    this.track({ destroy: () => sheet.clear() });
+    this.frames = ['character_green_walk_a', 'character_green_walk_b'].map(name => sheet.getFrame(name));
+    this.sprite = new AnimatedSprite(texture, { walk: { frames: this.frames, fps: 8 } }).setAnchor(0.5, 1).play('walk');
   }
 
-  private selectCharacter(): void {
-    this.characterIndex = (this.characterIndex + 1) % CHARACTERS.length;
-    this.sprite.play(CHARACTERS[this.characterIndex]);
-    if (!this.playing) {
+  override init(): void {
+    this.root.addChild(this.ground, this.sprite);
+    this.panel = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls: { fps: slider('FPS', { min: 1, max: 24, step: 1, value: 8, format: value => `${value} fps` }) },
+      actions: { Pause: () => this.pause() },
+      onChange: (_key, fps) => this.sprite.addClip('walk', { frames: this.frames, fps }),
+    });
+    this.inputs.attach(this.actions);
+  }
+
+  private pause(): void {
+    if (this.sprite.playing) {
       this.sprite.pause();
+    } else {
+      this.sprite.resume();
     }
   }
 
-  private updateHud(frame: number): void {
-    this.hud.setStatus(`${CHARACTERS[this.characterIndex]} · frame ${frame + 1}/2 · ${this.playing ? 'playing' : 'paused'}`);
-  }
+  override update(): void {
+    if (this.actions.pause.pressed) {
+      this.pause();
+    }
 
-  override destroy(): void {
-    this.hud.dispose();
-    super.destroy();
+    const { scale: k, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const size = Math.min(320, contentHeight * 0.8, width * 0.65) * k;
+    const baseline = (contentHeight + size / k) * 0.5 * k;
+
+    this.sprite.setPosition(this.app.width / 2, baseline).setScale(size / 128);
+    this.ground.clear();
+    this.ground.lineColor = new Color(134, 155, 141);
+    this.ground.lineWidth = 2 * k;
+    this.ground.moveTo(this.app.width / 2 - size * 0.7, baseline).lineTo(this.app.width / 2 + size * 0.7, baseline);
+    this.panel.actions.Pause!.label = this.sprite.playing ? 'Pause' : 'Play';
+    this.panel.status(`Frame ${this.sprite.currentFrame + 1}/${this.frames.length} | ${this.sprite.playing ? 'Playing' : 'Paused'}`);
   }
 }
 
 const app = new Application({
   scenes: { FrameAnimationScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: Color.black,
-  loader: { basePath: 'assets/' },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(239, 244, 227),
 });
 
-await app.start(FrameAnimationScene);
+await startExample(app, () => app.start(FrameAnimationScene));

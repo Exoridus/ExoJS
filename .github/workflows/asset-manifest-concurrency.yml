@@ -1,0 +1,37 @@
+name: Asset manifest concurrency
+
+on:
+  pull_request:
+    branches: [main, next]
+    paths:
+      - '.github/workflows/asset-manifest-concurrency.yml'
+      - '.github/actions/setup/**'
+      - '.nvmrc'
+      - 'packages/exojs-cli/**'
+      - 'packages/exojs-build/**'
+      - 'packages/exojs-config/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'vitest.config.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: asset-manifest-concurrency-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  transactions:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - name: Verify manifest ownership and real process recovery
+        run: pnpm exec vitest run --project=exojs-cli packages/exojs-cli/test/asset-manifest-lock.test.ts packages/exojs-cli/test/assets-manifest.test.ts packages/exojs-cli/test/assets-manifest-concurrency.test.ts

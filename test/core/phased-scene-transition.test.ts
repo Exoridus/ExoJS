@@ -292,3 +292,56 @@ describe('mergeSceneTransitionRequirements', () => {
     expect(mergeSceneTransitionRequirements(a, b)).toEqual({ outgoingFrame: 'snapshot', currentFrame: 'texture' });
   });
 });
+
+describe('phase state release on failure', () => {
+  class StatefulPhase extends RecordingPhase {
+    public readonly created: object[] = [];
+    public readonly destroyed: object[] = [];
+    public failCreateAt = -1;
+    public failDestroy = false;
+
+    protected override createPhaseState(): void {
+      if (this.created.length === this.failCreateAt) {
+        throw new Error('create failed');
+      }
+
+      const state = {};
+      this.created.push(state);
+
+      return state as unknown as void;
+    }
+
+    protected override destroyPhaseState(state: void): void {
+      this.destroyed.push(state as unknown as object);
+
+      if (this.failDestroy) {
+        throw new Error('destroy failed');
+      }
+    }
+  }
+
+  test('a throwing exit disposer does not skip the enter state', () => {
+    const exitPhase = new StatefulPhase();
+    const enterPhase = new StatefulPhase();
+    const session = composePhasedSceneTransition(exitPhase, enterPhase).beginSession(new TestEnvironment());
+
+    exitPhase.failDestroy = true;
+
+    expect(() => session.destroy()).toThrow('destroy failed');
+    expect(enterPhase.destroyed).toEqual(enterPhase.created);
+    expect(enterPhase.destroyed).toHaveLength(1);
+    expect(() => session.destroy()).not.toThrow();
+    expect(enterPhase.destroyed).toHaveLength(1);
+  });
+
+  test('a throwing second createPhaseState releases the first state', () => {
+    const exitPhase = new StatefulPhase();
+    const enterPhase = new StatefulPhase();
+
+    enterPhase.failCreateAt = 0;
+
+    expect(() => composePhasedSceneTransition(exitPhase, enterPhase).beginSession(new TestEnvironment())).toThrow('create failed');
+    expect(exitPhase.destroyed).toEqual(exitPhase.created);
+    expect(exitPhase.destroyed).toHaveLength(1);
+  });
+});

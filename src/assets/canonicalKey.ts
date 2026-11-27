@@ -70,16 +70,29 @@ export interface CanonicalAsset {
   readonly source: string;
   /** The logical source the caller wrote, before variant selection. */
   readonly requested?: string;
+  /** Display density of the selected file. It does not participate in identity. */
+  readonly variantResolution?: number;
   /** The option bag of the request, as the caller passed it. */
   readonly options?: unknown;
+  /**
+   * The factory source of a descriptor without a string source, handed over
+   * without fetching, decoding or caching. Present - possibly `undefined` - for
+   * every such descriptor, whose `source` and `locator` are then a `direct:`
+   * claim name rather than a URL.
+   */
+  readonly directSource?: unknown;
 }
 
 /** Sources that already carry their own absolute, opaque identity and must never be joined onto a base path or normalized. */
 const isOpaqueSource = (source: string): boolean => source.startsWith('blob:') || source.startsWith('data:');
 
 /** Sources that resolve without the loader base path: absolute URLs, protocol-relative, and root-relative paths. */
-const isAbsoluteSource = (source: string): boolean =>
-  source.startsWith('http://') || source.startsWith('https://') || source.startsWith('//') || source.startsWith('/');
+const isAbsoluteSource = (source: string): boolean => {
+  // URL schemes are case-insensitive, so `HTTPS://` is as absolute as `https://`.
+  const scheme = source.slice(0, 8).toLowerCase();
+
+  return scheme.startsWith('http://') || scheme.startsWith('https://') || source.startsWith('//') || source.startsWith('/');
+};
 
 /**
  * Collapse `.` and `..` segments and drop the fragment, leaving scheme,
@@ -166,11 +179,10 @@ const normalizeUrl = (url: string): string => {
 
     if (last !== undefined && last !== '..') {
       segments.pop();
-    }
-    // A `..` that would escape the root is dropped, mirroring how a browser
-    // resolves it. Only a relative source with nothing above it keeps the
-    // segment, so `../sibling.png` still addresses the sibling directory.
-    else if (!rooted && prefix === '') {
+    } else if (!rooted && prefix === '') {
+      // A `..` that would escape the root is dropped, mirroring how a browser
+      // resolves it. Only a relative source with nothing above it keeps the
+      // segment, so `../sibling.png` still addresses the sibling directory.
       segments.push('..');
     }
   }
@@ -208,7 +220,8 @@ export const canonicalizeSource = (basePath: string, source: string): AssetLocat
  * follows it or not, or a source that spells out `<source>|<discriminator>`
  * would compose the same key as that pair.
  */
-const escapeField = (value: string): string => (value.includes('%') || value.includes('|') ? value.replaceAll('%', '%25').replaceAll('|', '%7C') : value);
+const escapeField = (value: string): string =>
+  value.includes('%') || value.includes('|') ? value.replaceAll('%', '%25').replaceAll('|', '%7C') : value;
 
 /** Compose the {@link ResourceKey} for a type identity, the source it is built from, and an optional resource discriminator. */
 export const resourceKey = (typeId: string, source: SourceKey, discriminator?: string): ResourceKey =>

@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import type { Application } from '#core/Application';
@@ -179,6 +178,7 @@ describe('child scopes', () => {
     root.destroy();
 
     expect(loader.inspect()).toHaveLength(0);
+
     for (const handle of handles) {
       expect(handle.loadState).toBe('loading');
     }
@@ -268,7 +268,7 @@ describe('dependency scopes', () => {
     const parent = loader.createScope({ name: 'world' });
     const child = parent.createScope({ name: 'chunk' });
 
-    const font = await child.load(Asset.type('bmFont', 'fonts/ui.fnt'));
+    const font = await child.load({ type: 'bmFont', source: 'fonts/ui.fnt' });
     const page = font.textures[0]!;
 
     const pageOwners = loader.inspect().find(row => row.locator.endsWith('fonts/page0.png'))?.owners ?? [];
@@ -286,5 +286,32 @@ describe('dependency scopes', () => {
     await kept.loaded;
 
     expect(kept.loadState).toBe('ready');
+  });
+});
+
+describe('scope teardown failures', () => {
+  test('a throwing child does not stop its siblings or the parent release', () => {
+    const loader = createCoreLoader();
+    const parent = loader.createScope({ name: 'world' });
+    const bad = parent.createScope({ name: 'bad' });
+    const good = parent.createScope({ name: 'good' });
+    const releaseScope = vi.spyOn(loader, '_releaseScope');
+
+    releaseScope.mockImplementationOnce(() => {
+      throw new Error('release failed');
+    });
+
+    expect(() => parent.destroy()).toThrow('release failed');
+    expect(releaseScope).toHaveBeenCalledWith(good);
+    expect(releaseScope).toHaveBeenCalledWith(bad);
+    expect(releaseScope).toHaveBeenCalledWith(parent);
+  });
+});
+
+describe('Loader.load argument validation', () => {
+  test.each([[42], [null], [undefined]])('rejects %s synchronously with a message naming the argument', value => {
+    const loader = createCoreLoader();
+
+    expect(() => loader.load(value as never)).toThrow(/Loader\.load\(\) expects/);
   });
 });

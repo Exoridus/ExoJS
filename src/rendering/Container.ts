@@ -1,14 +1,16 @@
+import type { LoaderScope } from '#assets/LoaderScope';
 import type { Component } from '#core/Component';
 import type { ComponentAnchor, ComponentRuntime } from '#core/ComponentRuntime';
 import { invariant } from '#core/dev';
 import type { Stage } from '#core/Stage';
 import { removeArrayItems } from '#core/utils';
+import { Rectangle } from '#math/Rectangle';
 import { RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedPlanCache } from '#rendering/plan/RetainedPlanCache';
 import { blendModeNeedsBackdrop } from '#rendering/types';
 
-import { RenderNode } from './RenderNode';
+import { type AssetScopeValidation, RenderNode } from './RenderNode';
 
 /**
  * Scene-graph node that owns child {@link RenderNode}s. Renders its
@@ -17,7 +19,8 @@ import { RenderNode } from './RenderNode';
  *
  * Bounds aggregate the local bounds + every visible child's bounds, so
  * `container.getBounds()` always returns the smallest axis-aligned rectangle
- * containing the subtree. The size and edge accessors report that rectangle;
+ * containing the visible part of the subtree. The size and edge accessors
+ * report that rectangle;
  * writing to `width`/`height` rescales `scale` to fit.
  *
  * Adding a child re-parents it: the previous parent is detached
@@ -30,11 +33,43 @@ import { RenderNode } from './RenderNode';
  */
 export class Container extends RenderNode {
   private readonly _childList: RenderNode[] = [];
+  private _assetScope: LoaderScope | null = null;
+  private _assetScopeRevision = 0;
+  // Scope equality is settled only after nested propagation and rollback unwind.
+  private _assetScopeChanges = 0;
+  private _scopeKeptFor: RenderNode | null = null;
   private _retainedPlan: RetainedPlanCache | null = null;
   private _childrenView: readonly RenderNode[] | null = null;
   private _paintChildrenView: readonly RenderNode[] | null = null;
   private _childIndexView: ReadonlyMap<RenderNode, number> | null = null;
   private _anchor: ComponentAnchor | null = null;
+  private _parentChangeListeners: Set<() => void> | null = null;
+
+  /** @internal - observe parent changes without walking the subtree. */
+  public _addParentChangeListener(listener: () => void): void {
+    (this._parentChangeListeners ??= new Set()).add(listener);
+  }
+
+  /** @internal - stop observing parent changes. */
+  public _removeParentChangeListener(listener: () => void): void {
+    this._parentChangeListeners?.delete(listener);
+
+    if (this._parentChangeListeners?.size === 0) {
+      this._parentChangeListeners = null;
+    }
+  }
+
+  /** @internal */
+  public override _setParent(parent: Container | null): void {
+    super._setParent(parent);
+
+    if (this._parentChangeListeners !== null) {
+      // A listener can replace its ancestor subscriptions while handling this change.
+      for (const listener of [...this._parentChangeListeners]) {
+        listener();
+      }
+    }
+  }
 
   /**
    * The live child list, readable by subclasses and mutable only from here.
@@ -67,15 +102,23 @@ export class Container extends RenderNode {
 
   /** Cached renderer-compatible child order. @internal */
   public _childrenInPaintOrder(): readonly RenderNode[] {
-    if (this._paintChildrenView !== null) return this._paintChildrenView;
+    if (this._paintChildrenView !== null) {
+      return this._paintChildrenView;
+    }
+
     const children = this.children;
     const first = children[0];
-    if (first === undefined) return (this._paintChildrenView = children);
+
+    if (first === undefined) {
+      return (this._paintChildrenView = children);
+    }
+
     for (let i = 1; i < children.length; i++) {
       if (children[i]!.zIndex !== first.zIndex) {
         return (this._paintChildrenView = Object.freeze([...children].sort((a, b) => a.zIndex - b.zIndex)));
       }
     }
+
     return (this._paintChildrenView = children);
   }
 
@@ -250,29 +293,117 @@ export class Container extends RenderNode {
       return this._reorderChild(child, index);
     }
 
-    if (child.parent) {
-      child.parent.removeChild(child);
+    // Validate the entire subtree before removing its old claims or publishing
+    // parent/stage links. One foreign leaf must reject all of its siblings too.
+    child._validateAssetScope(this._assetScope);
+
+    const source = child.parent;
+    const sourceIndex = source?.getChildIndex(child) ?? 0;
+    const previousScope = source?._assetScope ?? (child instanceof Container ? child._assetScope : null);
+    let preserved: ComponentRuntime | null = null;
+
+    try {
+      if (source !== null) {
+        if (child._componentNodes > 0) {
+          const runtime = source._componentRuntime(false);
+
+          preserved = runtime !== null && runtime === this._componentRuntime(false) ? runtime : null;
+        }
+
+        // Hold the old claims until the new owner has acquired them. This also
+        // keeps a failed move's payload resident while its tree is restored.
+        const kept = source._scopeKeptFor;
+        source._scopeKeptFor = child;
+
+        try {
+          if (preserved === null) {
+            source.removeChild(child);
+          } else {
+            source._detachChild(child, preserved);
+          }
+        } finally {
+          source._scopeKeptFor = kept;
+        }
+
+        // Removal can call user code. A reentrant reparent/destroy supersedes
+        // this move and must never leave the node in two child arrays.
+        if (child.parent !== null || child.destroyed) {
+          return this;
+        }
+      }
+
+      const insertAt = this._resolveInsertIndex(index);
+
+      this._childList.splice(insertAt, 0, child);
+      this._invalidateChildOrder();
+      this._adjustComponentNodes(child._componentNodes);
+      child._setParent(this);
+      this.invalidateCache();
+      this._markStructureDirty();
+
+      if (child.parent !== this || child.destroyed) {
+        return this;
+      }
+
+      child._invalidateSubtreeTransform();
+      this._invalidateBoundsCascade();
+      child._setStage(this._stage);
+
+      if (child.parent !== this || child.destroyed) {
+        return this;
+      }
+
+      child._setAssetScope(this._assetScope);
+
+      if (child.parent !== this || child.destroyed) {
+        return this;
+      }
+
+      this._stage?.interaction._notifyNodeAdded(child);
+
+      if (child.parent !== this || child.destroyed) {
+        return this;
+      }
+
+      if (child._componentNodes > 0) {
+        this._adoptComponents(child, preserved);
+      }
+
+      this._onChildListChanged();
+    } catch (error) {
+      const failures: unknown[] = [error];
+
+      if (child.parent === this) {
+        const kept = this._scopeKeptFor;
+        this._scopeKeptFor = child;
+
+        try {
+          this.removeChild(child);
+        } catch (cleanupError) {
+          failures.push(cleanupError);
+        } finally {
+          this._scopeKeptFor = kept;
+        }
+      }
+
+      if (child.parent === null && !child.destroyed) {
+        try {
+          if (source !== null && !source.destroyed) {
+            source.addChildAt(child, Math.min(sourceIndex, source._childList.length));
+          } else {
+            child._setAssetScope(previousScope);
+          }
+        } catch (restoreError) {
+          failures.push(restoreError);
+        }
+      }
+
+      if (failures.length > 1) {
+        throw new AggregateError(failures, 'Container.addChild(): attach and rollback failed.', { cause: error });
+      }
+
+      throw error;
     }
-
-    const insertAt = this._resolveInsertIndex(index);
-
-    child._setParent(this);
-    this._childList.splice(insertAt, 0, child);
-    this._invalidateChildOrder();
-    this.invalidateCache();
-    this._markStructureDirty();
-
-    child._invalidateSubtreeTransform();
-    this._invalidateBoundsCascade();
-
-    child._setStage(this._stage);
-    this._stage?.interaction._notifyNodeAdded(child);
-
-    if (child._componentNodes > 0) {
-      this._adoptComponents(child);
-    }
-
-    this._onChildListChanged();
 
     return this;
   }
@@ -338,10 +469,13 @@ export class Container extends RenderNode {
 
       this._childIndexView = map;
     }
+
     const index = this._childIndexView.get(child);
+
     if (index === undefined) {
       throw new Error('Drawable is not a child of the container.');
     }
+
     return index;
   }
 
@@ -372,16 +506,31 @@ export class Container extends RenderNode {
 
   /** Remove `child` from this container. No-op if not present. */
   public removeChild(child: RenderNode): this {
-    const index = this._childList.indexOf(child);
-
-    if (index !== -1) {
-      this.removeChildAt(index);
-    }
+    this._detachChild(child, null);
 
     return this;
   }
 
   public removeChildAt(index: number): this {
+    this._detachChildAt(index, null);
+
+    return this;
+  }
+
+  /**
+   * Remove `child` as the first half of a move into another container of the
+   * component runtime `keep`: its components stay members of that runtime
+   * instead of being disabled and re-enabled around the move.
+   */
+  private _detachChild(child: RenderNode, keep: ComponentRuntime | null): void {
+    const index = this._childList.indexOf(child);
+
+    if (index !== -1) {
+      this._detachChildAt(index, keep);
+    }
+  }
+
+  private _detachChildAt(index: number, keep: ComponentRuntime | null): void {
     const child = this._childList[index];
 
     removeArrayItems(this._childList, index, 1);
@@ -391,27 +540,51 @@ export class Container extends RenderNode {
     // would observe a stale snapshot still containing `child`.
     this._invalidateChildOrder();
 
-    if (child?.parent === this) {
-      const componentRuntime = child._componentNodes > 0 ? this._componentRuntime(false) : null;
+    try {
+      if (child?.parent === this) {
+        const componentRuntime = child._componentNodes > 0 ? this._componentRuntime(false) : null;
 
-      // Cascade bounds up BEFORE clearing parent so the walk reaches this node.
-      this._invalidateBoundsCascade();
+        this._invalidateBoundsCascade();
+        this._detachChildState(child, componentRuntime === keep ? null : componentRuntime);
+      }
+    } finally {
+      this.invalidateCache();
+      this._markStructureDirty();
+      this._onChildListChanged();
+    }
+  }
+
+  private _detachChildState(child: RenderNode, runtime: ComponentRuntime | null): void {
+    // Debit the departing subtree while its count still belongs to this parent.
+    // Parent/blur callbacks may add or remove components after the unlink.
+    this._adjustComponentNodes(-child._componentNodes);
+
+    try {
       child._setParent(null);
       child._invalidateSubtreeTransform();
-      this._stage?.interaction._notifyNodeRemoved(child);
-      this._stage?.focus._notifyNodeRemoved(child);
-      child._setStage(null);
 
-      if (child._componentNodes > 0) {
-        this._releaseComponents(child, componentRuntime);
+      try {
+        this._stage?.interaction._notifyNodeRemoved(child);
+      } finally {
+        this._stage?.focus._notifyNodeRemoved(child);
+      }
+    } finally {
+      try {
+        if (child.parent === null) {
+          child._setStage(null);
+        }
+      } finally {
+        try {
+          if (child.parent === null && this._assetScope !== null && this._scopeKeptFor !== child) {
+            child._setAssetScope(null);
+          }
+        } finally {
+          if (child._componentNodes > 0 && (child.parent === null || child._componentRuntime(false) !== runtime)) {
+            runtime?.detachSubtree(child);
+          }
+        }
       }
     }
-
-    this.invalidateCache();
-    this._markStructureDirty();
-    this._onChildListChanged();
-
-    return this;
   }
 
   /**
@@ -444,16 +617,14 @@ export class Container extends RenderNode {
 
     const componentRuntime = this._componentNodes > 0 ? this._componentRuntime(false) : null;
 
+    const errors: unknown[] = [];
+
     for (const child of removed) {
       if (child.parent === this) {
-        child._setParent(null);
-        child._invalidateSubtreeTransform();
-        this._stage?.interaction._notifyNodeRemoved(child);
-        this._stage?.focus._notifyNodeRemoved(child);
-        child._setStage(null);
-
-        if (child._componentNodes > 0) {
-          this._releaseComponents(child, componentRuntime);
+        try {
+          this._detachChildState(child, componentRuntime);
+        } catch (error) {
+          errors.push(error);
         }
       }
     }
@@ -461,6 +632,10 @@ export class Container extends RenderNode {
     this.invalidateCache();
     this._markStructureDirty();
     this._onChildListChanged();
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
 
     return this;
   }
@@ -503,21 +678,112 @@ export class Container extends RenderNode {
     }
   }
 
-  /** A child subtree carrying components joined this container's tree. */
-  private _adoptComponents(child: RenderNode): void {
-    this._adjustComponentNodes(child._componentNodes);
-    this._componentRuntime(true)?.attachSubtree(child);
+  /**
+   * A child subtree carrying components joined this container's tree. `preserved`
+   * is the runtime the subtree kept its membership in across the move; it is
+   * released here only if this container no longer reaches it, which a hook
+   * that ran during the unlink can cause.
+   */
+  private _adoptComponents(child: RenderNode, preserved: ComponentRuntime | null): void {
+    const runtime = this._componentRuntime(true);
+
+    runtime?.attachSubtree(child);
+
+    if (preserved !== null && preserved !== runtime) {
+      preserved.detachSubtree(child);
+    }
   }
 
-  /**
-   * A child subtree carrying components left this container's tree. `runtime`
-   * is resolved before the unlink, because afterwards the subtree no longer
-   * reaches the scene it leaves; the hooks run only once the unlink is
-   * complete, so they observe a consistent tree.
-   */
-  private _releaseComponents(child: RenderNode, runtime: ComponentRuntime | null): void {
-    this._adjustComponentNodes(-child._componentNodes);
-    runtime?.detachSubtree(child);
+  /** @internal */
+  public override _validateAssetScope(scope: LoaderScope | null, validation?: AssetScopeValidation): void {
+    if (scope === null || (this._assetScope === scope && this._assetScopeChanges === 0)) {
+      return;
+    }
+
+    for (const child of this._childList) {
+      child._validateAssetScope(scope, validation);
+    }
+
+    validation?.revisions.set(this, this._contentRevision);
+  }
+
+  /** @internal */
+  public override _setAssetScope(scope: LoaderScope | null, validation?: AssetScopeValidation): void {
+    if (this._assetScope === scope && this._assetScopeChanges === 0) {
+      return;
+    }
+
+    if (scope === null) {
+      validation = undefined;
+    } else {
+      const content = validation?.revisions.get(this);
+
+      // A forwarded entry is single-use. Independent/reentrant calls have no
+      // context; changed descendants or foreign first claims require a fresh
+      // whole-subtree preflight before any new handle can become bound.
+      validation?.revisions.delete(this);
+
+      if (validation?.scope !== scope || validation.ownershipRevision !== scope._ownershipRevision || content !== this._contentRevision) {
+        validation = { scope, ownershipRevision: scope._ownershipRevision, revisions: new Map() };
+        this._validateAssetScope(scope, validation);
+        validation.revisions.delete(this);
+      }
+    }
+
+    const previous = this._assetScope;
+    const revision = ++this._assetScopeRevision;
+    this._assetScope = scope;
+    this._assetScopeChanges++;
+
+    try {
+      for (const child of this.children) {
+        if (child.parent === this) {
+          child._setAssetScope(scope, validation);
+        }
+
+        if (this._assetScopeRevision !== revision) {
+          return;
+        }
+      }
+    } catch (error) {
+      // A nested move owns the current tree. An older transaction may report
+      // its failure, but must not roll the newer scope back.
+      if (this._assetScopeRevision !== revision) {
+        throw error;
+      }
+
+      const rollbackRevision = ++this._assetScopeRevision;
+      this._assetScope = previous;
+
+      const failures: unknown[] = [error];
+
+      for (const child of this.children) {
+        try {
+          if (child.parent === this) {
+            child._setAssetScope(previous);
+          }
+        } catch (restoreError) {
+          failures.push(restoreError);
+        }
+
+        if (this._assetScopeRevision !== rollbackRevision) {
+          break;
+        }
+      }
+
+      if (failures.length > 1) {
+        throw new AggregateError(failures, 'Container: asset scope change and rollback failed.', { cause: error });
+      }
+
+      throw error;
+    } finally {
+      this._assetScopeChanges--;
+    }
+  }
+
+  /** @internal */
+  public _getAssetScope(): LoaderScope | null {
+    return this._assetScope;
   }
 
   /** @internal - propagate the owning stage down the whole subtree. */
@@ -575,7 +841,16 @@ export class Container extends RenderNode {
     // unlinks the node, and the removal stamps this container structure-dirty,
     // so a destroyed direct child always fails the key check above rather than
     // being replayed from a stale slot.
-    if (this._retainedPlan?.isClean(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend)) {
+    if (
+      this._retainedPlan?.isClean(
+        this._contentRevision,
+        this._structureRevision,
+        this._transformRevision,
+        viewUpdateId,
+        builder.backend,
+        builder._retentionView,
+      )
+    ) {
       this._replayRetainedChildren(builder);
 
       return;
@@ -603,6 +878,10 @@ export class Container extends RenderNode {
       const slot = slotIndex < slotCount ? cache.slotAt(slotIndex) : null;
 
       if (slot !== null && slot.childIndex === index) {
+        if (slot.viewDependent) {
+          builder._noteViewRead();
+        }
+
         builder._replayRetainedDraw(slot);
         slotIndex++;
       } else {
@@ -655,6 +934,7 @@ export class Container extends RenderNode {
       // The scope is still open, so its entry COUNT is the collected length -
       // the array itself may run past it (see `_peekCurrentScopeEntries`).
       const beforeCount = builder._peekCurrentScopeEntryCount();
+      const viewReadVersion = builder._viewReadVersion;
 
       child.collect(builder, index);
 
@@ -664,7 +944,7 @@ export class Container extends RenderNode {
         const entry = builder._peekCurrentScopeEntries()[afterCount - 1]!;
 
         if (entry.kind === RenderEntryKind.Draw && entry.command.drawable === child) {
-          (this._retainedPlan ??= new RetainedPlanCache())._appendSlot(index, entry.command);
+          (this._retainedPlan ??= new RetainedPlanCache())._appendSlot(index, entry.command, builder._viewReadVersion !== viewReadVersion);
         }
       }
     }
@@ -679,6 +959,7 @@ export class Container extends RenderNode {
         this._transformRevision,
         viewUpdateId,
         builder.backend,
+        builder._retentionView,
       );
     }
   }
@@ -703,6 +984,26 @@ export class Container extends RenderNode {
     }
 
     return false;
+  }
+
+  /** Child aggregates use a conservative world AABB; childless local geometry keeps its oriented box. @internal */
+  public override _isWorldAligned(): boolean {
+    return this._childList.length > 0 || super._isWorldAligned();
+  }
+
+  /**
+   * Keep the child aggregate when lifting container bounds into world space.
+   * A rotated aggregate remains a conservative AABB, as in {@link getBounds}.
+   * @internal
+   */
+  public override _getWorldBounds(out?: Rectangle): Rectangle {
+    const anchor = this._resolveTransformGroupAnchor();
+
+    if (anchor === null) {
+      return this.getBounds(out);
+    }
+
+    return this.getBounds().transform(anchor.getWorldTransform(), out ?? (this._worldBounds ??= new Rectangle()));
   }
 
   public override updateBounds(): this {
@@ -748,7 +1049,7 @@ export class Container extends RenderNode {
    * Destroy this container and every node beneath it.
    *
    * Ownership is by containment: detaching a subtree only unlinks it, so the
-   * descendants' GPU-backed resources (cached textures, filters, render
+   * descendants' GPU-backed resources (cached textures, render
    * textures) and signal listeners would outlive the tree that owned them and
    * leak on every scene change.
    *
@@ -768,12 +1069,17 @@ export class Container extends RenderNode {
 
     // Detach first, so every child leaves the interaction/focus registries and
     // drops its stage while it is still a valid node; only then tear it down.
-    this.removeChildren();
+    const errors: unknown[] = [];
+
+    try {
+      this.removeChildren();
+    } catch (error) {
+      errors.push(error);
+    }
 
     // A throwing child teardown (a component's onDestroy, a subclass override)
     // must not leave its siblings and this container alive; the first error
     // surfaces once everything is torn down.
-    const errors: unknown[] = [];
 
     for (const child of children) {
       // A child the caller already destroyed stays destroyed - re-entering its

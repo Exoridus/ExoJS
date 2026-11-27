@@ -57,6 +57,7 @@ const createTestBackend = (): RenderBackend => {
     },
     setView(v: View | null) {
       renderTarget.setView(v);
+
       return this;
     },
     setRenderTarget() {
@@ -111,6 +112,7 @@ const collectDraws = (root: Container, backend: RenderBackend): DrawCommand[] =>
   RenderPlanOptimizer.optimize(plan);
 
   const draws: DrawCommand[] = [];
+
   for (const pass of plan.passes) {
     gatherScopeDraws(pass.root, draws);
   }

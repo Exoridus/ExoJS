@@ -89,12 +89,11 @@ const makeBmFontData = (): BmFontData => {
     [72, { x: 0, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 0 }], // H
     [105, { x: 8, y: 0, width: 4, height: 12, xOffset: 0, yOffset: 2, xAdvance: 6, page: 0 }], // i
   ]);
+
   return { pages: ['font_0.png'], chars, kernings: new Map(), lineHeight: 16, base: 12 };
 };
 
-const makeBmFont = (): BmFont => {
-  return new BmFont(makeBmFontData(), [{ width: 64, height: 64 } as unknown as Texture]);
-};
+const makeBmFont = (): BmFont => new BmFont(makeBmFontData(), [{ width: 64, height: 64 } as unknown as Texture]);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -105,10 +104,10 @@ const buildStyledText = (): Text => {
   const text = new Text('Hi', {
     fontSize: 16,
     pixelRatio: 2.5,
-    sdfRadius: 6,
+    sdfRadius: 12,
     fillColor: new Color(10, 20, 30, 0.41),
     outlineColor: new Color(40, 50, 60, 0.52),
-    outlineWidth: 0.15,
+    outlineWidth: 1.5,
     shadowColor: new Color(70, 80, 90, 0.63),
     shadowOffsetX: 3,
     shadowOffsetY: -5,
@@ -174,10 +173,12 @@ describe('shared text node-data packer', () => {
       expect(target[base + 14]).toBeCloseTo(60 / 255);
       expect(target[base + 15]).toBeCloseTo(0.52);
 
-      // Params (texel 4): outlineMin, shadowAlpha, shadowBlur, gradientStopCount
-      expect(target[base + 16]).toBeCloseTo(0.5 - 0.15); // outlineMin
+      // Params (texel 4): logical-pixel lengths times the field scale. The
+      // runtime field spans 2 * sdfRadius logical pixels over 0..1.
+      const fieldScale = 1 / (2 * 12);
+      expect(target[base + 16]).toBeCloseTo(1.5 * fieldScale, 7); // outlineField
       expect(target[base + 17]).toBeCloseTo(0.74); // shadowAlpha
-      expect(target[base + 18]).toBeCloseTo(2 * 0.1); // shadowBlur * 0.1
+      expect(target[base + 18]).toBeCloseTo(2 * fieldScale, 7); // shadowBlurField
       expect(target[base + 19]).toBe(2); // two gradient stops
 
       // Shadow color (texel 5)
@@ -190,13 +191,14 @@ describe('shared text node-data packer', () => {
       expect(target[base + 24]).toBeCloseTo(3 * text.rasterPixelRatio);
       expect(target[base + 25]).toBeCloseTo(-5 * text.rasterPixelRatio);
       expect(target[base + 26]).toBe(0); // reserved
-      expect(target[base + 27]).toBe(6); // sdfRadius
+      expect(target[base + 27]).toBeCloseTo(fieldScale, 7);
 
       // Gradient ramp (texel 7): 90 degrees is a left-to-right ramp, which
       // resolves to t = gradUV.x with no bias.
       expect(target[base + 28]).toBeCloseTo(1);
       expect(target[base + 29]).toBeCloseTo(0);
       expect(target[base + 30]).toBeCloseTo(0);
+      expect(target[base + 31]).toBe(0.5); // field value on the glyph edge
 
       // Texel 8 is reserved and must stay zeroed.
       expect(Array.from(target.slice(base + 32, base + 36))).toEqual([0, 0, 0, 0]);
@@ -225,8 +227,13 @@ describe('shared text node-data packer', () => {
       expect(ink.height).toBeGreaterThan(0);
 
       // Nothing outside [base, base + 40) is touched.
-      for (let i = 0; i < base; i++) expect(target[i]).toBe(0);
-      for (let i = base + textNodeDataFloats; i < target.length; i++) expect(target[i]).toBe(0);
+      for (let i = 0; i < base; i++) {
+        expect(target[i]).toBe(0);
+      }
+
+      for (let i = base + textNodeDataFloats; i < target.length; i++) {
+        expect(target[i]).toBe(0);
+      }
     });
 
     test('no outline, shadow or gradient produces the disabled sentinels', () => {
@@ -235,11 +242,13 @@ describe('shared text node-data packer', () => {
 
       packTextNodeData(target, 0, text);
 
-      expect(target[16]).toBe(0.5); // outlineMin disabled (outlineWidth === 0)
+      expect(target[16]).toBe(0); // no outline (outlineWidth === 0)
+      expect(target[18]).toBe(0); // no blur
       expect(target[19]).toBe(0); // no gradient stops
       // A disabled gradient still zeroes the ramp and every stop slot, so a
-      // recycled row cannot leak a previous node's colours.
-      expect(Array.from(target.slice(28, 32))).toEqual([0, 0, 0, 0]);
+      // recycled row cannot leak a previous node's colours. The edge value
+      // shares the ramp texel.
+      expect(Array.from(target.slice(28, 32))).toEqual([0, 0, 0, 0.5]);
       expect(Array.from(target.slice(40, 80))).toEqual(new Array(40).fill(0));
     });
 
@@ -329,12 +338,22 @@ describe('shared text node-data packer', () => {
   });
 
   describe('packTextNodeData — BitmapText', () => {
-    test('packs the same layout as Text (sdfRadius sentinel excepted)', () => {
-      const font = makeBmFont();
+    test('packs the same layout as Text with the declared MSDF field scale', () => {
+      // Range 8 and padding 4 texels at scale 3: 12 local pixels of reach.
+      const font = new BmFont(
+        {
+          ...makeBmFontData(),
+          distanceField: { fieldType: 'msdf', distanceRange: 8, zeroDistanceValue: 0.5 },
+          padding: { top: 4, right: 4, bottom: 4, left: 4 },
+        },
+        [{ width: 64, height: 64 } as unknown as Texture],
+      );
       const bmp = new BitmapText('Hi', font, {
+        msdf: true,
+        scale: 3,
         fillColor: new Color(11, 21, 31, 0.42),
         outlineColor: new Color(41, 51, 61, 0.53),
-        outlineWidth: 0.2,
+        outlineWidth: 2,
         shadowColor: new Color(71, 81, 91, 0.64),
         shadowOffsetX: 4,
         shadowOffsetY: -6,
@@ -365,20 +384,19 @@ describe('shared text node-data packer', () => {
       expect(target[11]).toBeCloseTo(0.42);
       expect(target[12]).toBeCloseTo(41 / 255);
       expect(target[15]).toBeCloseTo(0.53);
-      expect(target[16]).toBeCloseTo(0.5 - 0.2);
+      const fieldScale = 1 / (8 * 3);
+      expect(target[16]).toBeCloseTo(2 * fieldScale, 7);
       expect(target[17]).toBeCloseTo(0.75);
-      expect(target[18]).toBeCloseTo(3 * 0.1);
+      expect(target[18]).toBeCloseTo(3 * fieldScale, 7);
       expect(target[19]).toBe(2);
       expect(target[20]).toBeCloseTo(71 / 255);
       expect(target[23]).toBeCloseTo(0.64);
-      // BitmapText.rasterPixelRatio is always 1 (offline atlas - see AbstractText).
-      expect(target[24]).toBeCloseTo(4);
-      expect(target[25]).toBeCloseTo(-6);
+      // Local pixels to atlas texels: one texel covers `fontScale` local pixels.
+      expect(target[24]).toBeCloseTo(4 / 3, 6);
+      expect(target[25]).toBeCloseTo(-6 / 3, 6);
       expect(target[26]).toBe(0); // reserved
-
-      // sdfRadius sentinel: 0 for anything that is not a `Text` (an offline
-      // MSDF atlas carries no distance range).
-      expect(target[27]).toBe(0);
+      expect(target[27]).toBeCloseTo(fieldScale, 7);
+      expect(target[31]).toBe(0.5);
 
       expect(target[40]).toBeCloseTo(101 / 255);
       expect(target[47]).toBeCloseTo(0.97);
@@ -387,6 +405,17 @@ describe('shared text node-data packer', () => {
       expect(target[36]).toBe(ink.x);
       expect(target[39]).toBe(ink.height);
     });
+  });
+
+  test('an MSDF font without a declared range packs an unknown field scale for fill-only rendering', () => {
+    const bmp = new BitmapText('Hi', makeBmFont(), { msdf: true });
+    const target = new Float32Array(textNodeDataFloats);
+
+    packTextNodeData(target, 0, bmp);
+
+    expect(target[16]).toBe(0);
+    expect(target[27]).toBe(0);
+    expect(target[31]).toBe(0.5);
   });
 
   describe('packTextNodeTransform — own-transform-move row patch primitive', () => {

@@ -339,6 +339,26 @@ describe('InputSystem — keyboard', () => {
     im.destroy();
   });
 
+  test('blur with a held modifier reports the side key only, not the aggregate', () => {
+    const { im, canvas } = createInputSystem();
+    const onKeyUp = vi.fn();
+
+    im.onKeyUp.add(onKeyUp);
+    canvas.dispatchEvent(new FocusEvent('focus'));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft' }));
+    im.preFrame(0 as never);
+    onKeyUp.mockClear();
+
+    canvas.dispatchEvent(new FocusEvent('blur'));
+    im.preFrame(0 as never);
+
+    expect(onKeyUp).toHaveBeenCalledTimes(1);
+    expect(onKeyUp).toHaveBeenCalledWith(Keyboard.ShiftLeft);
+    expect(ch(im, Keyboard.Shift)).toBe(0);
+
+    im.destroy();
+  });
+
   test('window blur behaves like canvas blur: releases keys and fires onCanvasFocusChange(false)', () => {
     const { im, canvas } = createInputSystem();
     const onFocusChange = vi.fn();

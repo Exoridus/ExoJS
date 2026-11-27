@@ -14,6 +14,10 @@ describe('GamepadPromptLayouts', () => {
   test('exposes stable control keys and base positions', () => {
     expect(GamepadPromptLayouts.controls).toContain('ButtonSouth');
     expect(GamepadPromptLayouts.controls).toContain('Select');
+
+    const before = [...GamepadPromptLayouts.controls];
+    expect(() => (GamepadPromptLayouts.controls as string[]).push('Extra')).toThrow(TypeError);
+    expect(GamepadPromptLayouts.controls).toEqual(before);
     expect(GamepadPromptLayouts.getControlPosition('LeftStick')).toEqual([0.38, 0.66]);
   });
 
@@ -132,6 +136,8 @@ describe('GamepadPromptLayouts', () => {
 
     expect(GamepadPromptLayouts.getControlLabels(switchPro)).toBe(GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.SwitchPro));
     expect(GamepadPromptLayouts.getControlLabels(dualShock4)).toBe(GamepadPromptLayouts.getControlLabels(dualShock4));
-    expect(GamepadPromptLayouts.getControlLabels(dualShock4)).not.toBe(GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.PlayStation));
+    expect(GamepadPromptLayouts.getControlLabels(dualShock4)).not.toBe(
+      GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.PlayStation),
+    );
   });
 });

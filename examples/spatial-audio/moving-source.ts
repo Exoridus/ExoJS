@@ -1,5 +1,6 @@
 import type { RenderingContext, Spatializable, Voice } from '@codexo/exojs';
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, type Seconds, Sound, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, type Seconds, Sound, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 // Orbit + attenuation tuned to the wide canvas so the readout reflects what you
@@ -9,11 +10,15 @@ const ORBIT_Y = 220;
 const REF_DISTANCE = 50;
 const MAX_DISTANCE = 520;
 
-function linearAttenuation(distance: number): number {
-  if (distance <= REF_DISTANCE) return 1;
+const linearAttenuation = (distance: number): number => {
+  if (distance <= REF_DISTANCE) {
+    return 1;
+  }
+
   const t = (distance - REF_DISTANCE) / (MAX_DISTANCE - REF_DISTANCE);
+
   return Math.max(0, 1 - t);
-}
+};
 
 class MovingSourceScene extends Scene {
   private sound!: Sound;
@@ -30,11 +35,10 @@ class MovingSourceScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    // A continuous music loop, not a one-shot: spatialization is only
-    // audible while there is sustained signal to pan/attenuate. The derived
+    // The sustained engine makes panning and attenuation audible. The derived
     // Sound below reads .audioBuffer synchronously, so await load() instead
     // of the deferred get() (whose placeholder audioBuffer is null until fill).
-    const source = await this.loader.load(Asset.type('sound', 'audio/demo-loop-main.ogg'));
+    const source = await this.loader.load(assets.soundSpaceEngine);
     this.sound = new Sound(source.audioBuffer);
     this.listener = { x: width / 2, y: height / 2 };
     app.audio.listener.target = this.listener;
@@ -82,7 +86,10 @@ class MovingSourceScene extends Scene {
     this.angle += delta * 1.1;
     this.source.x = this.listener.x + Math.cos(this.angle) * ORBIT_X;
     this.source.y = this.listener.y + Math.sin(this.angle) * ORBIT_Y;
-    if (this.voice) this.voice.position = this.source;
+
+    if (this.voice) {
+      this.voice.position = this.source;
+    }
   }
 
   override draw(context: RenderingContext): void {
@@ -133,9 +140,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(MovingSourceScene);

@@ -44,7 +44,14 @@ const makeTexture = (): DataTexture<TextureFormat.Rgba8> => {
 };
 
 /** Paint a solid rectangle of texels into the CPU-side buffer, leaving the dirty flag alone. */
-const paintRect = (texture: DataTexture<TextureFormat.Rgba8>, x: number, y: number, width: number, height: number, color: readonly number[]): void => {
+const paintRect = (
+  texture: DataTexture<TextureFormat.Rgba8>,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: readonly number[],
+): void => {
   for (let row = y; row < y + height; row++) {
     for (let column = x; column < x + width; column++) {
       texture.buffer.set(color, (row * EDGE + column) * 4);
@@ -59,6 +66,59 @@ const pixelAt = (frame: ArrayLike<number>, x: number, y: number): readonly [numb
 };
 
 describe('WebGPU uploads a partial DataTexture region', () => {
+  test('uploads an inset region from a foreign-realm float buffer', async ctx => {
+    const backend = await createWebGpuTestBackend(CANVAS);
+    const root = new Container();
+    const iframe = document.createElement('iframe');
+
+    document.body.append(iframe);
+
+    const foreign = iframe.contentWindow as Window & typeof globalThis;
+    const data = new foreign.Float32Array(EDGE * EDGE * 4);
+    const texture = new DataTexture({ width: EDGE, height: EDGE, format: TextureFormat.Rgba32F, data });
+
+    for (let index = 0; index < EDGE * EDGE; index++) {
+      data.set([1, 0, 0, 1], index * 4);
+    }
+
+    root.addChild(new Sprite(texture));
+
+    try {
+      expect(data).not.toBeInstanceOf(Float32Array);
+
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
+
+      expect(pixelAt(readWebGpuFrame(backend, CANVAS), 12, 12)).toEqual([...RED]);
+
+      for (let row = 8; row < 16; row++) {
+        for (let column = 8; column < 16; column++) {
+          data.set([0, 0, 1, 1], (row * EDGE + column) * 4);
+        }
+      }
+
+      texture.commitRect(8, 8, 8, 8);
+
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
+
+      const frame = readWebGpuFrame(backend, CANVAS);
+
+      expect(pixelAt(frame, 12, 12)).toEqual([...BLUE]);
+      expect(pixelAt(frame, 7, 12)).toEqual([...RED]);
+      expect(pixelAt(frame, 16, 12)).toEqual([...RED]);
+      expect(pixelAt(frame, 12, 7)).toEqual([...RED]);
+      expect(pixelAt(frame, 12, 16)).toEqual([...RED]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+      iframe.remove();
+    }
+  });
+
   test('an inset region lands at the right origin and leaves the rest untouched', async ctx => {
     const backend = await createWebGpuTestBackend(CANVAS);
     const root = new Container();
@@ -67,7 +127,9 @@ describe('WebGPU uploads a partial DataTexture region', () => {
     root.addChild(new Sprite(texture));
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       expect(pixelAt(readWebGpuFrame(backend, CANVAS), 12, 12)).toEqual([...RED]);
 
@@ -76,7 +138,9 @@ describe('WebGPU uploads a partial DataTexture region', () => {
       paintRect(texture, 8, 8, 8, 8, BLUE);
       texture.commitRect(8, 8, 8, 8);
 
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       const frame = readWebGpuFrame(backend, CANVAS);
 
@@ -102,7 +166,9 @@ describe('WebGPU uploads a partial DataTexture region', () => {
     root.addChild(new Sprite(texture));
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       // Full-width rows are already contiguous in the row-major buffer, which
       // lets the backend skip the packing copy entirely - the resulting texels
@@ -110,7 +176,9 @@ describe('WebGPU uploads a partial DataTexture region', () => {
       paintRect(texture, 0, 20, EDGE, 4, BLUE);
       texture.commitRect(0, 20, EDGE, 4);
 
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       const frame = readWebGpuFrame(backend, CANVAS);
 
@@ -134,17 +202,23 @@ describe('WebGPU uploads a partial DataTexture region', () => {
     root.addChild(new Sprite(texture));
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       paintRect(texture, 2, 2, 4, 4, BLUE);
       texture.commitRect(2, 2, 4, 4);
 
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       paintRect(texture, 24, 24, 4, 4, BLUE);
       texture.commitRect(24, 24, 4, 4);
 
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       const frame = readWebGpuFrame(backend, CANVAS);
 

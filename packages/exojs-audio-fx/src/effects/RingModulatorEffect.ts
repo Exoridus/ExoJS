@@ -1,5 +1,14 @@
 import { AudioEffect } from '@codexo/exojs';
 
+/** Carrier shapes a ring modulator can use; `'custom'` needs a `PeriodicWave` it never sets. */
+export type RingModulatorWaveform = Exclude<OscillatorType, 'custom'>;
+
+const assertWaveform = (waveform: OscillatorType): void => {
+  if (waveform === 'custom') {
+    throw new RangeError("RingModulatorEffect does not support the 'custom' waveform.");
+  }
+};
+
 /** Construction options for {@link RingModulatorEffect}. */
 export interface RingModulatorEffectOptions {
   /**
@@ -10,12 +19,12 @@ export interface RingModulatorEffectOptions {
    */
   frequency?: number;
   /**
-   * Carrier oscillator waveform shape. Default `'sine'`. Any
-   * `OscillatorType` is accepted (`'sine'`, `'square'`, `'sawtooth'`,
-   * `'triangle'`). Non-sine shapes introduce additional harmonic content into
-   * both sidebands.
+   * Carrier oscillator waveform shape. Default `'sine'`. One of `'sine'`,
+   * `'square'`, `'sawtooth'` or `'triangle'`; `'custom'` is not supported
+   * because no `PeriodicWave` is set. Non-sine shapes introduce additional
+   * harmonic content into both sidebands.
    */
-  waveform?: OscillatorType;
+  waveform?: RingModulatorWaveform;
   /**
    * Dry/wet mix, 0..1. The dry level is automatically `1 - wet`. Default 1.0
    * (fully wet / ring-modulated). Set to 0.5 for an equal mix of dry and
@@ -68,12 +77,13 @@ interface RingModulatorEffectSetup {
 export class RingModulatorEffect extends AudioEffect {
   private _setup: RingModulatorEffectSetup | null = null;
   private _frequency: number;
-  private _waveform: OscillatorType;
+  private _waveform: RingModulatorWaveform;
   private _wet: number;
 
   public constructor(options: RingModulatorEffectOptions = {}) {
     super();
     this._frequency = Math.max(0, Math.min(20000, options.frequency ?? 440));
+    assertWaveform(options.waveform ?? 'sine');
     this._waveform = options.waveform ?? 'sine';
     this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
     this._deferSetup(context => this._setupNodes(context));
@@ -84,7 +94,10 @@ export class RingModulatorEffect extends AudioEffect {
    * not yet initialized.
    */
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('RingModulatorEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('RingModulatorEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
@@ -93,7 +106,10 @@ export class RingModulatorEffect extends AudioEffect {
    * not yet initialized.
    */
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('RingModulatorEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('RingModulatorEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -107,6 +123,7 @@ export class RingModulatorEffect extends AudioEffect {
 
   public set frequency(value: number) {
     this._frequency = Math.max(0, Math.min(20000, value));
+
     if (this._setup) {
       const ctx = this._setup.inputGain.context;
       this._setup.carrierOsc.frequency.setTargetAtTime(this._frequency, ctx.currentTime, 0.01);
@@ -118,12 +135,14 @@ export class RingModulatorEffect extends AudioEffect {
    * immediately (no smoothing; waveform transitions are instantaneous in Web
    * Audio).
    */
-  public get waveform(): OscillatorType {
+  public get waveform(): RingModulatorWaveform {
     return this._waveform;
   }
 
-  public set waveform(value: OscillatorType) {
+  public set waveform(value: RingModulatorWaveform) {
+    assertWaveform(value);
     this._waveform = value;
+
     if (this._setup) {
       this._setup.carrierOsc.type = this._waveform;
     }
@@ -139,6 +158,7 @@ export class RingModulatorEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet, ctx.currentTime, 0.01);
@@ -148,6 +168,7 @@ export class RingModulatorEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.carrierOsc.stop();
       this._setup.carrierOsc.disconnect();

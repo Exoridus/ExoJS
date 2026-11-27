@@ -4,7 +4,7 @@
   "symbol": "TileMapView",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 15,
   "counts": {
@@ -26,7 +26,7 @@
         "**Ownership:** the view owns its generated layer nodes and bands. A layer assigned to a band is owned by that band; an unbanded layer is owned by the view directly. TileMapView.destroy destroys every band and layer node (detaching them from their application parents) but leaves actors, the map, its layers, and Loader-owned textures untouched. There is no map-replacement mutation API: to swap maps, destroy the old view, construct a new one, and re-parent its bands - the actor tree is never involved.",
         "**Image layers.** A view also produces exactly one canonical ImageLayerNode per TileMap.imageLayers entry (stable identity, map document order), reachable through imageLayerNodes, getImageLayerNodeById, and getImageLayerNodeByName. Image layers are selectable in TileMapViewOptions.bands exactly like tile layers: a band member list may mix both kinds, and the band stacks its members by the map's combined document order (import('./TileMap').TileMap.renderableLayers). A banded image node is owned by its band; an unbanded one is owned by the view directly, and the application parents it wherever the image belongs in draw order - the same way actors are interleaved."
       ],
-      "importLine": "import { TileMapView } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileMapView } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

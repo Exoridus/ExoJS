@@ -84,8 +84,10 @@ describe('Signal', () => {
 
   it('restores normal dispatch bookkeeping when a listener throws', () => {
     const signal = new Signal();
+
     const thrower = (): void => {
       signal.remove(thrower);
+
       throw new Error('boom');
     };
 
@@ -114,6 +116,7 @@ describe('Signal', () => {
     let nested = false;
 
     const b = (): void => void calls.push('b');
+
     const a = (): void => {
       calls.push('a');
 
@@ -147,6 +150,7 @@ describe('Signal', () => {
     let nested = false;
 
     const b = (): void => void calls.push('b');
+
     const a = (): void => {
       calls.push('a');
 
@@ -209,6 +213,7 @@ describe('Signal', () => {
     let nested = false;
 
     const b = (): void => void calls.push('b');
+
     const a = (): void => {
       calls.push('a');
 
@@ -234,6 +239,7 @@ describe('Signal', () => {
     let nested = false;
 
     const c = (): void => void calls.push('c');
+
     const a = (): void => {
       calls.push('a');
 
@@ -294,6 +300,7 @@ describe('Signal', () => {
     const signal = new Signal();
     const calls: string[] = [];
     const h = (): void => void calls.push('h');
+
     const trigger = (): void => {
       calls.push('trigger');
       signal.remove(h);
@@ -316,6 +323,7 @@ describe('Signal', () => {
     const signal = new Signal();
     const calls: string[] = [];
     const h = (): void => void calls.push('h');
+
     const trigger = (): void => {
       calls.push('trigger');
       signal.add(h);
@@ -334,6 +342,7 @@ describe('Signal', () => {
     const signal = new Signal();
     const calls: string[] = [];
     const c = (): void => void calls.push('c');
+
     const trigger = (): void => {
       calls.push('trigger');
       signal.add(c);
@@ -383,10 +392,12 @@ describe('Signal', () => {
     let nested = false;
 
     const c = (): void => void calls.push('c'); // registered after `a`/`b` — must never run once destroyed
+
     const b = (): void => {
       calls.push('b');
       signal.destroy(); // called from inside a *nested* dispatch frame
     };
+
     const a = (): void => {
       calls.push('a');
 
@@ -461,6 +472,7 @@ describe('dispatchIsolated', () => {
 
   it('_dispatchDepth is always cleared via finally, even after a throw — remove()/add() work normally afterward', () => {
     const signal = new Signal();
+
     const thrower = (): void => {
       throw new Error('boom');
     };
@@ -484,6 +496,7 @@ describe('dispatchIsolated', () => {
   it('a listener removing itself mid-dispatch (via isolated dispatch) is still deferred correctly', () => {
     const signal = new Signal();
     const calls: string[] = [];
+
     const selfRemoving: () => void = () => {
       calls.push('self');
       signal.remove(selfRemoving);

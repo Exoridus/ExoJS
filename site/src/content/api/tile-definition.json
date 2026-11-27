@@ -4,7 +4,7 @@
   "symbol": "TileDefinition",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 4,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Optional per-tile metadata in a TileSet. Sparse - only defined tiles carry a definition."
       ],
-      "importLine": "import { TileDefinition } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileDefinition } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

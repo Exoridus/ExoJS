@@ -45,5 +45,5 @@ fn geoVert(input: GeoVIn, @builtin(vertex_index) vid: u32) -> VOut {
 
 @fragment
 fn geoFrag(input: VOut) -> @location(0) vec4<f32> {
-    return textureSample(spriteTexture, spriteSampler, input.uv) * input.color;
+    return associateSampledColor(textureSample(spriteTexture, spriteSampler, input.uv), premultiplySample) * input.color;
 }

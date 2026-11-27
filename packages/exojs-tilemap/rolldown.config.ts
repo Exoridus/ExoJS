@@ -1,6 +1,6 @@
-import { createExtensionBuildOptions } from '@codexo/exojs-config/rolldown';
+import { defineRuntimeModule } from '@codexo/exojs-config/rolldown';
 
-export default createExtensionBuildOptions({
+export default defineRuntimeModule({
   root: import.meta.dirname,
   sourceCondition: null,
 });

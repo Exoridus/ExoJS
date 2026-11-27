@@ -47,7 +47,9 @@ describe('radiance angular average (WebGPU)', () => {
     root.addChild(sprite);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       const read = readWebGpuPixels(backend, TILE);
 

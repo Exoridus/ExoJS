@@ -65,8 +65,10 @@ const setupPannerSpy = (): {
       orientationZ: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
     };
     panners.push(panner);
+
     return panner as unknown as PannerNode;
   });
+
   return { panners, restore: () => spy.mockRestore() };
 };
 

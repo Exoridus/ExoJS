@@ -1,6 +1,6 @@
 // #region guide:basic-lightmap
 import { Application, Color, Graphics, Scene } from '@codexo/exojs';
-import { LightmapLighting, PointLight } from '@codexo/exojs-lighting';
+import { LightmapLighting, PointLight } from '@codexo/exojs/lighting';
 
 class LightingScene extends Scene {
   override init(): void {

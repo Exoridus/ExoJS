@@ -24,13 +24,15 @@ export class WeakHandleSet {
     }
   }
 
-  /** Add `handle` if it is not already a live member (dedup by identity). */
-  public add(handle: object): void {
+  /** Add `handle`, returning whether the set gained a live member. */
+  public add(handle: object): boolean {
     if (this.has(handle)) {
-      return;
+      return false;
     }
 
     this._refs.push(new WeakRef(handle));
+
+    return true;
   }
 
   /** True if `handle` is currently a live member. */
@@ -42,6 +44,14 @@ export class WeakHandleSet {
     }
 
     return false;
+  }
+
+  public delete(handle: object): void {
+    const index = this._refs.findIndex(ref => ref.deref() === handle);
+
+    if (index !== -1) {
+      this._refs.splice(index, 1);
+    }
   }
 
   /** The first still-live handle in insertion order, or `undefined` if none remain. */

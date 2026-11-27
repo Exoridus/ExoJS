@@ -90,6 +90,8 @@ const createFakeArm = (withDevice = true): FakeArm => {
 const createFakeWebGl2Arm = (): { adapter: EngineAdapter; events: EventLog; canvas: HTMLCanvasElement } => {
   const events: EventLog = [];
   const gl = {
+    RENDERER: 0x1f01,
+    getParameter: () => 'Test GPU',
     getExtension: () => null,
     drawArrays: () => undefined,
     drawElements: () => undefined,
@@ -136,9 +138,50 @@ const cell = (backend: Backend, warmupFrames: number, timedFrames: number): Cell
   warmupFrames,
 });
 
-const stageCanvas = (): HTMLCanvasElement => document.createElement('canvas');
+const stageCanvas = (): HTMLCanvasElement => {
+  const canvas = document.createElement('canvas');
+
+  vi.spyOn(canvas, 'getContext').mockReturnValue(null);
+
+  return canvas;
+};
 
 describe('cell lifecycle', () => {
+  test('records the live WebGL renderer before teardown can release its identity', async () => {
+    const arm = createFakeWebGl2Arm();
+    const gl = arm.canvas.getContext('webgl2')!;
+    let live = true;
+
+    gl.getParameter = () => (live ? 'ANGLE (NVIDIA, Test GPU)' : null);
+
+    arm.adapter.teardown = () => {
+      live = false;
+    };
+
+    const result = await runCell(arm.adapter, cell('webgl2', 0, 1), arm.canvas);
+
+    expect(live).toBe(false);
+    expect(result.renderer).toEqual({ backend: 'webgl2', adapter: 'ANGLE (NVIDIA, Test GPU)' });
+  });
+
+  test('records the measured WebGPU device identity instead of requesting another adapter', async () => {
+    const arm = createFakeArm();
+    let live = true;
+
+    Object.defineProperty(arm.adapter.gpuDevice!(), 'adapterInfo', {
+      get: () => (live ? { vendor: 'nvidia', architecture: 'test', device: '1234', description: 'Test GPU' } : undefined),
+    });
+
+    arm.adapter.teardown = () => {
+      live = false;
+    };
+
+    const result = await runCell(arm.adapter, cell('webgpu', 0, 1), stageCanvas());
+
+    expect(live).toBe(false);
+    expect(result.renderer).toEqual({ backend: 'webgpu', adapter: 'nvidia / test / 1234 / Test GPU' });
+  });
+
   test('tears the adapter down when initialization fails', async () => {
     const arm = createFakeArm();
     const failure = new Error('init failed');
@@ -329,7 +372,8 @@ const createFakeWebGpuDevice = (options: {
       ({
         beginRenderPass: (descriptor: GPURenderPassDescriptor): GPURenderPassEncoder => {
           const writes = (descriptor as unknown as Record<string, unknown>)['timestampWrites'] as
-            { beginningOfPassWriteIndex: number; endOfPassWriteIndex: number } | undefined;
+            | { beginningOfPassWriteIndex: number; endOfPassWriteIndex: number }
+            | undefined;
 
           if (writes === undefined) {
             timestampWritesSeen.push(null);
@@ -470,7 +514,9 @@ describe('WebGPU frame time comes from the hardware timestamp clock', () => {
     expect(timestampWritesSeen.slice(3, 5).every(entry => entry !== null)).toBe(true);
     // Every timed pass gets its OWN query pair: reusing an index inside one
     // submit is a validation error, and across submits it would overwrite.
-    const indices = timestampWritesSeen.filter((entry): entry is { begin: number; end: number } => entry !== null).flatMap(entry => [entry.begin, entry.end]);
+    const indices = timestampWritesSeen
+      .filter((entry): entry is { begin: number; end: number } => entry !== null)
+      .flatMap(entry => [entry.begin, entry.end]);
 
     expect(new Set(indices).size).toBe(indices.length);
   });

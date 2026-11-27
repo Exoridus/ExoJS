@@ -42,7 +42,9 @@ const validateAttributes = (attributes: readonly GeometryAttribute[], stride: nu
     }
 
     if (!Number.isInteger(attribute.offset) || attribute.offset < 0) {
-      throw new Error(`ParticleBufferLayout attribute "${attribute.name}" offset must be a non-negative integer (got ${attribute.offset}).`);
+      throw new Error(
+        `ParticleBufferLayout attribute "${attribute.name}" offset must be a non-negative integer (got ${attribute.offset}).`,
+      );
     }
 
     const end = attribute.offset + attributeTypeByteSizes[attribute.type] * attribute.size;

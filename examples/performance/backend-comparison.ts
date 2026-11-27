@@ -12,7 +12,7 @@ import {
   Texture,
 } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
-import { mountControls } from '@examples/runtime';
+import { choice, type ChoiceSpec, type DemoPanel, demoPanel, slider, type SliderSpec } from '@examples/runtime';
 
 const MAX_SPRITES = 2400;
 const COUNT_STEP = 400;
@@ -41,6 +41,7 @@ const makeTexture = (): Texture => {
   ctx.beginPath();
   ctx.arc(24, 24, 17, 0, Math.PI * 2);
   ctx.fill();
+
   return new Texture(canvas);
 };
 
@@ -48,12 +49,13 @@ class BatchingScene extends Scene {
   private layer!: Container;
   private sprites: Sprite[] = [];
   private textures: Texture[] = [];
-  private hud!: ReturnType<typeof mountControls>;
+  private panel!: DemoPanel<{ count: SliderSpec; textures: ChoiceSpec<'1' | '4'>; backend: ChoiceSpec<'webgl2' | 'webgpu'> }>;
 
   override init(): void {
     this.layer = new Container();
     this.addChild(this.layer);
     this.textures = Array.from({ length: 4 }, () => makeTexture());
+
     for (let i = 0; i < MAX_SPRITES; i++) {
       const sprite = new Sprite(this.textures[i % textureCount])
         .setAnchor(0.5)
@@ -64,50 +66,53 @@ class BatchingScene extends Scene {
       this.sprites.push(sprite);
     }
 
-    this.hud = mountControls({
-      title: 'Sprite Batching Laboratory',
+    // Keys and panel share one state; changing the backend rebuilds the whole
+    // application, which mounts a fresh panel from the same module state.
+    this.panel = demoPanel({
+      scene: this,
       corner: 'top-right',
-      controls: [
-        { keys: 'Up / Down', action: 'change visible sprite count' },
-        { keys: 'T', action: 'use one or four textures' },
-        { keys: 'B', action: 'switch WebGL2 / WebGPU' },
-      ],
-      hint: 'The seeded positions and motion stay the same across settings. The overlay reports this workload, not a general backend benchmark.',
-    });
-    this.updateHud();
-    this.inputs.onTrigger(Keyboard.Up, () => this.setCount(Math.min(MAX_SPRITES, spriteCount + COUNT_STEP)));
-    this.inputs.onTrigger(Keyboard.Down, () => this.setCount(Math.max(COUNT_STEP, spriteCount - COUNT_STEP)));
-    this.inputs.onTrigger(Keyboard.T, () => {
-      textureCount = textureCount === 1 ? 4 : 1;
-      this.sprites.forEach((sprite, index) => sprite.setTexture(this.textures[index % textureCount]));
-      this.updateHud();
-    });
-    this.inputs.onTrigger(Keyboard.B, () => {
-      if (!webGpuAvailable) {
-        this.hud.setStatus('WebGPU adapter unavailable; using WebGL2');
-        return;
-      }
-      void boot(backendType === 'webgpu' ? 'webgl2' : 'webgpu').catch(showStartupError);
-    });
-  }
+      controls: {
+        count: slider('Sprites', { min: COUNT_STEP, max: MAX_SPRITES, step: COUNT_STEP, value: spriteCount, format: v => v.toFixed(0) }),
+        textures: choice('Textures', ['1', '4'], textureCount === 1 ? '1' : '4'),
+        backend: choice('Backend', ['webgl2', 'webgpu'], backendType),
+      },
+      onChange: (_key, _value, values) => {
+        spriteCount = values.count;
+        textureCount = Number(values.textures);
+        this.sprites.forEach((sprite, index) => {
+          sprite.visible = index < spriteCount;
+          sprite.setTexture(this.textures[index % textureCount]);
+        });
 
-  private setCount(next: number): void {
-    spriteCount = next;
-    this.sprites.forEach((sprite, index) => {
-      sprite.visible = index < spriteCount;
-    });
-    this.updateHud();
-  }
+        if (values.backend === backendType) {
+          return;
+        }
 
-  private updateHud(): void {
-    this.hud.setStatus(`${backendType} · ${spriteCount} sprites · ${textureCount} texture${textureCount === 1 ? '' : 's'}`);
+        if (values.backend === 'webgpu' && !webGpuAvailable) {
+          this.panel.set('backend', 'webgl2');
+          this.panel.status('No WebGPU adapter: staying on WebGL2.');
+
+          return;
+        }
+
+        void boot(values.backend).catch(showStartupError);
+      },
+    });
+    this.inputs.onTrigger(Keyboard.Up, () => this.panel.step('count', 1));
+    this.inputs.onTrigger(Keyboard.Down, () => this.panel.step('count', -1));
+    this.inputs.onTrigger(Keyboard.T, () => this.panel.step('textures'));
+    this.inputs.onTrigger(Keyboard.B, () => this.panel.step('backend'));
   }
 
   override update(_delta: Seconds): void {
     const time = this.app.activeSeconds;
+
     for (let i = 0; i < spriteCount; i++) {
       const sprite = this.sprites[i];
-      sprite.setPosition(((i * 97) % this.app.width) + Math.sin(time + i * 0.13) * 12, ((i * 193) % this.app.height) + Math.cos(time + i * 0.17) * 12);
+      sprite.setPosition(
+        ((i * 97) % this.app.width) + Math.sin(time + i * 0.13) * 12,
+        ((i * 193) % this.app.height) + Math.cos(time + i * 0.17) * 12,
+      );
       sprite.rotation = time * ((i % 2 === 0 ? 1 : -1) * 25);
     }
   }
@@ -117,7 +122,7 @@ class BatchingScene extends Scene {
   }
 
   override destroy(): void {
-    this.hud.dispose();
+    this.panel.dispose();
     super.destroy();
     this.textures.forEach(texture => texture.destroy());
   }
@@ -127,16 +132,20 @@ const boot = async (type: 'webgl2' | 'webgpu'): Promise<void> => {
   if (booting) {
     return;
   }
+
   booting = true;
+
   try {
     overlay?.destroy();
     overlay = null;
+
     if (app) {
       const previous = app;
       app = null;
       await previous.destroy();
       previous.element?.remove();
     }
+
     backendType = type;
     app = new Application({
       scenes: { BatchingScene },

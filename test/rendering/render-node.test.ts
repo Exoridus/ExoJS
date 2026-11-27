@@ -16,7 +16,7 @@ const createRuntime = (): RenderBackend => {
   const stats = createRenderStats();
 
   return {
-    ...createRenderBackendDouble({ renderTarget: renderTarget, stats }),
+    ...createRenderBackendDouble({ renderTarget, stats }),
     stats,
     renderTarget,
     get view() {
@@ -139,18 +139,72 @@ describe('RenderNode and SceneNode contract', () => {
     // Adding a RenderNode subclass is allowed.
     container.addChild(drawable);
 
-    // The line below is a compile error in TypeScript; we keep it as a
-    // ts-expect-error sentinel so the constraint cannot be silently
-    // weakened in a future refactor.
+    // The call below is a compile error in TypeScript; the ts-expect-error
+    // sentinel keeps the constraint from being silently weakened in a future
+    // refactor. It is never executed: a bare SceneNode is not a RenderNode and
+    // a runtime guard for that cast is deliberately not part of the contract.
     const bareNode = new SceneNode();
-    // @ts-expect-error - Container.addChild requires a RenderNode, not a bare SceneNode.
-    container.addChild(bareNode);
 
-    // Runtime fallback: even though the cast went through above, the bare
-    // SceneNode lacks a render() method, so traversal would throw on the
-    // missing call. We do not exercise render() here because the contract
-    // we are protecting is the type-level one.
+    const addBare = (): void => {
+      // @ts-expect-error - Container.addChild requires a RenderNode, not a bare SceneNode.
+      container.addChild(bareNode);
+    };
+
+    void addBare;
     bareNode.destroy();
     container.destroy();
+  });
+});
+
+describe('subtree texture cache revisions', () => {
+  test.each([
+    ['content', (child: Container) => child.invalidateCache()],
+    ['transform', (child: Container) => child.setPosition(1, 1)],
+    ['structure', (child: Container) => child.addChild(new Container())],
+    [
+      'visibility',
+      (child: Container) => {
+        child.visible = false;
+      },
+    ],
+  ] as const)('a descendant %s change rejects a bounds-stable cached image', (_kind, mutate) => {
+    const cached = new Container();
+    const child = new Container();
+    cached.addChild(new Container().addChild(child));
+    cached.cacheAsTexture = true;
+    const texture = new RenderTexture(10, 10);
+    cached._renderPlanStoreCacheTexture(texture, 0, 0, 10, 10, 1);
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(true);
+    mutate(child);
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(false);
+    cached.destroy();
+  });
+
+  test('unchanged subtrees reuse their image after an unrelated sibling changes', () => {
+    const root = new Container();
+    const cached = new Container();
+    const sibling = new Container();
+    root.addChild(cached, sibling);
+    cached.cacheAsTexture = true;
+    cached._renderPlanStoreCacheTexture(new RenderTexture(10, 10), 0, 0, 10, 10, 1);
+    sibling.invalidateCache();
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(true);
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(true);
+    root.destroy();
+  });
+
+  test('cache publication separates consecutive content mutations', () => {
+    const cached = new Container();
+    const child = new Container();
+    cached.addChild(child);
+    cached.cacheAsTexture = true;
+    const texture = new RenderTexture(10, 10);
+    child.invalidateCache();
+    cached._renderPlanStoreCacheTexture(texture, 0, 0, 10, 10, 1);
+    child.invalidateCache();
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(false);
+    cached._renderPlanStoreCacheTexture(texture, 0, 0, 10, 10, 1);
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(true);
+    cached.destroy();
   });
 });

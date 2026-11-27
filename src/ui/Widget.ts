@@ -1,9 +1,10 @@
+import type { InteractionEvent } from '#input/InteractionEvent';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import type { UISkin, UITheme, UIThemePatch, UIThemeRole, UIWidgetState } from './theme';
-import { createUITheme, resolveUISkin } from './theme';
-import { ThemedContainer } from './ThemedContainer';
+import { createUITheme, resolveUISkin, themeSkinSet } from './theme';
+import { resolveThemeAt, ThemedContainer } from './ThemedContainer';
 import type { UIRoot } from './UIRoot';
 
 /** Anchor position of a widget within its container's box. */
@@ -56,6 +57,11 @@ export abstract class Widget extends ThemedContainer {
   private _uiAnchorOffsetY = 0;
   private _uiAnchorRoot: UIRoot | null = null;
   private _focusedNow = false;
+  private readonly _onPointerFocus = (event: InteractionEvent): void => {
+    if (event.target === this && this.effectiveEnabled) {
+      this.focus();
+    }
+  };
   private readonly _onFocusGained = (): void => {
     this._focusedNow = true;
     this._onFocusChanged(true);
@@ -105,8 +111,13 @@ export abstract class Widget extends ThemedContainer {
    * change is never paint-only.
    */
   public setTheme(patch: UIThemePatch | null): this {
+    const apply: Array<() => void> = [];
+    this._prepareTheme(this._resolveInheritedTheme(), patch, apply);
     this._themePatch = patch;
-    this._refreshTheme(true);
+
+    for (const commit of apply) {
+      commit();
+    }
 
     return this;
   }
@@ -174,7 +185,10 @@ export abstract class Widget extends ThemedContainer {
 
     const [ax, ay] = anchorFactors(this._uiAnchor);
 
-    this.setPosition(ax * (containerWidth - this._uiWidth) + this._uiAnchorOffsetX, ay * (containerHeight - this._uiHeight) + this._uiAnchorOffsetY);
+    this.setPosition(
+      ax * (containerWidth - this._uiWidth) + this._uiAnchorOffsetX,
+      ay * (containerHeight - this._uiHeight) + this._uiAnchorOffsetY,
+    );
   }
 
   /**
@@ -225,13 +239,15 @@ export abstract class Widget extends ThemedContainer {
 
   /**
    * Follow keyboard focus on this widget, so it can paint the `focused` state
-   * and react in {@link Widget._onFocusChanged}. Interactive subclasses call
+   * and react in {@link Widget._onFocusChanged}. Pointer presses request focus.
+   * Interactive subclasses call
    * this in their constructor; it is opt-in because subscribing allocates the
    * focus signals, which a decorative widget would never fire.
    */
   protected _trackFocus(): void {
     this.onFocus.add(this._onFocusGained);
     this.onBlur.add(this._onFocusLost);
+    this.onPointerDown.add(this._onPointerFocus);
   }
 
   /**
@@ -245,7 +261,7 @@ export abstract class Widget extends ThemedContainer {
 
   /** The skin `role` paints with in this widget's current state. */
   protected _skin(role: UIThemeRole): UISkin {
-    return resolveUISkin(this._theme[role], this._skinState);
+    return resolveUISkin(themeSkinSet(this._theme, role), this._skinState);
   }
 
   /** Switch the state skins resolve for, repainting when it actually changes. */
@@ -294,29 +310,43 @@ export abstract class Widget extends ThemedContainer {
     // Overridden by interactive subclasses (e.g. Button dimming).
   }
 
-  /**
-   * @internal - re-resolve {@link ThemedContainer.theme} from the nearest
-   * themed ancestor and this widget's own overrides, then push the same
-   * recompute into every themed descendant.
-   */
+  /** @internal */
   public override _refreshTheme(force = false): void {
+    const apply: Array<() => void> = [];
     const inherited = this._resolveInheritedTheme();
 
-    if (!force && inherited === this._inheritedTheme) {
-      return;
+    if (force) {
+      this._prepareTheme(inherited, this._themePatch, apply);
+    } else {
+      this._prepareInheritedTheme(inherited, apply);
     }
 
-    this._inheritedTheme = inherited;
-
-    const next = this._themePatch === null ? inherited : createUITheme(this._themePatch, inherited);
-
-    if (next === this._theme && !force) {
-      return;
+    for (const commit of apply) {
+      commit();
     }
+  }
 
-    this._theme = next;
-    this._onThemeChanged();
-    this._cascadeTheme();
+  /** @internal */
+  public override _prepareInheritedTheme(inherited: UITheme, apply: Array<() => void>): void {
+    if (inherited !== this._inheritedTheme) {
+      this._prepareTheme(inherited, this._themePatch, apply);
+    }
+  }
+
+  /** Validate widget-specific text overrides against the prospective theme. @internal */
+  protected _validateTheme(_theme: UITheme): void {
+    // Widgets without text overrides only use the theme factory validation.
+  }
+
+  private _prepareTheme(inherited: UITheme, patch: UIThemePatch | null, apply: Array<() => void>): void {
+    const next = patch === null ? inherited : createUITheme(patch, inherited);
+    this._validateTheme(next);
+    apply.push(() => {
+      this._inheritedTheme = inherited;
+      this._theme = next;
+      this._onThemeChanged();
+    });
+    this._prepareChildThemes(next, apply);
   }
 
   /**
@@ -377,9 +407,15 @@ export abstract class Widget extends ThemedContainer {
    * being touched.
    */
   public override _setParent(parent: Container | null): void {
+    const apply: Array<() => void> = [];
+    this._prepareInheritedTheme(resolveThemeAt(parent), apply);
     super._setParent(parent);
+
+    for (const commit of apply) {
+      commit();
+    }
+
     this._refreshEffectiveEnabled();
-    this._refreshTheme();
   }
 
   public override destroy(): void {

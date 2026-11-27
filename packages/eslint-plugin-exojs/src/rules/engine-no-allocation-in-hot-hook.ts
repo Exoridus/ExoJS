@@ -19,10 +19,12 @@
 // a helper call, and it does not try: the hooks it covers are short by design,
 // and the escape hatch for a genuinely allocation-free helper is that the
 // helper is not this hook.
+// Nested functions report their creation, but their parameters and bodies are
+// separate execution unless an ordinary synchronous inline call is recognized.
 import type { Rule } from 'eslint';
 import type { Node } from 'estree';
 
-import { type FunctionMember, memberFunction, staticKeyName, walk } from '../ast.js';
+import { type FunctionMember, memberFunction, staticKeyName } from '../ast.js';
 
 /** Array-returning calls common enough in this tree to be worth naming. */
 const DEFAULT_ALLOCATING_CALLS = [
@@ -47,6 +49,74 @@ const DEFAULT_ALLOCATING_CALLS = [
   '.toSorted',
 ];
 
+/** Array/TypedArray methods whose first argument is a synchronous callback. */
+const SYNCHRONOUS_CALLBACK_METHODS = new Set([
+  'every',
+  'filter',
+  'find',
+  'findIndex',
+  'findLast',
+  'findLastIndex',
+  'flatMap',
+  'forEach',
+  'map',
+  'reduce',
+  'reduceRight',
+  'some',
+  'sort',
+  'toSorted',
+]);
+
+type NestedFunction = Extract<Node, { type: 'ArrowFunctionExpression' | 'FunctionExpression' | 'FunctionDeclaration' }>;
+
+const isFunction = (node: Node): node is NestedFunction =>
+  node.type === 'ArrowFunctionExpression' || node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration';
+
+/** Syntactic call-site models only; receiver types and bindings are not resolved. */
+const executesInline = (fn: NestedFunction): boolean => {
+  if (fn.type === 'FunctionDeclaration' || fn.async || fn.generator) {
+    return false;
+  }
+
+  const parent = (fn as NestedFunction & Rule.NodeParentExtension).parent;
+
+  if (parent.type === 'CallExpression') {
+    if (parent.callee === fn) {
+      return true;
+    }
+
+    const callee = parent.callee;
+
+    if (callee.type !== 'MemberExpression' || callee.computed || callee.property.type !== 'Identifier') {
+      return false;
+    }
+
+    if (callee.object.type === 'Identifier' && callee.object.name === 'Array' && callee.property.name === 'from') {
+      return parent.arguments[1] === fn;
+    }
+
+    return parent.arguments[0] === fn && SYNCHRONOUS_CALLBACK_METHODS.has(callee.property.name);
+  }
+
+  if (parent.type === 'NewExpression') {
+    return parent.callee.type === 'Identifier' && parent.callee.name === 'Promise' && parent.arguments[0] === fn;
+  }
+
+  if (
+    parent.type === 'MemberExpression' &&
+    parent.object === fn &&
+    !parent.computed &&
+    parent.property.type === 'Identifier' &&
+    (parent.property.name === 'call' || parent.property.name === 'apply')
+  ) {
+    const call = parent.parent;
+
+    return call.type === 'CallExpression' && call.callee === parent;
+  }
+
+  return false;
+};
+
 /** Options for {@link engineNoAllocationInHotHook}. */
 export interface EngineNoAllocationInHotHookOptions {
   /** Method names whose bodies must not allocate. Empty by default: the hooks are named where the rule is switched on. */
@@ -57,12 +127,19 @@ export interface EngineNoAllocationInHotHookOptions {
 
 /** The `Namespace.member` or `.method` name a call expression invokes, if it has one. */
 const calleeName = (node: Node): string | undefined => {
-  if (node.type !== 'CallExpression' || node.callee.type === 'Super') return undefined;
+  if (node.type !== 'CallExpression' || node.callee.type === 'Super') {
+    return undefined;
+  }
 
   const callee = node.callee;
 
-  if (callee.type === 'Identifier') return callee.name;
-  if (callee.type !== 'MemberExpression' || callee.computed || callee.property.type !== 'Identifier') return undefined;
+  if (callee.type === 'Identifier') {
+    return callee.name;
+  }
+
+  if (callee.type !== 'MemberExpression' || callee.computed || callee.property.type !== 'Identifier') {
+    return undefined;
+  }
 
   const member = callee.property.name;
 
@@ -95,7 +172,9 @@ export const engineNoAllocationInHotHook: Rule.RuleModule = {
     const methods = new Set(options.methods ?? []);
     const allocatingCalls = new Set(options.allocatingCalls ?? DEFAULT_ALLOCATING_CALLS);
 
-    if (methods.size === 0) return {};
+    if (methods.size === 0) {
+      return {};
+    }
 
     /** What kind of allocation `node` is, phrased for the message, or `undefined`. */
     const allocationKind = (node: Node): string | undefined => {
@@ -108,6 +187,7 @@ export const engineNoAllocationInHotHook: Rule.RuleModule = {
           return 'a `new` expression';
         case 'ArrowFunctionExpression':
         case 'FunctionExpression':
+        case 'FunctionDeclaration':
           return 'a closure created per call';
         default: {
           const name = calleeName(node);
@@ -120,24 +200,48 @@ export const engineNoAllocationInHotHook: Rule.RuleModule = {
     const check = (member: FunctionMember): void => {
       const hook = staticKeyName(member.key, member.computed);
 
-      if (hook === undefined || !methods.has(hook)) return;
+      if (hook === undefined || !methods.has(hook)) {
+        return;
+      }
 
       const fn = memberFunction(member);
 
-      if (fn === undefined) return;
+      if (fn === undefined) {
+        return;
+      }
 
-      for (const node of walk(fn.body)) {
+      const visit = (node: Node): void => {
         const what = allocationKind(node);
 
         if (what !== undefined) {
           context.report({ node, messageId: 'allocation', data: { hook, what } });
         }
-      }
+
+        if (isFunction(node) && !executesInline(node)) {
+          // Parameter defaults belong to invocation too. Pruning the whole
+          // function also keeps an inner IIFE behind an outer deferred call.
+          return;
+        }
+
+        for (const key of context.sourceCode.visitorKeys[node.type] ?? []) {
+          const value = (node as unknown as Record<string, unknown>)[key];
+
+          for (const child of Array.isArray(value) ? value : [value]) {
+            if (child !== null && typeof child === 'object' && typeof (child as Node).type === 'string') {
+              visit(child as Node);
+            }
+          }
+        }
+      };
+
+      visit(fn.body);
     };
 
     return {
       MethodDefinition(node) {
-        if (node.kind !== 'method') return;
+        if (node.kind !== 'method') {
+          return;
+        }
 
         check(node);
       },

@@ -105,6 +105,12 @@ export class Panel extends Widget {
    */
   public setFill(patch: UIFillPatch | null): this {
     this._fill = patch === null ? null : { ...this._fill, ...patch };
+
+    // A fill override is the newest word on the panel's look; a descriptor set earlier would hide it.
+    if (patch !== null) {
+      this._background = null;
+    }
+
     this._invalidatePaint();
 
     return this;
@@ -112,13 +118,18 @@ export class Panel extends Widget {
 
   /**
    * Set the panel's background from a colour, a texture, a region or a full
-   * descriptor; `null` returns it to its skin. A colour becomes a fill override
+   * descriptor; `null` returns it to its skin and drops any fill override. A colour becomes a fill override
    * on top of the skin, so the skin's corner radius and border survive it.
-   * Layout-invalidating: a nine-slice and a fill can imply different content
-   * boxes.
+   * Layout-invalidating: it repaints the effective background and re-applies
+   * anchors, but the panel positions no children from a skin inset.
    */
   public setBackground(background: UIBackgroundInput | null, options: UIBackgroundOptions = {}): this {
     this._applyBackgroundInput(background, options);
+
+    if (background === null) {
+      this._fill = null;
+    }
+
     this._invalidateLayout();
 
     return this;
@@ -150,10 +161,21 @@ export class Panel extends Widget {
 const fillPatchFrom = (options: PanelOptions): UIFillPatch | null => {
   const patch: { -readonly [Key in keyof UIFillPatch]: UIFillPatch[Key] } = {};
 
-  if (options.color !== undefined) patch.color = options.color.clone();
-  if (options.borderColor !== undefined) patch.borderColor = options.borderColor.clone();
-  if (options.borderWidth !== undefined) patch.borderWidth = options.borderWidth;
-  if (options.cornerRadius !== undefined) patch.cornerRadius = options.cornerRadius;
+  if (options.color !== undefined) {
+    patch.color = options.color.clone();
+  }
+
+  if (options.borderColor !== undefined) {
+    patch.borderColor = options.borderColor.clone();
+  }
+
+  if (options.borderWidth !== undefined) {
+    patch.borderWidth = options.borderWidth;
+  }
+
+  if (options.cornerRadius !== undefined) {
+    patch.cornerRadius = options.cornerRadius;
+  }
 
   return Object.keys(patch).length > 0 ? patch : null;
 };

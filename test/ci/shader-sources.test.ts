@@ -56,7 +56,7 @@ beforeAll(() => {
   const importerPath = join(fixtureRoot, 'src/importers.ts');
 
   mkdirSync(dirname(importerPath), { recursive: true });
-  writeFileSync(importerPath, shaders.map((file, index) => `import shader${index} from '${file}';`).join('\n') + '\n', 'utf8');
+  writeFileSync(importerPath, `${shaders.map((file, index) => `import shader${index} from '${file}';`).join('\n')}\n`, 'utf8');
 });
 
 afterEach(() => {

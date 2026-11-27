@@ -20,6 +20,7 @@ const texture = (): Texture => {
   const context = canvas.getContext('2d')!;
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, 8, 8);
+
   return new Texture(canvas);
 };
 
@@ -31,6 +32,7 @@ test('transform feedback renders moving quads beside CPU systems without uploadi
   const gpu = new ParticleSystem(image, { capacity: 4 });
   const cpu = new ParticleSystem(image, { capacity: 4, simulation: 'cpu' });
   root.addChild(gpu, cpu);
+
   try {
     const a = gpu.emit()!;
     a.position.set(12, 20);
@@ -82,11 +84,16 @@ test.each([false, true])('backend teardown releases transform feedback before/af
   materializeRendererBindings(backend, particlesExtension.renderers!);
   const image = texture();
   const system = new ParticleSystem(image, { capacity: 4 });
+
   try {
     system.emit();
     renderWebGl2Once(backend, system);
     system.update(Time.seconds(0));
-    if (drawGpu) renderWebGl2Once(backend, system);
+
+    if (drawGpu) {
+      renderWebGl2Once(backend, system);
+    }
+
     const state = system.glState!;
     backend.destroy();
     expect(state.destroyed).toBe(true);
@@ -106,6 +113,7 @@ test('context restoration restarts simulation on the same backend and removes sy
   const image = texture();
   const system = new ParticleSystem(image, { capacity: 4 });
   const listeners = backend.onContextLost.count;
+
   try {
     system.emit()!.position.set(24, 24);
     renderWebGl2Once(backend, system);
@@ -145,9 +153,12 @@ test('insufficient vertex texture capability selects CPU before allocating trans
   const system = new ParticleSystem(image, { capacity: 4 });
   const gl = backend.context;
   const getParameter = gl.getParameter.bind(gl);
+
   try {
     renderWebGl2Once(backend, system);
-    vi.spyOn(gl, 'getParameter').mockImplementation((parameter: number) => (parameter === gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS ? 0 : getParameter(parameter)));
+    vi.spyOn(gl, 'getParameter').mockImplementation((parameter: number) =>
+      parameter === gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS ? 0 : getParameter(parameter),
+    );
     system.emit()!.velocity.set(4, 0);
     system.update(Time.seconds(0.25));
     expect(system.simulationBackend).toBe('cpu');
@@ -172,13 +183,16 @@ test('removing death modules cancels staged and backlogged lifetimes before slot
       deaths.push(death);
     }
   }
+
   try {
     system.addDeathModule(new Recorder());
     renderWebGl2Once(backend, system);
+
     for (let i = 0; i < 4; i++) {
       system.emit()!.lifetime = 0.25;
       system.update(Time.seconds(0.5));
     }
+
     system.clearDeathModules();
     system.update(Time.seconds(0));
     system.addDeathModule(new Recorder());

@@ -14,8 +14,10 @@ import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
  * data. The cursor resets whenever a new pass begins (tracked by the identity of
  * the coordinator's active pass), and capacity only grows.
  *
- * The arena is agnostic about what it stages - instance attributes, vertices or
- * indices all work, as long as the caller keeps its own stride bookkeeping.
+ * The arena is agnostic about what vertex data it stages - instance attributes
+ * and vertices both work, as long as the caller keeps its own stride
+ * bookkeeping. The backing buffer is created with `VERTEX | COPY_DST` usage,
+ * so index data (which needs `INDEX`) cannot be staged here.
  *
  * Growth reallocates the underlying buffer, which must not orphan draws already
  * recorded into the open pass - the caller is responsible for ending (submitting)

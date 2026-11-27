@@ -23,6 +23,7 @@ import { ObservableVector } from './ObservableVector';
 import type { Polygon } from './Polygon';
 import type { RectangleLike } from './RectangleLike';
 import type { ShapeLike } from './ShapeLike';
+import { ShapeRevision } from './ShapeRevision';
 import type { Size } from './Size';
 import { inRange } from './utils';
 import { Vector } from './Vector';
@@ -45,7 +46,9 @@ const tempPoint = new ObservableVector(null);
  * Same idea as a `readonly T[]`: the object underneath is still the mutable
  * one, the view just does not offer a way to change it.
  */
-export interface ReadonlyRectangle extends Collidable {
+export interface ReadonlyRectangle extends Omit<Collidable, 'getNormals'> {
+  /** Cached edge normals; the array is shared with the rectangle, so the view exposes it read-only. */
+  getNormals(): readonly Vector[];
   readonly x: number;
   readonly y: number;
   readonly width: number;
@@ -86,7 +89,7 @@ export interface ReadonlyRectangle extends Collidable {
  * See {@link ReadonlyRectangle} for the read-only view engine APIs hand out
  * when they return a live internal rectangle.
  */
-export class Rectangle implements ShapeLike, ReadonlyRectangle {
+export class Rectangle extends ShapeRevision implements ShapeLike, ReadonlyRectangle {
   public readonly collisionType: CollisionType = CollisionType.Rectangle;
 
   private readonly _position: ObservableVector;
@@ -103,6 +106,7 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
    * @param onChange - Owner notification invoked after any mutation. Defaults to `null`.
    */
   public constructor(x = 0, y = x, width = 0, height = width, onChange: (() => void) | null = null) {
+    super();
     this._position = new ObservableVector(this, 0, x, y);
     this._size = new ObservableSize(this._onObservableChange.bind(this), width, height);
     this._onChange = onChange;
@@ -118,7 +122,12 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
    */
   public _onObservableChange(): void {
     this._normalsDirty = true;
-    this._onChange?.();
+
+    try {
+      this._onChange?.();
+    } finally {
+      this._notifyGeometry();
+    }
   }
 
   public get position(): AbstractVector {
@@ -230,7 +239,7 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
 
   public getNormals(): Vector[] {
     if (this._normalsDirty || this._normals === null) {
-      this._updateNormals(this._normals || (this._normals = [new Vector(), new Vector(), new Vector(), new Vector()]));
+      this._updateNormals((this._normals ||= [new Vector(), new Vector(), new Vector(), new Vector()]));
 
       this._normalsDirty = false;
     }
@@ -244,7 +253,10 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
     const projection3 = axis.dot(this.right, this.bottom);
     const projection4 = axis.dot(this.left, this.bottom);
 
-    return result.set(Math.min(projection1, projection2, projection3, projection4), Math.max(projection1, projection2, projection3, projection4));
+    return result.set(
+      Math.min(projection1, projection2, projection3, projection4),
+      Math.max(projection1, projection2, projection3, projection4),
+    );
   }
 
   /**
@@ -301,7 +313,9 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
   public intersectsWith(target: Collidable): boolean {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return (target as SceneNode).isAlignedBox ? intersectionRectRect(this, (target as SceneNode).getBounds()) : intersectionSat(this, target);
+        return (target as SceneNode)._isWorldAligned()
+          ? intersectionRectRect(this, (target as SceneNode)._getWorldBounds())
+          : intersectionSat(this, target);
       case CollisionType.Rectangle:
         return intersectionRectRect(this, target as Rectangle);
       case CollisionType.Polygon:
@@ -322,7 +336,9 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
   public collidesWith(target: Collidable): CollisionResponse | null {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return (target as SceneNode).isAlignedBox ? getCollisionRectangleRectangle(this, (target as SceneNode).getBounds()) : getCollisionSat(this, target);
+        return (target as SceneNode)._isWorldAligned()
+          ? getCollisionRectangleRectangle(this, (target as SceneNode)._getWorldBounds())
+          : getCollisionSat(this, target);
       case CollisionType.Rectangle:
         return getCollisionRectangleRectangle(this, target as Rectangle);
       case CollisionType.Polygon:
@@ -346,6 +362,8 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
     if (this._normals) {
       this._normals = null;
     }
+
+    this._releaseGeometryListeners();
   }
 
   private _updateNormals(normals: Vector[]): void {

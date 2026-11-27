@@ -30,11 +30,36 @@ export interface DrawCommand {
    *  `undefined` when a pooled command is recycled). Required-but-nullable so the
    *  builder can explicitly clear it under `exactOptionalPropertyTypes`. */
   groupIndex: number | undefined;
+  /**
+   * The screen AABB below is out of date and must be re-read from
+   * {@link drawable} before use. Set by a retained replay whose node moved;
+   * only the optimizer's overlap test reads the extent, so it resolves it.
+   */
+  boundsStale?: boolean;
   minX: number;
   minY: number;
   maxX: number;
   maxY: number;
 }
+
+/**
+ * Bring a replayed command's AABB up to date. Read `minX`..`maxY` only after
+ * this when {@link DrawCommand.boundsStale} may be set.
+ * @internal
+ */
+export const resolveDrawBounds = (command: DrawCommand): void => {
+  if (command.boundsStale !== true) {
+    return;
+  }
+
+  const bounds = command.drawable.getBounds();
+
+  command.minX = bounds.left;
+  command.minY = bounds.top;
+  command.maxX = bounds.right;
+  command.maxY = bounds.bottom;
+  command.boundsStale = false;
+};
 
 /**
  * Whether a draw command's renderer reads the shared {@link TransformBuffer} /

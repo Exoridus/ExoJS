@@ -222,8 +222,8 @@ const mappingLabelCache = new WeakMap<GamepadMapping, ReadonlyMap<GamepadPromptC
  * control names to {@link GamepadButton} channel values.
  */
 export class GamepadPromptLayouts {
-  /** Complete ordered list of every {@link GamepadPromptControl} token. */
-  public static readonly controls: GamepadPromptControl[] = [
+  /** Complete ordered list of every {@link GamepadPromptControl} token. Frozen: the list is shared by every caller. */
+  public static readonly controls: readonly GamepadPromptControl[] = Object.freeze([
     'DPad',
     'DPadUp',
     'DPadDown',
@@ -245,7 +245,7 @@ export class GamepadPromptLayouts {
     'Paddle2',
     'Paddle3',
     'Paddle4',
-  ];
+  ]);
 
   /**
    * Returns the normalised [x, y] position of `control` on a generic controller

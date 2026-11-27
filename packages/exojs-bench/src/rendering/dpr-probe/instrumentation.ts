@@ -22,12 +22,12 @@ import type { InternalTargetRecord } from './matrix';
 
 /** Minimal structural surface of a render backend this module patches. */
 export interface RenderTextureAcquirer {
-  acquireRenderTexture(width: number, height: number): unknown;
+  acquireRenderTexture(width: number, height: number, format?: never): unknown;
 }
 
 /** Minimal structural surface of a `cacheAsTexture` node this module patches. */
 export interface CacheTextureOwner {
-  _renderPlanEnsureCacheTexture(width: number, height: number): unknown;
+  _renderPlanEnsureCacheTexture(width: number, height: number, format?: never): unknown;
 }
 
 /** Undo handle returned by every instrumenting call. */
@@ -137,10 +137,10 @@ export const createTargetRecorder = (): TargetRecorder => {
 export const instrumentAcquireRenderTexture = (backend: RenderTextureAcquirer, recorder: TargetRecorder): RestoreInstrumentation => {
   const original = backend.acquireRenderTexture.bind(backend);
 
-  return shadowMethod(backend, 'acquireRenderTexture', ((width: number, height: number): unknown => {
+  return shadowMethod(backend, 'acquireRenderTexture', ((width: number, height: number, ...rest: unknown[]): unknown => {
     recorder.record({ kind: 'pooled', width, height });
 
-    return original(width, height);
+    return (original as (...args: unknown[]) => unknown)(width, height, ...rest);
   }) as (...args: never[]) => unknown);
 };
 
@@ -148,9 +148,9 @@ export const instrumentAcquireRenderTexture = (backend: RenderTextureAcquirer, r
 export const instrumentCacheTexture = (node: CacheTextureOwner, recorder: TargetRecorder): RestoreInstrumentation => {
   const original = node._renderPlanEnsureCacheTexture.bind(node);
 
-  return shadowMethod(node, '_renderPlanEnsureCacheTexture', ((width: number, height: number): unknown => {
+  return shadowMethod(node, '_renderPlanEnsureCacheTexture', ((width: number, height: number, ...rest: unknown[]): unknown => {
     recorder.record({ kind: 'cache', width, height });
 
-    return original(width, height);
+    return (original as (...args: unknown[]) => unknown)(width, height, ...rest);
   }) as (...args: never[]) => unknown);
 };

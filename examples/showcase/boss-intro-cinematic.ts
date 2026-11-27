@@ -1,14 +1,14 @@
 import {
   Application,
-  Asset,
-  AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
   Keyboard,
+  type Music,
   type Pausable,
   type RenderingContext,
   Scene,
+  SceneState,
   type Seekable,
   Sprite,
   Text,
@@ -16,7 +16,8 @@ import {
   View,
   type Voice,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { startExample, unitsPerCssPixel } from '@examples/runtime';
 
 const titleText = 'VOID EMPEROR';
 
@@ -28,88 +29,109 @@ class BossIntroCinematicScene extends Scene {
   private title!: Text;
   private titleState!: { count: number };
   private boss!: Sprite;
-  private music!: AudioStream;
+  private escorts: Sprite[] = [];
+  private music!: Music;
   private musicVoice!: Voice & Seekable & Pausable;
-  private hud!: ReturnType<typeof mountControls>;
+  private finished = false;
+  private started = false;
   private tapPrompt!: Text;
   private width = 0;
   private height = 0;
-  private readonly sequenceTweens: { stop(): void }[] = [];
+  private readonly sequenceTweens: Array<{ stop(): void }> = [];
 
   override async load(): Promise<void> {
+    // Await the only asynchronous resource before init allocates scene objects.
+    this.music = await this.loader.load(assets.musicActionSynthRock);
+  }
+
+  override init(): void {
     const app = this.app;
     const { width, height } = app;
     this.width = width;
     this.height = height;
 
     // Start the camera left of the boss so the push-in sweeps across to it.
-    this.view = new View(width * 0.42, height / 2, width, height);
-    this.bg = new Graphics();
-    this.bars = new Graphics();
+    this.view = this.track(new View(width * 0.42, height / 2, width, height));
+    this.bg = this.track(new Graphics());
+    this.bg.fillColor = new Color(9, 15, 30);
+    this.bg.drawRectangle(-width * 0.25, 0, width * 1.5, height);
+
+    for (let i = 0; i < 120; i++) {
+      this.bg.fillColor = new Color(170, 195, 230, 0.3 + (i % 4) * 0.15);
+      this.bg.drawCircle(((i * 137) % (width * 1.5)) - width * 0.25, (i * 193) % height, 1 + (i % 2));
+    }
+
+    this.bars = this.track(new Graphics());
     this.barSize = { v: 0 };
-    this.title = new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' });
+    this.title = this.track(new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' }));
     this.title.setPosition(width * 0.12, height * 0.2);
     this.titleState = { count: 0 };
-    this.boss = new Sprite(this.loader.get(assets.demo.textures.shipA))
+    this.boss = this.track(new Sprite(this.loader.get(assets.spaceBossRed)))
       .setAnchor(0.5)
       .setScale(0.4)
-      .setPosition(width * 0.62, height / 2)
-      .setTint(new Color(255, 130, 130));
-    // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-    // is loaded directly through `Asset.type('music', ...)` and awaited rather
-    // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.music.loopMain));
-
-    this.hud = mountControls({
-      title: 'Boss Intro Cinematic',
-      controls: [{ keys: ['R', 'Click'], action: 'replay sequence' }],
-      status: 'Playing…',
-      hint: 'Push-in, letterbox bars, a typewriter title reveal, and a screen shake punched on the reveal beat.',
-    });
+      .setPosition(width * 0.62, height / 2);
+    this.escorts = [-1, 1].map(side =>
+      this.track(new Sprite(this.loader.get(assets.spaceEnemyRed)))
+        .setAnchor(0.5)
+        .setScale(0.8)
+        .setPosition(width * 0.78, height / 2 + side * 135),
+    );
 
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the sting + cinematic start.
-    this.tapPrompt = new Text('Click or press any key to start the cinematic', { fillColor: Color.white, fontSize: 22, align: 'center' })
-      .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, height - 64);
+    this.tapPrompt = this.track(new Text('', { fillColor: Color.white, fontSize: 16, align: 'center' })).setAnchor(0.5, 1);
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture; start the cinematic in lockstep with the sting on unlock.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.2 }) as Voice & Seekable & Pausable;
+    this.musicVoice = this.audio.play(this.music, { loop: true, volume: 0.15 });
     app.audio.onUnlock.add(this.playSequence);
+    this.onActivate.add(() => {
+      if (!this.started) {
+        this.playSequence();
+      }
+    });
 
-    this.inputs.onTrigger(Keyboard.R, () => this.replay());
+    this.inputs.onStart(Keyboard.R, () => this.replay());
     app.input.onPointerDown.add(this.replay);
   }
 
   private readonly replay = (): void => {
     const app = this.app;
-    if (app.audio.locked) {
+
+    if (this.state !== SceneState.Active || app.audio.locked) {
       return;
     }
 
     // Restart the sting from the top so the reveal beat lines up again.
     this.musicVoice.seek(0);
-    this.musicVoice.volume = 0.2;
+    this.musicVoice.volume = 0.15;
+
     if (this.musicVoice.paused) {
       this.musicVoice.resume();
     }
+
     this.playSequence();
-    this.hud.setStatus('Replaying…');
   };
 
   private readonly playSequence = (): void => {
+    if (this.state !== SceneState.Active || this.app.audio.locked) {
+      return;
+    }
+
+    this.started = true;
     const { width, height } = this;
 
     for (const tween of this.sequenceTweens) {
       tween.stop();
     }
+
     this.sequenceTweens.length = 0;
     this.view.reset(width * 0.42, height / 2, width, height);
     this.view.clearShake();
     this.barSize.v = 0;
     this.titleState.count = 0;
     this.title.text = '';
+    this.finished = false;
     this.boss.setScale(0.4);
 
     // Letterbox bars slam in.
@@ -118,7 +140,7 @@ class BossIntroCinematicScene extends Scene {
     this.sequenceTweens.push(
       this.tweens
         .create(this.view.center)
-        .to({ x: width * 0.55, y: height / 2 }, 2.0)
+        .to({ x: width * 0.55, y: height / 2 }, 2)
         .start(),
     );
     // The boss looms larger as the camera arrives.
@@ -127,7 +149,7 @@ class BossIntroCinematicScene extends Scene {
     this.sequenceTweens.push(
       this.tweens
         .create(this.titleState)
-        .to({ count: titleText.length }, 1.0)
+        .to({ count: titleText.length }, 1)
         .delay(1.6)
         .onStart(() => {
           this.view.shake(18, Time.seconds(0.52), { frequency: 24, decay: true });
@@ -135,21 +157,25 @@ class BossIntroCinematicScene extends Scene {
         .onUpdate(() => {
           this.title.text = titleText.slice(0, this.titleState.count | 0);
         })
+        .onComplete(() => {
+          this.finished = true;
+        })
         .start(),
     );
     // Music swells up under the reveal.
-    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2.0).start());
+    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.45 }, 2).start());
   };
 
   override draw(context: RenderingContext): void {
     const app = this.app;
     const { width, height } = this;
 
-    this.bg.clear();
-    this.bg.fillColor = new Color(36, 42, 70);
-    // Span well past the view edges so the push-in never reveals a seam.
-    this.bg.drawRectangle(-width * 0.25, 0, width * 1.5, height);
     context.render(this.bg, { view: this.view });
+
+    for (const escort of this.escorts) {
+      context.render(escort, { view: this.view });
+    }
+
     context.render(this.boss, { view: this.view });
     context.render(this.title, { view: context.screenView });
     this.bars.clear();
@@ -158,20 +184,25 @@ class BossIntroCinematicScene extends Scene {
     this.bars.drawRectangle(0, height - this.barSize.v, width, this.barSize.v);
     context.render(this.bars, { view: context.screenView });
 
-    if (app.audio.locked) {
+    // The replay hint appears only once the sequence has played out, so it
+    // never competes with the cinematic itself.
+    if (app.audio.locked || this.finished) {
+      const k = unitsPerCssPixel(app, app.canvas as HTMLCanvasElement);
+      const maxWidth = width / k - 32;
+      this.tapPrompt.text = app.audio.locked ? 'Tap or press a key to start' : 'Tap or press R to replay';
+
+      if (this.tapPrompt.layout.maxWidth !== maxWidth) {
+        this.tapPrompt.layout = { maxWidth };
+      }
+
+      this.tapPrompt.setScale(k).setPosition(width / 2, height - 16 * k);
       context.render(this.tapPrompt, { view: context.screenView });
     }
   }
 
   override destroy(): void {
-    for (const tween of this.sequenceTweens) {
-      tween.stop();
-    }
     this.app.audio.onUnlock.remove(this.playSequence);
     this.app.input.onPointerDown.remove(this.replay);
-    this.musicVoice?.stop();
-    this.hud?.dispose();
-    super.destroy();
   }
 }
 
@@ -186,4 +217,4 @@ const app = new Application({
   clearColor: new Color(16, 16, 24),
 });
 
-await app.start(BossIntroCinematicScene);
+await startExample(app, () => app.start(BossIntroCinematicScene));

@@ -4,7 +4,7 @@
  * A tileset texture is ordinary color content: it decodes on sample, layer
  * opacity is applied once as coverage, and the write encodes once.
  */
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codexo/exojs/tilemap';
 import { describe, onTestFinished, test } from 'vitest';
 
 import { Color } from '#core/Color';
@@ -13,7 +13,15 @@ import { Texture } from '#rendering/texture/Texture';
 import { TextureFormat } from '#rendering/types';
 
 import { makeTileset, wireTilemapRenderers } from './_tilemapScene';
-import { type ColorProbeHarness, drawInto, expectBytes, type OpenColorProbeHarness, srgbDecode, srgbEncode, toByte } from './color-probe-fixtures';
+import {
+  type ColorProbeHarness,
+  drawInto,
+  expectBytes,
+  type OpenColorProbeHarness,
+  srgbDecode,
+  srgbEncode,
+  toByte,
+} from './color-probe-fixtures';
 
 const grayCanvasTexture = (gray: number, options?: ConstructorParameters<typeof Texture>[1]): Texture => {
   const canvas = document.createElement('canvas');
@@ -35,7 +43,9 @@ const tileNode = (texture: Texture, opacity: number): TileMapNode => {
 
   layer.setTileAt(0, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
 
-  return new TileMapNode(new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] }));
+  return new TileMapNode(
+    new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] }),
+  );
 };
 
 export const defineColorTilemapProbes = (title: string, open: OpenColorProbeHarness): void => {

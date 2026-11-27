@@ -7,6 +7,8 @@
 // not collected by vitest (no `.test.ts` suffix).
 
 import {
+  type AssetDescriptorLeafPolicy,
+  type AssetDescriptorResource,
   type AssetFactory,
   type AssetRequest,
   type AssetSourceCodec,
@@ -16,7 +18,6 @@ import {
   type Loader,
   type LoadingQueue,
   textSourceCodec,
-  type ValueAsset,
 } from '@codexo/exojs';
 
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
@@ -72,6 +73,8 @@ class WorldAssetType extends AssetType<WorldData, World, WorldOptions, string> {
         void context.dependencies.release;
         // @ts-expect-error - nor is destroying it.
         void context.dependencies.destroy;
+        // @ts-expect-error - nor opening a child scope, which could release or be destroyed.
+        void context.dependencies.createScope;
 
         return Promise.resolve({} as World);
       },
@@ -82,21 +85,46 @@ class WorldAssetType extends AssetType<WorldData, World, WorldOptions, string> {
 const worldType = new WorldAssetType();
 declare const loader: Loader;
 
-// (4) The descriptor is typed by the type instance alone, branded with its
-// leaf policy - the default `'ref'` here.
-const level = worldType.asset('level.world');
-type _DescriptorCarriesResource = Expect<Equal<typeof level, ValueAsset<World>>>;
+// (4) The descriptor is typed by the type instance alone, and carries its leaf
+// policy - the default `'ref'` here.
+const level = { type: worldType, source: 'level.world' };
+type _DescriptorCarriesResource = Expect<Equal<AssetDescriptorResource<typeof level>, World>>;
+type _DescriptorIsValueLeaf = Expect<Equal<AssetDescriptorLeafPolicy<typeof level>, 'ref'>>;
 
 // (5) So the load resolves to the resource, with no generic at the call site.
-const loading = loader.load(worldType.asset('level.world'));
+const loading = loader.load({ type: worldType, source: 'level.world' });
 type _QueueResolvesToWorld = Expect<Equal<typeof loading, LoadingQueue<World>>>;
 
 // (6) Options are the type's own, and are checked.
-worldType.asset('level.world', { locale: 'de', palette: 'dusk' });
+loader.identify({ type: worldType, source: 'level.world', locale: 'de', palette: 'dusk' });
 // @ts-expect-error - 'noon' is not one of this type's palettes.
-worldType.asset('level.world', { palette: 'noon' });
+loader.identify({ type: worldType, source: 'level.world', palette: 'noon' });
 // @ts-expect-error - an option this type does not declare is rejected.
-worldType.asset('level.world', { mimeType: 'application/json' });
+loader.identify({ type: worldType, source: 'level.world', mimeType: 'application/json' });
+
+// (6b) A source that is not a locator is the type's own factory source, handed
+// over unfetched; a source-free descriptor builds from options alone.
+const inline = loader.load({ type: worldType, source: { name: 'inline' } });
+type _InlineResolvesToWorld = Expect<Equal<typeof inline, LoadingQueue<World>>>;
+// @ts-expect-error - a source must be a locator or the type's own source shape.
+loader.load({ type: worldType, source: 42 });
+// @ts-expect-error - get() hands out a placeholder keyed by locator.
+loader.get({ type: worldType, source: { name: 'inline' } });
+
+// (6c) A type whose source admits undefined is source-free, and a value type takes a parse transform.
+class SeedAssetType extends AssetType<undefined, World, { readonly seed: number }> {
+  public readonly id = 'com.example.seed';
+
+  public createFactory(): AssetFactory<undefined, World, { readonly seed: number }> {
+    return { create: () => Promise.resolve({} as World) };
+  }
+}
+
+const seedType = new SeedAssetType();
+const seeded = loader.load({ type: seedType, seed: 1 });
+type _SeededResolvesToWorld = Expect<Equal<typeof seeded, LoadingQueue<World>>>;
+const named = loader.load({ type: seedType, seed: 1, parse: (world: World) => world.data.name });
+type _ParsedResolvesToName = Expect<Equal<typeof named, LoadingQueue<string>>>;
 
 // (7) A type that takes no options accepts none.
 class NoteAssetType extends AssetType<string, string[]> {
@@ -109,10 +137,10 @@ class NoteAssetType extends AssetType<string, string[]> {
 }
 
 const noteType = new NoteAssetType();
-const note = noteType.asset('a.note');
-type _NoteIsStringArray = Expect<Equal<typeof note, ValueAsset<string[]>>>;
+const note = { type: noteType, source: 'a.note' };
+type _NoteIsStringArray = Expect<Equal<AssetDescriptorResource<typeof note>, string[]>>;
 // @ts-expect-error - this type declares no options at all.
-noteType.asset('a.note', { locale: 'de' });
+loader.identify({ type: noteType, source: 'a.note', locale: 'de' });
 
 // (8) Both kinds of type go in one extension's asset list.
 const extension: Extension = {

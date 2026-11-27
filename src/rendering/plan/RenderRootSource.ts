@@ -288,17 +288,21 @@ export class RenderRootSource {
     }
 
     const liveEntries = this._liveEntryNodes;
-    const tolerable = this.dirtyIndex.readSince(this._changeCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
-      const changed = node as unknown as RenderNode;
+    const tolerable = this.dirtyIndex.readSince(
+      this._changeCursor,
+      DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect,
+      (node, marked) => {
+        const changed = node as unknown as RenderNode;
 
-      // A mark outside this subtree is another product's; only what lies on or
-      // below this root can invalidate its items.
-      if (changed !== root && !isUnder(changed, root)) {
-        return true;
-      }
+        // A mark outside this subtree is another product's; only what lies on or
+        // below this root can invalidate its items.
+        if (changed !== root && !isUnder(changed, root)) {
+          return true;
+        }
 
-      return changeBelongsToLiveEntry(changed, root, marked, candidate => liveEntries.has(candidate), destinationOpaque);
-    });
+        return changeBelongsToLiveEntry(changed, root, marked, candidate => liveEntries.has(candidate), destinationOpaque);
+      },
+    );
 
     if (!tolerable) {
       return false;
@@ -452,7 +456,10 @@ export class RenderRootSource {
    * carry map: for every new global handle, the handle the same drawable held
    * before, or -1 when it is new here.
    *
-   * The returned array is the source's own and stays valid until the next delta.
+   * Only valid on a source that still holds a root scope - the caller reaches
+   * this through {@link canApplyStructureDelta}. The returned array is the
+   * source's own and stays valid until the next delta; it is grow-only and may
+   * be longer than {@link itemCount}, so only `[0, itemCount)` is meaningful.
    */
   public commitStructureDelta(
     root: RenderNode,

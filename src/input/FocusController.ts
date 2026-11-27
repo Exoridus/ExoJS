@@ -6,6 +6,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Widget } from '#ui/Widget';
 
 import { GamepadButton } from './GamepadButton';
+import { isDescendantOrSelf } from './interactionTree';
 import { KeyEvent } from './KeyEvent';
 import type { ScopeToken } from './ScopeToken';
 import { Keyboard } from './types';
@@ -108,8 +109,11 @@ export class FocusController implements FocusHooks {
     this._app = app;
     this._onKeyDownHandler = this._handleKeyDown.bind(this);
     this._onKeyUpHandler = this._handleKeyUp.bind(this);
+
     this._onGamepadButtonDownHandler = (_pad, button): void => {
-      this._handleDirectionalChannel(button.channel);
+      if (!this._isGated()) {
+        this._handleDirectionalChannel(button.channel);
+      }
     };
 
     app.input.onKeyDown.add(this._onKeyDownHandler);
@@ -148,7 +152,7 @@ export class FocusController implements FocusHooks {
 
     const activeScope = this._activeScopeRoot();
 
-    if (activeScope !== null && !this._isInsideScope(node, activeScope)) {
+    if (activeScope !== null && !isDescendantOrSelf(node, activeScope)) {
       return;
     }
 
@@ -205,7 +209,7 @@ export class FocusController implements FocusHooks {
 
     this._scopeStack.push({ token, root, previousFocus });
 
-    if (previousFocus !== null && this._isOwned(root) && !this._isInsideScope(previousFocus, root)) {
+    if (previousFocus !== null && this._isOwned(root) && !isDescendantOrSelf(previousFocus, root)) {
       this.blur();
     }
   }
@@ -369,7 +373,7 @@ export class FocusController implements FocusHooks {
 
     const focused = this._focused;
 
-    if (focused !== null && !this._isInsideScope(focused, activeScope)) {
+    if (focused !== null && !isDescendantOrSelf(focused, activeScope)) {
       this.blur();
     }
   }
@@ -407,6 +411,14 @@ export class FocusController implements FocusHooks {
     }
 
     const focused = this._liveFocused();
+    const editTarget = this._app.input._keyEventTextEditTarget;
+
+    // An editing command already handled for the previous focus owner must
+    // not activate or navigate a different widget during frame delivery.
+    if (editTarget != null && editTarget !== focused) {
+      return;
+    }
+
     let defaultPrevented = false;
 
     if (focused !== null) {
@@ -440,17 +452,9 @@ export class FocusController implements FocusHooks {
     return (state !== null && state !== SceneState.Active) || this._app.scenes._transitionGateOpen;
   }
 
-  /**
-   * Whether the aggregate {@link Keyboard.Shift} channel is currently held -
-   * read straight off the live channel buffer rather than latched from
-   * ShiftLeft/ShiftRight key events, which `InputSystem` already reconciles
-   * correctly (see `handleKeyUp`'s doc comment) when one side releases while
-   * the other stays down. A locally latched flag would have to reimplement
-   * that reconciliation to avoid flipping Tab's direction on a two-handed
-   * Shift release.
-   */
   private _isShiftDown(): boolean {
-    return this._app.input._actionSample().values[Keyboard.Shift] !== 0;
+    // A chord can press and release within one frame; the final sample loses its modifier.
+    return this._app.input._keyEventShift ?? this._app.input._actionSample().values[Keyboard.Shift] !== 0;
   }
 
   /** Navigate for an arrow key or a D-pad button; any other channel is left alone. */
@@ -640,21 +644,6 @@ export class FocusController implements FocusHooks {
     }
   }
 
-  /** Whether `node` is `scopeRoot` itself or lives somewhere in its subtree. */
-  private _isInsideScope(node: RenderNode, scopeRoot: RenderNode): boolean {
-    let current: RenderNode | null = node;
-
-    while (current !== null) {
-      if (current === scopeRoot) {
-        return true;
-      }
-
-      current = current.parent;
-    }
-
-    return false;
-  }
-
   /**
    * Restore whatever was focused before the just-popped scope activated -
    * provided it is still {@link _isFocusEligible eligible} and, if another
@@ -668,7 +657,7 @@ export class FocusController implements FocusHooks {
       previousFocus !== null &&
       this._isOwned(previousFocus) &&
       this._isFocusEligible(previousFocus) &&
-      (activeScope === null || this._isInsideScope(previousFocus, activeScope));
+      (activeScope === null || isDescendantOrSelf(previousFocus, activeScope));
 
     if (canRestore && previousFocus !== null) {
       this.focus(previousFocus);

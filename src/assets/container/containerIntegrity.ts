@@ -37,7 +37,9 @@ export const verifyPackBytes = async (pack: ManifestPack, buffer: ArrayBuffer): 
   // Absent in an insecure context, where the type says otherwise.
   const subtle = typeof crypto === 'undefined' ? undefined : (crypto.subtle as SubtleCrypto | undefined);
 
-  if (subtle === undefined) return;
+  if (subtle === undefined) {
+    return;
+  }
 
   const hash = toHex(await subtle.digest('SHA-256', buffer));
 

@@ -16,7 +16,7 @@ import type { View } from './View';
 export interface BackendTargetPassOptions {
   /** Render target to draw into. `null` or omitted redirects output to the default framebuffer. */
   readonly target?: RenderTarget | null;
-  /** {@link View} to use while executing this pass. Falls back to the backend's active view when omitted. */
+  /** {@link View} to use while executing this pass. Falls back to the target's own default view when omitted. */
   readonly view?: View | null;
   /** If provided, the target is cleared to this colour before the callback runs. */
   readonly clearColor?: Color;
@@ -86,7 +86,12 @@ export class BackendTargetPass implements BackendRenderPass {
    * constructing one per frame. A caller that configures a pass once still just
    * uses the constructor.
    */
-  public reconfigure(callback: (backend: RenderBackend) => void, target: RenderTarget | null, view: View | null, clearColor: Color | null): this {
+  public reconfigure(
+    callback: (backend: RenderBackend) => void,
+    target: RenderTarget | null,
+    view: View | null,
+    clearColor: Color | null,
+  ): this {
     this._callback = callback;
 
     return this.retarget(target, view, clearColor);

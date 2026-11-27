@@ -58,8 +58,8 @@ export class AnimationSystem {
   }
 
   /**
-   * Advance every registered sprite by the frame `delta`, converted to seconds
-   * at this single point of use. Sprites destroyed since the last frame are
+   * Advance every registered sprite by the frame `delta`, which arrives in
+   * seconds. Sprites destroyed since the last frame are
    * evicted rather than ticked, so a destroyed node can never be driven after
    * teardown. Iterates a snapshot so playback callbacks that register or
    * deregister sprites do not corrupt the loop.

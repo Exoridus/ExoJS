@@ -23,7 +23,7 @@
  * ]);
  *
  * for (let i = 0; i < count; i++) {
- *     particle.totalLifetime = lifetime.sample();
+ *     particle.lifetime = lifetime.sample();
  *     velocity.sample(particle.velocity);
  *     // tint is applied per-frame by ColorOverLifetime, not at spawn.
  * }

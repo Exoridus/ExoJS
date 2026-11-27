@@ -36,7 +36,10 @@ export interface AsepriteFrameData {
  * `from` and `to` are inclusive zero-based frame indices.
  */
 export interface AsepriteFrameTag {
+  /** Tag colour from the editor, as `#RRGGBBAA`. */
   readonly color?: string;
+  /** Free-form user data attached to the tag in the editor. */
+  readonly data?: string;
   readonly direction: AsepriteDirection;
   /** Inclusive end frame index. */
   readonly to: number;
@@ -72,17 +75,51 @@ export interface AsepriteLayer {
   readonly opacity?: number;
 }
 
-/** Bounds of a named slice at a specific frame. */
+/** A point in sprite canvas pixels. */
+export interface AsepritePoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * A slice's shape from one frame on, until the next key. Every rectangle and
+ * point is in pixels of the untrimmed sprite canvas.
+ */
 export interface AsepriteSliceKey {
   readonly bounds: AsepriteRect;
+  /** Nine-slice centre, relative to {@link bounds}; present only on nine-slices. */
+  readonly center?: AsepriteRect;
   readonly frame: number;
+  /** Pivot point, relative to {@link bounds}; present only when one was set. */
+  readonly pivot?: AsepritePoint;
 }
 
 /** A named slice defined in the Aseprite editor. */
 export interface AsepriteSlice {
+  /** Slice colour from the editor, as `#RRGGBBAA`. */
   readonly color?: string;
+  /** Free-form user data attached to the slice in the editor. */
+  readonly data?: string;
+  /** Keys in ascending frame order. */
   readonly keys: readonly AsepriteSliceKey[];
   readonly name: string;
+}
+
+/**
+ * A slice as it stands on one frame: the key in effect there, joined with the
+ * slice's own colour and user data. Returned by {@link AsepriteSheet.getSlice}.
+ */
+export interface AsepriteSliceFrame {
+  readonly name: string;
+  /** The frame the key in effect was set on, at or before the requested frame. */
+  readonly keyFrame: number;
+  readonly bounds: AsepriteRect;
+  /** Nine-slice centre, relative to {@link bounds}. */
+  readonly center?: AsepriteRect;
+  /** Pivot point, relative to {@link bounds}. */
+  readonly pivot?: AsepritePoint;
+  readonly color?: string;
+  readonly data?: string;
 }
 
 /** Metadata block of an Aseprite JSON export. */

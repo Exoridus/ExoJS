@@ -104,7 +104,11 @@ export const outlinesFromAlphaField = (
  * while a frame that is genuinely transparent has been answered correctly.
  * @internal
  */
-export const traceAlphaFrame = (texture: Texture, drawable: AlphaOccluderDrawable | null, options: AlphaOccluderOptions): Float32Array[] | null => {
+export const traceAlphaFrame = (
+  texture: Texture,
+  drawable: AlphaOccluderDrawable | null,
+  options: AlphaOccluderOptions,
+): Float32Array[] | null => {
   const region = tracedRegion(texture, drawable);
   const width = Math.max(1, Math.round(region.width));
   const height = Math.max(1, Math.round(region.height));
@@ -114,7 +118,14 @@ export const traceAlphaFrame = (texture: Texture, drawable: AlphaOccluderDrawabl
     return null;
   }
 
-  return outlinesFromAlphaField(alpha, width, height, options.threshold ?? 0.5, options.simplify ?? 2, localPlacement(drawable, width, height));
+  return outlinesFromAlphaField(
+    alpha,
+    width,
+    height,
+    options.threshold ?? 0.5,
+    options.simplify ?? 2,
+    localPlacement(drawable, width, height),
+  );
 };
 
 /**

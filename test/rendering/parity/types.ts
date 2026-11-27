@@ -177,7 +177,9 @@ export type Property = PerBackendProperty | CrossBackendProperty;
  * class observed instead of asserted.
  */
 export const cappedEvidence = (scene: Scene, claimed: EvidenceClass): EvidenceClass => {
-  if (claimed !== 'traced') return claimed;
+  if (claimed !== 'traced') {
+    return claimed;
+  }
 
   return scene.fixture === 'self-describing' && scene.nearestSampled ? 'traced' : 'frame-equal';
 };

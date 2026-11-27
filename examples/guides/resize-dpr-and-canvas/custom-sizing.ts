@@ -7,7 +7,9 @@ class HalfHeightCanvasSizing extends CanvasSizing {
   override attach(context: CanvasSizingContext): void {
     const host = context.host;
 
-    if (host === null) return;
+    if (host === null) {
+      return;
+    }
 
     const commit = (): void => {
       const width = host.clientWidth;
@@ -37,9 +39,15 @@ class HalfHeightCanvasSizing extends CanvasSizing {
 
 class LayoutScene extends Scene {
   // #region guide:relayout-on-resize
+  private readonly onResize = (): void => this.layout();
+
   override init(): void {
     this.layout();
-    this.app.onResize.add(() => this.layout());
+    this.app.onResize.add(this.onResize);
+  }
+
+  override destroy(): void {
+    this.app.onResize.remove(this.onResize);
   }
   // #endregion guide:relayout-on-resize
 

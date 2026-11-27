@@ -1,15 +1,27 @@
 import { Color } from '#core/Color';
 import type { MeshGeometryData } from '#math/geometry';
-import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildRoundedRectangle, buildStar } from '#math/geometry';
-import { bezierCurveTo, clamp, quadraticCurveTo, TAU } from '#math/utils';
+import {
+  buildCircle,
+  buildEllipse,
+  buildLine,
+  buildPath,
+  buildPolygon,
+  buildRectangle,
+  buildRoundedRectangle,
+  buildStar,
+} from '#math/geometry';
+import { bezierCurveTo, quadraticCurveTo } from '#math/utils';
 import { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
 import type { Gradient } from '#rendering/gradient/Gradient';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { GraphicsPath } from '#rendering/primitives/GraphicsPath';
+import { type GraphicsAppearancePatch, GraphicsShape, type GraphicsShapeSource } from '#rendering/primitives/GraphicsShape';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { DataTexture } from '#rendering/texture/DataTexture';
 import { ScaleModes, type TextureFormat } from '#rendering/types';
+
+import { arcSweep, tangentArc } from './arcGeometry';
 
 /**
  * Edge length of the square gradient texture rasterized for gradient paints.
@@ -32,8 +44,9 @@ const gradientTextureSize = 256;
  *
  * Fill and stroke are both opt-in: a shape is filled only once a fill
  * color/style is set (the fill defaults to transparent), and stroked only while
- * `lineWidth > 0`. An outline-only shape therefore needs just `lineColor` +
- * `lineWidth`, with no fill bleeding underneath.
+ * `lineWidth > 0`. The explicit stroke methods (`drawLine`, `drawPath`) use the
+ * current line style and do not check the fill. An outline-only shape therefore
+ * needs just `lineColor` + `lineWidth`, with no fill bleeding underneath.
  *
  * Gradient styles are rasterized once to a {@link DataTexture} via
  * {@link Gradient.toTexture} and sampled across each shape's local bounding
@@ -46,6 +59,71 @@ const gradientTextureSize = 256;
  * tint, and mask support from {@link Container}.
  */
 export class Graphics extends Container {
+  private readonly _shapes = new Map<GraphicsShapeSource, GraphicsShape>();
+  private readonly _createdMeshes = new WeakSet<RenderNode>();
+  private _defaultFill: Color | null = null;
+
+  public constructor(options: GraphicsAppearancePatch = {}) {
+    super();
+    this.setDefaultStyle(options);
+  }
+
+  /** Update the live fill inherited by retained drawings without local overrides. */
+  public setDefaultStyle(patch: GraphicsAppearancePatch): this {
+    if (patch.fill !== undefined) {
+      this._defaultFill = patch.fill?.clone() ?? null;
+
+      for (const shape of this._shapes.values()) {
+        shape._applyAppearance();
+      }
+    }
+
+    return this;
+  }
+
+  /**
+   * Register a live, borrowed source shape. Duplicate source identities throw.
+   * Destroying the source removes its drawing from every Graphics using it.
+   */
+  public addShape(source: GraphicsShapeSource, options: GraphicsAppearancePatch = {}): GraphicsShape {
+    if (this.destroyed) {
+      throw new Error('Cannot add a shape to destroyed Graphics.');
+    }
+
+    if (this._shapes.has(source)) {
+      throw new Error('Shape source is already registered in this Graphics.');
+    }
+
+    const shape = new GraphicsShape(
+      source,
+      () => this._defaultFill,
+      options,
+      () => this._removeShape(source),
+    );
+
+    this.addChild(shape._drawable);
+    this._shapes.set(source, shape);
+
+    return shape;
+  }
+
+  /** Look up a retained drawing by source identity, or return `null` when absent. */
+  public getShape(source: GraphicsShapeSource): GraphicsShape | null {
+    return this._shapes.get(source) ?? null;
+  }
+
+  private _removeShape(source: GraphicsShapeSource): void {
+    const shape = this._shapes.get(source);
+
+    if (shape === undefined) {
+      return;
+    }
+
+    this._shapes.delete(source);
+    this.removeChild(shape._drawable);
+    shape._dispose();
+  }
+
   private _lineWidth = 0;
   // Fill defaults to transparent: a shape is filled only when a fill color/style is
   // set, mirroring how the stroke is gated on `lineWidth > 0`. This keeps an
@@ -200,57 +278,15 @@ export class Graphics extends Container {
    * when the geometry is degenerate.
    */
   public arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this {
-    const { x: fromX, y: fromY } = this._currentPoint;
-    const r = Math.abs(radius);
+    const arc = tangentArc(this._currentPoint.x, this._currentPoint.y, x1, y1, x2, y2, radius);
 
-    if (r === 0 || (fromX === x1 && fromY === y1) || (x1 === x2 && y1 === y2)) {
+    if (arc === null) {
       return this.lineTo(x1, y1);
     }
 
-    const inX = x1 - fromX;
-    const inY = y1 - fromY;
-    const outX = x2 - x1;
-    const outY = y2 - y1;
-    const inLen = Math.hypot(inX, inY);
-    const outLen = Math.hypot(outX, outY);
+    this.lineTo(arc.startX, arc.startY);
 
-    if (inLen === 0 || outLen === 0) {
-      return this.lineTo(x1, y1);
-    }
-
-    const inDirX = inX / inLen;
-    const inDirY = inY / inLen;
-    const outDirX = outX / outLen;
-    const outDirY = outY / outLen;
-    const dot = clamp(inDirX * outDirX + inDirY * outDirY, -1, 1);
-    const angle = Math.acos(dot);
-
-    if (angle === 0 || angle === Math.PI) {
-      return this.lineTo(x1, y1);
-    }
-
-    const distanceToTangent = r / Math.tan(angle / 2);
-
-    if (!Number.isFinite(distanceToTangent) || distanceToTangent > inLen || distanceToTangent > outLen) {
-      return this.lineTo(x1, y1);
-    }
-
-    const startX = x1 - inDirX * distanceToTangent;
-    const startY = y1 - inDirY * distanceToTangent;
-    const endX = x1 + outDirX * distanceToTangent;
-    const endY = y1 + outDirY * distanceToTangent;
-    const cross = inDirX * outDirY - inDirY * outDirX;
-    const leftTurn = cross > 0;
-    const normalX = leftTurn ? -inDirY : inDirY;
-    const normalY = leftTurn ? inDirX : -inDirX;
-    const centerX = startX + normalX * r;
-    const centerY = startY + normalY * r;
-    const startAngle = Math.atan2(startY - centerY, startX - centerX);
-    const endAngle = Math.atan2(endY - centerY, endX - centerX);
-
-    this.lineTo(startX, startY);
-
-    return this.drawArc(centerX, centerY, r, startAngle, endAngle, leftTurn);
+    return this.drawArc(arc.centerX, arc.centerY, arc.radius, arc.startAngle, arc.endAngle, arc.anticlockwise);
   }
 
   /** Draw a stroked arc centered at (`x`, `y`) with the given `radius` from `startAngle` to `endAngle` (radians). */
@@ -261,13 +297,7 @@ export class Graphics extends Container {
       return this;
     }
 
-    let sweep = endAngle - startAngle;
-
-    if (!anticlockwise && sweep < 0) {
-      sweep += TAU;
-    } else if (anticlockwise && sweep > 0) {
-      sweep -= TAU;
-    }
+    const sweep = arcSweep(startAngle, endAngle, anticlockwise);
 
     if (sweep === 0) {
       return this;
@@ -303,19 +333,16 @@ export class Graphics extends Container {
   public drawPath(path: number[]): this {
     const data = buildPath(path, this._lineWidth);
 
-    this.addChild(this._createStrokeMesh(data));
+    if (data.indices.length > 0) {
+      this.addChild(this._createStrokeMesh(data));
+    }
 
     return this;
   }
 
-  /**
-   * Stroke a shape's perimeter. Shape builders return their outline OPEN
-   * (first point not repeated), but `buildPath` only closes a path whose
-   * first and last points coincide - so the closing segment (e.g. a
-   * rectangle's left edge) went missing. Repeat the first point here.
-   */
+  /** Close open outlines once; repeating a closed endpoint produces zero-length stroke segments. */
   private _strokeClosedOutline(points: number[]): void {
-    if (points.length >= 4) {
+    if (points.length >= 4 && (points[0] !== points[points.length - 2] || points[1] !== points[points.length - 1])) {
       this.drawPath([...points, points[0]!, points[1]!]);
     } else {
       this.drawPath(points);
@@ -373,8 +400,12 @@ export class Graphics extends Container {
     return this;
   }
 
-  /** Fill a circle and optionally stroke its outline if `lineWidth > 0`. */
+  /** Fill a circle and optionally stroke its outline if `lineWidth > 0`. A radius that is not positive draws nothing. */
   public drawCircle(centerX: number, centerY: number, radius: number): this {
+    if (!(radius > 0)) {
+      return this;
+    }
+
     const data = buildCircle(centerX, centerY, radius);
 
     this._appendFill(data);
@@ -386,8 +417,12 @@ export class Graphics extends Container {
     return this;
   }
 
-  /** Fill an ellipse and optionally stroke its outline if `lineWidth > 0`. */
+  /** Fill an ellipse and optionally stroke its outline if `lineWidth > 0`. A radius that is not positive draws nothing. */
   public drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): this {
+    if (!(radiusX > 0) || !(radiusY > 0)) {
+      return this;
+    }
+
     const data = buildEllipse(centerX, centerY, radiusX, radiusY);
 
     this._appendFill(data);
@@ -445,9 +480,28 @@ export class Graphics extends Container {
     return this;
   }
 
-  /** Remove all child meshes and reset pen state (position, fill/stroke styles, line width). */
+  /**
+   * Remove all child meshes and reset pen state (position, fill/stroke styles, line width).
+   *
+   * Meshes created by drawing calls and retained shapes are destroyed. Meshes
+   * added with `addChild` are only detached; their owner keeps them.
+   */
   public clear(): this {
+    for (const shape of this._shapes.values()) {
+      shape._dispose();
+    }
+
+    this._shapes.clear();
+
+    const children = [...this.children];
+
     this.removeChildren();
+
+    for (const child of children) {
+      if (this._createdMeshes.has(child)) {
+        child.destroy();
+      }
+    }
 
     this._lineWidth = 0;
     this._fillColor.copy(Color.transparentBlack);
@@ -463,13 +517,19 @@ export class Graphics extends Container {
   }
 
   public override destroy(): void {
-    super.destroy();
+    if (this.destroyed) {
+      return;
+    }
 
-    this.clear();
+    try {
+      super.destroy();
+    } finally {
+      this.clear();
 
-    this._lineColor.destroy();
-    this._fillColor.destroy();
-    this._currentPoint.destroy();
+      this._lineColor.destroy();
+      this._fillColor.destroy();
+      this._currentPoint.destroy();
+    }
   }
 
   /**
@@ -531,6 +591,7 @@ export class Graphics extends Container {
     });
 
     mesh.tint = color;
+    this._createdMeshes.add(mesh);
 
     return mesh;
   }
@@ -541,12 +602,16 @@ export class Graphics extends Container {
    * white tint and vertex color leave the sampled gradient color unmodulated.
    */
   private _createGradientMesh(data: MeshGeometryData, texture: DataTexture<TextureFormat.Rgba8>): Mesh {
-    return new Mesh({
+    const mesh = new Mesh({
       vertices: data.vertices,
       indices: data.indices,
       uvs: computeBoundsUvs(data.vertices),
       texture,
     });
+
+    this._createdMeshes.add(mesh);
+
+    return mesh;
   }
 
   private _rasterizeGradient(gradient: Gradient): DataTexture<TextureFormat.Rgba8> {
@@ -584,10 +649,21 @@ const computeBoundsUvs = (vertices: Float32Array): Float32Array => {
     const x = vertices[i]!;
     const y = vertices[i + 1]!;
 
-    if (x < minX) minX = x;
-    if (x > maxX) maxX = x;
-    if (y < minY) minY = y;
-    if (y > maxY) maxY = y;
+    if (x < minX) {
+      minX = x;
+    }
+
+    if (x > maxX) {
+      maxX = x;
+    }
+
+    if (y < minY) {
+      minY = y;
+    }
+
+    if (y > maxY) {
+      maxY = y;
+    }
   }
 
   const spanX = maxX - minX;

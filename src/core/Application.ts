@@ -1,5 +1,7 @@
 import { AnimationSystem } from '#animation/AnimationSystem';
 import { TweenSystem } from '#animation/TweenSystem';
+import type { ApplicationAssets } from '#assets/ApplicationAssets';
+import { probeAssetImageFormats } from '#assets/assetVariantCapabilities';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { AudioSystem } from '#audio/AudioSystem';
@@ -20,6 +22,7 @@ import { createDefaultCanvas, isRenderSurface } from '#core/applicationCanvas';
 import { CoroutineSystem } from '#core/CoroutineSystem';
 import { SceneDirector } from '#core/scene/SceneDirector';
 import { SceneNavigationAbortedError } from '#core/scene/sceneErrors';
+import { SceneState } from '#core/scene/SceneState';
 import {
   type AnySceneConstructor,
   type ChangeSceneArgs,
@@ -36,6 +39,7 @@ import { disposeExtensions, installExtensions } from '#extensions/lifetime';
 import { materializeAssetTypes, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
 import { InputSystem } from '#input/InputSystem';
+import { InputTickClock } from '#input/InputTickClock';
 import { InteractionSystem } from '#input/InteractionSystem';
 import type { PointLike } from '#math/PointLike';
 import { Random } from '#math/Random';
@@ -98,6 +102,46 @@ export enum ApplicationState {
 }
 
 /**
+ * How the teardown {@link Application.destroy} ran ended.
+ *
+ * | Status | Meaning |
+ * |---|---|
+ * | `completed` | Every teardown step `destroy()` runs or waits for settled without a failure |
+ * | `completedWithErrors` | Every step ran to its end, but at least one of them failed |
+ * | `forced` | Scene teardown outlived the grace period and was abandoned; the rest of the engine was released anyway |
+ *
+ * `forced` wins over `completedWithErrors`: when both happened the status is
+ * `forced`, and the failures are still listed in
+ * {@link ApplicationDestroyOutcome.errors}.
+ */
+export type ApplicationDestroyStatus = 'completed' | 'completedWithErrors' | 'forced';
+
+/**
+ * What {@link Application.destroyOutcome} reports once
+ * {@link Application.destroy} has settled. Frozen.
+ */
+export interface ApplicationDestroyOutcome {
+  readonly status: ApplicationDestroyStatus;
+  /**
+   * Every failure of a teardown step `destroy()` ran or waited for, in the
+   * order it was reported to {@link Application.onError}: a rejecting or
+   * throwing `Scene.unload()`, a throwing `Scene.destroy()`, tracked resource,
+   * system, audio voice, transition, lifecycle listener, extension disposer or
+   * engine subsystem. Several failures of one step can arrive grouped as an
+   * `AggregateError` whose `errors` hold the individual failures - the
+   * tracked resources of one scene, for example.
+   *
+   * Not listed: the grace-period timeout, which `status` reports; the
+   * rejection of a navigation `destroy()` interrupted, which is that
+   * navigation's result rather than a teardown failure; failures reported
+   * before `destroy()` was called, even by a teardown {@link Application.stop}
+   * started and `destroy()` then waits for; and failures of abandoned scene
+   * teardown that arrive after `destroy()` settled, which are only logged.
+   */
+  readonly errors: readonly Error[];
+}
+
+/**
  * How long {@link Application.destroy} waits for scene teardown before it
  * gives up on it and releases the rest of the engine anyway.
  *
@@ -108,7 +152,8 @@ export enum ApplicationState {
  * proceeding turns it into a loud, bounded failure. Scene teardown that
  * outlives the grace period keeps running, and may touch subsystems that are
  * destroyed by then - which is exactly why the timeout is reported through
- * {@link Application.onError} rather than swallowed.
+ * {@link Application.onError} and recorded as a `forced` outcome rather than
+ * swallowed.
  */
 const sceneTeardownGraceMs = 5000;
 
@@ -191,7 +236,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public readonly connectivity: Connectivity;
   public readonly loader: Loader;
+  /**
+   * The asset types this application can load, and the assets it owns for its
+   * whole lifetime. Scenes load their own assets through `scene.assets`.
+   */
+  public readonly assets: ApplicationAssets;
   public readonly input: InputSystem;
+  /** @internal Fixed-step clock behind every action's `tick` view - see {@link InputTickClock}. */
+  public readonly _inputTickClock = new InputTickClock();
   public readonly interaction: InteractionSystem;
   public readonly scenes: SceneDirector<Registry>;
   /**
@@ -330,6 +382,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * instead of starting a second teardown over already-released subsystems.
    */
   private _destroyPromise: Promise<void> | null = null;
+  /**
+   * @internal Failures reported while {@link Application.destroy} is in
+   * flight, or `null` outside that window. Scene teardown appends what it
+   * reports, so {@link Application.destroyOutcome} lists failures the
+   * application does not see directly.
+   */
+  public _teardownFailures: Error[] | null = null;
+  private _teardownForced = false;
+  private _destroyOutcome: ApplicationDestroyOutcome | null = null;
   private _backendType: 'webgl2' | 'webgpu';
   private _backend: RenderBackend;
   private _rendering: RenderingContext;
@@ -354,6 +415,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _outputTransform: OutputTransform;
   private _outputTexture: RenderTexture | null = null;
   private _outputPassesRedirect: BackendTargetPass | null = null;
+  private _uiRedirect: BackendTargetPass | null = null;
   /**
    * Samples per pixel the engine-owned working targets are rendered at, or
    * `null` while undecided - see {@link _workingSampleCount}. Decided once and
@@ -459,7 +521,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // Established before any subsystem, because input, interaction and the
       // frame loop all read the host through it.
       this._ownsPlatform = appSettings.platform === undefined;
-      this.platform = appSettings.platform ?? (this.element === null ? new OffscreenPlatform(this.canvas) : new BrowserPlatform(this.element));
+      this.platform =
+        appSettings.platform ?? (this.element === null ? new OffscreenPlatform(this.canvas) : new BrowserPlatform(this.element));
 
       // Reads the host through the same adapter as everything else, so a
       // platform that reports no network makes the whole application agree.
@@ -512,7 +575,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           // what travels is a per-acquisition snapshot rather than this object.
           connectivity: this.connectivity,
         },
-        rendering: resolveRenderingOptions(renderingOptions),
+        rendering: resolveRenderingOptions({
+          ...renderingOptions,
+          // The resolved canvas.element is always present; the original
+          // ownership decision is the only reliable default for terminal GL release.
+          releaseContext: renderingOptions.releaseContext ?? this._ownsCanvas,
+        }),
         input: {
           gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
           gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
@@ -536,8 +604,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._snapshot = buildSnapshot([...(appSettings.extensions ?? [])]);
 
       this.loader = constructed.track(new Loader(this.options.loader));
+      this.assets = this.loader._assetTypes;
 
       materializeAssetTypes(this.loader, [...coreAssetTypes, ...this._snapshot.assets]);
+
+      for (const definition of appSettings.assetTypes ?? []) {
+        this.assets._define(definition);
+      }
+
       materializeSerializerBindings(this.serializers, this._snapshot.serializers);
 
       this._backendType = resolveBackendType(this.options.backend);
@@ -565,6 +639,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // which only the frame loop knows and which changes as the loop observes
       // it - so the system reads it rather than being handed a number once.
       this.coroutines._bindFrameTarget(() => this._scheduler.displayFrameSeconds);
+      this.coroutines._bindTimeSource(this.platform);
 
       this._documentVisible = this.platform.documentVisible;
       this._visibilitySubscription = this.platform.onVisibilityChange(visible => {
@@ -665,6 +740,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._setState(ApplicationState.Destroyed);
 
     const failures: unknown[] = [];
+
     const attempt = (step: () => void): void => {
       try {
         step();
@@ -748,6 +824,29 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
+   * How {@link Application.destroy} ended, or `null` until the Promise it
+   * returned has fulfilled. The same frozen object for every later read and
+   * every repeated `destroy()` call.
+   *
+   * Read it when shutdown has to be more than "over": a test asserting a
+   * clean teardown, a host reusing the canvas, a tool reporting what went
+   * wrong. `forced` means scene teardown was abandoned, not cancelled - the
+   * `Scene.unload()` that held it may still be running, and may still touch
+   * subsystems that are gone by now.
+   *
+   * ```ts
+   * await app.destroy();
+   *
+   * if (app.destroyOutcome?.status !== 'completed') {
+   *   console.warn('Unclean shutdown', app.destroyOutcome);
+   * }
+   * ```
+   */
+  public get destroyOutcome(): ApplicationDestroyOutcome | null {
+    return this._state === ApplicationState.Destroyed ? this._destroyOutcome : null;
+  }
+
+  /**
    * The single writer for {@link Application._state}. `Destroying` and
    * `Destroyed` are terminal: the only transition out of them is
    * `Destroying` -> `Destroyed`. Startup runs settle asynchronously and their
@@ -757,9 +856,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * report `Stopped` and `start()` would reinitialize a destroyed backend.
    */
   private _setState(next: ApplicationState): void {
-    const terminal = this._state === ApplicationState.Destroyed || (this._state === ApplicationState.Destroying && next !== ApplicationState.Destroyed);
+    const terminal =
+      this._state === ApplicationState.Destroyed || (this._state === ApplicationState.Destroying && next !== ApplicationState.Destroyed);
 
-    if (!terminal) this._state = next;
+    if (!terminal) {
+      this._state = next;
+    }
   }
 
   public get startupSeconds(): Seconds {
@@ -879,9 +981,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * The color-managed working target's storage format: `Rgba16F` when
    * `rendering.color.workingFormat` asked for `'hdr'` (validated against the
    * backend's actual capability in {@link initializeBackend}), `Rgba8Srgb`
-   * otherwise.
+   * otherwise. Every engine-owned texture that holds a frame on its way to the
+   * output transform takes this format, so storage never clamps or requantizes
+   * what the working target already carries.
+   * @internal
    */
-  private _workingColorFormat(): TextureFormat.Rgba8Srgb | TextureFormat.Rgba16F {
+  public _workingColorFormat(): TextureFormat.Rgba8Srgb | TextureFormat.Rgba16F {
     return workingColorTextureFormat(this.options.rendering?.color?.workingFormat ?? 'sdr');
   }
 
@@ -928,7 +1033,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public get capabilities(): Capabilities {
     if (this._capabilities === null) {
-      throw new Error('Application.capabilities is unavailable before start() resolves. Use `await Capabilities.ready` for pre-start checks.');
+      throw new Error(
+        'Application.capabilities is unavailable before start() resolves. Use `await Capabilities.ready` for pre-start checks.',
+      );
     }
 
     return this._capabilities;
@@ -1039,10 +1146,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * {@link Pointer.x}/{@link Pointer.y} and node positions, e.g. `0..app.width`
    * - to a world position using the active camera. At the default centered
    * camera this is the identity; with a panned/zoomed/rotated camera it undoes
-   * the transform. Equivalent to `app.rendering.view.screenToWorld(x, y)`.
+   * the transform, and it honours a camera whose viewport covers only part of
+   * the canvas. Equivalent to
+   * `app.rendering.view.screenToWorld(x, y, app.width, app.height)`.
    */
   public screenToWorld(x: number, y: number): PointLike {
-    return this._rendering.view.screenToWorld(x, y);
+    return this._rendering.view.screenToWorld(x, y, this.width, this.height);
   }
 
   /**
@@ -1127,6 +1236,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     try {
       await this.initializeBackend();
 
+      if (this._destroyPromise !== null || this._state !== ApplicationState.Loading) {
+        return this;
+      }
+
       if (this.options.hello) {
         hello({ backend: this._backendType });
       }
@@ -1155,15 +1268,21 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       this._capabilities = await capabilitiesPromise;
 
+      if (this._destroyPromise !== null || this._state !== ApplicationState.Loading) {
+        return this;
+      }
+
       // Ahead of the initial navigation, so tooling is attached in time to see
       // the first scene load. Once per application: a later `start()` after a
       // `stop()` is a restart, not a second application.
       if (__DEV__ && !this._announced) {
         this._announced = true;
-        onAppInitialized.dispatch(this);
+        onAppInitialized.dispatchIsolated(observerError => {
+          this._errors.report(observerError instanceof Error ? observerError : new Error(String(observerError)), false);
+        }, this);
       }
 
-      if (target !== undefined) {
+      if (target !== undefined && this._destroyPromise === null && this._state === ApplicationState.Loading) {
         // `target`'s implementation-level type is a union (registered key
         // OR constructor) - TS overload resolution does not distribute
         // over a union-typed argument, so the cast picks the constructor
@@ -1181,10 +1300,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // it and wrote its own state; promoting over that would advertise
       // `Running` for a loop that no longer schedules frames, and every later
       // `start()`/`stop()` would early-return on the lie.
-      if (this._scheduler.active) this._setState(ApplicationState.Running);
+      if (this._scheduler.active) {
+        this._setState(ApplicationState.Running);
+      }
     } catch (error) {
       this._stopFrameLoop();
       this._setState(ApplicationState.Stopped);
+
       throw error;
     }
 
@@ -1196,20 +1318,20 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * reset every clock the frame body depends on - all in one place so every
    * call site that can start the loop does so identically. `_state` is left
    * untouched (still `Loading` at the point {@link Application.start} calls
-   * this) - {@link Application.update}'s gate reads `_frameLoopActive`, a
-   * strict superset of `_state === Running`.
+   * this) - {@link Application.update}'s gate reads the scheduler's `active`
+   * flag, a strict superset of `_state === Running`.
    */
   private _startFrameLoop(): void {
     this._scheduler.start();
   }
 
   /**
-   * Halt the per-frame loop: clear {@link Application._frameLoopActive},
-   * cancel the pending RAF request, and stop the active/frame clocks. Called
-   * from every place the loop can stop (fatal frame error, {@link
-   * Application.stop}, {@link Application.destroy} during the `Loading`
-   * window) so `_frameLoopActive` is the single source of truth everywhere,
-   * not only where the loop starts. Idempotent - a
+   * Halt the per-frame loop: clear the scheduler's `active` flag, cancel the
+   * pending RAF request, and stop the active/frame clocks. Called from every
+   * place the loop can stop (fatal frame error, {@link Application.stop},
+   * {@link Application.destroy} during the `Loading` window) so that flag is
+   * the single source of truth everywhere, not only where the loop starts.
+   * Idempotent - a
    * second call while the loop is already stopped is a no-op. Always aborts
    * whatever scene navigation is in flight via
    * {@link SceneDirector._abortInFlightNavigation} - a transition session
@@ -1228,6 +1350,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     if (!this._scheduler.stop()) {
       return;
     }
+
+    this._inputTickClock.retire();
 
     this.scenes._abortInFlightNavigation(reason);
   }
@@ -1265,6 +1389,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *    remaining time ({@link FrameBudget}). Work placed here overlaps the GPU
    *    drawing the frame just submitted.
    *
+   * The scene that opens a frame is the scene that runs it to the end. A
+   * scene navigation requested from any of these phases commits after the
+   * frame has finished. Only {@link Application.stop} ends the active
+   * scene's part in a frame early; {@link Application.destroy} lets the frame
+   * finish and tears the scene down after it.
+   *
    * Running one frame is all this does: scheduling belongs to the loop, so a
    * manual call runs an extra frame alongside a live loop rather than forking
    * a second one, and does not restart a loop that {@link Application.stop}
@@ -1280,6 +1410,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     if (this._scheduler.active) {
       if (this.pauseOnHidden && !this._documentVisible) {
         this._scheduler.skipFrame(timestamp);
+        this._inputTickClock.retire();
 
         return this;
       }
@@ -1290,6 +1421,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // Frame guard (render-fail surface): a throwing frame is reported
       // through the error pipeline instead of killing the RAF loop; the loop
       // halts only after `maxConsecutiveFrameErrors` consecutive failures.
+      let completed = false;
+
       try {
         const { rawDeltaMs, frameDelta, fixedSteps } = this._scheduler.beginFrame(timestamp);
         const frameStart = this.platform.now();
@@ -1297,7 +1430,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this._frameStart = frameStart;
         this._inFrame = true;
 
-        if (__DEV__) Perf.mark(frameStartMark);
+        if (__DEV__) {
+          Perf.mark(frameStartMark);
+        }
 
         // The index counts in frames, and this is where one begins. Advancing it
         // per render instead would rotate the window several times in a frame
@@ -1318,16 +1453,24 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         // Fixed-timestep steps (0..N) for deterministic logic/physics, after input
         // so they see this frame's input and before the variable update/draw.
         for (let step = 0; step < fixedSteps; step++) {
+          this._inputTickClock.open();
           this.systems._fixedUpdate(this._scheduler.stepSeconds);
           this.scenes.fixedUpdate(this._scheduler.stepSeconds);
           this.onFixedFrame.dispatch(this._scheduler.stepSeconds);
         }
 
+        this._inputTickClock.close();
         this._scheduler.captureAlpha();
 
-        if (__DEV__) Perf.mark(systemsStartMark);
+        if (__DEV__) {
+          Perf.mark(systemsStartMark);
+        }
+
         this.systems._update(frameDelta);
-        if (__DEV__) Perf.measure(systemsMeasure, systemsStartMark);
+
+        if (__DEV__) {
+          Perf.measure(systemsMeasure, systemsStartMark);
+        }
 
         this.scenes.update(frameDelta);
         this.scenes._updateTransition(frameDelta);
@@ -1352,14 +1495,26 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           Perf.clearMeasures(systemsMeasure);
         }
 
-        this._errors.resetFrameErrors();
+        completed = true;
       } catch (error) {
+        // Before the report: an `onError` listener is not inside a fixed step.
+        this._inputTickClock.close();
         this._handleFrameError(error);
       } finally {
         this._inFrame = false;
 
-        this.scenes._endFrame();
-        this.systems._endFrame();
+        // Closing a window applies buffered mutations, which runs registry
+        // listeners. Each close is guarded on its own: a throw escaping here
+        // would strand the application window and end the frame chain, since
+        // only a frame callback that returns schedules the next one.
+        const scenesClosed = this._closeFrameWindow(this.scenes);
+        const systemsClosed = this._closeFrameWindow(this.systems);
+
+        // Only a frame that also closed cleanly ends a failure streak, so a
+        // close error that recurs every frame still reaches the guard's limit.
+        if (completed && scenesClosed && systemsClosed) {
+          this._errors.resetFrameErrors();
+        }
 
         this._scheduler.endFrame();
       }
@@ -1387,12 +1542,23 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     });
   }
 
+  private _closeFrameWindow(owner: { _endFrame(): void }): boolean {
+    try {
+      owner._endFrame();
+
+      return true;
+    } catch (error) {
+      this._handleFrameError(error);
+
+      return false;
+    }
+  }
+
   /**
    * Halt the per-frame loop, unload the active scene, and stop the active
    * + frame clocks. Leaves backend, input, audio, etc. intact - call
-   * {@link Application.destroy} to release everything. Acts whenever the
-   * frame loop is actually live (`_frameLoopActive`), including mid-`start()`
-   * - not only while `_state` is `Running`.
+   * {@link Application.destroy} to release everything. Also supersedes a
+   * pending startup before its frame loop begins or its initial scene activates.
    *
    * A stop is allowed to interrupt a navigation - that is the point of it.
    * Everything scene-related is therefore delegated to the single
@@ -1423,11 +1589,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * teardown ordering matters.
    */
   public stop(): this {
-    if (!this._scheduler.active) {
+    if (!this._scheduler.active && this._state !== ApplicationState.Loading) {
       return this;
     }
 
-    if (this._state === ApplicationState.Running) this._setState(ApplicationState.Halting);
+    if (this._state === ApplicationState.Running) {
+      this._setState(ApplicationState.Halting);
+    }
 
     // One reason object for the one abort: `_stopFrameLoop()` performs it (it
     // has to - halting the loop strands a frame-driven session regardless of
@@ -1439,8 +1607,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._stopFrameLoop(reason);
 
     void this.scenes._stopAndClearActiveScene(reason).catch((error: unknown) => {
-      logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
-      this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
+      logger.error('Application.stop() failed to unload the active scene.', {
+        source: 'Application',
+        ...(error instanceof Error && { error }),
+      });
+      this._errors.report(error instanceof Error ? error : new Error(String(error)), false, true);
     });
 
     this._setState(ApplicationState.Stopped);
@@ -1498,8 +1669,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * The redirect wraps the scene, the systems and the transition together so a
    * pass sees the finished frame. A system that draws a debug overlay and a
    * scene transition are both part of the picture an effect is applied to; a
-   * caller who wants an overlay left unfiltered adds it as a frame pass
-   * instead, after the effect.
+   * caller who wants an overlay left unfiltered adds it to `Scene.ui`, which
+   * is composed after frame effects and before the output transform.
    *
    * An antialias request resolved for the working targets reaches the storage
    * as a sample count rather than a target flag: a multisample target is only
@@ -1520,7 +1691,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // multisample chain would pay the sample cost on filters too.
       output.sampleCount = this._workingSampleCount();
       this._backend.execute(this._frameRedirect.retarget(output, output.view, clear));
-      this._backend.resolveRenderTarget(output);
     } else {
       const texture = this.frameTexture;
 
@@ -1534,20 +1704,28 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._backend.execute(this._outputPassesRedirect.retarget(output, output.view, Color.transparentBlack));
     }
 
+    const scene = this.scenes.currentScene;
+
+    if (scene?.state === SceneState.Active && scene._peekUI() !== null) {
+      this._uiRedirect ??= new BackendTargetPass(() => this.scenes.currentScene?._peekUI()?._render(this._rendering));
+      this._backend.execute(this._uiRedirect.retarget(output, output.view, null));
+    }
+
+    this._backend.resolveRenderTarget(output);
     this._outputTransform.present(this._backend, output, this._transparentCanvas, this.clearColor);
   }
 
   /** The frame's own drawing, in the order the transition placement asks for. */
   private _drawSceneAndSystems(): void {
     if (this.scenes._transitionPlacement() === 'scene') {
-      this.scenes.draw(this._rendering);
+      this.scenes._drawFrame(this._rendering);
       this.scenes._renderTransition(this._rendering);
       this.systems._draw(this._rendering);
 
       return;
     }
 
-    this.scenes.draw(this._rendering);
+    this.scenes._drawFrame(this._rendering);
     this.systems._draw(this._rendering);
     this.scenes._renderTransition(this._rendering);
   }
@@ -1599,6 +1777,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _releaseOutputTarget(): void {
     this._outputTransform.destroy();
     this._outputPassesRedirect = null;
+    this._uiRedirect = null;
     this._outputTexture?.destroy();
     this._outputTexture = null;
   }
@@ -1703,11 +1882,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
    *
-   * The page is left as it was found: the active sizing policy is detached, so
-   * its observers go and the CSS box it wrote is cleared, and a canvas the
-   * engine created itself is removed from the document. A canvas supplied
-   * through `canvas.element` belongs to the caller and stays in place, as does
-   * every element around it - no sizing policy ever styles the page itself.
+   * The active sizing policy is detached, so its observers go; the CSS box it
+   * wrote stays on the canvas so the frozen last frame does not collapse. A
+   * canvas the engine created itself is removed from the document, which
+   * discards that box with it. A canvas supplied through `canvas.element`
+   * belongs to the caller and stays in place, including the inline width and
+   * height the policy wrote on it.
    *
    * Fires the RAF halt synchronously (so no further frame runs after this
    * call returns) and returns a Promise that fulfils once the rest of teardown
@@ -1734,19 +1914,28 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * is no uninstall short of it.
    *
    * The returned Promise **never rejects**: teardown failures go to
-   * {@link Application.onError} and the log, exactly as they did when this was
-   * a fire-and-forget chain, and the remaining stages still run. Awaiting it
-   * therefore means "teardown is over", not "teardown succeeded" - which is
-   * what a caller reusing the canvas or asserting on released resources needs.
+   * {@link Application.onError} and the log, and the remaining stages still
+   * run. Awaiting it therefore means "teardown is over", not "teardown
+   * succeeded". {@link Application.destroyOutcome} says which: `completed`,
+   * `completedWithErrors` with every failure listed, or `forced`.
    *
-   * Scene teardown is bounded: if `scenes._dispose()` has not settled within
-   * the grace period the engine reports a timeout and releases everything else
-   * anyway, rather than leaving the whole application pinned by one scene whose
-   * `unload()` never resolves. A scene that wants to cooperate with this should
-   * watch {@link Scene.lifecycleSignal}, which is aborted when its teardown
-   * begins - including for the incoming scene of a navigation still inside
-   * `load()`, which is aborted and awaited rather than left to finish
-   * preparing against subsystems this call has released.
+   * Scene teardown is bounded: if it has not settled 5 seconds after this
+   * call, the engine reports a timeout, records the outcome as `forced` and
+   * releases everything else anyway, rather than leaving the whole application
+   * pinned by one scene whose `unload()` or `load()` never settles. A Promise
+   * cannot be cancelled, so the abandoned teardown is not stopped: once its
+   * hook settles it runs on, may touch subsystems that are released by then,
+   * and its failures are only logged. `Destroyed` means the engine is done
+   * with the application, not that every asynchronous task a scene started
+   * has ended.
+   *
+   * Every scene the application owns - active, retained, preloaded, and the
+   * incoming scene of a navigation still inside `load()` - sees its
+   * {@link Scene.lifecycleSignal} abort during this call, before any teardown
+   * is awaited. The one exception is a retained scene a `restore()` in flight
+   * is handing back: its signal aborts as soon as that interrupted navigation
+   * settles. A scene whose asynchronous work watches that signal settles well
+   * inside the grace period; a cancelled preparation never reaches `init()`.
    *
    * Idempotent: every call after the first returns the same Promise as the
    * first and starts no second teardown. {@link Application.state} is
@@ -1758,25 +1947,40 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       return this._destroyPromise;
     }
 
+    // Publish the shared result before stopping navigation or aborting scene
+    // lifetimes: either can synchronously call destroy() again.
+    let finish!: () => void;
+
+    this._destroyPromise = new Promise<void>(resolve => {
+      finish = resolve;
+    });
+
+    // Opened before the frame loop stops: aborting the navigation in flight
+    // runs transition teardown synchronously, and its failures belong to this
+    // outcome too.
+    this._teardownFailures = [];
     this._releasePlatformSubscriptions();
     this._geometry.detachPolicy();
     this._releaseDom();
 
     if (this._scheduler.active) {
-      if (this._state === ApplicationState.Running) this._setState(ApplicationState.Halting);
+      if (this._state === ApplicationState.Running) {
+        this._setState(ApplicationState.Halting);
+      }
 
       this._stopFrameLoop();
     }
 
     this._setState(ApplicationState.Destroying);
 
-    this._destroyPromise = this._disposeManagedResources()
+    void this._disposeManagedResources()
       .catch((error: unknown) => {
-        logger.error('Application.destroy() failed during teardown.', { source: 'Application', ...(error instanceof Error && { error }) });
-        this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
+        this._reportTeardownError(error);
       })
       .then(() => {
+        this._destroyOutcome ??= this._sealDestroyOutcome();
         this._setState(ApplicationState.Destroyed);
+        finish();
       });
 
     return this._destroyPromise;
@@ -1810,52 +2014,66 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * first.
    */
   private async _disposeManagedResources(): Promise<void> {
+    const failures: unknown[] = [];
+
     try {
       await this._disposeScenesWithinGrace();
     } catch (error) {
-      logger.error('Application.destroy() failed to fully dispose SceneDirector.', { source: 'Application', ...(error instanceof Error && { error }) });
+      failures.push(error);
     }
+
+    // Every stage is guarded on its own: a throw from one subsystem must not
+    // leave the backend, platform subscriptions or Signals behind it alive.
+    const attempt = (stage: () => void): void => {
+      try {
+        stage();
+      } catch (error) {
+        failures.push(error);
+      }
+    };
 
     // Extensions installed last, so they are undone first - while the loader,
     // backend, audio and their own systems are all still alive for a disposer
     // to unhook from. Scenes go ahead of even this, because a scene may hold
     // whatever an extension installed.
-    disposeExtensions(this._extensionDisposers);
+    disposeExtensions(this._extensionDisposers, error => failures.push(error));
 
-    this.loader.destroy();
+    attempt(() => this.loader.destroy());
 
     // The core systems run as systems but belong to the application, not to
     // the registry - which destroys whatever is still registered when it goes
     // down. Unregister them first so they are torn down exactly once, here, in
     // reverse registration order.
-    for (const system of [...this._coreSystems].reverse()) {
-      this.systems._removeCoreSystem(system);
-    }
+    attempt(() => {
+      for (const system of [...this._coreSystems].reverse()) {
+        this.systems._removeCoreSystem(system);
+      }
+    });
 
-    this.systems.destroy();
+    attempt(() => this.systems._destroy(error => failures.push(error)));
 
-    this._releaseOutputTarget();
-    this._releaseFramePasses();
-    this._rendering.destroy();
-    this.animations.destroy();
-    this.tweens.destroy();
-    this.coroutines.destroy();
-    this._audio.destroy();
-    this.interaction.destroy();
-    this.input.destroy();
-    this._backend.destroy();
+    attempt(() => this._releaseOutputTarget());
+    attempt(() => this._releaseFramePasses());
+    attempt(() => this._rendering.destroy());
+    attempt(() => this.animations.destroy());
+    attempt(() => this.tweens.destroy());
+    attempt(() => this.coroutines.destroy());
+    attempt(() => this._audio._destroy(error => failures.push(error)));
+    attempt(() => this.interaction.destroy());
+    attempt(() => this.input.destroy());
+    attempt(() => this._backend.destroy());
 
     // Only what this application created is ours to tear down; an injected
     // adapter or connectivity may outlive us or be shared.
     if (this._ownsConnectivity) {
-      this.connectivity.destroy();
+      attempt(() => this.connectivity.destroy());
     }
 
     if (this._ownsPlatform) {
-      this.platform.destroy();
+      attempt(() => this.platform.destroy());
     }
 
-    this._scheduler.destroy();
+    attempt(() => this._scheduler.destroy());
     this.onResize.destroy();
     this.onFrame.destroy();
     this.onFixedFrame.destroy();
@@ -1863,7 +2081,57 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this.onVisibilityChange.destroy();
     this.onBackendLost.destroy();
     this.onBackendRestored.destroy();
+
+    // Reported before `onError` goes down, so its listeners still see them.
+    for (const failure of failures) {
+      this._reportTeardownError(failure);
+    }
+
     this.onError.destroy();
+
+    // Sealed here, synchronously, rather than once the returned Promise
+    // settles: abandoned scene teardown can still report in the microtasks in
+    // between, after every listener is gone, and must not change the outcome.
+    this._destroyOutcome = this._sealDestroyOutcome();
+  }
+
+  /** Freeze what this teardown recorded and stop recording. */
+  private _sealDestroyOutcome(): ApplicationDestroyOutcome {
+    const errors = Object.freeze([...(this._teardownFailures ?? [])]);
+    let status: ApplicationDestroyStatus = 'completed';
+
+    if (this._teardownForced) {
+      status = 'forced';
+    } else if (errors.length > 0) {
+      status = 'completedWithErrors';
+    }
+
+    this._teardownFailures = null;
+
+    return Object.freeze({ status, errors });
+  }
+
+  /**
+   * Log a teardown failure, record it for {@link Application.destroyOutcome}
+   * and forward it to {@link Application.onError}. A throwing listener is
+   * logged rather than propagated: `destroy()` must still settle, reach
+   * `Destroyed`, and deliver every failure to the other listeners.
+   */
+  private _reportTeardownError(error: unknown): void {
+    const normalized = error instanceof Error ? error : new Error(String(error));
+
+    this._teardownFailures?.push(normalized);
+    logger.error('Application.destroy() failed during teardown.', { source: 'Application', error: normalized });
+    this._dispatchErrorIsolated(normalized);
+  }
+
+  private _dispatchErrorIsolated(error: Error): void {
+    this.onError.dispatchIsolated(listenerError => {
+      logger.error('An Application.onError listener threw while a teardown failure was reported.', {
+        source: 'Application',
+        ...(listenerError instanceof Error && { error: listenerError }),
+      });
+    }, error);
   }
 
   /**
@@ -1890,12 +2158,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       const outcome = await Promise.race([this.scenes._dispose(), grace]);
 
       if (outcome === 'timeout') {
+        this._teardownForced = true;
+
         const error = new Error(
           `Application.destroy() gave up waiting for scene teardown after ${sceneTeardownGraceMs} ms and released the rest of the engine anyway. A Scene.unload() is most likely never settling — watch Scene.lifecycleSignal and resolve when it aborts.`,
         );
 
         logger.error(error.message, { source: 'Application', error });
-        this.onError.dispatch(error);
+        this._dispatchErrorIsolated(error);
       }
     } finally {
       clearTimeout(graceTimer);
@@ -1935,12 +2205,20 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   private async initializeBackend(): Promise<void> {
+    const imageFormats = this.loader.variants.profile.imageFormats ?? probeAssetImageFormats();
+
     try {
       await this._backend.initialize();
-      this.publishAssetVariantProfile();
+      const formats = await imageFormats;
+
+      if (this._destroyPromise !== null) {
+        return;
+      }
+
+      this.publishAssetVariantProfile(formats);
       this._validateWorkingColorFormatCapability();
     } catch (error) {
-      if (this.options.backend?.type !== 'auto' || this._backendType !== 'webgpu') {
+      if (this._destroyPromise !== null || this.options.backend?.type !== 'auto' || this._backendType !== 'webgpu') {
         throw error;
       }
 
@@ -1969,7 +2247,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._rendering.resize(this._geometry.width, this._geometry.height);
 
       await this._backend.initialize();
-      this.publishAssetVariantProfile();
+      const formats = await imageFormats;
+
+      if (this._destroyPromise !== null) {
+        return;
+      }
+
+      this.publishAssetVariantProfile(formats);
       this._validateWorkingColorFormatCapability();
     }
   }
@@ -1991,10 +2275,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * and a profile left over from the abandoned attempt would offer files the live
    * backend refuses.
    */
-  private publishAssetVariantProfile(): void {
+  private publishAssetVariantProfile(imageFormats: readonly string[]): void {
     this.loader.variants.profile = {
       textureFormats: this._backend.supportedTextureFormats,
       resolution: this._backend.rootResolution,
+      imageFormats,
     };
   }
 }

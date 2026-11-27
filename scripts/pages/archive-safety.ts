@@ -335,7 +335,15 @@ export const readTarEntries = (tar: Buffer): TarEntry[] => {
     longName = null;
 
     const type: ArchiveEntryType =
-      flag === '0' || flag === '\0' ? 'file' : flag === '5' ? 'directory' : flag === '2' ? 'symlink' : flag === '1' ? 'hardlink' : 'special';
+      flag === '0' || flag === '\0'
+        ? 'file'
+        : flag === '5'
+          ? 'directory'
+          : flag === '2'
+            ? 'symlink'
+            : flag === '1'
+              ? 'hardlink'
+              : 'special';
     const normalized = normalizeTarName(name);
 
     if (normalized === '' || normalized === '.') {

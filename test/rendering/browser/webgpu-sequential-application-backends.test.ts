@@ -67,9 +67,11 @@ const describeError = (value: unknown): string => {
 
 const captureGlobalErrors = (): ErrorSink => {
   const entries: string[] = [];
+
   const onError = (event: ErrorEvent): void => {
     entries.push(`window.error — ${describeError(event.error ?? event.message)}`);
   };
+
   const onRejection = (event: PromiseRejectionEvent): void => {
     entries.push(`unhandledrejection — ${describeError(event.reason)}`);
   };
@@ -159,7 +161,8 @@ const renderAndAssertSprite = (app: ApplicationType): void => {
   }
 };
 
-const expectedBackendType = (choice: BackendChoice): RenderBackendType => (choice === 'webgpu' ? RenderBackendType.WebGpu : RenderBackendType.WebGl2);
+const expectedBackendType = (choice: BackendChoice): RenderBackendType =>
+  choice === 'webgpu' ? RenderBackendType.WebGpu : RenderBackendType.WebGl2;
 
 /**
  * Runs the whole order end to end: each `Application` is created, rendered,
@@ -186,7 +189,9 @@ const runSequence = async (
       const app = await startApplication(choice, sink);
 
       try {
-        expect(app.backend.backendType, `application ${index + 1} (${choice}) did not get the requested backend`).toBe(expectedBackendType(choice));
+        expect(app.backend.backendType, `application ${index + 1} (${choice}) did not get the requested backend`).toBe(
+          expectedBackendType(choice),
+        );
 
         renderAndAssertSprite(app);
       } finally {
@@ -194,7 +199,9 @@ const runSequence = async (
 
         teardowns.push(teardown);
 
-        if (awaitDestroy) await teardown;
+        if (awaitDestroy) {
+          await teardown;
+        }
       }
     }
 

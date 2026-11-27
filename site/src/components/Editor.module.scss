@@ -1,9 +1,156 @@
 .root {
   display: block;
-  width: min(100%, 1160px);
+  width: 100%;
   margin: 0 auto;
   padding: 0.08rem 0 0.8rem;
   box-sizing: border-box;
+}
+
+.example-header {
+  grid-area: heading;
+  min-width: 0;
+  margin: 0 0 var(--s-3);
+  padding: var(--s-2);
+
+  h1 {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-family: var(--f-sans);
+    font-size: 1.125rem;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+    overflow-wrap: anywhere;
+  }
+}
+
+.example-heading {
+  display: flex;
+  align-items: flex-start;
+  min-height: 2.75rem;
+  gap: var(--s-3);
+}
+
+.example-context {
+  display: flex;
+  align-items: center;
+  min-height: 2.25rem;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.example-details {
+  min-width: 0;
+}
+
+.context-summary {
+  min-height: 44px;
+  padding: var(--s-2);
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  color: var(--fg);
+  font-size: var(--text-xs);
+  line-height: 26px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+  }
+}
+
+.context-next {
+  margin-top: var(--s-2);
+}
+
+.example-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+.code-link,
+.run-feedback button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-2);
+  background: var(--accent-soft);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+  }
+}
+
+.next-example {
+  color: var(--fg);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  text-decoration: none;
+
+  span:first-child {
+    color: var(--fg-muted);
+    margin-right: var(--s-2);
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.run-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+  min-height: 24px;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+
+  p {
+    margin: 0;
+  }
+
+  &[data-run-status='error'] {
+    color: var(--fg);
+  }
+}
+
+.example-description {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.learning-links {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--s-2) var(--s-4);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+
+  a {
+    color: var(--fg);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 .preview-frame,
@@ -20,6 +167,7 @@
 .preview-frame {
   margin: 0 auto 0.75rem;
   box-shadow: var(--shadow-2);
+  overflow: visible;
 }
 
 .preview-frame--expanded {
@@ -36,19 +184,128 @@
   position: relative;
   display: flex;
   justify-content: center;
+
   // Centred on both axes: the stage is a fixed-aspect box that rarely matches
   // the surface exactly - and in the expanded layout the surface is
   // deliberately much taller - so top alignment would strand the preview
   // against the upper edge with all the slack below it.
   align-items: center;
-  // Reserve the 16:9 stage height BEFORE the example reports its canvas
-  // size, so the layout doesn't jump when the preview appears. Purely a
-  // container measure — the iframe's own zoom mechanics stay untouched.
-  aspect-ratio: 16 / 9;
-  min-height: 240px;
+  min-height: 0;
   background: var(--bg-code);
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.preview-component {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.preview-component > [role='alert'] {
+  padding: var(--s-4);
+  background: var(--bg-panel);
+  color: var(--fg);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+
+  p {
+    margin: 0 0 var(--s-3);
+  }
+
+  p:first-child {
+    font-weight: 600;
+  }
+
+  button {
+    min-height: 44px;
+    margin: var(--s-1) var(--s-2) var(--s-1) 0;
+    padding: var(--s-2) var(--s-3);
+    border: 1px solid var(--accent-line);
+    border-radius: var(--r-2);
+    background: var(--accent-soft);
+    color: var(--fg);
+    font: inherit;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent-line);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.toolbar-slot {
+  flex: 0 0 auto;
+}
+
+.view-tabs,
+.split-divider {
+  display: none;
+}
+
+.preview-options {
+  position: relative;
+  z-index: 40;
+
+  summary {
+    display: flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 var(--s-3);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    color: var(--fg);
+    font-size: var(--text-sm);
+    list-style: none;
+    cursor: pointer;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary:focus-visible {
+    outline: 2px solid var(--accent-line);
+  }
+
+  > div {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: max-content;
+    min-width: 190px;
+    padding: var(--s-1);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-3);
+    background: var(--bg-panel);
+    box-shadow: var(--shadow-2);
+  }
+
+  button {
+    display: block;
+    width: 100%;
+    min-height: 36px;
+    padding: var(--s-2) var(--s-3);
+    border: 0;
+    background: transparent;
+    color: var(--fg);
+    text-align: left;
+    font-family: var(--f-sans);
+    font-size: var(--text-sm);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--accent-soft);
+    }
+  }
+
+  p {
+    margin: var(--s-2) var(--s-3);
+    color: var(--fg-muted);
+    font-size: var(--text-xs);
+  }
 }
 
 .unavailable-overlay {
@@ -61,8 +318,9 @@
   justify-content: center;
   gap: 0.7rem;
   padding: 1.2rem;
-  background: rgba(0, 0, 0, 0.75);
+  background: rgb(0 0 0 / 0.75);
   backdrop-filter: blur(2px);
+  color: #f4f6f8;
 }
 
 .unavailable-icon {
@@ -74,7 +332,7 @@
   font-size: 0.82rem;
   line-height: 1.55;
   text-align: center;
-  color: var(--fg-muted);
+  color: inherit;
 }
 
 .error-panel {
@@ -140,7 +398,7 @@
   border-radius: var(--r-2);
   background: var(--bg-code);
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   color: var(--fg-muted);
   font-size: 0.74rem;
   line-height: 1.5;
@@ -149,32 +407,65 @@
 
 // Split layout (editor left, preview right) — desktop only; below the
 // breakpoint the stacked flow always applies regardless of the toggle.
-@media (min-width: 1120px) {
+@media (width >= 1120px) {
+  .example-context {
+    // Reserve two readable lines so normal example changes do not move the
+    // preview. Longer instructions can still grow without being clipped.
+    min-height: calc(var(--text-sm) * 3);
+  }
+
   .root[data-layout='split'] {
     width: 100%;
+
     // The viewport under the header, less the column's own padding: the
     // editor stretches to it, so the source is as tall as the screen instead
     // of a fixed box with the rest of the column empty beneath it.
-    min-height: calc(100vh - 64px - 1.2rem - var(--playground-offset, 0px));
+    min-height: calc(100dvh - var(--playground-header-height, 64px) - 1.2rem);
     padding: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas:
-      'preview editor'
-      'diag editor'
-      'errors editor'
-      '. editor';
-    grid-template-rows: auto auto auto 1fr;
+    grid-template:
+      'heading heading heading' auto
+      'preview divider editor' auto
+      'diag divider editor' auto
+      'output divider editor' auto
+      '. divider editor' 1fr / minmax(0, var(--split-percent, 55%)) 12px minmax(0, 1fr);
     gap: 0.75rem;
     align-items: start;
   }
 
   .root[data-layout='split'][data-order='editor-first'] {
     grid-template-areas:
-      'editor preview'
-      'editor diag'
-      'editor errors'
-      'editor .';
+      'heading heading heading'
+      'editor divider preview'
+      'editor divider diag'
+      'editor divider output'
+      'editor divider .';
+  }
+
+  .root[data-layout='split'] .split-divider {
+    display: block;
+    grid-area: divider;
+    position: relative;
+    align-self: stretch;
+    cursor: col-resize;
+    touch-action: none;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0 4px;
+      border-radius: var(--r-2);
+      background: var(--line);
+    }
+
+    &:hover::before,
+    &:focus-visible::before {
+      background: var(--accent);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent-line);
+    }
   }
 
   .root[data-layout='split'] .editor-frame {
@@ -209,16 +500,22 @@
     grid-area: diag;
   }
 
-  .root[data-layout='split'] .errors-slot {
-    grid-area: errors;
+  .root[data-layout='split'] .output-slot {
+    grid-area: output;
+    min-width: 0;
   }
 
-  .root[data-layout='split'] .error-panel {
+  .root[data-layout='split'] .error-panel,
+  .root[data-layout='split'] .output-slot > * {
     margin: 0;
   }
 }
 
-@media (max-width: 1119px) {
+@media (width <= 1119px) {
+  .preview-options button[data-layout-action] {
+    display: none;
+  }
+
   .root {
     width: 100%;
     margin: 0;
@@ -237,10 +534,117 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
+  .example-header {
+    padding: var(--s-2) var(--s-3);
+  }
+
+  .example-heading {
+    flex-wrap: wrap;
+    gap: var(--s-2);
+
+    h1 {
+      flex-basis: 100%;
+    }
+  }
+
+  .root[data-active-view='code'] .example-header {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--s-2);
+
+    .example-heading,
+    .run-feedback {
+      grid-column: 1 / -1;
+    }
+
+    .example-actions {
+      grid-row: 2;
+      grid-column: 1;
+      margin-top: 0;
+    }
+
+    .example-details {
+      grid-row: 2;
+      grid-column: 2;
+
+      &[open] {
+        grid-row: 3;
+        grid-column: 1 / -1;
+
+        .example-context {
+          margin-top: var(--s-2);
+        }
+      }
+    }
+
+    .run-feedback {
+      margin-top: 0;
+    }
+  }
+
+  .code-link {
+    display: none;
+  }
+
+  .example-actions {
+    flex-wrap: wrap;
+    row-gap: var(--s-2);
+  }
+
+  .next-example {
+    width: 100%;
+    font-size: var(--text-xs);
+  }
+
+  .example-context {
+    flex-wrap: wrap;
+    row-gap: var(--s-1);
+  }
+
+  .example-description {
+    flex: 1 1 100%;
+  }
+
+  .learning-links {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .view-tabs {
+    display: flex;
+    gap: var(--s-2);
+    flex: 1 1 auto;
+
+    button {
+      min-height: 36px;
+      padding: 0 var(--s-3);
+      border: 1px solid var(--line);
+      border-radius: var(--r-2);
+      background: transparent;
+      color: var(--fg-muted);
+      font: inherit;
+
+      &[aria-selected='true'] {
+        color: var(--fg);
+        background: var(--accent-soft);
+        border-color: var(--accent-line);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--accent-line);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  .root[data-active-view='demo'] .editor-frame,
+  .root[data-active-view='code'] .preview-frame {
+    display: none;
+  }
+
   .preview-surface {
-    min-height: 180px;
-    max-height: min(44dvh, 330px);
+    min-height: 0;
   }
 
   .preview-component {

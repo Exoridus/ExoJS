@@ -34,6 +34,7 @@ export interface BeatMessage {
   beatPhase: number;
   energy: number;
   isDownbeat: boolean;
+  meterKnown?: boolean;
   beatInBar: number;
   /** Trust level: early reactive beat vs settled, trustworthy beat. */
   status: 'provisional' | 'locked';
@@ -48,14 +49,15 @@ export interface StateMessage {
   confidence: number;
   phaseConfidence: number;
   gridStability: number;
-  tempoCandidates: { bpm: number; score: number }[];
+  tempoCandidates: Array<{ bpm: number; score: number }>;
   rms: number;
   onsetStrength: number;
   bandEnergy: { low: number; mid: number; high: number };
   barPosition: number;
   barLength: number;
   timeSignature: { numerator: number; denominator: number };
-  lookahead: { audioTime: number; tempo: number; isDownbeat: boolean; beatInBar: number }[];
+  lookahead: Array<{ audioTime: number; tempo: number; isDownbeat: boolean; beatInBar: number }>;
+  lookaheadRevision: number;
   nextBeatTime: number;
   nextDownbeatTime: number;
 }
@@ -118,10 +120,12 @@ export const buildBeatProcessor = (): BeatProcessorCtor => {
   g['currentFrame'] = 0;
   g['AudioWorkletProcessor'] = class StubAWP {
     port: { postMessage: (m: unknown) => void };
+
     constructor() {
       this.port = { postMessage: () => {} };
     }
   };
+
   g['registerProcessor'] = (_name: string, cls: BeatProcessorCtor) => {
     klass = cls;
   };
@@ -132,18 +136,23 @@ export const buildBeatProcessor = (): BeatProcessorCtor => {
   // Restore globals
   g['sampleRate'] = prev.sampleRate;
   g['currentFrame'] = prev.currentFrame;
+
   if (prev.AudioWorkletProcessor === undefined) {
     delete g['AudioWorkletProcessor'];
   } else {
     g['AudioWorkletProcessor'] = prev.AudioWorkletProcessor;
   }
+
   if (prev.registerProcessor === undefined) {
     delete g['registerProcessor'];
   } else {
     g['registerProcessor'] = prev.registerProcessor;
   }
 
-  if (!klass) throw new Error('registerProcessor was not called — worklet source malformed');
+  if (!klass) {
+    throw new Error('registerProcessor was not called — worklet source malformed');
+  }
+
   return klass;
 };
 
@@ -162,6 +171,8 @@ export const buildBeatProcessor = (): BeatProcessorCtor => {
  * @param options.startFrame        Context frame the first block is rendered at,
  *   modelling a node created on a context that has already been running.
  *   Default 0.
+ * @param options.prepare           Called with the constructed processor before
+ *   the first block, to put it into a state no fixture reaches on its own.
  */
 export const runDetector = (
   samples: Float32Array,
@@ -169,19 +180,24 @@ export const runDetector = (
     processorOptions?: Record<string, unknown>;
     blockSize?: number;
     startFrame?: number;
+    sampleRate?: number;
+    prepare?: (processor: Record<string, unknown>) => void;
   } = {},
 ): { messages: WorkletMessage[] } => {
-  const { blockSize = 128, processorOptions = {}, startFrame = 0 } = options;
+  const { blockSize = 128, processorOptions = {}, startFrame = 0, sampleRate: rate = SAMPLE_RATE, prepare } = options;
 
   // Build (or reuse cached) processor class
-  if (!_processorCtor) _processorCtor = buildBeatProcessor();
+  if (!_processorCtor) {
+    _processorCtor = buildBeatProcessor();
+  }
+
   const Processor = _processorCtor;
 
   // Ensure sampleRate + currentFrame are correct for construction
   const g = globalThis as Record<string, unknown>;
   const prevSR = g['sampleRate'];
   const prevCF = g['currentFrame'];
-  g['sampleRate'] = SAMPLE_RATE;
+  g['sampleRate'] = rate;
   g['currentFrame'] = startFrame;
 
   const messages: WorkletMessage[] = [];
@@ -190,13 +206,17 @@ export const runDetector = (
   // Replace the stub's placeholder postMessage with our collector.
   // The collector closes over `blockStartSec` which is updated per block.
   let blockStartSec = 0;
+
   proc.port.postMessage = (m: unknown) => {
     messages.push({ ...(m as Record<string, unknown>), _audioTimeSec: blockStartSec } as WorkletMessage);
   };
 
+  prepare?.(proc as unknown as Record<string, unknown>);
+
   const n = samples.length;
+
   for (let off = 0; off < n; off += blockSize) {
-    blockStartSec = off / SAMPLE_RATE;
+    blockStartSec = off / rate;
     g['currentFrame'] = startFrame + off;
     const end = Math.min(off + blockSize, n);
     proc.process([[samples.subarray(off, end)]], [], {});

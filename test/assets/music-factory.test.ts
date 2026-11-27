@@ -1,7 +1,8 @@
 import type { MockInstance } from 'vitest';
 
-import { MusicFactory } from '#assets/factories/MusicFactory';
+import { AudioStreamFactory, MusicFactory } from '#assets/factories/MusicFactory';
 import { AudioStream } from '#audio/AudioStream';
+import { Music } from '#audio/Music';
 
 import { factoryContext } from './factory-context';
 
@@ -20,7 +21,11 @@ let capturedAudioElements: HTMLAudioElement[];
 
 const lastAudio = (): HTMLAudioElement => {
   const el = capturedAudioElements.at(-1);
-  if (!el) throw new Error('No <audio> element was created by the factory under test.');
+
+  if (!el) {
+    throw new Error('No <audio> element was created by the factory under test.');
+  }
+
   return el;
 };
 
@@ -36,7 +41,11 @@ describe('MusicFactory', () => {
     revokeObjectUrlSpy = vi.spyOn(URL, 'revokeObjectURL');
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions): HTMLElement => {
       const el = originalCreateElement(tagName, options);
-      if (tagName === 'audio') capturedAudioElements.push(el as HTMLAudioElement);
+
+      if (tagName === 'audio') {
+        capturedAudioElements.push(el as HTMLAudioElement);
+      }
+
       return el;
     }) as typeof document.createElement);
   });
@@ -46,7 +55,7 @@ describe('MusicFactory', () => {
     vi.useRealTimers();
   });
 
-  test('create() resolves with an AudioStream once the default "canplay" event fires', async () => {
+  test('create() resolves with a Music once the default "canplay" event fires', async () => {
     const factory = new MusicFactory();
 
     const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext());
@@ -54,7 +63,7 @@ describe('MusicFactory', () => {
 
     const stream = await promise;
 
-    expect(stream).toBeInstanceOf(AudioStream);
+    expect(stream).toBeInstanceOf(Music);
     expect(stream.audioElement).toBe(lastAudio());
   });
 
@@ -64,10 +73,10 @@ describe('MusicFactory', () => {
     const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext({ loadEvent: 'loadedmetadata' }));
     lastAudio().dispatchEvent(new Event('loadedmetadata'));
 
-    await expect(promise).resolves.toBeInstanceOf(AudioStream);
+    await expect(promise).resolves.toBeInstanceOf(Music);
   });
 
-  test('create() forwards playbackOptions to the AudioStream', async () => {
+  test('create() forwards playbackOptions to the Music', async () => {
     const factory = new MusicFactory();
 
     const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext({ playbackOptions: { volume: 0.4, loop: true } }));
@@ -151,7 +160,7 @@ describe('MusicFactory', () => {
     const audio = lastAudio();
 
     audio.dispatchEvent(new Event('canplay'));
-    await expect(promise).resolves.toBeInstanceOf(AudioStream);
+    await expect(promise).resolves.toBeInstanceOf(Music);
 
     // Should be a no-op - asserted indirectly by not throwing/hanging.
     expect(() => audio.dispatchEvent(new Event('stalled'))).not.toThrow();
@@ -197,7 +206,7 @@ describe('MusicFactory', () => {
 
     await expect(promise).rejects.toThrow('Error loading audio source.');
 
-    // No AudioStream was built, so dispose() will never run for this element:
+    // No Music was built, so dispose() will never run for this element:
     // a retried load would otherwise pile up one blob URL per attempt.
     expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
 
@@ -236,5 +245,58 @@ describe('MusicFactory', () => {
 
     expect(pauseSpy).toHaveBeenCalled();
     expect(audio.src).not.toContain('blob:');
+  });
+});
+
+describe('AudioStreamFactory', () => {
+  const originalCreateElement = document.createElement.bind(document);
+
+  beforeEach(() => {
+    capturedAudioElements = [];
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions): HTMLElement => {
+      const el = originalCreateElement(tagName, options);
+
+      if (tagName === 'audio') {
+        capturedAudioElements.push(el as HTMLAudioElement);
+      }
+
+      return el;
+    }) as typeof document.createElement);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  test('create() streams the URL and resolves with an AudioStream at "canplay"', async () => {
+    const factory = new AudioStreamFactory();
+    const promise = factory.create({ url: 'https://radio.example/live' }, factoryContext());
+
+    expect(lastAudio().src).toBe('https://radio.example/live');
+    lastAudio().dispatchEvent(new Event('canplay'));
+
+    const stream = await promise;
+
+    expect(stream).toBeInstanceOf(AudioStream);
+    expect(stream.connection).toBe('connected');
+    factory.dispose(stream);
+    expect(stream.destroyed).toBe(true);
+  });
+
+  test('create() forwards the reconnect policy', async () => {
+    vi.useFakeTimers();
+
+    const factory = new AudioStreamFactory();
+    const promise = factory.create({ url: 'https://radio.example/live' }, factoryContext({ reconnect: false }));
+
+    lastAudio().dispatchEvent(new Event('canplay'));
+
+    const stream = await promise;
+
+    lastAudio().dispatchEvent(new Event('error'));
+
+    expect(stream.connection).toBe('disconnected');
+    factory.destroy();
   });
 });

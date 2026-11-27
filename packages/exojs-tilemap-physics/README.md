@@ -1,24 +1,28 @@
-# @codexo/exojs-tilemap-physics
+# @codexo/exojs/tilemap-physics
 
 Static physics colliders from ExoJS tilemap collision geometry.
 
-> A peer-dependency library on top of `@codexo/exojs`, `@codexo/exojs-tilemap` and `@codexo/exojs-physics` — construct its API directly. Importing it registers nothing.
+> An optional Core subpath connecting `@codexo/exojs/tilemap` and `@codexo/exojs/physics`. Construct its API directly; importing it registers nothing.
 
-`@codexo/exojs-tilemap` never imports physics and `@codexo/exojs-physics` never imports tilemap; this package is the seam between them, so both stay usable on their own.
+`@codexo/exojs/tilemap` never imports physics and `@codexo/exojs/physics` never imports tilemap; this package is the seam between them, so both stay usable on their own.
+
+The former `@codexo/exojs-tilemap-physics` package name remains a 0.20 compatibility shim that forwards to this subpath. Prefer the subpath for new code.
 
 ## Installation
 
 ```sh
-npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-physics @codexo/exojs-tilemap-physics
+npm install --save-exact @codexo/exojs
 ```
 
 ## Tile layers
 
 `TileColliderStreamer` keeps a physics world's static tile colliders in sync with a `TileLayer`: one static body per chunk-sized partition of the layer, rebuilt when that partition is edited, destroyed when its chunk is evicted.
 
+Only orthogonal and isometric layers have the rectangular logical cells required by tile collision. Constructing a `TileColliderStreamer` for a staggered or hexagonal layer throws immediately, before creating physics bodies; these grids require colliders built separately.
+
 ```ts
-import { PhysicsWorld } from '@codexo/exojs-physics';
-import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+import { PhysicsWorld } from '@codexo/exojs/physics';
+import { TileColliderStreamer } from '@codexo/exojs/tilemap-physics';
 
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 } });
 const colliders = new TileColliderStreamer(world, groundLayer);
@@ -57,7 +61,7 @@ The source is sampled while a partition is built and is expected to answer ident
 An object layer is static data with no residency, so it gets a one-shot build:
 
 ```ts
-import { buildObjectLayerColliders } from '@codexo/exojs-tilemap-physics';
+import { buildObjectLayerColliders } from '@codexo/exojs/tilemap-physics';
 
 const built = buildObjectLayerColliders(world, triggersLayer, {
   isSensor: true,
@@ -120,7 +124,7 @@ In `outline` mode the resolved material also decides what may share a boundary: 
 
 ## Core compatibility
 
-This package follows the Core lockstep release line. Its Core, tilemap, and physics peer dependencies require the matching minor release.
+The bridge, tilemap and physics modules ship in the same Core release. Their private workspace implementation packages are not separate application dependencies.
 
 ## License
 

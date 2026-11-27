@@ -1,133 +1,260 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, Sprite, Video } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  Rectangle,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  Sprite,
+  type Video,
+} from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, demoPanel, slider, startExample, toggle } from '@examples/runtime';
 
-// Every video in the asset catalog, switchable at runtime with the number
-// keys. Only the first entry is fetched up front - the others lazy-load on
-// first selection so startup stays fast.
-//
-// The list is SDR video only. A video frame is imported as an external texture
-// in the browser's own display encoding and sampled as sRGB colour; the engine
-// makes no HDR-video promise, so no HDR clip is offered.
+// SDR clips only. Browser external video textures do not establish an HDR pipeline.
 const VIDEOS = [
-  { name: 'demoLoop', label: 'Demo loop (webm)', url: assets.demo.video.demoLoop },
-  { name: 'highRes', label: 'High-res (mp4)', url: assets.demo.video.highRes },
-  { name: 'highFps', label: 'High-fps (webm)', url: assets.demo.video.highFps },
+  { label: '4K 24 fps (MP4)', asset: assets.videoHighRes, key: Keyboard.One },
+  { label: '1080p 60 fps (WebM)', asset: assets.videoHighFps, key: Keyboard.Two },
 ];
-
+const controls = {
+  clip: choice(
+    'Clip',
+    VIDEOS.map(entry => entry.label),
+  ),
+  seek: slider('Seek %', { min: 0, max: 100, step: 1, value: 0 }),
+  paused: toggle('Paused', true),
+  loop: toggle('Loop', true),
+};
 class VideoDrawableScene extends Scene {
-  private video!: Video;
+  private video: Video | null = null;
   private overlay!: Sprite;
+  private panel!: ReturnType<typeof demoPanel<typeof controls>>;
+  private readonly loaded = new Set<Video>();
+  private generation = 0;
+  private videoIdx = -1;
   private elapsed = 0;
-  private hud!: ReturnType<typeof mountControls>;
-  private videoIdx = 0;
-  private readonly loadedVideos = new Set<string>();
-  private switching = false;
+  private mediaState = 'Waiting for media';
+  private loading = false;
 
-  override async load(): Promise<void> {
-    const app = this.app;
-    const { width, height } = app;
+  override init(): void {
+    this.overlay = new Sprite(this.loader.get(assets.platformerTilesImage)).setTextureFrame(new Rectangle(650, 325, 64, 64)).setAnchor(0.5);
+    this.panel = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls,
+      actions: {
+        'Play / Pause': () => this.panel.step('paused'),
+        Stop: () => {
+          this.elapsed = 0;
+          this.panel.set('paused', true);
+          this.panel.set('seek', 0);
+        },
+      },
+      onChange: (key, _value, values) => {
+        if (key === 'clip') {
+          void this.switchVideo(VIDEOS.findIndex(entry => entry.label === values.clip));
 
-    // Video is a non-leaf resource kind (no seamless placeholder, unlike
-    // Texture/Sound), so it is loaded directly through `Asset.type('video', ...)`
-    // and awaited rather than fetched synchronously via `get()`.
-    this.video = await this.loader.load(Asset.type('video', VIDEOS[0].url));
-    this.loadedVideos.add(VIDEOS[0].name);
+          return;
+        }
 
-    this.configureVideo();
+        if (this.loading || !this.video) {
+          return;
+        }
 
-    // A sprite composited on top of the live video texture - the same scene
-    // graph draws video frames and regular sprites side by side. Texture IS
-    // seamless, so it is fetched directly by source with no preload step.
-    this.overlay = new Sprite(this.loader.get(assets.demo.textures.shipA));
-    this.overlay.setAnchor(0.5);
-    this.overlay.setScale(3);
-    this.overlay.setPosition(width / 2, height / 2);
+        if (key === 'seek') {
+          this.video.currentTime = (this.video.duration * values.seek) / 100;
+        }
 
-    this.hud = mountControls({
-      title: 'Video Drawable',
-      controls: [
-        { keys: 'Tap', action: 'play / pause' },
-        { keys: '1–3', action: 'switch video' },
-      ],
-      status: `Playing — ${VIDEOS[0].label}`,
-      hint: 'The video streams as a live GPU texture with a sprite composited over it.',
+        if (key === 'paused') {
+          if (values.paused) {
+            this.video.pause();
+          } else {
+            this.play();
+          }
+        }
+
+        if (key === 'loop') {
+          this.video.loop = values.loop;
+        }
+      },
+    });
+    // Commands respond on key press, including a held key. They do not need
+    // onTrigger's short release window, which is intended for tap gestures.
+    this.inputs.onStart(Keyboard.Space, () => this.panel.step('paused'));
+    this.inputs.onStart(Keyboard.R, () => {
+      this.elapsed = 0;
+      this.panel.set('paused', true);
+      this.panel.set('seek', 0);
     });
 
-    app.input.onPointerTap.add(() => {
-      this.video.toggle();
-      this.hud.setStatus(this.video.playing ? `Playing — ${VIDEOS[this.videoIdx].label}` : 'Paused');
-    });
-
-    app.input.onKeyDown.add(channel => {
-      const idx = [Keyboard.One, Keyboard.Two, Keyboard.Three].indexOf(channel);
-      if (idx !== -1) {
-        void this.switchVideo(idx);
-      }
-    });
-
-    this.video.play();
+    for (const video of VIDEOS) {
+      this.inputs.onStart(video.key, () => this.panel.set('clip', video.label));
+    }
   }
 
-  /** Sizing + playback options shared by every video the example swaps in. */
-  private configureVideo(): void {
-    const app = this.app;
-    const { width, height } = app;
-    this.video.width = width;
-    this.video.height = height;
-    // Muted playback autoplays reliably under browser autoplay policy without
-    // requiring a user gesture first.
-    this.video.applyOptions({ loop: true, muted: true, volume: 0.5 });
-  }
+  private readonly onError = (error: Error): void => {
+    this.mediaState = `Error: ${error.message}`;
+    this.panel.status(`Media error: ${error.message}`, 'error');
+  };
+  private readonly onEnded = (): void => {
+    this.mediaState = 'Ended';
+    this.panel.set('paused', true);
+  };
 
-  private async switchVideo(idx: number): Promise<void> {
-    if (idx === this.videoIdx || this.switching) {
+  private play(): void {
+    const video = this.video;
+
+    if (!video) {
       return;
     }
-    const entry = VIDEOS[idx];
-    this.switching = true;
-    this.hud.setStatus(`Loading — ${entry.label}…`);
-    try {
-      const loaded = await this.loader.load(Asset.type('video', entry.url));
-      this.loadedVideos.add(entry.name);
-      this.video.pause();
-      this.videoIdx = idx;
-      this.video = loaded;
-      this.configureVideo();
-      this.video.play();
-      this.hud.setStatus(`Playing — ${entry.label}`);
-    } catch {
-      this.hud.setStatus(`Failed to load — ${entry.label}`);
-    } finally {
-      this.switching = false;
+
+    void video.videoElement
+      .play()
+      .then(() => {
+        if (!this.lifecycleSignal.aborted && video === this.video) {
+          this.mediaState = 'Playing';
+        }
+      })
+      .catch((error: unknown) => {
+        if (!this.lifecycleSignal.aborted && video === this.video) {
+          this.onError(error instanceof Error ? error : new Error(String(error)));
+        }
+      });
+  }
+
+  private async switchVideo(index: number): Promise<void> {
+    if (!VIDEOS[index]) {
+      return;
     }
+
+    if (index === this.videoIdx) {
+      if (this.loading) {
+        // Returning to the shown clip abandons the request still in flight.
+        this.generation++;
+        this.loading = false;
+        this.mediaState = 'Ready';
+
+        if (!this.panel.values.paused) {
+          this.play();
+        }
+      }
+
+      return;
+    }
+
+    const request = ++this.generation;
+    this.loading = true;
+    this.mediaState = 'Loading';
+    this.video?.pause();
+
+    try {
+      const loaded = await this.loader.load(VIDEOS[index].asset);
+      this.loaded.add(loaded);
+
+      if (loaded !== this.video) {
+        loaded.pause();
+      }
+
+      loaded.muted = true;
+
+      if (this.lifecycleSignal.aborted || request !== this.generation) {
+        return;
+      }
+
+      this.detach();
+      this.video = loaded;
+      this.videoIdx = index;
+      loaded.applyOptions({ muted: true, loop: this.panel.values.loop, volume: 0, time: (loaded.duration * this.panel.values.seek) / 100 });
+      loaded.onError.add(this.onError);
+      loaded.videoElement.addEventListener('ended', this.onEnded);
+      this.mediaState = 'Ready';
+
+      if (!this.panel.values.paused) {
+        this.play();
+      }
+    } catch (error: unknown) {
+      if (!this.lifecycleSignal.aborted && request === this.generation) {
+        this.onError(error instanceof Error ? error : new Error(String(error)));
+      }
+    } finally {
+      if (request === this.generation) {
+        this.loading = false;
+      }
+    }
+  }
+
+  private detach(): void {
+    if (!this.video) {
+      return;
+    }
+
+    this.video.pause();
+    this.video.muted = true;
+    this.video.onError.remove(this.onError);
+    this.video.videoElement.removeEventListener('ended', this.onEnded);
   }
 
   override update(delta: Seconds): void {
-    const app = this.app;
-    this.elapsed += delta;
+    const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
 
-    const { width, height } = app;
+    if (!this.panel.values.paused && !this.loading) {
+      this.elapsed += delta;
+    }
 
-    // Drift the composited sprite across the video so the overlay is obvious.
-    this.overlay.setPosition(width / 2 + Math.sin(this.elapsed) * (width * 0.3), height / 2 + Math.cos(this.elapsed * 0.7) * (height * 0.25));
-    this.overlay.rotate(delta * 60);
+    if (this.video) {
+      this.video.setPosition(0, 0);
+      this.video.width = this.app.width;
+      this.video.height = contentHeight * scale;
+    }
+
+    this.overlay
+      .setPosition(
+        (width / 2 + Math.sin(this.elapsed) * width * 0.25) * scale,
+        (contentHeight / 2 + Math.cos(this.elapsed * 0.7) * contentHeight * 0.2) * scale,
+      )
+      .setScale(scale * 0.8);
+    const time = this.video?.currentTime ?? 0;
+    const duration = this.video?.duration ?? 0;
+    this.panel.status(
+      `${this.mediaState} | ${this.loading ? 'loading' : this.video?.videoElement.ended ? 'ended' : this.video ? (this.video.paused ? 'paused' : 'playing') : 'no video'} | ${time.toFixed(1)} / ${duration.toFixed(1)}s | muted | SDR`,
+      this.mediaState.startsWith('Loading')
+        ? 'info'
+        : this.mediaState.startsWith('Error:')
+          ? 'error'
+          : this.mediaState === 'Ready'
+            ? 'success'
+            : 'neutral',
+    );
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.video);
+    if (this.video) {
+      context.render(this.video);
+    }
+
     context.render(this.overlay);
+  }
+
+  override destroy(): void {
+    this.generation++;
+    this.detach();
+
+    for (const video of this.loaded) {
+      video.pause();
+      video.muted = true;
+    }
+
+    this.overlay.destroy();
+    this.panel.dispose();
+    super.destroy();
   }
 }
 
 const app = new Application({
   scenes: { VideoDrawableScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
 });
-
-await app.start(VideoDrawableScene);
+await startExample(app, () => app.start(VideoDrawableScene));

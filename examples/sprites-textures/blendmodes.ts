@@ -1,27 +1,21 @@
 import {
   Application,
-  Asset,
   BlendModes,
   Color,
   FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  Rectangle,
   type RenderingContext,
-  ScaleModes,
   Scene,
   type Seconds,
   Sprite,
+  Text,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, demoPanel, slider, startExample, toggle } from '@examples/runtime';
 
-const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
-
-// Blending runs in linear light on premultiplied colour, so a mode reads
-// brighter and less muddy than the same equation on encoded values would. The
-// result alpha follows source-over coverage for the coverage-preserving modes
-// (Additive keeps its RGB sum, Subtract attenuates the destination rather than
-// subtracting arithmetically).
-//
-// Every public blend mode, in enum order, paired with a display name.
-const BLEND_MODES: { mode: BlendModes; name: string }[] = [
+const BLEND_MODES: Array<{ mode: BlendModes; name: string }> = [
   { mode: BlendModes.Normal, name: 'Normal' },
   { mode: BlendModes.Additive, name: 'Additive' },
   { mode: BlendModes.Subtract, name: 'Subtract' },
@@ -43,103 +37,111 @@ const BLEND_MODES: { mode: BlendModes; name: string }[] = [
   { mode: BlendModes.Luminosity, name: 'Luminosity' },
 ];
 
+const controls = {
+  mode: choice(
+    'Blend mode',
+    BLEND_MODES.map(entry => entry.name),
+  ),
+  alpha: slider('Source alpha', { min: 0, max: 1, step: 0.05, value: 0.7 }),
+  background: choice('Background', ['Opaque gray', 'Transparent']),
+  motion: toggle('Motion', true),
+};
 class BlendmodesScene extends Scene {
-  private background!: Sprite;
-  private left!: Sprite;
-  private right!: Sprite;
-  private index = 0;
-  private ticker = 0;
-  private hud!: ReturnType<typeof mountControls>;
+  private destinations: Sprite[] = [];
+  private sources: Sprite[] = [];
+  private labels: Text[] = [];
+  private readonly backdrop = new Graphics();
+  private panel!: ReturnType<typeof demoPanel<typeof controls>>;
+  private elapsed = 0;
 
-  // Note: passing `options` as a 3rd argument to `loader.get(...)` or
-  // `loader.load(Asset.type('texture', ...))` alongside a non-Json type currently mis-resolves
-  // the overload (falls through to the `Json` generic and types the result as
-  // `unknown`) - see the flagged deviation in the migration report. `load()`
-  // is awaited here purely to seed the fetch with `scaleMode: Nearest`; its
-  // return value is intentionally unused. The subsequent 2-argument `get()`
-  // calls for the same sources are unaffected and stay seamless.
   override async load(): Promise<void> {
-    const app = this.app;
-    const { width, height } = app;
+    await this.loader.load(assets.platformerTilesImage);
+  }
 
-    const textureOptions = { scaleMode: ScaleModes.Nearest };
-    await this.loader.load(Asset.type('texture', ALPHA_RINGS, { textureOptions }));
-    await this.loader.load(Asset.type('texture', assets.demo.textures.shipA, { textureOptions }));
+  override init(): void {
+    const texture = this.loader.get(assets.platformerTilesImage);
 
-    const backgroundTexture = this.loader.get(ALPHA_RINGS);
-    const shipTexture = this.loader.get(assets.demo.textures.shipA);
+    for (let i = 0; i < 2; i++) {
+      const destination = new Sprite(texture)
+        .setTextureFrame(new Rectangle(650, 325, 64, 64))
+        .setAnchor(0.5)
+        .setTint(new Color(90, 220, 255));
+      const source = new Sprite(texture)
+        .setTextureFrame(new Rectangle(650, 325, 64, 64))
+        .setAnchor(0.5)
+        .setTint(new Color(255, 100, 190));
+      this.destinations.push(destination);
+      this.sources.push(source);
+      this.labels.push(new Text('', { fillColor: Color.white, fontSize: 14, align: 'center' }).setAnchor(0.5));
+    }
 
-    this.background = new Sprite(backgroundTexture);
-    this.background.setPosition(width / 2, height / 2);
-    this.background.setAnchor(0.5, 0.5);
-    this.background.setScale(Math.max(width, height) / 256);
-    this.background.setTint(new Color(120, 130, 150));
-
-    // Two overlapping sprites in complementary hues so the composite in the
-    // overlap region differs clearly between modes.
-    this.left = new Sprite(shipTexture);
-    this.left.setAnchor(0.5, 0.5);
-    this.left.setScale(5);
-    this.left.setTint(new Color(80, 210, 255));
-
-    this.right = new Sprite(shipTexture);
-    this.right.setAnchor(0.5, 0.5);
-    this.right.setScale(5);
-    this.right.setTint(new Color(255, 96, 200));
-
-    this.hud = mountControls({
-      title: 'Blend Modes',
-      controls: [{ keys: 'Click', action: 'next blend mode' }],
+    this.root.addChild(this.backdrop, this.destinations[0], this.sources[0], this.destinations[1], this.sources[1], ...this.labels);
+    this.panel = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls,
+      actions: {
+        'Fix frame': () => {
+          this.panel.set('motion', false);
+          this.elapsed = 0;
+        },
+      },
     });
-
-    app.input.onPointerDown.add(() => this.setIndex((this.index + 1) % BLEND_MODES.length));
-
-    // Apply the initial mode (Normal) without skipping it.
-    this.applyBlendMode();
-  }
-
-  private setIndex(index: number): void {
-    this.index = ((index % BLEND_MODES.length) + BLEND_MODES.length) % BLEND_MODES.length;
-    this.applyBlendMode();
-  }
-
-  private applyBlendMode(): void {
-    const { mode, name } = BLEND_MODES[this.index];
-
-    this.left.setBlendMode(mode);
-    this.right.setBlendMode(mode);
-    this.hud.setStatus(`${name}  (${this.index + 1}/${BLEND_MODES.length})`);
+    this.inputs.onTrigger(Keyboard.Left, () => this.panel.step('mode', -1));
+    this.inputs.onTrigger(Keyboard.Right, () => this.panel.step('mode'));
+    this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('motion'));
   }
 
   override update(delta: Seconds): void {
-    const app = this.app;
-    const { width, height } = app;
-    const offset = (Math.cos(this.ticker * 1.4) * 0.5 + 0.5) * (width * 0.22);
+    const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.root.setScale(scale);
 
-    this.left.setPosition(width / 2 - offset, height / 2);
-    this.right.setPosition(width / 2 + offset, height / 2);
+    if (this.panel.values.motion) {
+      this.elapsed += delta;
+    }
 
-    this.ticker += delta;
+    const selected = BLEND_MODES.find(entry => entry.name === this.panel.values.mode)!;
+    const size = Math.min(210, contentHeight * 0.85, width * 0.32);
+    const offset = size * (0.1 + Math.sin(this.elapsed) * 0.07);
+    this.backdrop.clear();
+
+    for (let i = 0; i < 2; i++) {
+      const x = width * (i === 0 ? 0.25 : 0.75);
+      const y = contentHeight * 0.55;
+
+      if (this.panel.values.background === 'Opaque gray') {
+        this.backdrop.fillColor = new Color(112, 112, 112);
+        this.backdrop.drawRectangle(x - width * 0.23, 36, width * 0.46, contentHeight - 44);
+      }
+
+      this.destinations[i].setPosition(x - offset, y).setScale(size / 64);
+      this.sources[i].setPosition(x + offset, y).setScale(size / 64);
+      this.sources[i].tint.a = this.panel.values.alpha;
+      this.sources[i].blendMode = i === 0 ? BlendModes.Normal : selected.mode;
+      this.labels[i].text = i === 0 ? 'Normal reference' : selected.name;
+      this.labels[i].setPosition(x, 17);
+    }
+
+    this.panel.status(
+      `${this.app.backend.backendType} | ${this.panel.values.background} | source alpha ${this.panel.values.alpha.toFixed(2)} | ${selected.name === 'Subtract' ? 'Subtract: Cd * (1 - Cs), not arithmetic subtraction' : 'Destination alpha 1 inside key; transparent outside'} | ${this.panel.values.motion ? 'running' : 'fixed time'}`,
+    );
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.background);
-    context.render(this.left);
-    context.render(this.right);
+    for (const layer of this.root.children) {
+      context.render(layer);
+    }
+  }
+
+  override destroy(): void {
+    this.panel.dispose();
+    super.destroy();
   }
 }
 
 const app = new Application({
   scenes: { BlendmodesScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  // A mid-tone backdrop so darkening modes (Subtract, Multiply, Darken) stay
-  // visible instead of compositing into a black canvas.
-  clearColor: new Color(48, 54, 68),
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: Color.transparent,
 });
-
-await app.start(BlendmodesScene);
+await startExample(app, () => app.start(BlendmodesScene));

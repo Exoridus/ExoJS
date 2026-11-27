@@ -1,9 +1,8 @@
 import {
   Application,
-  Asset,
-  AudioStream,
   Color,
   FixedResolutionCanvasSizing,
+  type Music,
   type RenderingContext,
   Scene,
   Sprite,
@@ -12,11 +11,12 @@ import {
   View,
   type Voice,
 } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 class LowBandCameraShakeScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private musicVoice!: Voice;
   private analyser!: AudioAnalyser;
   private view!: View;
@@ -28,13 +28,13 @@ class LowBandCameraShakeScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-    // is loaded directly through `Asset.type('music', ...)` and awaited rather
+    // Music is a non-leaf resource kind (no seamless placeholder), so it
+    // is loaded directly through `{ type: 'music', source }` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
+    this.music = await this.loader.load(assets.musicGlitchMachine);
     this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
     this.view = new View(width / 2, height / 2, width, height);
-    this.sprite = new Sprite(this.loader.get(assets.demo.textures.shipA))
+    this.sprite = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setScale(3)
       .setPosition(width / 2, height / 2);
@@ -54,7 +54,7 @@ class LowBandCameraShakeScene extends Scene {
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.2 });
   }
 
   override update(): void {

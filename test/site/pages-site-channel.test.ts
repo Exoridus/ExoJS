@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   channelForBranch,
-  counterpartBasePath,
   isSafeBasePath,
   resolveSiteChannel,
   SITE_CHANNEL_BASE,
@@ -56,15 +55,29 @@ describe('resolveSiteChannel', () => {
       basePath: '/sandbox/next/',
       localTest: true,
     });
-    expect(() => resolveSiteChannel({ EXOJS_SITE_CHANNEL: 'next', EXOJS_SITE_BASE: '/sandbox/', EXOJS_SITE_LOCAL_TEST: '1', GITHUB_ACTIONS: 'true' })).toThrow(
-      /CI/,
-    );
+    expect(() =>
+      resolveSiteChannel({ EXOJS_SITE_CHANNEL: 'next', EXOJS_SITE_BASE: '/sandbox/', EXOJS_SITE_LOCAL_TEST: '1', GITHUB_ACTIONS: 'true' }),
+    ).toThrow(/CI/);
     expect(() => resolveSiteChannel({ EXOJS_SITE_BASE: '/sandbox/', EXOJS_SITE_LOCAL_TEST: '1' })).toThrow(/EXOJS_SITE_CHANNEL/);
   });
 
   it('rejects an unsafe base even in local test mode', () => {
-    for (const base of ['/a/../b/', '/a//b/', 'relative/', '/a b/', '/a/"x/', "/a/'/", '/a/<x>/', '/a/$(id)/', '//evil.example/', '/a/./']) {
-      expect(() => resolveSiteChannel({ EXOJS_SITE_CHANNEL: 'stable', EXOJS_SITE_BASE: base, EXOJS_SITE_LOCAL_TEST: '1' }), `${base}`).toThrow();
+    for (const base of [
+      '/a/../b/',
+      '/a//b/',
+      'relative/',
+      '/a b/',
+      '/a/"x/',
+      "/a/'/",
+      '/a/<x>/',
+      '/a/$(id)/',
+      '//evil.example/',
+      '/a/./',
+    ]) {
+      expect(
+        () => resolveSiteChannel({ EXOJS_SITE_CHANNEL: 'stable', EXOJS_SITE_BASE: base, EXOJS_SITE_LOCAL_TEST: '1' }),
+        `${base}`,
+      ).toThrow();
     }
   });
 });
@@ -89,12 +102,6 @@ describe('channel relations', () => {
     expect(channelForBranch('next')).toBe('next');
     expect(channelForBranch('feature/x')).toBeNull();
     expect(channelForBranch('refs/heads/main')).toBeNull();
-  });
-
-  it('names the other channel as the explicit switch target, but not for a local test base', () => {
-    expect(counterpartBasePath({ channel: 'next', basePath: '/ExoJS/next/', localTest: false })).toBe('/ExoJS/');
-    expect(counterpartBasePath({ channel: 'stable', basePath: '/ExoJS/', localTest: false })).toBe('/ExoJS/next/');
-    expect(counterpartBasePath({ channel: 'next', basePath: '/sandbox/', localTest: true })).toBeNull();
   });
 });
 

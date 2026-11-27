@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'vitest';
 
-import { applyOutputTransform, resolveOutputTransformOptions, validateWorkingColorFormatSupport, workingColorTextureFormat } from '#rendering/OutputTransform';
+import {
+  applyOutputTransform,
+  resolveOutputTransformOptions,
+  validateWorkingColorFormatSupport,
+  workingColorTextureFormat,
+} from '#rendering/OutputTransform';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { TextureFormat } from '#rendering/types';
 
@@ -10,7 +15,8 @@ const reinhardAtDefaultExposure = resolveOutputTransformOptions({ toneMapping: '
 const srgbDecode = (value: number): number => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
 
 /** A fake `RenderBackend` exposing only what {@link validateWorkingColorFormatSupport} reads. */
-const backendWithColorFormatSupport = (supported: boolean): RenderBackend => ({ supportsColorFormat: () => supported }) as unknown as RenderBackend;
+const backendWithColorFormatSupport = (supported: boolean): RenderBackend =>
+  ({ supportsColorFormat: () => supported }) as unknown as RenderBackend;
 
 describe('workingColorTextureFormat', () => {
   test("'sdr' resolves to Rgba8Srgb", () => {

@@ -10,16 +10,22 @@ describe('complete README examples', () => {
   it('typechecks every listing against the public package entry points', () => {
     const root = process.cwd();
     const virtual = new Map<string, string>();
+
     for (const path of CHECKED_README_PATHS) {
       const blocks = [...readFileSync(join(root, path), 'utf8').matchAll(/^```ts[ \t]*\r?\n([\s\S]*?)^```/gm)];
       expect(blocks.length, `${path} must retain its complete example`).toBeGreaterThan(0);
+
       for (const [index, block] of blocks.entries()) {
         virtual.set(resolve(root, `${path}.example-${index}.ts`), `${block[1]}\nexport {};\n`);
       }
     }
 
     const config = ts.readConfigFile(join(root, 'tsconfig.examples.json'), ts.sys.readFile);
-    if (config.error) throw new Error(ts.flattenDiagnosticMessageText(config.error.messageText, '\n'));
+
+    if (config.error) {
+      throw new Error(ts.flattenDiagnosticMessageText(config.error.messageText, '\n'));
+    }
+
     const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, root);
     expect(parsed.errors).toEqual([]);
     const options = { ...parsed.options, noEmit: true };
@@ -29,8 +35,10 @@ describe('complete README examples', () => {
     const readFile = host.readFile.bind(host);
     host.fileExists = file => virtual.has(resolve(file)) || fileExists(file);
     host.readFile = file => virtual.get(resolve(file)) ?? readFile(file);
+
     host.getSourceFile = (file, languageVersion, onError, shouldCreateNewSourceFile) => {
       const source = virtual.get(resolve(file));
+
       return source === undefined
         ? getSourceFile(file, languageVersion, onError, shouldCreateNewSourceFile)
         : ts.createSourceFile(file, source, languageVersion, true);
@@ -39,7 +47,9 @@ describe('complete README examples', () => {
     // Reuse the real shader/worklet and build-constant declarations, not permissive test stubs.
     const program = ts.createProgram([...virtual.keys(), join(root, 'src/typings.d.ts')], options, host);
     const diagnostics = ts.getPreEmitDiagnostics(program).map(diagnostic => {
-      const location = diagnostic.file && diagnostic.start !== undefined ? diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start) : undefined;
+      const location =
+        diagnostic.file && diagnostic.start !== undefined ? diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start) : undefined;
+
       return `${diagnostic.file?.fileName ?? 'compiler'}:${location ? location.line + 1 : ''} ${ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')}`;
     });
     expect(diagnostics).toEqual([]);

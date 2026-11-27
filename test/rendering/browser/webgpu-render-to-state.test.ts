@@ -23,11 +23,42 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
 
-import { createWebGpuTestBackend, readWebGpuPixels } from './_backendSetup';
+import { createWebGpuTestBackend, readWebGpuFrame, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
 
 const size = 32;
 
 describe('a render into a caller-owned target (WebGPU)', () => {
+  test.for([
+    [0, 1],
+    [1, 0],
+  ])('collapsed viewports (%s, %s) draw no pixels and remain WebGPU-valid', async ([width, height], ctx) => {
+    const backend = await createWebGpuTestBackend(size);
+    const texture = Texture.fromColor(Color.white, 1);
+    const sprite = new Sprite(texture);
+
+    sprite.width = size;
+    sprite.height = size;
+
+    try {
+      if (!(await renderWebGpuOnce(ctx, backend, sprite))) {
+        return;
+      }
+
+      expect(readWebGpuFrame(backend, size).filter((value, index) => index % 4 === 0 && value > 0).length).toBe(size * size);
+      backend.view.setViewport(0.25, 0.25, width, height);
+
+      if (!(await renderWebGpuOnce(ctx, backend, sprite))) {
+        return;
+      }
+
+      expect(readWebGpuFrame(backend, size).filter((value, index) => index % 4 !== 3 && value > 0).length).toBe(0);
+    } finally {
+      sprite.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
   test('leaves the frame that follows it drawing what it drew before', async () => {
     const backend = await createWebGpuTestBackend(size);
     const context = new RenderingContext(backend);

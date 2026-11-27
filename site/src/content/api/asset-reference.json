@@ -1,0 +1,149 @@
+{
+  "title": "AssetReference",
+  "description": "A reference to an asset by its persisted type ID and logical source.",
+  "symbol": "AssetReference",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A reference to an asset by its persisted type ID and logical source."
+      ],
+      "importLine": "import { AssetReference } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "$type",
+          "signature": "$type: string",
+          "signatureTokens": [
+            {
+              "text": "$type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "options",
+          "signature": "options?: Readonly<Record<string, unknown>>",
+          "signatureTokens": [
+            {
+              "text": "options",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "source",
+          "signature": "source: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetReference.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetReference.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetReference.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetReference.ts"
+}

@@ -109,10 +109,64 @@ describe('SystemRegistry ordering — before/after', () => {
     const b = new CycleSystemB();
 
     registry.add(a, { before: [b] });
-    registry.add(b, { before: [a] });
 
-    expect(() => tick(registry)).toThrow(/CycleSystemA/);
-    expect(() => tick(registry)).toThrow(/CycleSystemB/);
+    expect(() => registry.add(b, { before: [a] })).toThrow(/CycleSystemA/);
+    expect(registry.has(b)).toBe(false);
+    expect(registry.size).toBe(1);
+    expect(() => tick(registry)).not.toThrow();
+  });
+
+  test('a cycle closed by an add buffered during a frame is rejected without losing the other adds of that frame', () => {
+    const registry = new SystemRegistry();
+    const log: string[] = [];
+    const a = makeSystem(log, 'a');
+    const b = makeSystem(log, 'b');
+    const ok = makeSystem(log, 'ok');
+
+    registry.add(a, { before: [b] });
+
+    registry._beginFrame();
+    registry.add(b, { before: [a] });
+    registry.add(ok);
+
+    expect(() => registry._endFrame()).toThrow(/cycle/);
+    expect(registry.has(b)).toBe(false);
+    expect(registry.has(ok)).toBe(true);
+
+    registry.add(b);
+    tick(registry);
+
+    expect(log).toEqual(['a', 'ok', 'b']);
+  });
+
+  test.each(['add-first', 'remove-first'] as const)('ignores an inactive cycle target at the frame boundary (%s)', mutationOrder => {
+    const registry = new SystemRegistry();
+    const log: string[] = [];
+    const a = makeSystem(log, 'a');
+    const b = makeSystem(log, 'b');
+    const removed: System[] = [];
+
+    registry.onRemove.add(system => removed.push(system));
+    registry.add(a, { before: [b] });
+    registry._beginFrame();
+
+    if (mutationOrder === 'add-first') {
+      registry.add(b, { before: [a] });
+      registry.remove(a);
+    } else {
+      registry.remove(a);
+      registry.add(b, { before: [a] });
+    }
+
+    expect(registry.has(a)).toBe(false);
+    expect(() => registry._endFrame()).not.toThrow();
+    expect(registry.has(b)).toBe(true);
+    expect(registry.size).toBe(1);
+    expect(removed).toEqual([a]);
+
+    tick(registry);
+
+    expect(log).toEqual(['b']);
   });
 });
 
@@ -134,6 +188,25 @@ describe('SystemRegistry.destroy() — a throwing system cannot strand the rest'
     registry.destroy();
 
     expect(destroyed).toEqual(['last', 'first']);
+  });
+
+  test('a system removed by an earlier destroy() is not destroyed afterwards', () => {
+    const registry = new SystemRegistry();
+    const destroyed: string[] = [];
+    const removed: System = { update: (): void => {}, destroy: (): void => void destroyed.push('removed') };
+
+    registry.add(removed);
+    registry.add({
+      update: (): void => {},
+      destroy: (): void => {
+        destroyed.push('remover');
+        registry.remove(removed);
+      },
+    });
+
+    registry.destroy();
+
+    expect(destroyed).toEqual(['remover']);
   });
 
   test('the clear-and-reset tail still runs, so the registry does not stay live', () => {
@@ -172,7 +245,9 @@ describe('SystemRegistry.destroy() — a throwing system cannot strand the rest'
     const registry = new SystemRegistry();
     const reported: string[] = [];
     const removeSink = logger.addSink(entry => {
-      if (entry.severity === LogSeverity.Error) reported.push(entry.message);
+      if (entry.severity === LogSeverity.Error) {
+        reported.push(entry.message);
+      }
     });
 
     registry.add({
@@ -253,5 +328,75 @@ describe('SystemRegistry frame-scoped mutations', () => {
     registry._endFrame();
 
     expect(registry.has(system)).toBe(false);
+  });
+});
+
+describe('SystemRegistry._halt', () => {
+  test('ends the pass in progress after the running system and keeps every later pass empty', () => {
+    const registry = new SystemRegistry();
+    const log: string[] = [];
+
+    registry.add({
+      update: (): void => {
+        log.push('first');
+        registry._halt();
+      },
+    });
+    registry.add(makeSystem(log, 'second'));
+
+    tick(registry);
+    tick(registry);
+
+    expect(log).toEqual(['first']);
+    expect(registry.size).toBe(2);
+  });
+});
+
+describe('SystemRegistry - one registry per system', () => {
+  const warnings = (run: () => void): string[] => {
+    const reported: string[] = [];
+    const removeSink = logger.addSink(entry => {
+      if (entry.severity === LogSeverity.Warning) {
+        reported.push(entry.message);
+      }
+    });
+
+    try {
+      run();
+    } finally {
+      removeSink();
+    }
+
+    return reported;
+  };
+
+  test('warns when a system enters a second registry that both run', () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+    const system = makeSystem([], 'shared');
+
+    const reported = warnings(() => {
+      first.add(system);
+      second.add(system);
+    });
+
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toMatch(/another system registry/);
+  });
+
+  test('stays quiet when a system is moved: removed from one registry, then added to another', () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+    const system = makeSystem([], 'moved');
+
+    const reported = warnings(() => {
+      first.add(system);
+      first._beginFrame();
+      first.remove(system);
+      second.add(system);
+      first._endFrame();
+    });
+
+    expect(reported).toEqual([]);
   });
 });

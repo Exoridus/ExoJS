@@ -103,7 +103,12 @@ export class ApplicationErrorReporter {
       this._recent.shift();
     }
 
-    this._onError.dispatch(error);
+    this._onError.dispatchIsolated(observerError => {
+      logger.error('Application.onError observer failed.', {
+        source: 'core',
+        error: observerError instanceof Error ? observerError : new Error(String(observerError)),
+      });
+    }, error);
 
     if (__DEV__) {
       const detail = isRenderError && error.detail !== null ? `\n${error.detail}` : '';

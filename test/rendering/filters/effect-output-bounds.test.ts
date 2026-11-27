@@ -65,7 +65,9 @@ class ShrinkFilter extends Filter {
 const resolve = (source: Rectangle, filters: readonly Filter[]): { left: number; top: number; width: number; height: number } | null => {
   const resolver = new EffectBoundsResolver();
 
-  if (!resolver.resolve(source, filters)) return null;
+  if (!resolver.resolve(source, filters)) {
+    return null;
+  }
 
   return { left: resolver.left, top: resolver.top, width: resolver.width, height: resolver.height };
 };
@@ -80,7 +82,12 @@ describe('a single effect transforms bounds', () => {
   });
 
   test('a symmetric expansion moves all four edges', () => {
-    expect(resolve(new Rectangle(100, 50, 20, 10), [new AsymmetricFilter(8, 8, 8, 8)])).toEqual({ left: 92, top: 42, width: 36, height: 26 });
+    expect(resolve(new Rectangle(100, 50, 20, 10), [new AsymmetricFilter(8, 8, 8, 8)])).toEqual({
+      left: 92,
+      top: 42,
+      width: 36,
+      height: 26,
+    });
   });
 
   test('an asymmetric expansion moves the edges independently', () => {
@@ -141,9 +148,9 @@ describe('a chain composes sequentially', () => {
   });
 
   test('an identity effect in the middle changes nothing', () => {
-    expect(resolve(new Rectangle(0, 0, 10, 10), [new AsymmetricFilter(3, 3, 3, 3), new IdentityFilter(), new AsymmetricFilter(2, 2, 2, 2)])).toEqual(
-      resolve(new Rectangle(0, 0, 10, 10), [new AsymmetricFilter(5, 5, 5, 5)]),
-    );
+    expect(
+      resolve(new Rectangle(0, 0, 10, 10), [new AsymmetricFilter(3, 3, 3, 3), new IdentityFilter(), new AsymmetricFilter(2, 2, 2, 2)]),
+    ).toEqual(resolve(new Rectangle(0, 0, 10, 10), [new AsymmetricFilter(5, 5, 5, 5)]));
   });
 });
 
@@ -165,7 +172,12 @@ describe('capture quantisation covers every logical pixel', () => {
 
   test('a fractional expansion is quantised after the chain, not before it', () => {
     // Source [10.5, 20.5], expansion 0.25 -> [10.25, 20.75] -> [10, 21].
-    expect(resolve(new Rectangle(10.5, 0, 10, 10), [new AsymmetricFilter(0.25, 0, 0.25, 0)])).toEqual({ left: 10, top: 0, width: 11, height: 10 });
+    expect(resolve(new Rectangle(10.5, 0, 10, 10), [new AsymmetricFilter(0.25, 0, 0.25, 0)])).toEqual({
+      left: 10,
+      top: 0,
+      width: 11,
+      height: 10,
+    });
   });
 
   test('zero expansion leaves the source quantisation untouched', () => {
@@ -175,7 +187,12 @@ describe('capture quantisation covers every logical pixel', () => {
 
 describe('BlurFilter declares its real sampling reach', () => {
   test('the expansion is three standard deviations on every edge', () => {
-    expect(resolve(new Rectangle(100, 50, 100, 50), [new BlurFilter({ strength: 4 })])).toEqual({ left: 88, top: 38, width: 124, height: 74 });
+    expect(resolve(new Rectangle(100, 50, 100, 50), [new BlurFilter({ strength: 4 })])).toEqual({
+      left: 88,
+      top: 38,
+      width: 124,
+      height: 74,
+    });
   });
 
   test('a tap cap redistributes samples without changing the reach', () => {

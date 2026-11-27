@@ -106,7 +106,8 @@ export const wasmType = new WasmAssetType();
  * WebVTT and SubRip subtitle tracks, parsed into `VTTCue`s.
  *
  * One type reads both: the format is a property of the file, taken from its
- * suffix, and an unrecognised suffix reads as WebVTT.
+ * suffix, and an unrecognised suffix reads as WebVTT. A cue whose timestamps
+ * do not parse is skipped rather than failing the track.
  */
 export class SubtitleAssetType extends AssetType<SubtitleSource, VTTCue[], undefined, string> {
   public readonly id = 'subtitle';

@@ -23,30 +23,26 @@ import {
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-const fakeTexture = (): Texture => {
-  return {
+const fakeTexture = (): Texture =>
+  ({
     width: 512,
     height: 512,
     uid: 0,
     label: 'test',
     destroy: () => {},
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const fakeRegion = (tw = 512, th = 512): TextureRegion => {
-  return new TextureRegion(fakeTexture(), { x: 0, y: 0, width: tw, height: th });
-};
+const fakeRegion = (tw = 512, th = 512): TextureRegion => new TextureRegion(fakeTexture(), { x: 0, y: 0, width: tw, height: th });
 
-const makeTileset = (name: string, tileCount = 16, tw = 32, th = 32): TileSet => {
-  return new TileSet({
+const makeTileset = (name: string, tileCount = 16, tw = 32, th = 32): TileSet =>
+  new TileSet({
     name,
     texture: fakeRegion(512, 512),
     tileWidth: tw,
     tileHeight: th,
     tileCount,
   });
-};
 
 // ═══════════════════════════════════════════════════════════════════════
 // Tile identity & packing
@@ -925,6 +921,24 @@ describe('TileLayer', () => {
     expect(layer.revision).toBe(revisionBefore + 1);
   });
 
+  it('rejects a decoded word whose local tile id is negative', () => {
+    const ts2 = makeTileset('second');
+    const layer = new TileLayer({
+      id: 0,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [ts, ts2],
+      chunkWidth: 2,
+      chunkHeight: 2,
+    });
+    // Tileset 1 with zero local bits: storedId 0 decodes to localTileId -1.
+    layer._adoptChunk(0, 0, { width: 2, height: 2, tiles: new Uint32Array([1 << 20, 0, 0, 0]) });
+
+    expect(layer.getTileAt(0, 0)).toBeNull();
+    expect([...layer.tilesInRect(0, 0, 2, 2)]).toHaveLength(0);
+  });
+
   it('_evictChunk on a not-loaded chunk is a no-op returning false', () => {
     const layer = new TileLayer({
       id: 0,
@@ -1008,9 +1022,11 @@ describe('TileLayer', () => {
       chunkHeight: 2,
     });
     const events: ChunkStructuralEvent[] = [];
+
     const listener = (e: ChunkStructuralEvent): void => {
       events.push(e);
     };
+
     layer._addStructuralListener(listener);
     layer._adoptChunk(0, 0, { width: 2, height: 2, tiles: new Uint32Array(4) });
     layer._removeStructuralListener(listener);
@@ -1261,6 +1277,57 @@ describe('TileLayer', () => {
     expect(() => layer.setTileAt(0, 0, {} as unknown as ResolvedTile)).toThrow(/valid ResolvedTile/);
     expect(() => layer.setTileAt(0, 0, null as unknown as ResolvedTile)).toThrow(/valid ResolvedTile/);
     expect(() => layer.fillRect(0, 0, 2, 2, {} as unknown as ResolvedTile)).toThrow(/valid ResolvedTile/);
+  });
+
+  it.each([
+    [NaN, 0, 1, 1],
+    [0, NaN, 1, 1],
+    [0, 0, NaN, 1],
+    [0, 0, 1, NaN],
+    [0.5, 0, 1, 1],
+    [0, 0.5, 1, 1],
+    [0, 0, 0.5, 1],
+    [0, 0, 1, 0.5],
+    [-Infinity, 0, 1, 1],
+    [0, -Infinity, 1, 1],
+    [0, 0, -Infinity, 1],
+    [0, 0, 1, -Infinity],
+  ])('bulk rectangles reject invalid coordinates before mutation (%s, %s, %s, %s)', (x, y, w, h) => {
+    const layer = new TileLayer({
+      id: 0,
+      name: 'l',
+      width: 8,
+      height: 8,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [ts],
+    });
+    const ref = { tileset: ts, localTileId: 2, transform: TILE_TRANSFORM_IDENTITY };
+
+    expect(() => layer.fillRect(x, y, w, h, ref)).toThrow(/finite integer/);
+    expect(layer.revision).toBe(0);
+    expect([...layer.loadedChunks()]).toHaveLength(0);
+
+    layer.setTileAt(0, 0, ref);
+
+    expect(() => layer.clearRect(x, y, w, h)).toThrow(/finite integer/);
+    expect(() => [...layer.tilesInRect(x, y, w, h)]).toThrow(/finite integer/);
+    expect(layer.revision).toBe(1);
+    expect(layer.getTileAt(0, 0)).toEqual(ref);
+  });
+
+  it.each([
+    [2 ** 53, 0, 2, 1],
+    [0, 2 ** 53, 1, 2],
+    [Number.MAX_SAFE_INTEGER, 0, 1, 1],
+  ])('bulk rectangles reject a rectangle that ends past the safe integer range instead of looping (%s, %s, %s, %s)', (x, y, w, h) => {
+    const layer = new TileLayer({ id: 0, name: 'l', width: 8, height: 8, tileWidth: 16, tileHeight: 16, tilesets: [ts] });
+    const ref = { tileset: ts, localTileId: 2, transform: TILE_TRANSFORM_IDENTITY };
+
+    expect(() => layer.fillRect(x, y, w, h, ref)).toThrow(/safe integer/);
+    expect(() => layer.clearRect(x, y, w, h)).toThrow(/safe integer/);
+    expect(() => [...layer.tilesInRect(x, y, w, h)]).toThrow(/safe integer/);
+    expect(layer.revision).toBe(0);
   });
 
   it('fillRect fills a region', () => {
@@ -1625,11 +1692,13 @@ describe('TileLayer', () => {
     });
     const ts2 = makeTileset('other', 16);
     const rev = layer.revision;
+
     try {
       layer.setTileAt(0, 0, { tileset: ts2, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     } catch {
       /* expected */
     }
+
     expect(layer.revision).toBe(rev);
   });
 
@@ -1889,6 +1958,28 @@ describe('TileMap', () => {
     expect(map.objectLayers).toHaveLength(0);
   });
 
+  it('rejects a duplicate object layer ID in the constructor', () => {
+    expect(
+      () =>
+        new TileMap({
+          width: 64,
+          height: 64,
+          tileWidth: 32,
+          tileHeight: 32,
+          objectLayers: [new ObjectLayer({ id: 1, name: 'a' }), new ObjectLayer({ id: 1, name: 'b' })],
+        }),
+    ).toThrow(/Object layer ID 1 already exists/);
+  });
+
+  it('rejects addObjectLayer with an ID that is already in use', () => {
+    const map = new TileMap({ width: 64, height: 64, tileWidth: 32, tileHeight: 32 });
+
+    map.addObjectLayer(new ObjectLayer({ id: 1, name: 'a' }));
+
+    expect(() => map.addObjectLayer(new ObjectLayer({ id: 1, name: 'b' }))).toThrow(/Object layer ID 1 already exists/);
+    expect(map.objectLayers).toHaveLength(1);
+  });
+
   it('removeObjectLayer returns false for non-existent ID', () => {
     const map = new TileMap({
       width: 64,
@@ -2120,7 +2211,9 @@ describe('TileMap', () => {
     });
     map.destroy();
     expect(() => map.addTileset(ts)).toThrow();
-    expect(() => map.addLayer(new TileLayer({ id: 0, name: 'l', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] }))).toThrow();
+    expect(() =>
+      map.addLayer(new TileLayer({ id: 0, name: 'l', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] })),
+    ).toThrow();
   });
 
   it('destroys layers on destroy', () => {

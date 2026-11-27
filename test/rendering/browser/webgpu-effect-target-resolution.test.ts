@@ -52,7 +52,8 @@ const setupBackend = async (pixelRatio: number): Promise<WebGpuBackend> => {
   return backend;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const createSolidTexture = (color: string, size = 16): Texture => {
   const source = document.createElement('canvas');

@@ -85,6 +85,7 @@ const currentBranch = (git: GitRunner): string => {
 const main = (): void => {
   if (process.env['EXOJS_ALLOW_CHANGELOG_EDIT'] === '1') {
     console.log('check-changelog-untouched: skipped (EXOJS_ALLOW_CHANGELOG_EDIT=1).');
+
     return;
   }
 
@@ -92,6 +93,7 @@ const main = (): void => {
 
   if (result.ok) {
     console.log(`check-changelog-untouched: ${result.reason}`);
+
     return;
   }
 

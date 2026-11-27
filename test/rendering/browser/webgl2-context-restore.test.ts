@@ -13,7 +13,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import type { Application } from '#core/Application';
+import { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { OutputTransform } from '#rendering/OutputTransform';
@@ -39,7 +39,7 @@ import { expectPixelNear } from './_pixels';
 
 const canvasSize = 64;
 
-const createBackend = async (): Promise<WebGl2Backend> => {
+const createBackend = async (options: { suppliedCanvas?: boolean; releaseContext?: boolean } = {}): Promise<WebGl2Backend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -52,9 +52,10 @@ const createBackend = async (): Promise<WebGl2Backend> => {
     canvas,
     options: {
       clearColor: Color.black,
-      canvas: { width: canvasSize, height: canvasSize },
+      canvas: { width: canvasSize, height: canvasSize, ...(options.suppliedCanvas ? { element: canvas } : {}) },
       rendering: {
         debug: false,
+        ...(options.releaseContext !== undefined ? { releaseContext: options.releaseContext } : {}),
         webglAttributes: {
           antialias: false,
           preserveDrawingBuffer: true,
@@ -117,7 +118,12 @@ const loseAndRestoreContext = async (backend: WebGl2Backend): Promise<void> => {
 
   const restored = new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(
-      () => reject(new Error(`webglcontextrestored not delivered within 5s (raw events: ${seen.join(',') || 'none'}, isLost: ${gl.isContextLost()})`)),
+      () =>
+        reject(
+          new Error(
+            `webglcontextrestored not delivered within 5s (raw events: ${seen.join(',') || 'none'}, isLost: ${gl.isContextLost()})`,
+          ),
+        ),
       5000,
     );
 
@@ -240,6 +246,69 @@ describe('WebGL2 real context lose/restore', () => {
       root.destroy();
       texture.destroy();
       backend.destroy();
+    }
+  });
+
+  test('destroy releases an owned WebGL2 context at the end and is idempotent', async () => {
+    const backend = await createBackend();
+    const context = backend.context;
+    expect(context.isContextLost()).toBe(false);
+
+    backend.destroy();
+    expect(context.isContextLost()).toBe(true);
+    expect(() => backend.destroy()).not.toThrow();
+  });
+
+  test('terminal context release survives a late resource cleanup failure', async () => {
+    const backend = await createBackend();
+    const context = backend.context;
+    const pool = Reflect.get(backend, '_renderTexturePool') as { destroy(): void };
+    const brokenCleanup = vi.spyOn(pool, 'destroy').mockImplementation(() => {
+      throw new Error('injected pool cleanup failure');
+    });
+
+    try {
+      expect(() => backend.destroy()).toThrow('injected pool cleanup failure');
+      expect(context.isContextLost()).toBe(true);
+    } finally {
+      brokenCleanup.mockRestore();
+    }
+  });
+  test('caller-supplied canvas retains context unless terminal release is enabled', async () => {
+    const borrowedBackend = await createBackend({ suppliedCanvas: true });
+    const borrowedContext = borrowedBackend.context;
+
+    borrowedBackend.destroy();
+    expect(borrowedContext.isContextLost()).toBe(false);
+    // The fixture now owns this borrowed canvas and must release it itself.
+    borrowedContext.getExtension('WEBGL_lose_context')?.loseContext();
+
+    const releasedBackend = await createBackend({ suppliedCanvas: true, releaseContext: true });
+    const releasedContext = releasedBackend.context;
+
+    releasedBackend.destroy();
+    expect(releasedContext.isContextLost()).toBe(true);
+  });
+
+  test('Application uses original canvas ownership when choosing terminal context loss', async () => {
+    const owned = new Application({ backend: { type: 'webgl2' }, hello: false, canvas: { width: 64, height: 64 } });
+    const ownedContext = (owned.backend as WebGl2Backend).context;
+    await owned.destroy();
+    expect(ownedContext.isContextLost()).toBe(true);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    document.body.append(canvas);
+    const borrowed = new Application({ backend: { type: 'webgl2' }, hello: false, canvas: { element: canvas, width: 64, height: 64 } });
+    const borrowedContext = (borrowed.backend as WebGl2Backend).context;
+
+    try {
+      await borrowed.destroy();
+      expect(borrowedContext.isContextLost()).toBe(false);
+    } finally {
+      borrowedContext.getExtension('WEBGL_lose_context')?.loseContext();
+      canvas.remove();
     }
   });
 });

@@ -1,6 +1,8 @@
 import { Color } from '#core/Color';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { BlendModes } from '#rendering/types';
+import { WebGl2ScalableSpriteRenderer } from '#rendering/webgl2/WebGl2ScalableSpriteRenderer';
 
 import { createWebGl2TestBackend, readWebGl2Pixel } from './_backendSetup';
 import { createSolidTexture } from './_crossRendererBlendScene';
@@ -29,4 +31,40 @@ describe('scalable sprite draw-time state', () => {
       backend.destroy();
     }
   });
+});
+
+test('shader repeating sprites survive the capacity boundary on the GPU', async () => {
+  const backend = await createWebGl2TestBackend(64);
+  const renderer = new WebGl2ScalableSpriteRenderer(2);
+  const texture = createSolidTexture('#ff0000');
+  const sprites = Array.from({ length: 3 }, (_, index) => {
+    const sprite = new RepeatingSprite(texture, { width: 16, height: 16, modeX: 'mirror-repeat', modeY: 'stretch' });
+    sprite.setPosition(index * 20, 0);
+
+    return sprite;
+  });
+
+  try {
+    renderer.connect(backend);
+    backend.clear(Color.black);
+
+    for (const sprite of sprites) {
+      renderer.render(sprite);
+    }
+
+    renderer.flush();
+
+    for (const x of [8, 28, 48]) {
+      expectPixelNear(readWebGl2Pixel(backend, x, 8), [255, 0, 0, 255]);
+    }
+  } finally {
+    renderer.destroy();
+
+    for (const sprite of sprites) {
+      sprite.destroy();
+    }
+
+    texture.destroy();
+    backend.destroy();
+  }
 });

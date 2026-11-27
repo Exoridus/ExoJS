@@ -73,10 +73,21 @@ export class EffectBoundsResolver {
           continue;
         }
 
-        if (output.left < minX) minX = output.left;
-        if (output.top < minY) minY = output.top;
-        if (output.right > maxX) maxX = output.right;
-        if (output.bottom > maxY) maxY = output.bottom;
+        if (output.left < minX) {
+          minX = output.left;
+        }
+
+        if (output.top < minY) {
+          minY = output.top;
+        }
+
+        if (output.right > maxX) {
+          maxX = output.right;
+        }
+
+        if (output.bottom > maxY) {
+          maxY = output.bottom;
+        }
 
         const previousInput = input;
 

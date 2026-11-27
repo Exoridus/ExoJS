@@ -10,6 +10,50 @@ const makeTarget = () => ({ x: 0, y: 0 });
 /** Number of tweens the system currently holds a reference to. */
 const trackedCount = (system: TweenSystem): number => (system as unknown as { _tweens: unknown[] })._tweens.length;
 
+describe('Tween ownership during iteration', () => {
+  test('a transferred tween is skipped by its old in-flight snapshot', () => {
+    const oldSystem = new TweenSystem();
+    const nextSystem = new TweenSystem();
+    const target = makeTarget();
+    const trigger = oldSystem.create(makeTarget()).to({ x: 1 }, 1);
+    const tween = oldSystem.create(target).to({ x: 100 }, 1);
+    trigger.onUpdate(() => nextSystem.add(tween));
+    trigger.start();
+    tween.start();
+    oldSystem.preFrame(sec(0.25));
+    expect(target.x).toBe(0);
+    nextSystem.preFrame(sec(0.25));
+    expect(target.x).toBe(25);
+    oldSystem.destroy();
+    expect(tween.state).toBe(TweenState.Active);
+    nextSystem.destroy();
+  });
+});
+
+describe('Tween system ownership transfer', () => {
+  test.each(['add', 'sequence'] as const)('%s transfers an active tween without retaining the old owner', transfer => {
+    const oldSystem = new TweenSystem();
+    const nextSystem = new TweenSystem();
+    const target = makeTarget();
+    const tween = oldSystem.create(target).to({ x: 100 }, 1).start();
+
+    if (transfer === 'add') {
+      nextSystem.add(tween);
+    } else {
+      nextSystem.sequence([tween]);
+    }
+
+    oldSystem.preFrame(sec(0.25));
+    expect(target.x).toBe(0);
+    expect(trackedCount(oldSystem)).toBe(0);
+    tween.start();
+    nextSystem.preFrame(sec(0.25));
+    expect(target.x).toBe(25);
+    tween.stop();
+    expect(trackedCount(nextSystem)).toBe(0);
+  });
+});
+
 describe('TweenSystem', () => {
   test('create() returns a Tween bound to the system', () => {
     const system = new TweenSystem();
@@ -25,8 +69,8 @@ describe('TweenSystem', () => {
     const a = makeTarget();
     const b = makeTarget();
 
-    system.create(a).to({ x: 100 }, 1.0).start();
-    system.create(b).to({ x: 200 }, 1.0).start();
+    system.create(a).to({ x: 100 }, 1).start();
+    system.create(b).to({ x: 200 }, 1).start();
 
     system.preFrame(sec(0.5));
     expect(a.x).toBeCloseTo(50, 5);
@@ -36,20 +80,20 @@ describe('TweenSystem', () => {
   test('completed tween self-removes from system', () => {
     const system = new TweenSystem();
     const target = makeTarget();
-    const tween = system.create(target).to({ x: 100 }, 1.0).start();
+    const tween = system.create(target).to({ x: 100 }, 1).start();
 
-    system.preFrame(sec(1.0)); // completes
+    system.preFrame(sec(1)); // completes
     expect(tween.state).toBe(TweenState.Complete);
 
     // Further updates should not error and target should stay at 100
-    system.preFrame(sec(1.0));
+    system.preFrame(sec(1));
     expect(target.x).toBe(100);
   });
 
   test('add() registers a stand-alone Tween', () => {
     const system = new TweenSystem();
     const target = makeTarget();
-    const tween = new Tween(target).to({ x: 100 }, 1.0).start();
+    const tween = new Tween(target).to({ x: 100 }, 1).start();
 
     system.add(tween);
     system.preFrame(sec(0.5));
@@ -59,10 +103,10 @@ describe('TweenSystem', () => {
   test('add() does not double-register a tween', () => {
     const system = new TweenSystem();
     const target = makeTarget();
-    const tween = system.create(target).to({ x: 100 }, 1.0).start();
+    const tween = system.create(target).to({ x: 100 }, 1).start();
 
     system.add(tween); // add again
-    system.preFrame(sec(1.0)); // should complete once, not advance twice
+    system.preFrame(sec(1)); // should complete once, not advance twice
     expect(target.x).toBe(100);
     expect(tween.state).toBe(TweenState.Complete);
   });
@@ -70,7 +114,7 @@ describe('TweenSystem', () => {
   test('remove() evicts a tween; subsequent updates skip it', () => {
     const system = new TweenSystem();
     const target = makeTarget();
-    const tween = system.create(target).to({ x: 100 }, 1.0).start();
+    const tween = system.create(target).to({ x: 100 }, 1).start();
 
     system.preFrame(sec(0.3));
     system.remove(tween);
@@ -81,7 +125,7 @@ describe('TweenSystem', () => {
   test('remove() is a no-op when the tween is not present', () => {
     const system = new TweenSystem();
     const target = makeTarget();
-    const tween = system.create(target).to({ x: 100 }, 1.0).start();
+    const tween = system.create(target).to({ x: 100 }, 1).start();
 
     system.remove(tween); // remove once — present
     expect(() => system.remove(tween)).not.toThrow(); // remove again — not present
@@ -101,9 +145,9 @@ describe('TweenSystem', () => {
       const b = makeTarget();
       const c = makeTarget();
 
-      const t1 = new Tween(a).to({ x: 100 }, 1.0);
-      const t2 = new Tween(b).to({ x: 200 }, 1.0);
-      const t3 = new Tween(c).to({ x: 300 }, 1.0);
+      const t1 = new Tween(a).to({ x: 100 }, 1);
+      const t2 = new Tween(b).to({ x: 200 }, 1);
+      const t3 = new Tween(c).to({ x: 300 }, 1);
 
       const first = system.sequence([t1, t2, t3]);
       expect(first).toBe(t1);
@@ -116,17 +160,17 @@ describe('TweenSystem', () => {
       first.start();
       expect(trackedCount(system)).toBe(1);
 
-      system.preFrame(sec(1.0));
+      system.preFrame(sec(1));
       expect(t1.state).toBe(TweenState.Complete);
       expect(t2.state).toBe(TweenState.Active);
       expect(a.x).toBe(100);
 
-      system.preFrame(sec(1.0));
+      system.preFrame(sec(1));
       expect(t2.state).toBe(TweenState.Complete);
       expect(t3.state).toBe(TweenState.Active);
       expect(b.x).toBe(200);
 
-      system.preFrame(sec(1.0));
+      system.preFrame(sec(1));
       expect(t3.state).toBe(TweenState.Complete);
       expect(c.x).toBe(300);
 
@@ -136,13 +180,13 @@ describe('TweenSystem', () => {
 
     test('does not retain tweens of a sequence that is never started', () => {
       const system = new TweenSystem();
-      const t1 = new Tween(makeTarget()).to({ x: 100 }, 1.0);
-      const t2 = new Tween(makeTarget()).to({ x: 200 }, 1.0);
+      const t1 = new Tween(makeTarget()).to({ x: 100 }, 1);
+      const t2 = new Tween(makeTarget()).to({ x: 200 }, 1);
 
       system.sequence([t1, t2]);
 
       expect(trackedCount(system)).toBe(0);
-      system.preFrame(sec(1.0));
+      system.preFrame(sec(1));
       expect(t1.state).toBe(TweenState.Idle);
       expect(t2.state).toBe(TweenState.Idle);
     });
@@ -159,8 +203,8 @@ describe('TweenSystem', () => {
       // that input requires bypassing the type system, same as the
       // non-numeric-property tests in tween.test.ts.
       const system = new TweenSystem();
-      const t1 = new Tween(makeTarget()).to({ x: 100 }, 1.0);
-      const t3 = new Tween(makeTarget()).to({ x: 100 }, 1.0);
+      const t1 = new Tween(makeTarget()).to({ x: 100 }, 1);
+      const t3 = new Tween(makeTarget()).to({ x: 100 }, 1);
       const sparse = [t1, undefined, t3] as unknown as readonly Tween[];
 
       // The subsequent unconditional bind loop dereferences the hole, which
@@ -173,11 +217,11 @@ describe('TweenSystem', () => {
     const system = new TweenSystem();
     const onComplete = vi.fn();
 
-    system.create(makeTarget()).to({ x: 100 }, 1.0).onComplete(onComplete).start();
-    system.create(makeTarget()).to({ x: 200 }, 1.0).onComplete(onComplete).start();
+    system.create(makeTarget()).to({ x: 100 }, 1).onComplete(onComplete).start();
+    system.create(makeTarget()).to({ x: 200 }, 1).onComplete(onComplete).start();
 
     system.clear();
-    system.preFrame(sec(1.0)); // no tweens remain — nothing should fire
+    system.preFrame(sec(1)); // no tweens remain — nothing should fire
     expect(onComplete).not.toHaveBeenCalled();
   });
 
@@ -185,8 +229,8 @@ describe('TweenSystem', () => {
 
   test('clear() transitions every evicted tween to Stopped — state no longer claims Active', () => {
     const system = new TweenSystem();
-    const active = system.create(makeTarget()).to({ x: 100 }, 1.0).start();
-    const paused = system.create(makeTarget()).to({ x: 100 }, 1.0).start().pause();
+    const active = system.create(makeTarget()).to({ x: 100 }, 1).start();
+    const paused = system.create(makeTarget()).to({ x: 100 }, 1).start().pause();
 
     system.clear();
 
@@ -197,7 +241,7 @@ describe('TweenSystem', () => {
   test('clear() leaves the system binding intact — a later start() re-enters the tween', () => {
     const system = new TweenSystem();
     const target = makeTarget();
-    const tween = system.create(target).to({ x: 100 }, 1.0).start();
+    const tween = system.create(target).to({ x: 100 }, 1).start();
 
     system.clear();
     expect(trackedCount(system)).toBe(0);
@@ -213,7 +257,7 @@ describe('TweenSystem', () => {
   test('resume() on a tween orphaned by clear() stays inert — resume() alone does not re-track it', () => {
     const system = new TweenSystem();
     const target = makeTarget();
-    const tween = system.create(target).to({ x: 100 }, 1.0).start().pause();
+    const tween = system.create(target).to({ x: 100 }, 1).start().pause();
 
     system.clear();
     tween.resume(); // Stopped — resume() only acts on Paused, so this is a no-op.
@@ -221,7 +265,7 @@ describe('TweenSystem', () => {
     expect(tween.state).toBe(TweenState.Stopped);
     expect(trackedCount(system)).toBe(0);
 
-    system.preFrame(sec(1.0));
+    system.preFrame(sec(1));
     expect(target.x).toBe(0); // never advanced — genuinely not running
   });
 
@@ -229,7 +273,7 @@ describe('TweenSystem', () => {
     const system = new TweenSystem();
     const sequencer = system
       .createSequencer()
-      .then(system.create(makeTarget()).to({ x: 100 }, 1.0))
+      .then(system.create(makeTarget()).to({ x: 100 }, 1))
       .start();
 
     expect(sequencer.state).toBe(TweenSequencerState.Active);
@@ -243,7 +287,7 @@ describe('TweenSystem', () => {
     const system = new TweenSystem();
     const sequencer = system
       .createSequencer()
-      .then(system.create(makeTarget()).to({ x: 100 }, 1.0))
+      .then(system.create(makeTarget()).to({ x: 100 }, 1))
       .start();
 
     system.destroy();
@@ -255,15 +299,15 @@ describe('TweenSystem', () => {
     const system = new TweenSystem();
     const target = makeTarget();
 
-    system.create(target).to({ x: 100 }, 1.0).start();
+    system.create(target).to({ x: 100 }, 1).start();
     system.destroy();
-    system.preFrame(sec(1.0));
+    system.preFrame(sec(1));
     expect(target.x).toBe(0); // never advanced
   });
 
   test('destroy() transitions every tracked tween to Stopped', () => {
     const system = new TweenSystem();
-    const tween = system.create(makeTarget()).to({ x: 100 }, 1.0).start();
+    const tween = system.create(makeTarget()).to({ x: 100 }, 1).start();
 
     system.destroy();
 
@@ -275,13 +319,13 @@ describe('TweenSystem', () => {
     const a = makeTarget();
     const b = makeTarget();
 
-    const tweenA = system.create(a).to({ x: 100 }, 1.0).start();
+    const tweenA = system.create(a).to({ x: 100 }, 1).start();
     tweenA.onComplete(() => {
       // Add a new tween from within an onComplete callback.
-      system.create(b).to({ x: 200 }, 1.0).start();
+      system.create(b).to({ x: 200 }, 1).start();
     });
 
-    expect(() => system.preFrame(sec(1.0))).not.toThrow();
+    expect(() => system.preFrame(sec(1))).not.toThrow();
     expect(tweenA.state).toBe(TweenState.Complete);
   });
 
@@ -290,7 +334,7 @@ describe('TweenSystem', () => {
   test('create() does not retain a tween that is never started', () => {
     const system = new TweenSystem();
 
-    system.create(makeTarget()).to({ x: 100 }, 1.0);
+    system.create(makeTarget()).to({ x: 100 }, 1);
 
     // The tween (and through it, the target node) must not stay referenced by
     // the application-wide system just because it was configured.
@@ -301,7 +345,7 @@ describe('TweenSystem', () => {
     const system = new TweenSystem();
     const target = makeTarget();
 
-    const tween = system.create(target).to({ x: 100 }, 1.0).start();
+    const tween = system.create(target).to({ x: 100 }, 1).start();
 
     expect(trackedCount(system)).toBe(1);
     system.preFrame(sec(0.5));
@@ -311,7 +355,7 @@ describe('TweenSystem', () => {
 
   test('stop() evicts a running tween', () => {
     const system = new TweenSystem();
-    const tween = system.create(makeTarget()).to({ x: 100 }, 1.0).start();
+    const tween = system.create(makeTarget()).to({ x: 100 }, 1).start();
 
     expect(trackedCount(system)).toBe(1);
 
@@ -325,7 +369,7 @@ describe('TweenSystem', () => {
   test('add() binds an idle tween without retaining it', () => {
     const system = new TweenSystem();
     const target = makeTarget();
-    const tween = new Tween(target).to({ x: 100 }, 1.0);
+    const tween = new Tween(target).to({ x: 100 }, 1);
 
     system.add(tween);
 
@@ -343,9 +387,9 @@ describe('TweenSystem', () => {
 
   test('add() does not retain an already-completed tween', () => {
     const system = new TweenSystem();
-    const tween = system.create(makeTarget()).to({ x: 100 }, 1.0).start();
+    const tween = system.create(makeTarget()).to({ x: 100 }, 1).start();
 
-    system.preFrame(sec(1.0));
+    system.preFrame(sec(1));
     expect(tween.state).toBe(TweenState.Complete);
     expect(trackedCount(system)).toBe(0);
 
@@ -356,7 +400,7 @@ describe('TweenSystem', () => {
 
   test('add() does not retain a stopped tween', () => {
     const system = new TweenSystem();
-    const tween = new Tween(makeTarget()).to({ x: 100 }, 1.0).start().stop();
+    const tween = new Tween(makeTarget()).to({ x: 100 }, 1).start().stop();
 
     system.add(tween);
 
@@ -365,7 +409,7 @@ describe('TweenSystem', () => {
 
   test('add() enters an already-running tween immediately', () => {
     const system = new TweenSystem();
-    const tween = new Tween(makeTarget()).to({ x: 100 }, 1.0).start();
+    const tween = new Tween(makeTarget()).to({ x: 100 }, 1).start();
 
     system.add(tween);
 
@@ -375,7 +419,7 @@ describe('TweenSystem', () => {
   test('add() enters a paused tween — it is live and must resume on the frame tick', () => {
     const system = new TweenSystem();
     const target = makeTarget();
-    const tween = new Tween(target).to({ x: 100 }, 1.0).start().pause();
+    const tween = new Tween(target).to({ x: 100 }, 1).start().pause();
 
     system.add(tween);
 

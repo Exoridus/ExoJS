@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(texture: RenderTexture | Texture | null): Sprite",
+          "signature": "new(texture: RenderTexture | Texture | null | string): Sprite",
           "signatureTokens": [
             {
               "text": "new",
@@ -71,6 +71,14 @@
               "kind": "keyword"
             },
             {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -86,12 +94,12 @@
           "params": [
             {
               "name": "texture",
-              "type": "RenderTexture | Texture | null",
+              "type": "RenderTexture | Texture | null | string",
               "optional": false
             }
           ],
           "returnType": "Sprite",
-          "description": "Create a sprite for texture, or an empty one when the argument is omitted or null - a textureless sprite draws nothing until setTexture is called, which is the intended way to build a sprite whose texture is still loading."
+          "description": "Create a sprite for texture or an asset path, or an empty one when the argument is omitted or null - a textureless sprite draws nothing until setTexture is called, which is the intended way to build a sprite whose texture is still loading."
         }
       ],
       "paragraphs": [],
@@ -436,7 +444,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - either shape is a Polygon that encloses no area (empty, fewer than three distinct vertices, or collinear vertices) and the other is a filled shape (Rectangle, Circle, Ellipse or Polygon); such a polygon overlaps no filled shape, and intersectsWith returns false for the same pairs. Line and Point queries are unchanged: they test the polygon's outline and vertices as before, **or** - the specific shape-pair combination does not support response generation (for example Line against any shape, or Ellipse against a Point). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
         },
         {
           "name": "contains",
@@ -2557,7 +2565,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer (WebGL2). Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
+          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer on both backends. Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
         },
         {
           "name": "clipShape",
@@ -2743,7 +2751,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Filters are borrowed; destroying this node detaches them without destroying them."
         },
         {
           "name": "height",
@@ -3174,7 +3182,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space corner positions of the sprite quad, computed lazily from the current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3] (TL, TR, BR, BL). Cached until the transform is invalidated."
+          "description": "Rendering-space corner positions of the sprite quad: world space normally, group-local space below a retained transform boundary. Computed lazily from the current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3] (TL, TR, BR, BL). Cached until the transform is invalidated."
         },
         {
           "name": "visible",

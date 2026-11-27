@@ -10,6 +10,7 @@ import type { RenderTextureAcquirer, RestoreInstrumentation, TargetRecorder } fr
 import { createTargetRecorder, instrumentAcquireRenderTexture, instrumentCacheTexture } from './instrumentation';
 import type { InternalTargetRecord, ProbeCell, ProbeCellResult, ProbeMode, ProbeSceneId } from './matrix';
 import { internalToMainPixelRatio } from './matrix';
+import { releaseFailedPreview } from './previewCleanup';
 import type { ProbeScene } from './scenes';
 import { createProbeScene } from './scenes';
 
@@ -49,6 +50,13 @@ export const measureTimerResolutionMs = (): number => {
   return Number.isFinite(smallest) ? smallest : 0;
 };
 
+const releaseStageCanvas = (canvas: HTMLCanvasElement): void => {
+  const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+
+  gl?.getExtension('WEBGL_lose_context')?.loseContext();
+  canvas.remove();
+};
+
 /**
  * Replace `#stage` with a pristine canvas.
  *
@@ -63,10 +71,7 @@ const freshStageCanvas = (host: HTMLElement): HTMLCanvasElement => {
   const previous = host.querySelector('canvas');
 
   if (previous !== null) {
-    const gl = previous.getContext('webgl2') ?? previous.getContext('webgl');
-
-    gl?.getExtension('WEBGL_lose_context')?.loseContext();
-    previous.remove();
+    releaseStageCanvas(previous);
   }
 
   const canvas = document.createElement('canvas');
@@ -111,27 +116,33 @@ const bootProbeApplication = async (
 
   // Full production init, then stop the engine's own rAF loop: the probe owns
   // frame cadence so warmup and the measured window are identical across cells.
-  await app.start();
-  app.stop();
+  try {
+    await app.start();
+    app.stop();
 
-  const rendering = app.backend;
+    const rendering = app.backend;
 
-  if (rendering.backendType === RenderBackendType.WebGpu) {
-    const device = (rendering as WebGpuBackend).device;
-    const timer = createWebGpuGpuTimer(device);
+    if (rendering.backendType === RenderBackendType.WebGpu) {
+      const device = (rendering as WebGpuBackend).device;
+      const timer = createWebGpuGpuTimer(device);
 
-    return { app, canvas, backendType: rendering.backendType, gpuTimer: timer, webgpuTimestampQuery: timer.available };
+      return { app, canvas, backendType: rendering.backendType, gpuTimer: timer, webgpuTimestampQuery: timer.available };
+    }
+
+    const gl = canvas.getContext('webgl2');
+
+    return {
+      app,
+      canvas,
+      backendType: rendering.backendType,
+      gpuTimer: gl === null ? noopGpuTimer : createWebGl2GpuTimer(gl),
+      webgpuTimestampQuery: null,
+    };
+  } catch (error) {
+    await app.destroy();
+
+    throw error;
   }
-
-  const gl = canvas.getContext('webgl2');
-
-  return {
-    app,
-    canvas,
-    backendType: rendering.backendType,
-    gpuTimer: gl === null ? noopGpuTimer : createWebGl2GpuTimer(gl),
-    webgpuTimestampQuery: null,
-  };
 };
 
 /** Wait for one animation frame, resolving with its timestamp. */
@@ -140,13 +151,13 @@ const nextFrame = async (): Promise<number> =>
     requestAnimationFrame(resolve);
   });
 
-/** Everything {@link runProbeCell} needs beyond the cell itself. */
 /** Logical (CSS) stage every cell in a run renders at. Fixed for the whole run. */
 export interface StageSize {
   readonly width: number;
   readonly height: number;
 }
 
+/** Everything {@link runProbeCell} needs beyond the cell itself. */
 export interface RunProbeCellOptions {
   readonly cell: ProbeCell;
   readonly backend: ProbeBackendRequest;
@@ -154,6 +165,8 @@ export interface RunProbeCellOptions {
   readonly stage: StageSize;
   /** DOM element the stage canvas is (re)created inside. */
   readonly host: HTMLElement;
+  /** Identifier of the measurement run this cell belongs to, copied into the result. */
+  readonly runId: number;
   /** Position in the run order, copied into the result. */
   readonly index: number;
   /** `performance.now()` of the whole run's start, for {@link ProbeCellResult.startOffsetMs}. */
@@ -176,6 +189,7 @@ const captureLooseErrors = (sink: string[]): (() => void) => {
   const onError = (event: ErrorEvent): void => {
     sink.push(`uncaught: ${event.message}`);
   };
+
   const onRejection = (event: PromiseRejectionEvent): void => {
     const reason: unknown = event.reason;
 
@@ -223,16 +237,18 @@ const instrumentCell = (app: Application, scene: ProbeScene): { recorder: Target
  * scene has no internal target", which is the opposite of true.
  */
 export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeCellResult> => {
-  const { cell, backend, host, index, runStartedAt, stage } = options;
+  const { cell, backend, host, runId, index, runStartedAt, stage } = options;
   const measureMs = options.measureMs ?? DEFAULT_MEASURE_MS;
   const errors: string[] = [];
   const canvas = freshStageCanvas(host);
 
   let booted: ProbeApplication | null = null;
   let scene: ProbeScene | null = null;
+
   let restore: RestoreInstrumentation = (): void => {
     /* nothing instrumented yet */
   };
+
   const stopErrorCapture = captureLooseErrors(errors);
 
   try {
@@ -298,12 +314,18 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
     const measuredMs = performance.now() - startedAt;
     const gpuSamples = await gpuTimer.collect();
     const gpuUsable = gpuTimer.available && gpuSamples.frameMs.length > 0;
+
+    if (booted.webgpuTimestampQuery === null && gpuTimer.note !== null) {
+      errors.push(gpuTimer.note);
+    }
+
     const internalTargets = instrumentation.recorder.summary();
     const backingWidth = canvas.width;
     const backingHeight = canvas.height;
     const mainPixelCount = backingWidth * backingHeight;
 
     return {
+      runId,
       index,
       startOffsetMs: startedAt - runStartedAt,
       scene: cell.scene,
@@ -337,6 +359,7 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
     errors.push(error instanceof Error ? `${error.name}: ${error.message}` : String(error));
 
     return {
+      runId,
       index,
       startOffsetMs: performance.now() - runStartedAt,
       scene: cell.scene,
@@ -367,7 +390,8 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
     stopErrorCapture();
     restore();
     scene?.dispose();
-    booted?.app.destroy();
+    await booted?.app.destroy();
+    releaseStageCanvas(canvas);
   }
 };
 
@@ -403,62 +427,94 @@ export const startVisualPreview = async (options: {
   host: HTMLElement;
 }): Promise<VisualPreview> => {
   const canvas = freshStageCanvas(options.host);
-  const booted = await bootProbeApplication(canvas, options.stage, options.pixelRatio, options.backend);
-  const scene = createProbeScene(options.scene, {
-    stageWidth: options.stage.width,
-    stageHeight: options.stage.height,
-    mode: options.mode,
-    ...(options.textPixelRatio !== undefined && { textPixelRatio: options.textPixelRatio }),
-  });
-  const recorder = createTargetRecorder();
-  const restores: RestoreInstrumentation[] = [instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder)];
+  let booted: ProbeApplication;
 
-  for (const node of scene.cacheNodes) {
-    restores.push(instrumentCacheTexture(node, recorder));
+  try {
+    booted = await bootProbeApplication(canvas, options.stage, options.pixelRatio, options.backend);
+  } catch (error) {
+    releaseStageCanvas(canvas);
+
+    throw error;
   }
 
-  let running = true;
-  let frame = 0;
-  let handle = 0;
+  const restores: RestoreInstrumentation[] = [];
 
-  const loop = (): void => {
-    if (!running) {
-      return;
+  let scene: ProbeScene | null = null;
+
+  try {
+    const activeScene = createProbeScene(options.scene, {
+      stageWidth: options.stage.width,
+      stageHeight: options.stage.height,
+      mode: options.mode,
+      ...(options.textPixelRatio !== undefined && { textPixelRatio: options.textPixelRatio }),
+    });
+
+    scene = activeScene;
+
+    const recorder = createTargetRecorder();
+
+    restores.push(instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder));
+
+    for (const node of activeScene.cacheNodes) {
+      restores.push(instrumentCacheTexture(node, recorder));
     }
 
-    scene.update(frame++);
-    booted.app.backend.resetStats();
-    booted.app.backend.clear();
-    booted.app.rendering.render(scene.root);
-    booted.app.backend.flush();
-    handle = requestAnimationFrame(loop);
-  };
+    let running = true;
+    let frame = 0;
+    let handle = 0;
 
-  // Arm across the FIRST frame only, so the readout shows per-frame target
-  // shapes and, for `cacheAsTexture`, catches the one frame that bakes.
-  recorder.arm();
-  loop();
-  recorder.disarm();
-
-  return {
-    backingWidth: canvas.width,
-    backingHeight: canvas.height,
-    cssWidth: parseFloat(canvas.style.width) || canvas.clientWidth,
-    cssHeight: parseFloat(canvas.style.height) || canvas.clientHeight,
-    backendType: booted.backendType,
-    internalTargets: recorder.summary(),
-    async stop(): Promise<void> {
-      running = false;
-      cancelAnimationFrame(handle);
-      // One frame of slack so an in-flight callback cannot touch a destroyed app.
-      await nextFrame();
-
-      for (const undo of restores) {
-        undo();
+    const loop = (): void => {
+      if (!running) {
+        return;
       }
 
-      scene.dispose();
-      booted.app.destroy();
-    },
-  };
+      activeScene.update(frame++);
+      booted.app.backend.resetStats();
+      booted.app.backend.clear();
+      booted.app.rendering.render(activeScene.root);
+      booted.app.backend.flush();
+      handle = requestAnimationFrame(loop);
+    };
+
+    // Arm across the FIRST frame only, so the readout shows per-frame target
+    // shapes and, for `cacheAsTexture`, catches the one frame that bakes.
+    recorder.arm();
+    loop();
+    recorder.disarm();
+
+    return {
+      backingWidth: canvas.width,
+      backingHeight: canvas.height,
+      cssWidth: parseFloat(canvas.style.width) || canvas.clientWidth,
+      cssHeight: parseFloat(canvas.style.height) || canvas.clientHeight,
+      backendType: booted.backendType,
+      internalTargets: recorder.summary(),
+      async stop(): Promise<void> {
+        running = false;
+        cancelAnimationFrame(handle);
+        // One frame of slack so an in-flight callback cannot touch a destroyed app.
+        await nextFrame();
+
+        for (const undo of restores) {
+          undo();
+        }
+
+        activeScene.dispose();
+        await booted.app.destroy();
+        releaseStageCanvas(canvas);
+      },
+    };
+  } catch (error) {
+    // A failure after boot would otherwise leave the live backend, context,
+    // scene resources and style instrumentation unreachable; the caller only
+    // drops its reference.
+    await releaseFailedPreview({
+      restores: restores.splice(0),
+      disposeScene: scene === null ? null : () => scene!.dispose(),
+      destroyApp: () => booted.app.destroy(),
+    });
+    releaseStageCanvas(canvas);
+
+    throw error;
+  }
 };

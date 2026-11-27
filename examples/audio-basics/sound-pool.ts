@@ -1,10 +1,27 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, type Seconds, Sound, Text } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  type Sound,
+  Text,
+} from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 const POOL_SIZE = 12;
 const FIRE_INTERVAL = 0.04;
 
 class SoundPoolScene extends Scene {
+  private readonly onPointerDown = (): void => {
+    this.firing = true;
+  };
+  private readonly onPointerUp = (): void => {
+    this.firing = false;
+  };
   private sound!: Sound;
   private graphics!: Graphics;
   private label!: Text;
@@ -19,7 +36,6 @@ class SoundPoolScene extends Scene {
   private clock = 0;
   private evictions = 0;
   private lastDetune = 0;
-  private hud!: ReturnType<typeof mountControls>;
 
   override init(): void {
     const app = this.app;
@@ -27,17 +43,20 @@ class SoundPoolScene extends Scene {
 
     // impactHeavy is long enough (~0.5 s) that rapid fire actually overlaps -
     // a short click ends before the next shot and the pool never fills.
-    // Path-only get() infers Sound from the .ogg extension - sidesteps a
-    // compile-time overload ambiguity between Sound and the Json token form
-    // when passing the Sound token explicitly.
-    this.sound = this.loader.get(assets.demo.audio.impactHeavy);
+    this.sound = this.loader.get(assets.soundImpactHeavy);
     this.sound.poolSize = POOL_SIZE;
 
     this.graphics = new Graphics();
-    this.label = new Text('Hold Space to fire faster than voices finish', { fillColor: Color.white, fontSize: 22, align: 'center' })
+    this.label = new Text('Hold Space, a mouse button or a finger to fire faster than voices finish', {
+      fillColor: Color.white,
+      fontSize: 22,
+      align: 'center',
+    })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height * 0.22);
-    this.readout = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' }).setAnchor(0.5, 0.5).setPosition(width / 2, height * 0.32);
+    this.readout = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height * 0.32);
 
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it. Holding Space becomes audible once
@@ -46,22 +65,15 @@ class SoundPoolScene extends Scene {
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 48);
 
-    this.hud = mountControls({
-      title: 'Polyphonic Sound',
-      controls: [
-        { keys: 'Click', action: 'enable audio (once)' },
-        { keys: 'Space', action: 'hold to spawn voices into the pool' },
-      ],
-      status: 'Click or press any key to enable audio, then hold Space.',
-      hint: `The pool caps at ${POOL_SIZE} voices. Each shot varies pitch; at capacity, the oldest voice is evicted.`,
-    });
-
     this.inputs.onActive(Keyboard.Space, () => {
       this.firing = true;
     });
     this.inputs.onStop(Keyboard.Space, () => {
       this.firing = false;
     });
+    // Holding a pointer or a finger fires as well, so touch devices can fill the pool.
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.app.input.onPointerUp.add(this.onPointerUp);
   }
 
   private spawnVoice(): void {
@@ -79,7 +91,8 @@ class SoundPoolScene extends Scene {
     const playbackRate = 0.85 + Math.random() * 0.3;
     this.lastDetune = 1200 * Math.log2(playbackRate);
     this.voices.push(this.clock + this.sound.duration / playbackRate);
-    app.audio.play(this.sound, { playbackRate, volume: 0.5 });
+    // Up to POOL_SIZE impacts overlap, so each one is quiet on its own.
+    app.audio.play(this.sound, { playbackRate, volume: 0.3 });
   }
 
   override update(delta: Seconds): void {
@@ -95,6 +108,7 @@ class SoundPoolScene extends Scene {
     }
 
     this.timer += delta;
+
     while (this.timer >= FIRE_INTERVAL) {
       this.timer -= FIRE_INTERVAL;
       this.spawnVoice();
@@ -126,6 +140,7 @@ class SoundPoolScene extends Scene {
       } else {
         this.graphics.fillColor = new Color(50, 55, 60);
       }
+
       this.graphics.drawRectangle(x, y, cell, cell);
     }
 
@@ -141,7 +156,12 @@ class SoundPoolScene extends Scene {
   }
 
   override destroy(): void {
-    this.hud.dispose();
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.app.input.onPointerUp.remove(this.onPointerUp);
+    this.graphics?.destroy();
+    this.label?.destroy();
+    this.readout?.destroy();
+    this.tapPrompt?.destroy();
     super.destroy();
   }
 }

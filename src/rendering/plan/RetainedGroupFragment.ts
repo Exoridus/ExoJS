@@ -74,14 +74,6 @@ export interface RetainedFragmentBarrier {
 export type RetainedFragmentEntry = RetainedFragmentDraw | RetainedFragmentGroup | RetainedFragmentBarrier;
 
 /**
- * Process-wide monotonic epoch for the dirty-transform-row dedup
- * (see {@link RetainedGroupFragment}). Each fragment reset claims a fresh value,
- * so a node's dedup stamp from any earlier cycle - this fragment's or another's
- * - can never equal a fragment's current epoch, making a false dedup (a dropped
- * move → stale render) impossible.
- */
-
-/**
  * Whole-command-range fragment cache for one {@link RetainedContainer}.
  * Keyed on the subtree's aggregate
  * content/structure revision and the backend identity - deliberately NOT on
@@ -275,7 +267,12 @@ export class RetainedGroupFragment {
   }
 
   /** Fold every draw record (nested groups included) into `map`; returns the running minimum. */
-  private _collectRowsInto(map: Map<Drawable, RetainedFragmentDraw>, entries: readonly RetainedFragmentEntry[], entryCount: number, min: number): number {
+  private _collectRowsInto(
+    map: Map<Drawable, RetainedFragmentDraw>,
+    entries: readonly RetainedFragmentEntry[],
+    entryCount: number,
+    min: number,
+  ): number {
     let currentMin = min;
 
     for (let index = 0; index < entryCount; index++) {
@@ -382,7 +379,10 @@ export class RetainedGroupFragment {
    * `true` to skip the capture.
    */
   public shouldSuppressCapture(contentRevision: number, structureRevision: number): boolean {
-    const verdict = this._thrash.evaluate(this._hasCapture, this._observedContent === contentRevision && this._observedStructure === structureRevision);
+    const verdict = this._thrash.evaluate(
+      this._hasCapture,
+      this._observedContent === contentRevision && this._observedStructure === structureRevision,
+    );
 
     if (verdict === CaptureVerdict.Capture) {
       return false;
@@ -413,7 +413,12 @@ export class RetainedGroupFragment {
   }
 
   public isClean(contentRevision: number, structureRevision: number, backend: RenderBackend): boolean {
-    return this._hasCapture && this._contentRevision === contentRevision && this._structureRevision === structureRevision && this._backend === backend;
+    return (
+      this._hasCapture &&
+      this._contentRevision === contentRevision &&
+      this._structureRevision === structureRevision &&
+      this._backend === backend
+    );
   }
 
   /**
@@ -440,15 +445,19 @@ export class RetainedGroupFragment {
       return true;
     }
 
-    const tolerable = this.dirtyIndex.readSince(this._contentCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
-      const changed = node as unknown as RenderNode;
+    const tolerable = this.dirtyIndex.readSince(
+      this._contentCursor,
+      DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect,
+      (node, marked) => {
+        const changed = node as unknown as RenderNode;
 
-      if (changed !== root && !isUnder(changed, root)) {
-        return true;
-      }
+        if (changed !== root && !isUnder(changed, root)) {
+          return true;
+        }
 
-      return changeBelongsToLiveEntry(changed, root, marked, candidate => this.hasLiveRecordFor(candidate), destinationOpaque);
-    });
+        return changeBelongsToLiveEntry(changed, root, marked, candidate => this.hasLiveRecordFor(candidate), destinationOpaque);
+      },
+    );
 
     if (!tolerable) {
       return false;
@@ -600,6 +609,7 @@ const createFragmentDraw = (): RetainedFragmentDraw => ({
   seq: 0,
   zIndex: 0,
   material: createEmptyMaterialKey(),
+  boundsStale: false,
   minX: 0,
   minY: 0,
   maxX: 0,

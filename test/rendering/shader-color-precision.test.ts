@@ -24,6 +24,7 @@ const colourFragmentStages = [
   'src/rendering/filters/shaders/bloom-threshold.frag',
   'src/rendering/filters/shaders/blur.frag',
   'src/rendering/filters/shaders/color-matrix.frag',
+  'src/rendering/filters/shaders/crt.frag',
   'src/rendering/filters/shaders/displacement.frag',
   'src/rendering/filters/shaders/drop-shadow.frag',
   'src/rendering/filters/shaders/lut-3d.frag',
@@ -44,7 +45,7 @@ describe('colour fragment stage precision', () => {
     expect(source).not.toMatch(/^precision (?:lowp|mediump) sampler2D;/m);
   });
 
-  test.each(colourFragmentStages.filter(file => !/lit-sprite|tile-chunk|backdrop|normalize|output|blur|bloom/.test(file)))(
+  test.each(colourFragmentStages.filter(file => !/lit-sprite|tile-chunk|backdrop|normalize|blur|bloom/.test(file)))(
     '%s sets the default sampler precision',
     file => {
       expect(readFileSync(join(process.cwd(), file), 'utf8')).toMatch(/^precision highp sampler2D;/m);

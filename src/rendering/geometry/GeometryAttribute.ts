@@ -1,9 +1,13 @@
 /**
- * GPU buffer ownership strategy used by geometry-aware render paths.
+ * Buffer reuse hint used by geometry-aware render paths.
  *
- * - `static`  - immutable after creation; eligible for shared batched buffers.
- * - `dynamic` - occasionally mutated; backend should keep a dedicated buffer.
- * - `stream`  - mutated every frame; backend should treat as immediate data.
+ * - `static` - not expected to be mutated after creation; the only usage a
+ *   retained recording may reference, and the one eligible for shared batched
+ *   buffers.
+ * - `dynamic` - occasionally mutated; re-uploaded after
+ *   {@link Geometry.invalidate}.
+ * - `stream` - mutated every frame; resolved like `dynamic` today, kept as a
+ *   statement of intent for a backend that specialises on it.
  */
 export type GeometryUsage = 'static' | 'dynamic' | 'stream';
 

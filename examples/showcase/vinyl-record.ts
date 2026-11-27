@@ -1,21 +1,21 @@
 import {
   Application,
-  Asset,
-  AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
+  type Music,
   type RenderingContext,
   Scene,
   type Seconds,
   Text,
   type Voice,
 } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 class VinylRecordScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private musicVoice!: Voice;
   private analyser!: AudioAnalyser;
   private disc!: Graphics;
@@ -29,10 +29,10 @@ class VinylRecordScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-    // is loaded directly through `Asset.type('music', ...)` and awaited rather
+    // Music is a non-leaf resource kind (no seamless placeholder), so it
+    // is loaded directly through `{ type: 'music', source }` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
+    this.music = await this.loader.load(assets.musicLofiRhodes);
     this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
     this.disc = new Graphics();
     this.bars = new Graphics();
@@ -52,13 +52,13 @@ class VinylRecordScene extends Scene {
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.45 });
   }
 
   override update(delta: Seconds): void {
     // Spin speed is driven by live audio energy, not a constant fallback BPM.
     // Silence → energy 0 → the platter holds perfectly still.
-    const energy = this.analyser.getRms();
+    const energy = this.analyser.getLevel();
     const targetRpm = energy > 0.02 ? 30 + energy * 260 : 0;
 
     // Ease toward the target so the disc spins up and slows down smoothly.
@@ -83,7 +83,10 @@ class VinylRecordScene extends Scene {
     this.disc.drawCircle(cx, cy, 32);
     this.disc.lineWidth = 2;
     this.disc.lineColor = new Color(80, 80, 84);
-    for (let r = 45; r <= 140; r += 14) this.disc.drawArc(cx, cy, r, 0, Math.PI * 2);
+
+    for (let r = 45; r <= 140; r += 14) {
+      this.disc.drawArc(cx, cy, r, 0, Math.PI * 2);
+    }
 
     // A groove marker so the rotation is visible even on a smooth disc.
     const markerAngle = (this.angle * Math.PI) / 180;
@@ -93,6 +96,7 @@ class VinylRecordScene extends Scene {
     context.render(this.disc);
 
     this.bars.clear();
+
     for (let i = 0; i < 36; i++) {
       const a = (i / 36) * Math.PI * 2 + (this.angle * Math.PI) / 180;
       const bin = (i * 6) % spectrum.length;
@@ -105,6 +109,7 @@ class VinylRecordScene extends Scene {
       this.bars.lineColor = new Color(120, 200, 255);
       this.bars.drawLine(x0, y0, x1, y1);
     }
+
     context.render(this.bars);
 
     if (app.audio.locked) {

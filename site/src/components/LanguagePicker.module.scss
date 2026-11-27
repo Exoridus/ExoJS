@@ -43,7 +43,7 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 900px) {
+@media (width <= 900px) {
   .lang button {
     min-height: 44px;
     padding: 0 12px;

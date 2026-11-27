@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Source mappings for the public `@codexo/exojs` specifiers inside this repository, so a program type-checks against the workspace sources rather than against whatever `dist/` a previous build left behind. The paths are relative to this file. A config that needs further mappings has to repeat these, because TypeScript replaces an inherited `paths` object wholesale.",
+  "compilerOptions": {
+    "paths": {
+      "@codexo/exojs": ["../../../src/index.ts"],
+      "@codexo/exojs/extensions": ["../../../src/extensions/index.ts"],
+      "@codexo/exojs/renderer-sdk": ["../../../src/renderer-sdk.ts"],
+      "@codexo/exojs/debug": ["../../../src/debug/index.ts"],
+      "@codexo/exojs-demo-assets": ["../../exojs-demo-assets/src/index.ts"],
+      "@codexo/exojs-demo-assets/extended": ["../../exojs-demo-assets/src/extended.ts"],
+      "@codexo/exojs/tilemap": ["../../exojs-tilemap/src/index.ts"],
+      "@codexo/exojs/particles": ["../../exojs-particles/src/index.ts"],
+      "@codexo/exojs/audio-fx": ["../../exojs-audio-fx/src/index.ts"],
+      "@codexo/exojs/physics": ["../../exojs-physics/src/index.ts"],
+      "@codexo/exojs/tilemap-physics": ["../../exojs-tilemap-physics/src/index.ts"],
+      "@codexo/exojs/lighting": ["../../exojs-lighting/src/index.ts"],
+      "@codexo/exojs/pathfinding": ["../../exojs-pathfinding/src/index.ts"]
+    }
+  }
+}

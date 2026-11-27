@@ -31,6 +31,8 @@ import { chromium } from 'playwright';
 import { LAUNCH_FLAGS, readEngineVersion, readWebGpuAdapter, startViteServer, WEBGPU_LAUNCH_FLAGS } from './rendering/driver';
 import type { Backend } from './rendering/EngineAdapter';
 import type { TimerFrameRecord, TimerProbeMode, TimerProbeResult, TimerProbeSpec } from './rendering/page/timerProbe';
+import { parsePositiveInt } from './shared/args';
+import { median, percentile } from './shared/timing';
 
 const args = process.argv.slice(2);
 
@@ -46,15 +48,21 @@ const list = (name: string, fallback: string): string[] =>
     .map(value => value.trim())
     .filter(value => value.length > 0);
 
-const nodeCounts = list('nodes', '1000000').map(Number);
+const nodeCountTokens = list('nodes', '1000000');
+const nodeCounts = nodeCountTokens.map(value => parsePositiveInt('--nodes', value));
+
+if (nodeCounts.length === 0) {
+  throw new Error('--nodes must name at least one positive integer node count.');
+}
+
 const configs = list('config', 'retained') as Array<'current' | 'retained'>;
 const backends = list('backends', 'webgpu') as Backend[];
 const modes = list('mode', 'pipelined') as TimerProbeMode[];
 const archetype = flag('archetype') ?? 'scrolling-world';
-const timedFrames = Number(flag('frames') ?? 30);
-const warmupFrames = Number(flag('warmup') ?? 40);
-const repeats = Number(flag('repeats') ?? 1);
-const controlSamples = Number(flag('control-samples') ?? 20);
+const timedFrames = parsePositiveInt('--frames', flag('frames') ?? '30');
+const warmupFrames = parsePositiveInt('--warmup', flag('warmup') ?? '40');
+const repeats = parsePositiveInt('--repeats', flag('repeats') ?? '1');
+const controlSamples = parsePositiveInt('--control-samples', flag('control-samples') ?? '20');
 const noDrain = args.includes('--no-drain');
 const noTimestamps = args.includes('--no-timestamps');
 const controlsOnly = args.includes('--controls-only');
@@ -79,26 +87,14 @@ interface CellRun {
 }
 
 const cellKey = (spec: TimerProbeSpec): string =>
-  [spec.backend, `${spec.nodeCount}n`, spec.config, spec.mode, spec.drainAfterWarmup ? 'drained' : 'undrained', spec.timestampQueries ? 'ts' : 'no-ts'].join(
-    ' ',
-  );
-
-const median = (values: readonly number[]): number => {
-  const sorted = [...values].sort((a, b) => a - b);
-
-  return sorted.length === 0 ? 0 : sorted[Math.floor(sorted.length / 2)]!;
-};
-
-/** Nearest-rank percentile - the same definition `shared/timing.ts` uses. */
-const percentile = (values: readonly number[], p: number): number => {
-  const sorted = [...values].sort((a, b) => a - b);
-
-  if (sorted.length === 0) {
-    return 0;
-  }
-
-  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1))]!;
-};
+  [
+    spec.backend,
+    `${spec.nodeCount}n`,
+    spec.config,
+    spec.mode,
+    spec.drainAfterWarmup ? 'drained' : 'undrained',
+    spec.timestampQueries ? 'ts' : 'no-ts',
+  ].join(' ');
 
 const max = (values: readonly number[]): number => (values.length === 0 ? 0 : Math.max(...values));
 
@@ -205,7 +201,9 @@ const buildSpecs = (): TimerProbeSpec[] => {
 
 const runCell = async (spec: TimerProbeSpec, baseUrl: string): Promise<{ result: TimerProbeResult; adapter: string }> => {
   const flags =
-    spec.backend === 'webgpu' ? [...WEBGPU_LAUNCH_FLAGS, ...(spec.timestampQueries && !args.includes('--quantized') ? TIMESTAMP_FLAGS : [])] : LAUNCH_FLAGS;
+    spec.backend === 'webgpu'
+      ? [...WEBGPU_LAUNCH_FLAGS, ...(spec.timestampQueries && !args.includes('--quantized') ? TIMESTAMP_FLAGS : [])]
+      : LAUNCH_FLAGS;
   const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
 
   try {
@@ -283,14 +281,19 @@ const formatSummary = (runs: readonly CellRun[]): string => {
         '',
       );
 
-      lines.push('| frame | rafAt | rafΔ | cpuMs | submitAt | doneAt | A raw | B busy | dep | D hwPass | hwSpan | passes | entered | wbMiB |');
+      lines.push(
+        '| frame | rafAt | rafΔ | cpuMs | submitAt | doneAt | A raw | B busy | dep | D hwPass | hwSpan | passes | entered | wbMiB |',
+      );
       lines.push('| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :-: | ---: | ---: | ---: | ---: | ---: |');
 
       let previousDone: number | null = null;
 
       for (const frame of run.result.frames) {
         const raw = frame.doneAtMs === null ? null : frame.doneAtMs - frame.submitAtMs;
-        const busy = frame.doneAtMs === null ? null : frame.doneAtMs - (previousDone === null ? frame.submitAtMs : Math.max(frame.submitAtMs, previousDone));
+        const busy =
+          frame.doneAtMs === null
+            ? null
+            : frame.doneAtMs - (previousDone === null ? frame.submitAtMs : Math.max(frame.submitAtMs, previousDone));
         const dependent = previousDone !== null && frame.submitAtMs < previousDone;
 
         lines.push(
@@ -311,9 +314,15 @@ const formatSummary = (runs: readonly CellRun[]): string => {
 
     if (controls !== null) {
       lines.push('### Controls', '');
-      lines.push(`- \`performance.now()\` min non-zero delta: ${controls.nowMinDeltaMs.toFixed(4)} ms; crossOriginIsolated=${controls.crossOriginIsolated}`);
-      lines.push(`- clock delta histogram (ms, count): ${controls.nowDeltaHistogram.map(([delta, count]) => `${delta}×${count}`).join(' ')}`);
-      lines.push(`- microtask latency: median ${median(controls.microtaskMs).toFixed(4)} ms, max ${max(controls.microtaskMs).toFixed(4)} ms`);
+      lines.push(
+        `- \`performance.now()\` min non-zero delta: ${controls.nowMinDeltaMs.toFixed(4)} ms; crossOriginIsolated=${controls.crossOriginIsolated}`,
+      );
+      lines.push(
+        `- clock delta histogram (ms, count): ${controls.nowDeltaHistogram.map(([delta, count]) => `${delta}×${count}`).join(' ')}`,
+      );
+      lines.push(
+        `- microtask latency: median ${median(controls.microtaskMs).toFixed(4)} ms, max ${max(controls.microtaskMs).toFixed(4)} ms`,
+      );
       lines.push(
         `- idle-queue onSubmittedWorkDone: median ${median(controls.idleQueueMs).toFixed(3)} ms, p95 ${percentile(controls.idleQueueMs, 95).toFixed(3)} ms, max ${max(controls.idleQueueMs).toFixed(3)} ms`,
       );
@@ -336,6 +345,7 @@ const main = async (): Promise<void> => {
 
   if (baseUrl === undefined) {
     await server.close();
+
     throw new Error('The Vite dev server reported no local URL.');
   }
 

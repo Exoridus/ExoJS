@@ -20,6 +20,7 @@ const makeDrawable = (x = 0, y = 0, size = 16): Drawable => {
   const d = new Drawable();
   d.setLocalBounds(0, 0, size, size);
   d.setPosition(x, y);
+
   return d;
 };
 
@@ -93,6 +94,7 @@ const results: BenchmarkResult[] = [];
       name: 'bounds-cache-1k-nodes',
       setup() {
         root = new Container();
+
         for (let i = 0; i < 1000; i++) {
           const d = makeDrawable((i % 50) * 20, Math.floor(i / 50) * 20);
           root.addChild(d);
@@ -104,6 +106,7 @@ const results: BenchmarkResult[] = [];
         if (i % 10 === 0) {
           root!.setPosition(i % 50, 0);
         }
+
         // Read bounds on 100 random-ish nodes
         for (let j = 0; j < 100; j++) {
           nodes[(i * 97 + j * 31) % nodes.length].getBounds();

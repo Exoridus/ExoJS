@@ -26,12 +26,10 @@ The corresponding `<link>` elements live in `site/src/layouts/AppShell.astro`. T
 
 ## Regenerate
 
-Optimise SVGs from the design masters with this directory's `svgo.config.js`:
+Optimise SVGs from the design masters with the typed SVGO configuration in `site/scripts/optimize-brand-assets.ts`:
 
 ```sh
-for f in <masters>/*.svg; do
-  npx svgo --multipass --config site/public/brand/svgo.config.js -i "$f" -o "site/public/brand/$(basename "$f")"
-done
+pnpm --filter @codexo/exojs-examples brand:optimize <masters-dir>
 ```
 
 Rasterise the favicons from the dark mark with ImageMagick and its RSVG delegate. This PowerShell example keeps the intermediate image in the platform's temporary directory:

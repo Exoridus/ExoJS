@@ -19,11 +19,13 @@ export interface ToggleOptions extends CheckableOptions {
  * Behaviourally identical to {@link Checkbox} - same state machine, same
  * keyboard activation, same {@link CheckableWidget.onChange} - and different
  * only in what it paints: the `toggleTrack` role carries the interaction
- * states, and the `toggleKnob` role slides to the side `checked` selects.
+ * states, the `toggleFill` role covers the track while `checked`, and the
+ * `toggleKnob` role slides to the side `checked` selects.
  */
 export class Toggle extends CheckableWidget {
   private readonly _track = new WidgetBackground(this, 0);
-  private readonly _knob = new WidgetBackground(this, 1);
+  private readonly _fill = new WidgetBackground(this, 1);
+  private readonly _knob = new WidgetBackground(this, 2);
   private readonly _trackWidth: number;
   private readonly _trackHeight: number;
   private readonly _knobInset: number;
@@ -40,6 +42,11 @@ export class Toggle extends CheckableWidget {
   /** The node painting the track, or `null` while it paints nothing. */
   public get trackNode(): UIBackgroundNode | null {
     return this._track.node;
+  }
+
+  /** The node painting the checked fill, or `null` while unchecked or the fill paints nothing. */
+  public get fillNode(): UIBackgroundNode | null {
+    return this._fill.node;
   }
 
   /** The node painting the knob, or `null` while it paints nothing. */
@@ -60,13 +67,17 @@ export class Toggle extends CheckableWidget {
     const travel = Math.max(0, this._trackWidth - knobSize - this._knobInset * 2);
 
     this._track.apply(this._skin('toggleTrack').background, this._trackWidth, this._trackHeight);
+    this._fill.apply(this._checked ? this._skin('toggleFill').background : noFill, this._trackWidth, this._trackHeight);
     this._knob.apply(this._skin('toggleKnob').background, knobSize, knobSize);
     this._knob.node?.setPosition(this._knobInset + (this._checked ? travel : 0), this._knobInset);
   }
 
   public override destroy(): void {
     this._track.destroy();
+    this._fill.destroy();
     this._knob.destroy();
     super.destroy();
   }
 }
+
+const noFill = { kind: 'none' } as const;

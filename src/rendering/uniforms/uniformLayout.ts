@@ -94,7 +94,12 @@ const aggregateAlignment = 16;
 
 const alignOfNode = (node: UniformNodeLayout): number => (node.kind === 'leaf' ? uniformTypeInfo[node.type].align : node.align);
 
-const layoutLeaf = (type: UniformType, offset: number): UniformLeafLayout => ({ kind: 'leaf', type, offset, size: uniformTypeInfo[type].size });
+const layoutLeaf = (type: UniformType, offset: number): UniformLeafLayout => ({
+  kind: 'leaf',
+  type,
+  offset,
+  size: uniformTypeInfo[type].size,
+});
 
 const layoutNode = (fieldType: UniformFieldType, offset: number, typeName: string, structs: UniformStructLayout[]): UniformNodeLayout => {
   if (isUniformType(fieldType)) {

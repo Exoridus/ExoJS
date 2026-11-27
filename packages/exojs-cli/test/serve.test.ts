@@ -46,7 +46,7 @@ describe('exo serve', () => {
       // These three are the reason the server exists: a generic static server
       // answers all of them `application/octet-stream`, and streaming
       // instantiation then refuses the response.
-      const expected: readonly (readonly [string, string])[] = [
+      const expected: ReadonlyArray<readonly [string, string]> = [
         ['assets/module.wasm', 'application/wasm'],
         ['assets/atlas.ktx2', 'image/ktx2'],
         ['assets/level.exoa', 'application/vnd.exojs.container'],
@@ -55,7 +55,7 @@ describe('exo serve', () => {
         ['assets/data.bin', 'application/octet-stream'],
       ];
 
-      const served: [string, number, string | null][] = [];
+      const served: Array<[string, number, string | null]> = [];
 
       for (const [path] of expected) {
         const response = await fetch(`${server.url}${path}`);
@@ -165,6 +165,14 @@ describe('exo serve', () => {
 
       expect(response.status).toBe(416);
       expect(response.headers.get('content-range')).toBe('bytes */3');
+    }));
+
+  test('a range whose end precedes its start is answered whole, never as a 206', async () =>
+    serving({ root, port: 0 }, async server => {
+      const response = await fetch(new URL('assets/data.bin', server.url), { headers: { Range: 'bytes=2-1' } });
+
+      expect(response.status).toBe(200);
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
     }));
 
   test('a range it will not serve piecewise is answered whole rather than refused', async () =>

@@ -3,7 +3,14 @@ import * as ex from 'excalibur';
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import { excaliburCovers } from '../coverage';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
-import { createDigitAtlasCanvas, createDistinctTextureCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH, TEXT_FONT_SIZE } from '../sceneAssets';
+import {
+  createDigitAtlasCanvas,
+  createDistinctTextureCanvas,
+  DIGIT_ALPHABET,
+  DIGIT_CELL_HEIGHT,
+  DIGIT_CELL_WIDTH,
+  TEXT_FONT_SIZE,
+} from '../sceneAssets';
 import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, textForLeaf } from '../traits';
 import { GRID_MARGIN, gridLayout, gridPosition, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 import { replaceExcaliburChild } from './excaliburLifecycle';
@@ -28,7 +35,9 @@ import { replaceExcaliburChild } from './excaliburLifecycle';
  *
  * The harness owns frame cadence, so Excalibur's own game loop is halted right
  * after boot (`engine.clock.stop()`), and one frame is produced by replicating
- * exactly what the engine's private per-frame draw does, using only public API:
+ * exactly what the engine's private per-frame draw does, from the public
+ * lifecycle and draw calls plus the engine's own `_predraw`/`_postdraw`
+ * internals, which have no public equivalent:
  * `beginDrawLifecycle → clear → _predraw → currentScene.draw → _postdraw → flush
  * → endDrawLifecycle`. Only the DRAW half runs; the update systems (motion,
  * collision, the off-screen culling tagger) are never stepped, so only
@@ -204,7 +213,8 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       glyphFont = textGlyphs > 0 ? createGlyphFont() : null;
 
       /** Resting grid position of leaf `index`, from the shared layout helpers. */
-      const leafPosition = (index: number): { x: number; y: number } => (overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN));
+      const leafPosition = (index: number): { x: number; y: number } =>
+        overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN);
 
       /** Build (but do not parent) the leaf at global index `index`; reused by the churn mutation. */
       const makeLeaf = (index: number): { actor: ex.Actor; text: ex.Text | null } => {
@@ -353,9 +363,9 @@ export const createExcaliburAdapter = (): EngineAdapter => {
 
     teardown(): void {
       if (engine !== null) {
-        // `dispose` tears the whole engine down - scene graph, systems and the
-        // WebGL2 context. A fresh engine + canvas is created for the next cell,
-        // so nothing here needs to survive.
+        // `dispose` tears the engine down - scene graph and systems. The harness
+        // additionally force-loses the previous cell's WebGL context when it
+        // replaces the canvas; nothing here needs to survive that.
         engine.dispose();
         engine = null;
       }

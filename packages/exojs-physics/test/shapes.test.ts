@@ -81,6 +81,27 @@ describe('PolygonShape — convex validation', () => {
     ).toThrow(RangeError);
   });
 
+  it('rejects a self-intersecting star', () => {
+    const vertices = Array.from({ length: 5 }, (_, i) => {
+      const angle = (i * 4 * Math.PI) / 5;
+
+      return { x: Math.cos(angle), y: Math.sin(angle) };
+    });
+
+    expect(() => new PolygonShape(vertices)).toThrow(RangeError);
+    expect(() => new PolygonShape([...vertices].reverse())).toThrow(RangeError);
+  });
+
+  it('accepts a convex polygon at the vertex limit', () => {
+    const vertices = Array.from({ length: 256 }, (_, i) => {
+      const angle = (i * 2 * Math.PI) / 256;
+
+      return { x: Math.cos(angle), y: Math.sin(angle) };
+    });
+
+    expect(new PolygonShape(vertices).count).toBe(256);
+  });
+
   it('rejects a degenerate (collinear) polygon', () => {
     expect(
       () =>
@@ -215,5 +236,16 @@ describe('Shape mass capability', () => {
 
     expect(body.mass).toBeCloseTo(solidOnly.mass);
     expect(body.inertia).toBeCloseTo(solidOnly.inertia);
+  });
+
+  it('rejects a polygon with more edges than a contact point id can encode', () => {
+    const ring = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({
+        x: 100 * Math.cos((2 * Math.PI * i) / count),
+        y: 100 * Math.sin((2 * Math.PI * i) / count),
+      }));
+
+    expect(() => new PolygonShape(ring(257))).toThrow(RangeError);
+    expect(() => new PolygonShape(ring(256))).not.toThrow();
   });
 });

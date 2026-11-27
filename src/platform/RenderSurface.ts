@@ -11,16 +11,29 @@
  */
 export type RenderSurface = HTMLCanvasElement | OffscreenCanvas;
 
+type DomBrand = 'HTMLCanvasElement' | 'HTMLImageElement' | 'HTMLVideoElement' | 'OffscreenCanvas';
+
+/**
+ * Whether `value` is a platform object of the interface `brand`, whichever realm
+ * created it.
+ *
+ * Not `instanceof`: that compares against the constructors of the realm the
+ * check runs in, so an element from a same-origin iframe's document fails it,
+ * and a worker defines none of the element constructors at all.
+ * @internal
+ */
+export const hasDomBrand = <B extends DomBrand>(value: unknown, brand: B): value is InstanceType<(typeof globalThis)[B]> =>
+  typeof value === 'object' && value !== null && Object.prototype.toString.call(value) === `[object ${brand}]`;
+
 /**
  * Whether `surface` is a canvas element in a document, and so carries the DOM
  * affordances (style, layout box, event target, parent element) that an
  * `OffscreenCanvas` does not.
  *
- * Realm-safe: `HTMLCanvasElement` is not defined in a worker, where the answer
- * is always `false`.
+ * A canvas from another frame's document qualifies; in a worker the answer is
+ * always `false`.
  */
-export const isDomCanvas = (surface: RenderSurface): surface is HTMLCanvasElement =>
-  typeof HTMLCanvasElement !== 'undefined' && surface instanceof HTMLCanvasElement;
+export const isDomCanvas = (surface: RenderSurface): surface is HTMLCanvasElement => hasDomBrand(surface, 'HTMLCanvasElement');
 
 /**
  * The 2D context of either canvas kind, or `null` when the surface is already

@@ -11,7 +11,7 @@ When a drawable lands between device pixels — a camera at a fractional offset,
 
 ```ts
 import { type NineSliceSprite, PixelSnapMode, type Sprite } from '@codexo/exojs';
-import type { TileMapNode } from '@codexo/exojs-tilemap';
+import type { TileMapNode } from '@codexo/exojs/tilemap';
 
 declare const sprite: Sprite;
 declare const panel: NineSliceSprite;
@@ -73,11 +73,11 @@ Both modes are resolved in the vertex shaders against the composed device grid, 
 
 ## Tilemaps
 
-`@codexo/exojs-tilemap` exposes the same property on its scene nodes — `TileMapNode`, `TileMapView`, and `TileLayerNode`. Setting it cascades to every chunk node, current and rebuilt:
+`@codexo/exojs/tilemap` exposes the same property on its scene nodes — `TileMapNode`, `TileMapView`, and `TileLayerNode`. Setting it cascades to every chunk node, current and rebuilt:
 
 ```ts
 import { PixelSnapMode } from '@codexo/exojs';
-import { TileLayerNode, TileMap, TileMapNode, TileMapView } from '@codexo/exojs-tilemap';
+import { TileLayerNode, TileMap, TileMapNode, TileMapView } from '@codexo/exojs/tilemap';
 
 declare const map: TileMap;
 
@@ -103,6 +103,6 @@ Chunk origins snap on the shared device grid, and a chunk's internal tile geomet
 
 <ExamplePreview chapter="sprites-textures" slug="texture-sampling" />
 
-Compare texture sampling modes and render-only snapping against a fixed reference while changing zoom.
+Compare nearest, linear and mipmapped sampling side by side while magnifying and minifying the same texture, and toggle render-only snapping on the magnified row.
 
 The next section, [Effects](/ExoJS/en/guide/effects/filters/), builds directly on the rendering chapters — filters, particles, and post-processing chains that layer mood and motion onto a scene.

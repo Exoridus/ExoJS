@@ -81,7 +81,9 @@ const quadCount = (text: Text): number => text.pageQuads.reduce((total, batch) =
 const measureCtx = (font: string, direction: CanvasDirection): CanvasRenderingContext2D => {
   const ctx = document.createElement('canvas').getContext('2d');
 
-  if (!ctx) throw new Error('2D context required.');
+  if (!ctx) {
+    throw new Error('2D context required.');
+  }
 
   ctx.font = font;
   ctx.textBaseline = 'alphabetic';
@@ -228,6 +230,32 @@ describe('browser text shaping (WebGL2)', () => {
     for (const placement of placements.slice(0, -1)) {
       expect(placement.sourceEnd - placement.sourceStart === 1 || placement.sourceEnd - placement.sourceStart === FLAG.length).toBe(true);
     }
+
+    text.destroy();
+  });
+
+  test('Arabic ellipsis preserves the longest prefix measured by the canvas shaper', () => {
+    const value = 'بلاب';
+    const ctx = measureCtx('normal 48px sans-serif', 'rtl');
+    const maxWidth = (ctx.measureText('بل…').width + ctx.measureText('بلا…').width) / 2;
+    let expectedEnd = value.length;
+
+    while (expectedEnd > 0 && ctx.measureText(`${value.slice(0, expectedEnd)}…`).width > maxWidth) {
+      expectedEnd--;
+    }
+
+    const text = new Text(`${value}\nmore`, {
+      fontFamily: 'sans-serif',
+      fontSize: 48,
+      direction: 'rtl',
+      shaping: 'browser',
+      maxWidth,
+      maxLines: 1,
+      overflow: 'ellipsis',
+    });
+
+    expect(text.currentLayout.lines[0]?.sourceEnd).toBe(expectedEnd);
+    expect(text.currentLayout.advance.width).toBeLessThanOrEqual(maxWidth);
 
     text.destroy();
   });

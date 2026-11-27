@@ -2,6 +2,7 @@ import {
   Application,
   Color,
   FixedResolutionCanvasSizing,
+  Graphics,
   Keyboard,
   PixelSnapMode,
   type RenderingContext,
@@ -12,122 +13,182 @@ import {
   Text,
   Texture,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { choice, demoPanel, slider, startExample, toggle } from '@examples/runtime';
 
-// Colour textures are stored as sRGB and filtered in linear light, so the mips
-// of the checker average to the correct mid-grey rather than a darkened one.
-// Data textures (`colorSpace: 'none'`) filter their raw numeric values instead.
 const MODES = [
   { label: 'Nearest', scaleMode: ScaleModes.Nearest, mipmaps: false },
   { label: 'Linear', scaleMode: ScaleModes.Linear, mipmaps: false },
-  { label: 'Linear + mipmaps', scaleMode: ScaleModes.LinearMipmapLinear, mipmaps: true },
+  { label: 'Linear + mips', scaleMode: ScaleModes.LinearMipmapLinear, mipmaps: true },
 ] as const;
 
-const makePattern = (): HTMLCanvasElement => {
+const makePixelArt = (): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
   canvas.width = 32;
   canvas.height = 32;
   const ctx = canvas.getContext('2d')!;
+
   for (let y = 0; y < 32; y++) {
     for (let x = 0; x < 32; x++) {
       ctx.fillStyle = (x + y) % 2 === 0 ? '#f9d66e' : '#284b7a';
       ctx.fillRect(x, y, 1, 1);
     }
   }
+
   ctx.fillStyle = '#ff627d';
   ctx.fillRect(9, 9, 14, 14);
+
   return canvas;
 };
 
+// Zone plate: rings whose spacing shrinks towards the edge until it is finer
+// than a pixel. Drawn smaller than its size, everything past that point
+// aliases into false patterns unless mipmaps pre-average it.
+const makeZonePlate = (): HTMLCanvasElement => {
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const image = ctx.createImageData(size, size);
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x - size / 2;
+      const dy = y - size / 2;
+      // Ring frequency grows with the radius but stays below the texture's own
+      // Nyquist limit, so the source itself is alias-free.
+      const v = 0.5 + 0.5 * Math.cos((Math.PI * (dx * dx + dy * dy)) / (2 * size));
+      const i = (y * size + x) * 4;
+      image.data[i] = 40 + v * 215;
+      image.data[i + 1] = 60 + v * 190;
+      image.data[i + 2] = 90 + v * 150;
+      image.data[i + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(image, 0, 0);
+
+  return canvas;
+};
+
+const controls = {
+  magnify: slider('Magnify', { min: 1, max: 8, value: 3, step: 0.1 }),
+  minify: slider('Minify', { min: 0.1, max: 0.5, value: 0.25, step: 0.01 }),
+  snap: choice('Pixel snap', ['None', 'Position', 'Geometry']),
+  motion: toggle('Motion', true),
+};
 class TextureSamplingScene extends Scene {
-  private reference!: Sprite;
-  private sample!: Sprite;
-  private referenceTexture!: Texture;
-  private sampleTexture!: Texture;
-  private referenceLabel!: Text;
-  private sampleLabel!: Text;
-  private hud!: ReturnType<typeof mountControls>;
-  private mode = 0;
-  private zoom = 8;
-  private snap = false;
+  private magnified: Sprite[] = [];
+  private minified: Sprite[] = [];
+  private labels: Text[] = [];
+  private readonly grid = new Graphics();
+  private panel!: ReturnType<typeof demoPanel<typeof controls>>;
   private elapsed = 0;
-  private readonly onWheel = (_deltaX: number, deltaY: number): void => {
-    this.zoom = Math.max(0.3, Math.min(12, this.zoom * Math.exp(-deltaY * 0.002)));
-    this.updateHud();
+  private cameraMotion = false;
+  private cameraTime = 0;
+  private zoom = 1;
+  private readonly onWheel = (_x: number, y: number): void => {
+    this.zoom = Math.min(1.6, Math.max(0.5, this.zoom * Math.exp(-y * 0.001)));
   };
 
   override init(): void {
-    const source = makePattern();
-    this.referenceTexture = new Texture(source, { scaleMode: ScaleModes.Nearest, generateMipMap: false });
-    this.sampleTexture = new Texture(source, { scaleMode: ScaleModes.Nearest, generateMipMap: false });
-    this.reference = new Sprite(this.referenceTexture).setAnchor(0.5);
-    this.sample = new Sprite(this.sampleTexture).setAnchor(0.5);
-    this.reference.pixelSnapMode = PixelSnapMode.Geometry;
-    this.referenceLabel = new Text('Reference: nearest + snap', { fillColor: Color.white, fontSize: 20 });
-    this.sampleLabel = new Text('', { fillColor: Color.white, fontSize: 20 });
-    this.referenceLabel.setPosition(this.app.width * 0.18, this.app.height * 0.78);
-    this.sampleLabel.setPosition(this.app.width * 0.6, this.app.height * 0.78);
+    const pixelArt = makePixelArt();
+    const zone = makeZonePlate();
 
-    this.hud = mountControls({
-      title: 'Texture Sampling and Pixel Snapping',
-      controls: [
-        { keys: 'Space', action: 'cycle sample filtering' },
-        { keys: 'P', action: 'toggle sample snapping' },
-        { keys: 'Wheel', action: 'zoom both images' },
-      ],
-      hint: 'Compare the right image with the fixed nearest-filtered reference while zooming in and out.',
+    for (const mode of MODES) {
+      // Color is sRGB; numeric textures use colorSpace: 'none'. All columns share each source and clock.
+      this.magnified.push(
+        new Sprite(this.track(new Texture(pixelArt, { scaleMode: mode.scaleMode, generateMipMap: mode.mipmaps }))).setAnchor(0.5),
+      );
+      this.minified.push(
+        new Sprite(this.track(new Texture(zone, { scaleMode: mode.scaleMode, generateMipMap: mode.mipmaps }))).setAnchor(0.5),
+      );
+      this.labels.push(new Text(mode.label, { fillColor: Color.white, fontSize: 14, align: 'center' }).setAnchor(0.5));
+    }
+
+    this.root.addChild(this.grid, ...this.magnified, ...this.minified);
+    this.panel = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls,
+      actions: {
+        'Camera drift': () => {
+          this.cameraMotion = !this.cameraMotion;
+        },
+      },
     });
-    this.inputs.onTrigger(Keyboard.Space, () => this.selectMode((this.mode + 1) % MODES.length));
-    this.inputs.onTrigger(Keyboard.P, () => {
-      this.snap = !this.snap;
-      this.sample.pixelSnapMode = this.snap ? PixelSnapMode.Geometry : PixelSnapMode.None;
-      this.updateHud();
-    });
+    this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('motion'));
+    this.inputs.onTrigger(Keyboard.P, () => this.panel.step('snap'));
     this.app.input.onMouseWheel.add(this.onWheel);
-    this.updateHud();
-  }
-
-  private selectMode(index: number): void {
-    this.mode = index;
-    this.sampleTexture.setScaleMode(MODES[index].scaleMode);
-    this.sampleTexture.setGenerateMipMap(MODES[index].mipmaps);
-    this.updateHud();
-  }
-
-  private updateHud(): void {
-    this.sampleLabel.text = `Sample: ${MODES[this.mode].label}${this.snap ? ' + snap' : ''}`;
-    this.hud.setStatus(`Zoom ${this.zoom.toFixed(2)}x · ${MODES[this.mode].label} · snap ${this.snap ? 'on' : 'off'}`);
   }
 
   override update(delta: Seconds): void {
-    this.elapsed += delta;
+    const view = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+
+    if (this.panel.values.motion) {
+      this.elapsed += delta;
+    }
+
+    if (this.cameraMotion) {
+      this.cameraTime += delta;
+    }
+
+    this.root.setScale(view.scale);
     const drift = Math.sin(this.elapsed * 1.8) * 0.45;
-    this.reference.setPosition(this.app.width * 0.3 + drift, this.app.height * 0.54 + drift);
-    this.sample.setPosition(this.app.width * 0.7 + drift, this.app.height * 0.54 + drift);
-    this.reference.setScale(this.zoom);
-    this.sample.setScale(this.zoom);
+    const snap = { None: PixelSnapMode.None, Position: PixelSnapMode.Position, Geometry: PixelSnapMode.Geometry }[this.panel.values.snap];
+    this.grid.clear();
+    this.grid.lineWidth = 1;
+    this.grid.lineColor = new Color(255, 255, 255, 0.12);
+
+    for (let x = 0; x < view.width; x += 16) {
+      this.grid.drawLine(x, 32, x, view.contentHeight);
+    }
+
+    for (let y = 32; y < view.contentHeight; y += 16) {
+      this.grid.drawLine(0, y, view.width, y);
+    }
+
+    for (let i = 0; i < 3; i++) {
+      const x = (view.width * (i + 0.5)) / 3;
+      this.magnified[i].setPosition(x + drift, view.contentHeight * 0.34).setScale(this.panel.values.magnify);
+      this.minified[i].setPosition(x + drift, view.contentHeight * 0.77).setScale(this.panel.values.minify);
+      this.magnified[i].pixelSnapMode = snap;
+      this.minified[i].pixelSnapMode = snap;
+      this.labels[i].setPosition(x * view.scale, 14 * view.scale).setScale(view.scale);
+    }
+
+    this.app.rendering.view
+      .setCenter(this.app.width / 2 + (this.cameraMotion ? Math.sin(this.cameraTime) * 0.6 * view.scale : 0), this.app.height / 2)
+      .setZoom(this.zoom);
+    const canvas = this.app.canvas as HTMLCanvasElement;
+    this.panel.status(
+      `CSS ${view.width.toFixed(0)}x${view.height.toFixed(0)} | logical ${this.app.width}x${this.app.height} | buffer ${canvas.width}x${canvas.height} | DPR ${devicePixelRatio} | ratio ${this.app.pixelRatio} | zoom ${this.zoom.toFixed(2)} | camera ${this.cameraMotion ? 'moving' : 'still'}`,
+    );
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.reference);
-    context.render(this.sample);
-    context.render(this.referenceLabel);
-    context.render(this.sampleLabel);
+    context.render(this.root);
+
+    for (const label of this.labels) {
+      context.render(label, { view: context.screenView });
+    }
   }
 
   override destroy(): void {
     this.app.input.onMouseWheel.remove(this.onWheel);
-    this.hud.dispose();
+    this.app.rendering.view.setCenter(this.app.width / 2, this.app.height / 2).setZoom(1);
+    this.panel.dispose();
     super.destroy();
-    this.referenceTexture.destroy();
-    this.sampleTexture.destroy();
+
+    for (const label of this.labels) {
+      label.destroy();
+    }
   }
 }
 
 const app = new Application({
   scenes: { TextureSamplingScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
-  clearColor: new Color(14, 18, 27),
+  clearColor: new Color(38, 44, 52),
 });
-
-await app.start(TextureSamplingScene);
+await startExample(app, () => app.start(TextureSamplingScene));

@@ -1,3 +1,4 @@
+import type { LoaderScope } from '#assets/LoaderScope';
 import { Color } from '#core/Color';
 import { DirtyChannel } from '#core/nodeDirtyIndex';
 import { SceneNode } from '#core/SceneNode';
@@ -28,8 +29,11 @@ import type { ColorTextureFormat, TargetResolution } from './types';
 import { BlendModes, isAdvancedBlendMode, TextureFormat } from './types';
 import { View } from './View';
 
-interface DestroyableFilter {
-  destroy(): void;
+/** One synchronous, already-preflighted asset scope propagation. @internal */
+export interface AssetScopeValidation {
+  readonly scope: LoaderScope;
+  readonly ownershipRevision: number;
+  readonly revisions: Map<RenderNode, number>;
 }
 
 /**
@@ -54,9 +58,6 @@ interface RenderNodeSpriteLike extends Drawable {
   render(backend: RenderBackend): this;
   destroy(): void;
 }
-
-const isDestroyableFilter = (filter: Filter): filter is Filter & DestroyableFilter =>
-  'destroy' in filter && typeof (filter as Partial<DestroyableFilter>).destroy === 'function';
 
 /** Shared empty result for every node that has no filter list of its own. */
 const NO_FILTERS: readonly Filter[] = [];
@@ -205,7 +206,7 @@ export abstract class RenderNode extends SceneNode {
    * - `clipShape` is a `Rectangle` - clip to that world-space rectangle via
    *   scissor.
    * - `clipShape` is a `Geometry` - clip to the geometry's silhouette via the
-   *   stencil buffer (WebGL2). Only fragments inside the shape survive.
+   *   stencil buffer on both backends. Only fragments inside the shape survive.
    *
    * Clipping wraps the node's final (filtered/masked) output and acts as a
    * render barrier: draw commands are never reordered or batched across the
@@ -467,14 +468,21 @@ export abstract class RenderNode extends SceneNode {
    */
   private _cacheBakedResolution = 0;
   private _cacheDirty = true;
+  private _cacheContentRevision = -1;
+  private _cacheTransformRevision = -1;
   private _cacheTexture: RenderTexture | null = null;
   private _retainedRoot: RetainedRootRepresentation | null = null;
 
+  /** Filters are borrowed; destroying this node detaches them without destroying them. */
   public get filters(): readonly Filter[] {
     return this._filters ?? NO_FILTERS;
   }
 
   public set filters(filters: readonly Filter[]) {
+    if (filters === this.filters) {
+      return;
+    }
+
     this._detachFilterOwnership();
 
     if (filters.length === 0) {
@@ -517,6 +525,14 @@ export abstract class RenderNode extends SceneNode {
     }
 
     if (mask instanceof RenderNode) {
+      // Rendering a mask re-renders its whole subtree, so a mask that contains
+      // this node would render this node's mask again, without end.
+      for (let ancestor = this.parent; ancestor !== null; ancestor = ancestor.parent) {
+        if (ancestor === mask) {
+          throw new Error('A RenderNode cannot use one of its ancestors as its mask source.');
+        }
+      }
+
       const seen = new Set<RenderNode>([this]);
 
       for (let node: MaskSource = mask; node instanceof RenderNode; node = node._mask) {
@@ -753,6 +769,16 @@ export abstract class RenderNode extends SceneNode {
     }
   }
 
+  /** Propagates scene asset ownership independently of active rendering. @internal */
+  public _setAssetScope(_scope: LoaderScope | null, _validation?: AssetScopeValidation): void {
+    // Overridden by nodes that own asset claims.
+  }
+
+  /** Check a prospective owner before a scene-tree mutation publishes any changes. @internal */
+  public _validateAssetScope(_scope: LoaderScope | null, _validation?: AssetScopeValidation): void {
+    // Overridden by nodes that own asset claims.
+  }
+
   /** Part of the renderer SDK contract for extension renderers. */
   protected _collectContent(_builder: RenderPlanBuilder): void {
     // Overridden by Drawable/Container.
@@ -950,7 +976,15 @@ export abstract class RenderNode extends SceneNode {
 
   /** @internal */
   public _renderPlanCanReuseTextureCache(left: number, top: number, width: number, height: number, resolution: number): boolean {
-    if (!this._cacheAsTexture || this._cacheDirty || this._cacheTexture === null || this._cacheBounds === null || this._cacheBakedResolution !== resolution) {
+    if (
+      !this._cacheAsTexture ||
+      this._cacheDirty ||
+      this._cacheContentRevision !== this._contentRevision ||
+      this._cacheTransformRevision !== this._transformRevision ||
+      this._cacheTexture === null ||
+      this._cacheBounds === null ||
+      this._cacheBakedResolution !== resolution
+    ) {
       return false;
     }
 
@@ -973,11 +1007,20 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /** @internal */
-  public _renderPlanStoreCacheTexture(texture: RenderTexture, left: number, top: number, width: number, height: number, resolution: number): void {
+  public _renderPlanStoreCacheTexture(
+    texture: RenderTexture,
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+    resolution: number,
+  ): void {
     this._cacheTexture = texture;
     (this._cacheBounds ??= new Rectangle()).set(left, top, width, height);
     this._cacheBakedResolution = resolution;
     this._cacheDirty = false;
+    this._cacheContentRevision = this._contentRevision;
+    this._cacheTransformRevision = this._transformRevision;
   }
 
   /** @internal */
@@ -1028,6 +1071,7 @@ export abstract class RenderNode extends SceneNode {
     super.destroy();
 
     this._destroyCacheTexture();
+
     // Releases the captured entry records (and their drawable references) plus
     // the recorded GPU bundle this node owned as a render root, and balances the
     // representation's seam registration exactly once.
@@ -1036,6 +1080,7 @@ export abstract class RenderNode extends SceneNode {
       this._retainedRoot = null;
       this._dirtyIndex().releaseConsumer();
     }
+
     this._cacheBounds?.destroy();
     this._cacheBounds = null;
     this._cacheSprite?.destroy();
@@ -1045,12 +1090,6 @@ export abstract class RenderNode extends SceneNode {
 
     if (this._filters !== null) {
       this._detachFilterOwnership();
-
-      for (const filter of this._filters) {
-        if (isDestroyableFilter(filter)) {
-          filter.destroy();
-        }
-      }
 
       this._filters.length = 0;
       this._filters = null;
@@ -1109,7 +1148,15 @@ export abstract class RenderNode extends SceneNode {
     }
   }
 
-  private _drawTexture(backend: RenderBackend, texture: RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): void {
+  private _drawTexture(
+    backend: RenderBackend,
+    texture: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    blendMode: BlendModes,
+  ): void {
     const sprite = this._getCacheSprite();
 
     sprite.setTexture(texture).setBlendMode(blendMode).setTint(Color.white).setPosition(x, y).setRotation(0).setScale(1, 1);

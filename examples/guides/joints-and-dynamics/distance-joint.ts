@@ -1,4 +1,4 @@
-import { BoxShape, DistanceJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, DistanceJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:distance-joint
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });

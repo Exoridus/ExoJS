@@ -1,20 +1,29 @@
 import {
   ActionMap,
   Application,
+  BlurFilter,
+  ButtonAction,
   Color,
   Container,
   FixedResolutionCanvasSizing,
   GamepadAxis,
+  GamepadButton,
   Graphics,
   Keyboard,
   type RenderingContext,
   Scene,
+  SceneAvailability,
   type Seconds,
+  type Sprite,
+  Spritesheet,
+  type SpritesheetData,
   Text,
+  type Tween,
   VectorAction,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, startExample } from '@examples/runtime';
 
-// #region guide:constants
 const CANVAS_WIDTH = 1280;
 const CANVAS_HEIGHT = 720;
 const PLAYER_RADIUS = 18;
@@ -23,7 +32,6 @@ const ORB_RADIUS = 14;
 const SPAWN_INTERVAL = 0.9;
 const ORB_SPEED_MIN = 80;
 const ORB_SPEED_MAX = 200;
-// #endregion guide:constants
 
 interface OrbData {
   gfx: Graphics;
@@ -34,13 +42,26 @@ interface OrbData {
 
 class PlayScene extends Scene {
   private world!: Container;
-  private player!: Graphics;
+  private player!: Sprite;
+  private sheetData!: SpritesheetData;
+  private panel!: ReturnType<typeof demoPanel>;
+  private pauseText!: Text;
+  private readonly blur = this.track(new BlurFilter({ strength: 0 }));
+  private blurTween: Tween | null = null;
+  private navigating = false;
   private orbs: OrbData[] = [];
   private px = CANVAS_WIDTH / 2;
   private py = CANVAS_HEIGHT / 2;
   private readonly actions = new ActionMap({
+    pause: new ButtonAction([Keyboard.P, Keyboard.Escape, GamepadButton.Start]),
+    restart: new ButtonAction([Keyboard.R, Keyboard.Space, GamepadButton.South]),
     move: new VectorAction([
-      { up: [Keyboard.W, Keyboard.Up], down: [Keyboard.S, Keyboard.Down], left: [Keyboard.A, Keyboard.Left], right: [Keyboard.D, Keyboard.Right] },
+      {
+        up: [Keyboard.W, Keyboard.Up],
+        down: [Keyboard.S, Keyboard.Down],
+        left: [Keyboard.A, Keyboard.Left],
+        right: [Keyboard.D, Keyboard.Right],
+      },
       { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
     ]),
   });
@@ -50,7 +71,39 @@ class PlayScene extends Scene {
   private scoreText!: Text;
   private timeText!: Text;
 
-  // #region guide:play-init
+  override async load(): Promise<void> {
+    await this.loader.load(assets.platformerCharactersImage);
+    this.sheetData = await this.loader.load(assets.platformerCharactersAtlas);
+  }
+
+  private togglePause(): void {
+    const pausing = !this.paused;
+    this.blurTween?.stop();
+
+    if (pausing) {
+      this.app.scenes.pause();
+      this.world.filters = [this.blur];
+      this.blurTween = this.app.tweens.create(this.blur).to({ strength: 3 }, 0.35).start();
+    } else {
+      this.app.scenes.resume();
+      this.world.clearFilters();
+      this.blur.strength = 0;
+    }
+
+    this.panel.status(
+      pausing ? 'Paused - overlay blur keeps tweening while gameplay time freezes.' : 'Collect circles; avoid pointed red hazards.',
+    );
+  }
+
+  private restart(): void {
+    if (this.navigating) {
+      return;
+    }
+
+    this.navigating = true;
+    void this.app.scenes.change(PlayScene);
+  }
+
   override init(): void {
     this.px = CANVAS_WIDTH / 2;
     this.py = CANVAS_HEIGHT / 2;
@@ -58,13 +111,14 @@ class PlayScene extends Scene {
     this.elapsed = 0;
     this.spawnTimer = 0;
     this.orbs = [];
-    this.inputs.attach(this.actions);
+    this.inputs.attach(this.actions, { when: SceneAvailability.Always });
 
     this.world = new Container();
 
-    this.player = new Graphics();
-    this.player.fillColor = new Color(80, 160, 255);
-    this.player.drawCircle(0, 0, PLAYER_RADIUS);
+    this.player = new Spritesheet(this.loader.get(assets.platformerCharactersImage), this.sheetData).getFrameSprite(
+      'character_green_front',
+    );
+    this.player.setAnchor(0.5).setScale(0.38);
     this.player.setPosition(this.px, this.py);
     this.world.addChild(this.player);
 
@@ -73,15 +127,34 @@ class PlayScene extends Scene {
 
     this.timeText = new Text('0.0 s', { fillColor: Color.white, fontSize: 20 });
     this.timeText.setPosition(CANVAS_WIDTH - 90, 14);
+    this.pauseText = this.track(new Text('PAUSED', { fillColor: Color.white, fontWeight: 'bold' })).setAnchor(0.5);
+    this.panel = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls: {},
+      actions: { 'Pause / Resume': () => this.togglePause(), Restart: () => this.restart() },
+    });
+    this.panel.status('Collect circles; avoid pointed red hazards.');
+    document.addEventListener(
+      'visibilitychange',
+      () => {
+        if (document.hidden && !this.paused) {
+          this.togglePause();
+        }
+      },
+      { signal: this.lifecycleSignal },
+    );
+    [false, true, false].forEach((danger, index) => {
+      this.spawnOrb(danger);
+      this.orbs.at(-1)!.gfx.setPosition(((index + 1) * CANVAS_WIDTH) / 4, CANVAS_HEIGHT * 0.27);
+    });
   }
 
-  // #endregion guide:play-init
-  // #region guide:spawn-orb
-  private spawnOrb(): void {
-    const danger = Math.random() < 0.4;
+  private spawnOrb(danger = Math.random() < 0.4): void {
     const side = Math.floor(Math.random() * 4);
     let ox: number;
     let oy: number;
+
     switch (side) {
       case 0:
         ox = Math.random() * CANVAS_WIDTH;
@@ -100,6 +173,7 @@ class PlayScene extends Scene {
         oy = Math.random() * CANVAS_HEIGHT;
         break;
     }
+
     const tx = CANVAS_WIDTH / 2 + (Math.random() - 0.5) * (CANVAS_WIDTH * 0.6);
     const ty = CANVAS_HEIGHT / 2 + (Math.random() - 0.5) * (CANVAS_HEIGHT * 0.6);
     const dist = Math.hypot(tx - ox, ty - oy) || 1;
@@ -107,18 +181,18 @@ class PlayScene extends Scene {
 
     const gfx = new Graphics();
     gfx.fillColor = danger ? new Color(255, 80, 80) : new Color(80, 220, 120);
+
     if (danger) {
       gfx.drawStar(0, 0, 4, ORB_RADIUS * 1.25, ORB_RADIUS * 0.68, Math.PI / 4);
     } else {
       gfx.drawCircle(0, 0, ORB_RADIUS);
     }
+
     gfx.setPosition(ox, oy);
     this.world.addChild(gfx);
     this.orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
   }
 
-  // #endregion guide:spawn-orb
-  // #region guide:play-update
   override update(delta: Seconds): void {
     const app = this.app;
     this.elapsed += delta;
@@ -131,15 +205,17 @@ class PlayScene extends Scene {
 
     const { x, y } = this.actions.move.value;
     const mag = Math.max(1, Math.hypot(x, y));
+
     if (x !== 0 || y !== 0) {
       this.px += (x / mag) * PLAYER_SPEED * delta;
       this.py += (y / mag) * PLAYER_SPEED * delta;
     }
+
     this.px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this.px));
-    this.py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this.py));
+    const viewport = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.py = Math.max(PLAYER_RADIUS, Math.min(viewport.contentHeight * viewport.scale - PLAYER_RADIUS, this.py));
     this.player.setPosition(this.px, this.py);
 
-    // #region guide:collision-loop
     let gameEnded = false;
     const survived: OrbData[] = [];
 
@@ -162,17 +238,21 @@ class PlayScene extends Scene {
       }
 
       const dist = Math.hypot(ox - this.px, oy - this.py);
+
       if (dist < PLAYER_RADIUS + ORB_RADIUS) {
         this.world.removeChild(orb.gfx);
         orb.gfx.destroy();
+
         if (orb.danger) {
           for (const o of survived) {
             this.world.removeChild(o.gfx);
             o.gfx.destroy();
           }
+
           gameEnded = true;
           continue;
         }
+
         this.score++;
         this.scoreText.text = `Score: ${this.score}`;
         continue;
@@ -185,34 +265,55 @@ class PlayScene extends Scene {
 
     if (gameEnded) {
       void app.scenes.change(GameOverScene, { data: { score: this.score, time: this.elapsed } });
+
       return;
     }
 
     this.timeText.text = `${this.elapsed.toFixed(1)} s`;
-    // #endregion guide:collision-loop
   }
 
-  // #endregion guide:play-update
-  // #region guide:play-draw
   override draw(context: RenderingContext): void {
+    // Scene draw continues while paused, so these actions can resume the frozen update loop.
+    if (this.actions.pause.pressed) {
+      this.togglePause();
+    }
+
+    if (this.actions.restart.pressed) {
+      this.restart();
+    }
+
+    const { scale: k, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.scoreText.style.fontSize = 16 * k;
+    this.timeText.style.fontSize = 16 * k;
+    this.scoreText.setPosition(12 * k, 12 * k);
+    this.timeText.setPosition((width - 80) * k, 12 * k);
+    this.pauseText.style.fontSize = 32 * k;
+    this.pauseText.setPosition((width * k) / 2, (contentHeight * k) / 2);
     context.render(this.world);
     context.render(this.scoreText);
     context.render(this.timeText);
+
+    if (this.paused) {
+      context.render(this.pauseText);
+    }
   }
 
-  // #endregion guide:play-draw
-  // #region guide:play-destroy
   override destroy(): void {
+    this.blurTween?.stop();
+    this.world?.clearFilters();
+    this.panel?.dispose();
+    this.scoreText?.destroy();
+    this.timeText?.destroy();
+
     for (const orb of this.orbs) {
       orb.gfx.destroy();
     }
+
     this.world?.destroy();
     super.destroy();
   }
-  // #endregion guide:play-destroy
 }
 
-// #region guide:game-over-scene
 interface GameOverData {
   score: number;
   time: number;
@@ -222,6 +323,8 @@ class GameOverScene extends Scene<GameOverData> {
   private title!: Text;
   private stats!: Text;
   private hint!: Text;
+  private panel!: ReturnType<typeof demoPanel>;
+  private readonly actions = new ActionMap({ restart: new ButtonAction([Keyboard.Space, Keyboard.R, GamepadButton.South]) });
 
   override init(data: Readonly<GameOverData>): void {
     const app = this.app;
@@ -253,19 +356,37 @@ class GameOverScene extends Scene<GameOverData> {
     const restart = (): void => {
       void app.scenes.change(PlayScene);
     };
-    this.inputs.onTrigger(Keyboard.Space, restart);
-    this.inputs.onTrigger(Keyboard.R, restart);
+
+    this.inputs.attach(this.actions);
+    this.panel = demoPanel({ scene: this, layout: 'bar', controls: {}, actions: { Restart: restart } });
+    this.track(this.title);
+    this.track(this.stats);
+    this.track(this.hint);
   }
 
   override draw(context: RenderingContext): void {
+    if (this.actions.restart.pressed) {
+      void this.app.scenes.change(PlayScene);
+    }
+
+    const { scale: k, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.title.style.fontSize = 32 * k;
+    this.stats.style.fontSize = 16 * k;
+    this.hint.style.fontSize = 14 * k;
+    this.title.setPosition((width * k) / 2, (contentHeight / 2 - 48) * k);
+    this.stats.setPosition((width * k) / 2, (contentHeight * k) / 2);
+    this.hint.setPosition((width * k) / 2, (contentHeight / 2 + 44) * k);
     context.render(this.title);
     context.render(this.stats);
     context.render(this.hint);
   }
-}
-// #endregion guide:game-over-scene
 
-// #region guide:application-setup
+  override destroy(): void {
+    this.panel?.dispose();
+    super.destroy();
+  }
+}
+
 const app = new Application({
   scenes: { PlayScene, GameOverScene },
   canvas: {
@@ -276,6 +397,5 @@ const app = new Application({
   },
   clearColor: new Color(10, 14, 26),
 });
-// #endregion guide:application-setup
 
-await app.start(PlayScene);
+await startExample(app, () => app.start(PlayScene));

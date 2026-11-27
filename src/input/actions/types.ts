@@ -110,6 +110,26 @@ export interface ActionSample {
    * transitions can ignore this field.
    */
   timestamp: number;
+  /**
+   * The owning {@link InputSystem}'s fixed-step clock, shared by reference so
+   * an action can tell which fixed step owns what it sampled - see
+   * {@link TickLedger}. Absent on a sample built without a system, whose
+   * actions then deliver nothing to fixed steps.
+   */
+  readonly clock?: TickClock | undefined;
+}
+
+/**
+ * Fixed-step clock of one {@link InputSystem}. `serial` counts sampled-input
+ * windows: it advances when a fixed step starts, and again when a window is
+ * retired without starting one, so retired input can never be delivered as the
+ * next step's. `active` is `true` while a fixed step runs.
+ *
+ * @internal
+ */
+export interface TickClock {
+  serial: number;
+  active: boolean;
 }
 
 /**
@@ -167,7 +187,9 @@ export class ActionOwnership {
    * (see {@link ActionMapOwner._snapshotActionChannels}), a full channel
    * snapshot - as of the moment this map started (or resumed) observing its
    * current owner. Called from {@link ActionMapBase._attach} and from
-   * `InputSystem._resyncActionMap`. The next `resolve()` call that returns
+   * {@link ActionMapBase._armBaseline} when a scope adds or rearms a changed
+   * claim, or `_ownership` directly when availability resumes. The next
+   * `resolve()` call that returns
    * `'baseline'` uses the watermark, via {@link filterBatches}, to replay
    * only batches pushed at-or-after this moment, discarding anything still
    * sitting in the same real frame's shared log from BEFORE this map started
@@ -208,7 +230,7 @@ export class ActionOwnership {
 
     this._baselineValues = null;
 
-    return values === null ? null : { values, batches: [], frameId: sample.frameId, timestamp: sample.timestamp };
+    return values === null ? null : { values, batches: [], frameId: sample.frameId, timestamp: sample.timestamp, clock: sample.clock };
   }
 
   /**
@@ -226,7 +248,7 @@ export class ActionOwnership {
       return sample;
     }
 
-    return { values: sample.values, batches: filtered, frameId: sample.frameId, timestamp: sample.timestamp };
+    return { values: sample.values, batches: filtered, frameId: sample.frameId, timestamp: sample.timestamp, clock: sample.clock };
   }
 
   /** Forget the current owner, as if this map had never been sampled. */
@@ -258,5 +280,19 @@ export const toChannels = (binding: OneOrMany<InputChannel> | undefined): readon
     return [];
   }
 
-  return Array.isArray(binding) ? (binding as readonly number[]) : [binding as number];
+  const channels: readonly unknown[] = Array.isArray(binding) ? binding : [binding];
+  // Resolution must consume validated values without rereading caller-owned accessors.
+  const validated = new Array<number>(channels.length);
+
+  for (let i = 0; i < validated.length; i++) {
+    const channel = channels[i];
+
+    if (typeof channel !== 'number') {
+      throw new Error('Input binding: channel groups must contain numeric input channels.');
+    }
+
+    validated[i] = channel;
+  }
+
+  return validated;
 };

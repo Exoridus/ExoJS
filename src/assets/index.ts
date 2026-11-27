@@ -1,34 +1,65 @@
-export type { AssetForKind, LeaflessAsset, ResourceAsset, ValueAsset } from './Asset';
-export { Asset } from './Asset';
+export type { AssetOwner } from './ApplicationAssets';
+export { ApplicationAssets } from './ApplicationAssets';
 export type { AssetConstructor } from './AssetConstructor';
 export type { AssetDecodeErrorOptions } from './AssetDecodeError';
 export { AssetDecodeError } from './AssetDecodeError';
 export type {
   AnyAssetConfig,
   AssetDefinitions,
-  AssetInput,
   AssetTypeName,
   CatalogEntry,
+  CoreValueAssetKind,
   ExtensionKindMap,
-  InferAssetResource,
   InferLoadedEntry,
   KindByPath,
   LeaflessAssetKind,
   LeaflessCatalogEntry,
+  ValueAssetKind,
 } from './AssetDefinitions';
+export type {
+  AssetDescriptor,
+  AssetDescriptorLeaf,
+  AssetDescriptorLeafPolicy,
+  AssetDescriptorResource,
+  AssetTypeReference,
+  KindForResource,
+  LocatorAssetDescriptor,
+  ValidatedAssetDescriptor,
+  ValidatedLeafDescriptor,
+} from './AssetDescriptor';
 export type { AssetDependencyScope, AssetFactory, AssetFactoryContext } from './AssetFactory';
+export type {
+  AssetLoadEntry,
+  AssetLoadHandle,
+  AssetLoadInput,
+  LoadedAssetEntry,
+  LoadedAssets,
+  UnclaimedAssetPath,
+  ValidatedAssetLoadInput,
+} from './assetLoadGroup';
 export type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 export type { AssetNetworkErrorOptions } from './AssetNetworkError';
 export { AssetNetworkError } from './AssetNetworkError';
 export { AssetRef } from './AssetRef';
+export type { AssetReference } from './AssetReference';
 export type { AssetInspection, AssetOwnerInspection, AssetSizeStats, AssetStats, AssetTypeStats } from './AssetResidency';
 export type { AnyAssets, InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
 export type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';
-export { binarySourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSourceCodec';
+export { binarySourceCodec, blobSourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSourceCodec';
 export type { AssetStatus } from './AssetStatus';
-export type { AnyAssetType, AssetDescriptor, AssetLeaf, AssetOptionsArgument, AssetRequest } from './AssetType';
+export type { AnyAssetType, AssetLeaf, AssetRequest } from './AssetType';
 export { AssetType } from './AssetType';
+export type {
+  AssetDecode,
+  AssetFactorySpec,
+  AssetReadKinds,
+  AssetTypeDefinition,
+  AssetTypeDefinitionEntry,
+  DocumentAssetTypeDefinition,
+  ReadAssetTypeDefinition,
+} from './AssetTypes';
+export { AssetTypes } from './AssetTypes';
 export type { AssetVariant, AssetVariantProfile } from './AssetVariantSet';
 export { AssetVariantSet } from './AssetVariantSet';
 export type { AssetLocator, ResourceKey, SourceKey } from './canonicalKey';
@@ -40,7 +71,16 @@ export { cacheApiBlockStore, DEFAULT_BLOCK_CACHE_NAME } from './container/contai
 export type { ContainerReaderOptions } from './container/ContainerReader';
 export { ContainerReader } from './container/ContainerReader';
 export { coreAssetTypes } from './coreAssetTypes';
-export type { AssetIdentity, InferLoadedMap, Loadable, LoadContainerOptions, LoaderOptions, LoadManifestOptions, LoadOptions } from './Loader';
+export { DocumentCodec } from './DocumentCodec';
+export type {
+  AssetIdentity,
+  InferLoadedMap,
+  Loadable,
+  LoadContainerOptions,
+  LoaderOptions,
+  LoadManifestOptions,
+  LoadOptions,
+} from './Loader';
 export { LoadPriority } from './Loader';
 export { Loader } from './Loader';
 export type { LoaderScopeKind, LoaderScopeOptions } from './LoaderScope';
@@ -72,7 +112,7 @@ export { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
 export type { FontAssetOptions } from '#assets/factories/FontFactory';
 export type { DecodedImage, ImageAssetOptions } from '#assets/factories/ImageFactory';
 export type { MediaAssetOptions, MediaAssetSource } from '#assets/factories/mediaSource';
-export type { MusicAssetOptions } from '#assets/factories/MusicFactory';
+export type { AudioStreamAssetOptions, MusicAssetOptions } from '#assets/factories/MusicFactory';
 export type { CsvAssetOptions } from '#assets/factories/parseCsv';
 export type { SubtitleFormat } from '#assets/factories/parseSubtitles';
 export type { SoundAssetOptions } from '#assets/factories/SoundFactory';
@@ -105,8 +145,9 @@ export {
   xmlType,
 } from '#assets/types/data';
 export { SubtitleAssetType, subtitleType } from '#assets/types/data';
+export type { BmFontAssetOptions } from '#assets/types/font';
 export { BmFontAssetType, bmFontType, FontAssetType, fontType } from '#assets/types/font';
 export { ImageAssetType, imageType, SvgAssetType, svgType } from '#assets/types/image';
 export { TextureAssetType, textureType } from '#assets/types/image';
-export { MusicAssetType, musicType, VideoAssetType, videoType } from '#assets/types/media';
+export { AudioStreamAssetType, audioStreamType, MusicAssetType, musicType, VideoAssetType, videoType } from '#assets/types/media';
 export { SoundAssetType, soundType } from '#assets/types/media';

@@ -22,7 +22,7 @@ describe('openIndexedDb', () => {
 
     vi.stubGlobal('indexedDB', { open: () => request });
 
-    const opening = openIndexedDb('blocked-db', 1, () => undefined);
+    const opening = openIndexedDb('blocked-db', 1, () => {});
 
     request.dispatchEvent(new Event('blocked'));
 
@@ -40,7 +40,7 @@ describe('openIndexedDb', () => {
 
     vi.stubGlobal('indexedDB', { open: () => request });
 
-    const opening = openIndexedDb('open-db', 1, () => undefined);
+    const opening = openIndexedDb('open-db', 1, () => {});
 
     request.dispatchEvent(new Event('success'));
 

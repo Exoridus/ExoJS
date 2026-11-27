@@ -395,7 +395,13 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * different bytes, so neither pays for the other's upload.
    */
   public patchTintRow(localRow: number, bytes: Uint8Array): void {
-    if (this._tintTexture === null || this._tintBytes === null || this._transformLayout === null || localRow < 0 || localRow >= this._transformRowCount) {
+    if (
+      this._tintTexture === null ||
+      this._tintBytes === null ||
+      this._transformLayout === null ||
+      localRow < 0 ||
+      localRow >= this._transformRowCount
+    ) {
       return;
     }
 
@@ -403,26 +409,6 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
 
     this._tintBytes.set(bytes, localRow * tintBytesPerRow);
     this._tintTexture.commitRect(rect.x, rect.y, rect.width, rect.height);
-  }
-
-  /**
-   * CPU-side vertex re-bake patch, for a renderer that bakes world
-   * positions into its instance bytes rather than reading a shared-transform
-   * row live (Text on WebGL2, the confirmed ANGLE/D3D11 vertex-texel-fetch
-   * workaround). Overwrite `floats.length` words at `wordOffset` in the
-   * instance store and upload just that sub-range. Deliberately does NOT bump
-   * the generation - the recorded byte LAYOUT is unchanged, only the baked
-   * position values move. Out-of-range writes are ignored (a stale patch after
-   * a recapture shrank the store).
-   * @internal
-   */
-  public _patchInstanceWords(wordOffset: number, floats: Float32Array): void {
-    if (this._instanceBuffer === null || wordOffset < 0 || wordOffset + floats.length > this._usedWords) {
-      return;
-    }
-
-    this._instanceFloats.set(floats, wordOffset);
-    this._instanceBuffer.upload(floats, wordOffset * Float32Array.BYTES_PER_ELEMENT);
   }
 
   /**
@@ -609,7 +595,14 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
             if (attribute.integer) {
               gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
             } else {
-              gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+              gl.vertexAttribPointer(
+                attribute.location,
+                attribute.size,
+                attribute.type,
+                attribute.normalized,
+                attribute.stride,
+                attribute.start,
+              );
             }
 
             gl.enableVertexAttribArray(attribute.location);

@@ -4,7 +4,7 @@
   "symbol": "RevoluteJoint",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 13,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Pins a shared anchor point on two bodies (a hinge): the bodies may rotate freely about the pivot but the anchor points stay coincident. Solved as a 2-DOF point constraint (a 2×2 block) in the sub-step loop, warm-started."
       ],
-      "importLine": "import { RevoluteJoint } from '@codexo/exojs-physics'",
+      "importLine": "import { RevoluteJoint } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

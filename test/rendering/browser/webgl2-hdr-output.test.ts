@@ -39,7 +39,12 @@ const createSolidTexture = (color: string): Texture => {
 };
 
 /** Draw an opaque full-canvas white sprite into `target` `passes` times under additive blending - each pass adds linear 1.0. */
-const accumulateLinearWhite = (backend: Awaited<ReturnType<typeof createWebGl2TestBackend>>, target: RenderTexture, source: Texture, passes: number): void => {
+const accumulateLinearWhite = (
+  backend: Awaited<ReturnType<typeof createWebGl2TestBackend>>,
+  target: RenderTexture,
+  source: Texture,
+  passes: number,
+): void => {
   backend.setRenderTarget(target).clear(Color.transparentBlack);
 
   for (let i = 0; i < passes; i++) {

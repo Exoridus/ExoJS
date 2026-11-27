@@ -1,85 +1,116 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, Sprite, Text } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  Rectangle,
+  Scene,
+  type Seconds,
+  Sprite,
+  Text,
+  Texture,
+} from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, startExample } from '@examples/runtime';
 
-const modes = [
-  { name: 'corner', anchor: [0, 0] as [number, number], origin: [0, 0] as [number, number] | null },
-  { name: 'center', anchor: [0.5, 0.5] as [number, number], origin: null },
-  { name: 'off-canvas', anchor: [0.5, 0.5] as [number, number], origin: [180, -80] as [number, number] | null },
-];
-
+const VARIANTS = [
+  { label: 'Anchor (0, 0)', anchor: [0, 0], origin: null },
+  { label: 'Anchor (0.5, 0.5)', anchor: [0.5, 0.5], origin: null },
+  { label: 'Origin (78, -8)', anchor: [0.5, 0.5], origin: [78, -8] },
+] as const;
 class PivotAndAnchorScene extends Scene {
-  private sprite!: Sprite;
-  private pivotMarker!: Graphics;
-  private label!: Text;
-  private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private readonly texture = new Texture(assets.platformerTilesImage.source);
+  private sprites: Sprite[] = [];
+  private labels: Text[] = [];
+  private readonly overlay = new Graphics();
+  private panel!: ReturnType<typeof demoPanel<Record<string, never>>>;
+  private playing = true;
+  private angle = 0;
 
-  override init(): void {
-    const app = this.app;
-    const { width, height } = app;
-
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setPosition(width / 2, height / 2);
-    this.pivotMarker = new Graphics();
-    this.label = new Text('', { fillColor: Color.white, fontSize: 18 });
-    this.label.setPosition(20, 20);
-    this.hud = mountControls({ title: 'Pivot and Anchor', controls: [{ keys: 'Preset', action: 'compare rotation around each origin' }] });
-    this.panel = mountControlPanel({ title: 'Origin presets' });
-    modes.forEach((mode, index) => this.panel.addButton({ label: mode.name, onClick: () => this.applyMode(index) }));
-    this.applyMode(0);
+  override async load(): Promise<void> {
+    await this.assets.load(this.texture);
   }
 
-  private applyMode(index: number): void {
-    const mode = modes[index];
-    this.sprite.setAnchor(mode.anchor[0], mode.anchor[1]);
-    const bounds = this.sprite.getLocalBounds();
-    this.sprite.setOrigin(mode.origin?.[0] ?? bounds.width * mode.anchor[0], mode.origin?.[1] ?? bounds.height * mode.anchor[1]);
-    this.hud.setStatus(`${mode.name}: anchor (${mode.anchor.join(', ')}), origin (${this.sprite.origin.x.toFixed(0)}, ${this.sprite.origin.y.toFixed(0)})`);
+  override init(): void {
+    VARIANTS.forEach(variant => {
+      const sprite = new Sprite(this.texture).setTextureFrame(new Rectangle(650, 325, 64, 64));
+      sprite.setAnchor(variant.anchor[0], variant.anchor[1]);
+
+      if (variant.origin) {
+        sprite.setOrigin(...variant.origin);
+      }
+
+      this.sprites.push(sprite);
+      this.labels.push(new Text(variant.label, { fillColor: Color.white, fontSize: 14, align: 'center' }).setAnchor(0.5));
+    });
+    this.root.addChild(...this.sprites, this.overlay, ...this.labels);
+    this.panel = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls: {},
+      actions: {
+        'Pause / Resume': () => {
+          this.playing = !this.playing;
+        },
+        'Step 15°': () => this.step(),
+      },
+    });
+    this.inputs.onTrigger(Keyboard.Space, () => {
+      this.playing = !this.playing;
+    });
+    this.inputs.onTrigger(Keyboard.Right, () => this.step());
+  }
+
+  private step(): void {
+    this.playing = false;
+    this.angle += 15;
   }
 
   override update(delta: Seconds): void {
-    this.sprite.rotate(delta * 45);
-  }
+    const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.root.setScale(scale);
 
-  override draw(context: RenderingContext): void {
-    const m = this.sprite.getGlobalTransform();
-    const bounds = this.sprite.getBounds();
-    context.render(this.sprite);
-    this.pivotMarker.clear();
-    this.pivotMarker.lineColor = new Color(110, 215, 245);
-    this.pivotMarker.lineWidth = 2;
-    this.pivotMarker.drawLine(bounds.x, bounds.y, bounds.x + bounds.width, bounds.y);
-    this.pivotMarker.drawLine(bounds.x + bounds.width, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height);
-    this.pivotMarker.drawLine(bounds.x + bounds.width, bounds.y + bounds.height, bounds.x, bounds.y + bounds.height);
-    this.pivotMarker.drawLine(bounds.x, bounds.y + bounds.height, bounds.x, bounds.y);
-    this.pivotMarker.fillColor = new Color(255, 80, 80);
-    this.pivotMarker.drawCircle(m.x, m.y, 6);
-    this.label.text = `position (${this.sprite.x.toFixed(0)}, ${this.sprite.y.toFixed(0)})  bounds (${bounds.x.toFixed(0)}, ${bounds.y.toFixed(0)}, ${bounds.width.toFixed(0)}, ${bounds.height.toFixed(0)})`;
-    context.render(this.pivotMarker);
-    context.render(this.label);
+    if (this.playing) {
+      this.angle += delta * 35;
+    }
+
+    this.overlay.clear();
+    this.overlay.fillColor = Color.transparent;
+    this.overlay.lineWidth = 2;
+
+    for (const [index, sprite] of this.sprites.entries()) {
+      const x = (width * (index + 0.5)) / 3;
+      const y = contentHeight * 0.55;
+      sprite
+        .setPosition(x, y)
+        .setRotation(this.angle)
+        .setScale(width < 720 ? 0.8 : 2);
+      const bounds = sprite.getBounds();
+      this.overlay.lineColor = new Color(110, 215, 245);
+      this.overlay.drawRectangle(bounds.x / scale, bounds.y / scale, bounds.width / scale, bounds.height / scale);
+      this.overlay.lineColor = new Color(255, 100, 100);
+      this.overlay.moveTo(x - 7, y);
+      this.overlay.lineTo(x + 7, y);
+      this.overlay.moveTo(x, y - 7);
+      this.overlay.lineTo(x, y + 7);
+      this.labels[index].setPosition(x, 18);
+    }
+
+    this.panel.status(
+      `${this.playing ? 'Running' : 'Paused'} | angle ${(((this.angle % 360) + 360) % 360).toFixed(0)}° | bounds are derived`,
+    );
   }
 
   override destroy(): void {
-    this.panel?.dispose();
-    this.hud?.dispose();
-    this.sprite?.destroy();
-    this.pivotMarker?.destroy();
-    this.label?.destroy();
+    this.panel.dispose();
     super.destroy();
   }
 }
 
 const app = new Application({
   scenes: { PivotAndAnchorScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(20, 27, 34),
 });
-
-await app.start(PivotAndAnchorScene);
+await startExample(app, () => app.start(PivotAndAnchorScene));

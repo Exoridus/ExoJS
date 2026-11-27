@@ -1,0 +1,104 @@
+{
+  "title": "ApplicationDestroyOutcome",
+  "description": "What Application.destroyOutcome reports once Application.destroy has settled. Frozen.",
+  "symbol": "ApplicationDestroyOutcome",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What Application.destroyOutcome reports once Application.destroy has settled. Frozen."
+      ],
+      "importLine": "import { ApplicationDestroyOutcome } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "errors",
+          "signature": "errors: readonly Error[]",
+          "signatureTokens": [
+            {
+              "text": "errors",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Error",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Every failure of a teardown step destroy() ran or waited for, in the order it was reported to Application.onError: a rejecting or throwing Scene.unload(), a throwing Scene.destroy(), tracked resource, system, audio voice, transition, lifecycle listener, extension disposer or engine subsystem. Several failures of one step can arrive grouped as an AggregateError whose errors hold the individual failures - the tracked resources of one scene, for example. Not listed: the grace-period timeout, which status reports; the rejection of a navigation destroy() interrupted, which is that navigation's result rather than a teardown failure; failures reported before destroy() was called, even by a teardown Application.stop started and destroy() then waits for; and failures of abandoned scene teardown that arrive after destroy() settled, which are only logged."
+        },
+        {
+          "name": "status",
+          "signature": "status: ApplicationDestroyStatus",
+          "signatureTokens": [
+            {
+              "text": "status",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ApplicationDestroyStatus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Application.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Application.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+}

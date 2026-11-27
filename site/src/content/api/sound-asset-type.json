@@ -67,94 +67,6 @@
       "title": "Methods",
       "members": [
         {
-          "name": "asset",
-          "signature": "asset(source: string, options: [options]): ResourceAsset<Sound>",
-          "signatureTokens": [
-            {
-              "text": "asset",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "source",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ResourceAsset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Sound",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "source",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "options",
-              "type": "[options]",
-              "optional": false
-            }
-          ],
-          "returnType": "ResourceAsset<Sound>",
-          "description": "A typed, loadable descriptor for one asset of this type. The resource and option types come from the type instance, so a custom type is fully typed at every call site without declaring anything to the module system: ts const world = await loader.load(worldType.asset('level.world'));  The descriptor is branded with this type's leaf policy, so a catalog types its entry as the leaf the runtime hands out. options is required when the option bag has a required field. type and source are reserved for the request: an option bag carrying either throws."
-        },
-        {
           "name": "createFactory",
           "signature": "createFactory(): AssetFactory<ArrayBuffer, Sound, SoundAssetOptions>",
           "signatureTokens": [
@@ -212,16 +124,197 @@
           "description": "Creates the factory for one application, at install time. Called once per Loader, never per request and never at module import, so loader-local state a factory needs - a worker, a compiled module, a lookup shared across every resource of this type - can be built here and torn down with the loader."
         },
         {
-          "name": "resourceIdentity",
-          "signature": "resourceIdentity?(request: AssetRequest<SoundAssetOptions>): string",
+          "name": "persistedOptions",
+          "signature": "persistedOptions?(resource: Sound | undefined, options: Readonly<Record<string, unknown>> | undefined, donor?: Sound): Readonly<Record<string, unknown>> | undefined",
           "signatureTokens": [
             {
-              "text": "resourceIdentity",
+              "text": "persistedOptions",
               "kind": "name"
             },
             {
               "text": "?",
               "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resource",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "donor",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "resource",
+              "type": "Sound | undefined",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Readonly<Record<string, unknown>> | undefined",
+              "optional": false
+            },
+            {
+              "name": "donor",
+              "type": "Sound",
+              "optional": true
+            }
+          ],
+          "returnType": "Readonly<Record<string, unknown>> | undefined",
+          "description": "Projects a loaded handle's presentation options into a saved reference. Keep options that affect source or resource identity unchanged. With no handle, return the options used to distinguish logical requests, omitting the fields that depend on the handle. Only return JSON-compatible data. A resident donor can supply the presentation a bare reference would inherit."
+        },
+        {
+          "name": "resourceIdentity",
+          "signature": "resourceIdentity(request: AssetRequest<SoundAssetOptions>): string",
+          "signatureTokens": [
+            {
+              "text": "resourceIdentity",
+              "kind": "name"
             },
             {
               "text": "(",

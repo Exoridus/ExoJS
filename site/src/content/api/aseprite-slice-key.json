@@ -1,16 +1,16 @@
 {
   "title": "AsepriteSliceKey",
-  "description": "Bounds of a named slice at a specific frame.",
+  "description": "A slice's shape from one frame on, until the next key. Every rectangle and point is in pixels of the untrimmed sprite canvas.",
   "symbol": "AsepriteSliceKey",
   "kind": "interface",
   "subsystem": "aseprite",
   "importPath": "@codexo/exojs-aseprite",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 2,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Bounds of a named slice at a specific frame."
+        "A slice's shape from one frame on, until the next key. Every rectangle and point is in pixels of the untrimmed sprite canvas."
       ],
       "importLine": "import { AsepriteSliceKey } from '@codexo/exojs-aseprite'",
       "sourceLink": null
@@ -50,6 +50,31 @@
           "description": ""
         },
         {
+          "name": "center",
+          "signature": "center?: AsepriteRect",
+          "signatureTokens": [
+            {
+              "text": "center",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteRect",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Nine-slice centre, relative to bounds; present only on nine-slices."
+        },
+        {
           "name": "frame",
           "signature": "frame: number",
           "signatureTokens": [
@@ -69,6 +94,31 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "pivot",
+          "signature": "pivot?: AsepritePoint",
+          "signatureTokens": [
+            {
+              "text": "pivot",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepritePoint",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pivot point, relative to bounds; present only when one was set."
         }
       ],
       "paragraphs": [],

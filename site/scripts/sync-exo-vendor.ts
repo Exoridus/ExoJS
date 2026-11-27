@@ -77,7 +77,7 @@ const generatedTypingsFiles = ['exo.d.ts', 'module-shims.d.ts', 'esm-typings.jso
 // re-populating. Historical versioned subdirectories are no longer produced
 // (released versions load via jsDelivr at runtime); leftovers from prior
 // syncs may remain on disk and are harmless - they're gitignored.
-const flatManagedEntries: readonly { name: string; type: 'file' | 'dir' }[] = [
+const flatManagedEntries: ReadonlyArray<{ name: string; type: 'file' | 'dir' }> = [
   ...requiredArtifacts.map(name => ({ name, type: 'file' as const })),
   ...generatedTypingsFiles.map(name => ({ name, type: 'file' as const })),
   { name: 'esm', type: 'dir' as const },
@@ -124,11 +124,15 @@ const buildMonacoRegistry = (packageName: string, pkgRootDir: string, version: s
   const pkgVirtualRoot = `/node_modules/${packageName}`;
 
   for (const [subpathKey, conditions] of Object.entries(sourcePackageJson.exports ?? {})) {
-    if (subpathKey === '.' || subpathKey === './package.json') continue;
+    if (subpathKey === '.' || subpathKey === './package.json') {
+      continue;
+    }
 
     const typesPath = typeof conditions === 'object' && conditions !== null ? conditions['types'] : undefined;
 
-    if (typeof typesPath !== 'string' || !typesPath.startsWith('./dist/esm/')) continue;
+    if (typeof typesPath !== 'string' || !typesPath.startsWith('./dist/esm/')) {
+      continue;
+    }
 
     // './dist/esm/input/gamepad-mappings.d.ts' → 'dist/esm/input/gamepad-mappings'
     const targetRelToRoot = typesPath.slice(2).replace(/\.d\.ts$/, '');
@@ -143,7 +147,10 @@ const buildMonacoRegistry = (packageName: string, pkgRootDir: string, version: s
     const shimDir = path.posix.dirname(`${pkgVirtualRoot}/${subpath}.d.ts`);
     const targetAbs = `${pkgVirtualRoot}/${targetRelToRoot}`;
     let relPath = path.posix.relative(shimDir, targetAbs);
-    if (!relPath.startsWith('.')) relPath = `./${relPath}`;
+
+    if (!relPath.startsWith('.')) {
+      relPath = `./${relPath}`;
+    }
 
     subpathShims.push({
       virtualPath: shimVirtualPath,
@@ -156,19 +163,25 @@ const buildMonacoRegistry = (packageName: string, pkgRootDir: string, version: s
 
 const ensureSourcePackage = (): void => {
   if (!fs.existsSync(sourceDistDir)) {
-    throw new Error(`[vendor:sync] Missing ExoJS package dist at ${sourceDistDir}. Install dependencies and ensure the local @codexo/exojs package is built.`);
+    throw new Error(
+      `[vendor:sync] Missing ExoJS package dist at ${sourceDistDir}. Install dependencies and ensure the local @codexo/exojs package is built.`,
+    );
   }
 };
 
 const readRootPackageVersion = (): string => {
   const rootPackageJsonPath = path.resolve(projectRoot, '..', 'package.json');
+
   if (!fs.existsSync(rootPackageJsonPath)) {
     throw new Error(`[vendor:sync] Root package.json missing at ${rootPackageJsonPath}.`);
   }
+
   const rootPackageJson = JSON.parse(fs.readFileSync(rootPackageJsonPath, 'utf8')) as { version?: unknown };
+
   if (typeof rootPackageJson.version !== 'string' || rootPackageJson.version.length === 0) {
     throw new Error(`[vendor:sync] Root package.json at ${rootPackageJsonPath} has no usable "version" field.`);
   }
+
   return rootPackageJson.version;
 };
 
@@ -197,11 +210,14 @@ const copyArtifact = (fileName: string, targetDir: string, options: { required: 
     if (options.required) {
       throw new Error(`[vendor:sync] Missing required ExoJS package file at ${sourcePath}.`);
     }
+
     console.warn(`[vendor:sync] Optional file ${fileName} not present at ${sourcePath} — skipping.`);
+
     return false;
   }
 
   fs.copyFileSync(sourcePath, targetPath);
+
   return true;
 };
 
@@ -212,8 +228,10 @@ const collectFiles = (rootDir: string): string[] => {
 
   const walk = (relDir: string): void => {
     const absDir = path.resolve(rootDir, relDir);
+
     for (const entry of fs.readdirSync(absDir, { withFileTypes: true })) {
       const relEntry = relDir ? path.join(relDir, entry.name) : entry.name;
+
       if (entry.isDirectory()) {
         walk(relEntry);
       } else if (entry.isFile()) {
@@ -223,6 +241,7 @@ const collectFiles = (rootDir: string): string[] => {
   };
 
   walk('');
+
   return results.sort();
 };
 
@@ -234,6 +253,7 @@ const copyEsmTree = (sourceEsmDir: string, destEsmDir: string): { allFiles: stri
   fs.mkdirSync(destEsmDir, { recursive: true });
 
   const allFiles = collectFiles(sourceEsmDir);
+
   for (const rel of allFiles) {
     const src = path.resolve(sourceEsmDir, rel);
     const dst = path.resolve(destEsmDir, rel);
@@ -265,7 +285,11 @@ const rewriteSubpathImports = (esmDir: string, dtsRelFiles: readonly string[]): 
     const original = fs.readFileSync(abs, 'utf8');
     const updated = original.replace(importRe, (_match, prefix: string, quote: string, target: string) => {
       let relPath = path.posix.relative(fromDir, target);
-      if (!relPath.startsWith('.')) relPath = `./${relPath}`;
+
+      if (!relPath.startsWith('.')) {
+        relPath = `./${relPath}`;
+      }
+
       return `${prefix}${quote}${relPath}${quote}`;
     });
 
@@ -315,12 +339,16 @@ const syncTypings = (): void => {
   fs.rmSync(destEsmDir, { recursive: true, force: true });
 
   if (!fs.existsSync(sourceEsmDir)) {
-    throw new Error(`[vendor:sync] Missing required ExoJS package ESM runtime at ${sourceEsmDir}. preview.html imports @codexo/exojs from dist/esm/.`);
+    throw new Error(
+      `[vendor:sync] Missing required ExoJS package ESM runtime at ${sourceEsmDir}. preview.html imports @codexo/exojs from dist/esm/.`,
+    );
   }
 
   const { allFiles, dtsFiles } = copyEsmTree(sourceEsmDir, destEsmDir);
   const rewritten = rewriteSubpathImports(destEsmDir, dtsFiles);
-  console.log(`[vendor:sync] rewrote '#'-subpath imports to relative paths in ${rewritten} declaration file(s) (Monaco cannot resolve '#').`);
+  console.log(
+    `[vendor:sync] rewrote '#'-subpath imports to relative paths in ${rewritten} declaration file(s) (Monaco cannot resolve '#').`,
+  );
 
   if (fs.existsSync(sourceFlatDts)) {
     fs.copyFileSync(sourceFlatDts, destFlatDts);
@@ -345,7 +373,7 @@ const syncTypings = (): void => {
     console.log(`[vendor:sync] exo.d.ts: shim re-exporting ${dtsFiles.length} declarations from ${sourceEsmDir}.`);
   }
 
-  fs.writeFileSync(destManifest, JSON.stringify(dtsFiles, null, 2) + '\n', 'utf8');
+  fs.writeFileSync(destManifest, `${JSON.stringify(dtsFiles, null, 2)}\n`, 'utf8');
   console.log(`[vendor:sync] esm runtime: copied ${allFiles.length} files (${dtsFiles.length} declarations) from ${sourceEsmDir}.`);
 };
 
@@ -386,6 +414,58 @@ const syncBundlerClientTypes = (): void => {
   console.log('[vendor:sync] Copied @codexo/exojs-build client declarations -> vendor/exojs-build/client.d.ts');
 };
 
+/**
+ * Serves `@codexo/exojs-demo-assets` the way a consumer installs it: the
+ * compiled catalog under `esm/` and the standard media under `media/`, so each
+ * descriptor's `new URL('../media/...', import.meta.url)` resolves to a file
+ * the site actually ships, plus the package's `manifest.json`. Only the
+ * standard profile's media are copied; the extended media are not part of the
+ * site.
+ */
+const syncDemoAssets = (): void => {
+  const packageRoot = path.resolve(projectRoot, '..', 'packages', 'exojs-demo-assets');
+  const distDir = path.resolve(packageRoot, 'dist');
+  const mediaDir = path.resolve(packageRoot, 'media');
+
+  for (const required of [distDir, mediaDir]) {
+    if (!fs.existsSync(required)) {
+      throw new Error(
+        `[vendor:sync] @codexo/exojs-demo-assets is not built: ${required} is missing. ` +
+          'Build it first: pnpm --filter @codexo/exojs-demo-assets build',
+      );
+    }
+  }
+
+  const vendorDir = path.resolve(projectRoot, 'public', 'vendor', 'exojs-demo-assets');
+  fs.rmSync(vendorDir, { recursive: true, force: true });
+  fs.mkdirSync(vendorDir, { recursive: true });
+  fs.cpSync(distDir, path.resolve(vendorDir, 'esm'), { recursive: true });
+  fs.cpSync(mediaDir, path.resolve(vendorDir, 'media'), { recursive: true });
+  // The package exports its manifest (sizes, hashes, media metadata) as
+  // `@codexo/exojs-demo-assets/manifest.json`; the preview's import map
+  // resolves that specifier here.
+  fs.copyFileSync(path.resolve(packageRoot, 'manifest.json'), path.resolve(vendorDir, 'manifest.json'));
+
+  const dtsFiles = collectDeclarationFiles(distDir);
+  fs.writeFileSync(path.resolve(vendorDir, 'esm-typings.json'), `${JSON.stringify(dtsFiles, null, 2)}\n`, 'utf8');
+
+  const packageJson = JSON.parse(fs.readFileSync(path.resolve(packageRoot, 'package.json'), 'utf8')) as { version: string };
+  const registry: MonacoRegistry = {
+    packageJson: JSON.stringify({ name: '@codexo/exojs-demo-assets', version: packageJson.version, types: './dist/esm/index.d.ts' }),
+    subpathShims: [
+      {
+        virtualPath: 'file:///node_modules/@codexo/exojs-demo-assets/extended.d.ts',
+        content: "export * from './dist/esm/extended';\n",
+      },
+    ],
+  };
+  fs.writeFileSync(path.resolve(vendorDir, 'monaco-registry.json'), `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
+
+  console.log(
+    `[vendor:sync] Copied @codexo/exojs-demo-assets (${dtsFiles.length} declarations, standard media) -> vendor/exojs-demo-assets/`,
+  );
+};
+
 const syncVendor = (): void => {
   ensureSourcePackage();
   syncWebGpuTypes();
@@ -399,6 +479,7 @@ const syncVendor = (): void => {
   // from older syncs are left in place - they're gitignored and harmless.
   for (const entry of flatManagedEntries) {
     const target = path.resolve(flatTargetDir, entry.name);
+
     if (entry.type === 'dir') {
       fs.rmSync(target, { recursive: true, force: true });
     } else {
@@ -415,30 +496,23 @@ const syncVendor = (): void => {
   fs.writeFileSync(path.resolve(flatTargetDir, 'module-shims.d.ts'), moduleShims, 'utf8');
 
   const registry = buildMonacoRegistry('@codexo/exojs', packageRoot, versionId);
-  fs.writeFileSync(path.resolve(flatTargetDir, 'monaco-registry.json'), JSON.stringify(registry, null, 2) + '\n', 'utf8');
+  fs.writeFileSync(path.resolve(flatTargetDir, 'monaco-registry.json'), `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
 
   console.log(`[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`);
 
-  // Sync extension packages. Each gets the same Monaco-resolvable treatment as
+  // Sync the adapter packages; the runtime modules ship inside the Core tree
+  // copied above. Each adapter gets the same Monaco-resolvable treatment as
   // core: copy the ESM tree, rewrite '#'-subpath imports to relative paths
   // (Monaco can't resolve '#'), emit an `esm-typings.json` manifest, and emit a
   // `monaco-registry.json` (virtual package.json + subpath shims for e.g.
   // `/debug`). Without this the playground's TypeScript worker
-  // can't resolve `@codexo/exojs-particles` & co. and every extension example
+  // can't resolve `@codexo/exojs-tiled` & co. and every adapter example
   // shows a ts2307 "Cannot find module" error.
-  const extensionPackages = [
-    'exojs-particles',
-    'exojs-audio-fx',
-    'exojs-tilemap',
-    'exojs-tiled',
-    'exojs-ldtk',
-    'exojs-physics',
-    'exojs-tilemap-physics',
-    'exojs-lighting',
-    'exojs-pathfinding',
-  ] as const;
+  const extensionPackages = ['exojs-tiled', 'exojs-ldtk'] as const;
+
   for (const pkgName of extensionPackages) {
     let pkgRoot: string;
+
     try {
       const pkgJsonPath = requireFromSite.resolve(`@codexo/${pkgName}/package.json`);
       pkgRoot = path.dirname(pkgJsonPath);
@@ -446,21 +520,25 @@ const syncVendor = (): void => {
       // Fall back to workspace path.
       pkgRoot = path.resolve(projectRoot, '..', 'packages', pkgName);
     }
+
     const pkgDist = path.resolve(pkgRoot, 'dist', 'esm');
+
     if (!fs.existsSync(pkgDist)) {
       // Hard error on purpose. This used to warn-and-skip, which shipped a
       // playground where every extension example failed at runtime with
       // "Cannot find module '@codexo/exojs-...'" - and nobody saw the warning.
       throw new Error(
         `[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist}. ` +
-          `Build the extension packages first: pnpm --filter "@codexo/exojs-*" build`,
+          `Build the adapter packages first: pnpm --filter "./packages/*" build`,
       );
     }
+
     const vendorDir = path.resolve(projectRoot, 'public', 'vendor', pkgName);
     const destDir = path.resolve(vendorDir, 'esm');
     fs.rmSync(vendorDir, { recursive: true, force: true });
     fs.mkdirSync(destDir, { recursive: true });
     const files = collectFiles(pkgDist);
+
     for (const rel of files) {
       const src = path.resolve(pkgDist, rel);
       const dst = path.resolve(destDir, rel);
@@ -470,13 +548,34 @@ const syncVendor = (): void => {
 
     const dtsFiles = collectDeclarationFiles(pkgDist);
     const rewritten = rewriteSubpathImports(destDir, dtsFiles);
-    fs.writeFileSync(path.resolve(vendorDir, 'esm-typings.json'), JSON.stringify(dtsFiles, null, 2) + '\n', 'utf8');
+    fs.writeFileSync(path.resolve(vendorDir, 'esm-typings.json'), `${JSON.stringify(dtsFiles, null, 2)}\n`, 'utf8');
     const extRegistry = buildMonacoRegistry(`@codexo/${pkgName}`, pkgRoot, versionId);
-    fs.writeFileSync(path.resolve(vendorDir, 'monaco-registry.json'), JSON.stringify(extRegistry, null, 2) + '\n', 'utf8');
+    fs.writeFileSync(path.resolve(vendorDir, 'monaco-registry.json'), `${JSON.stringify(extRegistry, null, 2)}\n`, 'utf8');
 
     console.log(
       `[vendor:sync] Copied @codexo/${pkgName} ESM (${files.length} files, ${dtsFiles.length} declarations, ${rewritten} '#'-rewritten) -> vendor/${pkgName}/`,
     );
+  }
+
+  syncDemoAssets();
+
+  const fontDir = path.resolve(projectRoot, 'public', 'vendor', 'fonts');
+
+  fs.mkdirSync(fontDir, { recursive: true });
+
+  for (const [family, weights] of [
+    ['space-grotesk', [400, 600]],
+    ['jetbrains-mono', [400]],
+  ] as const) {
+    const packageRoot = path.dirname(requireFromSite.resolve(`@fontsource/${family}/package.json`));
+
+    for (const weight of weights) {
+      const name = `${family}-latin-${weight}-normal.woff2`;
+
+      fs.copyFileSync(path.join(packageRoot, 'files', name), path.join(fontDir, name));
+    }
+
+    fs.copyFileSync(path.join(packageRoot, 'LICENSE'), path.join(fontDir, `${family}-LICENSE.txt`));
   }
 };
 

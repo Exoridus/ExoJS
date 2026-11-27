@@ -3,15 +3,31 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { GATE_GROUPS } from './gate-groups.ts';
+import { GATE_GROUPS, orderGates } from './gate-groups.ts';
+import { isRelatedEligible } from './related-tests.ts';
 import { CHECKED_README_PATHS } from './select-lanes.ts';
 
-const ALL_GATES = Object.values(GATE_GROUPS).flat();
+const ALL_GATES = orderGates(Object.values(GATE_GROUPS).flat());
 const ALL_BROWSER = ['webgl', 'webgpu', 'audio', 'tilemap'] as const;
-const CORE_GATES = ['typecheck', 'typecheck:test', 'typecheck:workers', 'lint', 'lint:source-hygiene', 'lint:file-symbols', 'format:check', 'docs:api:check'];
+const CORE_GATES = [
+  'typecheck',
+  'typecheck:test',
+  'typecheck:workers',
+  'lint',
+  'lint:source-hygiene',
+  'lint:file-symbols',
+  'format:check',
+  'docs:api:check',
+  'docs:history:check',
+];
 const PACKAGE_GATES = ['lint', 'lint:source-hygiene', 'lint:file-symbols', 'format:check', 'docs:api:check'];
 const SITE_GATES = ['typecheck:site', 'typecheck:site-scripts', 'lint:site', 'format:check'];
-const CORE_WITHOUT_BROWSER = new Set(['src/math/Random.ts', 'src/input/gamepadMappings.ts', 'src/input/keyboardCodes.ts', 'src/input/gamepadDefinitions.ts']);
+const CORE_WITHOUT_BROWSER = new Set([
+  'src/math/Random.ts',
+  'src/input/gamepadMappings.ts',
+  'src/input/keyboardCodes.ts',
+  'src/input/gamepadDefinitions.ts',
+]);
 
 export interface LocalPolicy {
   gates: string[];
@@ -25,10 +41,16 @@ export interface LocalPolicy {
   allocation: boolean;
   physicsPerf: boolean;
   needsDist: boolean;
+  /** Run the dependency-free supervisor tests (`node --test`) that the unit lane starts with. */
+  nodeTests: boolean;
+  /** Discover affected files across the normal workspace unit inventory; uncertain changes keep it full. */
+  relatedTests: boolean;
 }
 
 interface PackageManifest {
   name: string;
+  /** Directory under `packages/`, which is also the package's Vitest project name. */
+  directory: string;
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
@@ -40,41 +62,159 @@ const packages = (): PackageManifest[] =>
     .filter(entry => entry.isDirectory())
     .flatMap(entry => {
       try {
-        return [JSON.parse(readFileSync(resolve('packages', entry.name, 'package.json'), 'utf8')) as PackageManifest];
+        const manifest = JSON.parse(readFileSync(resolve('packages', entry.name, 'package.json'), 'utf8')) as Omit<
+          PackageManifest,
+          'directory'
+        >;
+
+        return [{ ...manifest, directory: entry.name }];
       } catch {
         return [];
       }
     });
 
+const RUNTIME_MODULE_PREFIX = '@codexo/exojs-module-';
+
+const listSources = (dir: string): string[] =>
+  existsSync(dir)
+    ? readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+        const path = resolve(dir, entry.name);
+
+        if (entry.isDirectory()) {
+          return listSources(path);
+        }
+
+        return /\.tsx?$/.test(entry.name) ? [path] : [];
+      })
+    : [];
+
+/**
+ * The Core subpaths of runtime modules a package imports. A runtime module is
+ * reached through `@codexo/exojs/<subpath>` rather than through a dependency
+ * declaration, so the manifest alone cannot say who depends on it.
+ */
+const importedModuleSubpaths = (manifest: PackageManifest, subpaths: readonly string[]): string[] => {
+  const text = ['src', 'test']
+    .flatMap(dir => listSources(resolve('packages', manifest.directory, dir)))
+    .map(file => readFileSync(file, 'utf8'));
+
+  return subpaths.filter(subpath => text.some(source => source.includes(`'@codexo/exojs/${subpath}'`)));
+};
+
 const affectedPackages = (name: string): PackageManifest[] => {
   const manifests = packages();
+  const subpaths = manifests
+    .filter(manifest => manifest.name.startsWith(RUNTIME_MODULE_PREFIX))
+    .map(manifest => manifest.name.slice(RUNTIME_MODULE_PREFIX.length));
+  const edges = new Map(
+    manifests.map(manifest => [
+      manifest.name,
+      [
+        ...Object.keys({ ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies }),
+        ...importedModuleSubpaths(manifest, subpaths).map(subpath => `${RUNTIME_MODULE_PREFIX}${subpath}`),
+      ],
+    ]),
+  );
   const selected = new Set([name]);
   let changed = true;
+
   while (changed) {
     changed = false;
+
     for (const manifest of manifests) {
-      if (selected.has(manifest.name)) continue;
-      const dependencies = { ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies };
-      if (Object.keys(dependencies).some(dependency => selected.has(dependency))) {
+      if (selected.has(manifest.name)) {
+        continue;
+      }
+
+      if ((edges.get(manifest.name) ?? []).some(dependency => selected.has(dependency))) {
         selected.add(manifest.name);
         changed = true;
       }
     }
   }
+
   return manifests.filter(manifest => selected.has(manifest.name));
 };
 
 const hasUnitProject = (manifest: PackageManifest): boolean =>
-  manifest.name.startsWith('@codexo/exojs-') && existsSync(resolve('packages', manifest.name.slice('@codexo/'.length), 'test'));
+  manifest.directory.startsWith('exojs-') && existsSync(resolve('packages', manifest.directory, 'test'));
+
+/**
+ * Validation tooling that no engine, extension, example or site code reaches:
+ * every importer of these files is `test/ci`, another file in this set, or an
+ * entry point named in `package.json` or a workflow. A change to them can only
+ * break the validation scripts and their own tests, which the tooling scope
+ * runs. Deliberately absent, because something else imports them:
+ * `browser-profiles.ts` and `file-progress-reporter.ts` (`vitest.config.ts`,
+ * hence every test project), `bundle-size-summary.ts` and
+ * `verify-esm-importmap.ts` (build and release checks), `scripts/lib/output.ts`
+ * (`verify-publish.ts`), and anything new - an
+ * unlisted file under `scripts/ci/` stays global.
+ */
+export const CI_TOOLING_FILES: ReadonlySet<string> = new Set([
+  ...[
+    'affected-plan',
+    'affected-probe',
+    'affected-process',
+    'affected-range',
+    'affected-reporter',
+    'affected-run',
+    'affected-tests',
+    'browser-probe',
+    'capability',
+    'gate-groups',
+    'gates',
+    'lanes',
+    'local-lanes',
+    'local-policy',
+    'push-range',
+    'push-scope',
+    'qualify',
+    'related-tests',
+    'select-lanes',
+    'trust',
+    'verdict',
+  ].map(name => `scripts/ci/${name}.ts`),
+  ...['process-tree', 'run-command', 'validation-lock'].map(name => `scripts/lib/${name}.ts`),
+  'scripts/lib/stop-process-tree.ps1',
+  'scripts/lanes.ts',
+]);
+
+export const isCiTooling = (file: string): boolean =>
+  CI_TOOLING_FILES.has(file) ||
+  file.startsWith('test/ci/') ||
+  file === '.husky/pre-push' ||
+  file === '.husky/pre-commit' ||
+  file === '.husky/commit-msg';
+
+/** Static gates for a tooling change: scripts and tests typecheck, lint and format, plus the hygiene checks that read tracked files. */
+const TOOLING_GATES = [
+  'typecheck:scripts',
+  'typecheck:test',
+  'lint',
+  'lint:source-hygiene',
+  'lint:file-symbols',
+  'lint:config-paths',
+  'lint:js-files',
+  'format:check',
+];
+
+/** Test files that import tooling, besides `test/ci`: `select-lanes.ts` exports the README list `readme-examples` reads. */
+const toolingTestFilters = (file: string): string[] =>
+  file === 'scripts/ci/select-lanes.ts' ? ['test/ci', 'test/site/readme-examples'] : ['test/ci'];
+
+const isInfrastructureDocumentation = (file: string): boolean => /\.mdx?$/.test(file) && !/(?:^|\/)(?:dist|generated)\//.test(file);
 
 const isGlobal = (file: string): boolean =>
   file === 'package.json' ||
   file === 'pnpm-lock.yaml' ||
   file === 'pnpm-workspace.yaml' ||
   file === 'vitest.config.ts' ||
-  file.startsWith('scripts/ci/') ||
-  file.startsWith('.github/workflows/') ||
+  (((file.startsWith('scripts/ci/') && !isCiTooling(file)) || file.startsWith('.github/workflows/')) &&
+    !isInfrastructureDocumentation(file)) ||
   file.startsWith('packages/exojs-config/') ||
+  file.startsWith('packages/exojs-build/') ||
+  file === 'packages/exojs-cli/src/commands/assetsPack.ts' ||
   /^tsconfig\..*\.json$/.test(file);
 
 const emptyPolicy = (): LocalPolicy => ({
@@ -88,11 +228,37 @@ const emptyPolicy = (): LocalPolicy => ({
   allocation: false,
   physicsPerf: false,
   needsDist: false,
+  nodeTests: false,
+  relatedTests: false,
 });
+
+const historyInputs = (): Set<string> => {
+  const files = new Set(['document-history.lock.json']);
+
+  if (existsSync('document-history.lock.json')) {
+    try {
+      const entries = JSON.parse(readFileSync('document-history.lock.json', 'utf8')) as unknown;
+
+      if (Array.isArray(entries)) {
+        for (const entry of entries as Array<{ declaration?: unknown; fixture?: unknown } | null>) {
+          for (const path of [entry?.declaration, entry?.fixture]) {
+            if (typeof path === 'string') {
+              files.add(path.replaceAll('\\', '/'));
+            }
+          }
+        }
+      }
+    } catch {
+      // The history gate reports invalid lock input when the lock itself changes.
+    }
+  }
+
+  return files;
+};
 
 /** Local pre-push selection. Unknown files take the complete policy; CI keeps its own authoritative matrix. */
 export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy => {
-  const files = changedFiles.map(file => String(file).replaceAll('\\', '/').trim()).filter(Boolean);
+  const files = changedFiles.filter(Boolean);
   const policy = emptyPolicy();
   const gates = new Set<string>();
   const projects = new Set<string>();
@@ -100,40 +266,70 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
   const typechecks = new Set<string>();
   let broad = files.length === 0;
   let siteOnlyUnits = true;
+  let siteUnits = false;
+  const toolingFilters = new Set<string>();
+  const documents = historyInputs();
+
   const add = (...names: string[]): void => {
-    for (const name of names) gates.add(name);
+    for (const name of names) {
+      gates.add(name);
+    }
   };
 
   for (const file of files) {
+    if (documents.has(file)) {
+      add('docs:history:check');
+    }
+
     if (isGlobal(file)) {
       broad = true;
       continue;
     }
-    if (file === 'README.md' || CHECKED_README_PATHS.includes(file)) {
+
+    if (isCiTooling(file)) {
+      add(...TOOLING_GATES);
+      projects.add('exojs');
+      policy.nodeTests = true;
+
+      for (const filter of toolingTestFilters(file)) {
+        toolingFilters.add(filter);
+      }
+    } else if (file === 'README.md' || CHECKED_README_PATHS.includes(file)) {
       add('format:check');
       projects.add('exojs');
+      siteUnits = true;
     } else if (/\.mdx?$/.test(file) || /(^|\/)LICENSE$/.test(file)) {
       add('format:check');
+
       if (file.startsWith('site/src/content/')) {
         add('typecheck:guides', 'typecheck:site');
         add('format:check');
         projects.add('exojs');
+        siteUnits = true;
         policy.needsDist = true;
       }
     } else if (file.startsWith('src/')) {
       siteOnlyUnits = false;
       add(...CORE_GATES);
       projects.add('exojs');
+
       if (/^src\/(index\.ts|renderer-sdk\.ts|extensions\/)/.test(file) || file.endsWith('/index.ts')) {
-        add('typecheck:packages', 'full-bundle:exports:check');
+        add('typecheck:packages', 'dist:check');
         policy.needsDist = true;
-        for (const manifest of packages()) if (hasUnitProject(manifest)) projects.add(manifest.name.slice('@codexo/'.length));
+
+        for (const manifest of packages()) {
+          if (hasUnitProject(manifest)) {
+            projects.add(manifest.directory);
+          }
+        }
       }
+
       if (file.startsWith('src/rendering/') || file.startsWith('src/assets/')) {
         browsers.add('webgl');
         browsers.add('webgpu');
         policy.smoke = true;
         policy.needsDist = true;
+
         if (file.startsWith('src/rendering/')) {
           projects.add('rendering-perf');
           policy.allocation = true;
@@ -145,21 +341,37 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
         policy.smoke = true;
         policy.needsDist = true;
       }
+    } else if (file.startsWith('packages/legacy/')) {
+      // Generated forwarders: the generator check and the release tests that
+      // install them next to the Core tarball are what can notice a change.
+      siteOnlyUnits = false;
+      add('legacy-shims:check', 'format:check');
+      projects.add('exojs');
+      policy.needsDist = true;
     } else if (file.startsWith('packages/')) {
       siteOnlyUnits = false;
       const packageDirectory = file.split('/')[1]!;
       let manifest: PackageManifest;
+
       try {
         manifest = JSON.parse(readFileSync(resolve('packages', packageDirectory, 'package.json'), 'utf8')) as PackageManifest;
       } catch {
         broad = true;
         continue;
       }
+
       add(...PACKAGE_GATES);
+
       for (const affected of affectedPackages(manifest.name)) {
-        if (affected.scripts?.typecheck && affected.name !== '@codexo/exojs-bench') typechecks.add(affected.name);
-        if (hasUnitProject(affected)) projects.add(affected.name.slice('@codexo/'.length));
+        if (affected.scripts?.typecheck && affected.name !== '@codexo/exojs-bench') {
+          typechecks.add(affected.name);
+        }
+
+        if (hasUnitProject(affected)) {
+          projects.add(affected.directory);
+        }
       }
+
       if (
         packageDirectory === 'exojs-particles' ||
         packageDirectory === 'exojs-tilemap' ||
@@ -171,28 +383,51 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
         policy.smoke = true;
         policy.needsDist = true;
       }
-      if (packageDirectory === 'exojs-particles') policy.bench = true;
-      if (packageDirectory === 'exojs-audio-fx') browsers.add('audio');
-      if (packageDirectory === 'exojs-tilemap') browsers.add('tilemap');
-      if (packageDirectory === 'exojs-physics') policy.physicsPerf = true;
+
+      if (packageDirectory === 'exojs-particles') {
+        policy.bench = true;
+      }
+
+      if (packageDirectory === 'exojs-audio-fx') {
+        browsers.add('audio');
+      }
+
+      if (packageDirectory === 'exojs-tilemap') {
+        browsers.add('tilemap');
+      }
+
+      if (packageDirectory === 'exojs-physics') {
+        policy.physicsPerf = true;
+      }
     } else if (file.startsWith('examples/')) {
       add('typecheck:examples', 'examples:sync:check', 'assets:compact:check', ...SITE_GATES);
       projects.add('exojs');
+      siteUnits = true;
       policy.smoke = true;
       policy.needsDist = true;
     } else if (file.startsWith('site/')) {
       add(...SITE_GATES);
       policy.needsDist = true;
+
       if (file.startsWith('site/src/content/')) {
         add('typecheck:guides');
         projects.add('exojs');
+        siteUnits = true;
       }
-      if (file.startsWith('site/src/lib/')) projects.add('exojs');
-      if (file.startsWith('site/src/pages/') || file.startsWith('site/src/components/') || file === 'site/scripts/smoke-examples.ts') policy.smoke = true;
+
+      if (file.startsWith('site/src/lib/')) {
+        projects.add('exojs');
+        siteUnits = true;
+      }
+
+      if (file.startsWith('site/src/pages/') || file.startsWith('site/src/components/') || file === 'site/scripts/smoke-examples.ts') {
+        policy.smoke = true;
+      }
     } else if (file.startsWith('test/')) {
       siteOnlyUnits = false;
       add('typecheck:test', 'lint', 'format:check');
       projects.add('exojs');
+
       if (file.startsWith('test/rendering/')) {
         browsers.add('webgl');
         browsers.add('webgpu');
@@ -202,7 +437,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
     }
   }
 
-  if (broad)
+  if (broad) {
     return {
       gates: [...ALL_GATES],
       packageTypechecks: [],
@@ -214,26 +449,46 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
       allocation: true,
       physicsPerf: true,
       needsDist: true,
+      nodeTests: true,
+      relatedTests: false,
     };
-  policy.gates = [...ALL_GATES.filter(name => gates.has(name)), ...[...gates].filter(name => !ALL_GATES.some(gate => gate === name))];
+  }
+
+  policy.gates = orderGates([
+    ...ALL_GATES.filter(name => gates.has(name)),
+    ...[...gates].filter(name => !ALL_GATES.some(gate => gate === name)),
+  ]);
   policy.packageTypechecks = [...typechecks].sort();
-  policy.unitProjects = [...projects].sort();
-  if (siteOnlyUnits && policy.unitProjects.length === 1 && policy.unitProjects[0] === 'exojs') policy.unitFilter = 'test/site';
+  // Runtime consumers include workspace extensions even when no package
+  // manifest names a Core subpath. Vite determines which files can observe it.
+  policy.unitProjects = !siteOnlyUnits && projects.size > 0 ? ['exojs*', 'rendering-perf'] : [...projects].sort();
+  // Content contributes its own gates and its readers remain in the graph plan.
+  const graphInputs = files.filter(file => !/\.mdx?$/.test(file) && !/(^|\/)LICENSE$/.test(file));
+  policy.relatedTests = !siteOnlyUnits && projects.size > 0 && !files.some(isCiTooling) && isRelatedEligible(graphInputs);
+
+  if (siteOnlyUnits && policy.unitProjects.length === 1 && policy.unitProjects[0] === 'exojs') {
+    policy.unitFilter = [...(siteUnits ? ['test/site'] : []), ...toolingFilters].join(' ');
+  }
+
   policy.browser = [...browsers];
+
   return policy;
 };
 
-export const changedFilesBetween = (base: string, head: string): string[] =>
-  execFileSync('git', ['diff', '--name-only', `${base}..${head}`], { encoding: 'utf8' })
-    .split(/\r?\n/)
+/** Renames count as a deletion plus an addition, so the vanished original path is seen. */
+export const changedFilesBetween = (base: string, head: string, cwd?: string): string[] =>
+  execFileSync('git', ['diff', '-z', '--name-only', '--no-renames', `${base}..${head}`], { encoding: 'utf8', cwd })
+    .split('\0')
     .filter(Boolean);
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [option, ...args] = process.argv.slice(2);
+
   if (option === '--files') {
     process.stdout.write(`${JSON.stringify(selectLocalPolicy(args), null, 2)}\n`);
   } else if (option === '--needs-dist') {
     const [base, head] = args;
+
     try {
       process.stdout.write(`${selectLocalPolicy(base && head ? changedFilesBetween(base, head) : []).needsDist}\n`);
     } catch {

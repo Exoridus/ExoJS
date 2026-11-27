@@ -4,7 +4,7 @@
   "symbol": "CapsuleShape",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 8,
   "counts": {
@@ -23,7 +23,7 @@
         "The spine is given as two points rather than a centre, a half-height and an angle: every consumer needs the two endpoints, and the collider already carries a local rotation, so an angle on the shape would be a second and redundant orientation.",
         "A zero-length spine is rejected rather than quietly becoming a circle - use CircleShape to say that."
       ],
-      "importLine": "import { CapsuleShape } from '@codexo/exojs-physics'",
+      "importLine": "import { CapsuleShape } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

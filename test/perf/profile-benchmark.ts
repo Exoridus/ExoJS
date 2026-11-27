@@ -47,22 +47,22 @@ const makeParam = (): AudioParam =>
 
 const makeGain = (): GainNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
     context: null as unknown as AudioContext,
     gain: {
       value: 1,
-      setTargetAtTime: () => undefined,
-      cancelScheduledValues: () => undefined,
-      setValueAtTime: () => undefined,
-      linearRampToValueAtTime: () => undefined,
+      setTargetAtTime: () => {},
+      cancelScheduledValues: () => {},
+      setValueAtTime: () => {},
+      linearRampToValueAtTime: () => {},
     },
   }) as unknown as GainNode;
 
 const makePanner = (): PannerNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
     context: { currentTime: 0 } as AudioContext,
     panningModel: 'equalpower' as PanningModelType,
     distanceModel: 'linear' as DistanceModelType,
@@ -76,30 +76,30 @@ const makePanner = (): PannerNode =>
 
 const makeStereoPanner = (): StereoPannerNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
-    pan: { value: 0, setTargetAtTime: () => undefined },
+    connect: () => {},
+    disconnect: () => {},
+    pan: { value: 0, setTargetAtTime: () => {} },
   }) as unknown as StereoPannerNode;
 
 const makeBiquadFilter = (): BiquadFilterNode =>
   ({
-    connect: () => undefined,
-    disconnect: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
     context: { currentTime: 0 } as AudioContext,
     type: 'lowpass' as BiquadFilterType,
-    frequency: { value: 350, setValueAtTime: () => undefined, setTargetAtTime: () => undefined },
-    Q: { value: 1, setValueAtTime: () => undefined, setTargetAtTime: () => undefined },
-    gain: { value: 0, setValueAtTime: () => undefined, setTargetAtTime: () => undefined },
+    frequency: { value: 350, setValueAtTime: () => {}, setTargetAtTime: () => {} },
+    Q: { value: 1, setValueAtTime: () => {}, setTargetAtTime: () => {} },
+    gain: { value: 0, setValueAtTime: () => {}, setTargetAtTime: () => {} },
   }) as unknown as BiquadFilterNode;
 
 let _srcId = 0;
 const makeBufferSource = (): AudioBufferSourceNode =>
   ({
     _id: ++_srcId,
-    connect: () => undefined,
-    disconnect: () => undefined,
-    start: () => undefined,
-    stop: () => undefined,
+    connect: () => {},
+    disconnect: () => {},
+    start: () => {},
+    stop: () => {},
     playbackRate: { value: 1 },
     detune: { value: 0 },
     loop: false,
@@ -159,9 +159,11 @@ if (typeof (globalThis as Record<string, unknown>)['OfflineAudioContext'] === 'u
     writable: true,
     value: class {
       public sampleRate: number;
+
       constructor(_c: number, _l: number, sr: number) {
         this.sampleRate = sr;
       }
+
       decodeAudioData() {
         return Promise.resolve({} as AudioBuffer);
       }
@@ -174,10 +176,10 @@ if (typeof (globalThis as Record<string, unknown>)['AudioWorkletNode'] === 'unde
     configurable: true,
     writable: true,
     value: class {
-      connect = () => undefined;
-      disconnect = () => undefined;
+      connect = () => {};
+      disconnect = () => {};
       parameters = new Map<string, AudioParam>();
-      port = { postMessage: () => undefined, onmessage: null };
+      port = { postMessage: () => {}, onmessage: null };
     },
   });
 }
@@ -205,18 +207,22 @@ import type { RenderNode } from '../../src/rendering/RenderNode';
 
 const rng = (seed: number) => {
   let s = seed;
+
   return () => {
     s = (s * 1664525 + 1013904223) & 0xffffffff;
+
     return (s >>> 0) / 0xffffffff;
   };
 };
 
 const makeRegularPolygon = (cx: number, cy: number, radius: number, sides: number): Polygon => {
   const points: Vector[] = [];
+
   for (let i = 0; i < sides; i++) {
     const angle = (2 * Math.PI * i) / sides;
     points.push(new Vector(Math.cos(angle) * radius, Math.sin(angle) * radius));
   }
+
   return new Polygon(points, cx, cy);
 };
 
@@ -225,6 +231,7 @@ const makeInteractiveDrawable = (x: number, y: number, size = 32): Drawable => {
   d.setLocalBounds(0, 0, size, size);
   d.setPosition(x, y);
   d.interactive = true;
+
   return d;
 };
 
@@ -239,15 +246,26 @@ const makeAudioBuffer = (duration = 2, sampleRate = 44100): AudioBuffer =>
 
 // Inlined recursive hit-test (mirrors InteractionSystem._hitTestNode)
 const hitTestRecursive = (node: RenderNode, x: number, y: number): RenderNode | null => {
-  if (!node.visible) return null;
+  if (!node.visible) {
+    return null;
+  }
+
   if (node instanceof Container) {
     const children = node.children;
+
     for (let i = children.length - 1; i >= 0; i--) {
       const hit = hitTestRecursive(children[i], x, y);
-      if (hit) return hit;
+
+      if (hit) {
+        return hit;
+      }
     }
   }
-  if (node.interactive && node.contains(x, y)) return node;
+
+  if (node.interactive && node.contains(x, y)) {
+    return node;
+  }
+
   return null;
 };
 
@@ -262,29 +280,41 @@ const hitTestIndexed = (qt: Quadtree<IndexedNode>, buf: Array<QuadtreeItem<Index
   qt.queryPoint(x, y, buf);
   let bestOrder = -1;
   let bestNode: RenderNode | null = null;
+
   for (const candidate of buf) {
     const { node, order } = candidate.payload;
+
     if (order > bestOrder && node.contains(x, y)) {
       bestOrder = order;
       bestNode = node;
     }
   }
+
   return bestNode;
 };
 
 const buildIndex = (root: Container, worldBounds: Rectangle): Quadtree<IndexedNode> => {
   const qt = new Quadtree<IndexedNode>(new Rectangle(worldBounds.x, worldBounds.y, worldBounds.width, worldBounds.height));
   let order = 0;
+
   const collect = (node: RenderNode): void => {
-    if (!node.visible) return;
+    if (!node.visible) {
+      return;
+    }
+
     if (node.interactive) {
       qt.insert({ bounds: node.getBounds(), payload: { node, order: order++ } });
     }
+
     if (node instanceof Container) {
-      for (const child of node.children) collect(child);
+      for (const child of node.children) {
+        collect(child);
+      }
     }
   };
+
   collect(root);
+
   return qt;
 };
 
@@ -360,6 +390,7 @@ const scenarioResults: ProfileScenarioResult[] = [];
       },
       tick(_i, timings, counter) {
         counter.count('polygon-pair-iterations');
+
         for (const [a, b] of polygons) {
           // Time the getNormals calls separately from the intersection test
           const stopNA = timings.start('getNormals.A');
@@ -385,6 +416,7 @@ const scenarioResults: ProfileScenarioResult[] = [];
           a.destroy();
           b.destroy();
         }
+
         polygons.length = 0;
       },
     }),
@@ -406,12 +438,14 @@ const scenarioResults: ProfileScenarioResult[] = [];
       iterations: 100,
       setup() {
         qt = new Quadtree<number>(new Rectangle(0, 0, 5000, 5000));
+
         for (let i = 0; i < ITEMS; i++) {
           qt.insert({
             bounds: new Rectangle(rand() * 4900, rand() * 4900, 20 + rand() * 60, 20 + rand() * 60),
             payload: i,
           });
         }
+
         for (let i = 0; i < QUERIES; i++) {
           queryPoints.push([rand() * 5000, rand() * 5000]);
         }
@@ -419,10 +453,12 @@ const scenarioResults: ProfileScenarioResult[] = [];
       tick(_i, timings, counter) {
         counter.count('query-batch-iterations');
         const stopWalk = timings.start('tree-walk-all-queries');
+
         for (const [x, y] of queryPoints) {
           counter.count('leaf-tests');
           qt!.queryPoint(x, y);
         }
+
         stopWalk();
       },
       teardown() {
@@ -447,12 +483,14 @@ const scenarioResults: ProfileScenarioResult[] = [];
       iterations: 240,
       setup() {
         root = new Container();
+
         for (let i = 0; i < NODES; i++) {
           root.addChild(makeInteractiveDrawable((i % 40) * 25, Math.floor(i / 40) * 25));
         }
       },
       tick(frame, timings, counter) {
         counter.count('frame-ticks');
+
         for (let q = 0; q < QUERIES_PER_FRAME; q++) {
           const x = (frame * 97 + q * 31) % 1000;
           const y = (frame * 53 + q * 17) % 625;
@@ -481,15 +519,19 @@ const scenarioResults: ProfileScenarioResult[] = [];
       iterations: 1000,
       setup() {
         root = new Container();
+
         for (let a = 0; a < 10; a++) {
           const lvl1 = new Container();
           root.addChild(lvl1);
+
           for (let b = 0; b < 10; b++) {
             const lvl2 = new Container();
             lvl1.addChild(lvl2);
+
             for (let c = 0; c < 10; c++) {
               const lvl3 = new Container();
               lvl2.addChild(lvl3);
+
               for (let d = 0; d < 10; d++) {
                 const leaf = new Drawable();
                 leaf.setLocalBounds(0, 0, 16, 16);
@@ -530,12 +572,14 @@ const scenarioResults: ProfileScenarioResult[] = [];
       iterations: 1000,
       setup() {
         system = new AudioSystem();
+
         for (let i = 0; i < 50; i++) {
           sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
         }
       },
       tick(_i, timings, counter) {
         counter.count('play-batches');
+
         for (const s of sounds) {
           counter.count('sound-play-calls');
           const stopPlay = timings.start('sound.play');
@@ -549,6 +593,7 @@ const scenarioResults: ProfileScenarioResult[] = [];
         for (const s of sounds) {
           s.destroy();
         }
+
         sounds.length = 0;
         system!.destroy();
         system = null;
@@ -575,7 +620,8 @@ const deriveWins = (results: ProfileScenarioResult[]): Win[] => {
   const scored = results.map(r => {
     const avgMs = r.totalMs / r.iterations;
     const heapMb = Math.abs(r.memory.heapUsedDeltaMb);
-    const score = avgMs * 1.0 + heapMb * 2.0;
+    const score = avgMs * 1 + heapMb * 2;
+
     return { r, avgMs, heapMb, score };
   });
 
@@ -647,8 +693,10 @@ const deriveWins = (results: ProfileScenarioResult[]): Win[] => {
     } else {
       // Generic fallback
       observation =
-        `Hot phase "${hotPhase?.label ?? 'unknown'}" takes ~${hotPct}% of total time ` + `(${avgMs.toFixed(4)} ms/iter). Memory delta ${heapMb.toFixed(2)} MB.`;
-      recommendation = 'Investigate further — profile the hot phase with more granular sub-timings ' + 'or run under --cpu-prof for a flame graph.';
+        `Hot phase "${hotPhase?.label ?? 'unknown'}" takes ~${hotPct}% of total time ` +
+        `(${avgMs.toFixed(4)} ms/iter). Memory delta ${heapMb.toFixed(2)} MB.`;
+      recommendation =
+        'Investigate further — profile the hot phase with more granular sub-timings ' + 'or run under --cpu-prof for a flame graph.';
     }
 
     wins.push({ rank: rank + 1, scenario: r.name, observation, recommendation });
@@ -675,9 +723,10 @@ const fmtTable = (rows: string[][], headers: string[]): string => {
 
   const pad = (s: string, w: number, right = false): string => (right ? s.padStart(w) : s.padEnd(w));
 
-  const line = (row: string[], rights: boolean[] = []): string => `| ${row.map((cell, i) => pad(cell, widths[i], rights[i] ?? false)).join(' | ')} |`;
+  const line = (row: string[], rights: boolean[] = []): string =>
+    `| ${row.map((cell, i) => pad(cell, widths[i], rights[i] ?? false)).join(' | ')} |`;
 
-  const sep = `| ${widths.map((w, i) => (i > 0 ? '-'.repeat(w - 1) + ':' : '-'.repeat(w))).join(' | ')} |`;
+  const sep = `| ${widths.map((w, i) => (i > 0 ? `${'-'.repeat(w - 1)}:` : '-'.repeat(w))).join(' | ')} |`;
 
   return [line(headers), sep, ...rows.map(r => line(r, [false, true, true]))].join('\n');
 };
@@ -739,13 +788,19 @@ const md = [
 // runs accumulate without overwriting each other (all gitignored).
 const buildIdentifier = (() => {
   let version = 'unknown';
+
   try {
     const pkg = JSON.parse(readFileSync(resolve(resultsDir, '../../../package.json'), 'utf-8')) as { version?: string };
-    if (typeof pkg.version === 'string') version = pkg.version;
+
+    if (typeof pkg.version === 'string') {
+      version = pkg.version;
+    }
   } catch {
     /* ignore */
   }
+
   let sha = '';
+
   try {
     sha = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
@@ -753,18 +808,21 @@ const buildIdentifier = (() => {
   } catch {
     /* ignore */
   }
+
   return sha ? `${version}-${sha}` : version;
 })();
 
 mkdirSync(resultsDir, { recursive: true });
 const outPath = resolve(resultsDir, `findings-${buildIdentifier}.md`);
-writeFileSync(outPath, md + '\n', 'utf-8');
+writeFileSync(outPath, `${md}\n`, 'utf-8');
 
 console.log('\nExoJS Phase 2 Auto-Profiler complete.');
 console.log('Scenarios profiled:', scenarioResults.map(r => r.name).join(', '));
 console.log(`GC available: ${gcAvailable}`);
 console.log(`\nTop-3 wins:`);
+
 for (const w of wins) {
   console.log(`  ${w.rank}. ${w.scenario}`);
 }
+
 console.log(`\nFindings written to: ${outPath}`);

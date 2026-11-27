@@ -4,7 +4,7 @@
   "symbol": "Distribution",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 1,
   "counts": {
@@ -23,7 +23,7 @@
         "Implementations come in two flavours:",
         "- **Stateless / scalar** (e.g. Constant, Range) just return a `T` directly. - **Mutable-target** (Vector / Color distributions) accept an optional `out` parameter and write into it in place. Pass your own scratch instance to avoid per-spawn heap allocations; omit it to use the distribution's internal scratch (only valid until the next call)."
       ],
-      "importLine": "import { Distribution } from '@codexo/exojs-particles'",
+      "importLine": "import { Distribution } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

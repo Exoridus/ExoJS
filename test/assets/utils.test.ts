@@ -1,13 +1,9 @@
 import { determineMimeType } from '#assets/utils';
 
 /** Builds a big-endian uint32 as 4 bytes. */
-const u32be = (n: number): number[] => {
-  return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff];
-};
+const u32be = (n: number): number[] => [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff];
 
-const toBuffer = (bytes: number[]): ArrayBuffer => {
-  return new Uint8Array(bytes).buffer;
-};
+const toBuffer = (bytes: number[]): ArrayBuffer => new Uint8Array(bytes).buffer;
 
 describe('determineMimeType', () => {
   test('throws when the buffer is empty', () => {
@@ -43,7 +39,53 @@ describe('determineMimeType', () => {
     }
   });
 
+  test('every audio signature sniffs to a registered media type', () => {
+    const audio = [
+      { name: 'AU', bytes: [0x2e, 0x73, 0x6e, 0x64, 0, 0, 0, 0], mimeType: 'audio/basic' },
+      { name: 'MP3', bytes: [0x49, 0x44, 0x33, 0x04, 0, 0, 0, 0], mimeType: 'audio/mpeg' },
+      { name: 'WAVE', bytes: [0x52, 0x49, 0x46, 0x46, 0x24, 0, 0, 0, 0x57, 0x41, 0x56, 0x45], mimeType: 'audio/wav' },
+      { name: 'MIDI', bytes: [0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6], mimeType: 'audio/midi' },
+      { name: 'AIFF', bytes: [0x46, 0x4f, 0x52, 0x4d, 0, 0, 0, 0, 0x41, 0x49, 0x46, 0x46], mimeType: 'audio/aiff' },
+    ];
+
+    for (const { name, bytes, mimeType } of audio) {
+      const detected = determineMimeType(toBuffer(bytes));
+
+      expect({ name, detected }).toEqual({ name, detected: mimeType });
+      expect(detected).toMatch(/^[a-z]+\/[a-z0-9.+-]+$/);
+    }
+  });
+
   describe('MP4 detection (matchesMp4Video)', () => {
+    const ftyp = (major: string, ...compatible: string[]): ArrayBuffer => {
+      const size = 16 + compatible.length * 4;
+      const bytes = new Uint8Array(size);
+
+      new DataView(bytes.buffer).setUint32(0, size, false);
+      bytes.set(
+        [...`ftyp${major}`].map(character => character.charCodeAt(0)),
+        4,
+      );
+      compatible.forEach((brand, index) =>
+        bytes.set(
+          [...brand].map(character => character.charCodeAt(0)),
+          16 + index * 4,
+        ),
+      );
+
+      return bytes.buffer;
+    };
+
+    test('detects the common ISO base media major brands and a video compatible brand', () => {
+      expect(determineMimeType(ftyp('isom'))).toBe('video/mp4');
+      expect(determineMimeType(ftyp('mp42'))).toBe('video/mp4');
+      expect(determineMimeType(ftyp('M4A ', 'isom'))).toBe('video/mp4');
+    });
+
+    test('does not sniff an audio-only major brand as video', () => {
+      expect(determineMimeType(ftyp('M4A ', 'M4A '))).toBe('text/plain');
+    });
+
     test('detects a valid MP4 box (correct box size, "ftypmp4" brand)', () => {
       // 20-byte box: [box size u32][ 'ftypmp4' ][ padding ] - header.length === boxSize (20),
       // which satisfies `header.length >= max(12, boxSize)` and `boxSize % 4 === 0`.
@@ -105,14 +147,18 @@ describe('determineMimeType', () => {
 
     test('does not match (falls through) when neither the major nor a compatible brand is AVIF', () => {
       // 'ftyp' + 'mif1' (HEIC), compatible brands 'mif1' and 'heic'.
-      const bytes = [0, 0, 0, 0x1c, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x69, 0x66, 0x31, 0, 0, 0, 0, 0x6d, 0x69, 0x66, 0x31, 0x68, 0x65, 0x69, 0x63];
+      const bytes = [
+        0, 0, 0, 0x1c, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x69, 0x66, 0x31, 0, 0, 0, 0, 0x6d, 0x69, 0x66, 0x31, 0x68, 0x65, 0x69, 0x63,
+      ];
 
       expect(determineMimeType(toBuffer(bytes))).toBe('text/plain');
     });
 
     test('detects an AVIF that names "avif" only among the compatible brands', () => {
       // 'ftyp' + 'mif1' major brand, compatible brands 'mif1' and 'avif'.
-      const bytes = [0, 0, 0, 0x1c, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x69, 0x66, 0x31, 0, 0, 0, 0, 0x6d, 0x69, 0x66, 0x31, 0x61, 0x76, 0x69, 0x66];
+      const bytes = [
+        0, 0, 0, 0x1c, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x69, 0x66, 0x31, 0, 0, 0, 0, 0x6d, 0x69, 0x66, 0x31, 0x61, 0x76, 0x69, 0x66,
+      ];
 
       expect(determineMimeType(toBuffer(bytes))).toBe('image/avif');
     });
@@ -120,7 +166,9 @@ describe('determineMimeType', () => {
     test('stops scanning compatible brands at the declared "ftyp" box size', () => {
       // Box size 0x14 ends the brand list before the trailing 'avif', which
       // belongs to whatever box follows and must not be read as a brand.
-      const bytes = [0, 0, 0, 0x14, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x69, 0x66, 0x31, 0, 0, 0, 0, 0x6d, 0x69, 0x66, 0x31, 0x61, 0x76, 0x69, 0x66];
+      const bytes = [
+        0, 0, 0, 0x14, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x69, 0x66, 0x31, 0, 0, 0, 0, 0x6d, 0x69, 0x66, 0x31, 0x61, 0x76, 0x69, 0x66,
+      ];
 
       expect(determineMimeType(toBuffer(bytes))).toBe('text/plain');
     });

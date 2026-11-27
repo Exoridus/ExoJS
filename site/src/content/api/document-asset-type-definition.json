@@ -1,0 +1,295 @@
+{
+  "title": "DocumentAssetTypeDefinition",
+  "description": "An asset decoded from a versioned document before its factory runs.",
+  "symbol": "DocumentAssetTypeDefinition",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An asset decoded from a versioned document before its factory runs."
+      ],
+      "importLine": "import { DocumentAssetTypeDefinition } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "DocumentAssetTypeDefinition",
+          "signature": "Omit<AssetTypeDefinitionBase<Resource, Document, string>, \"codec\"> & { codec?: never; migrations?: Chain; minVersion?: Min; parser: DocumentParser<Document>; read?: never; version?: Version } & AssetFactorySpec<Resource, NoInfer<Document>, Options>",
+          "signatureTokens": [
+            {
+              "text": "Omit",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetTypeDefinitionBase",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"codec\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "codec",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "migrations",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Chain",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minVersion",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Min",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "parser",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DocumentParser",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "read",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Version",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetFactorySpec",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NoInfer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetTypes.ts"
+}

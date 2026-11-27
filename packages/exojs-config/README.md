@@ -14,7 +14,12 @@ It is consumed **without a build step**: every export is executable ESM JavaScri
 | `…/typescript/test.json`                    | base + `allowJs`/no-emit for type-checking tests                |
 | `…/typescript/compiler`                     | `runTypeScriptCompiler()`, `typescriptCompilerPath()`           |
 | `@codexo/exojs-config/eslint`               | `createImportBoundaries()`, `coreInternalDirs`                  |
-| `@codexo/exojs-config/prettier`             | shared Prettier options                                         |
+| `…/eslint/base`                             | language baseline, Node tooling profile                         |
+| `…/eslint/style`                            | shared authoring style, `prettierCompatConfig()`                |
+| `…/eslint/correctness`                      | type-aware correctness rules                                    |
+| `…/eslint/extension`, `…/react`             | extension-package and React source policy                       |
+| `…/eslint/package-test`, `…/vitest`         | test policy                                                     |
+| `@codexo/exojs-config/prettier`             | `formatOptions` for Oxfmt; Prettier config for generators       |
 | `@codexo/exojs-config/vitest`               | `createJsdomTestProject()`, `srcConditions`, `shaderStubPlugin` |
 | `@codexo/exojs-config/rolldown`             | `createExtensionBuildOptions()`                                 |
 | `@codexo/exojs-config/package-policy`       | `verifyRuntimePackage()`, `verifyConfigPackage()`               |

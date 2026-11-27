@@ -6,11 +6,11 @@
   "subsystem": "ldtk",
   "importPath": "@codexo/exojs-ldtk",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 8,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Background colour of the editor workspace, #rrggbb; not a level colour."
         },
         {
           "name": "defaultGridSize",
@@ -77,6 +77,31 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "defaultLevelBgColor",
+          "signature": "defaultLevelBgColor?: string",
+          "signatureTokens": [
+            {
+              "text": "defaultLevelBgColor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Background colour of levels that set none themselves, #rrggbb."
         },
         {
           "name": "defs",

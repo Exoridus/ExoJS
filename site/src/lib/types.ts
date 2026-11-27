@@ -23,6 +23,7 @@ export interface ExampleDefinition {
   status?: string;
   featured?: boolean;
   level?: ExampleLevel;
+  apiLinks?: Array<string>;
 }
 
 export interface Example extends ExampleDefinition {

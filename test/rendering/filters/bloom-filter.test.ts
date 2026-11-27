@@ -27,6 +27,28 @@ describe('BloomFilter bounds', () => {
     filter.destroy();
   });
 
+  test.each([0, -1, Number.NaN])('an invalid resolution %s is treated like the barrier does and stays finite', resolution => {
+    const filter = new BloomFilter({ strength: 4, levels: 3 });
+    const output = new Rectangle();
+
+    filter.resolution = resolution;
+    filter.getOutputBounds(new Rectangle(0, 0, 10, 10), output);
+
+    expect([output.x, output.width]).toEqual([-20, 50]);
+    filter.destroy();
+  });
+
+  test('a resolution below the barrier floor is raised to it', () => {
+    const filter = new BloomFilter({ strength: 0, levels: 1 });
+    const output = new Rectangle();
+
+    filter.resolution = 0.001;
+    filter.getOutputBounds(new Rectangle(0, 0, 10, 10), output);
+
+    expect(output.x).toBe(-2 * 64);
+    filter.destroy();
+  });
+
   test('a resolution above one does not shrink it - the chain still spans whole units', () => {
     const filter = new BloomFilter({ strength: 4, levels: 3 });
     const output = new Rectangle();

@@ -33,7 +33,9 @@ export const materializeRendererBindings = (backend: RenderBackend, bindings: re
   for (const binding of bindings) {
     const renderer = binding.create(backend);
 
-    if (renderer === undefined) continue;
+    if (renderer === undefined) {
+      continue;
+    }
 
     backend.rendererRegistry.bindRenderer(binding.targets, renderer);
   }

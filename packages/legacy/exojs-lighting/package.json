@@ -1,0 +1,38 @@
+{
+  "name": "@codexo/exojs-lighting",
+  "version": "0.19.1",
+  "description": "Compatibility shim that forwards to @codexo/exojs/lighting. Since ExoJS v0.20, import from @codexo/exojs/lighting.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Exoridus/ExoJS.git",
+    "directory": "packages/legacy/exojs-lighting"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "@codexo/exojs": "0.19.x"
+  },
+  "devDependencies": {
+    "@codexo/exojs": "workspace:*"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

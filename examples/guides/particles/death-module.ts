@@ -1,4 +1,4 @@
-import { DeathModule, type ParticleDeathContext, type ParticleSystem } from '@codexo/exojs-particles';
+import { DeathModule, type ParticleDeathContext, type ParticleSystem } from '@codexo/exojs/particles';
 
 // #region guide:splash-on-death
 class SplashOnDeath extends DeathModule {

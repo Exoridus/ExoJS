@@ -67,7 +67,10 @@
  *   quads that share a boundary value snap to the same result - seams cannot
  *   open. The shader falls back to `Position` semantics for a rotated / skewed
  *   transform (in the node or the view), decided in-shader from the composed
- *   linear part's cross-terms.
+ *   linear part's cross-terms. Boundary snapping applies to the quad-based
+ *   renderers only (sprite, nine-slice, repeating, tile chunk); the mesh and
+ *   text vertex stages resolve both non-zero modes as the origin snap, so
+ *   `Geometry` there behaves exactly like `Position`.
  *
  * ## Rounding policy
  *
@@ -85,7 +88,9 @@
  *   `x`/`y`, matrices, bounds and collision are unchanged.
  * - `Geometry` - snap a single coherent shared-boundary plan (origin + boundaries)
  *   so neighbouring quads stay seam-free. Falls back to `Position` automatically
- *   when the transform is not axis-aligned (rotation / skew).
+ *   when the transform is not axis-aligned (rotation / skew). Only quad-based
+ *   renderers snap boundaries; mesh and text snap the origin only, so `Geometry`
+ *   is equivalent to `Position` for them.
  *
  * Snapping targets device pixels (× view scale × pixel ratio), not integer world
  * units, and never alters logical state. The numeric values are the shader

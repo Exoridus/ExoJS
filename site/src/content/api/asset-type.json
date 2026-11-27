@@ -1,6 +1,6 @@
 {
   "title": "AssetType",
-  "description": "A first-class asset type: everything the loader needs to know about one kind of asset, in one value. An instance is an immutable descriptor. Installing it on an Application - by listing it in an Extension's `assets` - is what makes it loadable there, and only there: two applications in one process may have entirely different type sets. Installation calls createFactory once, so the mutable half of a type lives per application and is destroyed with it. The type owns four separable decisions, and no more: - what it is called (id) and which file suffixes name it (extensions); - when two requests are the same runtime resource (resourceIdentity); - when two requests acquire the same source data (sourceIdentity); - how a representation is read (codec), laid out in a cache (layout) and turned into a resource (createFactory); - what a catalog hands out before the payload arrives (leaf). Acquisition, caching and residency are the loader's, and the type is deliberately given no way to reach them.",
+  "description": "A first-class asset type: everything the loader needs to know about one kind of asset, in one value. An instance is an immutable descriptor. Installing it on an Application - by listing it in an Extension's `assets` - is what makes it loadable there, and only there: two applications in one process may have entirely different type sets. Installation calls createFactory once, so the mutable half of a type lives per application and is destroyed with it. The type owns five separable decisions, and no more: - what it is called (id) and which file suffixes name it (extensions); - when two requests are the same runtime resource (resourceIdentity); - when two requests acquire the same source data (sourceIdentity); - how a representation is read (codec), laid out in a cache (layout) and turned into a resource (createFactory); - what a catalog hands out before the payload arrives (leaf). Acquisition, caching and residency are the loader's, and the type is deliberately given no way to reach them.",
   "symbol": "AssetType",
   "kind": "class",
   "subsystem": "assets",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A first-class asset type: everything the loader needs to know about one kind of asset, in one value.",
         "An instance is an immutable descriptor. Installing it on an Application - by listing it in an Extension's `assets` - is what makes it loadable there, and only there: two applications in one process may have entirely different type sets. Installation calls createFactory once, so the mutable half of a type lives per application and is destroyed with it.",
-        "The type owns four separable decisions, and no more:",
+        "The type owns five separable decisions, and no more:",
         "- what it is called (id) and which file suffixes name it (extensions); - when two requests are the same runtime resource (resourceIdentity); - when two requests acquire the same source data (sourceIdentity); - how a representation is read (codec), laid out in a cache (layout) and turned into a resource (createFactory); - what a catalog hands out before the payload arrives (leaf).",
         "Acquisition, caching and residency are the loader's, and the type is deliberately given no way to reach them."
       ],
@@ -107,118 +107,6 @@
       "title": "Methods",
       "members": [
         {
-          "name": "asset",
-          "signature": "asset(source: string, options: AssetOptionsArgument<Options>): AssetDescriptor<AssetLeaf<Resource>, Resource>",
-          "signatureTokens": [
-            {
-              "text": "asset",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "source",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetOptionsArgument",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Options",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetDescriptor",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetLeaf",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Resource",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Resource",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "source",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "options",
-              "type": "AssetOptionsArgument<Options>",
-              "optional": false
-            }
-          ],
-          "returnType": "AssetDescriptor<AssetLeaf<Resource>, Resource>",
-          "description": "A typed, loadable descriptor for one asset of this type. The resource and option types come from the type instance, so a custom type is fully typed at every call site without declaring anything to the module system: ts const world = await loader.load(worldType.asset('level.world'));  The descriptor is branded with this type's leaf policy, so a catalog types its entry as the leaf the runtime hands out. options is required when the option bag has a required field. type and source are reserved for the request: an option bag carrying either throws."
-        },
-        {
           "name": "createFactory",
           "signature": "createFactory(): AssetFactory<Source, Resource, Options>",
           "signatureTokens": [
@@ -274,6 +162,191 @@
           "params": [],
           "returnType": "AssetFactory<Source, Resource, Options>",
           "description": "Creates the factory for one application, at install time. Called once per Loader, never per request and never at module import, so loader-local state a factory needs - a worker, a compiled module, a lookup shared across every resource of this type - can be built here and torn down with the loader."
+        },
+        {
+          "name": "persistedOptions",
+          "signature": "persistedOptions?(resource: Resource | undefined, options: Readonly<Record<string, unknown>> | undefined, donor?: Resource): Readonly<Record<string, unknown>> | undefined",
+          "signatureTokens": [
+            {
+              "text": "persistedOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resource",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "donor",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "resource",
+              "type": "Resource | undefined",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Readonly<Record<string, unknown>> | undefined",
+              "optional": false
+            },
+            {
+              "name": "donor",
+              "type": "Resource",
+              "optional": true
+            }
+          ],
+          "returnType": "Readonly<Record<string, unknown>> | undefined",
+          "description": "Projects a loaded handle's presentation options into a saved reference. Keep options that affect source or resource identity unchanged. With no handle, return the options used to distinguish logical requests, omitting the fields that depend on the handle. Only return JSON-compatible data. A resident donor can supply the presentation a bare reference would inherit."
         },
         {
           "name": "resourceIdentity",

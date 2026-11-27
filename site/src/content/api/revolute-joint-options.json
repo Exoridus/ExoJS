@@ -4,7 +4,7 @@
   "symbol": "RevoluteJointOptions",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 12,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for a RevoluteJoint."
       ],
-      "importLine": "import { RevoluteJointOptions } from '@codexo/exojs-physics'",
+      "importLine": "import { RevoluteJointOptions } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

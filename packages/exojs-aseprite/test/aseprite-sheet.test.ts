@@ -13,9 +13,7 @@ import { AsepriteSheet } from '../src/AsepriteSheet';
 const PKG_DIR = basename(process.cwd()) === 'exojs-aseprite' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-aseprite');
 const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
 
-const loadFixture = (name: string): AsepriteData => {
-  return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8')) as AsepriteData;
-};
+const loadFixture = (name: string): AsepriteData => JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8')) as AsepriteData;
 
 const arrayData = loadFixture('hero.array.json');
 const hashData = loadFixture('hero.hash.json');
@@ -75,6 +73,19 @@ describe('AsepriteSheet.parse — array form', () => {
     const sheet = AsepriteSheet.parse(arrayData, texture);
     expect(sheet.spritesheet.texture).toBe(texture);
   });
+
+  it('keeps finite unit-density canvas metadata when direct parsing receives an empty texture', () => {
+    const texture = new Texture();
+    const sheet = AsepriteSheet.parse(arrayData, texture);
+    const sprite = sheet.createAnimatedSprite().setAnchor(0.5).play('walk');
+
+    expect(sheet.clips.get('walk')!.sourceSize).toEqual({ width: 16, height: 16 });
+    expect(sprite.origin.x).toBe(8);
+    expect(sprite.origin.y).toBe(8);
+    sprite.destroy();
+    sheet.destroy();
+    texture.destroy();
+  });
 });
 
 // ── AsepriteSheet.parse - clips from frameTags ─────────────────────────────────
@@ -123,27 +134,25 @@ describe('AsepriteSheet.parse — clips from frameTags', () => {
 // ── AsepriteSheet.parse - direction expansion ──────────────────────────────────
 
 describe('AsepriteSheet.parse — direction expansion', () => {
-  const makeData = (tag: { from: number; to: number; direction: AsepriteDirection }): AsepriteData => {
-    return {
-      frames: [0, 1, 2].map(i => ({
-        duration: 100,
-        frame: { x: i * 16, y: 0, w: 16, h: 16 },
-        rotated: false,
-        trimmed: false,
-        sourceSize: { w: 16, h: 16 },
-        spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
-      })),
-      meta: {
-        app: 'aseprite',
-        version: '1.3',
-        image: 'x.png',
-        format: 'RGBA8888',
-        size: { w: 48, h: 16 },
-        scale: '1',
-        frameTags: [{ name: 'clip', from: tag.from, to: tag.to, direction: tag.direction }],
-      },
-    };
-  };
+  const makeData = (tag: { from: number; to: number; direction: AsepriteDirection }): AsepriteData => ({
+    frames: [0, 1, 2].map(i => ({
+      duration: 100,
+      frame: { x: i * 16, y: 0, w: 16, h: 16 },
+      rotated: false,
+      trimmed: false,
+      sourceSize: { w: 16, h: 16 },
+      spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+    })),
+    meta: {
+      app: 'aseprite',
+      version: '1.3',
+      image: 'x.png',
+      format: 'RGBA8888',
+      size: { w: 48, h: 16 },
+      scale: '1',
+      frameTags: [{ name: 'clip', from: tag.from, to: tag.to, direction: tag.direction }],
+    },
+  });
 
   const indicesOf = (sheet: AsepriteSheet): number[] => {
     const frames = sheet.clips.get('clip')!.frames;
@@ -297,6 +306,83 @@ describe('AsepriteSheet.parse — per-frame durations', () => {
 // ── AsepriteSheet.parse - trimmed-frame offsets ─────────────────────────────────
 
 describe('AsepriteSheet.parse — trimmed-frame offsets', () => {
+  it.each([
+    { resolution: 1, size: 128, originX: 64, originY: 96, offsetX: 58, offsetY: 86 },
+    { resolution: 2, size: 64, originX: 32, originY: 48, offsetX: 29, offsetY: 43 },
+  ])('preserves the authored canvas across trimmed and untrimmed tags at resolution $resolution', expected => {
+    const data: AsepriteData = {
+      frames: [
+        {
+          duration: 100,
+          frame: { x: 0, y: 0, w: 12, h: 10 },
+          rotated: false,
+          trimmed: true,
+          sourceSize: { w: 128, h: 128 },
+          spriteSourceSize: { x: 58, y: 86, w: 12, h: 10 },
+        },
+        {
+          duration: 100,
+          frame: { x: 12, y: 0, w: 20, h: 12 },
+          rotated: false,
+          trimmed: true,
+          sourceSize: { w: 128, h: 128 },
+          spriteSourceSize: { x: 54, y: 84, w: 20, h: 12 },
+        },
+        {
+          duration: 100,
+          frame: { x: 32, y: 0, w: 128, h: 128 },
+          rotated: false,
+          trimmed: false,
+          sourceSize: { w: 128, h: 128 },
+          spriteSourceSize: { x: 0, y: 0, w: 128, h: 128 },
+        },
+      ],
+      meta: {
+        app: 'aseprite',
+        version: '1.3',
+        image: 'x.png',
+        format: 'RGBA8888',
+        size: { w: 160, h: 128 },
+        scale: '1',
+        frameTags: [
+          { name: 'idle', from: 0, to: 0, direction: 'forward' },
+          { name: 'walk', from: 1, to: 1, direction: 'forward' },
+          { name: 'full', from: 2, to: 2, direction: 'forward' },
+        ],
+      },
+    };
+    const texture = newTexture();
+
+    texture.width = 160;
+    texture.height = 128;
+    texture._assetResolution = expected.resolution;
+
+    const sheet = AsepriteSheet.parse(data, texture);
+    const sprite = sheet.createAnimatedSprite().setAnchor(0.5, 0.75).setScale(2);
+
+    sprite.play('idle');
+
+    expect(sprite.origin.x).toBe(expected.originX);
+    expect(sprite.origin.y).toBe(expected.originY);
+    expect(sprite.getLocalBounds().x).toBe(expected.offsetX);
+    expect(sprite.getLocalBounds().y).toBe(expected.offsetY);
+
+    for (const name of ['walk', 'full', 'idle']) {
+      sprite.play(name);
+
+      expect(sprite.origin.x).toBe(expected.originX);
+      expect(sprite.origin.y).toBe(expected.originY);
+      expect(sprite.scale.x).toBe(2);
+      expect(sprite.scale.y).toBe(2);
+      expect(sheet.clips.get(name)!.sourceSize).toEqual({ width: expected.size, height: expected.size });
+    }
+
+    expect(sheet.clips.get('full')!.frameOffsets).toBeUndefined();
+    sprite.destroy();
+    sheet.destroy();
+    texture.destroy();
+  });
+
   it('populates frameOffsets from spriteSourceSize when any frame in the tag is trimmed', () => {
     const data: AsepriteData = {
       frames: [
@@ -344,27 +430,25 @@ describe('AsepriteSheet.parse — trimmed-frame offsets', () => {
 // ── AsepriteSheet.parse - repeat (one-shot vs finite vs infinite) ──────────────
 
 describe('AsepriteSheet.parse — repeat', () => {
-  const makeData = (repeat: string | undefined): AsepriteData => {
-    return {
-      frames: [0, 1].map(i => ({
-        duration: 100,
-        frame: { x: i * 16, y: 0, w: 16, h: 16 },
-        rotated: false,
-        trimmed: false,
-        sourceSize: { w: 16, h: 16 },
-        spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
-      })),
-      meta: {
-        app: 'aseprite',
-        version: '1.3',
-        image: 'x.png',
-        format: 'RGBA8888',
-        size: { w: 32, h: 16 },
-        scale: '1',
-        frameTags: [{ name: 'clip', from: 0, to: 1, direction: 'forward', ...(repeat === undefined ? {} : { repeat }) }],
-      },
-    };
-  };
+  const makeData = (repeat: string | undefined): AsepriteData => ({
+    frames: [0, 1].map(i => ({
+      duration: 100,
+      frame: { x: i * 16, y: 0, w: 16, h: 16 },
+      rotated: false,
+      trimmed: false,
+      sourceSize: { w: 16, h: 16 },
+      spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+    })),
+    meta: {
+      app: 'aseprite',
+      version: '1.3',
+      image: 'x.png',
+      format: 'RGBA8888',
+      size: { w: 32, h: 16 },
+      scale: '1',
+      frameTags: [{ name: 'clip', from: 0, to: 1, direction: 'forward', ...(repeat === undefined ? {} : { repeat }) }],
+    },
+  });
 
   it('repeat: "1" maps to repeatCount 1 (one-shot)', () => {
     const sheet = AsepriteSheet.parse(makeData('1'), newTexture());
@@ -378,6 +462,11 @@ describe('AsepriteSheet.parse — repeat', () => {
 
   it('no repeat field means infinite loop (repeat: -1)', () => {
     const sheet = AsepriteSheet.parse(makeData(undefined), newTexture());
+    expect(sheet.clips.get('clip')!.repeat).toBe(-1);
+  });
+
+  it('repeat: "0" means Aseprite infinite loop (repeat: -1), not an invalid zero', () => {
+    const sheet = AsepriteSheet.parse(makeData('0'), newTexture());
     expect(sheet.clips.get('clip')!.repeat).toBe(-1);
   });
 });
@@ -476,27 +565,25 @@ describe('AsepriteSheet.parse — layers', () => {
 // ── AsepriteSheet.parse - fps averaging and fallbacks ──────────────────────────
 
 describe('AsepriteSheet.parse — fps derivation', () => {
-  const makeData = (durations: number[], tag: { from: number; to: number }): AsepriteData => {
-    return {
-      frames: durations.map((duration, i) => ({
-        duration,
-        frame: { x: i * 16, y: 0, w: 16, h: 16 },
-        rotated: false,
-        trimmed: false,
-        sourceSize: { w: 16, h: 16 },
-        spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
-      })),
-      meta: {
-        app: 'aseprite',
-        version: '1.3',
-        image: 'x.png',
-        format: 'RGBA8888',
-        size: { w: 48, h: 16 },
-        scale: '1',
-        frameTags: [{ name: 'clip', from: tag.from, to: tag.to, direction: 'forward' }],
-      },
-    };
-  };
+  const makeData = (durations: number[], tag: { from: number; to: number }): AsepriteData => ({
+    frames: durations.map((duration, i) => ({
+      duration,
+      frame: { x: i * 16, y: 0, w: 16, h: 16 },
+      rotated: false,
+      trimmed: false,
+      sourceSize: { w: 16, h: 16 },
+      spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+    })),
+    meta: {
+      app: 'aseprite',
+      version: '1.3',
+      image: 'x.png',
+      format: 'RGBA8888',
+      size: { w: 48, h: 16 },
+      scale: '1',
+      frameTags: [{ name: 'clip', from: tag.from, to: tag.to, direction: 'forward' }],
+    },
+  });
 
   it('averages mixed durations across the range (100/200/300 -> 200ms -> 5fps)', () => {
     const sheet = AsepriteSheet.parse(makeData([100, 200, 300], { from: 0, to: 2 }), newTexture());
@@ -512,27 +599,25 @@ describe('AsepriteSheet.parse — fps derivation', () => {
 // ── AsepriteSheet.parse - frame-index edge cases ───────────────────────────────
 
 describe('AsepriteSheet.parse — frame-index handling in tags', () => {
-  const makeData = (tag: { from: number; to: number }): AsepriteData => {
-    return {
-      frames: [0, 1, 2].map(i => ({
-        duration: 100,
-        frame: { x: i * 16, y: 0, w: 16, h: 16 },
-        rotated: false,
-        trimmed: false,
-        sourceSize: { w: 16, h: 16 },
-        spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
-      })),
-      meta: {
-        app: 'aseprite',
-        version: '1.3',
-        image: 'x.png',
-        format: 'RGBA8888',
-        size: { w: 48, h: 16 },
-        scale: '1',
-        frameTags: [{ name: 'clip', from: tag.from, to: tag.to, direction: 'forward' }],
-      },
-    };
-  };
+  const makeData = (tag: { from: number; to: number }): AsepriteData => ({
+    frames: [0, 1, 2].map(i => ({
+      duration: 100,
+      frame: { x: i * 16, y: 0, w: 16, h: 16 },
+      rotated: false,
+      trimmed: false,
+      sourceSize: { w: 16, h: 16 },
+      spriteSourceSize: { x: 0, y: 0, w: 16, h: 16 },
+    })),
+    meta: {
+      app: 'aseprite',
+      version: '1.3',
+      image: 'x.png',
+      format: 'RGBA8888',
+      size: { w: 48, h: 16 },
+      scale: '1',
+      frameTags: [{ name: 'clip', from: tag.from, to: tag.to, direction: 'forward' }],
+    },
+  });
 
   it('silently skips out-of-range frame indices in a tag', () => {
     // from 1 to 10 against 3 frames -> only indices 1 and 2 resolve.

@@ -75,7 +75,7 @@ export interface RenderBackend {
    * application's effective `pixelRatio`.
    *
    * The root target is sized in LOGICAL units while the canvas backing store is
-   * `logical × pixelRatio`, so this is the ratio between them. It is the
+   * `logical x pixelRatio`, so this is the ratio between them. It is the
    * resolution an effect or cache target inherits when nothing overrides it (see
    * {@link TargetResolution}); without it an internal target would be pinned at
    * 1 and rasterize at `1/pixelRatio` of the detail it is sampled over.
@@ -155,6 +155,10 @@ export interface RenderBackend {
    * simply stays `null` and a profiling UI should report the measurement as
    * unavailable rather than retrying.
    *
+   * A WebGPU backend has no device before {@link initialize} resolves: a request
+   * made earlier returns `false`, is kept, and is applied once the device
+   * exists. Ask again after initialization for the capability answer.
+   *
    * Timing is off by default because it allocates GPU query objects and readback
    * buffers, and it costs a timestamp pair per render pass while on. Turn it off
    * again once the profiling UI that asked for it is gone; the call is
@@ -222,16 +226,18 @@ export interface RenderBackend {
   supportsReadbackFormat(format: ColorTextureFormat): boolean;
 
   /**
-   * Read back `width × height` RGBA components from `source`, starting at `x`, `y`
+   * Read back `width x height` RGBA components from `source`, starting at `x`, `y`
    * measured from its top-left corner, with the top row first.
    *
    * Pending work is submitted first, so the pixels are those of everything
-   * drawn into `source` up to this call. Both backends resolve on the GPU's own
-   * schedule rather than blocking, which is why this is asynchronous even where
-   * the platform call is not.
+   * drawn into `source` up to this call. WebGL2 reads into CPU memory and stalls
+   * until the GPU reaches this call; WebGPU copies into a staging buffer and
+   * awaits its map. Neither form is free, and the promise settles only once the
+   * bytes are actually available.
    *
-   * `uint8` accepts rgba8; `float32` accepts rgba16f/rgba32f and expands
-   * half-floats without normalization. The caller must validate the format and rectangle;
+   * `uint8` accepts rgba8 and rgba8srgb (the latter as its stored, sRGB-encoded
+   * bytes); `float32` accepts rgba16f/rgba32f and expands half-floats without
+   * normalization. The caller must validate the format and rectangle;
    * {@link RenderingContext.readPixels} is the checked entry point.
    * @advanced
    */
@@ -240,14 +246,22 @@ export interface RenderBackend {
   readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType): Promise<PixelArray>;
 
   /**
-   * Open a standing, non-blocking readback over `width × height` pixels of
+   * Open a standing, non-blocking readback over `width x height` pixels of
    * `source` at `x`, `y` from its top-left corner, with `slots` staging
    * buffers. The backend drains it at every frame start and invalidates it on
    * device loss; the caller destroys it. `PixelReader` is the checked,
    * caller-facing wrapper and the way application code should reach this.
    * @advanced
    */
-  createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number, dataType?: 'uint8'): PixelReadback;
+  createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType?: 'uint8',
+  ): PixelReadback;
   createPixelReadback(
     source: RenderTexture,
     x: number,
@@ -268,7 +282,7 @@ export interface RenderBackend {
   ): PixelReadback<PixelArray>;
 
   /**
-   * Borrow a temporary {@link RenderTexture} of exactly `width × height` and
+   * Borrow a temporary {@link RenderTexture} of exactly `width x height` and
    * `format` from the backend's pool, allocating one if no pooled entry
    * matches. Hand it back with {@link releaseRenderTexture} - destroying a
    * borrowed texture instead corrupts the pool.
@@ -314,7 +328,15 @@ export interface RenderBackend {
    * `(x, y, width, height)` in world-space. Used internally by the
    * non-Rectangle `MaskSource` paths on `RenderNode.mask`.
    */
-  composeWithAlphaMask(content: RenderTexture, mask: Texture | RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): this;
+  composeWithAlphaMask(
+    content: RenderTexture,
+    mask: Texture | RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    blendMode: BlendModes,
+  ): this;
 
   /**
    * Composite `source` over the active render target under an advanced
@@ -340,7 +362,13 @@ export interface RenderBackend {
    * supplied material must be instancing-compatible (default mesh material, or a
    * custom shader declaring `a_nodeIndex` + `u_transforms`).
    */
-  drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number, instances?: InstanceDataView | null): this;
+  drawInstanced(
+    mesh: Mesh,
+    transforms: readonly Matrix[],
+    tints: readonly Color[],
+    count: number,
+    instances?: InstanceDataView | null,
+  ): this;
 
   execute(pass: BackendRenderPass): this;
   flush(): this;

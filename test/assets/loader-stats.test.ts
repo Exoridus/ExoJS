@@ -5,7 +5,6 @@
  * ends up resident and no network sits between the request and the assertion.
  */
 
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { residentBytes } from '#assets/residentBytes';
@@ -25,7 +24,7 @@ const makeLoader = (types: Parameters<typeof materializeAssetTypes>[1]): Loader 
 const payloadType = (id: string, resource: (source: string) => unknown) =>
   testAssetType<string, unknown>({ id, acquires: false, create: async (_source, context) => resource(context.source) });
 
-// The ad-hoc types these cases install, declared so `new Asset({ type })`
+// The ad-hoc types these cases install, declared so a `{ type, source }` descriptor
 // resolves them the way an application's own types would.
 declare module '#assets/AssetDefinitions' {
   interface AssetDefinitions {
@@ -65,11 +64,14 @@ describe('Loader.stats', () => {
   });
 
   test('counts resident assets and their estimated bytes per type', async () => {
-    const loader = makeLoader([payloadType('bytes', () => new ArrayBuffer(1024)), payloadType('pixels', () => ({ width: 64, height: 64 }))]);
+    const loader = makeLoader([
+      payloadType('bytes', () => new ArrayBuffer(1024)),
+      payloadType('pixels', () => ({ width: 64, height: 64 })),
+    ]);
 
-    await loader.load(new Asset({ type: 'bytes', source: 'a.dat' }));
-    await loader.load(new Asset({ type: 'bytes', source: 'b.dat' }));
-    await loader.load(new Asset({ type: 'pixels', source: 'c.dat' }));
+    await loader.load({ type: 'bytes', source: 'a.dat' });
+    await loader.load({ type: 'bytes', source: 'b.dat' });
+    await loader.load({ type: 'pixels', source: 'c.dat' });
 
     const stats = loader.stats();
 
@@ -111,7 +113,7 @@ describe('Loader.stats', () => {
   test('the ready/pending/failed split always matches what inspect() reports', async () => {
     const loader = makeLoader([payloadType('bytes', () => new ArrayBuffer(64))]);
 
-    await loader.load(new Asset({ type: 'bytes', source: 'a.dat' }));
+    await loader.load({ type: 'bytes', source: 'a.dat' });
 
     const rows = loader.inspect();
     const stats = loader.stats();
@@ -131,7 +133,7 @@ describe('Loader.stats', () => {
     const loader = makeLoader([payloadType('bytes', url => new ArrayBuffer(sizes.get(url) ?? 1))]);
 
     for (const source of ['small.dat', 'medium.dat', 'large.dat']) {
-      await loader.load(new Asset({ type: 'bytes', source }));
+      await loader.load({ type: 'bytes', source });
     }
 
     expect(loader.stats(2).largest.map(row => row.bytes)).toEqual([65536, 4096]);
@@ -143,7 +145,7 @@ describe('Loader.stats', () => {
   test('an unmeasurable payload is ready and counted, but never appears among the largest', async () => {
     const loader = makeLoader([payloadType('json', () => ({ parsed: true }))]);
 
-    await loader.load(new Asset({ type: 'json', source: 'a.json' }));
+    await loader.load({ type: 'json', source: 'a.json' });
 
     const stats = loader.stats();
 
@@ -156,7 +158,7 @@ describe('Loader.stats', () => {
   test('the snapshot is frozen, so nothing handed out can be written back into residency', async () => {
     const loader = makeLoader([payloadType('bytes', () => new ArrayBuffer(32))]);
 
-    await loader.load(new Asset({ type: 'bytes', source: 'a.dat' }));
+    await loader.load({ type: 'bytes', source: 'a.dat' });
 
     const stats = loader.stats();
 

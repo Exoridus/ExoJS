@@ -1,0 +1,99 @@
+{
+  "title": "DocumentParser",
+  "description": "Validates untrusted document data of the current version. `parse` returns the data as the current document type, or throws. It runs after all migrations, so every document is checked in one place whatever its age. It validates data only: it builds no runtime objects and loads nothing. Check each field instead of casting; a TypeScript cast says nothing about what a file contains.",
+  "symbol": "DocumentParser",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Validates untrusted document data of the current version.",
+        "`parse` returns the data as the current document type, or throws. It runs after all migrations, so every document is checked in one place whatever its age. It validates data only: it builds no runtime objects and loads nothing.",
+        "Check each field instead of casting; a TypeScript cast says nothing about what a file contains."
+      ],
+      "importLine": "import { DocumentParser } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "parse",
+          "signature": "parse(input: unknown): Document",
+          "signatureTokens": [
+            {
+              "text": "parse",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "input",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "Document",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/document/DocumentParser.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/DocumentParser.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/document/DocumentParser.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/DocumentParser.ts"
+}

@@ -3,9 +3,12 @@
 /**
  * BoundingBoxesLayer tests (0.7.5).
  */
+import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 import { Time } from '#core/units';
 import { BoundingBoxesLayer } from '#debug/BoundingBoxesLayer';
+import { Graphics } from '#rendering/primitives/Graphics';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 
@@ -71,6 +74,7 @@ interface FakeNode {
   interactive: boolean;
   contains: MockInstance;
   getBounds: MockInstance;
+  _resolveTransformGroupAnchor: MockInstance;
   children: FakeNode[];
 }
 
@@ -91,6 +95,7 @@ const makeNode = (
     zIndex,
     interactive: false,
     contains: vi.fn(() => false),
+    _resolveTransformGroupAnchor: vi.fn(() => null),
     getBounds: vi.fn(() => ({
       width: boundsW,
       height: boundsH,
@@ -124,6 +129,27 @@ const makeApp = (root: FakeNode | null = null) =>
 // ---------------------------------------------------------------------------
 
 describe('BoundingBoxesLayer', () => {
+  test('draws retained child bounds in world space', () => {
+    const group = new RetainedContainer();
+    const child = new Graphics();
+    group.setPosition(100, 0);
+    child.fillColor = Color.white;
+    child.drawRectangle(0, 0, 10, 10);
+    group.addChild(child);
+    const gfx = { lineColor: null, moveTo: vi.fn(), lineTo: vi.fn() };
+    const layer = new BoundingBoxesLayer(makeApp());
+
+    (layer as unknown as { _walkNode(node: Graphics, gfx: unknown): void })._walkNode(child, gfx);
+
+    expect(gfx.moveTo).toHaveBeenCalledWith(100, 0);
+    group.setRotation(90);
+    gfx.moveTo.mockClear();
+    (layer as unknown as { _walkNode(node: Graphics, gfx: unknown): void })._walkNode(child, gfx);
+    expect(gfx.moveTo.mock.calls[0]![0]).toBeCloseTo(100);
+    expect(gfx.moveTo.mock.calls[0]![1]).toBeCloseTo(-10);
+    group.destroy();
+  });
+
   test('visible defaults to false', () => {
     const layer = new BoundingBoxesLayer(makeApp());
 
@@ -164,6 +190,7 @@ describe('BoundingBoxesLayer', () => {
       visible: true,
       zIndex: 0,
       interactive: false,
+      _resolveTransformGroupAnchor: vi.fn(() => null),
       getBounds: vi.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
       contains: vi.fn(() => false),
       children: [zeroNode, normalNode],
@@ -202,6 +229,7 @@ describe('BoundingBoxesLayer', () => {
       interactive: false,
       getBounds: vi.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
       contains: vi.fn(() => false),
+      _resolveTransformGroupAnchor: vi.fn(() => null),
       children: [node0, node1],
     };
 
@@ -229,6 +257,7 @@ describe('BoundingBoxesLayer', () => {
       interactive: false,
       getBounds: vi.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
       contains: vi.fn(() => false),
+      _resolveTransformGroupAnchor: vi.fn(() => null),
       children: [node1, node2],
     };
 
@@ -263,6 +292,7 @@ describe('BoundingBoxesLayer', () => {
       interactive: false,
       getBounds: vi.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
       contains: vi.fn(() => false),
+      _resolveTransformGroupAnchor: vi.fn(() => null),
       children: nodes,
     };
 
@@ -296,6 +326,7 @@ describe('BoundingBoxesLayer', () => {
       interactive: false,
       getBounds: vi.fn(() => ({ width: 10, height: 10, left: 0, top: 0, right: 10, bottom: 10 })),
       contains: vi.fn(() => false),
+      _resolveTransformGroupAnchor: vi.fn(() => null),
     };
     const app = makeApp(leaf as unknown as FakeNode);
     const layer = new BoundingBoxesLayer(app);

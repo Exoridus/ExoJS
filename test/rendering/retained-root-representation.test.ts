@@ -4,7 +4,11 @@ import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
-import { type RetainedBatchInstruction, RetainedInstructionKind, type RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
+import {
+  type RetainedBatchInstruction,
+  RetainedInstructionKind,
+  type RetainedInstructionSet,
+} from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
@@ -179,7 +183,8 @@ const playFrame = (root: Container, backend: RenderBackend): void => {
 
 const rootSetOf = (root: Container): RetainedInstructionSet | null => root._retainedRootRepresentation().fragment.instructions;
 
-const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
+const fragmentOf = (group: RetainedContainer): RetainedGroupFragment =>
+  (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
 
 /** A view whose world rect is `[0,0,800x600]`, matching the test render target. */
 const defaultView = (): View => new View(400, 300, 800, 600);
@@ -527,6 +532,49 @@ class ViewDependentLayer extends Container {
 }
 
 describe('automatic render-root representation: view-dependent content', () => {
+  test('a failed collect cannot replay the previous capture under the new view', () => {
+    const { backend, events } = createRecordingBackend();
+    const root = new ViewDependentLayer();
+    const visible = new RecordableLeaf('a');
+    const offscreen = new RecordableLeaf('b');
+
+    visible.setPosition(400, 300);
+    offscreen.setPosition(5000, 5000);
+    root.addChild(visible, offscreen);
+    backend.setView(defaultView());
+    playFrame(root, backend);
+
+    // A view-dependent root declines persistent-source discovery on the next collect.
+    backend.setView(new View(402, 300, 800, 600));
+    playFrame(root, backend);
+    playFrame(root, backend);
+    playFrame(root, backend);
+    expect(rootSetOf(root)?.hasRecording).toBe(true);
+
+    const failure = new Error('collect failed');
+    const collect = vi.spyOn(root, '_collectForRenderPlan').mockImplementationOnce(() => {
+      throw failure;
+    });
+
+    events.length = 0;
+    backend.setView(new View(5000, 5000, 800, 600));
+    expect(() => playFrame(root, backend)).toThrow(failure);
+    playFrame(root, backend);
+
+    expect(collect).toHaveBeenCalledTimes(2);
+    expect(events).toContain('flush:b');
+    expect(events).not.toContain('replay:a');
+
+    events.length = 0;
+    playFrame(root, backend);
+    playFrame(root, backend);
+    expect(events).toContain('replay:b');
+
+    collect.mockRestore();
+    root.destroy();
+    backend.destroy();
+  });
+
   test('a camera move inside the capture margin still runs a view-dependent collect', () => {
     const { backend } = createRecordingBackend();
     const root = new Container();

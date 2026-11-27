@@ -34,8 +34,8 @@ export interface ProbeSceneSpec {
   readonly label: string;
   /**
    * Whether the scene allocates an internal effect / cache render target. Only
-   * these scenes have a meaningful `parent-resolution` arm; the others would
-   * measure the identical work twice.
+   * these scenes have a meaningful `logical` arm; the others would measure the
+   * identical work twice.
    */
   readonly usesInternalTarget: boolean;
   /** What the scene is for, shown on the page so the tester knows what to look at. */
@@ -75,7 +75,7 @@ export const PROBE_SCENES: readonly ProbeSceneSpec[] = [
     label: 'cacheAsTexture',
     usesInternalTarget: true,
     purpose:
-      'The baseline content behind cacheAsTexture, baked once and replayed — the case that used to lose visible sharpness on HiDPI. WITHOUT the text nodes: a cacheAsTexture container containing Text draws nothing at all on WebGL2, which is the backend every iOS browser uses.',
+      'The baseline content behind cacheAsTexture, baked once and replayed — the case that used to lose visible sharpness on HiDPI. WITHOUT the text nodes: a cacheAsTexture container containing Text drew nothing on WebGL2 while that engine defect existed; it has since been fixed and is covered by the backend tests, and the text stays omitted so captures remain comparable with the ones taken before the fix.',
   },
   {
     id: 'cache-dirty',
@@ -152,7 +152,10 @@ export const TEXT_RATIO_CELLS: readonly ProbeCell[] = [
  * read as a DPR cost. The drift itself stays auditable: every result carries its
  * ordinal and its offset from the run start.
  */
-export const buildProbeMatrix = (scenes: readonly ProbeSceneSpec[] = PROBE_SCENES, pixelRatios: readonly number[] = PROBE_PIXEL_RATIOS): ProbeCell[] => {
+export const buildProbeMatrix = (
+  scenes: readonly ProbeSceneSpec[] = PROBE_SCENES,
+  pixelRatios: readonly number[] = PROBE_PIXEL_RATIOS,
+): ProbeCell[] => {
   const cells: ProbeCell[] = [];
 
   for (const scene of scenes) {
@@ -194,6 +197,12 @@ export interface InternalTargetRecord {
 
 /** Everything the probe measured for one cell. */
 export interface ProbeCellResult {
+  /**
+   * Which measurement run on this page the cell belongs to. `startOffsetMs` is
+   * relative to the start of that run, so offsets are comparable only within one
+   * `runId`.
+   */
+  readonly runId: number;
   /** Position in the run order - 0-based, ascending, never reused. */
   readonly index: number;
   /** Milliseconds between the start of the whole run and the start of this cell's measured window. */

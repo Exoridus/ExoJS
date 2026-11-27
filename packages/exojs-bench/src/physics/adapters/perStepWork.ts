@@ -59,7 +59,12 @@ const IDLE: PerStepWork = {
  * archetype casts no rays and churns nothing, so a plain solver archetype pays
  * nothing for this machinery.
  */
-export const createPerStepWork = <TBody>(spec: PhysicsArchetypeSpec, scene: SceneDescription, handles: TBody[], ops: ArmWorldOps<TBody>): PerStepWork => {
+export const createPerStepWork = <TBody>(
+  spec: PhysicsArchetypeSpec,
+  scene: SceneDescription,
+  handles: TBody[],
+  ops: ArmWorldOps<TBody>,
+): PerStepWork => {
   const rayCount = Math.max(0, Math.trunc(spec.raysPerStep ?? 0));
   const churnIndices = scene.churnIndices;
   const kickEvery = Math.max(0, Math.trunc(spec.kickEverySteps ?? 0));
@@ -67,7 +72,9 @@ export const createPerStepWork = <TBody>(spec: PhysicsArchetypeSpec, scene: Scen
   // so the drive re-applies exactly the impulse setup gave, to exactly the
   // bodies setup gave it to.
   const driven =
-    kickEvery === 0 ? [] : scene.bodies.flatMap((body, slot) => (body.perturb === undefined ? [] : [{ slot, vx: body.perturb.vx, vy: body.perturb.vy }]));
+    kickEvery === 0
+      ? []
+      : scene.bodies.flatMap((body, slot) => (body.perturb === undefined ? [] : [{ slot, vx: body.perturb.vx, vy: body.perturb.vy }]));
 
   // A drive cadence with nothing to drive is a misconfigured archetype, not an
   // idle one: falling through to IDLE would silently measure a plain solver

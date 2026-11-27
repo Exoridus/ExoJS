@@ -5,8 +5,8 @@ Astro + React docs/playground app for ExoJS. This package is private and is not 
 ## Relationship to `../examples`
 
 - `../examples` is the canonical source for example scripts, manifest, and shared assets.
-- `examples:sync` mirrors `../examples` into `site/public/examples` and `site/public/assets` for playground runtime serving.
-- `site/public/examples` and `site/public/assets` are generated artifacts (gitignored).
+- `examples:sync` mirrors `../examples` (without the guide sources and the `assets/` authoring media) into `site/public/examples` for playground runtime serving; `vendor:sync` serves `@codexo/exojs-demo-assets` and its standard media under `site/public/vendor/exojs-demo-assets`.
+- `site/public/examples` and `site/public/vendor` are generated artifacts (gitignored).
 
 This keeps source ownership outside the site framework while preserving the existing runtime contract (`preview.html` + static `examples/*.js` + `assets/*` URLs).
 

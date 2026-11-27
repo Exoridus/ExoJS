@@ -96,8 +96,13 @@ describe('DuckingEffect', () => {
     it('after await filter.ready: workletNode has 2 inputs configured', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -139,6 +144,7 @@ describe('DuckingEffect', () => {
     it('sidechain bus output is connected to worklet input 1 after ready', async () => {
       // Ensure sidechain output node exists
       const sidechainOutputNode = sidechain.getOutputNode();
+
       if (sidechainOutputNode) {
         const connectSpy = vi.spyOn(sidechainOutputNode, 'connect');
         const filter = new DuckingEffect({ sidechain });
@@ -159,6 +165,7 @@ describe('DuckingEffect', () => {
       let callCount = 0;
       const getOutputNodeSpy = vi.spyOn(sidechain, 'getOutputNode').mockImplementation(() => {
         callCount++;
+
         return callCount === 1 ? null : fakeOutputNode;
       });
       const onceSetupSpy = vi.spyOn(sidechain, 'onceSetup');
@@ -309,6 +316,17 @@ describe('DuckingEffect', () => {
       await filter.ready;
       filter.destroy();
       expect(() => filter.destroy()).not.toThrow();
+    });
+  });
+
+  describe('construction bounds', () => {
+    it('clamps out-of-range options like the setters and rejects NaN', () => {
+      const filter = new DuckingEffect({ sidechain, threshold: 50, ratio: 100, attackMs: -5 });
+
+      expect(filter.threshold).toBe(0);
+      expect(filter.ratio).toBe(20);
+      expect(filter.attackMs).toBe(0.001);
+      expect(() => new DuckingEffect({ sidechain, ratio: Number.NaN })).toThrow(RangeError);
     });
   });
 });

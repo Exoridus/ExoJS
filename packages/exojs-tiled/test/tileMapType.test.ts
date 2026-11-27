@@ -1,7 +1,8 @@
-import { Asset, Texture } from '@codexo/exojs';
-import { TileMap } from '@codexo/exojs-tilemap';
+import { Texture } from '@codexo/exojs';
+import { TileMap } from '@codexo/exojs/tilemap';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { tiledSourceType } from '../src/tiledSourceType';
 import { tileMapType } from '../src/tileMapType';
 import { loadFixture, makeTiledContext } from './type-context';
 
@@ -63,7 +64,7 @@ describe('tileMapType - minimal map', () => {
   it('reaches the document through a tiledSource dependency', async () => {
     await loadRuntime('minimal.tmj');
 
-    expect(load).toHaveBeenCalledWith(expect.objectContaining({ _config: { type: 'tiledSource', source: 'minimal.tmj' } }));
+    expect(load).toHaveBeenCalledWith({ type: tiledSourceType, source: 'minimal.tmj' });
   });
 
   it('rejects a map whose tileset carries no image', async () => {
@@ -89,7 +90,7 @@ describe('tileMapType - with atlas tileset image', () => {
 
     expect(result.tilesets).toHaveLength(1);
     // The texture is loaded transitively, through the tiledSource dependency.
-    expect(load).toHaveBeenCalledWith(Asset.type('texture', 'tiles.png'));
+    expect(load).toHaveBeenCalledWith({ type: 'texture', source: 'tiles.png' });
   });
 });
 
@@ -110,7 +111,7 @@ describe('tileMapType - external tileset (.tsj)', () => {
   it('loads the external tileset texture', async () => {
     await loadRuntime('external-tileset.tmj');
 
-    expect(load).toHaveBeenCalledWith(Asset.type('texture', 'external-tileset.png'));
+    expect(load).toHaveBeenCalledWith({ type: 'texture', source: 'external-tileset.png' });
   });
 });
 
@@ -126,7 +127,7 @@ describe('tileMapType - options passthrough', () => {
 
     await loadRuntime('world.tmj', options);
 
-    expect(load).toHaveBeenCalledWith(expect.objectContaining({ _config: { type: 'tiledSource', source: 'world.tmj', format: 'tiled' } }));
+    expect(load).toHaveBeenCalledWith({ type: tiledSourceType, source: 'world.tmj', format: 'tiled' });
   });
 });
 
@@ -137,7 +138,7 @@ describe('tileMapType - texture ownership', () => {
 
     // TileMap.destroy() clears the tilesets array but must NOT destroy the
     // texture, which the loader owns and other maps may share.
-    const texture = tileMap.tilesets[0]!.texture.texture;
+    const texture = tileMap.tilesets[0]!.texture!.texture;
 
     expect(texture).toBeInstanceOf(Texture);
 

@@ -25,6 +25,7 @@
 // have to widen into the same generic problem `unbound-method` already owns.
 import type { Linter } from 'eslint';
 
+import { migrationChain, migrationPurity, migrationStep } from './rules/document-migrations.js';
 import { engineNoAllocationInHotHook } from './rules/engine-no-allocation-in-hot-hook.js';
 import { noAsyncRenderHook } from './rules/no-async-render-hook.js';
 import { noAsyncUpdate } from './rules/no-async-update.js';
@@ -41,6 +42,9 @@ import { requireSuperDestroy } from './rules/require-super-destroy.js';
  */
 export const exoPlugin = {
   rules: {
+    'migration-chain': migrationChain,
+    'migration-purity': migrationPurity,
+    'migration-step': migrationStep,
     'no-async-render-hook': noAsyncRenderHook,
     'no-async-update': noAsyncUpdate,
     'no-deprecated-api': noDeprecatedApi,
@@ -120,7 +124,7 @@ export interface ExoRulesConfigOptions {
  * are safe - they register the same plugin object - but a single call covering
  * every glob is simpler to read.
  */
-export function exoRulesConfig({ files, deprecatedApi = {}, tier = 'recommended' }: ExoRulesConfigOptions): Linter.Config[] {
+export const exoRulesConfig = ({ files, deprecatedApi = {}, tier = 'recommended' }: ExoRulesConfigOptions): Linter.Config[] => {
   const rules: Linter.RulesRecord = { ...RECOMMENDED_RULES };
 
   if (tier === 'strict') {
@@ -128,7 +132,7 @@ export function exoRulesConfig({ files, deprecatedApi = {}, tier = 'recommended'
   }
 
   return [{ files, plugins: { exojs: exoPlugin }, rules }];
-}
+};
 
 /** Options for {@link exoEngineRulesConfig}. */
 export interface ExoEngineRulesConfigOptions {
@@ -149,17 +153,15 @@ export interface ExoEngineRulesConfigOptions {
  * anyway can call this directly - it is a supported entry point, not a private
  * one - but nothing turns it on for them.
  */
-export function exoEngineRulesConfig({ files, allocationFreeHooks }: ExoEngineRulesConfigOptions): Linter.Config[] {
-  return [
-    {
-      files,
-      plugins: { 'exojs-engine': exoEnginePlugin },
-      rules: {
-        'exojs-engine/no-allocation-in-hot-hook': ['error', { methods: allocationFreeHooks }],
-      },
+export const exoEngineRulesConfig = ({ files, allocationFreeHooks }: ExoEngineRulesConfigOptions): Linter.Config[] => [
+  {
+    files,
+    plugins: { 'exojs-engine': exoEnginePlugin },
+    rules: {
+      'exojs-engine/no-allocation-in-hot-hook': ['error', { methods: allocationFreeHooks }],
     },
-  ];
-}
+  },
+];
 
 export { collectDeprecatedExports, collectDeprecatedExportsFromSource } from './deprecatedApi.js';
 export { EXO_DESTROY_BASE_CLASSES } from './rules/require-super-destroy.js';

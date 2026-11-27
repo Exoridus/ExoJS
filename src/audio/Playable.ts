@@ -29,9 +29,11 @@ import type { AudioSystem } from './AudioSystem';
  */
 export interface Voice extends Spatializable {
   /**
-   * Stop playback and release this voice's resources. Pass `fade` to ramp the
-   * volume to zero over that duration before stopping; omit (or pass `0`) to
-   * stop immediately. Idempotent - calling again is a no-op.
+   * Stop playback and release this voice's resources. A positive `fade` ramps
+   * volume to zero before stopping and replaces any pending fade. Omitting it
+   * or passing `0` stops immediately; generator voices with an envelope use
+   * its release stage instead. Repeated release stops do not extend that stage.
+   * Calls after playback has ended have no effect.
    */
   stop(fade?: Seconds): void;
   /** Playback volume in the range [0, 1]. Bus volume (0..2) can amplify beyond this. */
@@ -46,9 +48,21 @@ export interface Voice extends Spatializable {
   /** Fires once when this voice ends (natural end or {@link Voice.stop}). */
   readonly onEnd: Signal;
   /**
-   * The voice's output node - the last node before the {@link AudioBus}. A Web
-   * Audio interop hook for custom routing or analysis; gameplay code does not
-   * need it, and an `AudioAnalyser` accepts the voice itself.
+   * The voice's stable output node. Engine voices expose their volume gain
+   * before occlusion and insert effects. A Web Audio interop hook for custom
+   * routing or analysis; gameplay code does not need it.
+   *
+   * A scene-deferred voice has no output until real playback is created:
+   * reading it throws, even after audio unlocks if the scene is still dormant.
+   * A cancelled voice that never materialized continues to throw. Reading this
+   * property never creates a placeholder or a context for deferred playback.
+   * Wait for activation and unlock before connecting native nodes or assigning
+   * a deferred voice to an analyser.
+   *
+   * A voice returned already ended - a play while audio is still locked, or a
+   * start offset past the end - has no graph: its output is an unconnected node,
+   * and reading it before audio is unlocked throws instead of creating the
+   * `AudioContext` ahead of the user gesture.
    * @advanced
    */
   readonly output: AudioNode;
@@ -56,8 +70,14 @@ export interface Voice extends Spatializable {
   bus: AudioBus;
   /**
    * Insert a per-voice {@link AudioEffect} into this voice's output chain
-   * (after the volume gain, before the bus). Effects are applied in insertion
-   * order.
+   * (after the volume gain and the occlusion stage, before the bus). Effects
+   * are applied in insertion order.
+   *
+   * Attaching does not transfer ownership: the caller keeps the effect and must
+   * `destroy()` it. Neither the voice ending nor {@link Voice.removeEffect}
+   * destroys it.
+   * A live voice rejects an effect whose nodes are not initialized without
+   * changing its current chain. Await {@link AudioEffect.ready} before attaching.
    */
   addEffect(effect: AudioEffect): this;
   /** Remove a previously added per-voice effect. The caller still owns it and must `destroy()` it. */
@@ -74,6 +94,10 @@ export interface Voice extends Spatializable {
    *
    * The returned {@link AudioSend} is owned by this voice and torn down with it;
    * remove one early with {@link Voice.removeSend} only to change the routing.
+   * A scene-deferred voice returns a handle immediately without allocating
+   * nodes. Its identity, target and latest level survive activation; removing
+   * it or stopping the voice before activation prevents its native connection.
+   * Throws if this voice has already ended, without creating a send.
    */
   addSend(bus: AudioBus, level?: number): AudioSend;
   /** Tear down a send opened on this voice. Idempotent; a send from another voice is ignored. */
@@ -84,9 +108,8 @@ export interface Voice extends Spatializable {
    * Take ownership of a send opened against a different node, re-pointing it at
    * this voice's output.
    *
-   * Exists for a deferred voice: a scene hands one out before the asset is ready,
-   * so a send opened on it is wired to a placeholder and has to be handed over -
-   * re-creating it would invalidate the handle the caller already holds.
+   * A deferred voice hands over its unbound sends when real playback starts;
+   * re-creating them would invalidate the handles the caller already holds.
    * @internal
    */
   _adoptSend(send: AudioSend): void;
@@ -172,6 +195,8 @@ export interface Spatializable {
    * position change that does not carry a `z`. It contributes to distance
    * attenuation, to the panner's own directionality, and to Doppler - a source
    * rising straight up recedes.
+   * Without a position or followed node, its horizontal coordinates are the
+   * world origin.
    */
   elevation: number;
   /**
@@ -189,8 +214,9 @@ export interface Spatializable {
    */
   occlusion: number;
   /**
-   * Track a {@link SceneNode}: the voice reads the node's global translation
-   * each frame. Pass `null` to stop following and fall back to
+   * Track a {@link SceneNode}: the voice reads the node's world transform each
+   * frame, so a node nested inside a transform group pans from where it is
+   * drawn. Pass `null` to stop following and fall back to
    * {@link Spatializable.position}.
    */
   follow(node: SceneNode | null): void;
@@ -214,18 +240,22 @@ export interface Spatializable {
    * `coneOuterAngle` are narrowed below 360°. Default `0`.
    */
   orientation: number;
-  /** Full-gain cone half-angle in degrees. Default `360` (omnidirectional - no cone). */
+  /**
+   * Full-gain cone angle in degrees, as a full apex angle (not a half-angle).
+   * Default `360` (omnidirectional - no cone).
+   */
   coneInnerAngle: number;
-  /** Falloff-to-`coneOuterGain` cone half-angle in degrees. Default `360`. */
+  /** Falloff-to-`coneOuterGain` cone angle in degrees, as a full apex angle. Default `360`. */
   coneOuterAngle: number;
   /** Gain applied outside `coneOuterAngle`. Default `0`. */
   coneOuterGain: number;
   /**
    * World-space velocity of the source (world units/second), or `null`.
    * Feeds the Doppler calculation (`app.audio.spatial.dopplerFactor`) -
-   * has no other effect. Explicit; when `null` and `follow(node)` is
-   * active, velocity is auto-derived each frame from the tracked node's
-   * position delta instead.
+   * has no other effect. Explicit; when `null`, the horizontal velocity is
+   * auto-derived each frame from the position delta of whatever this voice
+   * tracks, `follow(node)` or a plain `position`, and the vertical component
+   * comes only from {@link Spatializable.elevationVelocity}.
    */
   get velocity(): Vector | null;
   /**
@@ -244,6 +274,8 @@ export interface Spatializable {
  * Per-play overrides passed to {@link AudioSystem.play}.
  */
 export interface PlayOptions {
+  /** @internal A deferred stream starts held until its owner finishes configuration and applies its current policy. */
+  _startHeld?: boolean;
   /** Route this play through a specific {@link AudioBus}. */
   bus?: AudioBus;
   /** Override volume for this play instance. Range [0, 1]. */
@@ -276,9 +308,9 @@ export interface PlayOptions {
   panningModel?: PanningModelType;
   /** Initial cone facing direction, in degrees (`SceneNode.rotation` convention). Default `0`. */
   orientation?: number;
-  /** Initial full-gain cone half-angle. Default `360` (no cone). */
+  /** Initial full-gain cone angle, as a full apex angle (not a half-angle). Default `360` (no cone). */
   coneInnerAngle?: number;
-  /** Initial falloff cone half-angle. Default `360`. */
+  /** Initial falloff cone angle, as a full apex angle. Default `360`. */
   coneOuterAngle?: number;
   /** Initial gain outside the outer cone. Default `0`. */
   coneOuterGain?: number;
@@ -333,6 +365,8 @@ export interface Playable {
  * @internal
  */
 export interface VoiceProfile {
+  /** @internal Keep scene-deferred playback buffered while the audio context is locked. */
+  readonly waitForUnlock?: boolean;
   readonly bus: AudioBus;
   readonly pausable: boolean;
   /** {@link Seekable.duration}, or `null` when the voice will not be {@link Seekable}. */

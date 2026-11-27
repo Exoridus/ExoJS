@@ -20,31 +20,68 @@ export const GATE_GROUPS = {
     'typecheck:test',
     'typecheck:scripts',
   ],
+  // Cheapest first (seconds each), `lint:all` last (about a minute), so a
+  // trivial failure surfaces before the expensive ESLint pass starts.
   lint: [
-    'lint:all',
-    'lint:source-hygiene',
-    'lint:inline-source',
-    'lint:file-symbols',
     'lint:changelog',
-    'lint:config-paths',
-    'lint:js-files',
     'lint:shaders',
     'verify:bench-results',
+    'lint:file-symbols',
+    'lint:config-paths',
+    'lint:js-files',
+    'lint:inline-source',
+    'lint:source-hygiene',
     'format:check',
+    'lint:react:shadow',
+    'lint:exojs:shadow',
+    'lint:all',
   ],
   // `perf:smoke` runs the benchmarks for their EXIT CODE, not their numbers -
   // a shared runner measures nothing meaningful. Every one of these executes
   // engine source in-process, so they rot silently against an API change or a
   // module-resolution change and no other lane touches them.
-  sync: ['docs:api:check', 'examples:sync:check', 'assets:compact:check', 'perf:smoke'],
-  // `full-bundle:exports:check` reads every bundled package's built ESM barrel,
-  // so it needs the same built dist this group's job already provides. It runs
-  // first because it also carries the freshness check: a dist that lags the
-  // sources fails in seconds here rather than after the site typecheck.
-  site: ['full-bundle:exports:check', 'typecheck:site', 'typecheck:site-scripts'],
+  sync: [
+    'typecheck:native-api',
+    'docs:api:check',
+    'docs:history:check',
+    'examples:sync:check',
+    'legacy-shims:check',
+    'assets:compact:check',
+    'perf:smoke',
+  ],
+  // `dist:check` runs the freshness gate: a dist that lags the sources fails
+  // in seconds here rather than after the site typecheck. The site job already
+  // builds dist, so the check is a fast verification, and the hybrid-runtime
+  // export completeness of the built tree is covered by the CI build job's
+  // `test:release-dist`.
+  site: ['dist:check', 'typecheck:site', 'typecheck:site-scripts'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type GateGroup = keyof typeof GATE_GROUPS;
 
 /** Group names in run order, which is also the order `gates all` uses. */
 export const GATE_GROUP_NAMES = Object.keys(GATE_GROUPS) as GateGroup[];
+
+/**
+ * Gates that read only tracked files: none needs the built `dist`, a browser or
+ * a compiler, and each finishes in seconds. A selection runs these first, ahead
+ * of any `dist` rebuild, so a formatting or hygiene failure is reported before
+ * the expensive work starts.
+ */
+export const FAST_GATES: readonly string[] = [
+  'lint:changelog',
+  'lint:shaders',
+  'verify:bench-results',
+  'lint:file-symbols',
+  'lint:config-paths',
+  'lint:js-files',
+  'lint:inline-source',
+  'lint:source-hygiene',
+  'format:check',
+];
+
+/** Stable ordering for a gate selection: the fast gates first, everything else in the given order. */
+export const orderGates = (names: readonly string[]): string[] => [
+  ...FAST_GATES.filter(name => names.includes(name)),
+  ...names.filter(name => !FAST_GATES.includes(name)),
+];

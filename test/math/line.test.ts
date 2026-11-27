@@ -1,16 +1,14 @@
 import { Circle } from '#math/Circle';
 import type { Collidable } from '#math/collisionTypes';
-import { CollisionType } from '#math/collisionTypes';
 import { Ellipse } from '#math/Ellipse';
 import { Interval } from '#math/Interval';
 import { Line } from '#math/Line';
 import { Polygon } from '#math/Polygon';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
-
-// A minimal stand-in for a SceneNode, which Line only ever accesses through
-// `collisionType` + `getBounds()` in its intersectsWith() switch.
-const fakeSceneNode = (bounds: Rectangle): Collidable => ({ collisionType: CollisionType.SceneNode, getBounds: () => bounds }) as unknown as Collidable;
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 
 // A Collidable with a collisionType outside the known enum, to exercise the
 // `default` branch of the intersectsWith() switch.
@@ -176,10 +174,21 @@ describe('Line', () => {
   });
 
   describe('intersectsWith()', () => {
-    test('SceneNode branch delegates to the rectangle bounds', () => {
-      const line = new Line(-5, 5, 15, 5);
+    test.each([
+      { name: 'ordinary', Parent: Container },
+      { name: 'retained', Parent: RetainedContainer },
+    ])('SceneNode branch uses world bounds under an $name parent', ({ Parent }) => {
+      const parent = new Parent().setPosition(100, 100);
+      const node = new Drawable().setLocalBounds(0, 0, 10, 10);
 
-      expect(line.intersectsWith(fakeSceneNode(new Rectangle(0, 0, 10, 10)))).toBe(true);
+      parent.addChild(node);
+
+      try {
+        expect(new Line(95, 105, 115, 105).intersectsWith(node)).toBe(true);
+        expect(new Line(-5, 5, 15, 5).intersectsWith(node)).toBe(false);
+      } finally {
+        parent.destroy();
+      }
     });
 
     test('Rectangle branch', () => {

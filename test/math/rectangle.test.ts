@@ -498,6 +498,24 @@ describe('Rectangle', () => {
   });
 
   describe('destroy()', () => {
+    test('a retained size stops notifying the destroyed rectangle', () => {
+      const notification = vi.spyOn(Rectangle.prototype, '_onObservableChange');
+
+      try {
+        const rectangle = new Rectangle(0, 0, 1, 2);
+        const size = rectangle.size;
+
+        rectangle.destroy();
+        size.set(3, 4);
+
+        expect(notification).not.toHaveBeenCalled();
+        expect(size.width).toBe(3);
+        expect(size.height).toBe(4);
+      } finally {
+        notification.mockRestore();
+      }
+    });
+
     test('does not throw and releases the normals cache', () => {
       const rectangle = new Rectangle(0, 0, 10, 10);
 

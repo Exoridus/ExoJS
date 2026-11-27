@@ -17,6 +17,8 @@ import { Interval } from './Interval';
 import type { Line } from './Line';
 import { Rectangle } from './Rectangle';
 import type { ShapeLike } from './ShapeLike';
+import { ShapeRevision } from './ShapeRevision';
+import { ShapeVector } from './ShapeVector';
 import { Vector } from './Vector';
 
 let temp: Polygon | null = null;
@@ -31,10 +33,10 @@ let temp: Polygon | null = null;
  *
  * `Polygon.temp` is a shared scratch instance.
  */
-export class Polygon implements ShapeLike {
+export class Polygon extends ShapeRevision implements ShapeLike {
   public readonly collisionType: CollisionType = CollisionType.Polygon;
 
-  private readonly _position: Vector;
+  private readonly _position: ShapeVector;
   private readonly _points: Vector[] = [];
   private readonly _edges: Vector[] = [];
   /** Cached normals - null until first getNormals() call; reused across calls. */
@@ -42,8 +44,15 @@ export class Polygon implements ShapeLike {
   private _normalsDirty = true;
 
   public constructor(points: Vector[] = [], x = 0, y = 0) {
-    this._position = new Vector(x, y);
+    super();
+    this._position = new ShapeVector(this, x, y);
     this.setPoints(points);
+  }
+
+  /** @internal */
+  public _onObservableChange(): void {
+    this._normalsDirty = true;
+    this._notifyGeometry();
   }
 
   public get position(): Vector {
@@ -73,6 +82,7 @@ export class Polygon implements ShapeLike {
     this._normalsDirty = true;
   }
 
+  /** Direct vertex edits take effect after {@link updateGeometry}. */
   public get points(): Vector[] {
     return this._points;
   }
@@ -114,8 +124,14 @@ export class Polygon implements ShapeLike {
     }
 
     if (diff > 0) {
-      for (const point of this._points.splice(newLen)) point.destroy();
-      for (const point of this._edges.splice(newLen)) point.destroy();
+      for (const point of this._points.splice(newLen)) {
+        point.destroy();
+      }
+
+      for (const point of this._edges.splice(newLen)) {
+        point.destroy();
+      }
+
       // Trim the cached normals array if it exists and is longer than newLen.
       if (this._cachedNormals !== null && this._cachedNormals.length > newLen) {
         const removed = this._cachedNormals.splice(newLen);
@@ -132,21 +148,41 @@ export class Polygon implements ShapeLike {
       }
     }
 
-    for (let i = 0; i < newLen; i++) {
-      // _points and _edges both have length newLen here; i and (i+1)%newLen are valid.
+    return this.updateGeometry();
+  }
+
+  /** Rebuild edges after direct point edits and invalidate dependent geometry. */
+  public updateGeometry(): this {
+    while (this._edges.length < this._points.length) {
+      this._edges.push(new Vector());
+    }
+
+    while (this._edges.length > this._points.length) {
+      this._edges.pop()!.destroy();
+    }
+
+    if (this._cachedNormals !== null) {
+      while (this._cachedNormals.length > this._points.length) {
+        this._cachedNormals.pop()!.destroy();
+      }
+    }
+
+    for (let i = 0; i < this._points.length; i++) {
+      // Edge storage is synchronized with the vertex count before traversal.
       const curr = this._points[i]!;
-      const next = this._points[(i + 1) % newLen]!;
+      const next = this._points[(i + 1) % this._points.length]!;
 
       this._edges[i]!.set(next.x - curr.x, next.y - curr.y);
     }
 
     this._normalsDirty = true;
+    this._notifyGeometry();
 
     return this;
   }
 
   public set(x: number, y: number, points: Vector[]): this {
-    this._position.set(x, y);
+    this._position._setSilently(x, y);
     this.setPoints(points);
     this._normalsDirty = true;
 
@@ -154,7 +190,7 @@ export class Polygon implements ShapeLike {
   }
 
   public copy(polygon: Polygon): this {
-    this._position.copy(polygon.position);
+    this._position._setSilently(polygon.x, polygon.y);
     this.setPoints(polygon.points);
     this._normalsDirty = true;
 
@@ -174,6 +210,10 @@ export class Polygon implements ShapeLike {
   }
 
   public getBounds(out: Rectangle = new Rectangle()): Rectangle {
+    if (this._points.length === 0) {
+      return out.set(this.x, this.y, 0, 0);
+    }
+
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -243,8 +283,13 @@ export class Polygon implements ShapeLike {
       const vertex = points[i]!;
       const projection = nx * vertex.x + ny * vertex.y;
 
-      if (projection < min) min = projection;
-      if (projection > max) max = projection;
+      if (projection < min) {
+        min = projection;
+      }
+
+      if (projection > max) {
+        max = projection;
+      }
     }
 
     return result.set(min + offset, max + offset);
@@ -257,7 +302,7 @@ export class Polygon implements ShapeLike {
   public intersectsWith(target: Collidable): boolean {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return intersectionRectPoly((target as SceneNode).getBounds(), this);
+        return intersectionRectPoly((target as SceneNode)._getWorldBounds(), this);
       case CollisionType.Rectangle:
         return intersectionRectPoly(target as Rectangle, this);
       case CollisionType.Polygon:
@@ -306,9 +351,15 @@ export class Polygon implements ShapeLike {
       this._cachedNormals = null;
     }
 
+    // The points and edges are gone, so a later getNormals() must rebuild an
+    // empty cache rather than hand back the null it was reset to above.
+    this._normalsDirty = true;
+
     this._position.destroy();
     this._points.length = 0;
     this._edges.length = 0;
+
+    this._releaseGeometryListeners();
   }
 
   /**

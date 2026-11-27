@@ -93,7 +93,9 @@ const buildKtx2 = ({
 };
 
 const levelLengthsFor = (format: CompressedTextureFormat, width: number, height: number, count: number): number[] =>
-  Array.from({ length: count }, (_unused, index) => compressedLevelByteLength(format, Math.max(width >> index, 1), Math.max(height >> index, 1)));
+  Array.from({ length: count }, (_unused, index) =>
+    compressedLevelByteLength(format, Math.max(width >> index, 1), Math.max(height >> index, 1)),
+  );
 
 describe('isKtx2', () => {
   test('recognizes the identifier', () => {
@@ -109,7 +111,10 @@ describe('isKtx2', () => {
 describe('parseKtx2', () => {
   test('reads a single-level BC7 payload', () => {
     const format = CompressedTextureFormat.Bc7RgbaUnorm;
-    const payload = parseKtx2(buildKtx2({ vkFormat: 145, width: 16, height: 8, levelLengths: levelLengthsFor(format, 16, 8, 1) }), 'hero.ktx2');
+    const payload = parseKtx2(
+      buildKtx2({ vkFormat: 145, width: 16, height: 8, levelLengths: levelLengthsFor(format, 16, 8, 1) }),
+      'hero.ktx2',
+    );
 
     expect(payload).toMatchObject({ kind: 'compressed', format });
     expect(payload.kind === 'compressed' && payload.levels).toHaveLength(1);
@@ -118,11 +123,16 @@ describe('parseKtx2', () => {
 
   test('reads a mip chain in mip order, not in storage order', () => {
     const format = CompressedTextureFormat.Bc7RgbaUnorm;
-    const payload = parseKtx2(buildKtx2({ vkFormat: 145, width: 16, height: 16, levelLengths: levelLengthsFor(format, 16, 16, 3) }), 'hero.ktx2');
+    const payload = parseKtx2(
+      buildKtx2({ vkFormat: 145, width: 16, height: 16, levelLengths: levelLengthsFor(format, 16, 16, 3) }),
+      'hero.ktx2',
+    );
 
     expect(payload.kind).toBe('compressed');
 
-    if (payload.kind !== 'compressed') return;
+    if (payload.kind !== 'compressed') {
+      return;
+    }
 
     expect(payload.levels.map(({ width, height }) => [width, height])).toEqual([
       [16, 16],
@@ -149,10 +159,14 @@ describe('parseKtx2', () => {
     const etc2 = CompressedTextureFormat.Etc2Rgba8Unorm;
     const astc = CompressedTextureFormat.Astc6x6Unorm;
 
-    expect(parseKtx2(buildKtx2({ vkFormat: 151, width: 8, height: 8, levelLengths: levelLengthsFor(etc2, 8, 8, 1) }), 'a.ktx2')).toMatchObject({
+    expect(
+      parseKtx2(buildKtx2({ vkFormat: 151, width: 8, height: 8, levelLengths: levelLengthsFor(etc2, 8, 8, 1) }), 'a.ktx2'),
+    ).toMatchObject({
       format: etc2,
     });
-    expect(parseKtx2(buildKtx2({ vkFormat: 165, width: 12, height: 12, levelLengths: levelLengthsFor(astc, 12, 12, 1) }), 'b.ktx2')).toMatchObject({
+    expect(
+      parseKtx2(buildKtx2({ vkFormat: 165, width: 12, height: 12, levelLengths: levelLengthsFor(astc, 12, 12, 1) }), 'b.ktx2'),
+    ).toMatchObject({
       format: astc,
     });
   });
@@ -184,7 +198,9 @@ describe('parseKtx2', () => {
       const lengths = levelLengthsFor(format, width, height, 1);
 
       expect(parseKtx2(buildKtx2({ vkFormat: 157 + index * 2, width, height, levelLengths: lengths }), 'a.ktx2')).toMatchObject({ format });
-      expect(parseKtx2(buildKtx2({ vkFormat: 158 + index * 2, width, height, levelLengths: lengths, transfer: 2 }), 'a.ktx2')).toMatchObject({
+      expect(
+        parseKtx2(buildKtx2({ vkFormat: 158 + index * 2, width, height, levelLengths: lengths, transfer: 2 }), 'a.ktx2'),
+      ).toMatchObject({
         format: `astc-${blockWidth}x${blockHeight}-srgb`,
       });
     });
@@ -198,7 +214,9 @@ describe('parseKtx2', () => {
     ] as const;
 
     for (const [vkFormat, format] of signed) {
-      expect(parseKtx2(buildKtx2({ vkFormat, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1) }), 'a.ktx2')).toMatchObject({ format });
+      expect(
+        parseKtx2(buildKtx2({ vkFormat, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1) }), 'a.ktx2'),
+      ).toMatchObject({ format });
     }
   });
 
@@ -212,7 +230,10 @@ describe('parseKtx2', () => {
   test('rejects a compressed payload whose level count requests generated mips', () => {
     const format = CompressedTextureFormat.Bc1RgbaUnorm;
     expect(() =>
-      parseKtx2(buildKtx2({ vkFormat: 133, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1), declaredLevelCount: 0 }), 'hero.ktx2'),
+      parseKtx2(
+        buildKtx2({ vkFormat: 133, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1), declaredLevelCount: 0 }),
+        'hero.ktx2',
+      ),
     ).toThrow(/levelCount 0/);
   });
 
@@ -225,7 +246,10 @@ describe('parseKtx2', () => {
     const format = CompressedTextureFormat.Bc7RgbaUnorm;
 
     expect(() =>
-      parseKtx2(buildKtx2({ vkFormat: 145, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1), supercompressionScheme: scheme }), 'hero.ktx2'),
+      parseKtx2(
+        buildKtx2({ vkFormat: 145, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1), supercompressionScheme: scheme }),
+        'hero.ktx2',
+      ),
     ).toThrow(expected);
   });
 
@@ -295,7 +319,9 @@ const deflateKtx2 = async (buffer: ArrayBuffer, levelCount: number): Promise<Arr
       for (;;) {
         const { done, value } = await reader.read();
 
-        if (done) break;
+        if (done) {
+          break;
+        }
 
         chunks.push(value);
       }
@@ -367,7 +393,13 @@ describe('inflateKtx2Levels', () => {
   });
 
   test.each([1, 2])('leaves scheme %i alone for the parser to refuse', async scheme => {
-    const buffer = buildKtx2({ vkFormat: 145, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1), supercompressionScheme: scheme });
+    const buffer = buildKtx2({
+      vkFormat: 145,
+      width: 8,
+      height: 8,
+      levelLengths: levelLengthsFor(format, 8, 8, 1),
+      supercompressionScheme: scheme,
+    });
 
     expect(await inflateKtx2Levels(buffer, 'hero.ktx2')).toBe(buffer);
   });

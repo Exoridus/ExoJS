@@ -8,24 +8,61 @@ import { verifyPackBytes, verifyPackLength } from '#assets/container/containerIn
 import { ContainerReader } from '#assets/container/ContainerReader';
 import type { Connectivity } from '#core/Connectivity';
 import { Signal } from '#core/Signal';
+import { Texture } from '#rendering/texture/Texture';
 
-import { type Asset, AssetImpl, type ResourceAsset, type ValueAsset } from './Asset';
+import { ApplicationAssets } from './ApplicationAssets';
 import type { AssetConstructor } from './AssetConstructor';
 import { AssetDecoder } from './AssetDecoder';
-import type { AssetDefinitions, AssetInput, AssetTypeName, CatalogEntry, InferLoadedEntry, KindByPath, LeafForPath, ResourceForKind } from './AssetDefinitions';
+import type {
+  AssetDefinitions,
+  AssetTypeName,
+  CatalogEntry,
+  InferLoadedEntry,
+  KindByPath,
+  LeafForPath,
+  ResourceForKind,
+} from './AssetDefinitions';
+import {
+  _describeTypeReference,
+  _isAssetDescriptor,
+  _splitAssetDescriptor,
+  type AssetDescriptor,
+  type AssetDescriptorLeaf,
+  type AssetDescriptorResource,
+  type LocatorAssetDescriptor,
+  type SplitAssetDescriptor,
+  type ValidatedAssetDescriptor,
+  type ValidatedLeafDescriptor,
+} from './AssetDescriptor';
+import type { AssetLoadHandle, AssetLoadInput, LoadedAssets, ValidatedAssetLoadInput } from './assetLoadGroup';
 import { _readMeta, type CatalogResourceLeaf, type CatalogValueLeaf } from './assetMeta';
 import type { AssetRef } from './AssetRef';
 import type { AssetReferenceLookup } from './AssetRequestLog';
-import { type AssetInspection, AssetResidency, type AssetResidencySignals, type AssetStats, type ClaimParticipation } from './AssetResidency';
-import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
-import type { AnyAssetType } from './AssetType';
-import { AssetTypeRegistry } from './AssetTypeRegistry';
+import {
+  type AssetInspection,
+  AssetResidency,
+  type AssetResidencySignals,
+  type AssetStats,
+  type ClaimParticipation,
+} from './AssetResidency';
+import { type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
+import type { AnyAssetType, AssetLeaf } from './AssetType';
+import { AssetTypeRegistry, type InstalledAssetType } from './AssetTypeRegistry';
 import { AssetVariantSet } from './AssetVariantSet';
-import { type AssetLocator, type CanonicalAsset, canonicalizeSource, type ResourceKey, resourceKey, type SourceKey, sourceKey } from './canonicalKey';
+import {
+  type AssetLocator,
+  type CanonicalAsset,
+  canonicalizeSource,
+  type ResourceKey,
+  resourceKey,
+  type SourceKey,
+  sourceKey,
+} from './canonicalKey';
 import { createLeaf } from './catalogLeaf';
 import { LoadBatch } from './LoadBatch';
 import { LoaderScope, type LoaderScopeOptions } from './LoaderScope';
 import { LoadingQueue } from './LoadingQueue';
+import { parseAssetValue } from './parseAssetValue';
 import { isAbortError } from './SharedAbort';
 
 /**
@@ -132,38 +169,6 @@ export interface LoadOptions {
 // Loader
 // ---------------------------------------------------------------------------
 
-/**
- * Central asset management hub for ExoJS applications.
- *
- * The `Loader` orchestrates fetching, processing, caching, and retrieval of
- * all engine asset types. It ships with a built-in {@link AssetType} for every first-party
- * kind (Texture, Sound, AudioStream, Video, FontFace, ImageBitmap or HTMLImageElement, JSON,
- * text, SVG, subtitles, binary, and WASM); an application adds its own by
- * listing them in an extension.
- *
- * Assets can be loaded in two ways:
- * - **Direct** - `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
- *   immediately and resolves to the finished assets.
- * - **Background** - pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm
- *   assets at low priority; {@link awaitBackground} resolves once the queue drains.
- *
- * Once loaded, assets are stored in memory and returned from cache on
- * subsequent `load` or {@link get} calls without re-fetching.
- *
- * @example
- * ```ts
- * const loader = new Loader({ basePath: '/assets/', cache: new IndexedDbStore('game') });
- * const { hero } = await loader.load(Assets.from({ hero: 'hero.png' }));
- * ```
- *
- * @remarks Internally, `Loader` is a thin orchestrator over three collaborators:
- * `AssetTypeRegistry` (installed types, their suffixes and factories),
- * `AssetDecoder` (URL resolution, acquisition, codec and factory dispatch),
- * and `AssetResidency` (claims, in-flight dedup, the resident-resource store,
- * deferred-handle healing, the background queue). `Loader` itself keeps the
- * public call-shape dispatch (`load`/`get`/`unload` and their internal
- * scene-scope entry points) and the foreground-batch progress signals.
- */
 /** How {@link Loader.loadContainer} fetches a container. */
 export interface LoadContainerOptions {
   /**
@@ -193,10 +198,84 @@ export interface LoadManifestOptions {
   readonly cache?: RequestCache;
 }
 
+/** One entry of a load, normalized: a leaf to adopt, or a canonical request to load directly. */
+interface LoadUnit {
+  /** Unique within the load; keys the result map. */
+  readonly alias: string;
+  /** What progress signals report the entry as. */
+  readonly key: string;
+  readonly src: string;
+  readonly leaf?: object;
+  readonly canonical?: CanonicalAsset;
+  readonly options?: unknown;
+  /** A value type's synchronous transform, applied to the loaded value. */
+  readonly parse?: (raw: unknown) => unknown;
+  /** Rejects the item instead of loading it. */
+  readonly failure?: Error;
+}
+
+/** A descriptor whose type is installed on this loader, with any `parse` transform split off its options. */
+interface ResolvedDescriptor extends SplitAssetDescriptor {
+  readonly installed: InstalledAssetType;
+  readonly parse?: unknown;
+}
+
+interface QueueItem {
+  readonly alias: string;
+  readonly key: string;
+  readonly src: string;
+  readonly participation: ClaimParticipation | undefined;
+  readonly start: () => PromiseLike<unknown>;
+}
+
+/**
+ * Central asset management hub for ExoJS applications.
+ *
+ * The `Loader` orchestrates fetching, processing, caching, and retrieval of
+ * assets. An `Application` installs the first-party {@link AssetType}s
+ * (Texture, Sound, AudioStream, Video, FontFace, ImageBitmap or
+ * HTMLImageElement, JSON, text, SVG, subtitles, binary, and WASM). A standalone
+ * `Loader` resolves no suffix until a type is registered on it; an application
+ * adds its own types by listing them in an extension.
+ *
+ * Assets can be loaded in two ways:
+ * - **Direct** - `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
+ *   immediately and resolves to the finished assets.
+ * - **Background** - pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm
+ *   assets at low priority; {@link awaitBackground} resolves once the queue drains.
+ *
+ * Once loaded, assets are stored in memory and returned from cache on
+ * subsequent `load` or {@link get} calls without re-fetching.
+ *
+ * @example
+ * ```ts
+ * // Access the application-installed loader.
+ * // Its asset types were registered during Application construction.
+ * // A standalone Loader requires explicit asset-type registration.
+ * const loader = app.loader;
+ * const { hero } = await loader.load(Assets.from({ hero: 'hero.png' }));
+ * ```
+ *
+ * @remarks Internally, `Loader` is a thin orchestrator over three collaborators:
+ * `AssetTypeRegistry` (installed types, their suffixes and factories),
+ * `AssetDecoder` (URL resolution, acquisition, codec and factory dispatch),
+ * and `AssetResidency` (claims, in-flight dedup, the resident-resource store,
+ * deferred-handle healing, the background queue). `Loader` itself keeps the
+ * public call-shape dispatch (`load`/`get`/`unload` and their internal scene-scope
+ * entry points) and the foreground-batch progress signals.
+ */
 export class Loader {
   private readonly _typeRegistry = new AssetTypeRegistry();
+  /** @internal */
+  public readonly _assetTypes: ApplicationAssets = new ApplicationAssets(this._typeRegistry, this);
   private readonly _decoder: AssetDecoder;
   private readonly _residency: AssetResidency;
+  private _destroyed = false;
+  // Direct sources are identified by reference, never serialized: they can be
+  // arbitrary objects, and two equal-looking ones may be distinct inputs.
+  private readonly _directIds = new WeakMap<object, number>();
+  private readonly _directSymbolIds = new Map<symbol, number>();
+  private _nextDirectId = 0;
 
   /**
    * Resolve a bare path once for both `get()` and `load()`: normalize it to the
@@ -220,7 +299,7 @@ export class Loader {
     if (type === undefined) {
       throw new Error(
         `Loader: no installed asset type claims any extension of ${named}. Install a type that does, map the suffix with ` +
-          `loader.registerType(extension, type), or name the type explicitly with Asset.type(type, "${source}").`,
+          `loader.registerType(extension, type), or name the type with a descriptor: { type, source: "${source}" }.`,
       );
     }
 
@@ -231,6 +310,11 @@ export class Loader {
     }
 
     return { type, source, ctor };
+  }
+
+  /** Options a bare path implies for its type - shared by `load` and `peek` so both key identically. */
+  private _barePathOptions(type: AssetTypeName, source: string): unknown {
+    return type === 'font' ? { family: (source.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
   }
 
   /**
@@ -249,7 +333,8 @@ export class Loader {
     // two devices share one cache entry whose contents depend on which of them
     // filled it, and would leave a reference the asset itself carries resolving
     // against a path that was never loaded.
-    const selected = this.variants.resolve(source);
+    const variant = this.variants._resolveCandidate(source);
+    const selected = variant?.source ?? source;
     const locator = canonicalizeSource(this._decoder.basePath, selected);
     // The resource discriminator is deliberately absent from the source key: two
     // resources that differ only in how one download is interpreted must resolve
@@ -260,13 +345,132 @@ export class Loader {
     const acquired = sourceKey(locator, this._typeRegistry._sourceDiscriminator(type, selected, options));
 
     return {
-      key: resourceKey(this._typeRegistry._typeIdentity(type), acquired, this._typeRegistry._identityDiscriminator(type, selected, options)),
+      key: resourceKey(
+        this._typeRegistry._typeIdentity(type),
+        acquired,
+        this._typeRegistry._identityDiscriminator(type, selected, options),
+      ),
       sourceKey: acquired,
       locator,
       type,
       source: selected,
       requested: source,
+      ...(variant?.resolution !== undefined && { variantResolution: variant.resolution }),
       ...(options !== undefined && { options }),
+    };
+  }
+
+  /** The loader-local number identifying a direct source or source-free descriptor by reference. */
+  private _directId(value: object | symbol): number {
+    const ids = typeof value === 'symbol' ? this._directSymbolIds : undefined;
+    let id = ids === undefined ? this._directIds.get(value as object) : ids.get(value as symbol);
+
+    if (id === undefined) {
+      id = ++this._nextDirectId;
+
+      if (ids === undefined) {
+        this._directIds.set(value as object, id);
+      } else {
+        ids.set(value as symbol, id);
+      }
+    }
+
+    return id;
+  }
+
+  /**
+   * The installed type a descriptor names, with its source and options;
+   * `undefined` when no such type is installed. A `parse` transform is split off
+   * the options, so it never takes part in identity or reaches a factory.
+   */
+  private _resolveDescriptor(descriptor: AssetDescriptor): ResolvedDescriptor | undefined {
+    const split = _splitAssetDescriptor(descriptor);
+    const installed = this._typeRegistry._resolveReference(split.type);
+
+    if (installed === undefined) {
+      return undefined;
+    }
+
+    if (split.options === undefined || !Object.hasOwn(split.options, 'parse')) {
+      return { ...split, installed };
+    }
+
+    const { parse, ...rest } = split.options;
+
+    return { ...split, options: Object.keys(rest).length > 0 ? rest : undefined, installed, parse };
+  }
+
+  private _requireDescriptor(descriptor: AssetDescriptor, api: string): ResolvedDescriptor {
+    const resolved = this._resolveDescriptor(descriptor);
+
+    if (resolved === undefined) {
+      throw this._unknownDescriptorType(descriptor.type, api);
+    }
+
+    return resolved;
+  }
+
+  private _unknownDescriptorType(type: unknown, api: string): Error {
+    if (typeof type === 'function') {
+      return this._typeRegistry._missingTypeError(type as AssetConstructor);
+    }
+
+    return new Error(
+      `Loader: ${api} - no asset type ${_describeTypeReference(type)} is installed on this application. ` +
+        'A plain object with an own "type" property is always read as an asset descriptor, so a load group cannot use "type" as a key.',
+    );
+  }
+
+  private _descriptorParse({ installed: { type }, parse }: ResolvedDescriptor): ((raw: unknown) => unknown) | undefined {
+    if (parse !== undefined && (typeof parse !== 'function' || type.leaf !== 'ref')) {
+      throw new TypeError(`Loader: "parse" is a synchronous function for value asset types, which the "${type.id}" type is not.`);
+    }
+
+    return parse as ((raw: unknown) => unknown) | undefined;
+  }
+
+  /**
+   * The canonical identity of a resolved descriptor: a string source is a
+   * locator and canonicalizes like a path; anything else is a direct source.
+   */
+  private _canonicalizeDescriptor(resolved: ResolvedDescriptor, descriptor: AssetDescriptor): CanonicalAsset {
+    const { token } = resolved.installed;
+
+    return typeof resolved.source === 'string'
+      ? this._canonicalize(token, resolved.source, resolved.options)
+      : this._canonicalizeDirect(token, resolved, descriptor);
+  }
+
+  /**
+   * Identity for a factory source that is not fetched. It never touches the
+   * base path, variants or caches; the `direct:` locator only names the claim.
+   */
+  private _canonicalizeDirect(token: AssetConstructor, resolved: SplitAssetDescriptor, descriptor: AssetDescriptor): CanonicalAsset {
+    const { hasSource, source, options } = resolved;
+    const discriminator = this._typeRegistry._identityDiscriminator(token, '', options);
+    let identity: string;
+
+    if (!hasSource) {
+      // A type that declares a resource identity makes equal source-free
+      // requests one resource; otherwise only the descriptor object itself can.
+      identity = discriminator === undefined ? `descriptor-${this._directId(descriptor)}` : 'source-free';
+    } else if ((typeof source === 'object' && source !== null) || typeof source === 'function' || typeof source === 'symbol') {
+      identity = `value-${this._directId(source)}`;
+    } else {
+      identity = `${source === null ? 'null' : typeof source}-${String(source)}`;
+    }
+
+    const locator = `direct:${identity}`;
+    const acquired = sourceKey(locator);
+
+    return {
+      key: resourceKey(this._typeRegistry._typeIdentity(token), acquired, discriminator),
+      sourceKey: acquired,
+      locator,
+      type: token,
+      source: locator,
+      ...(options !== undefined && { options }),
+      directSource: source,
     };
   }
 
@@ -278,16 +482,8 @@ export class Loader {
    * will deduplicate: equal {@link AssetIdentity.resourceKey} means one resident
    * resource, equal {@link AssetIdentity.sourceKey} means one acquisition.
    */
-  public identify(asset: Asset<unknown>): AssetIdentity {
-    const ctor = this._typeRegistry.resolveTypeName(asset.type);
-
-    if (ctor === undefined) {
-      throw new Error(`Loader: no asset type "${asset.type}" is installed on this application.`);
-    }
-
-    const { type: _type, source, ...rest } = asset._config;
-    const options = Object.keys(rest).length > 0 ? rest : undefined;
-    const canonical = this._canonicalize(ctor, source, options);
+  public identify<const D extends AssetDescriptor>(descriptor: D & ValidatedAssetDescriptor<D>): AssetIdentity {
+    const canonical = this._canonicalizeDescriptor(this._requireDescriptor(descriptor, 'identify()'), descriptor);
 
     return { resourceKey: canonical.key, sourceKey: canonical.sourceKey, locator: canonical.locator };
   }
@@ -315,21 +511,25 @@ export class Loader {
    *
    * @example
    * ```ts
-   * await app.loader.cacheSource(assets.world);
-   * await app.loader.cacheSource(Asset.type('music', 'theme.mp3'));
+   * await app.loader.cacheSource({ type: worldType, source: 'levels/forest.world' });
+   * await app.loader.cacheSource({ type: Music, source: 'theme.mp3' });
    * ```
    */
-  public cacheSource(asset: Asset<unknown>, options?: { readonly signal?: AbortSignal }): Promise<void> {
-    const ctor = this._typeRegistry.resolveTypeName(asset.type);
+  public cacheSource<const D extends LocatorAssetDescriptor>(
+    descriptor: D & ValidatedAssetDescriptor<D>,
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<void> {
+    const resolved = this._requireDescriptor(descriptor, 'cacheSource()');
 
-    if (ctor === undefined) {
-      throw new Error(`Loader: no asset type "${asset.type}" is installed on this application.`);
+    if (typeof resolved.source !== 'string') {
+      throw new TypeError('Loader: cacheSource() acquires a locator, so the descriptor needs a string source.');
     }
 
-    const { type: _type, source, ...rest } = asset._config;
-    const requestOptions = Object.keys(rest).length > 0 ? rest : undefined;
-
-    return this._decoder._acquireOnly(this._canonicalize(ctor, source, requestOptions), requestOptions, options?.signal);
+    return this._decoder._acquireOnly(
+      this._canonicalize(resolved.installed.token, resolved.source, resolved.options),
+      resolved.options,
+      options?.signal,
+    );
   }
 
   /**
@@ -365,6 +565,7 @@ export class Loader {
    * so no caller can drop an app-lifetime claim another consumer relies on.
    */
   private readonly _appScope = new LoaderScope(this, 'app', '(app)');
+  private _liveLoadScope: LoaderScope | undefined;
 
   /** Aggregate foreground progress across every scope. Each scope also reports its own. */
   private readonly _batch = new LoadBatch(this);
@@ -490,13 +691,13 @@ export class Loader {
    * claimed the suffix by declaring it.
    *
    * It does NOT affect loader-free catalog construction - `Assets.from('level.json')`
-   * has no loader to consult and resolves through the built-in table alone. Use
-   * `Asset.type(type, source)` or the type's own `asset(...)` there instead.
+   * has no loader to consult and resolves through the built-in table alone. Name
+   * the type with a descriptor (`{ type, source }`) there instead.
    *
    * `type` is the type's id, not a constructor. This call installs nothing; the
    * named type must still be installed on the application. Repeating the same pair is idempotent,
-   * while changing an existing explicit override to another type throws. Use
-   * `Asset.type(...)` for a one-off exception.
+   * while changing an existing explicit override to another type throws. Use a
+   * descriptor for a one-off exception.
    *
    * @example
    * ```ts
@@ -604,7 +805,11 @@ export class Loader {
     const request = this._decoder._containerRequest(url, options?.signal);
     const manifestOptions: AssetManifestOptions = { init: { ...request.init, cache: options?.cache ?? 'no-cache' } };
 
-    return AssetManifest.open(request.url, manifestOptions);
+    try {
+      return await AssetManifest.open(request.url, manifestOptions);
+    } finally {
+      request.release?.();
+    }
   }
 
   /**
@@ -638,7 +843,9 @@ export class Loader {
     const request = this._decoder._containerRequest(url);
     const reader = await ContainerReader.open(request.url, { store: options.store, init: request.init });
 
-    if (pack !== undefined) verifyPackLength(pack, reader.byteLength);
+    if (pack !== undefined) {
+      verifyPackLength(pack, reader.byteLength);
+    }
 
     return reader;
   }
@@ -659,6 +866,11 @@ export class Loader {
 
       return { entry, asset: this._canonicalize(type, entry.source, entry.options) };
     });
+
+    // A new definition cannot switch the codec after these entries have been keyed.
+    for (const { asset } of resolved) {
+      this._typeRegistry.markUsed(asset.type);
+    }
 
     // Reading happens before anything touches residency. It is the only
     // asynchronous step in the unpack, and the claim/inject loop below must run
@@ -723,134 +935,81 @@ export class Loader {
   // -----------------------------------------------------------------------
 
   /**
-   * Fetches and processes one or more assets.
+   * Loads one asset or a group of assets into application ownership and
+   * returns an awaitable queue with progress and cancellation.
    *
-   * Every accepted input normalizes to the same canonical descriptor shape
-   * (`{ type, source }`) before dispatch:
+   * Accepts a path whose suffix names its type, a handle (`new Texture(path)`,
+   * a catalog leaf), an asset descriptor (`{ type: Video, source: 'intro.mp4' }`;
+   * see {@link AssetDescriptor}), or an array, tuple or named object of those. A
+   * group resolves to the same shape with every entry replaced by its loaded
+   * value; a handle heals in place as well. Named groups reserve `type` for
+   * descriptors. An {@link Assets} catalog resolves to a new map of its finished values.
    *
-   * - **Path string** - normalized by suffix through the app-local
-   *   {@link registerType} override, then the type that claimed the suffix
-   *   (basename-only, longest-suffix-first). Only suffixes of a type that hands
-   *   out a catalog leaf are accepted at compile time; a type that hands out
-   *   none (`bmFont`, `font`, `svg`, `image`, `music`, `video`) must be named
-   *   explicitly with `Asset.type(...)`.
-   * - **Asset<T>** - an explicit descriptor from `Asset.type(...)`.
-   * - **Assets<M>** - a typed catalog from `Assets.from(...)`; keys become aliases.
-   * - **A catalog leaf** - an `Assets.from()` property, adopted and resolved.
+   * In-flight and resident assets are shared: loading the same request again
+   * joins the existing fetch. Invalid input throws synchronously before any
+   * work starts; fetch and decode failures reject the queue and are also
+   * reported through {@link onError}. Claims made here last until the loader is
+   * destroyed; prefer a scene's or a child scope's `load` for shorter lifetimes.
    *
-   * (The inline record-catalog form `{ alias: { type, source } }` is no longer a
-   * public overload - build catalogs with `Assets.from(...)`; a runtime record
-   * fallback is retained only for internal multi-alias plumbing.)
-   *
-   * In-flight and already-loaded assets are de-duplicated: calling `load`
-   * for the same (type, alias) pair while a fetch is in progress attaches
-   * to the existing promise rather than issuing a second request.
-   * Handler/fetch failures reject the returned queue and are also dispatched
-   * through {@link onError}. Invalid inputs or missing bindings throw
-   * synchronously before a queue is created.
-   *
-   * Per-asset options ride on the `Asset.type(type, source, options)` descriptor
-   * (or the extra fields of a config object).
+   * With `priority: LoadPriority.Background` the fetches go through the
+   * background queue, and a later foreground request promotes them. Background
+   * loading needs a type with a placeholder, so it rejects streamed media and
+   * other types without one.
    *
    * @example
    * ```ts
-   * const texture = await loader.load('image/hero.png');                       // Texture
-   * const font    = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt'));   // BmFont
-   * const level   = await loader.load(Asset.type<LevelData>('json', 'l1.json'));
+   * const texture = await loader.load('image/hero.png');
+   * const { hero, intro } = await loader.load({ hero: 'image/hero.png', intro: { type: Video, source: 'video/intro.mp4' } });
    * ```
    */
-  public load<T>(asset: Asset<T>): LoadingQueue<T>;
   public load<M extends Record<string, CatalogEntry>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
-  // Single value-leaf (an `Assets.from()` AssetRef property): `AssetRef.loaded` resolves
-  // to the raw value, not the ref - this overload must win over the generic leaf one below.
-  public load<T>(leaf: CatalogValueLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
-  // Single handle-hybrid leaf (an `Assets.from()` property): adopt + resolve its value.
-  //
-  // Both leaf overloads match on the CATALOG-LEAF BRAND - the type-level mirror
-  // of the runtime `_assetMeta` stamp that `_loadClaimed` dispatches on - so a
-  // raw `new Texture()` / `new AssetRef()`, or a non-leaf resource like an
-  // `AudioStream`, is rejected here exactly as the runtime rejects it. `T` is
-  // recovered from the brand's phantom field, so the queue resolves to the plain
-  // resource rather than to the branded leaf type.
-  public load<T extends object>(leaf: CatalogResourceLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
+  public load<const Input extends AssetLoadInput>(
+    input: Input & ValidatedAssetLoadInput<Input>,
+    options?: LoadOptions,
+  ): LoadingQueue<LoadedAssets<Input>>;
+  public load(input: unknown, options?: LoadOptions): LoadingQueue<unknown> {
+    return this._loadClaimed(this._appScope, input, options);
+  }
 
-  // -----------------------------------------------------------------------
-  // Loading - bare path (type normalized from the file suffix)
-  // -----------------------------------------------------------------------
+  /** The application-owned scope behind `app.assets`, created on first use. @internal */
+  public get _applicationScope(): LoaderScope {
+    if (this._destroyed) {
+      throw new Error('Cannot load assets after the loader is destroyed.');
+    }
 
-  /**
-   * Fetches an asset by path, normalizing the suffix to an
-   * {@link AssetDefinitions} type before dispatch. Resolution is basename-only
-   * and longest-suffix-first (`hero.aseprite.json` tries `aseprite.json` before
-   * `json`), and consults the app-local {@link registerType} override, then the
-   * type that claimed the suffix.
-   *
-   * Only suffixes a catalog can also materialize are accepted at compile time
-   * (`ExtensionKindMap`, the map to augment by declaration merging). Types that
-   * hand out no leaf (`bmFont`, `font`, `svg`, `image`, `music`, `video`) and
-   * unclaimed suffixes are rejected here;
-   * name them with `load(Asset.type(type, path))` instead.
-   *
-   * The runtime is more lenient than the types, for untyped callers: a font
-   * suffix an installed type claims still loads, and the `family` the `font`
-   * type otherwise requires defaults to the file's base name (`ui/Inter.woff2`
-   * registers `Inter`). A descriptor never gets that default: `Asset.type('font',
-   * path)` and `fontType.asset(path)` require `family`, and a load of one
-   * without it rejects.
-   *
-   * ```ts
-   * const texture = await loader.load('image/hero.png');                     // Texture
-   * const level   = await loader.load('data/level.json');                    // unknown
-   * const font    = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont
-   * ```
-   */
-  // The `[KindByPath<S>] extends [never]` tuple guard is deliberate: the
-  // distributive `never extends ...` is vacuously TRUE, which would wrongly
-  // ACCEPT paths whose suffix is unregistered.
-  //
-  // Single-arg only: per-asset options go through `Asset.type(type, src, opts)`,
-  // so an `options?` param here would advertise a parameter the runtime ignores.
-  public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>;
-
-  // -----------------------------------------------------------------------
-  // Loading - implementation
-  // -----------------------------------------------------------------------
-
-  public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
-    return this._loadClaimed(this._appScope, arg0, arg1);
+    return (this._liveLoadScope ??= new LoaderScope(this, 'app', '(app assets)'));
   }
 
   /**
    * Claimed variant of {@link load}: identical logic, but every resolved key is
    * claimed under `claimer` (refcount). The public {@link load} delegates here
-   * under the app-lifetime {@link _rootClaimer}; the scene-scoped loader proxy
-   * passes its own scope. Claiming under `_rootClaimer` (which only `release()`
-   * frees) is observationally a no-op for existing callers.
+   * under the app-lifetime {@link _appScope}; the scene-scoped loader proxy
+   * passes its own scope. Claiming under `_appScope` (whose claims only
+   * {@link destroy} frees) is observationally a no-op for existing callers.
    * @internal
    */
-  public _loadClaimed(claimer: LoaderScope, arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
-    // 1. Single Asset<T>
-    if (arg0 instanceof AssetImpl) {
-      if (arg1 !== undefined) {
-        throw new Error(
-          'Loader: load(Asset.type(...), options) is not supported. Put per-asset options in Asset.type(type, path, options); ' +
-            'LoadOptions apply only to Assets catalogs and their leaves.',
-        );
-      }
-
-      const asset = arg0 as Asset<unknown>;
-      const alias = asset._config.source;
-
-      return this._createLoadingQueue(claimer, [{ alias, asset }], results => results.get(alias));
+  public _loadClaimed(claimer: LoaderScope, input: unknown, options?: unknown): LoadingQueue<unknown> {
+    if (this._destroyed) {
+      throw new Error('Cannot load assets after the loader is destroyed.');
     }
 
-    // 2. Assets<M> container - adopt every handle-hybrid leaf (fill in place,
-    // claim under `claimer`) and resolve the adopted queue to a map of the
-    // loaded values/handles. The container's own leaves heal in place.
-    if (arg0 instanceof AssetsImpl) {
-      const entries = Object.entries((arg0 as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
-      const background = (arg1 as LoadOptions | undefined)?.priority === LoadPriority.Background;
+    if (
+      options !== undefined &&
+      (typeof options !== 'object' || options === null || Object.keys(options).some(key => key !== 'priority'))
+    ) {
+      // Silently dropping a per-asset option here would load the asset with defaults.
+      throw new TypeError(
+        'Loader.load(): the second argument only takes LoadOptions ({ priority }). Per-asset options belong on the descriptor, ' +
+          'for example { type: Texture, source, textureOptions }.',
+      );
+    }
 
+    const background = (options as LoadOptions | undefined)?.priority === LoadPriority.Background;
+
+    // An Assets catalog adopts its own leaves, so they heal in place, and
+    // resolves to a fresh map of the loaded values.
+    if (input instanceof AssetsImpl) {
+      const entries = Object.entries((input as AssetsImpl<Record<string, CatalogEntry>>).entries) as Array<[string, object]>;
       const participations = this._adoptAll(entries, claimer, background);
 
       return this._createAdoptedQueue(claimer, entries, participations, results => {
@@ -864,83 +1023,195 @@ export class Loader {
       });
     }
 
-    // 2a. Single meta-stamped leaf (e.g. `load(assets.ship)`) - adopt it and
-    // resolve its loaded value/handle directly.
-    if (_readMeta(arg0) !== undefined) {
-      const leaf = arg0 as object;
-      const background = (arg1 as LoadOptions | undefined)?.priority === LoadPriority.Background;
-      const entries: Array<[string, object]> = [['value', leaf]];
-      const participations = this._adoptAll(entries, claimer, background);
+    let shape: 'single' | 'array' | 'record';
+    let candidates: Array<[key: string | symbol, entry: unknown]>;
 
-      return this._createAdoptedQueue(claimer, entries, participations, results => results.get('value'));
-    }
+    if (Array.isArray(input)) {
+      shape = 'array';
+      candidates = Array.from(input as unknown[], (entry, index): [string, unknown] => [String(index), entry]);
+    } else if (this._isLoadEntry(input)) {
+      shape = 'single';
+      candidates = [['0', input]];
+    } else {
+      const prototype: unknown = typeof input === 'object' && input !== null ? Object.getPrototypeOf(input) : undefined;
 
-    // 2b. Bare path string - normalize it to a `{ type, source }` descriptor and
-    // dispatch on the type's bound constructor.
-    if (typeof arg0 === 'string') {
-      if (arg1 !== undefined) {
-        throw new Error(
-          'Loader: load(path, options) is not supported. Put per-asset options on ' +
-            'Asset.type(type, path, options), or pass LoadOptions with an Assets catalog/leaf.',
+      if (prototype !== Object.prototype && prototype !== null) {
+        throw new TypeError(
+          `Loader.load() expects a path, an asset handle, an asset descriptor, or an array or plain object of those, got ${String(input)}.`,
         );
       }
 
-      const { type, source: path, ctor } = this._resolveBarePath(arg0);
-
-      // The font type requires a family option - infer it from the filename when not provided
-      const options: unknown = type === 'font' ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
-
-      // Canonicalized from the caller's logical path, not the variant selected for
-      // it: the selection happens again inside, and the request keeps the name a
-      // saved reference must repeat.
-      const canonical = this._canonicalize(ctor, arg0, options);
-
-      const participation = this._residency._participate(canonical, claimer);
-      this._onFgBatchStart(claimer, path, path);
-      let notifyFn: ((success: boolean) => void) | null = null;
-      const promise = this._residency._loadSingle(canonical, options).then(
-        v => {
-          this._residency._settleParticipation(participation);
-          notifyFn?.(true);
-          this._onFgBatchSettled(claimer, path, true);
-          return v;
-        },
-        (error: unknown) => {
-          this._residency._settleParticipation(participation);
-          notifyFn?.(false);
-          this._onFgBatchSettled(claimer, path, false, this._settleError(error));
-          throw error;
-        },
-      );
-      const queue = new LoadingQueue(promise, 1, () => this._cancelParticipations([participation]));
-      notifyFn = queue._notifyItem.bind(queue);
-      return queue;
+      const record = input as Record<string | symbol, unknown>;
+      shape = 'record';
+      candidates = Reflect.ownKeys(record)
+        .filter(key => Object.getOwnPropertyDescriptor(record, key)?.enumerable === true)
+        .map(key => [key, record[key]]);
     }
 
-    // Internal record fallback: `Record<string, AssetInput>`. The TYPED inline
-    // record-catalog overload is deliberately absent - public callers go through
-    // `Assets.from({...})` - but this path preserves the Loader's internal
-    // multi-alias/identity plumbing and its regression coverage.
-    //
-    // Every value is routed through the SAME `_normalizeEntry` used by
-    // `Assets.from(...)`: a bare path string (`{ a: 'a.png' }`) is resolved to a
-    // `{ type, source }` config by its suffix. An already-built `Asset` and a
-    // full config pass through unchanged.
-    const configMap = arg0 as Record<string, AssetInput>;
-    const items = Object.entries(configMap).map(([alias, value]) => ({
-      alias,
-      asset: value instanceof AssetImpl ? (value as Asset<unknown>) : new AssetImpl(_normalizeEntry(value as CatalogEntry)),
-    }));
+    // Every entry is validated before the first claim opens, so a load that
+    // throws leaves no stake behind.
+    const units = candidates.map(([key, entry], index) =>
+      this._loadUnit(String(index), String(key), entry, background, shape === 'record'),
+    );
+    const leaves = units.flatMap(unit => (unit.leaf === undefined ? [] : [[unit.alias, unit.leaf] as [string, object]]));
+    const participations = this._adoptAll(leaves, claimer, background);
+    const items: QueueItem[] = [];
+    let leafIndex = 0;
 
-    return this._createLoadingQueue(claimer, items, results => {
-      const out: Record<string, unknown> = {};
+    try {
+      for (const unit of units) {
+        if (unit.leaf !== undefined) {
+          const leaf = unit.leaf;
 
-      for (const { alias } of items) {
-        out[alias] = results.get(alias);
+          items.push({
+            alias: unit.alias,
+            key: unit.key,
+            src: unit.src,
+            participation: participations[leafIndex++],
+            start: () => (leaf as AssetLoadHandle).loaded,
+          });
+        } else if (unit.canonical !== undefined) {
+          const canonical = unit.canonical;
+          const participation = this._residency._participate(canonical, claimer);
+          const unitOptions = unit.options;
+          const parse = unit.parse;
+
+          participations.push(participation);
+          items.push({
+            alias: unit.alias,
+            key: unit.key,
+            src: unit.src,
+            participation,
+            start: () => {
+              const loading = this._residency._loadSingle(canonical, unitOptions);
+
+              return parse === undefined ? loading : loading.then(raw => parseAssetValue(raw, parse));
+            },
+          });
+        } else {
+          const failure = unit.failure ?? new Error(`The asset at "${unit.key}" could not be resolved.`);
+
+          items.push({ alias: unit.alias, key: unit.key, src: unit.src, participation: undefined, start: () => Promise.reject(failure) });
+        }
+      }
+    } catch (error) {
+      this._cancelParticipations(participations);
+
+      throw error;
+    }
+
+    return this._createItemQueue(
+      claimer,
+      items,
+      participations,
+      results => {
+        if (shape === 'single') {
+          return results.get('0');
+        }
+
+        if (shape === 'array') {
+          return units.map(unit => results.get(unit.alias));
+        }
+
+        return Object.fromEntries(candidates.map(([key], index) => [key, results.get(String(index))]));
+      },
+      !background,
+    );
+  }
+
+  private _isLoadEntry(input: unknown): boolean {
+    return typeof input === 'string' || _readMeta(input) !== undefined || _isAssetDescriptor(input);
+  }
+
+  /** Normalize one descriptor to a leaf to adopt (background) or a canonical request to load. */
+  private _descriptorUnit(alias: string, key: string, descriptor: AssetDescriptor, background: boolean, keyed: boolean): LoadUnit {
+    const label = typeof descriptor.source === 'string' ? descriptor.source : _describeTypeReference(descriptor.type);
+    const batchKey = keyed ? key : label;
+    const resolved = this._resolveDescriptor(descriptor);
+
+    if (resolved === undefined) {
+      if (typeof descriptor.type !== 'string') {
+        throw this._unknownDescriptorType(descriptor.type, 'load()');
       }
 
-      return out;
-    });
+      // Reported through the queue like a fetch failure: an id may name a type
+      // this application simply did not install.
+      return { alias, key: batchKey, src: label, failure: this._unknownDescriptorType(descriptor.type, 'load()') };
+    }
+
+    const assetType = resolved.installed.type;
+    const { options } = resolved;
+    const parse = this._descriptorParse(resolved);
+
+    if (background) {
+      if (typeof resolved.source !== 'string') {
+        throw new TypeError(`Loader: ${label} has no string source, so it has no placeholder to load at background priority.`);
+      }
+
+      if (assetType.leaf === 'none') {
+        throw new Error(
+          `Asset type "${assetType.id}" has no placeholder, so "${resolved.source}" cannot load at background priority. Load it at normal priority.`,
+        );
+      }
+
+      const leafOptions = parse === undefined ? options : { ...options, parse };
+
+      return {
+        alias,
+        key: batchKey,
+        src: resolved.source,
+        leaf: createLeaf(assetType.leaf as AssetLeaf<unknown>, assetType.id, resolved.source, leafOptions),
+      };
+    }
+
+    const canonical = this._canonicalizeDescriptor(resolved, descriptor);
+
+    return {
+      alias,
+      key: batchKey,
+      src: label,
+      canonical,
+      options,
+      ...(parse !== undefined && { parse }),
+    };
+  }
+
+  /** Normalize one load entry to a leaf to adopt or a canonical request to load. */
+  private _loadUnit(alias: string, key: string, entry: unknown, background: boolean, keyed: boolean): LoadUnit {
+    const batchKey = (src: string): string => (keyed ? key : src);
+
+    const meta = _readMeta(entry);
+
+    if (meta !== undefined) {
+      return { alias, key: batchKey(meta.src), src: meta.src, leaf: entry as object };
+    }
+
+    if (_isAssetDescriptor(entry)) {
+      return this._descriptorUnit(alias, key, entry, background, keyed);
+    }
+
+    if (typeof entry !== 'string') {
+      throw new TypeError(`The asset at "${key}" must be a path, an asset handle or an asset descriptor ({ type, source, ...options }).`);
+    }
+
+    const resolved = this._resolveBarePath(entry);
+    const options = this._barePathOptions(resolved.type, resolved.source);
+
+    if (background) {
+      const leaf = this._typeRegistry.leafFor(resolved.type);
+
+      if (leaf === undefined || leaf === 'none') {
+        throw new Error(
+          `Asset type "${resolved.type}" has no placeholder, so "${entry}" cannot load at background priority. Load it at normal priority.`,
+        );
+      }
+
+      return { alias, key: batchKey(entry), src: entry, leaf: createLeaf(leaf, resolved.type, entry, options) };
+    }
+
+    // Canonicalized from the logical path, not the variant selected for it: the
+    // selection happens again inside, and a saved reference repeats this name.
+    return { alias, key: batchKey(entry), src: entry, canonical: this._canonicalize(resolved.ctor, entry, options), options };
   }
 
   // -----------------------------------------------------------------------
@@ -962,7 +1233,10 @@ export class Loader {
 
   /**
    * Sets the maximum number of simultaneous background-queue fetches.
-   * Takes effect on the next {@link awaitBackground} call or `load(..., { background })`.
+   * Requires a nonnegative integer; zero pauses queued fetches.
+   * Takes effect at the next background-queue drain - on completion of a
+   * running fetch, on enqueue, or on {@link awaitBackground} - and does not
+   * start or abort a fetch that is already running.
    */
   public setConcurrency(n: number): this {
     this._residency.setConcurrency(n);
@@ -1016,7 +1290,7 @@ export class Loader {
    * When such a fetch DOES fail, a **development build** logs a one-time
    * (per-source) warning naming the literal path and how to fix it, so the 404
    * is no longer completely silent; production builds stay quiet. For a dynamic
-   * source, use `get(Asset.type('texture', dynamicPath))`.
+   * source, use `get({ type: Texture, source: dynamicPath })`.
    */
   public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
 
@@ -1029,29 +1303,24 @@ export class Loader {
   public get<M extends Record<string, CatalogEntry>>(catalog: Assets<M>): InferAssetsProperties<M>;
 
   /**
-   * Seamless/value access from an `Asset.type(...)` descriptor -
-   * the replacement for the removed `get(Type, dynamicSource)` form. Builds and
+   * Seamless/value access from a descriptor with a string source. Builds and
    * adopts the descriptor's handle-hybrid leaf: a resource type yields its
-   * heal-in-place handle, a value type a stable {@link AssetRef}. A type with
-   * neither a seamless adapter nor a value channel throws with guidance to use
-   * `load(Asset.type(...))`.
+   * heal-in-place handle, a value type a stable {@link AssetRef}. A type without
+   * a placeholder, or a descriptor without a string source, is rejected; load
+   * those with {@link load} instead.
    *
-   * The return type follows the {@link ValueAsset} brand (as {@link InferCatalogLeaf}
-   * does): a value-type descriptor (`Asset.type<T>('json', ...)`) returns
-   * `AssetRef<T>` - even for an object payload - while a resource-type descriptor
-   * returns the resource itself, so the type always matches the runtime value.
-   * Both come back BRANDED, mirroring the `_assetMeta` stamp `createLeaf` applies,
-   * so the returned leaf can be fed straight back into a single-leaf `load(...)`.
+   * The leaf comes back branded, mirroring the stamp a catalog leaf carries, so
+   * it can be fed straight back into a single-leaf `load(...)`.
    *
    * Unlike bare-path `get('x.png')`, this form is **not instance-deduped by
-   * source**: each call builds a fresh leaf, so repeated `get(Asset.type(type, sameSrc))`
-   * accumulates distinct handles (all healing to the same deduped backend
+   * source**: each call builds a fresh leaf, so repeated `get({ type, source })`
+   * calls accumulate distinct handles (all healing to the same deduped backend
    * payload). It is the dynamic-source escape hatch - capture the handle once.
    */
-  // A materialized VALUE LEAF resolves exactly like a value descriptor - it is
-  // adopted and handed back unchanged - so both share one signature.
-  public get<T>(asset: ValueAsset<T> | CatalogValueLeaf<T>): CatalogValueLeaf<T>;
-  public get<T>(asset: ResourceAsset<T>): CatalogResourceLeaf<T>;
+  public get<const D extends LocatorAssetDescriptor>(descriptor: D & ValidatedLeafDescriptor<D>): AssetDescriptorLeaf<D>;
+
+  /** Adopts a single value leaf (an `Assets.from()` property) and returns it unchanged. */
+  public get<T>(leaf: CatalogValueLeaf<T>): CatalogValueLeaf<T>;
 
   /**
    * Adopts a single handle-hybrid leaf (an `Assets.from()` property) and returns
@@ -1070,7 +1339,7 @@ export class Loader {
   /**
    * Claimed variant of {@link get}: identical resolution, but each resolved key
    * is claimed under `claimer` (refcount). The public {@link get} delegates here
-   * under the app-lifetime {@link _rootClaimer}; the scene-scoped loader proxy
+   * under the app-lifetime {@link _appScope}; the scene-scoped loader proxy
    * passes its own scope. `_claim` runs AFTER `AssetResidency._getSeamless`/
    * `_getRef` so an evicted key's re-fetch is driven from here (the re-armed
    * handle reads `'loading'`, which `_getSeamless` alone would not re-fetch).
@@ -1082,7 +1351,7 @@ export class Loader {
     if (input instanceof AssetsImpl) {
       const out: Record<string, unknown> = {};
 
-      const entries = Object.entries((input as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
+      const entries = Object.entries((input as AssetsImpl<Record<string, CatalogEntry>>).entries) as Array<[string, object]>;
       this._residency._bindLeaves(entries.map(([, leaf]) => leaf));
 
       for (const [k, leaf] of entries) {
@@ -1093,27 +1362,34 @@ export class Loader {
       return out;
     }
 
-    // Single `Asset.type(...)` descriptor (e.g. `get(Asset.type('json', 'x.json'))` /
-    // `get(Asset.type('texture', dynamicPath))`) - build its handle-hybrid leaf from the
-    // config, adopt it, and return it. A value type yields an AssetRef, a
-    // resource type the seamless placeholder handle. Mirrors `load`'s AssetImpl
-    // branch and the single-meta-leaf path below. Must precede the string branch
-    // (an AssetImpl carries no stamped meta, so the guard above misses it).
-    if (input instanceof AssetImpl) {
+    // A descriptor builds and adopts a fresh handle-hybrid leaf: a value type
+    // yields an AssetRef, a resource type its heal-in-place placeholder.
+    if (_isAssetDescriptor(input)) {
       if (options !== undefined) {
-        throw new Error('Loader: get(Asset.type(...), options) is not supported. Put per-asset options in Asset.type(type, path, options).');
+        throw new Error('Loader: get(descriptor, options) is not supported. Put per-asset options on the descriptor.');
       }
 
-      const { type, source: src, ...rest } = input._config;
-      const opts = Object.keys(rest).length > 0 ? rest : undefined;
+      const descriptor = input;
+      const resolved = this._requireDescriptor(descriptor, 'get()');
+      const assetType = resolved.installed.type;
 
-      let leaf: object;
-      try {
-        leaf = createLeaf(input._assetType?.leaf ?? this._typeRegistry.leafFor(type), type, src, opts);
-      } catch {
-        throw new Error(`Loader: get() hands out a catalog leaf, and the "${type}" type has none - use load(Asset.type('${type}', ...)) instead.`);
+      if (typeof resolved.source !== 'string') {
+        throw new TypeError(
+          `Loader: get() hands out a placeholder keyed by a locator, and this "${assetType.id}" descriptor has no string source. Load it with load() instead.`,
+        );
       }
 
+      if (assetType.leaf === 'none') {
+        throw new Error(`Loader: get() hands out a catalog leaf, and the "${assetType.id}" type has none - load it with load() instead.`);
+      }
+
+      const parse = this._descriptorParse(resolved);
+      const leaf = createLeaf(
+        assetType.leaf as AssetLeaf<unknown>,
+        assetType.id,
+        resolved.source,
+        parse === undefined ? resolved.options : { ...resolved.options, parse },
+      );
       this._adopt(leaf, claimer);
 
       return leaf;
@@ -1129,14 +1405,14 @@ export class Loader {
     // Anything left must be a bare path string: an object that reaches here is
     // neither a catalog, a descriptor, nor an adopted leaf.
     if (typeof input !== 'string') {
-      throw new Error('Loader: get() accepts a path string, an Asset.type(...) descriptor, an Assets catalog, or one of its leaves.');
+      throw new Error('Loader: get() accepts a path string, an asset descriptor, an Assets catalog, or one of its leaves.');
     }
 
     // Bare path string - normalize it to a `{ type, source }` descriptor, then
     // hand it to the SAME source-keyed dedup the catalog leaves use: a seamless
     // type yields its shared heal-in-place handle, a value type its shared
     // AssetRef. (This is deliberately NOT routed through `createLeaf` like the
-    // `Asset.type(...)` branch above - a bare path is instance-deduped by
+    // descriptor branch above - a bare path is instance-deduped by
     // source, and `createLeaf` mints a fresh leaf per call.)
     const { type, source: path, ctor } = this._resolveBarePath(input);
 
@@ -1157,7 +1433,10 @@ export class Loader {
       return ref;
     }
 
-    throw new Error(`Loader: type "${type}" inferred from "${path}" hands out no catalog leaf - ` + `use load(Asset.type('${type}', '${path}')) instead.`);
+    throw new Error(
+      `Loader: type "${type}" inferred from "${path}" hands out no catalog leaf - ` +
+        `use load({ type: '${type}', source: '${path}' }) instead.`,
+    );
   }
 
   /**
@@ -1172,7 +1451,7 @@ export class Loader {
    *
    * Invalid usage still fails loudly, exactly as it does on `get`: a path
    * whose extension resolves to no registered type, or an input that is
-   * neither a path string nor an `Asset.type(...)` descriptor, throws. Only
+   * neither a path string nor an asset descriptor, throws. Only
    * "the key is fine, nothing is stored under it" comes back as `undefined`.
    *
    * A catalog leaf needs no `peek`: the leaf *is* the handle, so read its
@@ -1192,97 +1471,162 @@ export class Loader {
    * entry reports `undefined` here and is indistinguishable from "not stored".
    */
   public peek<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): ResourceForKind<KindByPath<S>> | undefined;
-  /** Pure in-memory lookup from an `Asset.type(...)` descriptor - see the path overload. */
-  public peek<T>(asset: Asset<T>): T | undefined;
+  /**
+   * Looks up a resident resource without fetching or claiming it. A descriptor's
+   * `parse` runs synchronously on the stored value whenever the resource is resident.
+   * A parser error propagates to the caller.
+   */
+  public peek<const D extends AssetDescriptor>(descriptor: D & ValidatedAssetDescriptor<D>): AssetDescriptorResource<D> | undefined;
   public peek(input: string | object): unknown {
     let ctor: AssetConstructor;
     let source: string;
     let options: unknown;
 
-    if (input instanceof AssetImpl) {
-      const { type, source: src, ...rest } = input._config;
-      const resolved = this._typeRegistry.resolveTypeName(type);
-
-      if (resolved === undefined) {
-        throw new Error(`Loader: peek(Asset.type('${String(type)}', ...)) - no asset type "${String(type)}" is installed on this application.`);
-      }
-
-      ctor = resolved;
-      source = src;
+    if (_isAssetDescriptor(input)) {
+      const descriptor = input;
+      const resolved = this._requireDescriptor(descriptor, 'peek()');
+      const parse = this._descriptorParse(resolved);
       // Identity-relevant options are part of the canonical key, so a descriptor
       // carrying them must peek the key it would actually load.
-      options = Object.keys(rest).length > 0 ? rest : undefined;
-    } else if (typeof input === 'string') {
-      ctor = this._resolveBarePath(input).ctor;
+      const { key } = this._canonicalizeDescriptor(resolved, descriptor);
+
+      if (!this._residency._hasStored(key)) {
+        return undefined;
+      }
+
+      const raw = this._residency._peekResource(key);
+
+      return parse === undefined ? (raw ?? undefined) : parseAssetValue(raw, parse);
+    }
+
+    if (typeof input === 'string') {
+      const resolved = this._resolveBarePath(input);
+
+      ctor = resolved.ctor;
       source = input;
+      options = this._barePathOptions(resolved.type, resolved.source);
     } else {
       throw new Error(
-        'Loader: peek() accepts a path string or an Asset.type(...) descriptor. A catalog leaf is already a handle - read its loadState instead.',
+        'Loader: peek() accepts a path string or an asset descriptor. A catalog leaf is already a handle - read its loadState instead.',
       );
     }
 
     const { key } = this._canonicalize(ctor, source, options);
 
-    return this._residency._hasStored(key) ? (this._residency._peekResource(key) ?? undefined) : undefined;
+    return this._residency._peekResource(key) ?? undefined;
   }
 
   /**
    * Backs {@link LoaderScope.release}: resolve every accepted release form to a
    * canonical key and drop `claimer`'s claim on it.
    *
-   * The handle form resolves through an internal handle → key map populated only
-   * for adopted seamless handles and value-refs. A materialized-but-never-adopted
-   * catalog leaf is recognized by its meta stamp and stays an idempotent no-op,
-   * as does a handle this loader has EVER issued - that check is deliberately
-   * independent of current claim state, so the same object never throws or not
-   * depending on unrelated internal teardown ordering.
+   * A never-adopted catalog leaf and a previously issued handle or direct
+   * resource whose key has been removed are both safe to release again.
    * @internal
    */
-  public _releaseFrom(claimer: LoaderScope, handleOrType: object | AssetConstructor, source?: string): void {
-    if (typeof source === 'string') {
-      this._release(this._canonicalize(handleOrType as AssetConstructor, source).key, claimer);
+  public _releaseFrom(claimer: LoaderScope, handleOrType: unknown): void {
+    if (typeof handleOrType === 'string') {
+      const { type, source: selected, ctor } = this._resolveBarePath(handleOrType);
 
+      this._release(this._canonicalize(ctor, handleOrType, this._barePathOptions(type, selected)).key, claimer);
+
+      return;
+    }
+
+    if ((typeof handleOrType !== 'object' && typeof handleOrType !== 'function') || handleOrType === null) {
+      throw new TypeError(
+        `LoaderScope.release(): ${String(handleOrType)} has no claim identity. Release a path, a handle, a descriptor or a catalog instead.`,
+      );
+    }
+
+    // A directly loaded record or array must be released as a resource before
+    // attempting to interpret it as a group.
+    const key = this._residency._getHandleKey(handleOrType);
+    const directKeys = this._residency._getDirectKeys(handleOrType, claimer);
+
+    if (key !== undefined) {
+      this._release(key, claimer);
+    }
+
+    if (directKeys !== undefined) {
+      for (const directKey of directKeys) {
+        // A disposer may release and restart another direct claim synchronously.
+        if (this._residency._peekResource(directKey) === handleOrType) {
+          this._release(directKey, claimer);
+        }
+      }
+
+      return;
+    }
+
+    if (key !== undefined || this._residency._wasEverRegisteredHandle(handleOrType)) {
+      return;
+    }
+
+    if (typeof handleOrType === 'object' && this._releaseGroup(claimer, handleOrType)) {
       return;
     }
 
     // A catalog releases each of its leaves. A never-adopted leaf has no
     // registered key, so its release is a silent no-op.
     if (handleOrType instanceof AssetsImpl) {
-      for (const leaf of Object.values((handleOrType as AssetsImpl<Record<string, AssetInput>>).entries)) {
+      for (const leaf of Object.values((handleOrType as AssetsImpl<Record<string, CatalogEntry>>).entries)) {
         this._releaseFrom(claimer, leaf);
       }
 
       return;
     }
 
-    // A descriptor resolves to the same canonical key the load path claimed it
-    // under (see `_createLoadingQueue`).
-    if (handleOrType instanceof AssetImpl) {
-      const asset = handleOrType as Asset<unknown>;
-      const ctor = this._typeRegistry.resolveTypeName(asset.type);
+    if (_readMeta(handleOrType) === undefined) {
+      throw new Error('LoaderScope.release(): this object has no claim identity. Release its descriptor, catalog leaf or catalog instead.');
+    }
+  }
 
-      if (ctor) {
-        const { type: _type, source: assetSource, ...rest } = asset._config;
-        const options = Object.keys(rest).length > 0 ? rest : undefined;
+  /**
+   * Drop `claimer`'s claim on the key a descriptor loads under. A key it does
+   * not hold is a no-op, and so is a type this loader never installed: a load
+   * of it failed through its queue, so nothing can be held under it.
+   */
+  private _releaseDescriptor(claimer: LoaderScope, descriptor: AssetDescriptor): void {
+    const resolved = this._resolveDescriptor(descriptor);
 
-        this._release(this._canonicalize(ctor, assetSource, options).key, claimer);
+    if (resolved !== undefined) {
+      this._release(this._canonicalizeDescriptor(resolved, descriptor).key, claimer);
+    }
+  }
+
+  /** Release a descriptor, an array or a plain group. */
+  private _releaseGroup(claimer: LoaderScope, input: object): boolean {
+    if (_isAssetDescriptor(input)) {
+      this._releaseDescriptor(claimer, input);
+
+      return true;
+    }
+
+    if (Array.isArray(input)) {
+      for (const entry of input) {
+        this._releaseFrom(claimer, entry);
       }
 
-      return;
+      return true;
     }
 
-    const key = this._residency._getHandleKey(handleOrType);
+    const prototype: unknown = Object.getPrototypeOf(input);
 
-    if (key !== undefined) {
-      this._release(key, claimer);
-      return;
+    if ((prototype !== Object.prototype && prototype !== null) || _readMeta(input) !== undefined) {
+      return false;
     }
 
-    if (_readMeta(handleOrType) === undefined && !this._residency._wasEverRegisteredHandle(handleOrType)) {
-      throw new Error(
-        'LoaderScope.release(): this object has no claim identity. Release its descriptor, catalog leaf/catalog, or the (type, source) pair instead.',
-      );
+    // Object.values silently drops symbol keys, leaking their claims.
+    const record = input as Record<string | symbol, unknown>;
+
+    for (const key of Reflect.ownKeys(record)) {
+      if (Object.getOwnPropertyDescriptor(record, key)?.enumerable === true) {
+        this._releaseFrom(claimer, record[key]);
+      }
     }
+
+    return true;
   }
 
   /**
@@ -1355,7 +1699,90 @@ export class Loader {
    * @internal
    */
   public _peekResource(type: AssetConstructor, source: string, options?: unknown): unknown {
-    return this._residency._peekResource(this._canonicalize(type, source, options).key);
+    return this._residency._peekResource(this._canonicalize(type, source, options).key) ?? null;
+  }
+
+  /** Give a serialized sampler a handle of its own, using only a resident payload. @internal */
+  public _leaseTextureView(
+    source: string,
+    options: Readonly<Record<string, unknown>>,
+  ): { readonly texture: Texture; readonly release: () => void } | null {
+    if (this._destroyed) {
+      return null;
+    }
+
+    const { key } = this._canonicalize(Texture, source, options);
+
+    if (!(this._residency._peekResource(key) instanceof Texture)) {
+      return null;
+    }
+
+    const texture = createLeaf(this._typeRegistry.getSeamlessAdapter(Texture), 'texture', source, options) as Texture;
+    const scope = this.createScope();
+
+    const release = (): void => {
+      this._residency._forgetDeferredHandle(key, texture);
+
+      try {
+        texture.destroy();
+      } finally {
+        scope.destroy();
+      }
+    };
+
+    try {
+      this._adopt(texture, scope);
+
+      return { texture, release };
+    } catch (error) {
+      release();
+
+      throw error;
+    }
+  }
+
+  /** @internal */
+  public _matchesAssetType(type: AssetConstructor, id: string): boolean {
+    return this._typeRegistry.resolveTypeName(id) === type;
+  }
+
+  /** @internal */
+  public _referenceType(type: AssetConstructor, source: string, id?: string): string {
+    if (id !== undefined && !this._typeRegistry.hasAssetType(id)) {
+      throw new Error(`Cannot resolve asset "${source}": no asset type "${id}" is installed.`);
+    }
+
+    const expected = this._typeRegistry._typeIdentity(type);
+
+    if (id !== undefined && id !== expected) {
+      throw new TypeError(`Cannot resolve asset "${source}" of type "${id}" as "${expected}".`);
+    }
+
+    return expected;
+  }
+
+  /** @internal */
+  public _createReferenceLeaf<T>(id: string, source: string, options?: unknown): CatalogResourceLeaf<T> | CatalogValueLeaf<T> {
+    return createLeaf(this._typeRegistry.leafFor(id), id, source, options) as CatalogResourceLeaf<T> | CatalogValueLeaf<T>;
+  }
+
+  /** Reserve only after reading succeeds so a rejected document cannot leave claims. @internal */
+  public _reserveReferenceLeaves(leaves: ReadonlyMap<string, object>, owner: LoaderScope = this._appScope): void {
+    if (leaves.size === 0) {
+      return;
+    }
+
+    const scope = owner.createScope();
+
+    try {
+      for (const leaf of leaves.values()) {
+        this._residency._adopt(leaf, scope, false, undefined, true);
+      }
+    } catch (error) {
+      scope.destroy();
+
+      throw error;
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -1449,7 +1876,9 @@ export class Loader {
    * Tears down the loader and all resources it owns.
    *
    * Clears all in-memory assets and in-flight tracking, and disconnects all
-   * signals. Also calls `destroy?.()` on every installed type's factory.
+   * signals. Pending handles and refs reject with an `AbortError`.
+   * Also calls `destroy?.()` on every installed type's factory.
+   * Completes teardown before rethrowing the first cleanup failure, if any.
    *
    * Cache stores are destroyed only when this loader was given the stores
    * themselves, and therefore owns the cache it wrapped them in. An
@@ -1458,11 +1887,25 @@ export class Loader {
    * application is done with it.
    */
   public destroy(): void {
+    if (this._destroyed) {
+      return;
+    }
+
+    this._destroyed = true;
+    this._assetTypes._close();
+
     // Order matters: factory teardown must run after store teardown (via
-    // this._decoder.destroy()) - see the regression test in loader.test.ts.
-    this._decoder.destroy();
-    this._typeRegistry.destroy();
-    this._residency.destroy();
+    // this._decoder.destroy()). Pending handles still need their registered adapters
+    // while residency settles them, before factory teardown clears the registry.
+    const errors: unknown[] = [];
+
+    for (const stage of [this._liveLoadScope, this._decoder, this._residency, this._typeRegistry]) {
+      try {
+        stage?.destroy();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
 
     this.onProgress.destroy();
     this.onLoaded.destroy();
@@ -1472,6 +1915,10 @@ export class Loader {
     this.onLoadComplete.destroy();
     this.onLoadError.destroy();
     this.onCacheError.destroy();
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -1495,6 +1942,16 @@ export class Loader {
    */
   public _adopt(handle: object, claimer: LoaderScope, background = false): void {
     this._residency._adopt(handle, claimer, background);
+  }
+
+  /** Validate a prospective claim without changing the handle or its owner. @internal */
+  public _assertLeafOwner(leaf: object): void {
+    this._residency._assertLeafOwner(leaf);
+  }
+
+  /** @internal */
+  public get _ownershipRevision(): number {
+    return this._residency._ownershipRevision;
   }
 
   /**
@@ -1527,64 +1984,6 @@ export class Loader {
     this._residency._releaseScope(claimer);
   }
 
-  private _createLoadingQueue<T>(
-    claimer: LoaderScope,
-    items: Array<{ alias: string; asset: Asset<unknown> }>,
-    buildResult: (results: Map<string, unknown>) => T,
-  ): LoadingQueue<T> {
-    const results = new Map<string, unknown>();
-    const participations: ClaimParticipation[] = [];
-    let notifyFn: ((success: boolean) => void) | null = null;
-
-    const itemPromises = items.map(({ alias, asset }) => {
-      this._onFgBatchStart(claimer, alias, asset.source);
-      const ctor = this._typeRegistry.resolveTypeName(asset.type);
-
-      if (!ctor) {
-        // Must call _notifyItem(false) so LoadingProgress doesn't remain stuck.
-        return Promise.reject<unknown>(new Error(`No asset type "${asset.type}" is installed on this application.`)).then(
-          () => {
-            notifyFn?.(true);
-          },
-          (error: unknown) => {
-            notifyFn?.(false);
-            this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
-            throw error;
-          },
-        );
-      }
-
-      const { type: _type, source: assetSource, ...rest } = asset._config;
-      const options = Object.keys(rest).length > 0 ? rest : undefined;
-      const canonical = this._canonicalize(ctor, assetSource, options);
-
-      const participation = this._residency._participate(canonical, claimer);
-      participations.push(participation);
-
-      return this._residency._loadSingle(canonical, options).then(
-        resource => {
-          this._residency._settleParticipation(participation);
-          results.set(alias, resource);
-          notifyFn?.(true);
-          this._onFgBatchSettled(claimer, alias, true);
-        },
-        (error: unknown) => {
-          this._residency._settleParticipation(participation);
-          notifyFn?.(false);
-          this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
-          throw error;
-        },
-      );
-    });
-
-    const promise = Promise.all(itemPromises).then(() => buildResult(results));
-
-    const queue = new LoadingQueue<T>(promise, items.length, () => this._cancelParticipations(participations));
-    notifyFn = queue._notifyItem.bind(queue);
-
-    return queue;
-  }
-
   /**
    * Adopt every leaf of a load under `claimer`, opening one participation per
    * leaf in entry order. A leaf that cannot be adopted withdraws the
@@ -1601,57 +2000,102 @@ export class Loader {
       }
     } catch (error) {
       this._cancelParticipations(participations);
+
       throw error;
     }
 
     return participations;
   }
 
-  /**
-   * Progress-aware queue over already-{@link _adopt}ed handle-hybrid leaves.
-   *
-   * Mirrors {@link _createLoadingQueue}'s progress/settle machinery, but the
-   * fetch is already driven by `_adopt`; each item's promise is simply the
-   * leaf's own readiness promise (`leaf.loaded` - `Promise<this>` for a resource
-   * handle, `Promise<T>` for an `AssetRef`). No `_claim` here: adoption already
-   * opened one participation per entry, in entry order, and each settles with
-   * its own leaf. `buildResult` shapes the resolved values into the return.
-   * @internal
-   */
+  /** Progress-aware queue over already-{@link _adopt}ed leaves, each resolving to its own readiness value. */
   private _createAdoptedQueue<T>(
     claimer: LoaderScope,
     entries: Array<[string, object]>,
     participations: readonly ClaimParticipation[],
     buildResult: (results: Map<string, unknown>) => T,
+    foreground = true,
+  ): LoadingQueue<T> {
+    const items = entries.map(([alias, leaf], index): QueueItem => ({
+      alias,
+      key: alias,
+      src: _readMeta(leaf)?.src ?? alias,
+      participation: participations[index],
+      start: () => (leaf as AssetLoadHandle).loaded,
+    }));
+
+    return this._createItemQueue(claimer, items, participations, buildResult, foreground);
+  }
+
+  /**
+   * Progress-aware queue over load items whose claims are already open. Each
+   * item settles its own participation, so a cancelled queue withdraws only
+   * the stakes still pending. `buildResult` shapes the resolved values.
+   */
+  private _createItemQueue<T>(
+    claimer: LoaderScope,
+    items: readonly QueueItem[],
+    participations: readonly ClaimParticipation[],
+    buildResult: (results: Map<string, unknown>) => T,
+    foreground = true,
   ): LoadingQueue<T> {
     const results = new Map<string, unknown>();
     let notifyFn: ((success: boolean) => void) | null = null;
+    let cancellation: DOMException | undefined;
+    let rejectCancelled!: (reason: DOMException) => void;
+    const cancelled = new Promise<never>((_resolve, reject) => {
+      rejectCancelled = reject;
+    });
 
-    const itemPromises = entries.map(([alias, leaf], index) => {
-      const src = _readMeta(leaf)?.src ?? alias;
-      const participation = participations[index];
-      this._onFgBatchStart(claimer, alias, src);
-      const loaded = (leaf as { loaded: Promise<unknown> }).loaded;
+    const itemPromises = items.map(({ alias, key, src, participation, start }) => {
+      if (foreground) {
+        this._onFgBatchStart(claimer, key, src);
+      }
 
-      return loaded.then(
-        value => {
-          if (participation !== undefined) this._residency._settleParticipation(participation);
-          results.set(alias, value);
-          notifyFn?.(true);
-          this._onFgBatchSettled(claimer, alias, true);
-        },
-        (error: unknown) => {
-          if (participation !== undefined) this._residency._settleParticipation(participation);
-          notifyFn?.(false);
-          this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
-          throw error;
-        },
-      );
+      const failItem = (error: unknown): never => {
+        if (participation !== undefined) {
+          this._residency._settleParticipation(participation);
+        }
+
+        notifyFn?.(false);
+
+        if (foreground) {
+          this._onFgBatchSettled(claimer, key, false, this._settleError(error));
+        }
+
+        throw error;
+      };
+
+      return Promise.race([start(), cancelled]).then(value => {
+        if (cancellation !== undefined) {
+          return failItem(cancellation);
+        }
+
+        if (participation !== undefined) {
+          this._residency._settleParticipation(participation);
+        }
+
+        results.set(alias, value);
+        notifyFn?.(true);
+
+        if (foreground) {
+          this._onFgBatchSettled(claimer, key, true);
+        }
+      }, failItem);
     });
 
     const promise = Promise.all(itemPromises).then(() => buildResult(results));
 
-    const queue = new LoadingQueue<T>(promise, entries.length, () => this._cancelParticipations(participations));
+    const queue = new LoadingQueue<T>(promise, items.length, () => {
+      cancellation = new DOMException('This operation was aborted', 'AbortError');
+
+      try {
+        this._cancelParticipations(participations);
+      } finally {
+        if (items.length > 0) {
+          rejectCancelled(cancellation);
+        }
+      }
+    });
     notifyFn = queue._notifyItem.bind(queue);
 
     return queue;

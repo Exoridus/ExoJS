@@ -1,12 +1,21 @@
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
+import type { InteractionEvent } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
 import { Text } from '#rendering/text/Text';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import type { UIBackground, UIBackgroundInput, UIBackgroundOptions, UIFillPatch, UIWidgetState } from './theme';
-import { applyUIFillPatch, backgroundOptionsFrom, createUIBackground, resolveUISkin } from './theme';
+import {
+  applyUIFillPatch,
+  assertSkinSetTextEffects,
+  backgroundOptionsFrom,
+  createUIBackground,
+  resolveUISkin,
+  themeSkinSet,
+  type UITheme,
+} from './theme';
 import { Widget } from './Widget';
 import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
@@ -60,7 +69,7 @@ export class Button extends Widget {
   private readonly _label: Text;
   private readonly _backgrounds: Partial<Record<UIWidgetState, UIBackground>> = {};
   private readonly _fills: Partial<Record<UIWidgetState, UIFillPatch>> = {};
-  private _textStyle: TextStyleOptions | null = null;
+  private _textStyle: Readonly<TextStyleOptions> | null = null;
   /** The skin text object last pushed into the label, for a cheap identity check per paint. */
   private _appliedText: TextStyleOptions | null = null;
   private _pointerInside = false;
@@ -79,10 +88,17 @@ export class Button extends Widget {
       const color = perState[state];
       const patch: { -readonly [Key in keyof UIFillPatch]: UIFillPatch[Key] } = {};
 
-      if (color !== undefined) patch.color = color.clone();
-      if (options.cornerRadius !== undefined) patch.cornerRadius = options.cornerRadius;
+      if (color !== undefined) {
+        patch.color = color.clone();
+      }
 
-      if (Object.keys(patch).length > 0) this._fills[state] = patch;
+      if (options.cornerRadius !== undefined) {
+        patch.cornerRadius = options.cornerRadius;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        this._fills[state] = patch;
+      }
     }
 
     if (options.skin !== undefined) {
@@ -98,15 +114,16 @@ export class Button extends Widget {
     }
 
     if (options.textColor !== undefined || options.fontSize !== undefined) {
-      this._textStyle = {
+      this._textStyle = Object.freeze({
         ...(options.textColor !== undefined && { fillColor: options.textColor }),
         ...(options.fontSize !== undefined && { fontSize: options.fontSize }),
-      };
+      });
     }
 
     this._appliedText = resolveUISkin(this.theme.button, 'normal').text;
     this._label = new Text(options.label ?? '', { ...this._appliedText, ...this._textStyle });
 
+    this._label._onLayout = this._positionLabel;
     this.addChild(this._label);
 
     this.interactive = true;
@@ -130,7 +147,7 @@ export class Button extends Widget {
 
   public set label(value: string) {
     this._label.text = value;
-    this._positionLabel();
+    this._label.syncDirty();
   }
 
   /** The node painting the background, or `null` while it paints nothing. */
@@ -186,7 +203,7 @@ export class Button extends Widget {
   }
 
   /** The text-style overrides this button carries, or `null` when it takes the skin's. */
-  public get textStyleOverrides(): TextStyleOptions | null {
+  public get textStyleOverrides(): Readonly<TextStyleOptions> | null {
     return this._textStyle;
   }
 
@@ -238,10 +255,15 @@ export class Button extends Widget {
 
   /**
    * Override label text style on top of the skin's; `null` returns to it.
-   * Layout-invalidating - the label is re-measured and re-centered.
+   * Layout-invalidating - the label is re-measured and re-centered. An
+   * outline or shadow the label cannot draw throws a text effect error and
+   * keeps the previous overrides.
    */
   public setTextStyle(style: TextStyleOptions | null): this {
-    this._textStyle = style === null ? null : { ...this._textStyle, ...style };
+    const next = style === null ? null : Object.freeze({ ...this._textStyle, ...style });
+    assertSkinSetTextEffects(themeSkinSet(this.theme, 'button'), next, this._label);
+
+    this._textStyle = next;
     this._appliedText = null;
     this._invalidateLayout();
 
@@ -258,8 +280,8 @@ export class Button extends Widget {
     this._refreshState();
   };
 
-  private readonly _onPointerDown = (): void => {
-    if (this.effectiveEnabled) {
+  private readonly _onPointerDown = (event: InteractionEvent): void => {
+    if (this.effectiveEnabled && event.button === 0) {
       this._setSkinState('pressed');
     }
   };
@@ -268,8 +290,8 @@ export class Button extends Widget {
     this._refreshState();
   };
 
-  private readonly _activate = (): void => {
-    if (this.effectiveEnabled) {
+  private readonly _activate = (event: InteractionEvent): void => {
+    if (this.effectiveEnabled && event.button === 0) {
       this.onClick.dispatch(this);
     }
   };
@@ -309,14 +331,14 @@ export class Button extends Widget {
     this._refreshState();
   }
 
-  protected override _repaint(): void {
-    this._applyTextStyle();
-    this._surface.apply(this.backgroundIn(), this._uiWidth, this._uiHeight);
+  protected override _validateTheme(theme: UITheme): void {
+    assertSkinSetTextEffects(themeSkinSet(theme, 'button'), this._textStyle, this._label);
   }
 
-  protected override _relayout(): void {
-    super._relayout();
+  protected override _repaint(): void {
+    this._applyTextStyle();
     this._positionLabel();
+    this._surface.apply(this.backgroundIn(), this._uiWidth, this._uiHeight);
   }
 
   /**
@@ -333,18 +355,20 @@ export class Button extends Widget {
 
     this._appliedText = skinText;
     this._label.style = { ...skinText, ...this._textStyle };
-    this._positionLabel();
   }
 
   /** Center the label in the content box the skin's insets leave. */
-  private _positionLabel(): void {
+  private readonly _positionLabel = (): void => {
     const insets = resolveUISkin(this.theme.button, this._skinState).insets;
-    const bounds = this._label.getLocalBounds();
+    const bounds = this._label._fillBounds;
     const contentWidth = this._uiWidth - insets.left - insets.right;
     const contentHeight = this._uiHeight - insets.top - insets.bottom;
 
-    this._label.setPosition(insets.left + (contentWidth - bounds.width) / 2, insets.top + (contentHeight - bounds.height) / 2);
-  }
+    this._label.setPosition(
+      insets.left + (contentWidth - bounds.width) / 2 - bounds.x,
+      insets.top + (contentHeight - bounds.height) / 2 - bounds.y,
+    );
+  };
 
   public override destroy(): void {
     this._surface.destroy();

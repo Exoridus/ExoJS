@@ -6,6 +6,7 @@ import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Encoded } from '.
 import {
   backdropScene,
   bloom,
+  changingBloomScene,
   DARK,
   FAR_GLOW,
   INSIDE,
@@ -31,7 +32,10 @@ const withScene = async (filters: readonly Filter[], read: (pixel: (x: number, y
     root.destroy();
     texture.destroy();
     backend.destroy();
-    for (const filter of filters) filter.destroy();
+
+    for (const filter of filters) {
+      filter.destroy();
+    }
   }
 };
 
@@ -59,13 +63,52 @@ const withBackdrop = async (read: (pixel: (x: number, y: number) => RgbaTuple) =
     read((x, y) => readWebGl2Pixel(backend, x, y));
   } finally {
     root.destroy();
-    for (const texture of textures) texture.destroy();
+
+    for (const texture of textures) {
+      texture.destroy();
+    }
+
     backend.destroy();
     filter.destroy();
   }
 };
 
 describe('BloomFilter (WebGL2)', () => {
+  test('restores the halo after bypassing a settled scene', async () => {
+    const backend = await createWebGl2TestBackend(BLUR_SCENE_SIZE);
+    const { root, filtered, filter, redraw } = changingBloomScene();
+
+    const frame = (): void => {
+      redraw();
+      renderWebGl2Encoded(backend, root, CLEAR);
+    };
+
+    try {
+      for (let index = 0; index < 8; index++) {
+        frame();
+      }
+
+      expect(readWebGl2Pixel(backend, ...NEAR_GLOW)[0]).toBeGreaterThan(16);
+      filtered.filters = [];
+
+      for (let index = 0; index < 8; index++) {
+        frame();
+      }
+
+      expect(readWebGl2Pixel(backend, ...NEAR_GLOW)[0]).toBe(0);
+      filtered.filters = [filter];
+
+      for (let index = 0; index < 8; index++) {
+        frame();
+      }
+
+      expect(readWebGl2Pixel(backend, ...NEAR_GLOW)[0]).toBeGreaterThan(16);
+    } finally {
+      root.destroy();
+      backend.destroy();
+    }
+  });
+
   test('grows a halo around the bright square that falls off with distance', async () => {
     await withScene([bloom()], pixel => {
       const near = pixel(...NEAR_GLOW)[0]!;

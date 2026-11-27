@@ -111,6 +111,7 @@ interface DrawEntryOpts {
   bindKey?: number;
   ownMaterial?: boolean;
   aabb?: { minX: number; minY: number; maxX: number; maxY: number };
+  boundsStale?: boolean;
 }
 
 const createDrawEntry = (drawable: Drawable, opts: DrawEntryOpts = {}): DrawScopeEntry => {
@@ -128,6 +129,7 @@ const createDrawEntry = (drawable: Drawable, opts: DrawEntryOpts = {}): DrawScop
       zIndex: opts.zIndex ?? 0,
       material: mkMaterialKey(opts.pipelineKey ?? 100, opts.bindKey ?? 100, opts.ownMaterial ?? true),
       groupIndex: undefined,
+      boundsStale: opts.boundsStale ?? false,
       minX: aabb.minX,
       minY: aabb.minY,
       maxX: aabb.maxX,
@@ -199,6 +201,7 @@ const createRuntime = () => {
     },
     setRenderTarget(target) {
       currentTarget = target ?? root;
+
       return this;
     },
     pushScissorRect() {
@@ -224,10 +227,12 @@ const createRuntime = () => {
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     execute(pass) {
       pass.execute(this);
+
       return this;
     },
     flush() {
@@ -256,7 +261,9 @@ const getMaterials = (plan: RenderPlan) =>
   plan.passes[0].root.entries.filter((e: any) => e.kind === RenderEntryKind.Draw).map((e: any) => (e.command as DrawCommand).material);
 
 const getGroupIndices = (plan: RenderPlan) =>
-  plan.passes[0].root.entries.filter((e: any) => e.kind === RenderEntryKind.Draw).map((e: any) => (e.command as DrawCommand).groupIndex ?? 0);
+  plan.passes[0].root.entries
+    .filter((e: any) => e.kind === RenderEntryKind.Draw)
+    .map((e: any) => (e.command as DrawCommand).groupIndex ?? 0);
 
 describe('material grouping', () => {
   test('different material draws do not coalesce', () => {
@@ -385,7 +392,10 @@ describe('material grouping', () => {
     const b = new BoxDrawable('b');
 
     const plan = createPlan({
-      entries: [createDrawEntry(a, { pipelineKey: 100, bindKey: 100, zIndex: 0 }), createDrawEntry(b, { pipelineKey: 100, bindKey: 100, zIndex: 10 })],
+      entries: [
+        createDrawEntry(a, { pipelineKey: 100, bindKey: 100, zIndex: 0 }),
+        createDrawEntry(b, { pipelineKey: 100, bindKey: 100, zIndex: 10 }),
+      ],
     });
 
     RenderPlanOptimizer.optimize(plan);
@@ -449,6 +459,31 @@ describe('material grouping', () => {
     const groupIndices = getGroupIndices(plan);
 
     expect(groupIndices[0]).not.toBe(groupIndices[2]);
+  });
+
+  test('a stale snapshot extent is re-read from the drawable before the overlap test', () => {
+    const a = new BoxDrawable('a');
+    const b = new BoxDrawable('b');
+    const c = new BoxDrawable('c');
+
+    b.setLocalBounds(0, 0, 16, 16);
+
+    const plan = createPlan({
+      entries: [
+        createDrawEntry(a, { pipelineKey: 100, bindKey: 100, aabb: { minX: 0, minY: 0, maxX: 16, maxY: 16 } }),
+        createDrawEntry(b, {
+          pipelineKey: 200,
+          bindKey: 200,
+          boundsStale: true,
+          aabb: { minX: 50, minY: 50, maxX: 66, maxY: 66 },
+        }),
+        createDrawEntry(c, { pipelineKey: 100, bindKey: 100, aabb: { minX: 0, minY: 0, maxX: 16, maxY: 16 } }),
+      ],
+    });
+
+    RenderPlanOptimizer.optimize(plan);
+
+    expect(getMaterials(plan).map(material => material.pipelineKey)).toEqual([100, 200, 100]);
   });
 
   test('preserveDrawOrder disables overlap-aware reorder', () => {

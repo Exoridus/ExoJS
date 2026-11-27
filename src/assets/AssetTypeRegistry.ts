@@ -1,7 +1,10 @@
+import { logger } from '#core/Logger';
+
 import type { AssetConstructor } from './AssetConstructor';
 import type { AssetTypeName } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import type { AnyAssetType, AssetLeaf, AssetRequest } from './AssetType';
+import { AssetType } from './AssetType';
 import { normalizeExtension } from './extensions';
 import type { SeamlessAdapter } from './seamless';
 
@@ -48,6 +51,7 @@ interface PendingAssetType {
 export class AssetTypeRegistry {
   private readonly _byId = new Map<string, InstalledAssetType>();
   private readonly _byToken = new Map<AssetConstructor, InstalledAssetType>();
+  private readonly _usedTokens = new Set<AssetConstructor>();
   /** Suffixes claimed by an installed type. */
   private readonly _extensionTypes = new Map<string, AssetTypeName>();
   /** Explicit app-local overrides, written only by {@link registerType}. */
@@ -70,6 +74,36 @@ export class AssetTypeRegistry {
    * invalidate the validation its own set already passed.
    */
   public installAll(assetTypes: readonly AnyAssetType[]): void {
+    this._install(assetTypes);
+  }
+
+  /** Installs a definition or replaces the same class and id before any request uses them. @internal */
+  public define(type: AnyAssetType): void {
+    const token = type._token;
+
+    if (token === undefined) {
+      throw new Error('Asset definitions require a dispatch constructor.');
+    }
+
+    const previous = this._byToken.get(token);
+
+    if (previous !== undefined && previous.type.id !== type.id) {
+      throw new Error(`Asset type "${previous.type.id}" cannot change its stable id to "${type.id}".`);
+    }
+
+    if (this._usedTokens.has(token)) {
+      throw new Error(`Asset type "${type.id}" is already in use by this application.`);
+    }
+
+    this._install([type], previous);
+  }
+
+  /** Once requests exist, their key, codec, adapter and disposer must keep referring to one definition. @internal */
+  public markUsed(token: AssetConstructor): void {
+    this._usedTokens.add(token);
+  }
+
+  private _install(assetTypes: readonly AnyAssetType[], previous?: InstalledAssetType): void {
     if (this._installing) {
       throw new Error('AssetTypeRegistry: installAll() cannot be called from a createFactory() of a set still being installed.');
     }
@@ -77,14 +111,22 @@ export class AssetTypeRegistry {
     this._installing = true;
 
     try {
-      this._installAll(assetTypes);
+      this._installAll(assetTypes, previous);
     } finally {
       this._installing = false;
     }
   }
 
-  private _installAll(assetTypes: readonly AnyAssetType[]): void {
-    const prepared = this._prepare(this._validate(assetTypes));
+  private _installAll(assetTypes: readonly AnyAssetType[], previous: InstalledAssetType | undefined): void {
+    const prepared = this._prepare(this._validate(assetTypes, previous));
+
+    if (previous !== undefined) {
+      for (const [extension, id] of this._extensionTypes) {
+        if (id === previous.type.id) {
+          this._extensionTypes.delete(extension);
+        }
+      }
+    }
 
     for (const { installed, extensions } of prepared) {
       const { type, token } = installed;
@@ -96,10 +138,24 @@ export class AssetTypeRegistry {
         this._extensionTypes.set(extension, type.id);
       }
     }
+
+    if (previous !== undefined) {
+      if (![...this._byId.values()].some(installed => installed.factory === previous.factory)) {
+        try {
+          previous.factory.destroy?.();
+        } catch (error) {
+          logger.error(`Failed to destroy the replaced factory for asset type "${previous.type.id}".`, { data: { error } });
+        }
+      }
+
+      if (__DEV__) {
+        logger.info(`Replaced the definition for asset type "${previous.type.id}".`);
+      }
+    }
   }
 
   /** Check a whole set against itself and the installed types before anything is created. */
-  private _validate(assetTypes: readonly AnyAssetType[]): PendingAssetType[] {
+  private _validate(assetTypes: readonly AnyAssetType[], previous: InstalledAssetType | undefined): PendingAssetType[] {
     const pending: PendingAssetType[] = [];
     const seenIds = new Set<string>();
     const seenTokens = new Set<AssetConstructor>();
@@ -112,19 +168,23 @@ export class AssetTypeRegistry {
         throw new Error(`An asset type needs a non-empty string id, got ${JSON.stringify(id)}.`);
       }
 
-      if (seenIds.has(id) || this._byId.has(id)) {
+      const installedById = this._byId.get(id);
+
+      if (seenIds.has(id) || (installedById !== undefined && installedById !== previous)) {
         throw new Error(`Asset type id "${id}" is already installed on this application. An id identifies exactly one type.`);
       }
 
       seenIds.add(id);
 
-      const extensions = this._validateExtensions(id, type.extensions.map(normalizeExtension), seenExtensions);
+      const extensions = this._validateExtensions(id, type.extensions.map(normalizeExtension), seenExtensions, previous?.type.id);
 
       // A minted token is fresh per install and can never collide, so only a
       // type that brought its own can conflict.
       const token = type._token ?? mintToken(id);
 
-      if (type._token !== undefined && (seenTokens.has(token) || this._byToken.has(token))) {
+      const installedByToken = this._byToken.get(token);
+
+      if (type._token !== undefined && (seenTokens.has(token) || (installedByToken !== undefined && installedByToken !== previous))) {
         throw new Error(`Asset type "${id}" dispatches on ${this._describeType(token)}, which another installed type already uses.`);
       }
 
@@ -135,7 +195,12 @@ export class AssetTypeRegistry {
     return pending;
   }
 
-  private _validateExtensions(id: string, extensions: readonly string[], seenExtensions: Set<string>): readonly string[] {
+  private _validateExtensions(
+    id: string,
+    extensions: readonly string[],
+    seenExtensions: Set<string>,
+    previousId: string | undefined,
+  ): readonly string[] {
     const ownExtensions = new Set<string>();
 
     for (const extension of extensions) {
@@ -145,8 +210,10 @@ export class AssetTypeRegistry {
 
       ownExtensions.add(extension);
 
-      if (seenExtensions.has(extension) || this._extensionTypes.has(extension)) {
-        const owner = this._extensionTypes.get(extension) ?? '(another type in this set)';
+      const existing = this._extensionTypes.get(extension);
+
+      if (seenExtensions.has(extension) || (existing !== undefined && existing !== previousId)) {
+        const owner = existing ?? '(another type in this set)';
 
         throw new Error(
           `File extension ".${extension}" is already claimed by asset type "${owner}" on this application, so "${id}" cannot claim it too. ` +
@@ -161,17 +228,27 @@ export class AssetTypeRegistry {
   }
 
   /** Create every factory of a validated set, destroying the ones already created, newest first, if one throws. */
-  private _prepare(pending: readonly PendingAssetType[]): Array<{ readonly installed: InstalledAssetType; readonly extensions: readonly string[] }> {
+  private _prepare(
+    pending: readonly PendingAssetType[],
+  ): Array<{ readonly installed: InstalledAssetType; readonly extensions: readonly string[] }> {
     const prepared: Array<{ readonly installed: InstalledAssetType; readonly extensions: readonly string[] }> = [];
+    const known = new Set([...this._byId.values()].map(installed => installed.factory));
+    const created: Array<InstalledAssetType['factory']> = [];
 
     try {
       for (const { type, token, extensions } of pending) {
-        prepared.push({ installed: { type, token, factory: type.createFactory() as AssetFactory<unknown, unknown, unknown> }, extensions });
+        const factory = type.createFactory() as AssetFactory<unknown, unknown, unknown>;
+        prepared.push({ installed: { type, token, factory }, extensions });
+
+        if (!known.has(factory)) {
+          known.add(factory);
+          created.push(factory);
+        }
       }
     } catch (error) {
-      for (let i = prepared.length - 1; i >= 0; i--) {
+      for (const factory of created.reverse()) {
         try {
-          prepared[i]?.installed.factory.destroy?.();
+          factory.destroy?.();
         } catch {
           // The creation failure is the error the caller needs; a factory that
           // also fails to tear down must not hide it or stop the rest.
@@ -207,6 +284,24 @@ export class AssetTypeRegistry {
   /** The dispatch token a type name resolves to, or `undefined`. */
   public resolveTypeName(name: string): AssetConstructor | undefined {
     return this._byId.get(name)?.token;
+  }
+
+  /**
+   * The installed type a descriptor's `type` names - an id, the class the type
+   * produces, or an {@link AssetType} instance (matched by its id) - or
+   * `undefined` when none is installed.
+   * @internal
+   */
+  public _resolveReference(reference: unknown): InstalledAssetType | undefined {
+    if (typeof reference === 'string') {
+      return this._byId.get(reference);
+    }
+
+    if (reference instanceof AssetType) {
+      return this._byId.get(reference.id);
+    }
+
+    return typeof reference === 'function' ? this._byToken.get(reference as AssetConstructor) : undefined;
   }
 
   /** What the type named `name` hands out as a catalog leaf, or `undefined` when no such type is installed. @internal */
@@ -263,6 +358,18 @@ export class AssetTypeRegistry {
     return this._byToken.get(token)?.type.sourceIdentity?.(request(source, options));
   }
 
+  /** @internal */
+  public _persistedOptions(
+    token: AssetConstructor,
+    resource: object | undefined,
+    options?: Readonly<Record<string, unknown>>,
+    donor?: unknown,
+  ): Readonly<Record<string, unknown>> | undefined {
+    const type = this._byToken.get(token)?.type;
+
+    return type?.persistedOptions === undefined ? options : type.persistedOptions(resource, options, donor);
+  }
+
   /**
    * Resolves a whole path to the type that claims it, matching the basename's
    * dot-suffixes longest-first: `hero.aseprite.json` tries `aseprite.json`
@@ -300,7 +407,7 @@ export class AssetTypeRegistry {
     if (existing !== undefined && existing !== type) {
       throw new Error(
         `AssetTypeRegistry: extension ".${key}" is already registered to type "${existing}" on this ` +
-          `app, cannot also register it as "${type}". Use Asset.type(...) for a one-off exception ` +
+          `app, cannot also register it as "${type}". Use { type, source } for a one-off exception ` +
           `instead of a second app-wide override.`,
       );
     }
@@ -329,18 +436,31 @@ export class AssetTypeRegistry {
     return new Error(`No asset type is installed for ${this._describeType(token)}. Install it through an extension's "assets" list first.`);
   }
 
-  /** Destroys every installed factory. */
+  /** Destroys every installed factory, then rethrows the first teardown failure, if any. */
   public destroy(): void {
-    for (const installed of this._byId.values()) {
-      installed.factory.destroy?.();
-    }
+    const factories = new Set([...this._byId.values()].map(installed => installed.factory));
+    const errors: unknown[] = [];
 
     this._byId.clear();
     this._byToken.clear();
+    this._usedTokens.clear();
     this._extensionTypes.clear();
     this._extensionOverrides.clear();
+
+    for (const factory of factories) {
+      try {
+        factory.destroy?.();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
   }
 }
 
 /** The shape an identity hook sees. Options are omitted entirely when the request carried none. */
-const request = (source: string, options: unknown): AssetRequest<unknown> => (options === undefined || options === null ? { source } : { source, options });
+const request = (source: string, options: unknown): AssetRequest<unknown> =>
+  options === undefined || options === null ? { source } : { source, options };

@@ -13,7 +13,9 @@ export const openWebGl2ColorHarness: OpenColorProbeHarness = async size => {
     checked: async action => {
       const gl = backend.context;
 
-      while (gl.getError() !== gl.NO_ERROR);
+      while (gl.getError() !== gl.NO_ERROR) {
+        // Drain errors left by earlier work so the check below sees only this action's.
+      }
 
       const result = await action();
 

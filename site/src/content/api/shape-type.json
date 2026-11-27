@@ -4,7 +4,7 @@
   "symbol": "ShapeType",
   "kind": "type",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Discriminant for the concrete shape kinds supported in the MVP."
       ],
-      "importLine": "import { ShapeType } from '@codexo/exojs-physics'",
+      "importLine": "import { ShapeType } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

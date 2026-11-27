@@ -1,4 +1,4 @@
-import { Color, Geometry, INSTANCE_TRANSFORM_GLSL, Matrix, MeshMaterial, RenderBatch, Scene, Shader } from '@codexo/exojs';
+import { type Color, Geometry, INSTANCE_TRANSFORM_GLSL, Matrix, MeshMaterial, RenderBatch, Scene, Shader } from '@codexo/exojs';
 
 interface Spark {
   driftX: number;
@@ -45,6 +45,7 @@ class SparkFieldScene extends Scene {
     const data = { a_offset: [0, 0], a_phase: 0 };
 
     this.batch.clear();
+
     for (const spark of this.sparks) {
       data.a_offset[0] = spark.driftX;
       data.a_offset[1] = spark.driftY;

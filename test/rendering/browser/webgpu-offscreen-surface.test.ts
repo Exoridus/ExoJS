@@ -24,7 +24,9 @@ const filledOffscreenCanvas = (edge = 16): OffscreenCanvas => {
   const canvas = new OffscreenCanvas(edge, edge);
   const context = canvas.getContext('2d');
 
-  if (context === null) throw new Error('This suite needs a 2D context on an OffscreenCanvas.');
+  if (context === null) {
+    throw new Error('This suite needs a 2D context on an OffscreenCanvas.');
+  }
 
   context.fillStyle = '#ff0000';
   context.fillRect(0, 0, edge, edge);
@@ -51,7 +53,9 @@ const acceptsVideoFrame = (device: GPUDevice): boolean => {
 
     return true;
   } catch (error) {
-    if (error instanceof TypeError) return false;
+    if (error instanceof TypeError) {
+      return false;
+    }
 
     throw error;
   } finally {
@@ -84,7 +88,9 @@ const filledCanvas = (edge = 16): HTMLCanvasElement => {
 
   const context = canvas.getContext('2d');
 
-  if (context === null) throw new Error('This suite needs a 2D context.');
+  if (context === null) {
+    throw new Error('This suite needs a 2D context.');
+  }
 
   context.fillStyle = '#00ff00';
   context.fillRect(0, 0, edge, edge);
@@ -102,7 +108,9 @@ describe('WebGPU renders into an OffscreenCanvas', () => {
     root.addChild(sprite);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       expectPixelNear(pixelAt(readWebGpuFrame(backend, SIZE), SIZE, 16, 16), [255, 0, 0, 255]);
     } finally {
@@ -132,7 +140,9 @@ describe('WebGPU uploads the surface-only texture sources', () => {
     root.addChild(sprite);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       expectPixelNear(pixelAt(readWebGpuFrame(backend, SIZE), SIZE, 16, 16), [255, 0, 0, 255]);
     } finally {
@@ -142,7 +152,9 @@ describe('WebGPU uploads the surface-only texture sources', () => {
   });
 
   test('a VideoFrame uploads, and the engine leaves it open for its owner to close', async ctx => {
-    if (!hasVideoFrame(ctx)) return;
+    if (!hasVideoFrame(ctx)) {
+      return;
+    }
 
     const backend = await createWebGpuTestBackend(SIZE);
 
@@ -161,7 +173,9 @@ describe('WebGPU uploads the surface-only texture sources', () => {
     root.addChild(sprite);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       expectPixelNear(pixelAt(readWebGpuFrame(backend, SIZE), SIZE, 16, 16), [0, 255, 0, 255]);
 

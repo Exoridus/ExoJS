@@ -55,6 +55,12 @@ export const parseArgs = (argv: readonly string[], spec: OptionSpec): ParsedArgs
       continue;
     }
 
+    // A following option belongs to the caller, not to this value: without
+    // this check `--host --no-spa` silently stores the flag as the host.
+    if (inlineValue === undefined && rest[0] !== undefined && rest[0] !== '-' && rest[0].startsWith('-')) {
+      throw new CliError(`option "--${name}" expects a value`);
+    }
+
     const value = inlineValue ?? rest.shift();
 
     if (value === undefined) {
@@ -85,11 +91,13 @@ export const text = (args: ParsedArgs, name: string, fallback: string): string =
 export const integer = (args: ParsedArgs, name: string, fallback: number): number => {
   const value = args.options.get(name);
 
-  if (typeof value !== 'string') return fallback;
+  if (typeof value !== 'string') {
+    return fallback;
+  }
 
   const parsed = Number(value);
 
-  if (!Number.isInteger(parsed) || parsed < 0) {
+  if (value.trim() === '' || !Number.isInteger(parsed) || parsed < 0) {
     throw new CliError(`option "--${name}" expects a non-negative integer, got "${value}"`);
   }
 

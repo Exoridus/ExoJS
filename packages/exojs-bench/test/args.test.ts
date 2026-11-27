@@ -1,4 +1,4 @@
-import { parseArgList, parseArgs } from '../src/shared/args';
+import { parseArgList, parseArgs, parsePositiveInt, unclaimedArgs } from '../src/shared/args';
 
 /**
  * `bench:compare` takes one `--rendering` / `--physics` path per benchmark run,
@@ -36,5 +36,39 @@ describe('parseArgList', () => {
 
   test('takes a value whole, so a path containing a comma survives', () => {
     expect(parseArgList(['--rendering=C:/runs/a,b/results.json'], 'rendering')).toEqual(['C:/runs/a,b/results.json']);
+  });
+});
+
+describe('unclaimedArgs', () => {
+  test('reports the tokens no flag took as its value, in the order given', () => {
+    expect(unclaimedArgs(['--rendering', 'run-1.json', 'run-2.json', 'run-3.json'])).toEqual(['run-2.json', 'run-3.json']);
+  });
+
+  test('is empty when every token is a flag or the value of the flag before it', () => {
+    expect(unclaimedArgs(['--rendering', '1.json', '--rendering=2.json', '--profile', '--out', 'a.md'])).toEqual([]);
+  });
+
+  test('reports a token after a joined flag, which takes no separate value', () => {
+    expect(unclaimedArgs(['--rendering=1.json', '2.json'])).toEqual(['2.json']);
+  });
+
+  test('reports a leading token that precedes every flag', () => {
+    expect(unclaimedArgs(['stray.json', '--profile'])).toEqual(['stray.json']);
+  });
+});
+
+describe('parsePositiveInt', () => {
+  test('accepts a plain positive integer', () => {
+    expect(parsePositiveInt('--nodes', '250000')).toBe(250_000);
+    expect(parsePositiveInt('--frames', '1')).toBe(1);
+  });
+
+  test.each(['0', '-5', '1000abc', '', '1.5', ' 1000'])('refuses %j', value => {
+    expect(() => parsePositiveInt('--nodes', value)).toThrow(/--nodes must be a positive integer/);
+  });
+
+  test('names the flag it refused', () => {
+    expect(() => parsePositiveInt('--bodies', '0')).toThrow(/--bodies/);
+    expect(() => parsePositiveInt('--frames', 'abc')).toThrow(/--frames/);
   });
 });

@@ -12,7 +12,13 @@ import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import type { Drawable } from '#rendering/Drawable';
 import type { Filter } from '#rendering/filters/Filter';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import { materialKeyForcesFlush } from '#rendering/material/MaterialKey';
+import {
+  copyMaterialKeyInto,
+  createEmptyMaterialKey,
+  deriveCapturePipelineKey,
+  type MaterialKey,
+  materialKeyForcesFlush,
+} from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { RenderTarget } from '#rendering/RenderTarget';
@@ -77,6 +83,11 @@ interface RetainedBackendHooks {
   _validateRetainedInstructionSet?(set: RetainedInstructionSet): boolean;
 }
 
+interface CaptureMaterialKey extends MaterialKey {
+  sourcePipelineKey: number;
+  capturePipelineKey: number;
+}
+
 /**
  * How far a capturing collect's cull rect reaches beyond the view, per side, as
  * a fraction of that view axis. Each axis therefore grows by twice this, and the
@@ -117,6 +128,9 @@ interface MutableGroupScope extends GroupScope, EntryPlacementState {
   firstOwnMaterial: boolean;
 }
 
+/** Placeholder for a pooled descriptor's `filters` before its first fill. */
+const emptyFilters: readonly Filter[] = Object.freeze([]);
+
 /**
  * Effect-less descriptor shared by every sub-branch escape barrier:
  * all effect stages are disabled, so {@link RenderEffectExecutor.play} is a
@@ -124,9 +138,6 @@ interface MutableGroupScope extends GroupScope, EntryPlacementState {
  * playback semantics - the group uniform is suspended (the branch collected
  * world-space transforms) and fragment capture records a live re-dispatch.
  */
-/** Placeholder for a pooled descriptor's `filters` before its first fill. */
-const emptyFilters: readonly Filter[] = Object.freeze([]);
-
 const groupEscapeEffect: EffectDescriptor = Object.freeze({
   filters: emptyFilters,
   clip: ClipKind.None,
@@ -181,7 +192,8 @@ export class RenderPlanBuilder {
   private _checkedOut = false;
 
   public static acquire(): RenderPlanBuilder {
-    const builder = RenderPlanBuilder._availableCount > 0 ? RenderPlanBuilder._available[--RenderPlanBuilder._availableCount]! : new RenderPlanBuilder();
+    const builder =
+      RenderPlanBuilder._availableCount > 0 ? RenderPlanBuilder._available[--RenderPlanBuilder._availableCount]! : new RenderPlanBuilder();
 
     builder._checkedOut = true;
 
@@ -207,6 +219,8 @@ export class RenderPlanBuilder {
 
   public backend!: RenderBackend;
   private _view: View | null = null;
+  /** Monotonic count of content reads of the active view. @internal */
+  public _viewReadVersion = 0;
   /**
    * Effective resolution of the target each enclosing barrier renders into,
    * innermost last. Empty while collecting into the canvas root, whose
@@ -229,6 +243,8 @@ export class RenderPlanBuilder {
   private readonly _opaqueDestinationStack: boolean[] = [];
   /** Coverage guarantee of the target this build collects into, read once per build. */
   private _rootDestinationOpaque = false;
+  private _captureNode: RenderNode | null = null;
+  private readonly _captureMaterials = new WeakMap<Drawable, CaptureMaterialKey>();
   /**
    * Shared across every barrier. Barriers nest, but a barrier reads its four
    * integers out before collecting its children, so no nested collect can
@@ -360,7 +376,7 @@ export class RenderPlanBuilder {
     // falls back for one that reports nothing usable.
     const destination = backend.renderTarget as RenderTarget | undefined;
 
-    this._rootDestinationOpaque = destination?.opaqueDestination === true;
+    this._rootDestinationOpaque = destination?.opaqueDestination === true || destination?._opaqueContent === true;
     this._plan.reset();
     this._rewindPools();
     this._viewCullSuppression = 0;
@@ -411,6 +427,14 @@ export class RenderPlanBuilder {
     // Builder-internal reads go through `_viewUnobserved` so the machinery that
     // sets a capture up - the cull-rect inflation, the plan's own view field -
     // cannot mark every capture as view-dependent.
+    this._noteViewRead();
+
+    return this._viewUnobserved();
+  }
+
+  /** Propagate a replayed fragment's view dependency to enclosing captures. @internal */
+  public _noteViewRead(): void {
+    this._viewReadVersion++;
     this._trackedRoot?.noteViewRead();
 
     if (this._sourceProducer !== null) {
@@ -420,7 +444,10 @@ export class RenderPlanBuilder {
       // stops being persistent.
       this._sourceViewReaders.add(this._sourceProducer);
     }
+  }
 
+  /** View identity for cache checks without observing a content dependency. @internal */
+  public get _retentionView(): View {
     return this._viewUnobserved();
   }
 
@@ -570,6 +597,11 @@ export class RenderPlanBuilder {
         this._pushScope(childPlan);
         this._resolutionStack.push(resolution);
         this._opaqueDestinationStack.push(false);
+        const previousCapture = this._captureNode;
+
+        if (needsBounds) {
+          this._captureNode = node;
+        }
 
         try {
           // The barrier's CONTENT is an ordinary subtree and gets the same
@@ -583,6 +615,7 @@ export class RenderPlanBuilder {
             node._collectForRenderPlan(this);
           }
         } finally {
+          this._captureNode = previousCapture;
           this._opaqueDestinationStack.pop();
           this._resolutionStack.pop();
           this._popScope();
@@ -687,7 +720,14 @@ export class RenderPlanBuilder {
     }
 
     if (node._isTransformGroupBoundary) {
-      scope.others.push({ kind: RenderEntryKind.Barrier, seq, zIndex, node, reason: LiveEntryReason.Boundary, itemMark: scope.items.count });
+      scope.others.push({
+        kind: RenderEntryKind.Barrier,
+        seq,
+        zIndex,
+        node,
+        reason: LiveEntryReason.Boundary,
+        itemMark: scope.items.count,
+      });
 
       return;
     }
@@ -794,7 +834,14 @@ export class RenderPlanBuilder {
    * items, and a nested producer that read the view has already collapsed
    * itself, so this only ever fires for the OUTERMOST reader of a chain.
    */
-  private _resolveViewAttribution(node: RenderNode, scope: SourceScope, mark: number, otherMark: number, seq: number, zIndex: number): void {
+  private _resolveViewAttribution(
+    node: RenderNode,
+    scope: SourceScope,
+    mark: number,
+    otherMark: number,
+    seq: number,
+    zIndex: number,
+  ): void {
     if (!this._sourceViewReaders.has(node)) {
       return;
     }
@@ -838,7 +885,13 @@ export class RenderPlanBuilder {
    * the outcome.
    * @internal
    */
-  public _rederiveSourceScope(node: RenderNode, previous: SourceScope, cursor: number, epoch: number, targets: SourceDeltaTargets): SourceScope | null {
+  public _rederiveSourceScope(
+    node: RenderNode,
+    previous: SourceScope,
+    cursor: number,
+    epoch: number,
+    targets: SourceDeltaTargets,
+  ): SourceScope | null {
     this._rederivation.begin(cursor, epoch, targets);
 
     const scope = this._walkSourceScope(node, previous);
@@ -979,11 +1032,12 @@ export class RenderPlanBuilder {
     command.seq = seq;
     command.zIndex = zIndex;
     command.groupIndex = undefined;
-    command.material = drawable._getOrComputeMaterialKey(this.backend);
+    command.material = this._materialForDraw(drawable);
 
     // The stored extent is the drawable's own, unchanged - the same argument
     // the query just made. Asking the node again would resolve its parent chain
     // a second time for an answer already in hand.
+    command.boundsStale = false;
     command.minX = minX;
     command.minY = minY;
     command.maxX = maxX;
@@ -1184,7 +1238,14 @@ export class RenderPlanBuilder {
     // this frame ends up capturing.
     representation.noteRebuildKeys(contentRevision, structureRevision, ancestryStamp, transformRevision);
 
-    const selection = this._resolveSourceSelection(node, representation, contentRevision, structureRevision, ancestryStamp, transformRevision);
+    const selection = this._resolveSourceSelection(
+      node,
+      representation,
+      contentRevision,
+      structureRevision,
+      ancestryStamp,
+      transformRevision,
+    );
 
     if (representation.shouldSuppressCapture(contentRevision, structureRevision, transformRevision, view)) {
       // No capture this frame, but the cheap path is still the cheap path: the
@@ -1440,6 +1501,7 @@ export class RenderPlanBuilder {
     // Stale items describe a subtree that no longer exists, and world bounds
     // stored against a different ancestry are not repairable. Release them here
     // rather than leaving a million dead records reachable until the next build.
+    representation.releasePersistentSlots();
     existing?.invalidate();
     representation.derivedProduct?.release();
 
@@ -1538,6 +1600,38 @@ export class RenderPlanBuilder {
     tracked.noteKept(node.cullArea ?? node.getBounds());
   }
 
+  private _materialForDraw(drawable: Drawable): MaterialKey {
+    const source = drawable._getOrComputeMaterialKey(this.backend);
+
+    if (drawable !== this._captureNode) {
+      return source;
+    }
+
+    let material = this._captureMaterials.get(drawable);
+
+    if (material === undefined) {
+      material = Object.assign(createEmptyMaterialKey(), { sourcePipelineKey: -1, capturePipelineKey: 0 });
+      this._captureMaterials.set(drawable, material);
+    }
+
+    // The outer composite applies this node's blend; capturing it again would erase Multiply source RGB.
+    copyMaterialKeyInto(material, source);
+    material.blendMode = BlendModes.Normal;
+
+    if (source.ownMaterial) {
+      if (material.sourcePipelineKey !== source.pipelineKey) {
+        material.sourcePipelineKey = source.pipelineKey;
+        material.capturePipelineKey = deriveCapturePipelineKey(source.pipelineKey);
+      }
+
+      material.pipelineKey = material.capturePipelineKey;
+    } else {
+      material.pipelineKey = source.rendererId * 31 + BlendModes.Normal;
+    }
+
+    return material;
+  }
+
   public emitDraw(drawable: Drawable, seq?: number): void {
     const hasPending = this._hasPending;
     const pendingSeq = this._pendingSeq;
@@ -1588,7 +1682,8 @@ export class RenderPlanBuilder {
     // stale groupIndex from a previous frame (the plan player's group-adjacency
     // walk would coalesce on it before optimize() runs).
     command.groupIndex = undefined;
-    command.material = drawable._getOrComputeMaterialKey(this.backend);
+    command.material = this._materialForDraw(drawable);
+    command.boundsStale = false;
     command.minX = bounds.left;
     command.minY = bounds.top;
     command.maxX = bounds.right;
@@ -1682,7 +1777,9 @@ export class RenderPlanBuilder {
     // fragment itself stays clean. Re-derive their key on the entry-replay
     // fallback so a structural retained invalidation cannot regroup using the
     // record-time snapshot before the replacement capture is produced.
-    command.material = slot.material.ownMaterial ? slot.drawable._getOrComputeMaterialKey(this.backend) : slot.material;
+    command.material =
+      slot.drawable === this._captureNode || slot.material.ownMaterial ? this._materialForDraw(slot.drawable) : slot.material;
+    command.boundsStale = slot.boundsStale === true;
     command.minX = slot.minX;
     command.minY = slot.minY;
     command.maxX = slot.maxX;
@@ -1805,6 +1902,12 @@ export class RenderPlanBuilder {
     groupScope.transformNode = fragment.transformNode;
 
     if (innerSet !== null) {
+      // Never pushed, so _popScope's trim does not run: drop what the pooled
+      // slot held from an earlier frame.
+      if (groupScope.entries.length > 0) {
+        groupScope.entries.length = 0;
+      }
+
       groupScope.retainedInstructions = innerSet;
       this._pushGroupEntry(fragment.seq, fragment.zIndex, groupScope);
 
@@ -1844,6 +1947,7 @@ export class RenderPlanBuilder {
     this._resolutionStack.length = 0;
     this._opaqueDestinationStack.length = 0;
     this._rootDestinationOpaque = false;
+    this._captureNode = null;
     this._nodeIndex = 0;
     this._viewCullSuppression = 0;
     this._retentionRoot = null;
@@ -1935,6 +2039,7 @@ export class RenderPlanBuilder {
       zIndex: 0,
       material: undefined as unknown as DrawCommand['material'],
       groupIndex: undefined,
+      boundsStale: false,
       minX: 0,
       minY: 0,
       maxX: 0,
@@ -1962,7 +2067,10 @@ export class RenderPlanBuilder {
       scope.firstPipelineKey = material.pipelineKey;
       scope.firstBindKey = material.bindKey;
       scope.firstOwnMaterial = material.ownMaterial;
-    } else if (!scope.hasMixedPipeline && materialKeyForcesFlush(scope.firstPipelineKey, scope.firstBindKey, scope.firstOwnMaterial, material)) {
+    } else if (
+      !scope.hasMixedPipeline &&
+      materialKeyForcesFlush(scope.firstPipelineKey, scope.firstBindKey, scope.firstOwnMaterial, material)
+    ) {
       scope.hasMixedPipeline = true;
     }
   }

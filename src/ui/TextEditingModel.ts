@@ -119,7 +119,8 @@ export const glyphOffsetAtIndex = (offsets: number[], index: number, textLength:
   return clamped >= offsets.length ? textLength : (offsets[clamped] ?? textLength);
 };
 
-const isWhitespaceUnit = (unit: number): boolean => unit === 0x20 || unit === 0x09 || unit === 0x0a || unit === 0x0d || unit === 0x0b || unit === 0x0c;
+const isWhitespaceUnit = (unit: number): boolean =>
+  unit === 0x20 || unit === 0x09 || unit === 0x0a || unit === 0x0d || unit === 0x0b || unit === 0x0c;
 
 /**
  * The boundary a word-step backward from `from` reaches: the whitespace run

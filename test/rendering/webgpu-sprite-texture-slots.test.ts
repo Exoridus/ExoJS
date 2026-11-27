@@ -21,6 +21,7 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
+import { spriteMaterialTextureSlots } from '#rendering/sprite/materialSources';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -253,12 +254,24 @@ describe('resolveSpriteBatchTextureSlots', () => {
   test('quantizes the granted limits to the 8 / 16 / 32 tiers', () => {
     expect(resolveSpriteBatchTextureSlots(makeDevice({ maxSampledTexturesPerShaderStage: 16, maxSamplersPerShaderStage: 16 }))).toBe(16);
     expect(resolveSpriteBatchTextureSlots(makeDevice({ maxSampledTexturesPerShaderStage: 32, maxSamplersPerShaderStage: 32 }))).toBe(32);
-    expect(resolveSpriteBatchTextureSlots(makeDevice({ maxSampledTexturesPerShaderStage: 1048576, maxSamplersPerShaderStage: 1048576 }))).toBe(32);
+    expect(
+      resolveSpriteBatchTextureSlots(makeDevice({ maxSampledTexturesPerShaderStage: 1048576, maxSamplersPerShaderStage: 1048576 })),
+    ).toBe(32);
     // The tightest of the two limits drives the tier.
-    expect(resolveSpriteBatchTextureSlots(makeDevice({ maxSampledTexturesPerShaderStage: 1048576, maxSamplersPerShaderStage: 16 }))).toBe(16);
+    expect(resolveSpriteBatchTextureSlots(makeDevice({ maxSampledTexturesPerShaderStage: 1048576, maxSamplersPerShaderStage: 16 }))).toBe(
+      16,
+    );
     expect(resolveSpriteBatchTextureSlots(makeDevice({ maxSampledTexturesPerShaderStage: 24, maxSamplersPerShaderStage: 24 }))).toBe(16);
     // Below-spec limits collapse to the legacy 8-slot floor.
     expect(resolveSpriteBatchTextureSlots(makeDevice({ maxSampledTexturesPerShaderStage: 8, maxSamplersPerShaderStage: 8 }))).toBe(8);
+  });
+
+  test('never resolves below the custom-material slot count, however low the granted limits', () => {
+    for (const granted of [0, 1, 4, 7, 8]) {
+      const device = makeDevice({ maxSampledTexturesPerShaderStage: granted, maxSamplersPerShaderStage: granted });
+
+      expect(resolveSpriteBatchTextureSlots(device)).toBeGreaterThanOrEqual(spriteMaterialTextureSlots);
+    }
   });
 
   test('a device without a limits object falls back to the legacy 8-slot path', () => {

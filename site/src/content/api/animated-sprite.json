@@ -187,7 +187,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Anchor against the untrimmed SOURCE canvas, not against the per-frame trimmed rectangle. A trimmed atlas gives every frame its own size and its own AnimatedSpriteClipDefinition.frameOffsets entry. Measuring the anchor against that rectangle would move the pivot on every frame advance, so an anchored character would wobble around its own feet for the length of the animation. The pivot has to stand still, which means measuring against a box that is constant for the whole clip. A clip carries no explicit untrimmed size, so the box is derived from the frames themselves: width = max(offset.x + frame.width) and height = max(offset.y + frame.height) over every frame, anchored at the local origin (0, 0) - the point the offsets are expressed relative to. That is the smallest canvas every frame of the clip fits on, it is computed once per clip in addClip, and it is identical for every frame index. It can under-report an authored canvas whose right or bottom edge is empty in every single frame; nothing in the frame data can distinguish that case, and the pivot stays stable either way. A clip WITHOUT frameOffsets is not trimmed, so its frame rectangle is its layout box and the base implementation already measures the right thing. It is used unchanged there - deriving a clip-wide box would be actively wrong for it, because such a clip keeps its rendered pixel size across differently-sized frames (see _applyFrame) and the per-frame extent is what maps onto that constant rendered box."
+          "description": "Anchor against the untrimmed SOURCE canvas, not against the per-frame trimmed rectangle. A trimmed atlas gives every frame its own size and its own AnimatedSpriteClipDefinition.frameOffsets entry. Measuring the anchor against that rectangle would move the pivot on every frame advance, so an anchored character would wobble around its own feet for the length of the animation. The pivot has to stand still, which means measuring against a box that is constant for the whole clip. The authored AnimatedSpriteClipDefinition.sourceSize includes transparent right/bottom padding that no crop can recover. Older clips retain their offset-plus-frame estimate, computed once in addClip; a clip with neither canvas metadata nor offsets keeps its per-frame box."
         },
         {
           "name": "addClip",
@@ -562,7 +562,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - either shape is a Polygon that encloses no area (empty, fewer than three distinct vertices, or collinear vertices) and the other is a filled shape (Rectangle, Circle, Ellipse or Polygon); such a polygon overlaps no filled shape, and intersectsWith returns false for the same pairs. Line and Point queries are unchanged: they test the polygon's outline and vertices as before, **or** - the specific shape-pair combination does not support response generation (for example Line against any shape, or Ellipse against a Point). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
         },
         {
           "name": "contains",
@@ -2585,7 +2585,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Advance playback by deltaSeconds - seconds, the same unit as Tween.update, and the unit a Time delta reports through delta.seconds. Clip authoring stays in its own units: AnimatedSpriteClipDefinition.frameDurations is still seconds per frame and fps is still frames per second. Called automatically once per frame by the owning AnimationSystem for a playing, attached sprite - call it yourself only for a sprite that is not part of an application's scene tree, or to step playback manually. Dispatches onFrame for each frame boundary crossed and onComplete when the clip completes its final AnimatedSpriteClipDefinition.repeat cycle."
+          "description": "Advance playback by deltaSeconds - seconds, the same unit as Tween.update, and the unit a Time delta reports through delta.seconds. Clip authoring stays in its own units: AnimatedSpriteClipDefinition.frameDurations is still seconds per frame and fps is still frames per second. Called automatically once per frame by the owning AnimationSystem for a playing, attached sprite - call it yourself only for a sprite that is not part of an application's scene tree, or to step playback manually. Dispatches onFrame for each frame boundary crossed and onComplete when the clip completes its final AnimatedSpriteClipDefinition.repeat cycle. A handler that pauses, stops, plays another clip or destroys the sprite ends the advance at that frame: the rest of deltaSeconds is not played, and a later resume starts the paused frame's hold afresh."
         },
         {
           "name": "updateBounds",
@@ -3058,7 +3058,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer (WebGL2). Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
+          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer on both backends. Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
         },
         {
           "name": "clipShape",
@@ -3294,7 +3294,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Filters are borrowed; destroying this node detaches them without destroying them."
         },
         {
           "name": "height",
@@ -3767,7 +3767,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space corner positions of the sprite quad, computed lazily from the current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3] (TL, TR, BR, BL). Cached until the transform is invalidated."
+          "description": "Rendering-space corner positions of the sprite quad: world space normally, group-local space below a retained transform boundary. Computed lazily from the current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3] (TL, TR, BR, BL). Cached until the transform is invalidated."
         },
         {
           "name": "visible",

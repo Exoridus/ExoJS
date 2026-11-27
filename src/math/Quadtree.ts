@@ -7,8 +7,9 @@ export interface QuadtreeItem<T> {
 }
 
 /**
- * Generic recursive spatial index used by the engine's `InteractionSystem`
- * to accelerate per-frame hit-testing of scene nodes.
+ * Generic recursive spatial index for axis-aligned bounding boxes. The engine's
+ * hit-testing path indexes nodes with `DynamicAabbTree` instead; this class
+ * remains a public spatial-index utility.
  *
  * Items are inserted with their axis-aligned bounding box; the tree
  * automatically subdivides into four quadrants (NW/NE/SW/SE) when a node
@@ -53,6 +54,7 @@ export class Quadtree<T> {
     // If not subdivided and under capacity, store here.
     if (this._children === null && this._items.length < this._maxItems) {
       this._items.push(item);
+
       return;
     }
 
@@ -66,6 +68,7 @@ export class Quadtree<T> {
       for (const child of this._children) {
         if (child._bounds.containsRect(item.bounds)) {
           child.insert(item);
+
           return;
         }
       }
@@ -118,12 +121,19 @@ export class Quadtree<T> {
   public queryRect(rect: Rectangle, results: Array<QuadtreeItem<T>> = []): Array<QuadtreeItem<T>> {
     // Check intersection using left/right/top/bottom comparisons to avoid
     // needing a full Rectangle.intersectsWith() call with collision dispatch.
-    if (rect.right < this._bounds.left || rect.left > this._bounds.right || rect.bottom < this._bounds.top || rect.top > this._bounds.bottom) {
+    if (
+      rect.right < this._bounds.left ||
+      rect.left > this._bounds.right ||
+      rect.bottom < this._bounds.top ||
+      rect.top > this._bounds.bottom
+    ) {
       return results;
     }
 
     for (const item of this._items) {
-      if (!(item.bounds.right < rect.left || item.bounds.left > rect.right || item.bounds.bottom < rect.top || item.bounds.top > rect.bottom)) {
+      if (
+        !(item.bounds.right < rect.left || item.bounds.left > rect.right || item.bounds.bottom < rect.top || item.bounds.top > rect.bottom)
+      ) {
         results.push(item);
       }
     }
@@ -163,7 +173,7 @@ export class Quadtree<T> {
     return false;
   }
 
-  /** Remove all items and collapse all child nodes. Child `Quadtree` instances are retained but reset. */
+  /** Remove all items and collapse all child nodes. Child `Quadtree` instances are released, not retained. */
   public clear(): void {
     this._items.length = 0;
 
@@ -178,9 +188,9 @@ export class Quadtree<T> {
 
   /**
    * Walk every subdivided region's bounding rectangle, calling `callback`
-   * once per node in the tree (including the root). Used by
-   * {@link HitTestLayer} to visualise quadtree partitioning. Not part of
-   * the stable public API - friend-class access only.
+   * once per node in the tree (including the root). The debug hit-test layer
+   * visualises `DynamicAabbTree` partitions instead. Not part of the stable
+   * public API - friend-class access only.
    *
    * @internal
    */
@@ -196,8 +206,8 @@ export class Quadtree<T> {
 
   public destroy(): void {
     this._items.length = 0;
-    this._bounds.destroy();
 
+    // `_bounds` is borrowed from the caller, not owned by the tree.
     if (this._children !== null) {
       for (const child of this._children) {
         child.destroy();

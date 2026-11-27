@@ -128,7 +128,9 @@ const INTEGER_LIKE = /^\d+$/;
  */
 export const mergeAssetManifest = (existing: unknown, name: string, pack: AssetManifestPack): AssetManifestDocument => {
   if (name === '' || INTEGER_LIKE.test(name)) {
-    throw new Error(`pack name ${JSON.stringify(name)} cannot be written in a stable order; name it with something other than digits alone`);
+    throw new Error(
+      `pack name ${JSON.stringify(name)} cannot be written in a stable order; name it with something other than digits alone`,
+    );
   }
 
   // A Map, not an object literal: a pack named `__proto__` assigned onto `{}`
@@ -141,7 +143,9 @@ export const mergeAssetManifest = (existing: unknown, name: string, pack: AssetM
     }
 
     if (existing.version !== ASSET_MANIFEST_VERSION) {
-      throw new Error(`manifest version ${JSON.stringify(existing.version)} is not the version this build writes (${ASSET_MANIFEST_VERSION})`);
+      throw new Error(
+        `manifest version ${JSON.stringify(existing.version)} is not the version this build writes (${ASSET_MANIFEST_VERSION})`,
+      );
     }
 
     for (const [key, value] of Object.entries(existing.packs)) {

@@ -5,13 +5,13 @@ import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rende
 import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
-import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
+import { computeShaderOffset, computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes } from '#rendering/types';
+import { BlendModes, ScaleModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
@@ -26,10 +26,11 @@ import commonWgslModule from './shaders/repeating-sprite-common.wgsl';
 import geoPathEntriesModule from './shaders/repeating-sprite-geo-path.wgsl';
 import shaderPathEntriesModule from './shaders/repeating-sprite-shader-path.wgsl';
 import { packSnapViewport } from './snapViewport';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass, WebGpuPassCoordinator } from './WebGpuPassCoordinator';
+import { pipelineVariantKey, WebGpuPipelineVariantCache } from './WebGpuPipelineVariantCache';
 
 // ---------------------------------------------------------------------------
 // Shared WGSL declarations - structs, bindings, and output struct used by
@@ -77,14 +78,37 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 // Sampler address mode helper
 // ---------------------------------------------------------------------------
 
+const repeatModeIndex = (mode: RepeatMode): number => {
+  switch (mode) {
+    case 'stretch':
+      return 0;
+    case 'repeat':
+      return 1;
+    case 'mirror-repeat':
+      return 2;
+  }
+};
+
+const scalablePipelineVariant = (kind: 'shader' | 'geo', blend: BlendModes, stencil: WebGpuStencilMode, premultiply: boolean): number =>
+  pipelineVariantKey(blend, stencil) * 4 + (kind === 'geo' ? 2 : 0) + (premultiply ? 1 : 0);
+
 const repeatModeToAddressMode = (mode: RepeatMode): GPUAddressMode => {
-  if (mode === 'repeat') return 'repeat';
-  if (mode === 'mirror-repeat') return 'mirror-repeat';
+  if (mode === 'repeat') {
+    return 'repeat';
+  }
+
+  if (mode === 'mirror-repeat') {
+    return 'mirror-repeat';
+  }
+
   return 'clamp-to-edge';
 };
 
 /** Shared geometry batches for scalable sprites, with a separate whole-texture repeating path. @internal */
-export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSliceSprite | RepeatingSprite> implements WebGpuRetainedBatchReplayer {
+export class WebGpuScalableSpriteRenderer
+  extends AbstractWebGpuRenderer<NineSliceSprite | RepeatingSprite>
+  implements WebGpuRetainedBatchReplayer
+{
   /**
    * NineSlice and atlas repeating geometry share the retained instance layout.
    * Whole-texture repeating uses a distinct stride and sampler state, so it
@@ -130,8 +154,8 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
   private _indexBuffer: GPUBuffer | null = null;
   private _transformBindGroup: GPUBindGroup | null = null;
   private _transformStorageBuf: GPUBuffer | null = null;
-  private readonly _pipelines = new Map<string, GPURenderPipeline>();
-  private readonly _samplers = new Map<string, GPUSampler>();
+  private readonly _pipelines = new WebGpuPipelineVariantCache<GPURenderPipeline>();
+  private readonly _samplers = new Map<number, GPUSampler>();
   // Single-texture group(1) bind groups cached per texture (WeakMap so a
   // short-lived texture does not pin its GPU bind group). The entry stores the
   // resolved view AND sampler it was built from: the view detects a
@@ -183,7 +207,9 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
   private readonly _stagedReplayGroupData = new Float32Array(16);
 
   protected onConnect(backend: WebGpuBackend): void {
-    if (this._device) return;
+    if (this._device) {
+      return;
+    }
 
     const device = backend.device;
     this._device = device;
@@ -278,15 +304,23 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
 
   public render(sprite: NineSliceSprite | RepeatingSprite): void {
     const backend = this._backend;
-    if (!backend) return;
+
+    if (!backend) {
+      return;
+    }
 
     const texture = sprite.texture;
-    if (!isSampleableTexture(texture)) return;
+
+    if (!isSampleableTexture(texture)) {
+      return;
+    }
 
     const repeating = sprite instanceof RepeatingSprite ? sprite : null;
     const strategy = repeating?.resolvedStrategy ?? 'geometry';
 
-    if (strategy === 'geometry' && sprite.quads.length === 0) return;
+    if (strategy === 'geometry' && sprite.quads.length === 0) {
+      return;
+    }
 
     const blendMode = sprite.blendMode;
     const modeX = repeating?.modeX ?? null;
@@ -326,7 +360,10 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
 
     const command = backend.activeDrawCommand;
     const nodeIndex = command !== null ? command.nodeIndex : backend.pushTransform(sprite);
-    if (nodeIndex > this._maxNodeIndex) this._maxNodeIndex = nodeIndex;
+
+    if (nodeIndex > this._maxNodeIndex) {
+      this._maxNodeIndex = nodeIndex;
+    }
 
     if (repeating !== null && strategy === 'shader') {
       this._currentModeX = modeX;
@@ -350,8 +387,8 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
 
     const tilingX = computeShaderTiling(srcW, destW, sprite.modeX, sprite.fitX);
     const tilingY = computeShaderTiling(srcH, destH, sprite.modeY, sprite.fitY);
-    const offsetU = sprite.offsetX / (srcW > 0 ? srcW : 1);
-    const offsetV = sprite.offsetY / (srcH > 0 ? srcH : 1);
+    const offsetU = computeShaderOffset(srcW, sprite.offsetX, sprite.modeX);
+    const offsetV = computeShaderOffset(srcH, sprite.offsetY, sprite.modeY);
     const uvParamY = flipY ? -tilingY : tilingY;
     const uvParamW = flipY ? tilingY + offsetV : offsetV;
 
@@ -381,7 +418,9 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     // boundary to the device grid in the vertex shader (gap-free, like NineSlice).
     const quads: readonly RepeatingSpriteQuad[] = sprite.quads;
 
-    if (quads.length === 0) return;
+    if (quads.length === 0) {
+      return;
+    }
 
     const flipY = sprite.texture instanceof Texture && sprite.texture.flipY;
     const tint = sprite.tint.toRgba8();
@@ -428,7 +467,9 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     const device = this._device;
     const uniform = this._uniformBuffer;
 
-    if (!backend || !device || !uniform) return;
+    if (!backend || !device || !uniform) {
+      return;
+    }
 
     if (this._shaderQuadCount === 0 && this._geoQuadCount === 0 && !backend.clearRequested) {
       return;
@@ -459,7 +500,13 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     const view = backend.view;
     const viewportChanged = packSnapViewport(backend, this._projData, 32);
 
-    if (!this._hasWrittenProjection || this._writtenView !== view || this._writtenViewUpdateId !== view.updateId || groupChanged || viewportChanged) {
+    if (
+      !this._hasWrittenProjection ||
+      this._writtenView !== view ||
+      this._writtenViewUpdateId !== view.updateId ||
+      groupChanged ||
+      viewportChanged
+    ) {
       packAffineMat4(view.getTransform(), this._projData, 0);
       packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projData, 16);
 
@@ -516,7 +563,7 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
 
       const offset = this._instanceArena.take(batchBytes);
       const instanceBuffer = this._instanceArena.buffer!;
-      const stencil = backend.passCoordinator.stencilActive;
+      const stencil = backend.passCoordinator.stencilMode;
 
       if (drawShader) {
         this._drawShaderBatch(device, backend, active.pass, stencil, instanceBuffer, offset);
@@ -525,6 +572,26 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
       }
     } else if (backend.clearRequested) {
       backend.passCoordinator.acquirePass();
+    }
+
+    // Retained recording: while a capture window is open,
+    // hand the exact packed geometry-path bytes of this flush to the backend -
+    // independent of the capture frame's visibility. A single base texture binds to group(1),
+    // so the recorded slot list is one entry. Shader-path batches poison the capture.
+    if (this._geoQuadCount > 0 && backend._retainedCaptureActive && this._currentTexture !== null && this._currentBlendMode !== null) {
+      this._recordTextureScratch[0] = this._currentTexture;
+      backend.recordRetainedBatch(
+        this,
+        this._geoInstData,
+        this._geoQuadCount * geoStrideBytes,
+        this._geoQuadCount,
+        this._currentBlendMode,
+        this._recordTextureScratch,
+        1,
+        null,
+        null,
+        this._geoBatchNodeCount,
+      );
     }
 
     // Batch flushes no longer submit; the backend ends the pass at boundaries.
@@ -543,11 +610,13 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     device: GPUDevice,
     backend: WebGpuBackend,
     pass: GPURenderPassEncoder,
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     instanceBuffer: GPUBuffer,
     instanceByteOffset: number,
   ): void {
-    if (!this._indexBuffer || this._currentBlendMode === null || this._currentTexture === null) return;
+    if (!this._indexBuffer || this._currentBlendMode === null || this._currentTexture === null) {
+      return;
+    }
 
     device.queue.writeBuffer(instanceBuffer, instanceByteOffset, this._shaderInstData, 0, this._shaderQuadCount * shaderStrideBytes);
 
@@ -556,13 +625,25 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
 
     const modeX = this._currentModeX ?? 'repeat';
     const modeY = this._currentModeY ?? 'repeat';
-    const sampler = this._getOrCreateSampler(device, modeX, modeY);
+    const sampler = this._getOrCreateSampler(device, modeX, modeY, this._currentTexture.scaleMode);
     // The shader path pairs the resolved texture view with a wrap-mode sampler
     // (not the backend's default), so the cache is keyed on both identities.
     const texView = backend.getTextureBinding(this._currentTexture).view;
-    const textureBindGroup = this._getOrCreateTextureBindGroup(device, this._currentTexture, texView, sampler, 'repeating-sprite:texture-bind-group:shader');
+    const textureBindGroup = this._getOrCreateTextureBindGroup(
+      device,
+      this._currentTexture,
+      texView,
+      sampler,
+      'repeating-sprite:texture-bind-group:shader',
+    );
 
-    const pipeline = this._getPipeline('shader', this._currentBlendMode, backend.renderTargetFormat, stencil);
+    const pipeline = this._getPipeline(
+      'shader',
+      this._currentBlendMode,
+      backend.renderTargetFormat,
+      stencil,
+      backend.shouldPremultiplyTextureSample(this._currentTexture),
+    );
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformBindGroup);
@@ -580,11 +661,13 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     device: GPUDevice,
     backend: WebGpuBackend,
     pass: GPURenderPassEncoder,
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     instanceBuffer: GPUBuffer,
     instanceByteOffset: number,
   ): void {
-    if (!this._indexBuffer || this._currentBlendMode === null || this._currentTexture === null) return;
+    if (!this._indexBuffer || this._currentBlendMode === null || this._currentTexture === null) {
+      return;
+    }
 
     device.queue.writeBuffer(instanceBuffer, instanceByteOffset, this._geoInstData, 0, this._geoQuadCount * geoStrideBytes);
 
@@ -601,7 +684,13 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
       'repeating-sprite:texture-bind-group:geo',
     );
 
-    const pipeline = this._getPipeline('geo', this._currentBlendMode, backend.renderTargetFormat, stencil);
+    const pipeline = this._getPipeline(
+      'geo',
+      this._currentBlendMode,
+      backend.renderTargetFormat,
+      stencil,
+      backend.shouldPremultiplyTextureSample(this._currentTexture),
+    );
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformBindGroup);
@@ -613,27 +702,6 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     backend.passCoordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
-
-    // Retained recording: while a capture window is open,
-    // hand the exact packed geometry-path bytes of this flush to the backend -
-    // byte-identical to what just drew. A single base texture binds to group(1),
-    // so the recorded slot list is one entry. WebGl2Shader-path batches never reach
-    // here (render() poisoned the window if one appeared).
-    if (backend._retainedCaptureActive && this._currentTexture !== null && this._currentBlendMode !== null) {
-      this._recordTextureScratch[0] = this._currentTexture;
-      backend.recordRetainedBatch(
-        this,
-        this._geoInstData,
-        this._geoQuadCount * geoStrideBytes,
-        this._geoQuadCount,
-        this._currentBlendMode,
-        this._recordTextureScratch,
-        1,
-        null,
-        null,
-        this._geoBatchNodeCount,
-      );
-    }
   }
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
@@ -674,7 +742,7 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
    * the OPEN pass. All STATE is resolved live (pipeline via the existing
    * `_getPipeline('geo', ...)` cache, texture bind group(1) via the existing
    * texture-bind-group cache - resolving re-syncs dirty texture content, the
-   * group's 128-byte UBO written only when its content changed) and only DATA
+   * group's 144-byte UBO written only when its content changed) and only DATA
    * is cached (instance bytes, group transform storage). Mirrors
    * {@link WebGpuSpriteRenderer._replayRecordedSpriteBatch}.
    * @internal
@@ -724,7 +792,13 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     // live flush - so resolving through getTextureBinding reuses the live cache.
     const texture = payload.textures[0]!;
     const binding = backend.getTextureBinding(texture);
-    const textureBindGroup = this._getOrCreateTextureBindGroup(device, texture, binding.view, binding.sampler, 'repeating-sprite:texture-bind-group:geo');
+    const textureBindGroup = this._getOrCreateTextureBindGroup(
+      device,
+      texture,
+      binding.view,
+      binding.sampler,
+      'repeating-sprite:texture-bind-group:geo',
+    );
 
     // Group UBO: skip the write while (view, updateId, group bytes) match what
     // the buffer holds; guard the double-replay aliasing case first.
@@ -769,11 +843,20 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    const nativePipeline = this._getPipeline('geo', payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+    const nativePipeline = this._getPipeline(
+      'geo',
+      payload.blendMode,
+      backend.renderTargetFormat,
+      coordinator.stencilMode,
+      backend.shouldPremultiplyTextureSample(texture),
+    );
     const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, false);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
-    if (!nativeCompatible) bundle.nativeReplay.skipPass();
+
+    if (!nativeCompatible) {
+      bundle.nativeReplay.skipPass();
+    }
 
     if (
       !nativeCompatible ||
@@ -835,19 +918,29 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
   // Private helpers
   // -----------------------------------------------------------------------
 
-  private _getOrCreateSampler(device: GPUDevice, modeX: RepeatMode, modeY: RepeatMode): GPUSampler {
-    const key = `${modeX}:${modeY}`;
+  private _getOrCreateSampler(device: GPUDevice, modeX: RepeatMode, modeY: RepeatMode, scaleMode: ScaleModes): GPUSampler {
+    const filter =
+      scaleMode === ScaleModes.Nearest || scaleMode === ScaleModes.NearestMipmapNearest || scaleMode === ScaleModes.NearestMipmapLinear
+        ? 'nearest'
+        : 'linear';
+    const mipmapFilter = scaleMode === ScaleModes.NearestMipmapLinear || scaleMode === ScaleModes.LinearMipmapLinear ? 'linear' : 'nearest';
+    const key = (repeatModeIndex(modeX) * 3 + repeatModeIndex(modeY)) * 0x1000 + (scaleMode - ScaleModes.Nearest);
     const existing = this._samplers.get(key);
-    if (existing) return existing;
+
+    if (existing) {
+      return existing;
+    }
 
     const sampler = device.createSampler({
       label: 'repeating-sprite:sampler',
       addressModeU: repeatModeToAddressMode(modeX),
       addressModeV: repeatModeToAddressMode(modeY),
-      magFilter: 'linear',
-      minFilter: 'linear',
+      magFilter: filter,
+      minFilter: filter,
+      mipmapFilter,
     });
     this._samplers.set(key, sampler);
+
     return sampler;
   }
 
@@ -855,6 +948,7 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     if (this._transformBindGroup !== null && this._transformStorageBuf === storageBuf) {
       return this._transformBindGroup;
     }
+
     this._transformStorageBuf = storageBuf;
     this._transformBindGroup = device.createBindGroup({
       label: 'repeating-sprite:transform-bind-group',
@@ -864,6 +958,7 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
         { binding: 1, resource: { buffer: storageBuf } },
       ],
     });
+
     return this._transformBindGroup;
   }
 
@@ -901,21 +996,37 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     return group;
   }
 
-  private _getPipeline(kind: 'shader' | 'geo', blend: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const key = `${kind}:${blend}:${format}:${stencil ? 's' : 'n'}`;
-    const existing = this._pipelines.get(key);
-    if (existing) return existing;
+  private _getPipeline(
+    kind: 'shader' | 'geo',
+    blend: BlendModes,
+    format: GPUTextureFormat,
+    stencil: WebGpuStencilMode,
+    premultiply = false,
+  ): GPURenderPipeline {
+    const variant = scalablePipelineVariant(kind, blend, stencil, premultiply);
+    const existing = this._pipelines.get(format, variant);
+
+    if (existing) {
+      return existing;
+    }
 
     if (!this._device || !this._shaderModule || !this._pipelineLayout) {
       throw new Error('WebGpuScalableSpriteRenderer: not connected.');
     }
 
-    const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(kind, blend, format, stencil));
-    this._pipelines.set(key, pipeline);
+    const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(kind, blend, format, stencil, premultiply));
+    this._pipelines.set(format, variant, pipeline);
+
     return pipeline;
   }
 
-  private _buildPipelineDescriptor(kind: 'shader' | 'geo', blend: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
+  private _buildPipelineDescriptor(
+    kind: 'shader' | 'geo',
+    blend: BlendModes,
+    format: GPUTextureFormat,
+    stencil = WebGpuStencilMode.None,
+    premultiply = false,
+  ): GPURenderPipelineDescriptor {
     if (!this._shaderModule || !this._pipelineLayout) {
       throw new Error('WebGpuScalableSpriteRenderer: not connected.');
     }
@@ -960,13 +1071,14 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
       fragment: {
         module: this._shaderModule,
         entryPoint: isShader ? 'shaderFrag' : 'geoFrag',
+        constants: { premultiplySample: premultiply ? 1 : 0 },
         targets: [{ format, blend: getWebGpuBlendState(blend), writeMask: GPUColorWrite.ALL }],
       },
       primitive: { topology: 'triangle-list' },
     };
 
-    if (stencil) {
-      desc.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      desc.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     return desc;
@@ -977,13 +1089,14 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
    * blend-mode × target-format combination this renderer can produce,
    * asynchronously and in parallel. Called from the backend init path so
    * first-frame draws do not block on synchronous WGSL compilation. Only the
-   * no-clip (`:n`) variants are prewarmed; stencil pipelines compile lazily on
+   * no-attachment variants are prewarmed; stencil pipelines compile lazily on
    * the first clipped draw (mirrors the sprite, mesh and text renderers).
    */
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
     const device = this._device;
+    const pipelineLayout = this._pipelineLayout;
 
-    if (!device || !this._shaderModule || !this._pipelineLayout) {
+    if (!device || !this._shaderModule || !pipelineLayout) {
       return;
     }
 
@@ -1007,15 +1120,17 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
     for (const kind of kinds) {
       for (const blendMode of blendModes) {
         for (const format of formats) {
-          const key = `${kind}:${blendMode}:${format}:n`;
+          const variant = scalablePipelineVariant(kind, blendMode, WebGpuStencilMode.None, false);
 
-          if (this._pipelines.has(key)) {
+          if (this._pipelines.has(format, variant)) {
             continue;
           }
 
           promises.push(
             device.createRenderPipelineAsync(this._buildPipelineDescriptor(kind, blendMode, format)).then(pipeline => {
-              this._pipelines.set(key, pipeline);
+              if (this._device === device && this._pipelineLayout === pipelineLayout) {
+                this._pipelines.set(format, variant, pipeline);
+              }
             }),
           );
         }
@@ -1028,30 +1143,48 @@ export class WebGpuScalableSpriteRenderer extends AbstractWebGpuRenderer<NineSli
   // Grow the CPU staging arrays for the batch being packed. The GPU instance
   // buffer is a separate frame-scoped arena managed in flush().
   private _ensureShaderCapacity(needed: number): void {
-    if (needed <= this._shaderInstCapacity) return;
+    if (needed <= this._shaderInstCapacity) {
+      return;
+    }
+
     this._shaderInstCapacity = this._growCapacity(this._shaderInstCapacity, needed);
     const oldData = this._shaderInstData;
     const carry = this._shaderQuadCount * shaderStrideBytes;
     this._shaderInstData = new ArrayBuffer(this._shaderInstCapacity * shaderStrideBytes);
-    if (carry > 0) new Uint8Array(this._shaderInstData).set(new Uint8Array(oldData, 0, carry));
+
+    if (carry > 0) {
+      new Uint8Array(this._shaderInstData).set(new Uint8Array(oldData, 0, carry));
+    }
+
     this._shaderInstF32 = new Float32Array(this._shaderInstData);
     this._shaderInstU32 = new Uint32Array(this._shaderInstData);
   }
 
   private _ensureGeoCapacity(needed: number): void {
-    if (needed <= this._geoInstCapacity) return;
+    if (needed <= this._geoInstCapacity) {
+      return;
+    }
+
     this._geoInstCapacity = this._growCapacity(this._geoInstCapacity, needed);
     const oldData = this._geoInstData;
     const carry = this._geoQuadCount * geoStrideBytes;
     this._geoInstData = new ArrayBuffer(this._geoInstCapacity * geoStrideBytes);
-    if (carry > 0) new Uint8Array(this._geoInstData).set(new Uint8Array(oldData, 0, carry));
+
+    if (carry > 0) {
+      new Uint8Array(this._geoInstData).set(new Uint8Array(oldData, 0, carry));
+    }
+
     this._geoInstF32 = new Float32Array(this._geoInstData);
     this._geoInstU32 = new Uint32Array(this._geoInstData);
   }
 
   private _growCapacity(current: number, needed: number): number {
     let cap = Math.max(current, initialBatchCapacity);
-    while (cap < needed) cap *= 2;
+
+    while (cap < needed) {
+      cap *= 2;
+    }
+
     return cap;
   }
 }

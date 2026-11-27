@@ -1,0 +1,346 @@
+{
+  "title": "DocumentVersionError",
+  "description": "Thrown when a document's `$version` cannot be read. `reason` is `'newer'` for a document written by a newer application (never read best-effort, because re-saving it would lose data), `'discontinued'` for a version below `minVersion`, and `'invalid'` for a missing or malformed `$version`.",
+  "symbol": "DocumentVersionError",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Thrown when a document's `$version` cannot be read.",
+        "`reason` is `'newer'` for a document written by a newer application (never read best-effort, because re-saving it would lose data), `'discontinued'` for a version below `minVersion`, and `'invalid'` for a missing or malformed `$version`."
+      ],
+      "importLine": "import { DocumentVersionError } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(typeId: string, reason: DocumentVersionProblem, found: unknown, minVersion: number, version: number): DocumentVersionError",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "reason",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DocumentVersionProblem",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "found",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minVersion",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "version",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DocumentVersionError",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "typeId",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "reason",
+              "type": "DocumentVersionProblem",
+              "optional": false
+            },
+            {
+              "name": "found",
+              "type": "unknown",
+              "optional": false
+            },
+            {
+              "name": "minVersion",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "version",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "DocumentVersionError",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cause",
+          "signature": "cause?: unknown",
+          "signatureTokens": [
+            {
+              "text": "cause",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "found",
+          "signature": "found: unknown",
+          "signatureTokens": [
+            {
+              "text": "found",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "message",
+          "signature": "message: string",
+          "signatureTokens": [
+            {
+              "text": "message",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "reason",
+          "signature": "reason: DocumentVersionProblem",
+          "signatureTokens": [
+            {
+              "text": "reason",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DocumentVersionProblem",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "stack",
+          "signature": "stack?: string",
+          "signatureTokens": [
+            {
+              "text": "stack",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "typeId",
+          "signature": "typeId: string",
+          "signatureTokens": [
+            {
+              "text": "typeId",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/document/documentErrors.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/documentErrors.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/document/documentErrors.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/documentErrors.ts"
+}

@@ -27,7 +27,6 @@ import { computeProfileSignature } from '../../packages/exojs-bench/src/profile/
 
 const REPO_ROOT = resolve(import.meta.dirname!, '../..');
 const GATE = 'scripts/verify-bench-results.ts';
-const TSX_CLI = join('node_modules', 'tsx', 'dist', 'cli.mjs');
 
 const SLUG = 'test-gpu-linux-26-chromium';
 
@@ -170,7 +169,7 @@ const write = (document: Record<string, unknown>, { sign = true, indent = 2 }: {
 /** Run the gate over the fixture directory; returns its output on failure, or null when it passed. */
 const check = (): string | null => {
   try {
-    execFileSync('node', [TSX_CLI, GATE, directory], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' });
+    execFileSync(process.execPath, ['--import', 'tsx', GATE, directory], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' });
 
     return null;
   } catch (error) {
@@ -292,7 +291,9 @@ describe('verify-bench-results', () => {
   it('rejects an edited measurement', () => {
     const document = validProfile();
     const signed: Record<string, unknown> = { ...document, signature: { algorithm: 'sha256', value: computeProfileSignature(document) } };
-    const rendering = signed['rendering'] as { backends: Array<{ sections: Array<{ rows: Array<{ cells: Array<{ competitorMs: number }> }> }> }> };
+    const rendering = signed['rendering'] as {
+      backends: Array<{ sections: Array<{ rows: Array<{ cells: Array<{ competitorMs: number }> }> }> }>;
+    };
 
     rendering.backends[0]!.sections[0]!.rows[0]!.cells[0]!.competitorMs = 5;
 

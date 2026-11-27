@@ -4,7 +4,7 @@
   "symbol": "GranularEffectOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 8,
   "counts": {
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [],
-      "importLine": "import { GranularEffectOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { GranularEffectOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {
@@ -49,7 +49,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Internal circular-buffer length in seconds. Compile-time, not runtime. Default 2."
+          "description": "Internal circular-buffer length in seconds. Must be positive and finite, yielding at least one sample at the context sample rate. Compile-time, not runtime. Default 2."
         },
         {
           "name": "density",

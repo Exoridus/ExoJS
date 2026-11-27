@@ -1,5 +1,6 @@
 import { builtinLeaf, builtinTypeForExtension, builtinTypeForPath, coreAssetTypes } from '#assets/coreAssetTypes';
 import { AudioStream } from '#audio/AudioStream';
+import { Music } from '#audio/Music';
 import { Sound } from '#audio/Sound';
 import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
@@ -18,7 +19,24 @@ describe('coreAssetTypes', () => {
   });
 
   test('covers every built-in kind the engine ships', () => {
-    expect(ids).toEqual(['texture', 'sound', 'music', 'video', 'json', 'text', 'svg', 'subtitle', 'xml', 'csv', 'binary', 'bmFont', 'font', 'image', 'wasm']);
+    expect(ids).toEqual([
+      'texture',
+      'sound',
+      'music',
+      'audioStream',
+      'video',
+      'json',
+      'text',
+      'svg',
+      'subtitle',
+      'xml',
+      'csv',
+      'binary',
+      'bmFont',
+      'font',
+      'image',
+      'wasm',
+    ]);
   });
 
   test('no two built-ins claim the same suffix', () => {
@@ -32,7 +50,8 @@ describe('coreAssetTypes', () => {
 
     expect(tokenOf('texture')).toBe(Texture);
     expect(tokenOf('sound')).toBe(Sound);
-    expect(tokenOf('music')).toBe(AudioStream);
+    expect(tokenOf('music')).toBe(Music);
+    expect(tokenOf('audioStream')).toBe(AudioStream);
     expect(tokenOf('video')).toBe(Video);
     expect(tokenOf('bmFont')).toBe(BmFont);
   });

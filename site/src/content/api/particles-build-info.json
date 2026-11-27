@@ -4,7 +4,7 @@
   "symbol": "ParticlesBuildInfo",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -22,7 +22,7 @@
         "Immutable compile-time build metadata for `@codexo/exojs-particles`.",
         "`development` mirrors the `__DEV__` compile-time constant and is statically replaced before tree shaking. `version` is the exact `package.json` version of the Particles package at build time. `revision` is the short source-control revision (appended with `-dirty` when uncommitted changes are present) or `\"unknown\"` when no revision information is available."
       ],
-      "importLine": "import { ParticlesBuildInfo } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticlesBuildInfo } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

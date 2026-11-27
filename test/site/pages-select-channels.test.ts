@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ChannelEntry, ChannelsDocument } from '../../scripts/pages/compose-site';
-import { type ArtifactMeta, type CandidateRun, selectChannels, type SelectionInput, type WorkflowRunMeta } from '../../scripts/pages/select-channels';
+import {
+  type ArtifactMeta,
+  type CandidateRun,
+  selectChannels,
+  type SelectionInput,
+  type WorkflowRunMeta,
+} from '../../scripts/pages/select-channels';
 
 /**
  * The publisher re-decides both channels every time it starts. The trigger
@@ -326,7 +332,9 @@ describe('expired artifacts (W08)', () => {
         previous: { runId: 900, channels: published, pagesArtifact: { ...PAGES_ARTIFACT, expired: true } },
       }),
     );
-    expect(result.channels.stable.action === 'keep' && result.channels.stable.transports.map(transport => transport.kind)).toEqual(['release']);
+    expect(result.channels.stable.action === 'keep' && result.channels.stable.transports.map(transport => transport.kind)).toEqual([
+      'release',
+    ]);
   });
 
   it('deploys nothing when no trusted source of a kept channel is left', () => {

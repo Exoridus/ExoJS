@@ -4,7 +4,11 @@ import { Light, type LightOptions } from './Light';
 export interface SpotLightOptions extends LightOptions {
   /** Distance in pixels at which the light contributes nothing. Defaults to `320`. */
   readonly radius?: number;
-  /** Half-angle of the cone in DEGREES, measured from its axis. Defaults to `30`. */
+  /**
+   * Half-angle of the cone in DEGREES, measured from its axis. Defaults to
+   * `30`. Rendering clamps the angle to `0..90`, but the stored value stays as
+   * assigned, so a wider cone is not rendered.
+   */
   readonly angle?: number;
   /**
    * How far the cone fades at its edge, as a fraction of {@link angle}. `0` is a

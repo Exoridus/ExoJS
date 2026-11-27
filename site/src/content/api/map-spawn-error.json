@@ -4,7 +4,7 @@
   "symbol": "MapSpawnError",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 8,
   "counts": {
@@ -22,7 +22,7 @@
         "A spawn failed. The whole spawn is rolled back before this is thrown - no partial session exists.",
         "For `'factory-failed'` the error a factory raised is preserved as `cause`."
       ],
-      "importLine": "import { MapSpawnError } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapSpawnError } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

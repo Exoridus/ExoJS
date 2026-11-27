@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { INDEPENDENT_PACKAGES } from '../../scripts/release/lockstep-packages.ts';
+
 const repoRoot = resolve(fileURLToPath(import.meta.url), '..', '..', '..');
 
 interface Manifest {
@@ -27,6 +29,9 @@ const peerRange = `${releaseVersion.split('.').slice(0, 2).join('.')}.x`;
 
 // A lockstep extension is any package under packages/ that peers on the core.
 // Discovered from disk so new extension packages are covered automatically.
+// Independent packages (build tooling, content) also declare the engine peer
+// but move on their own version line, so the release matrix excludes them.
+const independentNames = new Set<string>(INDEPENDENT_PACKAGES.map(pkg => pkg.name));
 const packagesDir = resolve(repoRoot, 'packages');
 const lockstepExtensions = readdirSync(packagesDir)
   .map(dir => {
@@ -36,7 +41,10 @@ const lockstepExtensions = readdirSync(packagesDir)
       return null;
     }
   })
-  .filter((manifest): manifest is Manifest => manifest?.peerDependencies?.['@codexo/exojs'] !== undefined);
+  .filter(
+    (manifest): manifest is Manifest =>
+      manifest?.peerDependencies?.['@codexo/exojs'] !== undefined && manifest.name !== undefined && !independentNames.has(manifest.name),
+  );
 
 describe('release coherence', () => {
   it('CHANGELOG opens with a concrete, dated release section', () => {
@@ -58,16 +66,17 @@ describe('release coherence', () => {
     });
   }
 
-  // exojs-tiled and exojs-ldtk both render tiles via exojs-tilemap's runtime
-  // classes, but consumers only get one copy of those classes if the host app
-  // supplies exojs-tilemap itself - hence a peerDependency (not a runtime
-  // `dependencies` entry) backed by a workspace:* devDependency for local dev/test.
+  // exojs-tiled and exojs-ldtk render tiles through the tilemap runtime, which
+  // ships inside Core as `@codexo/exojs/tilemap`. Their Core peer is therefore
+  // the only engine dependency they may declare: a dependency on the retired
+  // tilemap package would install a second, separate tilemap implementation.
   for (const consumer of ['exojs-tiled', 'exojs-ldtk']) {
-    it(`@codexo/${consumer} declares @codexo/exojs-tilemap as a peerDependency`, () => {
+    it(`@codexo/${consumer} reaches the tilemap runtime through its Core peer only`, () => {
       const manifest = readManifest(resolve(packagesDir, consumer, 'package.json'));
-      expect(manifest.peerDependencies?.['@codexo/exojs-tilemap']).toBeDefined();
-      expect(manifest.devDependencies?.['@codexo/exojs-tilemap']).toBe('workspace:*');
-      expect(manifest.dependencies?.['@codexo/exojs-tilemap']).toBeUndefined();
+      const declared = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies });
+
+      expect(manifest.peerDependencies?.['@codexo/exojs']).toBeDefined();
+      expect(declared.filter(name => name.startsWith('@codexo/exojs-') && name !== '@codexo/exojs-config')).toEqual([]);
     });
   }
 });

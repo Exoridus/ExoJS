@@ -1,7 +1,12 @@
 import { WebGl2ShaderUniform } from '#rendering/webgl2/WebGl2ShaderUniform';
 
-import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './shaderMappings';
+import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveComponentCountMapping } from './shaderMappings';
 
+/**
+ * Reflection metadata and an owned GPU buffer for one active GLSL uniform block.
+ * Uniform views share the block's CPU buffer, which {@link upload} sends to the GPU.
+ * @advanced
+ */
 export class WebGl2ShaderBlock {
   public readonly index: number;
   public readonly name: string;
@@ -11,8 +16,9 @@ export class WebGl2ShaderBlock {
   private readonly _context: WebGL2RenderingContext;
   private readonly _program: WebGLProgram;
   private readonly _blockData: ArrayBuffer;
-  private readonly _uniformBuffer: WebGLBuffer | null;
+  private _uniformBuffer: WebGLBuffer | null;
   private readonly _uniforms: Map<string, WebGl2ShaderUniform> = new Map<string, WebGl2ShaderUniform>();
+  private readonly _leafUniforms: Map<string, WebGl2ShaderUniform | null> = new Map<string, WebGl2ShaderUniform | null>();
 
   public constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number) {
     this._context = gl;
@@ -32,12 +38,22 @@ export class WebGl2ShaderBlock {
     gl.uniformBlockBinding(this._program, this.index, this.binding);
   }
 
+  /**
+   * Look up an active member by its full GLSL name (`uLight.color`) or, when unique within the block,
+   * by its property name (`color`). A property name shared by several struct members throws; use the full name.
+   */
   public getUniform(name: string): WebGl2ShaderUniform {
-    if (!this._uniforms.has(name)) {
+    const uniform = this._uniforms.get(name) ?? this._leafUniforms.get(name);
+
+    if (uniform === undefined) {
       throw new Error(`Uniform "${name}" is not available.`);
     }
 
-    return this._uniforms.get(name)!;
+    if (uniform === null) {
+      throw new Error(`Uniform "${name}" is ambiguous in block "${this.name}"; address it by its full name.`);
+    }
+
+    return uniform;
   }
 
   public upload(): void {
@@ -48,11 +64,17 @@ export class WebGl2ShaderBlock {
   }
 
   public destroy(): void {
+    if (this._uniformBuffer !== null) {
+      this._context.deleteBuffer(this._uniformBuffer);
+      this._uniformBuffer = null;
+    }
+
     for (const uniform of this._uniforms.values()) {
       uniform.destroy();
     }
 
     this._uniforms.clear();
+    this._leafUniforms.clear();
   }
 
   private _extractUniforms(): void {
@@ -72,16 +94,22 @@ export class WebGl2ShaderBlock {
       const index = indices[i]!;
       const { type, size, name } = gl.getActiveUniform(program, index)!;
       const arrayConstructor = webGl2PrimitiveArrayConstructors[type];
-      const byteSize = webGl2PrimitiveByteSizeMapping[type];
+      const componentCount = webGl2PrimitiveComponentCountMapping[type];
 
-      if (arrayConstructor === undefined || byteSize === undefined) {
+      if (arrayConstructor === undefined || componentCount === undefined) {
         throw new Error(`Unsupported uniform type ${type} for uniform "${name}".`);
       }
 
-      const data = new arrayConstructor(blockData, offsets[i], byteSize * size);
+      const data = new arrayConstructor(blockData, offsets[i], componentCount * size);
       const uniform = new WebGl2ShaderUniform(index, type, size, name, data);
 
-      this._uniforms.set(uniform.propName, uniform);
+      this._uniforms.set(name, uniform);
+
+      const leaf = uniform.propName;
+
+      if (leaf !== name) {
+        this._leafUniforms.set(leaf, this._leafUniforms.has(leaf) ? null : uniform);
+      }
     }
   }
 }

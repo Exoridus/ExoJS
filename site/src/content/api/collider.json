@@ -4,7 +4,7 @@
   "symbol": "Collider",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 20,
   "counts": {
@@ -22,7 +22,7 @@
         "Geometry attached to a PhysicsBody: a Shape plus a body-local offset/rotation, material (friction/restitution/density) and a collision filter. A body may own several colliders (compound). The collider also caches its world-space geometry - refreshed by synchronize - which the broad phase, narrow phase and queries read directly.",
         "Material fields and the filter are mutable; the shape and local placement are immutable (rebuild the collider to change geometry)."
       ],
-      "importLine": "import { Collider } from '@codexo/exojs-physics'",
+      "importLine": "import { Collider } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {
@@ -328,7 +328,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Stable id, assigned when the owning body joins a world (-1 until then)."
+          "description": "The collision geometry."
         },
         {
           "name": "aabb",
@@ -382,7 +382,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The body this collider belongs to. null until the collider has been added to a body that has joined a world (free-standing colliders have no body yet)."
+          "description": "The body this collider belongs to."
         },
         {
           "name": "destroyed",

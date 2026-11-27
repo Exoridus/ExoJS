@@ -1,17 +1,17 @@
 import type { RenderingContext, Seconds } from '@codexo/exojs';
-import { Application, Asset, AudioStream, Color, Graphics, Scene } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
+import { Application, Color, Graphics, type Music, Scene } from '@codexo/exojs';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
 
 // #region guide:full-visualizer
 
 class AudioReactiveScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private analyser!: AudioAnalyser;
   private detector!: BeatDetector;
   private bars!: Graphics;
 
   async load() {
-    this.music = await this.loader.load(Asset.type('music', 'audio/track.ogg'));
+    this.music = await this.loader.load({ type: 'music', source: 'audio/track.ogg' });
   }
 
   init() {
@@ -38,6 +38,7 @@ class AudioReactiveScene extends Scene {
     const barW = width / bands.length;
 
     this.bars.clear();
+
     for (let i = 0; i < bands.length; i++) {
       const h = (bands[i] / 255) * height;
       const t = i / Math.max(1, bands.length - 1);

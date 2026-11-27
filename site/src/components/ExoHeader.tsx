@@ -31,11 +31,13 @@ export const ExoHeader = ({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
     setSearchOpen(false);
     setMenuOpen(true);
   };
+
   const openSearch = (event: MouseEvent<HTMLButtonElement>): void => {
     setSheetOpener(event.currentTarget);
     setMenuOpen(false);
     setSearchOpen(true);
   };
+
   const dismissSheets = (): void => {
     setMenuOpen(false);
     setSearchOpen(false);

@@ -4,7 +4,7 @@
   "symbol": "ParticlesExtensionOptions",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 1,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for createParticlesExtension."
       ],
-      "importLine": "import { ParticlesExtensionOptions } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticlesExtensionOptions } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {
@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Particles the WebGL2 renderer's instance buffer is pre-sized for. Defaults to 8192. This is a starting allocation, not a limit: a system with more live particles grows the buffer instead of dropping the surplus, so raise it only to avoid the initial growth steps for a known-large system."
+          "description": "Particles the WebGL2 renderer's instance buffer is pre-sized for. Defaults to 8192. Must be a positive integer: a negative, fractional or non-finite value throws when the extension is created. This is a starting allocation, not a limit: a system with more live particles grows the buffer instead of dropping the surplus, so raise it only to avoid the initial growth steps for a known-large system."
         }
       ],
       "paragraphs": [],

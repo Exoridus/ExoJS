@@ -4,7 +4,7 @@
   "symbol": "TileMap",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 44,
   "counts": {
@@ -24,7 +24,7 @@
         "The map does NOT own tileset textures (those are Loader-owned) and does NOT own SceneNode children - see import('./TileMapNode').TileMapNode, which owns those.",
         "Multiple tilesets are supported: each cell stores a packed tileset index and local tile ID, so different tilesets may have different tile dimensions."
       ],
-      "importLine": "import { TileMap } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileMap } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {
@@ -442,7 +442,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy the map and all owned layers and chunk storage. Is idempotent. Does NOT destroy tileset textures (Loader-owned) or any SceneNodes (those do not exist yet in this slice)."
+          "description": "Destroy the map and all owned layers and chunk storage. Is idempotent. Does NOT destroy tileset textures (Loader-owned) or any SceneNodes (see import('./TileMapNode').TileMapNode)."
         },
         {
           "name": "getImageLayer",
@@ -1613,7 +1613,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Tile draw order (Tiled renderorder). Informational."
+          "description": "Tile draw order (Tiled renderorder). Informational: orthogonal tile layers always draw in 'right-down' order."
         },
         {
           "name": "tileHeight",
@@ -1957,7 +1957,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Monotonic map revision counter. Increments on structural changes only (add/remove layer, add tileset). Cell mutations are tracked per-chunk and per-layer; the renderer reads chunk-level revisions directly."
+          "description": "Monotonic map revision counter. Increments on structural changes only (add/remove tile, image, or object layer; add tileset). Cell mutations are tracked per-chunk and per-layer; the renderer reads chunk-level revisions directly."
         },
         {
           "name": "tilesets",

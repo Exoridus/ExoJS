@@ -8,7 +8,7 @@ import { mutable } from '../../support/mutable';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeTexture = (w = 128, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
+const makeTexture = (w = 128, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => {} }) as unknown as Texture;
 
 const makeRegion = (texture: Texture, x = 0, y = 0, width?: number, height?: number): TextureRegion =>
   new TextureRegion(texture, { x, y, width: width ?? texture.width, height: height ?? texture.height });
@@ -214,6 +214,7 @@ describe('buildNineSliceQuads — UV boundaries', () => {
     const slices = { left: 10, top: 10, right: 10, bottom: 10 };
     const border = { left: 10, top: 10, right: 10, bottom: 10 };
     const quads = buildNineSliceQuads(region, slices, border, 100, 100, undefined);
+
     for (const q of quads) {
       expect(q.u0).toBeGreaterThanOrEqual(-1e-9);
       expect(q.u1).toBeLessThanOrEqual(1 + 1e-9);
@@ -228,6 +229,7 @@ describe('buildNineSliceQuads — UV boundaries', () => {
     const slices = { left: 10, top: 10, right: 10, bottom: 10 };
     const border = { left: 10, top: 10, right: 10, bottom: 10 };
     const quads = buildNineSliceQuads(region, slices, border, 100, 100, undefined);
+
     for (const q of quads) {
       expect(q.u0).toBeLessThanOrEqual(q.u1);
       expect(q.v0).toBeLessThanOrEqual(q.v1);
@@ -272,6 +274,26 @@ describe('buildNineSliceQuads — UV boundaries', () => {
     expect(br.v1).toBe(region.v1);
   });
 
+  test('asymmetric extrusion insets only the edges that are not extruded', () => {
+    const tex = makeTexture(128, 128);
+    const region = new TextureRegion(tex, {
+      x: 32,
+      y: 32,
+      width: 64,
+      height: 64,
+      extrusion: { left: 2, top: 0, right: 0, bottom: 2 },
+    });
+    const slices = { left: 10, top: 10, right: 10, bottom: 10 };
+    const border = { left: 10, top: 10, right: 10, bottom: 10 };
+    const quads = buildNineSliceQuads(region, slices, border, 64, 64, undefined);
+    const half = 0.5 / 128;
+
+    expect(quads[0].u0).toBe(region.u0);
+    expect(quads[0].v0).toBe(region.v0 + half);
+    expect(quads[3].u1).toBe(region.u1 - half);
+    expect(quads[3].v1).toBe(region.v1);
+  });
+
   test('no extrusion: outer UVs are half-texel inset', () => {
     const tex = makeTexture(64, 64);
     const region = makeRegion(tex);
@@ -296,6 +318,7 @@ describe('buildNineSliceQuads — UV boundaries', () => {
     const slices = { left: 0, top: 0, right: 0, bottom: 0 };
     const border = { left: 5, top: 5, right: 5, bottom: 5 };
     const quads = buildNineSliceQuads(region, slices, border, 20, 20, undefined);
+
     for (const q of quads) {
       expect(q.u0).toBeLessThanOrEqual(q.u1);
       expect(q.v0).toBeLessThanOrEqual(q.v1);
@@ -316,6 +339,7 @@ describe('buildNineSliceQuads — zero-center', () => {
     const quads = buildNineSliceQuads(region, slices, border, 64, 64, undefined);
     // 4 corners + 2 vertical edges
     expect(quads.length).toBe(6);
+
     for (const q of quads) {
       expect(q.x1 - q.x0).toBeGreaterThan(0);
     }
@@ -344,6 +368,7 @@ describe('buildNineSliceQuads — small-target compression', () => {
     const slices = { left: 16, top: 16, right: 16, bottom: 16 };
     const border = { left: 30, top: 16, right: 30, bottom: 16 };
     const quads = buildNineSliceQuads(region, slices, border, 50, 50, undefined);
+
     for (const q of quads) {
       expect(q.x0).toBeGreaterThanOrEqual(0);
       expect(q.x1).toBeLessThanOrEqual(50 + 1e-9);
@@ -358,6 +383,7 @@ describe('buildNineSliceQuads — small-target compression', () => {
     const slices = { left: 16, top: 16, right: 16, bottom: 16 };
     const border = { left: 30, top: 30, right: 30, bottom: 30 };
     const quads = buildNineSliceQuads(region, slices, border, 20, 20, undefined);
+
     // All quads fit within [0,20]x[0,20] - only corners
     for (const q of quads) {
       expect(q.x0).toBeGreaterThanOrEqual(0);

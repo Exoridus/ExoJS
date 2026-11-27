@@ -102,7 +102,8 @@ const createQuadGeometry = (): Geometry => {
   });
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 /** Run `body` inside a validation error scope; returns false on a device-loss skip. */
 const runGuarded = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, body: () => void): Promise<boolean> => {

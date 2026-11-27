@@ -22,25 +22,23 @@ interface ObjectSpec {
   readonly name?: string;
 }
 
-const object = (spec: ObjectSpec): TileMapObject => {
-  return {
-    kind: 'rectangle',
-    id: spec.id,
-    ...(spec.sourceId !== undefined && { sourceId: spec.sourceId }),
-    name: spec.name ?? '',
-    type: spec.type ?? '',
-    x: spec.id * 10,
-    y: 0,
-    width: 8,
-    height: 8,
-    rotation: 0,
-    visible: true,
-    properties: {},
-  };
-};
+const object = (spec: ObjectSpec): TileMapObject => ({
+  kind: 'rectangle',
+  id: spec.id,
+  ...(spec.sourceId !== undefined && { sourceId: spec.sourceId }),
+  name: spec.name ?? '',
+  type: spec.type ?? '',
+  x: spec.id * 10,
+  y: 0,
+  width: 8,
+  height: 8,
+  rotation: 0,
+  visible: true,
+  properties: {},
+});
 
-const mapWith = (...layers: readonly LayerSpec[]): TileMap => {
-  return new TileMap({
+const mapWith = (...layers: readonly LayerSpec[]): TileMap =>
+  new TileMap({
     name: 'level',
     width: 4,
     height: 4,
@@ -48,7 +46,6 @@ const mapWith = (...layers: readonly LayerSpec[]): TileMap => {
     tileHeight: 16,
     objectLayers: layers.map(layer => new ObjectLayer({ id: layer.id, name: layer.name, objects: layer.objects.map(object) })),
   });
-};
 
 class Thing implements Destroyable {
   public destroyed = false;
@@ -124,7 +121,10 @@ describe('MapObjectSpawner identification', () => {
   it('passes the spawn context to identify', async () => {
     const map = mapWith({ id: 1, name: 'entities', objects: [{ id: 1, type: 'Enemy' }] });
     const identify = vi.fn((_object: MapObjectDescriptor, context: { hard: boolean }) => (context.hard ? 'Enemy:hard' : 'Enemy'));
-    const spawner = new MapObjectSpawner<{ hard: boolean }, Thing>({ Enemy: () => new Thing('normal'), 'Enemy:hard': () => new Thing('hard') }, { identify });
+    const spawner = new MapObjectSpawner<{ hard: boolean }, Thing>(
+      { Enemy: () => new Thing('normal'), 'Enemy:hard': () => new Thing('hard') },
+      { identify },
+    );
 
     const session = await spawner.spawn(map, { hard: true });
 
@@ -196,6 +196,7 @@ describe('MapObjectSpawner factories', () => {
       Sync: () => new Thing('sync'),
       Async: async () => {
         await tick();
+
         return new Thing('async');
       },
     });
@@ -241,6 +242,7 @@ describe('MapObjectSpawner factories', () => {
       Slow: async descriptor => {
         await tick();
         await tick();
+
         return new Thing(`slow-${descriptor.id}`);
       },
     });
@@ -256,6 +258,7 @@ describe('MapObjectSpawner factories', () => {
     const spawner = new MapObjectSpawner<void, Thing>({
       Enemy: descriptor => {
         seen.push(descriptor);
+
         return new Thing('enemy');
       },
     });
@@ -421,6 +424,7 @@ describe('MapObjectSpawner atomicity', () => {
     const spawner = new MapObjectSpawner<void, Thing>({
       Enemy: async () => {
         await tick();
+
         throw boom;
       },
     });
@@ -466,6 +470,7 @@ describe('MapObjectSpawner cancellation', () => {
       Slow: async descriptor => {
         controller.abort();
         await tick();
+
         return new Thing(descriptor.id, log);
       },
     });
@@ -487,6 +492,7 @@ describe('MapObjectSpawner cancellation', () => {
     const spawner = new MapObjectSpawner<void, Thing>({
       Enemy: (_object, _context, signal) => {
         seen = signal;
+
         return new Thing('enemy');
       },
     });

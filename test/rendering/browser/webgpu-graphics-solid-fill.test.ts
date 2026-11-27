@@ -17,6 +17,8 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Circle } from '#math/Circle';
+import { Rectangle } from '#math/Rectangle';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -53,7 +55,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 
 // The software (SwiftShader) adapter can drop the device mid-test; treat that as
 // an unavailable-adapter skip rather than a failure.
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a scene through the real plan path inside a validation error scope and
 // assert it produced valid GPU work. Returns false when the device dropped
@@ -88,6 +91,101 @@ const renderAndValidate = async (ctx: { skip: (reason: string) => void }, backen
 };
 
 describe('WebGPU Graphics solid fill', () => {
+  test('shared live rectangles refresh cached draws and survive one Graphics teardown', async ctx => {
+    const backend = await setupBackend();
+    const source = new Rectangle(8, 8, 16, 32);
+    const first = new Graphics({ fill: Color.red });
+    const second = new Graphics({ fill: Color.blue });
+    const handle = first.addShape(source);
+    second.addShape(source);
+
+    try {
+      for (const graphics of [first, second, first, second]) {
+        if (!(await renderAndValidate(ctx, backend, graphics))) {
+          return;
+        }
+
+        expectPixelNear(readWebGpuPixels(backend, canvasSize)(40, 20), [0, 0, 0, 255]);
+      }
+
+      source.width = 48;
+
+      for (const [graphics, color] of [
+        [first, [255, 0, 0, 255]],
+        [second, [0, 0, 255, 255]],
+      ] as const) {
+        if (!(await renderAndValidate(ctx, backend, graphics))) {
+          return;
+        }
+
+        expectPixelNear(readWebGpuPixels(backend, canvasSize)(40, 20), [...color]);
+      }
+
+      handle.setStyle({ fill: Color.green });
+      const graphics = first;
+
+      if (!(await renderAndValidate(ctx, backend, graphics))) {
+        return;
+      }
+
+      expectPixelNear(readWebGpuPixels(backend, canvasSize)(40, 20), [0, 255, 0, 255]);
+      first.destroy();
+      source.width = 16;
+
+      for (const graphics of [second, second]) {
+        if (!(await renderAndValidate(ctx, backend, graphics))) {
+          return;
+        }
+
+        expectPixelNear(readWebGpuPixels(backend, canvasSize)(40, 20), [0, 0, 0, 255]);
+      }
+    } finally {
+      first.destroy();
+      second.destroy();
+      source.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('cut-outs leave the clear color where the union of cuts covers a live rectangle', async ctx => {
+    const backend = await setupBackend();
+    const source = new Rectangle(8, 8, 48, 48);
+    const hole = new Circle(28, 28, 10);
+    const notch = new Rectangle(40, 40, 24, 24);
+    const graphics = new Graphics({ fill: Color.green });
+
+    graphics.addShape(source).cutShape(hole).cutShape(notch);
+
+    try {
+      if (!(await renderAndValidate(ctx, backend, graphics))) {
+        return;
+      }
+
+      let readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(28, 28), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(50, 50), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(12, 12), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(20, 50), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(50, 20), [0, 255, 0, 255]);
+
+      hole.destroy();
+
+      if (!(await renderAndValidate(ctx, backend, graphics))) {
+        return;
+      }
+
+      readPixel = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(readPixel(28, 28), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(50, 50), [0, 0, 0, 255]);
+    } finally {
+      graphics.destroy();
+      source.destroy();
+      notch.destroy();
+      backend.destroy();
+    }
+  });
+
   test('solid-color rectangle fill renders the fill color inside and the clear color outside', async ctx => {
     const backend = await setupBackend();
     const graphics = new Graphics();

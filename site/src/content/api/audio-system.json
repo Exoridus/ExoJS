@@ -351,7 +351,7 @@
         },
         {
           "name": "play",
-          "signature": "play(source: AudioStream, options?: PlayOptions): Voice & Seekable & Pausable & Loopable & RatePitched",
+          "signature": "play(source: MediaAudio, options?: PlayOptions): Voice & Seekable & Pausable & Loopable & RatePitched",
           "signatureTokens": [
             {
               "text": "play",
@@ -370,7 +370,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioStream",
+              "text": "MediaAudio",
               "kind": "type"
             },
             {
@@ -441,7 +441,7 @@
           "params": [
             {
               "name": "source",
-              "type": "AudioStream",
+              "type": "MediaAudio",
               "optional": false
             },
             {
@@ -895,7 +895,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Tunable smoothing applied to per-frame panner/listener position updates, shared by the AudioListener and every spatial voice. Adjust smoothing (the setTargetAtTime time constant) or teleportThreshold (the snap-instead-of-ramp jump distance) to trade responsiveness against zipper-noise suppression (AU4). Reachable as app.audio.spatial."
+          "description": "Tunable smoothing applied to per-frame panner position updates on every spatial voice, in the same settings object the AudioListener reads its Doppler tuning from. Adjust smoothing (the setTargetAtTime time constant) or teleportThreshold (the snap-instead-of-ramp jump distance) to trade responsiveness against zipper-noise suppression (AU4). Reachable as app.audio.spatial."
         },
         {
           "name": "zones",
@@ -937,7 +937,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true while audio is blocked by the browser's autoplay policy - no user gesture has resumed the AudioContext yet. What a play call does while locked depends on the asset: an AudioStream is deferred and starts on the gesture, because a media element owns its own playhead and can simply be told to play later. A Sound or an AudioGenerator is **skipped** - it returns an already-ended voice and never makes a sound. Neither can be deferred honestly: a suspended context's currentTime stands still, so every source scheduled while locked lands on the same instant and the entire backlog would fire simultaneously on the gesture. Start such playback from AudioSystem.onUnlock instead."
+          "description": "true while audio is blocked by the browser's autoplay policy - no user gesture has resumed the AudioContext yet. What a play call does while locked depends on the asset: an MediaAudio is deferred and starts on the gesture, because a media element owns its own playhead and can simply be told to play later. A Sound or an AudioGenerator is **skipped** - it returns an already-ended voice and never makes a sound. Neither can be deferred honestly: a suspended context's currentTime stands still, so every source scheduled while locked lands on the same instant and the entire backlog would fire simultaneously on the gesture. Start such playback from AudioSystem.onUnlock instead."
         },
         {
           "name": "muteOnHidden",

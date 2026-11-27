@@ -116,7 +116,7 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
       return true;
     },
     resolveRenderTarget() {
-      return undefined;
+      return;
     },
     getColorFormatCapabilities() {
       return { renderable: true, filterable: true, blendable: true, sampleCounts: [1] };
@@ -128,9 +128,7 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
       width: number,
       height: number,
       dataType: T = 'uint8' as T,
-    ) => {
-      return Promise.resolve(createPixelArray(width * height * 4, dataType));
-    }) as RenderBackend['readPixels'],
+    ) => Promise.resolve(createPixelArray(width * height * 4, dataType))) as RenderBackend['readPixels'],
     createPixelReadback: (<T extends PixelDataType = 'uint8'>(
       _source: RenderTexture,
       _x: number,
@@ -139,9 +137,7 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
       height: number,
       slots: number,
       dataType: T = 'uint8' as T,
-    ) => {
-      return createPixelReadbackDouble(width, height, slots, dataType);
-    }) as RenderBackend['createPixelReadback'],
+    ) => createPixelReadbackDouble(width, height, slots, dataType)) as RenderBackend['createPixelReadback'],
     acquireRenderTexture(width: number, height: number, format?: ColorTextureFormat) {
       return new RenderTexture(width, height, format === undefined ? {} : { format });
     },
@@ -170,7 +166,7 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
       return this;
     },
     destroy() {
-      return undefined;
+      return;
     },
   };
 };

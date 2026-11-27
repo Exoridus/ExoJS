@@ -4,7 +4,7 @@
   "symbol": "MapObjectFactory",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -22,7 +22,7 @@
         "Creates one runtime object from one map object, or `null` to deliberately create nothing for it.",
         "`signal` aborts with the spawn it belongs to; a factory that loads assets or awaits anything else should pass it on, so a level unloaded mid-load stops its own work too."
       ],
-      "importLine": "import { MapObjectFactory } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapObjectFactory } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

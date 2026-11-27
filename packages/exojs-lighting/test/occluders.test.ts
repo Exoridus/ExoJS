@@ -389,6 +389,17 @@ describe('MeshOccluder', () => {
     expect(collect(new MeshOccluder(loose))).toHaveLength(4);
   });
 
+  test('welds vertices closer than the weld distance even across a quantisation boundary', () => {
+    const straddling = {
+      // The shared diagonal's corner is 0.02 apart between the triangles, on either side of x = 10.5.
+      vertices: new Float32Array([0, 0, 10, 0, 10.49, 10, 0, 0, 10.51, 10, 0, 10]),
+      indices: null,
+      getWorldTransform: () => new Matrix(),
+    };
+
+    expect(collect(new MeshOccluder(straddling, { weld: 1 }))).toHaveLength(4);
+  });
+
   test('a hole comes back as an outline of its own', () => {
     // A square ring: four corners outside, four inside, eight triangles.
     const outer = [0, 0, 30, 0, 30, 30, 0, 30];

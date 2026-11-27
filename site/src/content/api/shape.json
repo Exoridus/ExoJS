@@ -4,7 +4,7 @@
   "symbol": "Shape",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -22,7 +22,7 @@
         "Immutable local-space collision geometry. A `Shape` carries no transform - a Collider positions it in a body.",
         "Having an interior is a capability, not a given: solid shapes expose massProperties, while boundary geometry (a segment, a chain of edges) reports `null` and contributes nothing to the owning body's mass. Read the property rather than assuming an area exists."
       ],
-      "importLine": "import { Shape } from '@codexo/exojs-physics'",
+      "importLine": "import { Shape } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

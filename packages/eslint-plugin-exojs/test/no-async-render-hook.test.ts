@@ -34,6 +34,11 @@ ruleTester.run('no-async-render-hook', noAsyncRenderHook, {
   ],
   invalid: [
     {
+      code: 'class Effect extends Filter { async apply() {} }',
+      options: [{ hooks: { MyEffectBase: ['run'] } }],
+      errors: [{ messageId: 'asyncRenderHook', data: { name: 'apply', base: 'Filter' } }],
+    },
+    {
       code: 'class Pass extends RenderPass { async execute(context) { await this.upload(); } }',
       errors: [{ messageId: 'asyncRenderHook', data: { name: 'execute', base: 'RenderPass' } }],
     },

@@ -30,21 +30,31 @@ const buildProcessorClass = (): PitchProcessorConstructor => {
   g['AudioWorkletProcessor'] = class {
     port = { postMessage: (): void => undefined, onmessage: null as ((event: { data: unknown }) => void) | null };
   };
+
   g['registerProcessor'] = (_name: string, cls: PitchProcessorConstructor): void => {
     klass = cls;
   };
+
   eval(pitchShiftWorkletSource);
   g['sampleRate'] = savedSampleRate;
   delete g['AudioWorkletProcessor'];
   delete g['registerProcessor'];
-  if (!klass) throw new Error('registerProcessor was not called — worklet source malformed');
+
+  if (!klass) {
+    throw new Error('registerProcessor was not called — worklet source malformed');
+  }
+
   return klass;
 };
 
 // ─── Signal helpers ─────────────────────────────────────────────────────────
 const makeSine = (freq: number, amplitude: number, n: number): Float32Array => {
   const buf = new Float32Array(n);
-  for (let i = 0; i < n; i++) buf[i] = amplitude * Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
+
+  for (let i = 0; i < n; i++) {
+    buf[i] = amplitude * Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
+  }
+
   return buf;
 };
 
@@ -53,16 +63,22 @@ const magnitudeAt = (buf: Float32Array, freq: number): number => {
   let re = 0,
     im = 0;
   const omega = (2 * Math.PI * freq) / SAMPLE_RATE;
+
   for (let i = 0; i < buf.length; i++) {
     re += buf[i] * Math.cos(omega * i);
     im -= buf[i] * Math.sin(omega * i);
   }
+
   return (2 * Math.sqrt(re * re + im * im)) / buf.length;
 };
 
 const rms = (buf: Float32Array): number => {
   let s = 0;
-  for (const v of buf) s += v * v;
+
+  for (const v of buf) {
+    s += v * v;
+  }
+
   return Math.sqrt(s / buf.length);
 };
 
@@ -70,27 +86,37 @@ const rms = (buf: Float32Array): number => {
 const dominantFreq = (buf: Float32Array, lo = 50, hi = 4000): { freq: number; mag: number } => {
   let bestF = lo,
     bestM = -1;
+
   for (let f = lo; f <= hi; f += 2) {
     const m = magnitudeAt(buf, f);
+
     if (m > bestM) {
       bestM = m;
       bestF = f;
     }
   }
+
   for (let f = bestF - 2; f <= bestF + 2; f += 0.25) {
     const m = magnitudeAt(buf, f);
+
     if (m > bestM) {
       bestM = m;
       bestF = f;
     }
   }
+
   return { freq: bestF, mag: bestM };
 };
 
-const runWorklet = (Processor: PitchProcessorConstructor, input: Float32Array, opts: { pitch: number; grainSize: number }): Float32Array => {
+const runWorklet = (
+  Processor: PitchProcessorConstructor,
+  input: Float32Array,
+  opts: { pitch: number; grainSize: number },
+): Float32Array => {
   const proc = new Processor({ processorOptions: { grainSize: opts.grainSize } });
   const n = input.length;
   const out = new Float32Array(n);
+
   for (let off = 0; off < n; off += BLOCK) {
     const len = Math.min(BLOCK, n - off);
     const iB = input.subarray(off, off + len);
@@ -98,6 +124,7 @@ const runWorklet = (Processor: PitchProcessorConstructor, input: Float32Array, o
     proc.process([[iB]], [[oB]], { pitch: [opts.pitch] });
     out.set(oB, off);
   }
+
   return out;
 };
 
@@ -121,18 +148,19 @@ describe('PitchShiftProcessor DSP', () => {
     const { freq, mag } = dominantFreq(meas);
     const purity = mag / (Math.SQRT2 * (rms(meas) || 1e-9));
     const ratioRms = rms(meas) / rms(input.subarray(WARMUP));
+
     return { freq, purity, ratioRms };
   };
 
   // ── Identity: pitch=1.0 must not change the pitch ──────────────────────────
   it('pitch=1.0 leaves the dominant frequency at the input frequency', () => {
-    const { freq } = measureShift(1.0);
+    const { freq } = measureShift(1);
     expect(freq).toBeGreaterThan(INPUT_FREQ * 0.95);
     expect(freq).toBeLessThan(INPUT_FREQ * 1.05);
   });
 
   it('pitch=1.0 output is tonal, not broadband noise', () => {
-    const { purity } = measureShift(1.0);
+    const { purity } = measureShift(1);
     expect(purity).toBeGreaterThan(0.7);
   });
 
@@ -146,8 +174,8 @@ describe('PitchShiftProcessor DSP', () => {
 
   // ── Shift up one octave ────────────────────────────────────────────────────
   it('pitch=2.0 shifts the dominant frequency up one octave', () => {
-    const { freq } = measureShift(2.0);
-    const expected = INPUT_FREQ * 2.0;
+    const { freq } = measureShift(2);
+    const expected = INPUT_FREQ * 2;
     expect(freq).toBeGreaterThan(expected * 0.95);
     expect(freq).toBeLessThan(expected * 1.05);
   });
@@ -162,8 +190,8 @@ describe('PitchShiftProcessor DSP', () => {
 
   // ── Loudness: a pitch shifter is roughly level-preserving ──────────────────
   it('output level stays within -12..+6 dB of input at wet=1 (pitch=2.0)', () => {
-    const { ratioRms } = measureShift(2.0);
+    const { ratioRms } = measureShift(2);
     expect(ratioRms).toBeGreaterThan(0.25); // > -12 dB
-    expect(ratioRms).toBeLessThan(2.0); // < +6 dB
+    expect(ratioRms).toBeLessThan(2); // < +6 dB
   });
 });

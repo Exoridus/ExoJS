@@ -1,6 +1,15 @@
 import { AnimatedSprite, type AnimatedSpriteClipDefinition, Spritesheet, type Texture, Time } from '@codexo/exojs';
 
-import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type AsepriteLayer, type AsepriteSlice, isAsepriteArrayData } from './AsepriteData';
+import {
+  type AsepriteData,
+  type AsepriteFrameData,
+  type AsepriteFrameTag,
+  type AsepriteLayer,
+  type AsepriteSlice,
+  type AsepriteSliceFrame,
+  type AsepriteSliceKey,
+  isAsepriteArrayData,
+} from './AsepriteData';
 
 /**
  * Normalises an {@link AsepriteData} document into an ordered array of
@@ -39,22 +48,40 @@ const expandFrameIndices = (tag: AsepriteFrameTag): number[] => {
 
   switch (tag.direction) {
     case 'reverse':
-      for (let i = to; i >= from; i--) indices.push(i);
+      for (let i = to; i >= from; i--) {
+        indices.push(i);
+      }
+
       break;
 
     case 'pingpong':
-      for (let i = from; i <= to; i++) indices.push(i);
-      for (let i = to - 1; i > from; i--) indices.push(i);
+      for (let i = from; i <= to; i++) {
+        indices.push(i);
+      }
+
+      for (let i = to - 1; i > from; i--) {
+        indices.push(i);
+      }
+
       break;
 
     case 'pingpong_reverse':
-      for (let i = to; i >= from; i--) indices.push(i);
-      for (let i = from + 1; i < to; i++) indices.push(i);
+      for (let i = to; i >= from; i--) {
+        indices.push(i);
+      }
+
+      for (let i = from + 1; i < to; i++) {
+        indices.push(i);
+      }
+
       break;
 
     case 'forward':
     default:
-      for (let i = from; i <= to; i++) indices.push(i);
+      for (let i = from; i <= to; i++) {
+        indices.push(i);
+      }
+
       break;
   }
 
@@ -115,14 +142,15 @@ const resolveTaggedFrames = (frameArray: AsepriteFrameData[], indices: number[])
  *   (keyed by zero-based index string: `"0"`, `"1"`, ...).
  * - A `clips` map of {@link AnimatedSpriteClipDefinition} entries built from
  *   `meta.frameTags`, one per named tag.
- * - The `slices` and `layers` metadata maps, carried through verbatim.
+ * - The `slices`, `layers` and `tags` metadata maps, carried through verbatim,
+ *   and {@link getSlice} to read a slice on a given frame.
  *
  * Call {@link createAnimatedSprite} to obtain a ready-to-use
  * {@link AnimatedSprite} with all clips pre-registered.
  *
  * @example
  * ```ts
- * const sheet = await loader.load(Asset.type('asepriteSheet', 'hero.aseprite.json'));
+ * const sheet = await loader.load({ type: 'asepriteSheet', source: 'hero.aseprite.json' });
  * const sprite = sheet.createAnimatedSprite();
  * sprite.play('run');
  * scene.addChild(sprite);
@@ -144,8 +172,8 @@ export class AsepriteSheet {
    * name. Slices describe editor-defined regions - hitboxes, nine-patch
    * borders, UI anchor points - that aren't part of the frame/animation
    * data itself. Each {@link AsepriteSlice} carries one {@link AsepriteSliceKey}
-   * per frame at which its bounds change; consumers resolve the applicable
-   * key for a given frame index themselves.
+   * per frame at which its bounds change; {@link getSlice} resolves the key
+   * in effect on a given frame.
    */
   public readonly slices: ReadonlyMap<string, AsepriteSlice>;
 
@@ -163,6 +191,21 @@ export class AsepriteSheet {
   public readonly layers: ReadonlyMap<string, AsepriteLayer>;
 
   /**
+   * Frame tags from the Aseprite `meta.frameTags` metadata, keyed by tag
+   * name, with the editor colour and user data that {@link clips} do not
+   * carry. Empty when the export has no tags.
+   */
+  public readonly tags: ReadonlyMap<string, AsepriteFrameTag>;
+
+  /**
+   * For every clip in {@link clips}, the sheet frame index of each of its
+   * frames, in play order: the index an {@link AnimatedSprite}'s
+   * `currentFrame` selects. Use it to look up per-frame metadata such as
+   * {@link getSlice} for the frame being shown.
+   */
+  public readonly clipFrameIndices: ReadonlyMap<string, readonly number[]>;
+
+  /**
    * @internal - use {@link AsepriteSheet.parse} to create instances.
    * The public modifier is required for the Loader's `AssetConstructor` token
    * contract; users should call `parse()` instead of constructing directly.
@@ -172,11 +215,57 @@ export class AsepriteSheet {
     clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>,
     slices: ReadonlyMap<string, AsepriteSlice>,
     layers: ReadonlyMap<string, AsepriteLayer> = new Map(),
+    tags: ReadonlyMap<string, AsepriteFrameTag> = new Map(),
+    clipFrameIndices: ReadonlyMap<string, readonly number[]> = new Map(),
   ) {
     this.spritesheet = spritesheet;
     this.clips = clips;
     this.slices = slices;
     this.layers = layers;
+    this.tags = tags;
+    this.clipFrameIndices = clipFrameIndices;
+  }
+
+  /**
+   * The shape slice `name` has on sheet frame `frameIndex`: its most recent
+   * key at or before that frame, with the slice's colour and user data.
+   * `null` when the sheet has no such slice or the slice starts later.
+   *
+   * Rectangles and points retain the export's untrimmed source-canvas pixels.
+   * For clips carrying `sourceSize`, divide by the texture asset's resolution
+   * to compare them with logical local bounds. Metadata-free clips retain
+   * legacy trim-offset units; this method always returns authored source
+   * pixels. The pivot and nine-slice centre stay relative to the bounds.
+   *
+   * @example
+   * ```ts
+   * const frame = sheet.clipFrameIndices.get(sprite.currentClip!)![sprite.currentFrame]!;
+   * const hitbox = sheet.getSlice('hitbox', frame);
+   * ```
+   */
+  public getSlice(name: string, frameIndex: number): AsepriteSliceFrame | null {
+    const slice = this.slices.get(name);
+    let current: AsepriteSliceKey | undefined;
+
+    for (const key of slice?.keys ?? []) {
+      if (key.frame <= frameIndex && (current === undefined || key.frame >= current.frame)) {
+        current = key;
+      }
+    }
+
+    if (slice === undefined || current === undefined) {
+      return null;
+    }
+
+    return {
+      name,
+      keyFrame: current.frame,
+      bounds: current.bounds,
+      ...(current.center !== undefined && { center: current.center }),
+      ...(current.pivot !== undefined && { pivot: current.pivot }),
+      ...(slice.color !== undefined && { color: slice.color }),
+      ...(slice.data !== undefined && { data: slice.data }),
+    };
   }
 
   /**
@@ -202,12 +291,25 @@ export class AsepriteSheet {
    * non-positive), so uneven hold-frames survive into playback instead of
    * being flattened to a uniform fps. `frameOffsets` carries each frame's
    * `spriteSourceSize` `{x,y}` - its trimmed content's offset within the
-   * untrimmed canvas - whenever any frame in the tag is trimmed, so frames
-   * trimmed by different amounts stay anchored instead of jittering; it's
-   * omitted entirely for tags with no trimmed frames.
+   * untrimmed canvas - whenever any frame in the tag is trimmed; it's omitted
+   * for tags with no trimmed frames. `sourceSize` preserves the original canvas
+   * for every tag, including transparent padding, so anchors and scale remain
+   * stable across tags. When `sourceSize` is present, both are converted to
+   * logical pixels using the loaded texture's asset resolution. Older input
+   * without it retains the legacy raw offsets and inferred-canvas fallback.
    */
   public static parse(data: AsepriteData, texture: Texture): AsepriteSheet {
     const frameArray = normaliseFrames(data);
+    // Use public dimensions: package declarations intentionally strip internal
+    // texture fields. The asset factory awaits the image before parsing; an
+    // empty texture supplied directly retains the legacy unit-density fallback.
+    let resolution = 1;
+
+    if (texture.width > 0) {
+      resolution = texture.width / texture.logicalWidth;
+    } else if (texture.height > 0) {
+      resolution = texture.height / texture.logicalHeight;
+    }
 
     // Build SpritesheetData: frame names are zero-based index strings.
     const spritesheetFrames: Record<string, { frame: { x: number; y: number; w: number; h: number } }> = {};
@@ -220,6 +322,8 @@ export class AsepriteSheet {
 
     // Build clips from frameTags, resolving frame indices into Rectangles.
     const clips = new Map<string, AnimatedSpriteClipDefinition>();
+    const clipFrameIndices = new Map<string, readonly number[]>();
+    const tags = new Map<string, AsepriteFrameTag>();
     const frameTags = data.meta.frameTags ?? [];
 
     for (const tag of frameTags) {
@@ -229,14 +333,17 @@ export class AsepriteSheet {
       const taggedFrames = resolveTaggedFrames(frameArray, expandFrameIndices(tag));
       const frames = taggedFrames.map(({ index }) => spritesheet.getFrame(String(index)));
 
+      tags.set(tag.name, tag);
+
       if (frames.length === 0) {
         continue;
       }
 
       // Aseprite's `tag.repeat` (a numeric string, `'1'` through any N) maps
-      // directly onto the engine's `repeat` count. Absent means the tag
-      // loops indefinitely, the engine's `-1` sentinel.
-      const repeat = tag.repeat !== undefined ? Number(tag.repeat) : -1;
+      // directly onto the engine's `repeat` count. Absent or `'0'` means the
+      // tag loops indefinitely, the engine's `-1` sentinel.
+      const parsedRepeat = tag.repeat !== undefined ? Number(tag.repeat) : -1;
+      const repeat = parsedRepeat === 0 ? -1 : parsedRepeat;
       const fps = avgFps(taggedFrames);
 
       // Per-frame hold duration (Aseprite "duration"), so uneven hold-frames
@@ -245,18 +352,39 @@ export class AsepriteSheet {
       // degenerate case `avgFps` guards against) falls back to the average -
       // computed as `1 / fps` directly, not `(1000 / fps) / 1000`, so it is
       // bit-for-bit the reciprocal of the fps this clip actually carries.
-      const frameDurations = taggedFrames.map(({ frameData }) => Time.seconds(frameData.duration > 0 ? frameData.duration / 1000 : 1 / fps));
+      const frameDurations = taggedFrames.map(({ frameData }) =>
+        Time.seconds(frameData.duration > 0 ? frameData.duration / 1000 : 1 / fps),
+      );
+
+      let sourceSize: { width: number; height: number } | undefined = { width: 0, height: 0 };
+
+      for (const { frameData } of taggedFrames) {
+        // Earlier accepted exports can omit this field. Keep their inferred
+        // canvas rather than manufacturing authoritative dimensions.
+        const size = (frameData as Partial<AsepriteFrameData>).sourceSize;
+
+        if (size === undefined) {
+          sourceSize = undefined;
+          break;
+        }
+
+        sourceSize.width = Math.max(sourceSize.width, size.w / resolution);
+        sourceSize.height = Math.max(sourceSize.height, size.h / resolution);
+      }
 
       // Per-frame trim offset (Aseprite "spriteSourceSize"), so frames trimmed
       // by different amounts stay anchored to the same point in the untrimmed
       // canvas instead of jittering frame to frame. Omitted entirely when no
       // frame in the tag is trimmed, to avoid noise on untrimmed sheets.
       const anyTrimmed = taggedFrames.some(({ frameData }) => frameData.trimmed);
+      // The metadata-free legacy path historically kept raw trim offsets.
+      // Preserve those units with its existing inferred-canvas behavior.
+      const offsetResolution = sourceSize === undefined ? 1 : resolution;
       const frameOffsets = anyTrimmed
         ? taggedFrames.map(({ frameData }) => {
             const { x, y } = frameData.spriteSourceSize;
 
-            return { x, y };
+            return { x: x / offsetResolution, y: y / offsetResolution };
           })
         : undefined;
 
@@ -266,7 +394,12 @@ export class AsepriteSheet {
         repeat,
         frameDurations,
         ...(frameOffsets ? { frameOffsets } : {}),
+        ...(sourceSize ? { sourceSize } : {}),
       });
+      clipFrameIndices.set(
+        tag.name,
+        taggedFrames.map(({ index }) => index),
+      );
     }
 
     // Build the slices map from meta.slices, keyed by slice name.
@@ -284,7 +417,7 @@ export class AsepriteSheet {
       layers.set(layer.name, layer);
     }
 
-    return new AsepriteSheet(spritesheet, clips, slices, layers);
+    return new AsepriteSheet(spritesheet, clips, slices, layers, tags, clipFrameIndices);
   }
 
   /**

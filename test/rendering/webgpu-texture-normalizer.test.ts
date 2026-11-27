@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
+import { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
 import { textureNormalizeWgsl, WebGpuTextureNormalizer } from '#rendering/webgpu/WebGpuTextureNormalizer';
@@ -138,26 +139,27 @@ describe('WebGPU managed-colour alpha normalization', () => {
     backend.destroy();
   });
 
-  test('normalizes every authored mip level separately, sharing one staging texture', async () => {
+  test('normalizes authored mip levels from independent staging textures in one submit', async () => {
     environment = createMockWebGpuEnvironment();
     const backend = await createMockBackend(environment);
+    const writes = vi.spyOn(backend.device.queue, 'writeTexture');
+    const submits = vi.spyOn(backend.device.queue, 'submit');
     const texture = Texture.fromPixels({
       colorSpace: 'srgb',
       alphaMode: 'straight',
       levels: [
         { data: new Uint8Array(4 * 4 * 4).fill(64), width: 4, height: 4 },
-        { data: new Uint8Array(2 * 2 * 4).fill(64), width: 2, height: 2 },
+        { data: new Uint8Array(2 * 2 * 4).fill(128), width: 2, height: 2 },
       ],
     });
 
     backend.getTextureBinding(texture);
 
     expect(environment.renderPassLabels().filter(label => label === NORMALIZE_PASS)).toHaveLength(2);
-    // Each level is staged with its own row pitch, and only ONE scratch texture
-    // was created for the pair.
     expect(environment.writeTextureRows().filter(row => row % 4 === 0)).toEqual([16, 8]);
-    // Base level plus one staging texture for the whole chain.
-    expect(environment.textureDescriptors().length).toBe(2);
+    expect(writes.mock.calls[0]![0].texture).not.toBe(writes.mock.calls[1]![0].texture);
+    expect(submits).toHaveBeenCalledTimes(1);
+    expect(environment.textureDescriptors()).toHaveLength(3);
 
     texture.destroy();
     backend.destroy();
@@ -184,6 +186,39 @@ describe('WebGPU managed-colour alpha normalization', () => {
     expect(environment.writeTextureRows()).toEqual([16, 8]);
 
     texture.destroy();
+    backend.destroy();
+  });
+
+  test('pools and accounts each mip staging texture and releases the chain on reset', async () => {
+    environment = createMockWebGpuEnvironment();
+    const backend = await createMockBackend(environment);
+    const accountant = new GpuResourceAccountant(backend.stats);
+    const normalizer = new WebGpuTextureNormalizer(backend.device, accountant);
+    const destination = backend.device.createTexture({
+      size: [4, 4],
+      mipLevelCount: 2,
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    const levels = [
+      { width: 4, height: 4, data: new Uint8Array(64).fill(64) },
+      { width: 2, height: 2, data: new Uint8Array(16).fill(128) },
+    ];
+    normalizer.normalizeLevels(destination, 'rgba8unorm', levels);
+    expect(accountant.liveBytes).toBe(80);
+    const allocations = environment.textureDescriptors().length;
+    normalizer.normalizeLevels(destination, 'rgba8unorm', levels);
+    expect(environment.textureDescriptors()).toHaveLength(allocations);
+    expect(accountant.liveBytes).toBe(80);
+    normalizer.reset();
+    expect(accountant.liveBytes).toBe(0);
+    normalizer.normalizeLevels(destination, 'rgba8unorm', levels);
+    expect(environment.textureDescriptors()).toHaveLength(allocations + 2);
+    expect(accountant.liveBytes).toBe(80);
+    normalizer.destroy();
+    normalizer.destroy();
+    expect(accountant.liveBytes).toBe(0);
+    destination.destroy();
     backend.destroy();
   });
 

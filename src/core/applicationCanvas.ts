@@ -1,5 +1,5 @@
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
-import { isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
+import { hasDomBrand, isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
 
 import { assert } from './dev';
 
@@ -32,7 +32,7 @@ export const createDefaultCanvas = (): HTMLCanvasElement => {
  * @internal
  */
 export const isRenderSurface = (value: unknown): value is RenderSurface =>
-  isDomCanvas(value as RenderSurface) || (typeof OffscreenCanvas !== 'undefined' && value instanceof OffscreenCanvas);
+  isDomCanvas(value as RenderSurface) || hasDomBrand(value, 'OffscreenCanvas');
 
 /**
  * Clamp a host device-pixel ratio to the ceiling the auto policy allows, and
@@ -41,7 +41,8 @@ export const isRenderSurface = (value: unknown): value is RenderSurface =>
  *
  * @internal
  */
-export const clampAutoPixelRatio = (ratio: number | undefined): number => (typeof ratio === 'number' && ratio > 0 ? Math.min(ratio, maxAutoPixelRatio) : 1);
+export const clampAutoPixelRatio = (ratio: number | undefined): number =>
+  typeof ratio === 'number' && ratio > 0 ? Math.min(ratio, maxAutoPixelRatio) : 1;
 
 /**
  * The auto device-pixel ratio for the realm the application starts in.
@@ -61,7 +62,11 @@ export const resolveAutoPixelRatio = (): number => clampAutoPixelRatio((globalTh
  *
  * @internal
  */
-export const watchAutoPixelRatio = (platform: PlatformAdapter, current: number, onChange: (ratio: number) => void): PlatformSubscription | null =>
+export const watchAutoPixelRatio = (
+  platform: PlatformAdapter,
+  current: number,
+  onChange: (ratio: number) => void,
+): PlatformSubscription | null =>
   platform.onPixelRatioChange?.(hostRatio => {
     const ratio = clampAutoPixelRatio(hostRatio);
 

@@ -62,8 +62,8 @@ describe('View rotation pivots around the camera center', () => {
     view.setRotation(37);
     view.setZoom(2.5);
 
-    // Zoom shrinks the design space, so the middle of the viewport moves with it.
-    const world = view.screenToWorld(view.width / 2, view.height / 2);
+    // Zoom changes the visible area, not the design space the pointer lives in.
+    const world = view.screenToWorld(WIDTH / 2, HEIGHT / 2);
 
     expect(world.x).toBeCloseTo(-250, 6);
     expect(world.y).toBeCloseTo(480, 6);

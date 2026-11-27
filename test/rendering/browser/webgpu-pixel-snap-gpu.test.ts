@@ -109,7 +109,8 @@ const createSolidTexture = (color: string, size: number): Texture => {
 
 // On the software (SwiftShader) adapter the WebGPU device can be dropped
 // mid-test. Treat that as an unavailable-adapter skip rather than a failure.
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a scene inside a validation error scope.
 // Returns false when the device dropped mid-test (caller should bail).

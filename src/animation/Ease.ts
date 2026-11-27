@@ -52,15 +52,21 @@ export const Ease = {
   expoIn: (t: number): number => (t === 0 ? 0 : Math.pow(2, 10 * t - 10)),
   expoOut: (t: number): number => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
   expoInOut: (t: number): number => {
-    if (t === 0) return 0;
-    if (t === 1) return 1;
+    if (t === 0) {
+      return 0;
+    }
+
+    if (t === 1) {
+      return 1;
+    }
 
     return t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
   },
 
   circIn: (t: number): number => 1 - Math.sqrt(1 - Math.pow(t, 2)),
   circOut: (t: number): number => Math.sqrt(1 - Math.pow(t - 1, 2)),
-  circInOut: (t: number): number => (t < 0.5 ? (1 - Math.sqrt(1 - Math.pow(2 * t, 2))) / 2 : (Math.sqrt(1 - Math.pow(-2 * t + 2, 2)) + 1) / 2),
+  circInOut: (t: number): number =>
+    t < 0.5 ? (1 - Math.sqrt(1 - Math.pow(2 * t, 2))) / 2 : (Math.sqrt(1 - Math.pow(-2 * t + 2, 2)) + 1) / 2,
 
   backIn: (t: number): number => {
     const c1 = 1.70158;
@@ -86,22 +92,40 @@ export const Ease = {
   bounceInOut: (t: number): number => (t < 0.5 ? (1 - bounceOutFn(1 - 2 * t)) / 2 : (1 + bounceOutFn(2 * t - 1)) / 2),
 
   elasticIn: (t: number): number => {
-    if (t === 0) return 0;
-    if (t === 1) return 1;
+    if (t === 0) {
+      return 0;
+    }
+
+    if (t === 1) {
+      return 1;
+    }
+
     const c4 = (2 * Math.PI) / 3;
 
     return -Math.pow(2, 10 * t - 10) * Math.sin((t * 10 - 10.75) * c4);
   },
   elasticOut: (t: number): number => {
-    if (t === 0) return 0;
-    if (t === 1) return 1;
+    if (t === 0) {
+      return 0;
+    }
+
+    if (t === 1) {
+      return 1;
+    }
+
     const c4 = (2 * Math.PI) / 3;
 
     return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
   },
   elasticInOut: (t: number): number => {
-    if (t === 0) return 0;
-    if (t === 1) return 1;
+    if (t === 0) {
+      return 0;
+    }
+
+    if (t === 1) {
+      return 1;
+    }
+
     const c5 = (2 * Math.PI) / 4.5;
 
     return t < 0.5

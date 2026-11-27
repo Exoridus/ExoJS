@@ -5,25 +5,39 @@ import { PLAYGROUND_CATEGORIES } from '../../site/src/lib/playground-categories'
 import { buildPlaygroundNavModel, isExampleRouteActive, normalizeExamplePath } from '../../site/src/lib/playground-nav';
 import type { Example } from '../../site/src/lib/types';
 
-const ex = (section: string, slug: string, extra: Partial<Example> = {}): Example => {
-  return {
-    section,
-    slug,
-    path: `${section}/${slug}.js`,
-    title: slug,
-    description: '',
-    backend: 'core',
-    ...extra,
-  };
-};
+const ex = (section: string, slug: string, extra: Partial<Example> = {}): Example => ({
+  section,
+  slug,
+  path: `${section}/${slug}.js`,
+  title: slug,
+  description: '',
+  backend: 'core',
+  ...extra,
+});
+
+describe('navigation filtering', () => {
+  const retro = ex('filters', 'retro', { title: 'Retro Display', tags: ['CRT'] });
+  const music = ex('audio', 'music', { title: 'Music playback' });
+
+  it('matches every query word across titles, tags and categories without changing catalog order', () => {
+    const categories = buildPlaygroundNavModel([retro, music], undefined, '  RETRO   crt  ');
+
+    expect(categories.flatMap(category => category.examples)).toEqual([retro]);
+    expect(buildPlaygroundNavModel([retro, music], undefined, 'filters').flatMap(category => category.examples)).toEqual([retro]);
+  });
+
+  it('returns no categories for an unknown term and keeps the full catalog for an empty filter', () => {
+    expect(buildPlaygroundNavModel([retro, music], undefined, 'missing')).toEqual([]);
+    expect(buildPlaygroundNavModel([retro, music], undefined, '  ').flatMap(category => category.examples)).toHaveLength(2);
+  });
+});
 
 // A flat list synthesised from the real catalog, exactly how the live store
 // hands examples to the nav (each entry once, carrying its `section`).
-const catalogExamples = (): Example[] => {
-  return Object.entries(EXAMPLES_CATALOG).flatMap(([section, entries]) =>
+const catalogExamples = (): Example[] =>
+  Object.entries(EXAMPLES_CATALOG).flatMap(([section, entries]) =>
     entries.map(entry => ex(section, entry.slug, { path: entry.path, title: entry.title })),
   );
-};
 
 describe('normalizeExamplePath', () => {
   it('strips a .js suffix', () => {

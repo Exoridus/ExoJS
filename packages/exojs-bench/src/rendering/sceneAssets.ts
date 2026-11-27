@@ -130,12 +130,15 @@ export const createParticleCanvas = (): HTMLCanvasElement => {
 
 /**
  * The tile atlas: one row of {@link TILE_VARIANTS} cells of {@link TILE_SIZE}
- * pixels, each a flat distinct colour with a one-pixel darker border.
+ * pixels, each a flat distinct colour with one-pixel darker lines on its top and
+ * left edges only; no cell draws its own bottom or right line. Adjacent cells
+ * therefore share a single separator line, and the row's right and bottom edges
+ * carry none.
  *
  * One row and one page, so every arm resolves its tiles out of a single texture
- * and none of them pays a texture-slot or page-switch cost the others avoid. The
- * border is what makes a captured frame readable as a tile grid rather than as a
- * colour field, which is how a scroll or an edit is checked by eye; nothing
+ * and none of them pays a texture-slot or page-switch cost the others avoid.
+ * Those lines are what make a captured frame readable as a tile grid rather than
+ * as a colour field, which is how a scroll or an edit is checked by eye; nothing
  * measures it.
  */
 export const createTileAtlasCanvas = (): HTMLCanvasElement => {

@@ -12,7 +12,13 @@ import { BlendModes } from '#rendering/types';
 
 import { createWebGl2TestBackend, readWebGl2Frame, renderWebGl2Once } from './_backendSetup';
 import { expectPixelNear, pixelAt } from './_pixels';
-import { buildTextBlendScene, findFullyCoveredPixel, textAdditiveExpected, textBlendClearColor, textNormalExpected } from './_textBlendScene';
+import {
+  buildTextBlendScene,
+  findFullyCoveredPixel,
+  textAdditiveExpected,
+  textBlendClearColor,
+  textNormalExpected,
+} from './_textBlendScene';
 
 const canvasSize = 64;
 

@@ -4,7 +4,13 @@ import { pathToFileURL } from 'node:url';
 
 import { checkTreeSafety, extractTar, readZipFile } from './archive-safety.ts';
 import { type ExpectedChannel, openChannelArchive, verifyChannelTree, verifyDigest } from './channel-artifact.ts';
-import { buildChannelsDocument, CHANNELS_FILE, type ChannelsDocument, type ChannelSource, serializeChannelsDocument } from './channels-document.ts';
+import {
+  buildChannelsDocument,
+  CHANNELS_FILE,
+  type ChannelsDocument,
+  type ChannelSource,
+  serializeChannelsDocument,
+} from './channels-document.ts';
 import { createGitHubClient, type GitHubClient } from './github-api.ts';
 import { type ChannelPlan, parseSelection, type Transport } from './select-channels.ts';
 import { evaluateSiteSize, SITE_SIZE_REFUSE_BYTES, type SiteSizeThresholds, type SiteSizeVerdict } from './site-budget.ts';
@@ -234,7 +240,9 @@ export const extractComposedChannel = (composedDir: string, path: '' | 'next/', 
   const problems = verifySiteTree(root, manifest, path === '' ? { allowExtra: isReserved } : {});
 
   if (problems.length > 0) {
-    throw new Error(`[compose-site] the ${path === '' ? 'stable' : 'next'} channel of the snapshot is not intact:\n  ${problems.join('\n  ')}`);
+    throw new Error(
+      `[compose-site] the ${path === '' ? 'stable' : 'next'} channel of the snapshot is not intact:\n  ${problems.join('\n  ')}`,
+    );
   }
 
   copyListed(root, destDir, manifest);
@@ -258,7 +266,11 @@ export interface FetchedChannel {
   transport: string;
 }
 
-const openPagesSnapshot = async (client: GitHubClient, transport: Extract<Transport, { kind: 'snapshot' }>, cache: SnapshotCache): Promise<string> => {
+const openPagesSnapshot = async (
+  client: GitHubClient,
+  transport: Extract<Transport, { kind: 'snapshot' }>,
+  cache: SnapshotCache,
+): Promise<string> => {
   const dir = join(cache.dir, String(transport.artifactId));
 
   if (existsSync(dir)) {
@@ -283,7 +295,12 @@ const openPagesSnapshot = async (client: GitHubClient, transport: Extract<Transp
  * planned snapshot. A kept channel tries its transports in order and takes
  * the first that verifies; throws when none does.
  */
-export const fetchChannelSnapshot = async (client: GitHubClient, plan: ChannelPlan, dir: string, cache: SnapshotCache): Promise<FetchedChannel> => {
+export const fetchChannelSnapshot = async (
+  client: GitHubClient,
+  plan: ChannelPlan,
+  dir: string,
+  cache: SnapshotCache,
+): Promise<FetchedChannel> => {
   const downloadCandidate = async (artifactId: number, digest: string, expected: ExpectedChannel): Promise<SiteBuildManifest> => {
     const zip = await client.download(`/repos/${client.repository}/actions/artifacts/${artifactId}/zip`);
 

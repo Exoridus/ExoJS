@@ -18,9 +18,9 @@ import {
   type OccluderTileLayer,
   PhysicsOccluder,
   TilemapOccluder,
-} from '@codexo/exojs-lighting';
-import type { PhysicsWorld } from '@codexo/exojs-physics';
-import type { ResolvedTile, TileLayer } from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/lighting';
+import type { PhysicsWorld } from '@codexo/exojs/physics';
+import type { ResolvedTile, TileLayer } from '@codexo/exojs/tilemap';
 
 declare const world: PhysicsWorld;
 declare const layer: TileLayer;

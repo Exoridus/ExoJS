@@ -1,7 +1,6 @@
 import type { LoaderScope } from '@codexo/exojs';
-import { Asset } from '@codexo/exojs';
-import type { MapLevelLoadContext, MapWorld, TileMap, TileSet } from '@codexo/exojs-tilemap';
-import { MapWorldRuntime } from '@codexo/exojs-tilemap';
+import type { MapLevelLoadContext, MapWorld, TileMap, TileSet } from '@codexo/exojs/tilemap';
+import { MapWorldRuntime } from '@codexo/exojs/tilemap';
 
 import type { LdtkData, LdtkLevel } from './LdtkData';
 import type { LdtkLevelEntry } from './ldtkLevelEntries';
@@ -64,7 +63,7 @@ export interface LdtkRuntimeOptions {
  *
  * @example
  * ```ts
- * const project = await scene.loader.load(Asset.type('ldtkProject', 'world.ldtk'));
+ * const project = await scene.loader.load({ type: 'ldtkProject', source: 'world.ldtk' });
  * const runtime = project.createRuntime({ scope: scene.loader });
  *
  * const forest = await runtime.loadLevel(project.world.getLevelByName('Forest')!.id, {
@@ -72,7 +71,15 @@ export interface LdtkRuntimeOptions {
  *   context: { services, save },
  * });
  *
- * scene.addChild(forest.map.createView().root);
+ * const view = forest.map.createView();
+ *
+ * for (const layer of view.layers) {
+ *   scene.addChild(layer);
+ * }
+ *
+ * // Release the view before runtime.unloadLevel(); it owns its layer nodes.
+ * view.destroy();
+ *
  * runtime.unloadLevel(forest.id);
  * ```
  */
@@ -158,14 +165,19 @@ export class LdtkProject {
    * on a later load.
    */
   private async _resolveLevel(level: LdtkLevel, scope: LoaderScope): Promise<LdtkLevel> {
-    if (level.layerInstances !== null || level.externalRelPath === undefined || level.externalRelPath === null || level.externalRelPath === '') {
+    if (
+      level.layerInstances !== null ||
+      level.externalRelPath === undefined ||
+      level.externalRelPath === null ||
+      level.externalRelPath === ''
+    ) {
       return level;
     }
 
     const url = resolveLdtkUrl(level.externalRelPath, this.source);
     // Validated as strictly as an inlined level, with the `.ldtkl` file as the
     // error source - a malformed external payload must fail as loudly.
-    const external = validateLdtkLevelData(await scope.load(Asset.type('json', url)), url);
+    const external = validateLdtkLevelData(await scope.load({ type: 'json', source: url }), url);
     const fieldInstances = external.fieldInstances ?? level.fieldInstances;
 
     return {

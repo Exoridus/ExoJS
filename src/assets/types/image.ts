@@ -83,6 +83,9 @@ export const svgType = new SvgAssetType();
  * decode yields is the browser's choice and is not specified anywhere, so an
  * icon whose exact size matters should be shipped as the single image it is
  * meant to be rather than as a multi-resolution container.
+ *
+ * Releasing the last claim closes the `ImageBitmap` the texture decoded, so a
+ * `source` read from a loaded texture is valid only while that texture is held.
  */
 export class TextureAssetType extends AssetType<ArrayBuffer, Texture, TextureAssetOptions> {
   public readonly id = 'texture';
@@ -109,6 +112,33 @@ export class TextureAssetType extends AssetType<ArrayBuffer, Texture, TextureAss
     }
 
     return identity.join('&');
+  }
+
+  public override persistedOptions(
+    resource: Texture | undefined,
+    options: Readonly<Record<string, unknown>> | undefined,
+    donor?: Texture,
+  ): Readonly<Record<string, unknown>> | undefined {
+    const { textureOptions, ...request } = options ?? {};
+    const nested = textureOptions !== null && typeof textureOptions === 'object' && !Array.isArray(textureOptions) ? textureOptions : {};
+    const { scaleMode: _scaleMode, wrapMode: _wrapMode, ...texture } = nested as Record<string, unknown>;
+    const defaults = Texture.defaultOptions;
+
+    if (
+      resource !== undefined &&
+      (resource.scaleMode !== defaults.scaleMode ||
+        resource.wrapMode !== defaults.wrapMode ||
+        (donor !== undefined && (resource.scaleMode !== donor.scaleMode || resource.wrapMode !== donor.wrapMode)))
+    ) {
+      texture.scaleMode = resource.scaleMode;
+      texture.wrapMode = resource.wrapMode;
+    }
+
+    if (Object.keys(texture).length > 0) {
+      return { ...request, textureOptions: texture };
+    }
+
+    return Object.keys(request).length === 0 ? undefined : request;
   }
 
   public createFactory(): AssetFactory<ArrayBuffer, Texture, TextureAssetOptions> {

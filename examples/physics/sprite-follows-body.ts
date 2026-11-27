@@ -1,177 +1,276 @@
 import {
   Application,
-  Asset,
   Color,
   FixedResolutionCanvasSizing,
+  Graphics,
   Keyboard,
+  type Pointer,
+  Rectangle,
   type RenderingContext,
   Scene,
-  type Seconds,
+  SceneState,
   Sprite,
   Spritesheet,
   type SpritesheetData,
   SystemOrder,
-  Vector,
+  Text,
 } from '@codexo/exojs';
-import { BoxShape, MouseJoint, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-import { mountControls } from '@examples/runtime';
+import { PhysicsDebugDraw } from '@codexo/exojs/debug';
+import { BoxShape, MouseJoint, type PhysicsBody, PhysicsWorld, PolygonShape } from '@codexo/exojs/physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { startExample, unitsPerCssPixel } from '@examples/runtime';
 
 class SpriteFollowsBodyScene extends Scene {
   private world!: PhysicsWorld;
-  private actor!: Sprite;
-  private actorBody!: PhysicsBody;
+  private debug!: PhysicsDebugDraw;
+  private readonly sprites: Sprite[] = [];
+  private readonly sheets: Spritesheet[] = [];
+  private readonly bodies: PhysicsBody[] = [];
+  private readonly objects: Sprite[] = [];
+  private readonly dragLine = new Graphics();
+  private grabPoint = { x: 0, y: 0 };
+  private releasing = false;
+  private readonly hint = new Text('Grab a crate. Drag, then release to throw.', { fillColor: Color.white, fontSize: 15 }).setAnchor(
+    0.5,
+    1,
+  );
+  private characters!: SpritesheetData;
+  private tiles!: SpritesheetData;
   private dragJoint: MouseJoint | null = null;
-  private floor!: Sprite;
-  private floorY = 0;
-  private settled = 0;
-  private hud!: ReturnType<typeof mountControls>;
-  private spritesheetData!: SpritesheetData;
+  private dragPointer: number | null = null;
+  private interacted = false;
+  private readonly grabHint = this.track(new Text('Drag me', { fillColor: new Color(160, 237, 216), fontSize: 15 })).setAnchor(0.5, 1);
+  private showColliders = false;
 
   override async load(): Promise<void> {
-    this.spritesheetData = (await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData;
+    await this.loader.load(assets.platformerCharactersImage);
+    await this.loader.load(assets.platformerTilesImage);
+    this.characters = (await this.loader.load(assets.platformerCharactersAtlas)) as SpritesheetData;
+    this.tiles = (await this.loader.load(assets.platformerTilesAtlas)) as SpritesheetData;
   }
 
   override init(): void {
-    const app = this.app;
-    const { width, height } = app;
+    this.world = this.systems.add(
+      new PhysicsWorld({
+        gravity: { x: 0, y: 1400 },
+        fixedDelta: this.app.fixedTimeStep,
+        interpolation: true,
+        frameAlphaSource: () => this.app.frameAlpha,
+      }),
+      { order: SystemOrder.Physics },
+    );
+    const tiles = new Spritesheet(this.loader.get(assets.platformerTilesImage), this.tiles);
+    const characters = new Spritesheet(this.loader.get(assets.platformerCharactersImage), this.characters);
+    this.sheets.push(tiles, characters);
 
-    // Gravity in px/s², +Y down - matches the engine's screen space.
-    this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
-    this.systems.add(this.world, { order: SystemOrder.Physics });
+    for (let x = 112; x <= 1200; x += 64) {
+      const floor = new Sprite(tiles.texture).setTextureFrame(tiles.getFrame('terrain_grass_block_top')).setAnchor(0.5);
+      floor.width = floor.height = 64;
+      this.sprites.push(floor);
+      this.world.attach(floor, { type: 'static', position: { x, y: 608 }, shape: new BoxShape(64, 64) });
+    }
 
-    const characters = new Spritesheet(this.loader.get(assets.demo.spritesheets.platformerCharacters.image), this.spritesheetData);
+    for (let y = 32; y <= 544; y += 64) {
+      for (const x of [48, 1232]) {
+        const wall = new Sprite(tiles.texture).setTextureFrame(tiles.getFrame('bricks_brown')).setAnchor(0.5);
+        wall.width = wall.height = 64;
+        this.sprites.push(wall);
+        this.world.attach(wall, { type: 'static', position: { x, y }, shape: new BoxShape(64, 64) });
+      }
+    }
 
-    this.floorY = height - 80;
-
-    // ── Static floor ──────────────────────────────────────────────────
-    // A wide static body. `world.attach` binds it to the floor sprite, so
-    // the sprite is positioned from the body (no manual placement needed).
-    const floorWidth = width - 120;
-    const floorHeight = 48;
-
-    this.floor = new Sprite(this.loader.get(assets.demo.textures.pixelWhite)).setAnchor(0.5);
-    this.floor.width = floorWidth;
-    this.floor.height = floorHeight;
-    this.floor.tint = new Color(70, 92, 120);
-
-    this.world.attach(this.floor, {
-      type: 'static',
-      position: { x: width / 2, y: this.floorY },
-      shape: new BoxShape(floorWidth, floorHeight),
-    });
-
-    // ── Dynamic actor ─────────────────────────────────────────────────
-    // A dynamic body dropped from above. Its collider is a box sized to the
-    // character art; `world.attach` binds the sprite, so it falls, lands and
-    // tracks the body (position + rotation) every fixed step.
-    this.actor = characters.getFrameSprite('character_beige_front').setAnchor(0.5).setScale(1.1);
-    this.actorBody = this.world.attach(this.actor, {
-      type: 'dynamic',
-      position: { x: width / 2, y: 140 },
-      shape: new BoxShape(70, 90),
-      friction: 0.4,
-      restitution: 0.15,
-    });
-
-    this.hud = mountControls({
-      title: 'Drag and Throw Physics',
-      controls: [
-        { keys: 'Drag', action: 'pull and throw the actor' },
-        { keys: 'R', action: 'reset the actor' },
+    const character = characters.getFrameSprite('character_beige_front');
+    const frame = character.textureFrame;
+    // The character cell includes transparent headroom and side margins.
+    character.setTextureFrame(new Rectangle(frame.x + 25, frame.y + 31, 78, 97));
+    // Transparent margins and clipped corners must not become solid collision space.
+    const outlines = [
+      [
+        [26, 61],
+        [41, 38],
+        [59, 31],
+        [74, 32],
+        [93, 44],
+        [103, 65],
+        [99, 109],
+        [80, 128],
+        [48, 128],
+        [28, 109],
+        [26, 78],
       ],
-      status: 'Dropping…',
-      hint: 'world.attach binds the sprite to a body. MouseJoint pulls the body, and the sprite follows the simulated transform.',
+      [
+        [4, 0],
+        [60, 0],
+        [64, 4],
+        [64, 60],
+        [60, 64],
+        [4, 64],
+        [0, 60],
+        [0, 4],
+      ],
+    ] as const;
+    this.objects.push(
+      character,
+      new Sprite(tiles.texture).setTextureFrame(tiles.getFrame('block_planks')),
+      new Sprite(tiles.texture).setTextureFrame(tiles.getFrame('block_planks')),
+    );
+    this.objects.forEach((sprite, index) => {
+      sprite.setAnchor(0.5).setScale([82, 72, 90][index]! / sprite.textureFrame.height);
+      const vertices = outlines[index === 0 ? 0 : 1].map(([x, y]) => ({
+        x: (x - (index === 0 ? 64 : 32)) * sprite.scale.x,
+        y: (y - (index === 0 ? 79.5 : 32)) * sprite.scale.y,
+      }));
+      this.sprites.push(sprite);
+      const body = this.world.attach(sprite, {
+        type: 'dynamic',
+        position: { x: 420 + index * 220, y: 180 },
+        shape: new PolygonShape(vertices),
+        friction: 0.2,
+        restitution: 0.5,
+      });
+      body.isBullet = true;
+      this.bodies.push(body);
     });
-    app.input.onPointerDown.add(this.onDown);
-    app.input.onPointerMove.add(this.onMove);
-    app.input.onPointerUp.add(this.onEnd);
-    app.input.onPointerCancel.add(this.onEnd);
-    this.inputs.onTrigger(Keyboard.R, this.resetActor);
+    this.debug = new PhysicsDebugDraw(this.app, this.world);
+    this.inputs.onTrigger(Keyboard.C, () => {
+      this.showColliders = !this.showColliders;
+      // Debug contours use current physics transforms rather than presentation interpolation.
+      this.world.interpolation = !this.showColliders;
+    });
+    this.app.input.onPointerDown.add(this.onDown);
+    this.app.input.onPointerMove.add(this.onMove);
+    this.app.input.onPointerUp.add(this.onEnd);
+    this.app.input.onPointerCancel.add(this.onCancel);
+    // Native release/blur must remove the joint even outside the input surface.
+    window.addEventListener('pointerup', this.onWindowEnd);
+    window.addEventListener('blur', this.endDrag);
+    this.onSuspend.add(this.endDrag);
   }
 
-  private readonly onDown = (pointer: { x: number; y: number }): void => {
-    if (Math.abs(pointer.x - this.actorBody.x) > 42 || Math.abs(pointer.y - this.actorBody.y) > 55) {
+  private readonly onDown = (pointer: Pointer, x: number, y: number): void => {
+    if (this.state !== SceneState.Active || this.dragPointer !== null) {
       return;
     }
-    this.onEnd();
-    this.dragJoint = this.world.addJoint(new MouseJoint({ body: this.actorBody, target: pointer, hertz: 7, dampingRatio: 0.8, maxForce: 400_000 }));
-  };
 
-  private readonly onMove = (pointer: { x: number; y: number }): void => {
-    if (this.dragJoint) {
-      this.dragJoint.target = pointer;
-    }
-  };
+    const body = this.world
+      .queryPoint({ x, y })
+      .map(collider => collider.body)
+      .find(body => this.bodies.includes(body));
 
-  private readonly onEnd = (): void => {
-    if (!this.dragJoint) {
+    if (!body) {
       return;
     }
-    this.world.removeJoint(this.dragJoint);
-    this.dragJoint = null;
-  };
 
-  private readonly resetActor = (): void => {
-    this.onEnd();
-    this.actorBody.setTransform(new Vector(this.app.width / 2, 140), 0);
-    this.actorBody.linearVelocityX = 0;
-    this.actorBody.linearVelocityY = 0;
-    this.actorBody.angularVelocity = 0;
-  };
-
-  override update(delta: Seconds): void {
-    const app = this.app;
-
-    const { width, height } = app;
-    const body = this.actorBody;
-    const restingSpeed = Math.hypot(body.linearVelocityX, body.linearVelocityY);
-
-    if (body.y > this.floorY - 60 && restingSpeed < 6) {
-      this.settled += delta;
-    } else {
-      this.settled = 0;
-    }
-
-    this.hud.setStatus(
-      this.dragJoint
-        ? 'Dragging body with MouseJoint.'
-        : this.settled > 0
-          ? `Resting on the floor (${restingSpeed.toFixed(0)} px/s)`
-          : `Moving at ${restingSpeed.toFixed(0)} px/s.`,
+    body.wake();
+    const sprite = this.objects[this.bodies.indexOf(body)]!;
+    const dx = x - body.x;
+    const dy = y - body.y;
+    this.grabPoint = {
+      x: sprite.origin.x + (dx * Math.cos(body.angle) + dy * Math.sin(body.angle)) / sprite.scale.x,
+      y: sprite.origin.y + (-dx * Math.sin(body.angle) + dy * Math.cos(body.angle)) / sprite.scale.y,
+    };
+    this.dragPointer = pointer.id;
+    this.dragJoint = this.world.addJoint(
+      new MouseJoint({ body, target: { x, y }, hertz: 6, dampingRatio: 0.8, maxForce: body.mass * 6000 }),
     );
-
-    if (!this.dragJoint && (body.y > height + 200 || Math.abs(body.x - width / 2) > width)) {
-      this.resetActor();
+    this.interacted = true;
+  };
+  private readonly onMove = (pointer: Pointer, x: number, y: number): void => {
+    if (pointer.id === this.dragPointer && this.dragJoint && !this.releasing) {
+      this.dragJoint.target = { x, y };
     }
+  };
+  private readonly onEnd = (pointer: Pointer, x: number, y: number): void => {
+    if (pointer.id === this.dragPointer && this.dragJoint) {
+      this.dragJoint.target = { x, y };
+      // The final pointer target must reach physics before its real velocity is released.
+      this.releasing = true;
+      this.app.onFixedFrame.add(this.endDrag);
+    }
+  };
+  private readonly onCancel = (pointer: Pointer): void => {
+    if (pointer.id === this.dragPointer) {
+      this.endDrag();
+    }
+  };
+  private readonly onWindowEnd = (event: PointerEvent): void => {
+    if (event.pointerId === this.dragPointer) {
+      this.releasing = true;
+      this.app.onFixedFrame.add(this.endDrag);
+    }
+  };
+  private readonly endDrag = (): void => {
+    if (this.dragJoint) {
+      this.world.removeJoint(this.dragJoint);
+    }
+
+    this.dragJoint = null;
+    this.dragPointer = null;
+    this.releasing = false;
+    this.app.onFixedFrame.remove(this.endDrag);
+  };
+
+  override update(): void {
+    for (const [index, body] of this.bodies.entries()) {
+      if (body.y > 1100 || Math.abs(body.x) > 2200) {
+        if (this.dragJoint?.bodyB === body) {
+          this.endDrag();
+        }
+
+        body.setTransform({ x: 420 + index * 220, y: 180 }, 0);
+        body.linearVelocityX = body.linearVelocityY = body.angularVelocity = 0;
+      }
+    }
+
+    const scale = unitsPerCssPixel(this.app, this.app.canvas as HTMLCanvasElement);
+    this.hint.setScale(Math.min(scale, this.app.width / 340)).setPosition(this.app.width / 2, this.app.height - 8 * scale);
+    const crate = this.objects[1]!;
+    this.grabHint.setScale(scale).setPosition(crate.position.x, crate.getBounds().top - 12 * scale);
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.floor);
-    context.render(this.actor);
+    this.sprites.forEach(sprite => context.render(sprite));
+
+    if (this.dragJoint) {
+      const sprite = this.objects[this.bodies.indexOf(this.dragJoint.bodyB)]!;
+      const m = sprite.getGlobalTransform();
+      const { x, y } = this.grabPoint;
+      const target = this.dragJoint.target;
+      this.dragLine.clear();
+      this.dragLine.lineColor = Color.white;
+      this.dragLine.lineWidth = 2 * unitsPerCssPixel(this.app, this.app.canvas as HTMLCanvasElement);
+      this.dragLine.drawLine(m.a * x + m.b * y + m.x, m.c * x + m.d * y + m.y, target.x, target.y);
+      context.render(this.dragLine);
+    }
+
+    if (this.showColliders) {
+      this.debug.render(context.backend);
+    }
+
+    if (!this.interacted) {
+      context.render(this.grabHint);
+      context.render(this.hint, { view: context.screenView });
+    }
   }
 
   override destroy(): void {
-    this.onEnd();
+    this.endDrag();
     this.app.input.onPointerDown.remove(this.onDown);
     this.app.input.onPointerMove.remove(this.onMove);
     this.app.input.onPointerUp.remove(this.onEnd);
-    this.app.input.onPointerCancel.remove(this.onEnd);
-    this.hud?.dispose();
-    this.actor?.destroy();
-    this.floor?.destroy();
-    super.destroy();
+    this.app.input.onPointerCancel.remove(this.onCancel);
+    window.removeEventListener('pointerup', this.onWindowEnd);
+    window.removeEventListener('blur', this.endDrag);
+    this.debug?.destroy();
+    this.sprites.forEach(sprite => sprite.destroy());
+    this.sheets.forEach(sheet => sheet.clear());
+    this.hint.destroy();
+    this.dragLine.destroy();
   }
 }
-
 const app = new Application({
   scenes: { SpriteFollowsBodyScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: new Color(18, 22, 33),
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(28, 38, 53),
 });
-
-await app.start(SpriteFollowsBodyScene);
+await startExample(app, () => app.start(SpriteFollowsBodyScene));

@@ -1,0 +1,88 @@
+{
+  "title": "TextEffectFailureReason",
+  "description": "Why a text node cannot draw a requested outline or shadow. - `'no-distance-field'`: color glyphs (`Text` with `colorGlyphs`) or a plain bitmap font (`BitmapText` without `msdf`) render RGBA glyphs and have no distance to measure an effect against. - `'unknown-range'`: an MSDF font that does not declare its distance range, zero value and glyph padding. - `'invalid-range'`: an MSDF font whose declared range, zero value or padding cannot encode any outward distance. - `'insufficient-effect-capacity'`: the effect is larger than the distance field and the glyph quads reach.",
+  "symbol": "TextEffectFailureReason",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Why a text node cannot draw a requested outline or shadow.",
+        "- `'no-distance-field'`: color glyphs (`Text` with `colorGlyphs`) or a plain bitmap font (`BitmapText` without `msdf`) render RGBA glyphs and have no distance to measure an effect against. - `'unknown-range'`: an MSDF font that does not declare its distance range, zero value and glyph padding. - `'invalid-range'`: an MSDF font whose declared range, zero value or padding cannot encode any outward distance. - `'insufficient-effect-capacity'`: the effect is larger than the distance field and the glyph quads reach."
+      ],
+      "importLine": "import { TextEffectFailureReason } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TextEffectFailureReason",
+          "signature": "\"insufficient-effect-capacity\" | \"invalid-range\" | \"no-distance-field\" | \"unknown-range\"",
+          "signatureTokens": [
+            {
+              "text": "\"insufficient-effect-capacity\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"invalid-range\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"no-distance-field\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"unknown-range\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/textEffects.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/textEffects.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/textEffects.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/textEffects.ts"
+}

@@ -50,16 +50,30 @@ describe('Texture.fromPixels', () => {
   });
 
   test('uses normalization defaults from the payload role and rejects it for numeric samples', () => {
-    const numeric = Texture.fromPixels({ colorSpace: 'none', alphaMode: 'straight', levels: [{ data: pixels(1, 1), width: 1, height: 1 }] });
-    const color = Texture.fromPixels({ colorSpace: 'linear-srgb', alphaMode: 'straight', levels: [{ data: pixels(1, 1), width: 1, height: 1 }] });
+    const numeric = Texture.fromPixels({
+      colorSpace: 'none',
+      alphaMode: 'straight',
+      levels: [{ data: pixels(1, 1), width: 1, height: 1 }],
+    });
+    const color = Texture.fromPixels({
+      colorSpace: 'linear-srgb',
+      alphaMode: 'straight',
+      levels: [{ data: pixels(1, 1), width: 1, height: 1 }],
+    });
 
     expect(numeric.premultiplyAlpha).toBe(false);
     expect(color.premultiplyAlpha).toBe(true);
     expect(() =>
-      Texture.fromPixels({ colorSpace: 'none', alphaMode: 'straight', levels: [{ data: pixels(1, 1), width: 1, height: 1 }] }, { premultiplyAlpha: true }),
+      Texture.fromPixels(
+        { colorSpace: 'none', alphaMode: 'straight', levels: [{ data: pixels(1, 1), width: 1, height: 1 }] },
+        { premultiplyAlpha: true },
+      ),
     ).toThrow(/numeric/i);
     expect(() =>
-      Texture.fromPixels({ colorSpace: 'srgb', alphaMode: 'straight', levels: [{ data: pixels(1, 1), width: 1, height: 1 }] }, { colorSpace: 'none' }),
+      Texture.fromPixels(
+        { colorSpace: 'srgb', alphaMode: 'straight', levels: [{ data: pixels(1, 1), width: 1, height: 1 }] },
+        { colorSpace: 'none' },
+      ),
     ).toThrow(/contradicts the payload/i);
   });
 

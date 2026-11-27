@@ -11,6 +11,7 @@ import { isEffectReady } from './AudioEffect';
 import { AudioSend } from './AudioSend';
 import type { AudioSystem } from './AudioSystem';
 import type { DistanceModel, Spatializable, SpatialPoint, Voice } from './Playable';
+import { rampGain } from './rampGain';
 import {
   createVelocitySample,
   deriveVelocity,
@@ -44,7 +45,7 @@ const defaultSpatialConfig: VoiceSpatialConfig = {
 /** Construction parameters shared by every concrete voice. */
 export interface BaseVoiceInit {
   audioContext: AudioContext;
-  /** The voice's output gain - the last node before the bus. */
+  /** The voice's output gain - the stable tap point ahead of the occlusion stage and per-voice effects. */
   output: GainNode;
   bus: AudioBus;
   system: AudioSystem;
@@ -71,11 +72,13 @@ export interface SpatialVoice extends Voice {
  * routing - and the {@link Spatializable} capability via a lazily-inserted
  * `PannerNode`.
  *
- * The voice graph is `<source> → [panner] → output(gain) → bus.input`. The
- * `output` gain is always the last node (a stable tap point); the panner is
- * inserted between the source and the gain only once the voice is actually
- * spatialized. Concrete voices provide the two source-specific hooks
- * {@link BaseVoice._routeThroughPanner} and {@link BaseVoice._teardownSource}.
+ * The voice graph is `<source> -> [panner] -> output(gain) -> [occlusion] ->
+ * [effects] -> bus.input`. The `output` gain is a stable tap point that
+ * per-voice sends and effects start from; the panner is inserted between the
+ * source and the gain only once the voice is actually spatialized. Concrete
+ * voices provide the source-specific hooks
+ * {@link BaseVoice._routeThroughPanner}, {@link BaseVoice._routeDirect} and
+ * {@link BaseVoice._teardownSource}.
  */
 export abstract class BaseVoice implements Voice {
   protected readonly _audioContext: AudioContext;
@@ -84,6 +87,10 @@ export abstract class BaseVoice implements Voice {
   protected _bus: AudioBus;
   protected _volume: number;
   protected _ended = false;
+  /** Owner-imposed silence - see {@link BaseVoice._setHeld}. */
+  protected _held = false;
+  /** The caller's own pause, kept apart from {@link BaseVoice._held}. */
+  protected _pauseRequested = false;
   protected _stopTimer: ReturnType<typeof setTimeout> | null = null;
 
   public readonly onEnd = new Signal();
@@ -129,7 +136,12 @@ export abstract class BaseVoice implements Voice {
     this._volume = clamp(init.volume, 0, 1);
     this._spatialConfig = { ...defaultSpatialConfig };
 
-    this._output.gain.setTargetAtTime(this._volume, this._audioContext.currentTime, 0.01);
+    // Set, not ramped: a fresh GainNode starts at unity, and the source has not
+    // started yet, so there is nothing to click. A ramp from unity would let a
+    // one-shot's first milliseconds - usually its loudest transient - through
+    // at full level before the requested volume took hold.
+    this._output.gain.setValueAtTime(this._volume, this._audioContext.currentTime);
+
     if (init.autoConnect !== false) {
       this._connectOutput();
     }
@@ -138,6 +150,36 @@ export abstract class BaseVoice implements Voice {
     // covered regardless of how it was constructed - `open()`, sprite playback
     // and pooled replays all go through this constructor. `_finish` deregisters.
     this._system._registerVoice(this);
+  }
+
+  // -------------------------------------------------------------------------
+  // Hold
+  // -------------------------------------------------------------------------
+
+  /**
+   * Silence (`true`) or release (`false`) the voice on behalf of an owner
+   * such as a scene, independently of the caller's own pause: a held voice
+   * renders nothing and advances no playhead, while `paused` keeps reporting
+   * what the caller last asked for, and releasing it plays only if the caller
+   * has not paused it. A voice that cannot pause ignores this. No-op once the
+   * voice has ended.
+   * @internal
+   */
+  public _setHeld(held: boolean): void {
+    if (this._ended || this._held === held) {
+      return;
+    }
+
+    this._held = held;
+    this._applyHold();
+  }
+
+  /**
+   * Bring a pausable voice's actual output in line with `_held` and the caller's pause.
+   * @internal
+   */
+  protected _applyHold(): void {
+    // A voice that cannot pause has nothing it could hold.
   }
 
   // -------------------------------------------------------------------------
@@ -158,6 +200,7 @@ export abstract class BaseVoice implements Voice {
 
   public set volume(value: number) {
     this._volume = clamp(value, 0, 1);
+
     if (!this._ended) {
       this._output.gain.setTargetAtTime(this._volume, this._audioContext.currentTime, 0.01);
     }
@@ -168,14 +211,20 @@ export abstract class BaseVoice implements Voice {
   }
 
   public set bus(bus: AudioBus) {
-    if (bus === this._bus) return;
-    if (this._ended) {
-      this._bus = bus;
+    if (bus === this._bus) {
       return;
     }
+
+    if (this._ended) {
+      this._bus = bus;
+
+      return;
+    }
+
     this._tail().disconnect();
     this._bus = bus;
     this._connectOutput();
+    this._reconnectSends();
   }
 
   /**
@@ -184,9 +233,13 @@ export abstract class BaseVoice implements Voice {
    * Attaching the same effect twice is a caller error: the rebuilt chain would
    * wire the effect's output back into its own input, producing a feedback
    * loop. The dev build asserts; production ignores the second attach.
+   * An effect whose audio nodes are not initialized is rejected without
+   * changing the current chain; await its ready promise before attaching it.
    */
   public addEffect(effect: AudioEffect): this {
-    if (this._ended) return this;
+    if (this._ended) {
+      return this;
+    }
 
     if (this._effects.includes(effect)) {
       assert(false, 'Voice.addEffect: this effect is already attached to the voice.');
@@ -194,15 +247,22 @@ export abstract class BaseVoice implements Voice {
       return this;
     }
 
+    if (!isEffectReady(effect)) {
+      throw new Error('Voice.addEffect: effect is not yet initialized. Await effect.ready before attaching it.');
+    }
+
     this._effects.push(effect);
     this._rebuildEffectChain();
+
     return this;
   }
 
   public removeEffect(effect: AudioEffect): this {
     const index = this._effects.indexOf(effect);
+
     if (index !== -1) {
       this._effects.splice(index, 1);
+
       // Detach the removed effect's output from the graph (its internal input
       // wiring is left intact so the caller can reuse it). The rebuild below
       // only touches the effects still in the chain. Skipped for an effect
@@ -211,13 +271,17 @@ export abstract class BaseVoice implements Voice {
       if (isEffectReady(effect)) {
         effect.outputNode.disconnect();
       }
+
       this._rebuildEffectChain();
     }
+
     return this;
   }
 
   public fade(to: number, duration: Seconds): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
 
     const target = clamp(to, 0, 1);
     this._volume = target;
@@ -227,29 +291,29 @@ export abstract class BaseVoice implements Voice {
 
     if (duration <= 0) {
       node.gain.setTargetAtTime(target, ctx.currentTime, 0.01);
+
       return;
     }
 
-    node.gain.cancelScheduledValues(ctx.currentTime);
-    node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
-    node.gain.linearRampToValueAtTime(target, ctx.currentTime + duration);
+    rampGain(node.gain, target, ctx.currentTime, duration);
   }
 
   public stop(fade?: Seconds): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
 
     if (fade !== undefined && fade > 0) {
       const ctx = this._audioContext;
       const node = this._output;
-      node.gain.cancelScheduledValues(ctx.currentTime);
-      node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
-      node.gain.linearRampToValueAtTime(0, ctx.currentTime + fade);
+      rampGain(node.gain, 0, ctx.currentTime, fade);
 
       this._clearStopTimer();
       this._stopTimer = setTimeout(() => {
         this._stopTimer = null;
         this._finish();
       }, fade * 1000);
+
       return;
     }
 
@@ -265,14 +329,18 @@ export abstract class BaseVoice implements Voice {
   }
 
   public set position(value: Vector | SpatialPoint | null) {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
 
     if (value === null) {
       if (this._position !== null) {
         this._position.destroy();
         this._position = null;
       }
+
       this._disableSpatializationIfUnused();
+
       return;
     }
 
@@ -303,8 +371,12 @@ export abstract class BaseVoice implements Voice {
    * group sounds where it is drawn.
    */
   public follow(node: SceneNode | null): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
+
     this._followNode = node;
+
     if (node !== null) {
       this._ensurePanner();
       this._tickSpatial();
@@ -319,6 +391,7 @@ export abstract class BaseVoice implements Voice {
 
   public set distanceModel(value: DistanceModel) {
     this._spatialConfig.distanceModel = value;
+
     if (this._panner !== null) {
       this._panner.distanceModel = value;
     }
@@ -339,6 +412,7 @@ export abstract class BaseVoice implements Voice {
     const safe = Number.isFinite(value) ? value : this._spatialConfig.refDistance;
     const clamped = Math.max(Number.EPSILON, safe);
     this._spatialConfig.refDistance = clamped;
+
     if (this._panner !== null) {
       this._panner.refDistance = clamped;
     }
@@ -355,6 +429,7 @@ export abstract class BaseVoice implements Voice {
     const safe = Number.isFinite(value) ? value : this._spatialConfig.maxDistance;
     const clamped = Math.max(Number.EPSILON, safe);
     this._spatialConfig.maxDistance = clamped;
+
     if (this._panner !== null) {
       this._panner.maxDistance = clamped;
     }
@@ -368,6 +443,7 @@ export abstract class BaseVoice implements Voice {
     const safe = Number.isFinite(value) ? value : this._spatialConfig.rolloffFactor;
     const clamped = Math.max(0, safe);
     this._spatialConfig.rolloffFactor = clamped;
+
     if (this._panner !== null) {
       this._panner.rolloffFactor = clamped;
     }
@@ -379,6 +455,7 @@ export abstract class BaseVoice implements Voice {
 
   public set panningModel(value: PanningModelType | null) {
     this._panningModel = value;
+
     if (this._panner !== null) {
       this._panner.panningModel = value ?? this._system.spatial.panningModel;
     }
@@ -401,6 +478,7 @@ export abstract class BaseVoice implements Voice {
     const safe = Number.isFinite(value) ? value : this._coneInnerAngle;
     const clamped = clamp(safe, 0, 360);
     this._coneInnerAngle = clamped;
+
     if (this._panner !== null) {
       this._panner.coneInnerAngle = clamped;
     }
@@ -414,6 +492,7 @@ export abstract class BaseVoice implements Voice {
     const safe = Number.isFinite(value) ? value : this._coneOuterAngle;
     const clamped = clamp(safe, 0, 360);
     this._coneOuterAngle = clamped;
+
     if (this._panner !== null) {
       this._panner.coneOuterAngle = clamped;
     }
@@ -427,6 +506,7 @@ export abstract class BaseVoice implements Voice {
     const safe = Number.isFinite(value) ? value : this._coneOuterGain;
     const clamped = clamp(safe, 0, 1);
     this._coneOuterGain = clamped;
+
     if (this._panner !== null) {
       this._panner.coneOuterGain = clamped;
     }
@@ -437,21 +517,27 @@ export abstract class BaseVoice implements Voice {
   }
 
   public set velocity(value: Vector | SpatialPoint | null) {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
 
     if (value === null) {
       if (this._velocity !== null) {
         this._velocity.destroy();
         this._velocity = null;
       }
+
       this._explicitVelocity = false;
+
       return;
     }
 
     // Reject a non-finite component outright (no partial write) - an
-    // explicit NaN/±Infinity velocity would otherwise feed straight into the
+    // explicit NaN/+/-Infinity velocity would otherwise feed straight into the
     // Doppler ratio calculation. Keep whatever velocity was in effect before.
-    if (!Number.isFinite(value.x) || !Number.isFinite(value.y)) return;
+    if (!Number.isFinite(value.x) || !Number.isFinite(value.y)) {
+      return;
+    }
 
     if (this._velocity === null) {
       this._velocity = new Vector(value.x, value.y);
@@ -531,15 +617,13 @@ export abstract class BaseVoice implements Voice {
   }
 
   public addSend(bus: AudioBus, level = 1): AudioSend {
+    if (this._ended) {
+      throw new Error('Cannot open an audio send on a voice that has already ended.');
+    }
+
     const send = new AudioSend(this._audioContext, this._output, bus, level);
 
     this._sends.push(send);
-
-    // A send on an already-finished voice is legal but pointless; destroying it
-    // straight away keeps the invariant that a voice's sends never outlive it.
-    if (this._ended) {
-      send.destroy();
-    }
 
     return send;
   }
@@ -554,16 +638,18 @@ export abstract class BaseVoice implements Voice {
    * @internal
    */
   public _adoptSend(send: AudioSend): void {
-    if (this._sends.includes(send)) {
+    if (this._sends.includes(send) || send.destroyed) {
+      return;
+    }
+
+    if (this._ended) {
+      send.destroy();
+
       return;
     }
 
     send._retarget(this._output);
     this._sends.push(send);
-
-    if (this._ended) {
-      send.destroy();
-    }
   }
 
   public removeSend(send: AudioSend): this {
@@ -579,7 +665,9 @@ export abstract class BaseVoice implements Voice {
 
   /** @internal Called once per frame by {@link AudioSystem.update} for spatial voices. */
   public _tickSpatial(): void {
-    if (this._panner === null || this._ended) return;
+    if (this._panner === null || this._ended) {
+      return;
+    }
 
     let x: number;
     let y: number;
@@ -596,7 +684,8 @@ export abstract class BaseVoice implements Voice {
       x = this._position.x;
       y = this._position.y;
     } else {
-      return;
+      x = 0;
+      y = 0;
     }
 
     const panner = this._panner as unknown as Partial<{
@@ -669,6 +758,7 @@ export abstract class BaseVoice implements Voice {
   private _tickDoppler(x: number, y: number, z: number, now: number, settings: SpatialSmoothingSettings): void {
     if (settings.dopplerFactor <= 0) {
       this._setDopplerRatio(1);
+
       return;
     }
 
@@ -676,7 +766,7 @@ export abstract class BaseVoice implements Voice {
     let vy: number;
     // Only ever explicit: a derived velocity comes from the tracked position,
     // and nothing tracks elevation - `follow()` reads a 2D scene node.
-    const vz = this._explicitVelocity ? this._elevationVelocity : 0;
+    const vz = this._elevationVelocity;
 
     if (this._explicitVelocity && this._velocity !== null) {
       vx = this._velocity.x;
@@ -692,9 +782,11 @@ export abstract class BaseVoice implements Voice {
     const dy = y - listener.position.y;
     const dz = z - listener.elevation;
     const distance = Math.hypot(dx, dy, dz);
+
     // Coincident with the listener - no defined line of sight to project onto.
     if (distance < POSITION_EPSILON) {
       this._setDopplerRatio(1);
+
       return;
     }
 
@@ -719,7 +811,11 @@ export abstract class BaseVoice implements Voice {
     // the shared settings object, ...) - falls back to the neutral ratio
     // rather than ever writing a non-finite value to a live AudioParam.
     const safeRatio = Number.isFinite(ratio) ? ratio : 1;
-    if (safeRatio === 1 && !this._dopplerActive) return;
+
+    if (safeRatio === 1 && !this._dopplerActive) {
+      return;
+    }
+
     this._dopplerActive = safeRatio !== 1;
     this._applyDopplerRate(safeRatio);
   }
@@ -735,7 +831,9 @@ export abstract class BaseVoice implements Voice {
    * would need a second angle, which no caller can supply today.
    */
   private _writeOrientation(): void {
-    if (this._panner === null || this._ended) return;
+    if (this._panner === null || this._ended) {
+      return;
+    }
 
     // SceneNode rotation is counter-clockwise on the Y-down screen: local +X
     // lands on (cos, -sin) in world space, not (cos, sin).
@@ -839,8 +937,10 @@ export abstract class BaseVoice implements Voice {
   /** Connect `tail` to the bus input, or to the destination with a deferred reroute while the bus is still locked. */
   private _connectTail(tail: AudioNode): void {
     const input = this._bus.getInputNode();
+
     if (input !== null) {
       tail.connect(input);
+
       return;
     }
 
@@ -853,23 +953,32 @@ export abstract class BaseVoice implements Voice {
     this._pendingBusSetup?.();
     this._pendingBusSetup = this._bus.onceSetup((): void => {
       this._pendingBusSetup = null;
-      if (this._ended) return;
+
+      if (this._ended) {
+        return;
+      }
+
       const node = this._bus.getInputNode();
+
       if (node !== null) {
         const current = this._tail();
         current.disconnect();
         current.connect(node);
+        this._reconnectSends();
       }
     });
   }
 
-  /** Rewire `output → [effects...] → bus` after the per-voice effect chain changes. */
+  /** Rewire `output -> [effects...] -> bus` after the per-voice effect chain changes. */
   private _rebuildEffectChain(): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
 
     this._output.disconnect();
     this._occlusionFilter?.disconnect();
     this._occlusionGain?.disconnect();
+
     for (const effect of this._effects) {
       effect.outputNode.disconnect();
     }
@@ -886,7 +995,17 @@ export abstract class BaseVoice implements Voice {
       prev.connect(effect.inputNode);
       prev = effect.outputNode;
     }
+
     this._connectTail(prev);
+    this._reconnectSends();
+  }
+
+  private _reconnectSends(): void {
+    // Rebuilding the dry chain can disconnect every edge from the output,
+    // including the independently owned parallel taps.
+    for (const send of this._sends) {
+      send._retarget(this._output);
+    }
   }
 
   protected _clearStopTimer(): void {
@@ -897,7 +1016,9 @@ export abstract class BaseVoice implements Voice {
   }
 
   private _ensurePanner(): void {
-    if (this._panner !== null || this._ended) return;
+    if (this._panner !== null || this._ended) {
+      return;
+    }
 
     const panner = this._audioContext.createPanner();
     panner.panningModel = this._panningModel ?? this._system.spatial.panningModel;
@@ -920,7 +1041,10 @@ export abstract class BaseVoice implements Voice {
   }
 
   private _disableSpatializationIfUnused(): void {
-    if (this._position !== null || this._followNode !== null || this._panner === null) return;
+    if (this._position !== null || this._followNode !== null || this._panner === null) {
+      return;
+    }
+
     const panner = this._panner;
     this._routeDirect();
     panner.disconnect();
@@ -939,6 +1063,7 @@ export abstract class BaseVoice implements Voice {
     this._smoothOrientX.reset();
     this._smoothOrientY.reset();
     this._smoothOrientZ.reset();
+
     if (this._spatialRegistered) {
       this._spatialRegistered = false;
       this._system._unregisterSpatial(this);
@@ -950,7 +1075,10 @@ export abstract class BaseVoice implements Voice {
    * subsequent calls are no-ops once `_ended` is set.
    */
   protected _finish(): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
+
     this._ended = true;
     this._clearStopTimer();
 
@@ -961,11 +1089,13 @@ export abstract class BaseVoice implements Voice {
 
     this._teardownSource();
     this._panner?.disconnect();
+
     // Sends read `_output`, so they go before it is disconnected - the shared
     // bus each one feeds must not be left with a live tap on a dead voice.
     for (const send of this._sends) {
       send.destroy();
     }
+
     this._sends.length = 0;
     this._output.disconnect();
     this._occlusionFilter?.disconnect();
@@ -982,16 +1112,19 @@ export abstract class BaseVoice implements Voice {
         effect.outputNode.disconnect();
       }
     }
+
     this._effects.length = 0;
 
     if (this._position !== null) {
       this._position.destroy();
       this._position = null;
     }
+
     if (this._velocity !== null) {
       this._velocity.destroy();
       this._velocity = null;
     }
+
     this._followNode = null;
 
     if (this._spatialRegistered) {
@@ -1001,14 +1134,19 @@ export abstract class BaseVoice implements Voice {
 
     this._system._unregisterVoice(this);
 
-    this.onEnd.dispatch();
-    this.onEnd.destroy();
+    try {
+      this.onEnd.dispatch();
+    } finally {
+      // A throwing listener must not leave its (now inert) Signal retaining
+      // every callback after the voice itself has been fully torn down.
+      this.onEnd.destroy();
+    }
   }
 
   /**
    * Insert `panner` between the voice's source and its output gain. The source
    * is currently connected directly to {@link BaseVoice._output}; rewire it as
-   * `source → panner → output`.
+   * `source -> panner -> output`.
    */
   protected abstract _routeThroughPanner(panner: PannerNode): void;
 

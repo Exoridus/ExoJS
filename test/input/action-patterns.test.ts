@@ -24,19 +24,30 @@ const createSample = (): SampleDriver => {
     sample,
     batch(timestamp, writes): void {
       const channels: ChannelEvent[] = [];
+
       for (const [channel, value] of writes) {
-        if (values[channel] === value) continue;
+        if (values[channel] === value) {
+          continue;
+        }
+
         values[channel] = value;
         channels.push({ channel, value });
       }
-      if (channels.length > 0) batches.push({ channels, sequence: ++sequence, timestamp });
+
+      if (channels.length > 0) {
+        batches.push({ channels, sequence: ++sequence, timestamp });
+      }
+
       // A real frame is sampled no earlier than the events it carries.
       sample.timestamp = Math.max(sample.timestamp, timestamp);
     },
     frame(now): void {
       batches.length = 0;
       sample.frameId++;
-      if (now !== undefined) sample.timestamp = now;
+
+      if (now !== undefined) {
+        sample.timestamp = now;
+      }
     },
   };
 };
@@ -330,7 +341,9 @@ describe('ChordAction: `|` alternation', () => {
   });
 
   test('rejects a step mixing a bare channel with a nested alternative', () => {
-    expect(() => new ChordAction(runtimeArrayPattern<ChordBinding>([Keyboard.A, [Keyboard.B, Keyboard.C]]))).toThrow(/ChordAction:.*mixes a bare channel/);
+    expect(() => new ChordAction(runtimeArrayPattern<ChordBinding>([Keyboard.A, [Keyboard.B, Keyboard.C]]))).toThrow(
+      /ChordAction:.*mixes a bare channel/,
+    );
   });
 });
 

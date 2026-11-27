@@ -1,5 +1,6 @@
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import type { AssetDependencyScope, AssetFactoryContext } from '#assets/AssetFactory';
+import { MemoryCacheStore } from '#assets/cache/MemoryCacheStore';
 import type { SoundAssetOptions } from '#assets/factories/SoundFactory';
 import { SoundFactory } from '#assets/factories/SoundFactory';
 import { Sound } from '#audio/Sound';
@@ -14,7 +15,7 @@ import { factoryContext } from './factory-context';
 // so the mock function must be created via `vi.hoisted()` to be referenced
 // safely inside the factory below.
 const { decodeAudioDataMock } = vi.hoisted(() => ({
-  decodeAudioDataMock: vi.fn(async (): Promise<AudioBuffer> => ({ duration: 2 }) as AudioBuffer),
+  decodeAudioDataMock: vi.fn(async (_source: ArrayBuffer): Promise<AudioBuffer> => ({ duration: 2 }) as AudioBuffer),
 }));
 
 vi.mock('#audio/audioContext', () => ({
@@ -49,6 +50,35 @@ describe('SoundFactory', () => {
 
     expect(sound.volume).toBe(0.6);
     expect(sound.loop).toBe(true);
+  });
+
+  test('decoding cannot detach the caller-owned bytes needed by another acquisition', async () => {
+    const bytes = new Uint8Array([1, 2, 3, 4]).buffer;
+    const cache = new MemoryCacheStore();
+    const key = { namespace: 'sound', source: 'sound.wav', version: 1, record: 'bytes' };
+
+    const consume = async (source: ArrayBuffer): Promise<AudioBuffer> => {
+      structuredClone(source, { transfer: [source] });
+
+      return { duration: 2 } as AudioBuffer;
+    };
+
+    decodeAudioDataMock.mockImplementationOnce(consume).mockImplementationOnce(consume);
+
+    const factory = new SoundFactory();
+
+    await cache.set(key, bytes);
+
+    for (let acquisition = 0; acquisition < 2; acquisition++) {
+      const cached = await cache.get(key);
+
+      if (!cached.hit) {
+        throw new Error('sound bytes disappeared from cache');
+      }
+
+      await factory.create(cached.value as ArrayBuffer, factoryContext());
+      expect(Array.from(new Uint8Array(bytes))).toEqual([1, 2, 3, 4]);
+    }
   });
 
   test('create() forwards a custom poolSize', async () => {
@@ -116,7 +146,7 @@ describe('SoundFactory - sprite sidecar', () => {
     return factoryContext<SoundAssetOptions>(
       { sprites: sidecar },
       {
-        dependencies: { load, get: vi.fn(), createScope: vi.fn() } as unknown as AssetDependencyScope,
+        dependencies: { load, get: vi.fn() } as unknown as AssetDependencyScope,
       },
     );
   };
@@ -132,11 +162,15 @@ describe('SoundFactory - sprite sidecar', () => {
   });
 
   test('a sidecar that is not an object mapping names to clips is a decode failure', async () => {
-    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', [1, 2, 3]))).rejects.toBeInstanceOf(AssetDecodeError);
-    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', { impact: 3 }))).rejects.toThrow(/is not a clip object/);
-    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', { impact: { start: 0, end: 'x' } }))).rejects.toThrow(
-      /finite "start" and "end" times/,
+    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', [1, 2, 3]))).rejects.toBeInstanceOf(
+      AssetDecodeError,
     );
+    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', { impact: 3 }))).rejects.toThrow(
+      /is not a clip object/,
+    );
+    await expect(
+      new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', { impact: { start: 0, end: 'x' } })),
+    ).rejects.toThrow(/finite "start" and "end" times/);
   });
 
   test('a clip only the buffer duration can reject is reported against the sidecar, not the caller', async () => {
@@ -147,7 +181,10 @@ describe('SoundFactory - sprite sidecar', () => {
   });
 
   test('an inline sprite map still reaches the Sound unchanged', async () => {
-    const sound = await new SoundFactory().create(new ArrayBuffer(8), factoryContext<SoundAssetOptions>({ sprites: { hit: { start: 0, end: 1 } } }));
+    const sound = await new SoundFactory().create(
+      new ArrayBuffer(8),
+      factoryContext<SoundAssetOptions>({ sprites: { hit: { start: 0, end: 1 } } }),
+    );
 
     expect(sound.hasSprite('hit')).toBe(true);
   });

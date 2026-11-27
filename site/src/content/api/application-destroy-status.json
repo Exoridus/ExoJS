@@ -1,0 +1,81 @@
+{
+  "title": "ApplicationDestroyStatus",
+  "description": "How the teardown Application.destroy ran ended. | Status | Meaning | |---|---| | `completed` | Every teardown step `destroy()` runs or waits for settled without a failure | | `completedWithErrors` | Every step ran to its end, but at least one of them failed | | `forced` | Scene teardown outlived the grace period and was abandoned; the rest of the engine was released anyway | `forced` wins over `completedWithErrors`: when both happened the status is `forced`, and the failures are still listed in ApplicationDestroyOutcome.errors.",
+  "symbol": "ApplicationDestroyStatus",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How the teardown Application.destroy ran ended.",
+        "| Status | Meaning | |---|---| | `completed` | Every teardown step `destroy()` runs or waits for settled without a failure | | `completedWithErrors` | Every step ran to its end, but at least one of them failed | | `forced` | Scene teardown outlived the grace period and was abandoned; the rest of the engine was released anyway |",
+        "`forced` wins over `completedWithErrors`: when both happened the status is `forced`, and the failures are still listed in ApplicationDestroyOutcome.errors."
+      ],
+      "importLine": "import { ApplicationDestroyStatus } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ApplicationDestroyStatus",
+          "signature": "\"completed\" | \"completedWithErrors\" | \"forced\"",
+          "signatureTokens": [
+            {
+              "text": "\"completed\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"completedWithErrors\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"forced\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Application.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Application.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+}

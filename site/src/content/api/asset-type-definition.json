@@ -1,0 +1,155 @@
+{
+  "title": "AssetTypeDefinition",
+  "description": "An application-owned asset definition and the source representation it consumes.",
+  "symbol": "AssetTypeDefinition",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An application-owned asset definition and the source representation it consumes."
+      ],
+      "importLine": "import { AssetTypeDefinition } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AssetTypeDefinition",
+          "signature": "AssetTypeDefinitionBase<Resource, Source, Stored> & { read?: never } & AssetFactorySpec<Resource, Source, Options>",
+          "signatureTokens": [
+            {
+              "text": "AssetTypeDefinitionBase",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Source",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "read",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetFactorySpec",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Source",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetTypes.ts"
+}

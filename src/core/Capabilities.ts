@@ -10,7 +10,7 @@
 // `app.capabilities` after `await app.start(...)`); there is no global
 // sync mirror, by design.
 
-import { getWebGl2Context, type RenderSurface } from '#platform/RenderSurface';
+import { getWebGl2Context, hasDomBrand, type RenderSurface } from '#platform/RenderSurface';
 
 /**
  * Which kind of global scope the probes ran in. Capabilities are realm-local:
@@ -36,8 +36,14 @@ const workerGlobalScope = Reflect.get(globalThis, 'WorkerGlobalScope') as (abstr
 const hasWorkerScope = workerGlobalScope !== undefined && globalThis instanceof workerGlobalScope;
 
 const detectRealm = (): HostRealm => {
-  if (hasWindow && hasDocument) return 'window';
-  if (hasWorkerScope) return 'worker';
+  if (hasWindow && hasDocument) {
+    return 'window';
+  }
+
+  if (hasWorkerScope) {
+    return 'worker';
+  }
+
   return 'unknown';
 };
 
@@ -80,6 +86,21 @@ interface CapabilityValues {
  */
 export class Capabilities {
   private static _readyPromise: Promise<Capabilities> | null = null;
+
+  // Actual renderer contexts are stronger evidence than throwaway probes.
+  // Each observation stays in its own JavaScript realm; no GL handles are retained.
+  private static _observedWebGl2 = false;
+  private static _observedOffscreenWebGl2 = false;
+
+  /** @internal Successful acquisition of a real rendering context. */
+  public static _observeWebGl2Context(surface: RenderSurface): void {
+    if (hasDomBrand(surface, 'HTMLCanvasElement')) {
+      Capabilities._observedWebGl2 = true;
+    } else if (hasDomBrand(surface, 'OffscreenCanvas')) {
+      Capabilities._observedWebGl2 = true;
+      Capabilities._observedOffscreenWebGl2 = true;
+    }
+  }
 
   /**
    * Lazy-cached Promise that resolves to a frozen Capabilities instance.
@@ -168,7 +189,7 @@ export class Capabilities {
 
     return new Capabilities({
       realm,
-      webgl2: probeWebGl2(),
+      webgl2: Capabilities._observedWebGl2 || probeWebGl2(),
       webgpu: probeWebGpuApiSurface(),
       webgpuAdapter,
       webgpuVendor: webgpuInfo?.vendor ?? null,
@@ -184,7 +205,7 @@ export class Capabilities {
       imageBitmap: probeImageBitmap(),
       deviceMemory: probeDeviceMemory(),
       offscreenCanvas: probeOffscreenCanvas(),
-      offscreenWebgl2: probeOffscreenWebGl2(),
+      offscreenWebgl2: Capabilities._observedOffscreenWebGl2 || probeOffscreenWebGl2(),
       webWorkers: probeWebWorkers(),
       devicePixelRatio: hasWindow ? window.devicePixelRatio : 1,
     });
@@ -253,16 +274,22 @@ const probeOffscreenWebGl2 = (): boolean => {
 const probeWebGpuApiSurface = (): boolean => hasNavigator && 'gpu' in navigator;
 
 const probeWebGpu = async (): Promise<[GPUAdapter | null, GPUAdapterInfo | null]> => {
-  if (!probeWebGpuApiSurface()) return [null, null];
+  if (!probeWebGpuApiSurface()) {
+    return [null, null];
+  }
 
   const gpu = (navigator as Navigator & { gpu?: GPU }).gpu;
 
-  if (!gpu || typeof gpu.requestAdapter !== 'function') return [null, null];
+  if (!gpu || typeof gpu.requestAdapter !== 'function') {
+    return [null, null];
+  }
 
   try {
     const adapter = await gpu.requestAdapter();
 
-    if (!adapter) return [null, null];
+    if (!adapter) {
+      return [null, null];
+    }
 
     // Modern path: GPUAdapter.info is a sync property (Chrome 116+,
     // Safari 18+). Older browsers exposed a deprecated async
@@ -301,29 +328,50 @@ const probeKeyboard = (): boolean => hasWindow && 'KeyboardEvent' in globalThis;
 const probeGamepad = (): boolean => hasNavigator && typeof navigator.getGamepads === 'function';
 
 const probeTouchSupported = (): boolean => {
-  if (!hasWindow) return false;
-  if ('ontouchstart' in globalThis) return true;
-  if (probeMaxTouchPoints() > 0) return true;
+  if (!hasWindow) {
+    return false;
+  }
+
+  if ('ontouchstart' in globalThis) {
+    return true;
+  }
+
+  if (probeMaxTouchPoints() > 0) {
+    return true;
+  }
+
   return false;
 };
 
 const probeMaxTouchPoints = (): number => {
-  if (!hasNavigator) return 0;
+  if (!hasNavigator) {
+    return 0;
+  }
+
   const points = navigator.maxTouchPoints;
+
   return typeof points === 'number' ? points : 0;
 };
 
 // `AudioContext` is window-scoped by specification - a worker cannot construct
 // one even where the identifier resolves.
 const probeAudio = (): boolean => {
-  if (!hasWindow) return false;
+  if (!hasWindow) {
+    return false;
+  }
+
   const w = globalThis as typeof globalThis & { webkitAudioContext?: unknown };
+
   return w.AudioContext !== undefined || w.webkitAudioContext !== undefined;
 };
 
 const probeFullscreen = (): boolean => {
-  if (!hasDocument) return false;
+  if (!hasDocument) {
+    return false;
+  }
+
   const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: unknown };
+
   return typeof el.requestFullscreen === 'function' || typeof el.webkitRequestFullscreen === 'function';
 };
 
@@ -332,8 +380,12 @@ const probeVibration = (): boolean => hasNavigator && typeof navigator.vibrate =
 const probeImageBitmap = (): boolean => typeof createImageBitmap === 'function';
 
 const probeDeviceMemory = (): number => {
-  if (!hasNavigator) return 0;
+  if (!hasNavigator) {
+    return 0;
+  }
+
   const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+
   return typeof mem === 'number' ? mem : 0;
 };
 

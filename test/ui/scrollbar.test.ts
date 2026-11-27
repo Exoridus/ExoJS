@@ -57,7 +57,8 @@ const makeStage = (): { stage: Stage } & PointerSignals => {
   return { stage: { interaction, focus, app }, ...signals };
 };
 
-const pointerDownAt = (x: number, y: number, id = 1): InteractionEvent => ({ x, y, pointer: { id }, stopPropagation: vi.fn() }) as unknown as InteractionEvent;
+const pointerDownAt = (x: number, y: number, id = 1): InteractionEvent =>
+  ({ x, y, pointer: { id }, stopPropagation: vi.fn() }) as unknown as InteractionEvent;
 
 const fakePointer = { id: 1 } as Pointer;
 
@@ -132,6 +133,22 @@ describe('Scrollbar geometry', () => {
 });
 
 describe('Scrollbar drag', () => {
+  test('disabling the bar, or an ancestor, mid-drag ends the drag', () => {
+    const { stage, onPointerMove } = makeStage();
+    const bar = new Scrollbar().setLength(200);
+
+    bar._setStage(stage);
+    bar.setRange(100, 400);
+    bar.thumbNode.onPointerDown.dispatch(pointerDownAt(0, 10));
+    expect(bar.dragging).toBe(true);
+
+    bar.enabled = false;
+    expect(bar.dragging).toBe(false);
+
+    onPointerMove.dispatch(fakePointer, 0, 85);
+    expect(bar.offset).toBe(0);
+  });
+
   test('a thumb drag reports the offset it travelled to', () => {
     const { stage, onPointerMove, onPointerUp } = makeStage();
     const bar = new Scrollbar().setLength(200);
@@ -158,6 +175,21 @@ describe('Scrollbar drag', () => {
 
     onPointerMove.dispatch(fakePointer, 0, 200);
 
+    expect(bar.offset).toBe(150);
+  });
+
+  test('ignores a drag while its transform is singular', () => {
+    const { stage, onPointerMove } = makeStage();
+    const bar = new Scrollbar().setLength(200);
+    bar._setStage(stage);
+    bar.setRange(100, 400);
+    bar.thumbNode.onPointerDown.dispatch(pointerDownAt(0, 10));
+    bar.scale.set(0, 1);
+
+    expect(() => onPointerMove.dispatch(fakePointer, 0, 85)).not.toThrow();
+    expect(bar.offset).toBe(0);
+    bar.scale.set(1, 1);
+    onPointerMove.dispatch(fakePointer, 0, 85);
     expect(bar.offset).toBe(150);
   });
 

@@ -73,7 +73,12 @@ export interface PointerPhaseEntry {
  *
  * @internal
  */
-export const computeDesignPoint = (app: Application, platform: PlatformAdapter, clientX: number, clientY: number): { x: number; y: number } => {
+export const computeDesignPoint = (
+  app: Application,
+  platform: PlatformAdapter,
+  clientX: number,
+  clientY: number,
+): { x: number; y: number } => {
   const rect = platform.getSurfaceMetrics();
   const u = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
   const v = rect.height > 0 ? (clientY - rect.top) / rect.height : 0;
@@ -110,7 +115,7 @@ export enum PointerState {
  *
  * Coordinates are stored in the application's logical space - `app.width` /
  * `app.height` units (`0..app.width` × `0..app.height`), matching node
- * positions, the 2-argument {@link View.screenToWorld}, and the active camera.
+ * positions and {@link Application.screenToWorld}.
  * The CSS-pixel event coordinates are mapped through the canvas's display rect,
  * so the value is independent of {@link Application.pixelRatio}, of the render
  * resolution, and of however the canvas is scaled for display: a click at its
@@ -526,7 +531,14 @@ export class Pointer {
    * which keeps the mapping correct for a non-uniform transform and needs only
    * one extra conversion - the event's design position is already known.
    */
-  private _accumulateMovement(clientX: number, clientY: number, designX: number, designY: number, movementX: number, movementY: number): void {
+  private _accumulateMovement(
+    clientX: number,
+    clientY: number,
+    designX: number,
+    designY: number,
+    movementX: number,
+    movementY: number,
+  ): void {
     const app = this._app;
     const platform = this._platform;
 
@@ -546,7 +558,12 @@ export class Pointer {
    * {@link Application._backingStoreToLogical}. The contact size is mapped as a
    * delta through the same transform.
    */
-  private _computeDesignGeometry(clientX: number, clientY: number, width: number, height: number): { x: number; y: number; width: number; height: number } {
+  private _computeDesignGeometry(
+    clientX: number,
+    clientY: number,
+    width: number,
+    height: number,
+  ): { x: number; y: number; width: number; height: number } {
     const app = this._app;
     const platform = this._platform;
 

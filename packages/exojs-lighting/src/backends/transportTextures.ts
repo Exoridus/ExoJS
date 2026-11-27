@@ -54,7 +54,13 @@ export class TransportTextures {
   }
 
   /** The grid the walk is told about: where it starts, how large a cell is, and how many there are. */
-  public get grid(): { readonly originX: number; readonly originY: number; readonly cellSize: number; readonly width: number; readonly height: number } {
+  public get grid(): {
+    readonly originX: number;
+    readonly originY: number;
+    readonly cellSize: number;
+    readonly width: number;
+    readonly height: number;
+  } {
     const built = this._geometry.tables;
 
     return { originX: built.originX, originY: built.originY, cellSize: built.cellSize, width: built.gridWidth, height: built.gridHeight };

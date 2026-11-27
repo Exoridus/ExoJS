@@ -40,10 +40,14 @@ export class InputVoice extends BaseVoice {
    * sparingly - routing a microphone to the speakers risks feedback.
    */
   public routeTo(bus: AudioBus): this {
-    if (this._ended) return this;
+    if (this._ended) {
+      return this;
+    }
+
     this._tail().disconnect();
     this._bus = bus;
     this._connectOutput();
+
     return this;
   }
 
@@ -51,17 +55,24 @@ export class InputVoice extends BaseVoice {
    * Record `duration` of the live input and resolve with a playable
    * {@link Sound}. Uses `MediaRecorder` under the hood, then decodes the
    * captured blob into an `AudioBuffer`.
+   *
+   * The resolved {@link Sound} is owned by the caller and must be `destroy()`ed
+   * like any other. Recording is independent of this voice's lifecycle: it
+   * keeps running if the voice is stopped, and rejects if the recorder or the
+   * decode fails.
    */
   public async record(duration: Seconds): Promise<Sound> {
     const recorder = new MediaRecorder(this._stream);
     const chunks: Blob[] = [];
 
     recorder.addEventListener('dataavailable', event => {
-      if (event.data.size > 0) chunks.push(event.data);
+      if (event.data.size > 0) {
+        chunks.push(event.data);
+      }
     });
 
     return new Promise<Sound>((resolve, reject) => {
-      recorder.addEventListener('stop', () => {
+      const onStop = (): void => {
         void (async (): Promise<void> => {
           try {
             const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
@@ -71,13 +82,26 @@ export class InputVoice extends BaseVoice {
             reject(error instanceof Error ? error : new Error(String(error)));
           }
         })();
-      });
-      recorder.addEventListener('error', () => reject(new Error('Recording failed.')));
+      };
+
+      // A failed recorder never delivers a usable blob: cancel the pending stop so
+      // it does not decode a partial capture or keep the timer alive.
+      const onError = (): void => {
+        clearTimeout(timer);
+        recorder.removeEventListener('stop', onStop);
+        recorder.removeEventListener('error', onError);
+        reject(new Error('Recording failed.'));
+      };
+
+      recorder.addEventListener('stop', onStop);
+      recorder.addEventListener('error', onError);
 
       recorder.start();
-      setTimeout(
+      const timer = setTimeout(
         () => {
-          if (recorder.state !== 'inactive') recorder.stop();
+          if (recorder.state !== 'inactive') {
+            recorder.stop();
+          }
         },
         Math.max(0, duration * 1000),
       );

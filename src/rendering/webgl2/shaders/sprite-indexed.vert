@@ -10,9 +10,9 @@ precision highp int;
 // slot-addressed stores that only change when an item enters or leaves the view,
 // and the single per-instance attribute is the slot to read.
 //
-// The shared half of this shader (snapBoundary + everything from the corner
-// selection to the end of main) is byte-identical to `sprite.vert` and pinned
-// that way by `test/rendering/sprite-shader-variants.test.ts`. Edit both.
+// The shared part of this shader (snapBoundary, plus the corner selection and
+// the output writes) mirrors `sprite.vert`; edit both. The matrix reads happen
+// at a different point here, so the two files are not byte-identical.
 //
 // Store layout, all three addressed by the SAME row mapping as the shared
 // transform texture (`exoTransformTexel` / `exoTintTexel`), because a slot row
@@ -30,6 +30,7 @@ precision highp int;
 // WebGL2 minimum guarantees; a third texel would need 3072.
 layout(location = 0) in uint a_slot;
 
+uniform highp int u_samplePremultiplyMask;
 uniform mat3 u_projection;
 uniform mat3 u_group;
 uniform vec4 u_viewport;                        // device-pixel viewport rect (x, y, width, height) for position snapping
@@ -126,5 +127,6 @@ void main(void) {
     // rather than an extra gamma step.
     highp vec3 linearTint = srgbToLinear(m2.rgb);
     v_color = vec4(linearTint * m2.a, m2.a);
-    v_textureSlot = a_textureSlot;
+    uint premultiplySample = (uint(u_samplePremultiplyMask) >> a_textureSlot) & 1u;
+    v_textureSlot = a_textureSlot | (premultiplySample << 8u);
 }

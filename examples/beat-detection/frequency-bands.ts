@@ -1,5 +1,6 @@
-import { Application, Asset, AudioStream, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type Music, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 // Eight perceptual frequency bands spanning the audible range, from the lowest
@@ -23,7 +24,7 @@ const BAND_COLORS = [
 ];
 
 class FrequencyBandsScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private analyser!: AudioAnalyser;
   private bars!: Graphics;
   private labels: Text[] = [];
@@ -34,8 +35,8 @@ class FrequencyBandsScene extends Scene {
 
   override async load(): Promise<void> {
     const app = this.app;
-    // AudioStream has no seamless adapter - await it explicitly.
-    const track = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
+    // Music has no seamless adapter - await it explicitly.
+    const track = await this.loader.load(assets.musicGlitchMachine);
     this.music = track;
 
     this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
@@ -46,6 +47,7 @@ class FrequencyBandsScene extends Scene {
     const binCount = this.analyser.frequencyBinCount;
     const minBin = 1;
     const maxBin = binCount;
+
     for (let i = 0; i <= BAND_COUNT; i++) {
       const t = i / BAND_COUNT;
       this.bandEdges.push(Math.round(minBin * Math.pow(maxBin / minBin, t)));
@@ -57,6 +59,7 @@ class FrequencyBandsScene extends Scene {
     const gap = 16;
     const slotWidth = (width - gap) / BAND_COUNT;
     const barWidth = slotWidth - gap;
+
     for (let i = 0; i < BAND_COUNT; i++) {
       const label = new Text(BAND_LABELS[i], { fillColor: new Color(190, 198, 214), fontSize: 14 });
       label.setAnchor(0.5, 0);
@@ -78,7 +81,7 @@ class FrequencyBandsScene extends Scene {
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically.
-    app.audio.play(this.music, { loop: true, volume: 0.8 });
+    app.audio.play(this.music, { loop: true, volume: 0.2 });
   }
 
   override update(): void {
@@ -89,6 +92,7 @@ class FrequencyBandsScene extends Scene {
       const end = Math.max(start + 1, this.bandEdges[band + 1]);
 
       let sum = 0;
+
       for (let bin = start; bin < end; bin++) {
         sum += spectrum[bin];
       }
@@ -142,9 +146,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(14, 16, 22),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(FrequencyBandsScene);

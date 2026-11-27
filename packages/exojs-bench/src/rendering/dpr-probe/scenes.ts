@@ -149,7 +149,10 @@ const createFlatTexture = (): Texture => {
  * the surface's real resolution - and, when the content sits behind an effect or
  * a texture cache, of the INTERNAL target's resolution instead.
  */
-const buildSharpContent = (stageSize: number, withText: boolean): { node: Container; textures: Texture[]; spin: Graphics; textNodes: Text[] } => {
+const buildSharpContent = (
+  stageSize: number,
+  withText: boolean,
+): { node: Container; textures: Texture[]; spin: Graphics; textNodes: Text[] } => {
   const content = new Container();
   const edgeTexture = createEdgeTexture(64);
   const sprite = new Sprite(edgeTexture);
@@ -262,12 +265,11 @@ const buildTextRatioScene = (stageWidth: number, stageHeight: number, textPixelR
       fontSize,
       fillColor: new Color(255, 208, 96),
       outlineColor: new Color(10, 14, 20),
-      // Reach is `outlineWidth × sdfRadius` LOGICAL pixels, so a single constant
-      // is not one look across three font sizes: 0.12 is 0.96px per side, which
-      // is the whole stem of a 9px glyph and turns the row into a dark blob
-      // instead of a legible density comparison. Scaled to a quarter of the cap
-      // height so all three rows carry a visually comparable outline.
-      outlineWidth: Math.min(0.12, fontSize / 200),
+      // A single width is not one look across three font sizes: 0.96px per
+      // side is the whole stem of a 9px glyph and turns the row into a dark
+      // blob instead of a legible density comparison. Scaled with the font
+      // size so all three rows carry a visually comparable outline.
+      outlineWidth: Math.min(0.96, fontSize / 25),
       ...(textPixelRatio !== undefined && { pixelRatio: textPixelRatio }),
     });
 
@@ -341,15 +343,12 @@ const buildOverdrawScene = (stageWidth: number, stageHeight: number): ProbeScene
  * and not what this probe is about. Its measured cost is therefore the REPLAY
  * cost, and its interesting column is sharpness, not milliseconds.
  *
- * It is also the only scene WITHOUT text, and not by preference. Measured while
- * building this probe (desktop Chromium, both backends, same page): a
- * `cacheAsTexture` container that contains a `Text` node draws NOTHING on WebGL2
- * - not the text and not its non-text siblings - while the identical scene
- * renders correctly on WebGPU, and while the same content behind a filter (no
- * cache) renders correctly on both. Since iOS Safari is always WebGL2, keeping
- * text here would have made the whole `cacheAsTexture` arm a black rectangle on
- * the device this probe exists for. The omission is stated in the run's notes
- * rather than quietly compensated for.
+ * It is also the only scene WITHOUT text. That was forced by a WebGL2 defect seen
+ * while building this probe: a `cacheAsTexture` container holding a `Text` node
+ * drew nothing, text and non-text siblings alike, while the same scene rendered
+ * correctly on WebGPU. The omission is kept so new captures stay comparable with
+ * the ones taken before the fix; `cacheAsTexture` with text is covered by the
+ * backend cache-as-texture browser tests.
  */
 export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): ProbeScene => {
   const { stageWidth, stageHeight, mode } = options;

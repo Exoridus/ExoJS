@@ -1,8 +1,8 @@
-import { Container, Drawable, type SceneNode } from '@codexo/exojs';
+import { Container, Drawable, type SceneNode, Time } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
 import { createAabb, expandAabb } from '../src/Aabb';
-import { BoxShape, CircleShape, Collider, DistanceJoint, PhysicsBody, PhysicsWorld, SegmentShape } from '../src/index';
+import { BoxShape, ChainShape, CircleShape, Collider, DistanceJoint, PhysicsBody, PhysicsWorld, SegmentShape } from '../src/index';
 import { colliderAt } from './support';
 
 interface FakeNode {
@@ -35,6 +35,41 @@ const fakeNode = (): FakeNode => ({
 });
 
 describe('PhysicsWorld lifecycle and mass model', () => {
+  it('rolls back the newly created body when attach rejects a skewed node', () => {
+    const world = new PhysicsWorld();
+    const node = fakeNode();
+
+    node.skewX = 1;
+
+    expect(() => world.attach(node as unknown as SceneNode, { shape: new BoxShape(16, 16) })).toThrow(/skew/i);
+    expect(world.bodies).toHaveLength(0);
+    expect(world.colliders).toHaveLength(0);
+    expect(world.queryPoint({ x: 0, y: 0 })).toHaveLength(0);
+
+    world.destroy();
+  });
+
+  it('rolls back a queued failed attach when its collision callback aborts the step', () => {
+    const world = new PhysicsWorld();
+    const node = fakeNode();
+
+    node.skewX = 1;
+    colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
+    world.add(new PhysicsBody({ type: 'kinematic', position: { x: 8, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    world.onCollisionStart.once(() => {
+      world.attach(node as unknown as SceneNode, { shape: new BoxShape(16, 16) });
+    });
+
+    expect(() => world.step(1 / 60)).toThrow(/skew/i);
+    expect(world.bodies).toHaveLength(2);
+    expect(world.colliders).toHaveLength(2);
+    world.step(1 / 60);
+    expect(world.bodies).toHaveLength(2);
+    expect(world.colliders).toHaveLength(2);
+
+    world.destroy();
+  });
+
   it('adds a freely-constructed static body carrying a collider', () => {
     const world = new PhysicsWorld();
     const collider = new Collider({ shape: new BoxShape(800, 32) });
@@ -112,8 +147,12 @@ describe('PhysicsWorld lifecycle and mass model', () => {
 
   it('treats static and kinematic bodies as infinite mass', () => {
     const world = new PhysicsWorld();
-    const staticBody = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), density: 5 }] }));
-    const kinematicBody = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), density: 5 }] }));
+    const staticBody = world.add(
+      new PhysicsBody({ type: 'static', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), density: 5 }] }),
+    );
+    const kinematicBody = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), density: 5 }] }),
+    );
 
     expect(staticBody.invMass).toBe(0);
     expect(staticBody.invInertia).toBe(0);
@@ -123,7 +162,9 @@ describe('PhysicsWorld lifecycle and mass model', () => {
 
   it('fixedRotation removes angular response', () => {
     const world = new PhysicsWorld();
-    const body = world.add(new PhysicsBody({ type: 'dynamic', fixedRotation: true, colliders: [{ shape: new BoxShape(10, 10), density: 1 }] }));
+    const body = world.add(
+      new PhysicsBody({ type: 'dynamic', fixedRotation: true, colliders: [{ shape: new BoxShape(10, 10), density: 1 }] }),
+    );
 
     expect(body.invMass).toBeGreaterThan(0);
     expect(body.invInertia).toBe(0);
@@ -160,7 +201,11 @@ describe('PhysicsWorld lifecycle and mass model', () => {
       new PhysicsBody({
         type: 'dynamic',
         position: { x: 0, y: 0 },
-        colliders: [{ shape: new BoxShape(10, 10) }, { shape: new BoxShape(10, 10), offset: { x: 12, y: 0 } }, { shape: new SegmentShape(0, 20, 20, 20) }],
+        colliders: [
+          { shape: new BoxShape(10, 10) },
+          { shape: new BoxShape(10, 10), offset: { x: 12, y: 0 } },
+          { shape: new SegmentShape(0, 20, 20, 20) },
+        ],
       }),
     );
     const box0 = body.colliders[0]!;
@@ -325,8 +370,12 @@ describe('PhysicsWorld joints and backend accessors', () => {
     // `bodyB` is added first (the lower island index) but passed as the joint's
     // *second* body - deliberately reversed from index order, so the island
     // union-find takes its `rootB < rootA` branch, not just `rootA < rootB`.
-    const dynB = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 20, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }));
-    const dynA = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }));
+    const dynB = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 20, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }),
+    );
+    const dynA = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }),
+    );
     const joint = world.addJoint(new DistanceJoint({ bodyA: dynA, bodyB: dynB, length: 20 }));
 
     expect(() => world.step(1 / 60)).not.toThrow();
@@ -343,8 +392,12 @@ describe('PhysicsWorld joints and backend accessors', () => {
     // same pair is unioned twice in one pass: once via the solid contact (which
     // merges them first), once via the joint. The second call finds both
     // already at the same union-find root - neither `_union` branch fires.
-    const dynB = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 8, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }));
-    const dynA = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }));
+    const dynB = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 8, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }),
+    );
+    const dynA = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }),
+    );
     const joint = world.addJoint(new DistanceJoint({ bodyA: dynA, bodyB: dynB, length: 8 }));
 
     expect(() => world.step(1 / 60)).not.toThrow();
@@ -364,7 +417,9 @@ describe('PhysicsWorld joints and backend accessors', () => {
     // touching each other - two solid contacts share the same `a` (the floor),
     // so the sort comparator must fall through to comparing `b.id`.
     colliderAt(world, new BoxShape(400, 20), { x: 0, y: 100 });
-    const boxLeft = world.add(new PhysicsBody({ type: 'dynamic', position: { x: -50, y: 100 - 10 - 5 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+    const boxLeft = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: -50, y: 100 - 10 - 5 }, colliders: [{ shape: new BoxShape(16, 16) }] }),
+    );
     world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 100 - 10 - 5 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
 
     for (let i = 0; i < 30; i++) {
@@ -456,7 +511,9 @@ describe('Collider validation and accessors', () => {
 describe('PhysicsBody accessors, force/torque/impulse and mass edge cases', () => {
   it('exposes position as a fresh Vector and body-local centre-of-mass accessors', () => {
     const world = new PhysicsWorld();
-    const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 3, y: 4 }, colliders: [{ shape: new BoxShape(10, 10), density: 1 }] }));
+    const body = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 3, y: 4 }, colliders: [{ shape: new BoxShape(10, 10), density: 1 }] }),
+    );
 
     expect(body.position.x).toBe(3);
     expect(body.position.y).toBe(4);
@@ -720,13 +777,17 @@ describe("PhysicsWorld.attach: defaults to the node's world position (P2f)", () 
 describe('PhysicsWorld.fixedUpdate()', () => {
   it('advances exactly one fixed step per call, matching step() with a delta equal to fixedDelta', () => {
     const worldA = new PhysicsWorld({ gravity: { x: 0, y: 900 } });
-    const bodyA = worldA.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }));
+    const bodyA = worldA.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }),
+    );
 
     const worldB = new PhysicsWorld({ gravity: { x: 0, y: 900 } });
-    const bodyB = worldB.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }));
+    const bodyB = worldB.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }),
+    );
 
     worldA.step(1 / 60);
-    worldB.fixedUpdate({ seconds: 1 / 60 } as never);
+    worldB.fixedUpdate(Time.seconds(1 / 60));
 
     expect(bodyB.y).toBeCloseTo(bodyA.y, 10);
     expect(bodyB.linearVelocityY).toBeCloseTo(bodyA.linearVelocityY, 10);
@@ -734,14 +795,18 @@ describe('PhysicsWorld.fixedUpdate()', () => {
 
   it('is a no-op-safe repeatable call: N fixedUpdate() calls match N step() calls of the same size', () => {
     const worldA = new PhysicsWorld({ gravity: { x: 0, y: 900 } });
-    const bodyA = worldA.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }));
+    const bodyA = worldA.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }),
+    );
 
     const worldB = new PhysicsWorld({ gravity: { x: 0, y: 900 } });
-    const bodyB = worldB.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }));
+    const bodyB = worldB.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }),
+    );
 
     for (let i = 0; i < 5; i++) {
       worldA.step(1 / 60);
-      worldB.fixedUpdate({ seconds: 1 / 60 } as never);
+      worldB.fixedUpdate(Time.seconds(1 / 60));
     }
 
     expect(bodyB.y).toBeCloseTo(bodyA.y, 8);
@@ -753,16 +818,117 @@ describe('PhysicsWorld.fixedUpdate()', () => {
 
     world.onCollisionStart.add(() => events.push('start'));
 
-    const ground = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [new Collider({ shape: new BoxShape(200, 20) })] }));
-    const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }));
+    const ground = world.add(
+      new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [new Collider({ shape: new BoxShape(200, 20) })] }),
+    );
+    const box = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }),
+    );
 
     void ground;
     void box;
 
     for (let i = 0; i < 60; i++) {
-      world.fixedUpdate({ seconds: 1 / 60 } as never);
+      world.fixedUpdate(Time.seconds(1 / 60));
     }
 
     expect(events).toContain('start');
   });
+});
+
+describe('collider ownership reservation', () => {
+  it('rejects duplicate and shared instances before detached bodies enter a world', () => {
+    const collider = new Collider({ shape: new CircleShape(3) });
+    const body = new PhysicsBody({ colliders: [collider] });
+    const other = new PhysicsBody();
+
+    expect(() => collider.body).toThrow(/not been attached/);
+    expect(() => body.addCollider(collider)).toThrow(/already belongs/);
+    expect(() => other.addCollider(collider)).toThrow(/already belongs/);
+    expect(() => new PhysicsBody({ colliders: [collider] })).toThrow(/already belongs/);
+    expect(body.colliders).toEqual([collider]);
+    expect(other.colliders).toEqual([]);
+    expect(collider.id).toBe(-1);
+  });
+
+  it('retains ownership across removal and readdition without mutating world entries', () => {
+    const world = new PhysicsWorld();
+    const collider = new Collider({ shape: new CircleShape(3) });
+    const body = world.add(new PhysicsBody({ colliders: [collider] }));
+    const mass = body.mass;
+    const id = collider.id;
+    const other = world.add(new PhysicsBody());
+
+    expect(() => body.addCollider(collider)).toThrow(/already belongs/);
+    expect(() => other.addCollider(collider)).toThrow(/already belongs/);
+    expect(body.mass).toBe(mass);
+    expect(collider.id).toBe(id);
+    expect(world.colliders).toEqual([collider]);
+    world.remove(body);
+    expect(() => other.addCollider(collider)).toThrow(/already belongs/);
+    world.add(body);
+    expect(collider.body).toBe(body);
+    expect(world.colliders).toEqual([collider]);
+    world.destroy();
+    expect(() => new PhysicsBody({ colliders: [collider] })).toThrow(/destroyed/);
+  });
+
+  it('releases reservations when a constructor fails after earlier valid entries', () => {
+    const free = new Collider({ shape: new CircleShape(3) });
+    const taken = new Collider({ shape: new CircleShape(4) });
+    const owner = new PhysicsBody({ colliders: [taken] });
+
+    expect(() => new PhysicsBody({ colliders: [free, taken] })).toThrow(/already belongs/);
+    expect(() => new PhysicsBody({ colliders: [free, free] })).toThrow(/already belongs/);
+    const recovered = new PhysicsBody({ colliders: [free] });
+    expect(recovered.colliders).toEqual([free]);
+    expect(owner.colliders).toEqual([taken]);
+    expect(() => new PhysicsBody({ colliders: [taken] })).toThrow(/already belongs/);
+  });
+});
+
+it('rejects an attached chain proxy without changing its original body', () => {
+  const world = new PhysicsWorld();
+  const chain = new Collider({
+    shape: new ChainShape([
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+    ]),
+  });
+  const owner = world.add(new PhysicsBody({ type: 'static', colliders: [chain] }));
+  const proxy = chain.chainEdges![0]!;
+  const other = world.add(new PhysicsBody({ type: 'static' }));
+  expect(() => other.addCollider(proxy)).toThrow(/already belongs/);
+  expect(proxy.body).toBe(owner);
+  expect(other.colliders).toEqual([]);
+  world.remove(owner);
+  expect(() => other.addCollider(proxy)).toThrow(/already belongs/);
+  world.add(owner);
+  expect(proxy.body).toBe(owner);
+  world.destroy();
+});
+
+it('releases reservations if later collider options fail during construction', () => {
+  const collider = new Collider({ shape: new CircleShape(3) });
+  const invalid = {
+    get shape(): never {
+      throw new Error('invalid shape');
+    },
+  };
+  expect(() => new PhysicsBody({ colliders: [collider, invalid] })).toThrow('invalid shape');
+  const recovered = new PhysicsBody({ colliders: [collider] });
+  expect(recovered.colliders).toEqual([collider]);
+  expect(() => collider.body).toThrow(/not been attached/);
+});
+
+it('reserves constructor colliders without calling subclass overrides', () => {
+  class CustomBody extends PhysicsBody {
+    public override addCollider(): Collider {
+      throw new Error('subclass is not initialized');
+    }
+  }
+  const collider = new Collider({ shape: new CircleShape(3) });
+  const body = new CustomBody({ colliders: [collider] });
+  expect(body.colliders).toEqual([collider]);
+  expect(() => new PhysicsBody({ colliders: [collider] })).toThrow(/already belongs/);
 });

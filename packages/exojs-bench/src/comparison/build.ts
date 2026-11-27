@@ -1,3 +1,4 @@
+import { hardwareGpuMedian } from '../competitive/metrics';
 import { PHYSICS_ARCHETYPES } from '../physics/archetypes';
 import type { PhysicsCellResult } from '../physics/PhysicsAdapter';
 import { ARCHETYPES } from '../rendering/archetypes';
@@ -178,7 +179,11 @@ export interface ExcludedRow {
 export interface BackendComparison {
   /** Backend these rows were measured on. */
   readonly backend: Backend;
-  /** Node count every row in this block was measured at, or `null` when no single count qualified. */
+  /**
+   * Largest node count present in every comparable archetype's ladder at which every arm produced a valid cell,
+   * or `null` when none qualified. It only selects the legacy WebGL1 rows; every row states its own load, so
+   * `null` does not hide the rows of {@link BackendComparison.sections}.
+   */
   readonly headlineCount: number | null;
   /** Competitor arms present, in a stable order. */
   readonly competitors: readonly string[];
@@ -207,7 +212,8 @@ const cellKey = (engine: string, config: string, archetype: string, count: numbe
  */
 const loadIdentity = (scenarioId: string, count: number): { loadId: string; unit: LoadUnit; primary: boolean; label?: string } => {
   const scenario =
-    scenariosFor('rendering').find(entry => entry.scenarioId === scenarioId) ?? scenariosFor('physics').find(entry => entry.scenarioId === scenarioId);
+    scenariosFor('rendering').find(entry => entry.scenarioId === scenarioId) ??
+    scenariosFor('physics').find(entry => entry.scenarioId === scenarioId);
   const load = scenario?.loads.find(entry => entry.value === count);
 
   return {
@@ -219,7 +225,8 @@ const loadIdentity = (scenarioId: string, count: number): { loadId: string; unit
 };
 
 /** Identity used to preserve the old CPU-only Phaser block while new WebGL2 profiles migrate. */
-const armKeyOf = (result: { readonly spec: { readonly engine: string; readonly config: string } }): string => `${result.spec.engine}|${result.spec.config}`;
+const armKeyOf = (result: { readonly spec: { readonly engine: string; readonly config: string } }): string =>
+  `${result.spec.engine}|${result.spec.config}`;
 
 /** Whether a result can be compared at all: it measured, and it measured something. */
 const isComparable = (result: { status: string; note?: string }): boolean => result.status === 'ok';
@@ -259,12 +266,18 @@ export const chooseRowCount = (ladder: readonly number[], hasValidCell: (count: 
  * either publish nothing or publish rows at a size chosen for a different
  * archetype; each physics row states its own count instead.
  */
-export const chooseHeadlineCount = (archetypeLadders: ReadonlyArray<readonly number[]>, hasValidCell: (count: number) => boolean): number | null => {
+export const chooseHeadlineCount = (
+  archetypeLadders: ReadonlyArray<readonly number[]>,
+  hasValidCell: (count: number) => boolean,
+): number | null => {
   if (archetypeLadders.length === 0) {
     return null;
   }
 
-  const shared = archetypeLadders.reduce<number[]>((candidates, ladder) => candidates.filter(count => ladder.includes(count)), [...archetypeLadders[0]!]);
+  const shared = archetypeLadders.reduce<number[]>(
+    (candidates, ladder) => candidates.filter(count => ladder.includes(count)),
+    [...archetypeLadders[0]!],
+  );
 
   return chooseRowCount(shared, hasValidCell);
 };
@@ -272,17 +285,33 @@ export const chooseHeadlineCount = (archetypeLadders: ReadonlyArray<readonly num
 /** Build one backend's comparison from the measured rendering results. */
 const buildBackend = (backend: Backend, results: readonly CellResult[]): BackendComparison => {
   const onBackend = results.filter(result => result.spec.backend === backend);
-  const byKey = new Map(onBackend.map(result => [cellKey(result.spec.engine, result.spec.config, result.spec.archetype, result.spec.nodeCount), result]));
-  const armEngines = [...new Set(onBackend.map(result => result.spec.engine))].filter(engine => engine !== REFERENCE_ENGINE).sort();
-  const webgl1Engines = [...new Set(onBackend.filter(result => LEGACY_WEBGL1_ARM_KEYS.includes(armKeyOf(result))).map(result => result.spec.engine))];
-  const competitors = armEngines.filter(engine => !webgl1Engines.includes(engine));
+  const byKey = new Map(
+    onBackend.map(result => [cellKey(result.spec.engine, result.spec.config, result.spec.archetype, result.spec.nodeCount), result]),
+  );
+  const arms = [
+    ...new Map(
+      onBackend.filter(result => result.spec.engine !== REFERENCE_ENGINE).map(result => [armKeyOf(result), result.spec]),
+    ).entries(),
+  ].sort(
+    ([, a], [, b]) =>
+      a.engine.localeCompare(b.engine) ||
+      Number(b.config === 'default') - Number(a.config === 'default') ||
+      a.config.localeCompare(b.config),
+  );
+  const webgl1Arms = arms.filter(([key]) => LEGACY_WEBGL1_ARM_KEYS.includes(key));
+  const competitorArms = arms.filter(([key]) => !LEGACY_WEBGL1_ARM_KEYS.includes(key));
+  const armLabel = (arm: { readonly engine: string; readonly config: string }): string =>
+    arm.config === 'default' ? arm.engine : `${arm.engine} (${arm.config})`;
+  const competitors = competitorArms.map(([, arm]) => armLabel(arm));
   // Only archetypes the run actually MEASURED can constrain the count. An
   // archetype absent from the run says nothing about which count is valid, and
   // letting it veto would make every subset run produce an empty table; it is
   // listed as an omission instead. An archetype that IS present and failed at a
   // count still lowers the choice - that is the case the rule exists for.
   const measured = new Set(
-    onBackend.filter(result => result.spec.engine === REFERENCE_ENGINE && result.spec.config === REFERENCE_CONFIG).map(result => result.spec.archetype),
+    onBackend
+      .filter(result => result.spec.engine === REFERENCE_ENGINE && result.spec.config === REFERENCE_CONFIG)
+      .map(result => result.spec.archetype),
   );
   const comparable = ARCHETYPES.filter(archetype => archetype.crossArm && measured.has(archetype.id));
 
@@ -302,10 +331,8 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
 
       // A competitor that sits the archetype out (`coversArchetype`) has no cell
       // and must not veto the count; one that HAS a cell must have measured it.
-      return competitors.every(competitor => {
-        const cell = [...byKey.values()].find(
-          result => result.spec.engine === competitor && result.spec.archetype === archetype.id && result.spec.nodeCount === count,
-        );
+      return competitorArms.every(([, arm]) => {
+        const cell = byKey.get(cellKey(arm.engine, arm.config, archetype.id, count));
 
         return cell === undefined || isComparable(cell);
       });
@@ -328,7 +355,10 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
     [
       ...new Set(
         onBackend
-          .filter(result => result.spec.engine === REFERENCE_ENGINE && result.spec.config === REFERENCE_CONFIG && result.spec.archetype === archetype)
+          .filter(
+            result =>
+              result.spec.engine === REFERENCE_ENGINE && result.spec.config === REFERENCE_CONFIG && result.spec.archetype === archetype,
+          )
           .map(result => result.spec.nodeCount),
       ),
     ].sort((a, b) => a - b);
@@ -346,10 +376,8 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
         const reference = byKey.get(cellKey(REFERENCE_ENGINE, REFERENCE_CONFIG, archetype.id, count));
         const cells: ComparisonCell[] = [];
 
-        for (const competitor of competitors) {
-          const competitorCell = onBackend.find(
-            result => result.spec.engine === competitor && result.spec.archetype === archetype.id && result.spec.nodeCount === count,
-          );
+        for (const [, arm] of competitorArms) {
+          const competitorCell = byKey.get(cellKey(arm.engine, arm.config, archetype.id, count));
 
           if (reference === undefined || competitorCell === undefined || !isComparable(reference) || !isComparable(competitorCell)) {
             continue;
@@ -359,18 +387,19 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
           // supposed to report, and dropping them would leave the row with no
           // evidence and take it out of the table.
           const drawless = isUiLayoutScene(archetype);
-          const counters = (result: CellResult): StructuralCounters | null => (drawless || result.structural.drawCalls > 0 ? result.structural : null);
+          const counters = (result: CellResult): StructuralCounters | null =>
+            drawless || result.structural.drawCalls > 0 ? result.structural : null;
           const mechanism = renderingMechanism(counters(reference), counters(competitorCell), { drawless });
 
           cells.push({
-            competitor,
+            competitor: armLabel(arm),
             referenceMs: reference.cpuMsMedian,
             referenceP95Ms: reference.cpuMsP95,
-            referenceGpuMs: reference.frameMsMedian,
+            referenceGpuMs: hardwareGpuMedian(reference),
             referenceOverFrameBudget: exceedsFrameBudget(reference.cpuMsMedian),
             competitorMs: competitorCell.cpuMsMedian,
             competitorP95Ms: competitorCell.cpuMsP95,
-            competitorGpuMs: competitorCell.frameMsMedian,
+            competitorGpuMs: hardwareGpuMedian(competitorCell),
             competitorOverFrameBudget: exceedsFrameBudget(competitorCell.cpuMsMedian),
             verdict: compareMedians(reference.cpuMsMedian, competitorCell.cpuMsMedian),
             mechanism,
@@ -417,7 +446,7 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
   // CPU-time-only observations instead.
   const webgl1: ComparisonRow[] = [];
 
-  if (headlineCount !== null && webgl1Engines.length > 0) {
+  if (headlineCount !== null && webgl1Arms.length > 0) {
     for (const archetype of comparable) {
       if (!archetype.nodeCounts.includes(headlineCount)) {
         continue;
@@ -426,24 +455,22 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
       const reference = byKey.get(cellKey(REFERENCE_ENGINE, REFERENCE_CONFIG, archetype.id, headlineCount));
       const cells: ComparisonCell[] = [];
 
-      for (const competitor of webgl1Engines) {
-        const competitorCell = onBackend.find(
-          result => result.spec.engine === competitor && result.spec.archetype === archetype.id && result.spec.nodeCount === headlineCount,
-        );
+      for (const [, arm] of webgl1Arms) {
+        const competitorCell = byKey.get(cellKey(arm.engine, arm.config, archetype.id, headlineCount));
 
         if (reference === undefined || competitorCell === undefined || !isComparable(reference) || !isComparable(competitorCell)) {
           continue;
         }
 
         cells.push({
-          competitor,
+          competitor: armLabel(arm),
           referenceMs: reference.cpuMsMedian,
           referenceP95Ms: reference.cpuMsP95,
-          referenceGpuMs: reference.frameMsMedian,
+          referenceGpuMs: hardwareGpuMedian(reference),
           referenceOverFrameBudget: exceedsFrameBudget(reference.cpuMsMedian),
           competitorMs: competitorCell.cpuMsMedian,
           competitorP95Ms: competitorCell.cpuMsP95,
-          competitorGpuMs: competitorCell.frameMsMedian,
+          competitorGpuMs: hardwareGpuMedian(competitorCell),
           competitorOverFrameBudget: exceedsFrameBudget(competitorCell.cpuMsMedian),
           verdict: compareMedians(reference.cpuMsMedian, competitorCell.cpuMsMedian),
           mechanism: null,
@@ -506,7 +533,9 @@ export const buildPhysicsComparison = (results: readonly PhysicsCellResult[], cl
   for (const archetype of comparable) {
     const loads = [
       ...new Set(
-        results.filter(result => result.spec.engine === 'exojs-physics' && result.spec.archetype === archetype.id).map(result => result.spec.bodyCount),
+        results
+          .filter(result => result.spec.engine === 'exojs-physics' && result.spec.archetype === archetype.id)
+          .map(result => result.spec.bodyCount),
       ),
     ].sort((a, b) => a - b);
 

@@ -3,8 +3,8 @@
 import { AudioBus } from '#audio/AudioBus';
 import { getAudioContext } from '#audio/audioContext';
 import type { AudioInput } from '#audio/AudioInput';
-import { AudioStream } from '#audio/AudioStream';
 import { AudioSystem } from '#audio/AudioSystem';
+import { Music } from '#audio/Music';
 import type { Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import { logger } from '#core/Logger';
@@ -73,6 +73,7 @@ const createAudioElementStub = (): HTMLAudioElement => {
   Object.defineProperty(el, 'loop', { configurable: true, writable: true, value: false });
   Object.defineProperty(el, 'playbackRate', { configurable: true, writable: true, value: 1 });
   Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: true });
+
   return el;
 };
 
@@ -337,7 +338,7 @@ describe('AudioSystem', () => {
   test('destroy() stops a stream voice so its media element stops decoding', () => {
     const system = new AudioSystem();
     const el = createAudioElementStub();
-    const stream = new AudioStream(el);
+    const stream = new Music(el);
     const voice = system.play(stream);
     const pauseSpy = vi.spyOn(el, 'pause');
 
@@ -387,7 +388,7 @@ describe('AudioSystem', () => {
   test('destroy() completes the teardown even when a voice throws while stopping', () => {
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
     // Registered first so the throw happens before the healthy voice is reached.
     const broken = {

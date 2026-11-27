@@ -1,4 +1,5 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Signal, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Signal, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 class DamageFlashScene extends Scene {
@@ -13,10 +14,11 @@ class DamageFlashScene extends Scene {
     const { width, height } = app;
 
     this.hit = new Signal();
-    this.ship = new Sprite(this.loader.get('image/ship-a.png'))
+    this.ship = new Sprite(assets.ship.source)
       .setAnchor(0.5)
       .setScale(2.2)
       .setPosition(width / 2, height / 2);
+    this.root.addChild(this.ship);
     // A single drawable's flash is a tint, not a filter: it multiplies in
     // the sprite shader and costs no render target.
     this.flashColor = new Color(255, 255, 255, 1);
@@ -43,10 +45,6 @@ class DamageFlashScene extends Scene {
     // renderer about it.
     this.ship.setTint(this.flashColor);
   }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.ship);
-  }
 }
 
 const app = new Application({
@@ -58,9 +56,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(DamageFlashScene);

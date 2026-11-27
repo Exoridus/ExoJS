@@ -60,8 +60,14 @@ export const runScenario = (scenario: BenchmarkScenario, iterations = 240): Benc
 
   for (const t of times) {
     sum += t;
-    if (t < min) min = t;
-    if (t > max) max = t;
+
+    if (t < min) {
+      min = t;
+    }
+
+    if (t > max) {
+      max = t;
+    }
   }
 
   return {
@@ -113,7 +119,7 @@ export const formatResults = (results: readonly BenchmarkResult[], columns: read
   const pad = (s: string, w: number, align: 'left' | 'right' = 'left'): string => (align === 'right' ? s.padStart(w) : s.padEnd(w));
 
   const header = `| ${columns.map((col, i) => pad(col.header, widths[i], col.align)).join(' | ')} |`;
-  const separator = `| ${widths.map((w, i) => (columns[i].align === 'right' ? '-'.repeat(w - 1) + ':' : '-'.repeat(w))).join(' | ')} |`;
+  const separator = `| ${widths.map((w, i) => (columns[i].align === 'right' ? `${'-'.repeat(w - 1)}:` : '-'.repeat(w))).join(' | ')} |`;
   const rows = results.map(r => `| ${columns.map((col, i) => pad(getCellValue(r, col.key), widths[i], col.align)).join(' | ')} |`);
 
   return [header, separator, ...rows].join('\n');
@@ -132,14 +138,19 @@ export const formatResults = (results: readonly BenchmarkResult[], columns: read
  */
 const buildIdentifier = (() => {
   let version = 'unknown';
+
   try {
     const pkg = JSON.parse(readFileSync(resolve(resultsDir, '../../../package.json'), 'utf-8')) as { version?: string };
-    if (typeof pkg.version === 'string') version = pkg.version;
+
+    if (typeof pkg.version === 'string') {
+      version = pkg.version;
+    }
   } catch {
     // ignore
   }
 
   let sha = '';
+
   try {
     sha = execSync('git rev-parse --short HEAD', {
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -153,14 +164,19 @@ const buildIdentifier = (() => {
   return sha ? `${version}-${sha}` : version;
 })();
 
-export const writeResults = (filename: string, sectionTitle: string, results: readonly BenchmarkResult[], columns?: readonly ColumnDef[]): void => {
+export const writeResults = (
+  filename: string,
+  sectionTitle: string,
+  results: readonly BenchmarkResult[],
+  columns?: readonly ColumnDef[],
+): void => {
   mkdirSync(resultsDir, { recursive: true });
 
   const suffixedName = `${filename}-${buildIdentifier}`;
 
   // JSON
   const jsonPath = resolve(resultsDir, `${suffixedName}.json`);
-  writeFileSync(jsonPath, JSON.stringify(results, null, 2) + '\n', 'utf-8');
+  writeFileSync(jsonPath, `${JSON.stringify(results, null, 2)}\n`, 'utf-8');
 
   // Markdown
   const table = formatResults(results, columns);

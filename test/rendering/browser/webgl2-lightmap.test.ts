@@ -19,7 +19,7 @@ import {
   RadianceLighting,
   SpotLight,
   SunLight,
-} from '@codexo/exojs-lighting';
+} from '@codexo/exojs/lighting';
 
 import { type Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -386,6 +386,28 @@ describe('WebGL2 lightmap renderer', () => {
       expect(flatRight).toBeGreaterThan(right + 20);
     } finally {
       ground.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
+  test('a line light maps its cookie across the full capsule bounds', async () => {
+    const host = await createHost();
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
+    const cookie = new DataTexture({
+      width: 4,
+      height: 1,
+      format: TextureFormat.Rgba8,
+      data: new Uint8Array([255, 255, 255, 255, 0, 0, 0, 255, 255, 255, 255, 255, 0, 0, 0, 255]),
+    });
+    lighting.add(new LineLight({ length: 32, radius: 16, intensity: 1, cookie })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      runFrame(host, lighting);
+      expect(readPixel(host.backend, 44, 32)[0]).toBeGreaterThan(readPixel(host.backend, 20, 32)[0] + 50);
+    } finally {
+      cookie.destroy();
       lighting.destroy();
       host.destroy();
     }

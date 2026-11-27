@@ -4,7 +4,7 @@
   "symbol": "ColorOverSpeed",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 11,
   "counts": {
@@ -23,7 +23,7 @@
         "Use cases: heat-mapping (slow=blue, fast=red), velocity-tinted trails, speed-gated highlights.",
         "CPU, WebGL2 and WebGPU use the same 256-sample lookup table with explicit linear interpolation. Narrow keyframe features are approximated. Color channels are quantized to the nearest byte after interpolation."
       ],
-      "importLine": "import { ColorOverSpeed } from '@codexo/exojs-particles'",
+      "importLine": "import { ColorOverSpeed } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

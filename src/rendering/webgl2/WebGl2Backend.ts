@@ -7,6 +7,7 @@
 /* eslint-disable max-lines */
 import type { Application } from '#core/Application';
 import type { CanvasAlphaMode, RenderingApplicationOptions } from '#core/application/ApplicationOptions';
+import { Capabilities } from '#core/Capabilities';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
@@ -65,7 +66,7 @@ import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextu
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { DepthTexture } from '#rendering/texture/DepthTexture';
 import { isFullyOpaqueLevel } from '#rendering/texture/pixelPayload';
-import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { markClearCoverage, releaseOpaqueContent, RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
 import { TransformBuffer } from '#rendering/TransformBuffer';
@@ -98,9 +99,13 @@ import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 // Used only in dev builds when renderingOptions.debug = true (see __DEV__ gates below).
 const glEnumToString = (gl: WebGL2RenderingContext, value: number): string => {
   const ctor = gl.constructor as unknown as Record<string, unknown>;
+
   for (const key of Object.getOwnPropertyNames(ctor)) {
-    if (ctor[key] === value) return key;
+    if (ctor[key] === value) {
+      return key;
+    }
   }
+
   return `0x${value.toString(16).padStart(4, '0').toUpperCase()}`;
 };
 
@@ -117,24 +122,34 @@ const makeWebGl2DebugContext = (gl: WebGL2RenderingContext): WebGL2RenderingCont
       // `Reflect.get` is typed `any`; contain it as `unknown` so the non-function
       // branch returns a safe value and the function branch narrows via `typeof`.
       const value: unknown = Reflect.get(target, prop, receiver);
-      if (typeof value !== 'function') return value;
+
+      if (typeof value !== 'function') {
+        return value;
+      }
+
       const name = String(prop);
+
       return (...args: unknown[]) => {
         if (__DEV__) {
           console.log(`gl.${name}(${glArgsToString(target, args)})`);
+
           for (const arg of args) {
             if (arg === undefined) {
               console.error(`undefined passed to gl.${name}(${glArgsToString(target, args)})`);
             }
           }
         }
+
         const result = Reflect.apply(value as (...a: unknown[]) => unknown, target, args);
+
         if (name !== 'getError') {
           const err = target.getError();
+
           if (err !== target.NO_ERROR) {
             throw new Error(`${glEnumToString(target, err)} was caused by call to: ${name}`);
           }
         }
+
         return result;
       };
     },
@@ -154,6 +169,8 @@ interface ManagedTextureState {
   height: number;
   /** GPU bytes currently booked for this texture's storage (0 until first upload). */
   accountedBytes: number;
+  sharedBitmap?: SharedWebGlBitmap;
+  sampler?: WebGLSampler;
   /**
    * Reusable packing buffer for a partial `DataTexture` upload (see
    * `_syncTexture`'s partial branch), sized to the largest region packed so
@@ -165,6 +182,16 @@ interface ManagedTextureState {
    * for `rgba8`/`r8`) and never changes for a given texture instance.
    */
   partialUploadScratch: Float32Array | Uint8Array | null;
+}
+
+interface SharedWebGlBitmap {
+  readonly bitmap: ImageBitmap;
+  readonly format: number;
+  readonly generateMipMap: boolean;
+  readonly premultiply: boolean;
+  readonly normalize: boolean;
+  readonly storage: ManagedTextureState;
+  owners: number;
 }
 
 /**
@@ -224,9 +251,10 @@ interface ManagedRenderTargetState {
   /** Colour texture currently attached to {@link resolveFramebuffer}. */
   resolveTexture: WebGLTexture | null;
   /**
-   * Whether a draw or a clear has landed in {@link multisampleColor} since the
-   * last resolve, so a readback of the target's texture can be served a fresh
-   * resolve instead of the previous frame's.
+   * Whether {@link multisampleColor} may hold content the resolve destination
+   * does not: set when the multisample storage is allocated and on every bind
+   * that reuses it, cleared by a resolve. Deliberately conservative - a bind
+   * that drew nothing costs one redundant resolve, never a stale read.
    */
   multisampleDirty: boolean;
 }
@@ -345,7 +373,11 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _rootRenderTarget: RenderTarget;
   private readonly _onContextLostHandler: (event: Event) => void;
   private readonly _onContextRestoredHandler: () => void;
-  private readonly _textureStates: Map<Texture | RenderTexture, ManagedTextureState> = new Map<Texture | RenderTexture, ManagedTextureState>();
+  private readonly _textureStates: Map<Texture | RenderTexture, ManagedTextureState> = new Map<
+    Texture | RenderTexture,
+    ManagedTextureState
+  >();
+  private readonly _sharedBitmaps = new WeakMap<ImageBitmap, Set<SharedWebGlBitmap>>();
   private readonly _renderTargetStates: Map<RenderTarget, ManagedRenderTargetState> = new Map<RenderTarget, ManagedRenderTargetState>();
   /**
    * Bind state for depth attachments sampled as textures. Separate from
@@ -356,7 +388,7 @@ export class WebGl2Backend implements RenderBackend {
   private _depthWriteEnabled = false;
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
-  /** Context-local base-texture sampler overrides shared by custom materials. */
+  /** Context-local samplers for shared texture storage and material overrides. */
   private readonly _materialSamplers = new Map<number, WebGLSampler>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
   private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
@@ -372,6 +404,8 @@ export class WebGl2Backend implements RenderBackend {
    */
   private readonly _clipPixelStack: PixelClipBoundsState[] = [];
   private _clipDepth = 0;
+  /** Targets whose `_opaqueContent` this frame set - dropped again at the next frame start. */
+  private readonly _opaqueClearedTargets: RenderTarget[] = [];
   /** Scratch for the incoming rect before it is intersected into its slot. */
   private readonly _clipPixelScratch: PixelClipBoundsState = { x: 0, y: 0, width: 0, height: 0 };
   private readonly _clipPointA: Vector = new Vector();
@@ -394,6 +428,8 @@ export class WebGl2Backend implements RenderBackend {
   // triggered on. A fresh `getExtension()` after the loss returns a different
   // object that cannot drive the restore (verified against headless Chromium).
   private readonly _loseContextExtension: WEBGL_lose_context | null;
+  /** Final GL context loss is automatic for application-owned canvases only. */
+  private readonly _releaseContextOnDestroy: boolean;
   /** Whether `EXT_color_buffer_float` is available (float RenderTexture targets are renderable). */
   private _floatRenderable = false;
   /** Whether float32 textures can use linear sampler state. */
@@ -440,6 +476,7 @@ export class WebGl2Backend implements RenderBackend {
   private _renderGroupTransform: Matrix | null = null;
   private _renderGroupTransformId = 0;
   private _shader: WebGl2Shader | null = null;
+  private _shaderConnectionRevision = -1;
   private _blendMode: BlendModes | null = null;
   // What GL currently has bound to TEXTURE_2D on each texture unit, indexed by
   // unit. Keyed on the `WebGLTexture` handle rather than the user-side
@@ -447,6 +484,8 @@ export class WebGl2Backend implements RenderBackend {
   // `Texture` a brand new handle - can never match a stale slot. A hole
   // (`undefined`) means "unit never touched", which reads as a miss and binds.
   private readonly _boundHandles: Array<WebGLTexture | null> = [];
+  private readonly _defaultSamplers: Array<WebGLSampler | null> = [];
+  private readonly _samplerOverrides: boolean[] = [];
   private _textureUnit = 0;
   private _vao: WebGl2VertexArrayObject | null = null;
   private _clearColor: Color = new Color();
@@ -518,6 +557,8 @@ export class WebGl2Backend implements RenderBackend {
     const debug = renderingOptions.debug ?? false;
     this._surfacePixelRatio = sanitizeSurfacePixelRatio(canvasOptions.pixelRatio);
     this._canvas = app.canvas;
+    const ownsCanvas = canvasOptions.element === undefined;
+    this._releaseContextOnDestroy = renderingOptions.releaseContext ?? ownsCanvas;
 
     // `webglAttributes.antialias` reaches the device twice. The attribute below
     // asks the browser to multisample the default framebuffer; the colour-
@@ -533,6 +574,10 @@ export class WebGl2Backend implements RenderBackend {
 
     this._context = __DEV__ && debug ? makeWebGl2DebugContext(gl) : gl;
     this._contextLost = this._context.isContextLost();
+
+    if (!this._contextLost) {
+      Capabilities._observeWebGl2Context(this._canvas);
+    }
 
     // Enable + cache float color-buffer renderability. getExtension() is the
     // enable call; without it, RGBA16F/RGBA32F are not color-renderable in WebGL2.
@@ -598,9 +643,10 @@ export class WebGl2Backend implements RenderBackend {
    * Device pixels per logical unit of the canvas root target.
    *
    * Derived rather than stored: the root target carries the LOGICAL size while
-   * the canvas backing store carries `logical × pixelRatio`, so the ratio
-   * between them is always current - including after a `resize()` that changes
-   * only one of the two.
+   * the canvas backing store carries whatever the active sizing policy committed
+   * (the base geometry's `logical x pixelRatio` when there is none), so the
+   * ratio between them is always current - including after a `resize()` that
+   * changes only one of the two.
    */
   public get rootResolution(): number {
     const logicalWidth = this._rootRenderTarget.width;
@@ -690,6 +736,7 @@ export class WebGl2Backend implements RenderBackend {
     // previously reset per render() call in _beginDrawPlan).
     this._transformBuffer.begin();
     this._gpuTimer?.beginFrame();
+    releaseOpaqueContent(this._opaqueClearedTargets);
 
     // Frame start rather than frame end: a fence never signals in the task
     // that created it, so polling here is what lets a read requested in one
@@ -811,6 +858,7 @@ export class WebGl2Backend implements RenderBackend {
     if (store !== null) {
       store.owner = owner;
       this._persistentStores.add(store);
+      store.onDestroyed = () => this._persistentStores.delete(store);
     }
 
     return store;
@@ -853,7 +901,12 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /** @internal */
-  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+  public _rekeyPersistentSlots(
+    bundle: PersistentSlotBundle,
+    source: RenderRootSource,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean {
     const store = bundle as WebGl2PersistentSlotStore;
     const owner = store.owner;
 
@@ -871,7 +924,12 @@ export class WebGl2Backend implements RenderBackend {
    * store was already serving, so re-resolving it would put the acquisition walk
    * back on a path that runs on every structural frame.
    */
-  private _ownerServesArrivals(source: RenderRootSource, owner: PersistentSlotCapableRenderer, carried: Int32Array, previousHandleCount: number): boolean {
+  private _ownerServesArrivals(
+    source: RenderRootSource,
+    owner: PersistentSlotCapableRenderer,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean {
     for (const scope of source.scopes) {
       const drawables = scope.items.drawables;
       const count = scope.items.count;
@@ -1082,7 +1140,13 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
-  public drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number, instances: InstanceDataView | null = null): this {
+  public drawInstanced(
+    mesh: Mesh,
+    transforms: readonly Matrix[],
+    tints: readonly Color[],
+    count: number,
+    instances: InstanceDataView | null = null,
+  ): this {
     if (count <= 0 || mesh.vertexCount === 0) {
       return this;
     }
@@ -1280,7 +1344,11 @@ export class WebGl2Backend implements RenderBackend {
     blendMode: BlendModes,
   ): this {
     if (this._multiAttachmentTarget) {
-      assertSingleAttachmentCompose('Alpha-mask compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGl2);
+      assertSingleAttachmentCompose(
+        'Alpha-mask compositing',
+        (this._renderTarget as MultiRenderTarget).attachments.length,
+        RenderBackendType.WebGl2,
+      );
     }
 
     if (width <= 0 || height <= 0) {
@@ -1304,7 +1372,11 @@ export class WebGl2Backend implements RenderBackend {
 
   public composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this {
     if (this._multiAttachmentTarget) {
-      assertSingleAttachmentCompose('Backdrop-blend compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGl2);
+      assertSingleAttachmentCompose(
+        'Backdrop-blend compositing',
+        (this._renderTarget as MultiRenderTarget).attachments.length,
+        RenderBackendType.WebGl2,
+      );
     }
 
     if (width <= 0 || height <= 0) {
@@ -1360,7 +1432,12 @@ export class WebGl2Backend implements RenderBackend {
       case TextureFormat.Rgba8Srgb:
         return colorFormatCapabilities(true, true, true, this._sampleCountsFor(format, true));
       case TextureFormat.Rgba16F:
-        return colorFormatCapabilities(this._floatRenderable, true, this._floatRenderable, this._sampleCountsFor(format, this._floatRenderable));
+        return colorFormatCapabilities(
+          this._floatRenderable,
+          true,
+          this._floatRenderable,
+          this._sampleCountsFor(format, this._floatRenderable),
+        );
       case TextureFormat.Rgba32F:
         return colorFormatCapabilities(
           this._floatRenderable,
@@ -1401,7 +1478,9 @@ export class WebGl2Backend implements RenderBackend {
       return singleSampleCount;
     }
 
-    const counts = normalizeSampleCounts(gl.getInternalformatParameter(gl.RENDERBUFFER, webgl2DataTextureFormat(format).internalFormat, gl.SAMPLES));
+    const counts = normalizeSampleCounts(
+      gl.getInternalformatParameter(gl.RENDERBUFFER, webgl2DataTextureFormat(format).internalFormat, gl.SAMPLES),
+    );
 
     this._sampleCountsByFormat.set(format, counts);
 
@@ -1457,11 +1536,32 @@ export class WebGl2Backend implements RenderBackend {
     return this.supportsColorFormat(format);
   }
 
-  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType?: 'uint8'): Promise<Uint8ClampedArray>;
+  public readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType?: 'uint8',
+  ): Promise<Uint8ClampedArray>;
   public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: 'float32'): Promise<Float32Array>;
-  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType): Promise<PixelArray>;
-  public readPixels(source: RenderTexture, x: number, y: number, width: number, height: number, dataType: PixelDataType = 'uint8'): Promise<PixelArray> {
-    this.flush();
+  public readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType: PixelDataType,
+  ): Promise<PixelArray>;
+  public readPixels(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    dataType: PixelDataType = 'uint8',
+  ): Promise<PixelArray> {
+    this.flushPending();
 
     const gl = this._context;
     const rows = createPixelArray(width * height * 4, dataType);
@@ -1477,7 +1577,15 @@ export class WebGl2Backend implements RenderBackend {
     return Promise.resolve(flipRowsInPlace(rows, width, height));
   }
 
-  public createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number, dataType?: 'uint8'): PixelReadback;
+  public createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType?: 'uint8',
+  ): PixelReadback;
   public createPixelReadback(
     source: RenderTexture,
     x: number,
@@ -1577,6 +1685,7 @@ export class WebGl2Backend implements RenderBackend {
     if (this._renderTarget.view !== view) {
       this._flushActiveRenderer();
     }
+
     this._renderTarget.setView(view);
     this._bindRenderTarget(this._renderTarget);
 
@@ -1602,17 +1711,22 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public bindShader(shader: WebGl2Shader | null): this {
-    if (this._shader !== shader) {
+    const revision = shader?._connectionRevision ?? -1;
+
+    if (this._shader !== shader || this._shaderConnectionRevision !== revision) {
       if (this._shader) {
         this._shader.unbind();
         this._shader = null;
       }
+
+      this._shaderConnectionRevision = -1;
 
       if (shader) {
         shader.bind();
       }
 
       this._shader = shader;
+      this._shaderConnectionRevision = revision;
     }
 
     return this;
@@ -1625,6 +1739,7 @@ export class WebGl2Backend implements RenderBackend {
 
     if (texture === null) {
       this._bindTextureHandle(null);
+      this._setDefaultSampler(null);
 
       return this;
     }
@@ -1632,7 +1747,9 @@ export class WebGl2Backend implements RenderBackend {
     // `_syncTexture` performs the bind itself (through the same per-unit cache)
     // because its parameter and upload calls act on whatever is bound to the
     // active unit - binding a second time here would only duplicate GL work.
-    this._syncTexture(texture);
+    const state = this._syncTexture(texture);
+
+    this._setDefaultSampler(state.sampler ?? null);
 
     return this;
   }
@@ -1649,14 +1766,26 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     // Compressed bytes cannot be normalized at upload; their DFD association governs the sample instead.
-    if (texture.compressed !== null) return texture.colorSpace !== 'none';
-    if (!texture.premultiplyAlpha) return false;
+    if (texture.compressed !== null) {
+      return texture.colorSpace !== 'none';
+    }
+
+    if (!texture.premultiplyAlpha) {
+      return false;
+    }
 
     return !this._needsColorNormalization(texture) && texture.source === null;
   }
 
   /** Bind a material's base-texture sampler override to one texture unit. Part of the renderer SDK contract for extension renderers. */
   public bindMaterialSampler(options: SamplerOptions, unit: number): this {
+    this._context.bindSampler(unit, this._getSampler(options));
+    this._samplerOverrides[unit] = true;
+
+    return this;
+  }
+
+  private _getSampler(options: SamplerOptions): WebGLSampler {
     const key = samplerStateKey(options.scaleMode, options.wrapMode);
     let sampler = this._materialSamplers.get(key);
 
@@ -1676,14 +1805,13 @@ export class WebGl2Backend implements RenderBackend {
       sampler = created;
     }
 
-    this._context.bindSampler(unit, sampler);
-
-    return this;
+    return sampler;
   }
 
   /** Restore a texture unit to its texture-owned sampler state. Part of the renderer SDK contract for extension renderers. */
   public unbindMaterialSampler(unit: number): this {
-    this._context.bindSampler(unit, null);
+    this._context.bindSampler(unit, this._defaultSamplers[unit] ?? null);
+    this._samplerOverrides[unit] = false;
 
     return this;
   }
@@ -1724,6 +1852,7 @@ export class WebGl2Backend implements RenderBackend {
    */
   public bindRawTexture(handle: WebGLTexture | null): this {
     this._bindTextureHandle(handle);
+    this._setDefaultSampler(null);
 
     return this;
   }
@@ -1767,7 +1896,11 @@ export class WebGl2Backend implements RenderBackend {
     // both textures upload from the one dirty-range consumption below.
     const tintTexture = this._tintTexture;
 
-    if (tintTexture?.height !== layout.tintHeight || tintTexture.width !== layout.tintWidth || tintTexture.buffer !== this._transformBuffer.tintData) {
+    if (
+      tintTexture?.height !== layout.tintHeight ||
+      tintTexture.width !== layout.tintWidth ||
+      tintTexture.buffer !== this._transformBuffer.tintData
+    ) {
       tintTexture?.destroy();
 
       this._tintTexture = new DataTexture({
@@ -2000,6 +2133,18 @@ export class WebGl2Backend implements RenderBackend {
     }
   }
 
+  private _setDefaultSampler(sampler: WebGLSampler | null): void {
+    const unit = this._textureUnit;
+
+    if ((this._defaultSamplers[unit] ?? null) !== sampler) {
+      this._defaultSamplers[unit] = sampler;
+
+      if (this._samplerOverrides[unit] !== true) {
+        this._context.bindSampler(unit, sampler);
+      }
+    }
+  }
+
   /**
    * Bind `handle` to the active texture unit, skipping the call when GL already
    * has it there. Per-unit rather than global: the same handle legitimately
@@ -2135,9 +2280,20 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._bindRenderTarget(this._renderTarget);
+    // A scissored clear leaves the pixels outside the clip as they were.
+    markClearCoverage(this._renderTarget, this._clearColor.a >= 1 && this._clipDepth === 0, this._opaqueClearedTargets);
+
+    let colorBit: number = gl.COLOR_BUFFER_BIT;
+
+    if (this._renderTarget instanceof MultiRenderTarget) {
+      this._clearAttachments(this._renderTarget);
+      colorBit = 0;
+    }
 
     if (this._renderTarget.depthTexture === null) {
-      gl.clear(gl.COLOR_BUFFER_BIT);
+      if (colorBit !== 0) {
+        gl.clear(colorBit);
+      }
 
       return this;
     }
@@ -2149,13 +2305,38 @@ export class WebGl2Backend implements RenderBackend {
       gl.depthMask(true);
     }
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clear(colorBit | gl.DEPTH_BUFFER_BIT);
 
     if (!this._depthWriteEnabled) {
       gl.depthMask(false);
     }
 
     return this;
+  }
+
+  /**
+   * `gl.clear` writes one clear color into every draw buffer, but the
+   * attachments of one multi-attachment target may mix formats, and only the
+   * `Rgba8Srgb` ones need the linear-decoded value - so each slot is cleared on
+   * its own.
+   */
+  private _clearAttachments(target: MultiRenderTarget): void {
+    const gl = this._context;
+    const value = this._clearColorLinearScratch;
+    const color = this._clearColor;
+
+    for (let index = 0; index < target.attachments.length; index++) {
+      if (this._isSrgbTarget(target.attachments[index]!)) {
+        color.writeLinear(value);
+      } else {
+        value[0] = color.r / 255;
+        value[1] = color.g / 255;
+        value[2] = color.b / 255;
+        value[3] = color.a;
+      }
+
+      gl.clearBufferfv(gl.COLOR, index, value);
+    }
   }
 
   /**
@@ -2196,13 +2377,24 @@ export class WebGl2Backend implements RenderBackend {
 
   public resize(width: number, height: number): this {
     this._rootRenderTarget.resize(width, height);
+    this._rootRenderTarget.updateViewport();
     this._bindRenderTarget(this._renderTarget);
 
     return this;
   }
 
-  public flush(): this {
+  /**
+   * Submit queued draws without ending the frame's GPU timing window.
+   * @internal
+   */
+  public flushPending(): this {
     this._flushActiveRenderer();
+
+    return this;
+  }
+
+  public flush(): this {
+    this.flushPending();
 
     if (this._gpuTimer !== null) {
       this._gpuTimer.endFrame();
@@ -2601,6 +2793,7 @@ export class WebGl2Backend implements RenderBackend {
     // Nodes, not instances: a batch whose renderer expands one node into many
     // instances records its own node count (see RetainedBatchInstruction).
     this._stats.submittedNodes += batch.nodeCount ?? batch.instanceCount;
+
     if (payload.replayer.replayRetainedBatch(payload) !== false) {
       this._stats.batches++;
       this._stats.drawCalls += batch.drawCalls;
@@ -2608,7 +2801,24 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public destroy(): void {
+    if (this._destroyed) {
+      return;
+    }
+
     this._destroyed = true;
+
+    try {
+      this._disposeContextResources();
+    } finally {
+      // Always request a terminal loss, even when resource cleanup failed.
+      // The extension was cached while the context was live.
+      if (this._releaseContextOnDestroy && !this._context.isContextLost()) {
+        this._loseContextExtension?.loseContext();
+      }
+    }
+  }
+
+  private _disposeContextResources(): void {
     this._gpuTimingRequested = false;
     this._gpuTimer?.destroy();
     this._gpuTimer = null;
@@ -2687,10 +2897,14 @@ export class WebGl2Backend implements RenderBackend {
     this._vao = null;
     this._renderer = null;
     this._shader = null;
+    this._shaderConnectionRevision = -1;
     this._blendMode = null;
     this._attachmentBlendActive = false;
     this._boundHandles.length = 0;
+    this._defaultSamplers.length = 0;
+    this._samplerOverrides.length = 0;
     this._boundFramebuffer = null;
+
     if (this._readbackFramebuffer !== null) {
       this._context.deleteFramebuffer(this._readbackFramebuffer);
       this._readbackFramebuffer = null;
@@ -2702,7 +2916,10 @@ export class WebGl2Backend implements RenderBackend {
     this._sampleCountsByFormat.clear();
   }
 
-  private _createContext(options: RenderingApplicationOptions['webglAttributes'], alphaMode: CanvasAlphaMode): WebGL2RenderingContext | null {
+  private _createContext(
+    options: RenderingApplicationOptions['webglAttributes'],
+    alphaMode: CanvasAlphaMode,
+  ): WebGL2RenderingContext | null {
     try {
       // Force a stencil buffer on the default framebuffer so geometric stencil
       // clipping (RenderNode.clip with a Geometry clipShape) works on the root
@@ -2916,9 +3133,12 @@ export class WebGl2Backend implements RenderBackend {
     this._boundFramebuffer = null;
     this._readbackFramebuffer = null;
     this._boundHandles.length = 0;
+    this._defaultSamplers.length = 0;
+    this._samplerOverrides.length = 0;
     this._textureUnit = 0;
     this._vao = null;
     this._shader = null;
+    this._shaderConnectionRevision = -1;
     this._blendMode = null;
     this._attachmentBlendActive = false;
     this._renderer = null;
@@ -2967,7 +3187,7 @@ export class WebGl2Backend implements RenderBackend {
   /**
    * Re-book a managed texture's GPU storage with the resource accountant after a
    * full `texImage2D` (re)allocation: frees the previously booked size (if any -
-   * e.g. on resize) and allocates the new `width · height · bytesPerPixel`
+   * e.g. on resize) and allocates the new `width * height * bytesPerPixel`
    * footprint, including the mip chain when the texture generates mips.
    */
   private _bookTextureStorage(state: ManagedTextureState, texture: Texture | RenderTexture, bytesPerPixel: number): void {
@@ -3097,8 +3317,58 @@ export class WebGl2Backend implements RenderBackend {
       });
     }
 
-    const state: ManagedTextureState = {
-      handle: this._createTextureHandle(),
+    const state = this._newTextureState(texture);
+    this._textureStates.set(texture, state);
+
+    return state;
+  }
+
+  private _newTextureState(texture: Texture | RenderTexture): ManagedTextureState {
+    if (texture instanceof Texture) {
+      const bitmap = texture._decodedAssetBitmap;
+
+      if (bitmap !== null && bitmap.width > 0 && bitmap.width === texture.width && bitmap.height === texture.height) {
+        let variants = this._sharedBitmaps.get(bitmap);
+        let shared: SharedWebGlBitmap | undefined;
+
+        if (variants === undefined) {
+          variants = new Set();
+          this._sharedBitmaps.set(bitmap, variants);
+        } else {
+          for (const entry of variants) {
+            if (this._matchesBitmapStorage(entry, texture)) {
+              shared = entry;
+
+              break;
+            }
+          }
+        }
+
+        if (shared === undefined) {
+          shared = {
+            bitmap,
+            format: this._managedColorInternalFormat(texture),
+            generateMipMap: texture.generateMipMap,
+            premultiply: texture.premultiplyAlpha,
+            normalize: this._needsColorNormalization(texture),
+            storage: this._newTextureStorage(this._createTextureHandle()),
+            owners: 0,
+          };
+          variants.add(shared);
+        }
+
+        shared.owners++;
+
+        return { ...this._newTextureStorage(shared.storage.handle), sharedBitmap: shared };
+      }
+    }
+
+    return this._newTextureStorage(this._createTextureHandle());
+  }
+
+  private _newTextureStorage(handle: WebGLTexture): ManagedTextureState {
+    return {
+      handle,
       samplerKey: -1,
       version: -1,
       width: 0,
@@ -3106,10 +3376,18 @@ export class WebGl2Backend implements RenderBackend {
       accountedBytes: 0,
       partialUploadScratch: null,
     };
+  }
 
-    this._textureStates.set(texture, state);
-
-    return state;
+  private _matchesBitmapStorage(shared: SharedWebGlBitmap, texture: Texture): boolean {
+    return (
+      shared.bitmap === texture._decodedAssetBitmap &&
+      shared.bitmap.width === texture.width &&
+      shared.bitmap.height === texture.height &&
+      shared.generateMipMap === texture.generateMipMap &&
+      shared.premultiply === texture.premultiplyAlpha &&
+      shared.format === this._managedColorInternalFormat(texture) &&
+      shared.normalize === this._needsColorNormalization(texture)
+    );
   }
 
   private _subscribeToDestroy<T extends DestroyListenable>(descriptor: T, handlers: Map<T, () => void>, handler: () => void): void {
@@ -3226,12 +3504,27 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     if (state) {
-      this._context.deleteTexture(state.handle);
-      this._forgetTextureHandle(state.handle);
-      this._accountant.free(state.accountedBytes);
-      state.accountedBytes = 0;
+      this._freeTextureStorage(state);
       this._textureStates.delete(texture);
     }
+  }
+
+  private _freeTextureStorage(state: ManagedTextureState): void {
+    const shared = state.sharedBitmap;
+    let storage = state;
+
+    if (shared !== undefined) {
+      if (--shared.owners !== 0) {
+        return;
+      }
+
+      this._sharedBitmaps.get(shared.bitmap)?.delete(shared);
+      storage = shared.storage;
+    }
+
+    this._context.deleteTexture(storage.handle);
+    this._forgetTextureHandle(storage.handle);
+    this._accountant.free(storage.accountedBytes);
   }
 
   private _bindRenderTarget(target: RenderTarget): void {
@@ -3449,14 +3742,6 @@ export class WebGl2Backend implements RenderBackend {
         this._syncColorAttachments(state, handles);
       }
 
-      // Reset the on-demand flag for pooled RenderTexture targets, so a
-      // stencil renderbuffer from a previous use does not permanently
-      // consume GPU memory when the target is re-purposed for non-clip
-      // rendering.
-      if (!this._stencilStates.has(target)) {
-        target.needsStencil = false;
-      }
-
       // Keep an existing depth/stencil attachment sized to the (possibly
       // resized) texture so the framebuffer stays complete during non-clip
       // rendering. A target that opted into a sampleable depth attachment
@@ -3492,8 +3777,9 @@ export class WebGl2Backend implements RenderBackend {
    * both is served single-sample rather than a half-multisampled framebuffer
    * that no driver would accept. The root target is the browser's to
    * multisample.
+   * @internal
    */
-  private _effectiveSampleCount(target: RenderTarget): number {
+  public _effectiveSampleCount(target: RenderTarget): number {
     if (target.root || target.depthTexture !== null) {
       return 1;
     }
@@ -3590,7 +3876,10 @@ export class WebGl2Backend implements RenderBackend {
     state.multisampleHeight = height;
     state.multisampleSamples = samples;
     state.multisampleDirty = true;
-    state.multisampleAccountedBytes = this._accountant.reallocate(state.multisampleAccountedBytes, width * height * samples * descriptor.bytesPerPixel);
+    state.multisampleAccountedBytes = this._accountant.reallocate(
+      state.multisampleAccountedBytes,
+      width * height * samples * descriptor.bytesPerPixel,
+    );
   }
 
   private _syncDepthStencilAttachment(target: RenderTarget, state: ManagedRenderTargetState): void {
@@ -3666,7 +3955,10 @@ export class WebGl2Backend implements RenderBackend {
     state.stencilWidth = width;
     state.stencilHeight = height;
     state.stencilSamples = samples;
-    state.stencilAccountedBytes = this._accountant.reallocate(state.stencilAccountedBytes, width * height * DEPTH_STENCIL8_BYTES_PER_PIXEL * samples);
+    state.stencilAccountedBytes = this._accountant.reallocate(
+      state.stencilAccountedBytes,
+      width * height * DEPTH_STENCIL8_BYTES_PER_PIXEL * samples,
+    );
   }
 
   private _getStencilState(target: RenderTarget): StencilTargetState {
@@ -3700,7 +3992,7 @@ export class WebGl2Backend implements RenderBackend {
 
   /**
    * Return the packing scratch for `state`, at least `length` elements long
-   * (grown on demand, never shrunk, kind-matched to `source`). It is NOT
+   * (grown on demand, never shrunk, kind-matched to `format`). It is NOT
    * narrowed to `length`: the caller passes it to the `(..., srcData, srcOffset)`
    * overload, which reads exactly the rectangle's worth of elements from the
    * offset - so a longer buffer uploads the same bytes as an exact-length view
@@ -3714,8 +4006,8 @@ export class WebGl2Backend implements RenderBackend {
    * contiguous, so `_syncTexture` hands GL an offset into the texture buffer
    * itself.
    */
-  private _acquirePartialUploadScratch(state: ManagedTextureState, source: Float32Array | Uint8Array, length: number): Float32Array | Uint8Array {
-    const isFloat = source instanceof Float32Array;
+  private _acquirePartialUploadScratch(state: ManagedTextureState, format: DataTextureFormat, length: number): Float32Array | Uint8Array {
+    const isFloat = format === TextureFormat.R32F || format === TextureFormat.Rgba32F;
     let scratch = state.partialUploadScratch;
 
     if (scratch === null || scratch.length < length || isFloat !== scratch instanceof Float32Array) {
@@ -3746,12 +4038,40 @@ export class WebGl2Backend implements RenderBackend {
       return this._syncDepthTexture(texture);
     }
 
-    const state = this._getTextureState(texture);
+    let state = this._getTextureState(texture);
     const version = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
+
+    if (
+      state.sharedBitmap !== undefined &&
+      state.version !== version &&
+      texture instanceof Texture &&
+      !this._matchesBitmapStorage(state.sharedBitmap, texture)
+    ) {
+      const previous = state;
+      state = this._newTextureState(texture);
+      this._textureStates.set(texture, state);
+      this._freeTextureStorage(previous);
+    }
 
     this._bindTextureHandle(state.handle);
 
     const samplerKey = samplerStateKey(texture.scaleMode, texture.wrapMode);
+    const shared = state.sharedBitmap;
+
+    if (shared !== undefined) {
+      if (state.samplerKey !== samplerKey) {
+        state.sampler = this._getSampler(texture);
+        state.samplerKey = samplerKey;
+      }
+
+      if (shared.storage.version === -1) {
+        this._syncTextureUpload(texture, shared.storage, version);
+      }
+
+      state.version = version;
+
+      return state;
+    }
 
     if (state.samplerKey !== samplerKey) {
       this._applySamplerParameters(texture, state, samplerKey);
@@ -3885,7 +4205,17 @@ export class WebGl2Backend implements RenderBackend {
       const bytesPerPixel = dataTextureBytesPerPixel(format);
 
       if (needsAlloc || region === null || region.full) {
-        gl.texImage2D(gl.TEXTURE_2D, 0, formatInfo.internalFormat, texture.width, texture.height, 0, formatInfo.format, formatInfo.type, texture.buffer);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          formatInfo.internalFormat,
+          texture.width,
+          texture.height,
+          0,
+          formatInfo.format,
+          formatInfo.type,
+          texture.buffer,
+        );
         this._bookTextureStorage(state, texture, bytesPerPixel);
         this._accountant.recordTextureUpload(texture.width * texture.height * bytesPerPixel);
       } else {
@@ -3921,7 +4251,7 @@ export class WebGl2Backend implements RenderBackend {
           // never reallocated per call - see `_acquirePartialUploadScratch`)
           // that gl.texSubImage2D can read as one tightly packed block.
           const subRowChannels = region.width * channels;
-          const subView = this._acquirePartialUploadScratch(state, texture.buffer, region.width * region.height * channels);
+          const subView = this._acquirePartialUploadScratch(state, format, region.width * region.height * channels);
           const source = texture.buffer;
 
           if (subRowChannels <= nativeRowCopyThreshold) {
@@ -3943,7 +4273,18 @@ export class WebGl2Backend implements RenderBackend {
             }
           }
 
-          gl.texSubImage2D(gl.TEXTURE_2D, 0, region.x, region.y, region.width, region.height, formatInfo.format, formatInfo.type, subView, 0);
+          gl.texSubImage2D(
+            gl.TEXTURE_2D,
+            0,
+            region.x,
+            region.y,
+            region.width,
+            region.height,
+            formatInfo.format,
+            formatInfo.type,
+            subView,
+            0,
+          );
         }
 
         this._accountant.recordTextureUpload(region.width * region.height * bytesPerPixel);
@@ -3966,13 +4307,16 @@ export class WebGl2Backend implements RenderBackend {
       const internalFormat = this._managedColorInternalFormat(texture);
       const needsNormalization = this._needsColorNormalization(texture);
       const allocateChain = needsNormalization && levels.length > 1 && levels.some(({ data }) => !isFullyOpaqueLevel(data));
+
       if (allocateChain) {
         // A non-base mip cannot be a framebuffer attachment until its texture is mip-complete.
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, levels.length - 1);
+
         for (const [level, { width, height }] of levels.entries()) {
           gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         }
       }
+
       let uploadedBytes = 0;
 
       for (const [level, { data, width, height }] of levels.entries()) {
@@ -3980,7 +4324,10 @@ export class WebGl2Backend implements RenderBackend {
           // Allocated uninitialized and filled by the pass, so the write path
           // stays identical to the plain upload below: same destination, same
           // storage format, same accounting.
-          if (!allocateChain) gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          if (!allocateChain) {
+            gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          }
+
           this._getTextureNormalizer().normalizePixels({ destination: state.handle, level, width, height, internalFormat }, data);
         } else if (allocateChain) {
           gl.texSubImage2D(gl.TEXTURE_2D, level, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
@@ -4134,6 +4481,7 @@ export class WebGl2Backend implements RenderBackend {
     // two units it borrowed, and `restoreAfterColorNormalization` records them.
     this._boundFramebuffer = null;
     this._shader = null;
+    this._shaderConnectionRevision = -1;
     this._vao = null;
   }
 
@@ -4143,7 +4491,11 @@ export class WebGl2Backend implements RenderBackend {
    * keeps describing what GL holds - a render target the pass restored onto a
    * unit has to stay releasable from it.
    */
-  public restoreAfterColorNormalization(unitZeroBinding: WebGLTexture | null, activeUnit: number, activeBinding: WebGLTexture | null): void {
+  public restoreAfterColorNormalization(
+    unitZeroBinding: WebGLTexture | null,
+    activeUnit: number,
+    activeBinding: WebGLTexture | null,
+  ): void {
     this._boundHandles[0] = unitZeroBinding;
     this._boundHandles[activeUnit] = activeBinding;
     this._bindRenderTarget(this._renderTarget);
@@ -4242,7 +4594,12 @@ const RGBA8_BYTES_PER_PIXEL = 4;
 // one 32-bit texel, for both the sampleable-texture and renderbuffer forms of
 // a target's depth/stencil attachment.
 const DEPTH_STENCIL8_BYTES_PER_PIXEL = 4;
-const colorFormatCapabilities = (renderable: boolean, filterable: boolean, blendable: boolean, sampleCounts: readonly number[]): ColorFormatCapabilities => ({
+const colorFormatCapabilities = (
+  renderable: boolean,
+  filterable: boolean,
+  blendable: boolean,
+  sampleCounts: readonly number[],
+): ColorFormatCapabilities => ({
   renderable,
   filterable,
   blendable,
@@ -4341,9 +4698,27 @@ let formatTable: WebGl2DataTextureFormatTable | null = null;
 const buildWebgl2DataTextureFormatTable = (gl: typeof WebGL2RenderingContext): WebGl2DataTextureFormatTable => ({
   [TextureFormat.R8]: Object.freeze({ internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, channels: 1, bytesPerPixel: 1 }),
   [TextureFormat.R32F]: Object.freeze({ internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT, channels: 1, bytesPerPixel: 4 }),
-  [TextureFormat.Rgba8]: Object.freeze({ internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 }),
-  [TextureFormat.Rgba8Srgb]: Object.freeze({ internalFormat: gl.SRGB8_ALPHA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 }),
-  [TextureFormat.Rgba16F]: Object.freeze({ internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT, channels: 4, bytesPerPixel: 8 }),
+  [TextureFormat.Rgba8]: Object.freeze({
+    internalFormat: gl.RGBA8,
+    format: gl.RGBA,
+    type: gl.UNSIGNED_BYTE,
+    channels: 4,
+    bytesPerPixel: 4,
+  }),
+  [TextureFormat.Rgba8Srgb]: Object.freeze({
+    internalFormat: gl.SRGB8_ALPHA8,
+    format: gl.RGBA,
+    type: gl.UNSIGNED_BYTE,
+    channels: 4,
+    bytesPerPixel: 4,
+  }),
+  [TextureFormat.Rgba16F]: Object.freeze({
+    internalFormat: gl.RGBA16F,
+    format: gl.RGBA,
+    type: gl.HALF_FLOAT,
+    channels: 4,
+    bytesPerPixel: 8,
+  }),
   [TextureFormat.Rgba32F]: Object.freeze({ internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, channels: 4, bytesPerPixel: 16 }),
 });
 

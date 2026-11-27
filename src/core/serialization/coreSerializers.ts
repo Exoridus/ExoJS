@@ -1,13 +1,17 @@
+import { readAssetReference } from '#assets/AssetReference';
+import { createLeaf } from '#assets/catalogLeaf';
+import { textureSeamlessAdapter } from '#assets/seamless';
 import { logger } from '#core/Logger';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
-import { SDF_RADIUS, Text } from '#rendering/text/Text';
+import { Text } from '#rendering/text/Text';
 import { Texture } from '#rendering/texture/Texture';
 
-import type { NodeSerializer } from './NodeSerializer';
-import { asSerializedNode } from './read';
+import { initializeDeserializedNode } from './deserializeOwnership';
+import type { DeserializeContext, NodeSerializer } from './NodeSerializer';
+import { asNumberArray, asSerializedNode, readNumber } from './read';
 import { registerRenderingSerializers } from './renderingSerializers';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } from './serializerHelpers';
@@ -24,21 +28,37 @@ const containerSerializer: NodeSerializer<Container> = {
     return { children: node.children.map(child => ctx.writeNode(child)) };
   },
   read(data, ctx) {
-    const node = new Container();
-    const children = data.children;
+    return initializeDeserializedNode(new Container(), node => {
+      const children = data.children;
 
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        const childNode = asSerializedNode(child);
-        if (childNode !== null) node.addChild(ctx.readNode(childNode) as RenderNode);
+      if (Array.isArray(children)) {
+        for (const child of children) {
+          const childNode = asSerializedNode(child);
+
+          if (childNode !== null) {
+            node.addChild(ctx.readNode(childNode) as RenderNode);
+          }
+        }
       }
-    }
-
-    return node;
+    });
   },
 };
 
 // ── Sprite ─────────────────────────────────────────────────────────────────
+
+const readSpriteTexture = (value: unknown, ctx: DeserializeContext): Texture | null => {
+  const reference = ctx.version >= 3 ? readAssetReference(value) : null;
+
+  if (reference === null || !('$type' in reference) || typeof reference.$type !== 'string') {
+    return ctx.resolveAsset(value, Texture);
+  }
+
+  if (reference.$type !== 'texture') {
+    throw new TypeError(`Cannot read Sprite texture "${reference.source}" of type "${reference.$type}".`);
+  }
+
+  return createLeaf(textureSeamlessAdapter, reference.$type, reference.source, reference.options, true) as Texture;
+};
 
 const spriteSerializer: NodeSerializer<Sprite> = {
   write(node, ctx) {
@@ -50,10 +70,13 @@ const spriteSerializer: NodeSerializer<Sprite> = {
     }
 
     if (node.material !== null) {
-      logger.warn('Sprite.material is not serialized (custom materials are deferred); the deserialized sprite falls back to the default material.', {
-        source: 'serialize',
-        once: 'serialize:sprite-material',
-      });
+      logger.warn(
+        'Sprite.material is not serialized (custom materials are deferred); the deserialized sprite falls back to the default material.',
+        {
+          source: 'serialize',
+          once: 'serialize:sprite-material',
+        },
+      );
     }
 
     const texture = node.texture;
@@ -68,15 +91,15 @@ const spriteSerializer: NodeSerializer<Sprite> = {
     return out;
   },
   read(data, ctx) {
-    const texture = ctx.resolveAsset(data.texture, Texture);
+    const texture = readSpriteTexture(data.texture, ctx);
     const sprite = new Sprite(texture);
-    const frame = data.frame;
+    const frame = asNumberArray(data.frame);
 
-    if (texture !== null && Array.isArray(frame) && frame.length === 4) {
+    if (texture !== null && frame?.length === 4) {
       // A dedicated rectangle, not the shared Rectangle.temp: setTextureFrame
       // reads its argument again after re-entering node code (bounds/origin
       // invalidation), and this call has no instance to own a scratch on.
-      sprite.setTextureFrame(new Rectangle(Number(frame[0]), Number(frame[1]), Number(frame[2]), Number(frame[3])));
+      sprite.setTextureFrame(new Rectangle(frame[0] ?? 0, frame[1] ?? 0, frame[2] ?? 0, frame[3] ?? 0));
     }
 
     return sprite;
@@ -90,23 +113,37 @@ const textSerializer: NodeSerializer<Text> = {
     const out: Record<string, unknown> = { text: node.text };
     const style = serializeStyle(node.style);
 
-    if (style !== undefined) out.style = style;
-    if (Object.keys(node.layout).length > 0) out.layout = { ...node.layout };
-    if (node.colorGlyphs) out.colorGlyphs = true;
-    if (node.sdfRadius !== SDF_RADIUS) out.sdfRadius = node.sdfRadius;
+    if (style !== undefined) {
+      out.style = style;
+    }
+
+    if (Object.keys(node.layout).length > 0) {
+      out.layout = { ...node.layout };
+    }
+
+    if (node.colorGlyphs) {
+      out.colorGlyphs = true;
+    }
+
+    if (node._explicitRadius !== undefined) {
+      out.sdfRadius = node._explicitRadius;
+    }
 
     return out;
   },
   read(data) {
     const layout = readLayoutOptions(data.layout);
+    const colorGlyphs = data.colorGlyphs === true;
+    const sdfRadius = readNumber(data, 'sdfRadius');
+    const style = deserializeStyleOptions(data.style);
 
     return new Text(
       typeof data.text === 'string' ? data.text : '',
       compact({
-        ...deserializeStyleOptions(data.style),
+        ...style,
         ...layout,
-        colorGlyphs: data.colorGlyphs === true,
-        sdfRadius: typeof data.sdfRadius === 'number' ? data.sdfRadius : undefined,
+        colorGlyphs,
+        sdfRadius,
       }),
     );
   },

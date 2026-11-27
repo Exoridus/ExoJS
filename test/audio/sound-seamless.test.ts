@@ -5,9 +5,7 @@ import { Sound } from '#audio/Sound';
 import { LoadState } from '#core/LoadState';
 import { logger, LogSeverity } from '#core/Logger';
 
-const bufferStub = (duration = 2): AudioBuffer => {
-  return { duration } as AudioBuffer;
-};
+const bufferStub = (duration = 2): AudioBuffer => ({ duration }) as AudioBuffer;
 
 describe('Sound seamless surface', () => {
   test('a directly constructed Sound is ready with its buffer', () => {
@@ -66,8 +64,11 @@ describe('Sound.play before load', () => {
   test('playing a loading sound returns NoopVoice and warns "not yet loaded"', () => {
     const warnings: string[] = [];
     const removeSink = logger.addSink(e => {
-      if (e.severity === LogSeverity.Warning) warnings.push(e.message);
+      if (e.severity === LogSeverity.Warning) {
+        warnings.push(e.message);
+      }
     });
+
     try {
       const system = new AudioSystem();
       const sound = new Sound(null);
@@ -83,8 +84,11 @@ describe('Sound.play before load', () => {
   test('playing a failed sound returns NoopVoice, warns "failed", and does not re-fetch', () => {
     const warnings: string[] = [];
     const removeSink = logger.addSink(e => {
-      if (e.severity === LogSeverity.Warning) warnings.push(e.message);
+      if (e.severity === LogSeverity.Warning) {
+        warnings.push(e.message);
+      }
     });
+
     try {
       const system = new AudioSystem();
       const sound = new Sound(null);
@@ -109,5 +113,20 @@ describe('Sound.play before load', () => {
       voice = system.play(sound.sprite('hit'), {});
     }).not.toThrow();
     expect(voice).toBeInstanceOf(NoopVoice);
+  });
+
+  test('a sprite handle held across eviction and reload stays playable', () => {
+    const system = new AudioSystem();
+    const sound = new Sound(bufferStub(4));
+    sound.addSprite('hit', { start: 0, end: 1 });
+    const sprite = sound.sprite('hit');
+    const donor = new Sound(bufferStub(4));
+    donor.addSprite('hit', { start: 0, end: 1 });
+
+    sound._evictBuffer();
+    sound._fillFrom(donor);
+
+    expect(sprite.destroyed).toBe(false);
+    expect(system.play(sprite)).not.toBeInstanceOf(NoopVoice);
   });
 });

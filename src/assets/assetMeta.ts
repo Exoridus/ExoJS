@@ -1,4 +1,4 @@
-import type { AnyAssetConfig, AssetTypeName } from './AssetDefinitions';
+import type { AssetTypeName } from './AssetDefinitions';
 import type { AssetRef } from './AssetRef';
 
 /** Descriptor metadata stamped onto a handle-hybrid catalog leaf. */
@@ -7,6 +7,8 @@ export interface AssetMeta {
   readonly kind: AssetTypeName;
   readonly src: string;
   readonly opts?: unknown;
+  /** Whether a scene should claim this handle when it enters the scene graph. */
+  readonly live?: true;
 }
 
 /** Symbol under which {@link AssetMeta} rides on a handle-hybrid leaf. */
@@ -57,45 +59,15 @@ type LeafPayloadOf<T> = T extends AssetRef<infer V> ? V : T;
  */
 export const _stampMeta = <T extends object>(target: T, meta: AssetMeta): T & CatalogLeafBrand<LeafPayloadOf<T>> => {
   Object.defineProperty(target, _assetMeta, { value: meta, enumerable: false, configurable: false, writable: false });
+
   return target as T & CatalogLeafBrand<LeafPayloadOf<T>>;
 };
 
 /** Read the {@link AssetMeta} off a value, or `undefined` if not stamped. @internal */
 export const _readMeta = (value: unknown): AssetMeta | undefined => {
-  if (typeof value !== 'object' || value === null) return undefined;
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+
   return (value as { [_assetMeta]?: AssetMeta })[_assetMeta];
-};
-
-/** Option keys a descriptor's request owns; an option bag may not set them. */
-const RESERVED_OPTION_KEYS = ['type', 'source'] as const;
-
-/**
- * Build a descriptor's request config from its type, source and option bag.
- *
- * The request identity is never taken from the option bag: an option object
- * typed loosely enough to carry `type` or `source` - an `object` variable,
- * untyped JSON - would otherwise silently redirect the request to another type
- * or file. Such a bag throws instead, and every other option passes through
- * unchanged.
- * @internal
- */
-export const _requestConfig = (type: string, source: string, options: unknown): AnyAssetConfig => {
-  if (options === undefined || options === null) {
-    return { type, source } as unknown as AnyAssetConfig;
-  }
-
-  if (typeof options !== 'object') {
-    throw new TypeError(`Asset "${source}" (${type}): options must be an object, got ${typeof options}.`);
-  }
-
-  for (const key of RESERVED_OPTION_KEYS) {
-    if (Object.hasOwn(options, key)) {
-      throw new TypeError(
-        `Asset "${source}" (${type}): "${key}" is reserved for the request and cannot be passed as an option. ` +
-          'Name the asset type and source through the descriptor arguments instead.',
-      );
-    }
-  }
-
-  return { ...options, type, source } as unknown as AnyAssetConfig;
 };

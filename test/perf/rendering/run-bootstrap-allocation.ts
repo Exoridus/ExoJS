@@ -66,6 +66,7 @@ for (const count of counts) {
 
   if (run.status !== 0) {
     process.stderr.write(run.stderr ?? '');
+
     throw new Error(`cell for count=${count} exited with ${String(run.status)}`);
   }
 

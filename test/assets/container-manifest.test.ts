@@ -1,7 +1,6 @@
 import { type ContainerInput, encodeContainer } from '@codexo/exojs-build/asset-container';
 import { containerPackFileName, describeContainerPack } from '@codexo/exojs-build/asset-manifest';
 
-import { Asset } from '#assets/Asset';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { AssetNetworkError } from '#assets/AssetNetworkError';
 import { AssetCache } from '#assets/cache/AssetCache';
@@ -116,7 +115,9 @@ const recordingStore = (): ContainerBlockStore & { readonly held: Map<string, Ui
     get: async hash => {
       const bytes = held.get(hash);
 
-      if (bytes !== undefined) hits.push(hash);
+      if (bytes !== undefined) {
+        hits.push(hash);
+      }
 
       return bytes === undefined ? undefined : new Uint8Array(bytes.slice().buffer);
     },
@@ -169,6 +170,17 @@ describe('AssetManifest', () => {
     expect(pack.byteLength).toBe(record.byteLength);
     expect(pack.blockCount).toBe(3);
     expect(pack.entries).toEqual(['a.bin', 'b.bin', 'c.bin']);
+  });
+
+  test('addresses packs under the manifest directory when a signed URL has slashes in its query', async () => {
+    const deployment = deploy({ level1: threePacked(2) });
+
+    serve(deployment);
+
+    const manifest = await AssetManifest.open('/assets/assets.json?sig=part/a&exp=1');
+    const record = deployment.document.packs['level1']!;
+
+    expect(new URL(manifest.pack('level1').url).pathname).toBe(`/assets/${record.file as string}`);
   });
 
   test('finds the pack carrying a source', async () => {
@@ -293,7 +305,7 @@ describe('loading a pack through a manifest', () => {
 
     await loader.loadContainer(manifest.pack('level1'));
 
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'b.bin')).value)).toEqual(noise(1500, 2));
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'b.bin' }).value)).toEqual(noise(1500, 2));
   });
 
   test('refuses pack bytes whose hash is not the one the manifest states', async () => {
@@ -348,7 +360,7 @@ describe('loading a pack through a manifest', () => {
 
     await loader.loadContainer(after.pack('level1'), { store });
 
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'b.bin')).value)).toEqual(noise(1500, 7));
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'b.bin' }).value)).toEqual(noise(1500, 7));
     // The manifest, the pack head, and exactly the one block that changed.
     expect(requests.filter(request => request.path.endsWith('.exoa'))).toHaveLength(2);
     expect(store.hits).toHaveLength(2);
@@ -377,7 +389,7 @@ describe('loading a pack through a manifest', () => {
 
     await loader.loadContainer(manifest.pack('level1'));
 
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'b.bin')).value)).toEqual(noise(1500, 2));
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'b.bin' }).value)).toEqual(noise(1500, 2));
   });
 
   test('checks the length even where crypto.subtle is unavailable', async () => {
@@ -409,7 +421,7 @@ describe('loading a pack through a manifest', () => {
     // `crypto.subtle` there is none: degrading beats refusing to load at all.
     await loader.loadContainer(manifest.pack('level1'));
 
-    expect(loader.get(Asset.type('binary', 'b.bin')).value.byteLength).toBe(1500);
+    expect(loader.get({ type: 'binary', source: 'b.bin' }).value.byteLength).toBe(1500);
   });
 
   test('a pack the server does not have is a transport failure on the block path too', async () => {

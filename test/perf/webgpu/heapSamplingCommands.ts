@@ -74,7 +74,9 @@ export const startHeapSampling = async (ctx: BrowserCommandContext, samplingInte
 };
 
 export const stopHeapSampling = async (): Promise<SamplingProfileNode> => {
-  if (session === null) throw new Error('stopHeapSampling called without a matching startHeapSampling.');
+  if (session === null) {
+    throw new Error('stopHeapSampling called without a matching startHeapSampling.');
+  }
 
   const result = (await session.send('HeapProfiler.stopSampling')) as { profile: { head: SamplingProfileNode } };
 

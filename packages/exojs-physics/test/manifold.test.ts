@@ -92,9 +92,11 @@ describe('narrow phase — manifold generation', () => {
       }
 
       const ids = [];
+
       for (let i = 0; i < manifold.pointCount; i++) {
         ids.push(manifold.points[i].id);
       }
+
       ids.sort((m, n) => m - n);
 
       if (previousIds !== null) {

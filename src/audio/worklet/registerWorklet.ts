@@ -11,21 +11,34 @@ const _pending = new WeakMap<BaseAudioContext, Map<string, Promise<void>>>();
  * Blob URL at runtime - no separate worklet asset file is shipped.
  * @advanced
  */
-export const registerAudioWorkletProcessor = async (audioContext: BaseAudioContext, processorName: string, source: string): Promise<void> => {
+export const registerAudioWorkletProcessor = async (
+  audioContext: BaseAudioContext,
+  processorName: string,
+  source: string,
+): Promise<void> => {
   let registered = _registered.get(audioContext);
+
   if (!registered) {
     registered = new Set();
     _registered.set(audioContext, registered);
   }
-  if (registered.has(processorName)) return;
+
+  if (registered.has(processorName)) {
+    return;
+  }
 
   let pending = _pending.get(audioContext);
+
   if (!pending) {
     pending = new Map();
     _pending.set(audioContext, pending);
   }
+
   const inFlight = pending.get(processorName);
-  if (inFlight) return inFlight;
+
+  if (inFlight) {
+    return inFlight;
+  }
 
   const blob = new Blob([source], { type: 'application/javascript' });
   const url = URL.createObjectURL(blob);
@@ -41,9 +54,11 @@ export const registerAudioWorkletProcessor = async (audioContext: BaseAudioConte
     })
     .catch((error: unknown) => {
       pending.delete(processorName);
+
       throw error;
     });
 
   pending.set(processorName, promise);
+
   return promise;
 };

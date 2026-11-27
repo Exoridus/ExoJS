@@ -26,13 +26,20 @@ const fakeScope = (name: string, log: string[] = []): FakeScope & LoaderScope =>
     createScope(options) {
       const child = fakeScope(options?.name ?? '', log);
       scope.children.push(child);
+
       return child;
     },
     destroy() {
-      if (scope.destroyed) return;
+      if (scope.destroyed) {
+        return;
+      }
+
       scope.destroyed = true;
       log.push(name);
-      for (const child of scope.children) child.destroy();
+
+      for (const child of scope.children) {
+        child.destroy();
+      }
     },
   };
 
@@ -41,22 +48,20 @@ const fakeScope = (name: string, log: string[] = []): FakeScope & LoaderScope =>
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
-const level = (id: string): MapLevel => {
-  return {
-    id,
-    name: id,
-    index: 0,
-    bounds: { x: 0, y: 0, width: 64, height: 64 },
-    external: false,
-    neighbours: [],
-    properties: {},
-  };
-};
+const level = (id: string): MapLevel => ({
+  id,
+  name: id,
+  index: 0,
+  bounds: { x: 0, y: 0, width: 64, height: 64 },
+  external: false,
+  neighbours: [],
+  properties: {},
+});
 
 const world = new MapWorld({ name: 'overworld', levels: [level('forest'), level('cave')] });
 
-const levelMap = (id: string, objectType?: string): TileMap => {
-  return new TileMap({
+const levelMap = (id: string, objectType?: string): TileMap =>
+  new TileMap({
     name: id,
     width: 4,
     height: 4,
@@ -87,7 +92,6 @@ const levelMap = (id: string, objectType?: string): TileMap => {
             }),
           ],
   });
-};
 
 class Thing implements Destroyable {
   public destroyed = false;
@@ -178,6 +182,7 @@ describe('MapWorldRuntime loading', () => {
         expect((context.scope as unknown as FakeScope).name).toBe('level:cave');
         expect(context.signal.aborted).toBe(false);
         expect(context.level.id).toBe('cave');
+
         return levelMap(context.level.id);
       },
     });
@@ -201,6 +206,7 @@ describe('MapWorldRuntime concurrency', () => {
   it('coalesces concurrent loads of the same level onto one operation', async () => {
     const load = vi.fn(async ({ level: l }: { level: MapLevel }) => {
       await tick();
+
       return levelMap(l.id);
     });
     const runtime = new MapWorldRuntime({ world, scope: fakeScope('root'), load });
@@ -217,6 +223,7 @@ describe('MapWorldRuntime concurrency', () => {
       scope: fakeScope('root'),
       load: async ({ level: l }) => {
         await tick();
+
         return levelMap(l.id);
       },
     });
@@ -261,6 +268,7 @@ describe('MapWorldRuntime failure and cancellation', () => {
       scope: root,
       load: ({ level: l }) => {
         created = levelMap(l.id, 'Enemy');
+
         return created;
       },
     });
@@ -294,6 +302,7 @@ describe('MapWorldRuntime failure and cancellation', () => {
       load: async ({ level: l }) => {
         await tick();
         created = levelMap(l.id);
+
         return created;
       },
     });
@@ -310,6 +319,7 @@ describe('MapWorldRuntime failure and cancellation', () => {
   it('starts a fresh load when a level is reloaded in the same turn it was cancelled', async () => {
     const load = vi.fn(async ({ level: l }: { level: MapLevel }) => {
       await tick();
+
       return levelMap(l.id);
     });
     const runtime = new MapWorldRuntime({ world, scope: fakeScope('root'), load });
@@ -330,7 +340,11 @@ describe('MapWorldRuntime failure and cancellation', () => {
       scope: fakeScope('root'),
       load: ({ level: l }) => {
         attempt++;
-        if (attempt === 1) throw new Error('first attempt failed');
+
+        if (attempt === 1) {
+          throw new Error('first attempt failed');
+        }
+
         return levelMap(l.id);
       },
     });
@@ -346,7 +360,11 @@ describe('MapWorldRuntime failure and cancellation', () => {
       scope: fakeScope('root'),
       load: async ({ level: l }) => {
         await tick();
-        if (l.id === 'cave') throw new Error('cave is broken');
+
+        if (l.id === 'cave') {
+          throw new Error('cave is broken');
+        }
+
         return levelMap(l.id);
       },
     });
@@ -368,6 +386,7 @@ describe('MapWorldRuntime failure and cancellation', () => {
       load: async ({ level: l }) => {
         await tick();
         created = levelMap(l.id);
+
         return created;
       },
     });
@@ -389,6 +408,7 @@ describe('MapWorldRuntime failure and cancellation', () => {
       Enemy: async () => {
         runtime.unloadLevel('forest');
         await tick();
+
         return new Thing(log);
       },
     });
@@ -397,6 +417,7 @@ describe('MapWorldRuntime failure and cancellation', () => {
       scope: root,
       load: ({ level: l }) => {
         created = levelMap(l.id, 'Enemy');
+
         return created;
       },
     });
@@ -421,6 +442,7 @@ describe('MapWorldRuntime failure and cancellation', () => {
         vi.spyOn(map, 'destroy').mockImplementation(() => {
           throw new Error('map teardown exploded');
         });
+
         return map;
       },
     });
@@ -440,11 +462,13 @@ describe('MapWorldRuntime failure and cancellation', () => {
       scope: root,
       load: ({ level: l }) => {
         const map = levelMap(l.id);
+
         if (l.id === 'cave') {
           vi.spyOn(map, 'destroy').mockImplementation(() => {
             throw new Error('cave teardown exploded');
           });
         }
+
         return map;
       },
     });
@@ -502,6 +526,7 @@ describe('MapWorldRuntime load options', () => {
       load: async ({ level: l }) => {
         controller.abort();
         await tick();
+
         return levelMap(l.id);
       },
     });

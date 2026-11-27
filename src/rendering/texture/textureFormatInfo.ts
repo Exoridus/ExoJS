@@ -1,6 +1,11 @@
 import { TextureFormat } from '#rendering/types';
 
-import { type CompressedBlockLayout, compressedBlockLayout, CompressedTextureFormat, isCompressedTextureFormat } from './CompressedTextureFormat';
+import {
+  type CompressedBlockLayout,
+  compressedBlockLayout,
+  CompressedTextureFormat,
+  isCompressedTextureFormat,
+} from './CompressedTextureFormat';
 import type { TextureAlphaMode, TextureColorSpace } from './TextureOptions';
 
 export interface TextureFormatMetadata {
@@ -78,7 +83,10 @@ const resolveMetadata = <T extends string>(value: T | undefined, payloadValue: T
  * exact storage identity. An sRGB storage format fixes the transfer function;
  * linear storage may be interpreted as linear color or as non-color data.
  */
-export const resolveTextureFormat = (format: TextureFormat | CompressedTextureFormat, metadata: TextureFormatMetadata = {}): ResolvedTextureFormat => {
+export const resolveTextureFormat = (
+  format: TextureFormat | CompressedTextureFormat,
+  metadata: TextureFormatMetadata = {},
+): ResolvedTextureFormat => {
   const srgbStorage = srgbFormats.has(format);
   const hasAlpha = !opaqueFormats.has(format);
   const colorSpace = resolveMetadata(metadata.colorSpace, metadata.payloadColorSpace, srgbStorage ? 'srgb' : 'none', 'color-space');

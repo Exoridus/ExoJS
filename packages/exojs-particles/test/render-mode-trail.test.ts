@@ -82,6 +82,89 @@ describe('TrailParticles', () => {
     expect(counts).toEqual([4, 4, 6, 6, 8, 8, 10]);
   });
 
+  it('preserves trail history when rebuilt at the same age', () => {
+    const system = new ParticleSystem({ capacity: 2 });
+    const mode = new TrailParticles({ interval: 0.1, points: 4 });
+    spawn(system, 1);
+    mode.build(system, system._storage);
+    step(system, mode, 10, 0.1);
+    step(system, mode, 10, 0.1);
+    const before = Array.from(new Uint8Array(mode.data).slice(0, mode.count * mode.dataLayout.stride));
+    mode.build(system, system._storage);
+    expect(Array.from(new Uint8Array(mode.data).slice(0, mode.count * mode.dataLayout.stride))).toEqual(before);
+  });
+
+  it.each([0.25, 0.5])('restarts a trail after clearing and re-emitting at age %s', age => {
+    const mode = new TrailParticles({ interval: 0.1, points: 4 });
+    const system = new ParticleSystem({ capacity: 2, render: mode });
+    system.emit()!.lifetime = 1;
+    mode.build(system, system._storage);
+    step(system, mode, 10, 0.25);
+    expect(mode.count).toBe(4);
+
+    system.clearParticles();
+    const replacement = system.emit()!;
+    replacement.lifetime = 1;
+    replacement.position.x = 100;
+    system.update(Time.seconds(age));
+    mode.build(system, system._storage);
+    expect(mode.count).toBe(0);
+
+    step(system, mode, 10, 0.25);
+    expect(mode.count).toBe(4);
+    expect(vertex(mode, 2).x).toBeCloseTo(100);
+  });
+
+  it('restarts a trail when an expired particle is replaced at the same age and lifetime', () => {
+    const mode = new TrailParticles({ interval: 0.1, points: 4 });
+    const system = new ParticleSystem({ capacity: 2, render: mode });
+    system.emit()!.lifetime = 1;
+    mode.build(system, system._storage);
+    step(system, mode, 10, 0.25);
+
+    system.update(Time.seconds(0.75));
+    expect(system.liveCount).toBe(0);
+    const replacement = system.emit()!;
+    replacement.lifetime = 1;
+    replacement.position.x = 100;
+    system.update(Time.seconds(0.25));
+    mode.build(system, system._storage);
+    expect(mode.count).toBe(0);
+  });
+
+  it('keeps the surviving trail when equal-lifetime particles compact', () => {
+    const mode = new TrailParticles({ interval: 0.1, points: 4 });
+    const system = new ParticleSystem({ capacity: 2, render: mode });
+    system.emit()!.lifetime = 1;
+    system.update(Time.seconds(0.25));
+    const survivor = system.emit()!;
+    survivor.lifetime = 1;
+    survivor.position.y = 100;
+    mode.build(system, system._storage);
+    step(system, mode, 10, 0.25);
+
+    system.update(Time.seconds(0.5));
+    expect(system.liveCount).toBe(1);
+    mode.build(system, system._storage);
+    expect(mode.count).toBe(4);
+    expect(vertex(mode, 2).x).toBeCloseTo(0);
+    expect(vertex(mode, 2).y).toBeCloseTo(100.5);
+  });
+
+  it('restarts only the trail whose particle lifetime changes', () => {
+    const mode = new TrailParticles({ interval: 0.1, points: 4 });
+    const system = new ParticleSystem({ capacity: 2, render: mode });
+    spawn(system, 2);
+    system._storage.posY[1] = 100;
+    mode.build(system, system._storage);
+    step(system, mode, 10, 0.25);
+    system._storage.lifetime[0] = 2;
+    mode.build(system, system._storage);
+    expect(mode.count).toBe(4);
+    expect(vertex(mode, 2).x).toBeCloseTo(0);
+    expect(vertex(mode, 2).y).toBeCloseTo(100.5);
+  });
+
   it('records on the particle clock rather than per frame', () => {
     const build = (frames: number, dt: number): number => {
       const system = new ParticleSystem({ capacity: 16 });

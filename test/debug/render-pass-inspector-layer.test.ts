@@ -64,6 +64,7 @@ const makeFilter = (name: string): FakeFilter => {
       return name;
     }
   }
+
   return { constructor: NamedFilter as any };
 };
 
@@ -89,12 +90,22 @@ const makeNode = (
     className?: string;
   } = {},
 ): FakeNode => {
-  const { visible = true, filters = [], mask = null, cacheAsTexture = false, width = 100, height = 50, children = [], className = 'Sprite' } = opts;
+  const {
+    visible = true,
+    filters = [],
+    mask = null,
+    cacheAsTexture = false,
+    width = 100,
+    height = 50,
+    children = [],
+    className = 'Sprite',
+  } = opts;
   class NamedClass {
     public static get name(): string {
       return className;
     }
   }
+
   return {
     visible,
     filters,
@@ -327,7 +338,9 @@ describe('RenderPassInspectorLayer — pipeline inspection', () => {
   test('the panel HUD lists pipeline rows alongside filter-chain entries, dimming disabled passes', () => {
     const root = makeNode({ filters: [makeFilter('Blur')] });
     const layer = new RenderPassInspectorLayer(makeApp(root));
-    const pipeline = new RenderPipeline().addPass(new TestPass({ label: 'world' })).addPass(new TestPass({ label: 'units', enabled: false }));
+    const pipeline = new RenderPipeline()
+      .addPass(new TestPass({ label: 'world' }))
+      .addPass(new TestPass({ label: 'units', enabled: false }));
 
     layer.setPipeline(pipeline);
     layer.update(makeTime());
@@ -360,5 +373,21 @@ describe('RenderPassInspectorLayer — HUD overflow', () => {
 
     expect(last?.text).toMatch(/^\.\.\. \(\+\d+ more\)$/);
     expect(last?.visible).toBe(true);
+  });
+
+  test('the summary line counts every line the reserved row pushed out', () => {
+    // 24 line budget: one entry header plus 26 filters is 27 lines, so 23 rows
+    // carry data and the 24th is the marker - four lines are hidden, not three.
+    const manyFilters = Array.from({ length: 26 }, (_, i) => makeFilter(`Filter${i}`));
+    const layer = new RenderPassInspectorLayer(makeApp(makeNode({ filters: manyFilters })));
+
+    layer.update(makeTime());
+
+    const lines = (layer as unknown as { _lines: Text[] })._lines;
+    const hidden = Number(/\(\+(\d+) more\)/.exec(lines[lines.length - 1]?.text ?? '')?.[1]);
+    const dataRows = lines.filter(line => line.visible && !line.text.startsWith('... (+')).length;
+
+    expect(hidden).toBe(4);
+    expect(dataRows + hidden).toBe(27);
   });
 });

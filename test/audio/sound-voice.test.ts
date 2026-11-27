@@ -59,8 +59,10 @@ const setupSourceSpy = (): { sources: MockBufferSource[]; restore: () => void } 
       buffer: null,
     };
     sources.push(node);
+
     return node as unknown as AudioBufferSourceNode;
   });
+
   return { sources, restore: () => spy.mockRestore() };
 };
 
@@ -106,8 +108,10 @@ const setupPannerSpy = (): { panners: MockPanner[]; restore: () => void } => {
       positionZ: makeSpatialParamMock(),
     };
     panners.push(panner);
+
     return panner as unknown as PannerNode;
   });
+
   return { panners, restore: () => spy.mockRestore() };
 };
 
@@ -299,6 +303,37 @@ describe('SoundVoice — capabilities', () => {
     // `pos < 0` correction branch: -5 % 2 === -1 in JS, then +span => 1.
     mutable(ctx).currentTime = -5;
     expect(voice.time).toBeCloseTo(1);
+
+    mutable(ctx).currentTime = 0;
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('time advances at the detuned speed', () => {
+    const factory = setupSourceSpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(10));
+    const voice = system.play(sound, { detune: 1200 }) as SoundVoice;
+
+    mutable(getAudioContext()).currentTime = 1;
+    expect(voice.time).toBeCloseTo(2);
+
+    mutable(getAudioContext()).currentTime = 0;
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('changing detune mid-play keeps the playhead and speeds up only afterwards', () => {
+    const factory = setupSourceSpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(10));
+    const voice = system.play(sound) as SoundVoice;
+    const ctx = getAudioContext();
+
+    mutable(ctx).currentTime = 2;
+    voice.detune = 1200;
+    mutable(ctx).currentTime = 3;
+    expect(voice.time).toBeCloseTo(4);
 
     mutable(ctx).currentTime = 0;
     factory.restore();

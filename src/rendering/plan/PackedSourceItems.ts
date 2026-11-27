@@ -186,6 +186,23 @@ export class PackedSourceItems {
   }
 
   /**
+   * Append item `index` of `source` under a fresh placement, copying its stored
+   * bounds instead of asking the drawable again. Prepacked rows are not carried:
+   * the receiving store packs them when it is first asked to.
+   */
+  public pushFrom(source: PackedSourceItems, index: number, seq: number, zIndex: number): number {
+    return this.push(
+      source.drawables[index]!,
+      seq,
+      zIndex,
+      source._minX[index]!,
+      source._minY[index]!,
+      source._maxX[index]!,
+      source._maxY[index]!,
+    );
+  }
+
+  /**
    * Drop everything back to `length` items.
    *
    * Discovery needs this because a producer that turns out to have read the view
@@ -193,15 +210,6 @@ export class PackedSourceItems {
    * already contributed have to be withdrawn (see
    * `RenderPlanBuilder._resolveViewAttribution`).
    */
-  /**
-   * Append item `index` of `source` under a fresh placement, copying its stored
-   * bounds instead of asking the drawable again. Prepacked rows are not carried:
-   * the receiving store packs them when it is first asked to.
-   */
-  public pushFrom(source: PackedSourceItems, index: number, seq: number, zIndex: number): number {
-    return this.push(source.drawables[index]!, seq, zIndex, source._minX[index]!, source._minY[index]!, source._maxX[index]!, source._maxY[index]!);
-  }
-
   public truncate(length: number): void {
     if (length < this._count) {
       this.drawables.length = length;

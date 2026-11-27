@@ -39,7 +39,10 @@ const currentFrameRank = { none: 0, direct: 1, texture: 2 } as const;
  * `texture`-requesting session - a promoted phase that itself only
  * declared `direct` never needs to know it was promoted.
  */
-export const mergeSceneTransitionRequirements = (a: SceneTransitionPhaseRequirements, b: SceneTransitionPhaseRequirements): SceneTransitionRequirements => ({
+export const mergeSceneTransitionRequirements = (
+  a: SceneTransitionPhaseRequirements,
+  b: SceneTransitionPhaseRequirements,
+): SceneTransitionRequirements => ({
   outgoingFrame: outgoingFrameRank[a.outgoingFrame] >= outgoingFrameRank[b.outgoingFrame] ? a.outgoingFrame : b.outgoingFrame,
   currentFrame: currentFrameRank[a.currentFrame] >= currentFrameRank[b.currentFrame] ? a.currentFrame : b.currentFrame,
 });
@@ -225,7 +228,14 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     private readonly _environment: SceneTransitionEnvironment,
   ) {
     this._exitPhaseState = this._exitPhase._createPhaseStateForSession();
-    this._enterPhaseState = this._enterPhase._createPhaseStateForSession();
+
+    try {
+      this._enterPhaseState = this._enterPhase._createPhaseStateForSession();
+    } catch (error) {
+      this._exitPhase._destroyPhaseStateForSession(this._exitPhaseState);
+
+      throw error;
+    }
   }
 
   public get done(): boolean {
@@ -299,7 +309,10 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     const ownRequirements = activePhase.getRequirementsForPhase(phase, this._environment.context);
 
     if (frame.current !== null && ownRequirements.currentFrame !== 'texture') {
+      const bounds = context.screenView.getBounds();
       this._identitySprite.texture = frame.current;
+      this._identitySprite.width = bounds.right - bounds.left;
+      this._identitySprite.height = bounds.bottom - bounds.top;
       this._identitySprite.x = 0;
       this._identitySprite.y = 0;
       this._identitySprite.tint.a = 1;
@@ -328,8 +341,13 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     }
 
     this._phaseStateDestroyed = true;
-    this._exitPhase._destroyPhaseStateForSession(this._exitPhaseState);
-    this._enterPhase._destroyPhaseStateForSession(this._enterPhaseState);
+
+    // The enter state is released even when the exit disposer throws.
+    try {
+      this._exitPhase._destroyPhaseStateForSession(this._exitPhaseState);
+    } finally {
+      this._enterPhase._destroyPhaseStateForSession(this._enterPhaseState);
+    }
   }
 }
 
@@ -388,5 +406,7 @@ const noOpPhasedSceneTransition = new NoOpPhasedSceneTransition({ duration: seco
  * see {@link NoOpPhasedSceneTransition}) into one composed
  * {@link SceneTransition}, ready to hand to {@link SceneTransition.beginSession}.
  */
-export const resolvePhasedSelection = (exit: PhasedSceneTransition | undefined, enter: PhasedSceneTransition | undefined): SceneTransition =>
-  composePhasedSceneTransition(exit ?? noOpPhasedSceneTransition, enter ?? noOpPhasedSceneTransition);
+export const resolvePhasedSelection = (
+  exit: PhasedSceneTransition | undefined,
+  enter: PhasedSceneTransition | undefined,
+): SceneTransition => composePhasedSceneTransition(exit ?? noOpPhasedSceneTransition, enter ?? noOpPhasedSceneTransition);

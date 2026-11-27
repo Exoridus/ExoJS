@@ -25,13 +25,45 @@ const noopInteraction: InteractionHooks = {
  * effects run genuine user code from inside the structural methods.
  */
 const createStage = (): { stage: Stage; focus: FocusController } => {
-  const stubInput = { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} }, onAnyGamepadButtonDown: { add() {}, remove() {} } };
+  const stubInput = {
+    onKeyDown: { add() {}, remove() {} },
+    onKeyUp: { add() {}, remove() {} },
+    onAnyGamepadButtonDown: { add() {}, remove() {} },
+  };
   const focus = new FocusController({ input: stubInput } as unknown as Application);
 
   return { stage: { interaction: noopInteraction, focus }, focus };
 };
 
 describe('Container structural methods are atomic against user callbacks', () => {
+  test('a reparent during blur supersedes the outer move without duplicating or detaching the child', () => {
+    const { stage, focus } = createStage();
+    const source = new Container();
+    const target = new Container();
+    const newer = new Container();
+    const moving = new DummyDrawable();
+
+    source._setStage(stage);
+    target._setStage(stage);
+    newer._setStage(stage);
+    moving.focusable = true;
+    source.addChild(moving);
+    focus.focus(moving);
+    moving.onBlur.add(() => newer.addChild(moving));
+
+    target.addChild(moving);
+
+    expect(source.children).toHaveLength(0);
+    expect(target.children).toHaveLength(0);
+    expect(newer.children).toHaveLength(1);
+    expect(moving.parent === newer).toBe(true);
+    expect(moving._getStage() === stage).toBe(true);
+
+    source.destroy();
+    target.destroy();
+    newer.destroy();
+  });
+
   test('removeChildren has already committed the array when a synchronous onBlur handler runs', () => {
     const { stage, focus } = createStage();
     const container = new Container();
@@ -185,5 +217,58 @@ describe('Container structural methods are atomic against user callbacks', () =>
 
     source.destroy();
     target.destroy();
+  });
+});
+
+describe('Container removal completes after throwing blur handlers', () => {
+  test.each(['single', 'range', 'destroy'])('%s removal releases stage and structure state', mode => {
+    const { stage, focus } = createStage();
+    const container = new Container();
+    const branch = new Container();
+    const first = new DummyDrawable();
+    const second = new DummyDrawable();
+
+    branch.addChild(first);
+    container._setStage(stage);
+    container.addChild(branch, second);
+    first.focusable = true;
+    focus.focus(first);
+
+    const revision = container._structureRevision;
+    const error = new Error('blur failed');
+
+    first.onBlur.add(() => {
+      throw error;
+    });
+
+    expect(() => {
+      if (mode === 'single') {
+        container.removeChild(branch);
+      } else if (mode === 'range') {
+        container.removeChildren();
+      } else {
+        container.destroy();
+      }
+    }).toThrow(error);
+
+    expect(branch.parent).toBeNull();
+    expect(branch._getStage()).toBeNull();
+    expect(first._getStage()).toBeNull();
+    expect(container._structureRevision).toBeGreaterThan(revision);
+    expect(container.children).toEqual(mode === 'single' ? [second] : []);
+
+    if (mode !== 'single') {
+      expect(second.parent).toBeNull();
+      expect(second._getStage()).toBeNull();
+    }
+
+    if (mode === 'destroy') {
+      expect(container.destroyed).toBe(true);
+      expect(branch.destroyed).toBe(true);
+      expect(first.destroyed).toBe(true);
+      expect(second.destroyed).toBe(true);
+    }
+
+    container.destroy();
   });
 });

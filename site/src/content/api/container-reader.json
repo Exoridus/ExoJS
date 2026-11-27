@@ -218,7 +218,7 @@
             }
           ],
           "returnType": "Promise<ArrayBuffer>",
-          "description": "Read one entry's asset bytes. Prefer readEntries for several: entries commonly share a block, and reading them together is what keeps a shared block fetched and decoded once."
+          "description": "Read one entry's asset bytes. Prefer readEntries for several: entries commonly share a block, and reading them together is what keeps a shared block fetched and decoded once. Failed block reads are retried by a later call."
         },
         {
           "name": "readEntryRange",

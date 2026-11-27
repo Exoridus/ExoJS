@@ -1,0 +1,213 @@
+{
+  "title": "AsepriteSliceFrame",
+  "description": "A slice as it stands on one frame: the key in effect there, joined with the slice's own colour and user data. Returned by AsepriteSheet.getSlice.",
+  "symbol": "AsepriteSliceFrame",
+  "kind": "interface",
+  "subsystem": "aseprite",
+  "importPath": "@codexo/exojs-aseprite",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A slice as it stands on one frame: the key in effect there, joined with the slice's own colour and user data. Returned by AsepriteSheet.getSlice."
+      ],
+      "importLine": "import { AsepriteSliceFrame } from '@codexo/exojs-aseprite'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bounds",
+          "signature": "bounds: AsepriteRect",
+          "signatureTokens": [
+            {
+              "text": "bounds",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteRect",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "center",
+          "signature": "center?: AsepriteRect",
+          "signatureTokens": [
+            {
+              "text": "center",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteRect",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Nine-slice centre, relative to bounds."
+        },
+        {
+          "name": "color",
+          "signature": "color?: string",
+          "signatureTokens": [
+            {
+              "text": "color",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "data",
+          "signature": "data?: string",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "keyFrame",
+          "signature": "keyFrame: number",
+          "signatureTokens": [
+            {
+              "text": "keyFrame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The frame the key in effect was set on, at or before the requested frame."
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pivot",
+          "signature": "pivot?: AsepritePoint",
+          "signatureTokens": [
+            {
+              "text": "pivot",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepritePoint",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pivot point, relative to bounds."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-aseprite/src/AsepriteData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-aseprite/src/AsepriteData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+}

@@ -10,8 +10,7 @@ const sourceRoot = process.env.KENNEY_INPUT_PROMPTS_DIR
   ? path.resolve(projectRoot, process.env.KENNEY_INPUT_PROMPTS_DIR)
   : 'C:/Users/User/Desktop/kenney_input-prompts_1.4.1';
 
-const targetImageDir = path.resolve(projectRoot, '..', 'examples', 'assets', 'image');
-const targetJsonDir = path.resolve(projectRoot, '..', 'examples', 'assets', 'json');
+const targetDir = path.resolve(projectRoot, '..', 'examples', 'assets', 'images');
 
 type Attributes = Record<string, string>;
 
@@ -29,29 +28,29 @@ const profiles = [
     key: 'generic',
     sourcePng: 'Generic/generic_sheet_default.png',
     sourceXml: 'Generic/generic_sheet_default.xml',
-    outputPng: 'input-prompts-generic.png',
-    outputJson: 'input-prompts-generic.json',
+    outputPng: 'generic-input-prompts-image.png',
+    outputJson: 'generic-input-prompts-atlas.json',
   },
   {
     key: 'xbox',
     sourcePng: 'Xbox Series/xbox-series_sheet_default.png',
     sourceXml: 'Xbox Series/xbox-series_sheet_default.xml',
-    outputPng: 'input-prompts-xbox-series.png',
-    outputJson: 'input-prompts-xbox-series.json',
+    outputPng: 'xbox-series-input-prompts-image.png',
+    outputJson: 'xbox-series-input-prompts-atlas.json',
   },
   {
     key: 'playstation',
     sourcePng: 'PlayStation Series/playstation-series_sheet_default.png',
     sourceXml: 'PlayStation Series/playstation-series_sheet_default.xml',
-    outputPng: 'input-prompts-playstation-series.png',
-    outputJson: 'input-prompts-playstation-series.json',
+    outputPng: 'playstation-series-input-prompts-image.png',
+    outputJson: 'playstation-series-input-prompts-atlas.json',
   },
   {
     key: 'switch',
     sourcePng: 'Nintendo Switch/nintendo-switch_sheet_default.png',
     sourceXml: 'Nintendo Switch/nintendo-switch_sheet_default.xml',
-    outputPng: 'input-prompts-nintendo-switch.png',
-    outputJson: 'input-prompts-nintendo-switch.json',
+    outputPng: 'nintendo-switch-input-prompts-image.png',
+    outputJson: 'nintendo-switch-input-prompts-atlas.json',
   },
 ];
 
@@ -131,14 +130,13 @@ const run = (): void => {
     throw new Error(`Input prompts source folder not found: ${sourceRoot}. Set KENNEY_INPUT_PROMPTS_DIR to override.`);
   }
 
-  fs.mkdirSync(targetImageDir, { recursive: true });
-  fs.mkdirSync(targetJsonDir, { recursive: true });
+  fs.mkdirSync(targetDir, { recursive: true });
 
   for (const profile of profiles) {
     const sourcePngPath = path.resolve(sourceRoot, profile.sourcePng);
     const sourceXmlPath = path.resolve(sourceRoot, profile.sourceXml);
-    const targetPngPath = path.resolve(targetImageDir, profile.outputPng);
-    const targetJsonPath = path.resolve(targetJsonDir, profile.outputJson);
+    const targetPngPath = path.resolve(targetDir, profile.outputPng);
+    const targetJsonPath = path.resolve(targetDir, profile.outputJson);
 
     ensureExists(sourcePngPath);
     ensureExists(sourceXmlPath);

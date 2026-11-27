@@ -4,7 +4,7 @@
   "symbol": "VocoderEffectOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 7,
   "counts": {
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [],
-      "importLine": "import { VocoderEffectOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { VocoderEffectOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {
@@ -170,7 +170,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Number of frequency bands. More bands = better resolution, more CPU. Default 16."
+          "description": "Number of frequency bands, an integer from 1 to 64. More bands = better resolution, more CPU. Default 16."
         },
         {
           "name": "wet",

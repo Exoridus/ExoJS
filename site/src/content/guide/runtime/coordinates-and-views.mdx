@@ -29,23 +29,27 @@ Use `context.view` for the scene's normal view or pass a dedicated view to a dra
 
 ## Follow a world-space target
 
-A view can follow an object with `x` and `y` coordinates. Those values must describe the intended world point. Following a deeply parented node's local position as though it were world position produces an incorrect camera target.
+A view can follow a plain object with world-space `x`/`y`, or a `SceneNode`. For a SceneNode, `View.follow` uses `getWorldTransform()` and follows the transformed local `(0, 0)` origin, including RetainedContainer boundaries. This is not automatically the position pivot of an anchored sprite. Follow an origin-free parent Container when its position is the desired target.
+
+`getGlobalTransform()` can stop at a retained render-group boundary and is not a universal synonym for world coordinates. `getWorldTransform()` composes the full chain. Its translation transforms the local origin; to obtain the node's position pivot, transform `node.origin` with that matrix. Public `contains`, `intersectsWith`, and `collidesWith` queries use world geometry, while render-group bounds/caches keep their own space.
 
 For smoothing, keep a separate world-space camera target and move it toward the subject in `update`. A frame-rate-aware exponential weight is `1 - Math.exp(-response * delta)`; unlike an unbounded `response * delta` weight, it does not overshoot simply because one frame was long. The [camera-follow recipe](/ExoJS/en/guide/recipes/camera-follow-and-parallax/) combines follow and parallax without changing the subject's simulated position.
 
 ## Convert input using the same view
 
-Pointer coordinates arrive in logical canvas units. Convert them through the view that rendered the world object:
+Pointer coordinates arrive in logical canvas units. Convert them through the view that rendered the world object, over the logical canvas size so the view's viewport is taken into account:
 
 <SourceSnippet source="examples/guides/coordinates-and-views/split-views.ts" region="pointer-world" language="ts" title="Logical pointer coordinates to world coordinates" />
 
-In split-screen, first choose the viewport under the pointer, then use that viewport's view. Converting with the other player's camera can yield a plausible point in the wrong part of the world. If hit testing needs a child's local coordinates, apply the appropriate world-to-local conversion afterward.
+For a camera that covers the whole canvas, the two-argument `view.screenToWorld(x, y)` gives the same result at every zoom level; `app.screenToWorld(x, y)` does this for the active camera. In split-screen, first choose the viewport under the pointer, then use that viewport's view with the canvas size as above. Converting with the other player's camera can yield a plausible point in the wrong part of the world. If hit testing needs a child's local coordinates, apply the appropriate world-to-local conversion afterward.
 
 Do not multiply pointer coordinates by DPR to repair a camera mismatch. The input system already supplies logical canvas coordinates; backing pixels are a rendering detail.
 
 <ExamplePreview chapter="application-scenes" slug="world-vs-screen-coords" />
 
-The example pans with WASD or arrows, zooms with the wheel, and places markers at converted world points while its readout stays fixed on screen.
+Move a target with WASD, arrows or a stick while View follows it; press F for free-camera dragging, zoom at the pointer and compare screen/world coordinates. The wheel and + / - zoom around the pointer, including while following: the view keeps the resulting offset from the target. Press F again to return to centered follow. The small pointer readout uses both `screenToWorld()` and `worldToScreen()`; it does not place markers. Movement requires a keyboard or controller; free-camera dragging also accepts touch.
+
+This example uses `view.follow(target)` with its default immediate tracking. The optional `lerp` is a factor per rendered frame, so the same value gives different smoothing at 60 and 144 Hz. For smoothing measured in seconds, use the exponential target described above.
 
 ## Draw one world through multiple views
 

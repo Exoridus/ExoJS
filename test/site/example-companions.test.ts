@@ -20,7 +20,11 @@ describe('playground example companions', () => {
   });
 
   it('ignores package imports and resolves extensionless sibling modules', () => {
-    const source = ["import { Scene } from '@codexo/exojs';", "import { helper } from './helper';", "import shader from './glow.frag?raw';"].join('\n');
+    const source = [
+      "import { Scene } from '@codexo/exojs';",
+      "import { helper } from './helper';",
+      "import shader from './glow.frag?raw';",
+    ].join('\n');
 
     expect(findExampleCompanions(source, 'filters/glow.ts')).toEqual(['filters/helper.ts', 'filters/glow.frag']);
   });

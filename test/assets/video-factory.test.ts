@@ -1,7 +1,10 @@
 import type { MockInstance } from 'vitest';
 
 import { VideoFactory } from '#assets/factories/VideoFactory';
+import { videoType } from '#assets/types/media';
 import type { Texture } from '#rendering/texture/Texture';
+import type { TextureOptions } from '#rendering/texture/TextureOptions';
+import { ScaleModes } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
 
 import { factoryContext } from './factory-context';
@@ -18,7 +21,11 @@ let capturedVideoElements: HTMLVideoElement[];
 
 const lastVideo = (): HTMLVideoElement => {
   const el = capturedVideoElements.at(-1);
-  if (!el) throw new Error('No <video> element was created by the factory under test.');
+
+  if (!el) {
+    throw new Error('No <video> element was created by the factory under test.');
+  }
+
   return el;
 };
 
@@ -34,7 +41,11 @@ describe('VideoFactory', () => {
     revokeObjectUrlSpy = vi.spyOn(URL, 'revokeObjectURL');
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions): HTMLElement => {
       const el = originalCreateElement(tagName, options);
-      if (tagName === 'video') capturedVideoElements.push(el as HTMLVideoElement);
+
+      if (tagName === 'video') {
+        capturedVideoElements.push(el as HTMLVideoElement);
+      }
+
       return el;
     }) as typeof document.createElement);
   });
@@ -56,6 +67,24 @@ describe('VideoFactory', () => {
     expect(video.videoElement).toBe(lastVideo());
 
     video.destroy();
+  });
+
+  test('a Video constructor failure revokes the object URL once and leaves nothing for destroy() to release', async () => {
+    const factory = new VideoFactory();
+    const playbackOptions = {
+      get volume(): number {
+        throw new Error('bad playback options');
+      },
+    } as unknown as Partial<import('#core/types').PlaybackOptions>;
+
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext({ playbackOptions }));
+    lastVideo().dispatchEvent(new Event('canplay'));
+
+    await expect(promise).rejects.toThrow('bad playback options');
+
+    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
+    factory.destroy();
+    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
   });
 
   test('create() honors a custom loadEvent option', async () => {
@@ -280,5 +309,46 @@ describe('VideoFactory', () => {
     expect(videoElement.src).not.toContain('blob:');
 
     video.destroy();
+  });
+});
+
+describe('VideoAssetType identity', () => {
+  test.each<Partial<TextureOptions>>([
+    { flipY: true },
+    { colorSpace: 'linear-srgb' },
+    { alphaMode: 'premultiplied' },
+    { premultiplyAlpha: false },
+    { generateMipMap: false },
+  ])('texture interpretation belongs to the resident video identity: %j', textureOptions => {
+    const plain = videoType.resourceIdentity({ source: 'clip.mp4' });
+    const configured = videoType.resourceIdentity({ source: 'clip.mp4', options: { textureOptions } });
+
+    expect(configured).not.toBe(plain);
+  });
+
+  test('explicit default texture options retain the default identity', () => {
+    const plain = videoType.resourceIdentity({ source: 'clip.mp4' });
+    const configured = videoType.resourceIdentity({
+      source: 'clip.mp4',
+      options: {
+        textureOptions: { flipY: false, colorSpace: 'srgb', alphaMode: 'straight', premultiplyAlpha: true, generateMipMap: true },
+      },
+    });
+
+    expect(configured).toBe(plain);
+  });
+
+  test('a data colorSpace is part of the resource identity', () => {
+    const plain = videoType.resourceIdentity({ source: 'clip.mp4' });
+    const data = videoType.resourceIdentity({ source: 'clip.mp4', options: { textureOptions: { colorSpace: 'none' } } });
+
+    expect(data).not.toBe(plain);
+  });
+
+  test('ordinary sampler options do not split the shared resident video', () => {
+    const plain = videoType.resourceIdentity({ source: 'clip.mp4' });
+    const nearest = videoType.resourceIdentity({ source: 'clip.mp4', options: { textureOptions: { scaleMode: ScaleModes.Nearest } } });
+
+    expect(nearest).toBe(plain);
   });
 });

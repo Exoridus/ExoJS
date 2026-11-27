@@ -12,7 +12,13 @@ import { BlendModes } from '#rendering/types';
 
 import { createWebGpuTestBackend, readWebGpuFrame, renderWebGpuOnce, webGpuAvailable } from './_backendSetup';
 import { expectPixelNear, pixelAt } from './_pixels';
-import { buildTextBlendScene, findFullyCoveredPixel, textAdditiveExpected, textBlendClearColor, textNormalExpected } from './_textBlendScene';
+import {
+  buildTextBlendScene,
+  findFullyCoveredPixel,
+  textAdditiveExpected,
+  textBlendClearColor,
+  textNormalExpected,
+} from './_textBlendScene';
 
 const canvasSize = 64;
 
@@ -26,7 +32,9 @@ describe('WebGPU Text.blendMode', () => {
     const scene = buildTextBlendScene();
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, scene.root, textBlendClearColor))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, scene.root, textBlendClearColor))) {
+        return;
+      }
 
       const normal = readWebGpuFrame(backend, canvasSize);
       const sample = findFullyCoveredPixel(normal, canvasSize);
@@ -36,7 +44,9 @@ describe('WebGPU Text.blendMode', () => {
 
       scene.text.blendMode = BlendModes.Additive;
 
-      if (!(await renderWebGpuOnce(ctx, backend, scene.root, textBlendClearColor))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, scene.root, textBlendClearColor))) {
+        return;
+      }
 
       const additive = readWebGpuFrame(backend, canvasSize);
 

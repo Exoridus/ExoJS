@@ -98,7 +98,7 @@ class FakePlatformAdapter implements PlatformAdapter {
   }
 
   public onPointerLockChange(): PlatformSubscription {
-    return () => undefined;
+    return () => {};
   }
 
   public pollGamepads(): ReadonlyArray<BrowserGamepad | null> {
@@ -106,11 +106,11 @@ class FakePlatformAdapter implements PlatformAdapter {
   }
 
   public onVisibilityChange(): PlatformSubscription {
-    return () => undefined;
+    return () => {};
   }
 
   public onNetworkHintChange(): PlatformSubscription {
-    return () => undefined;
+    return () => {};
   }
 
   public now(): number {
@@ -201,9 +201,9 @@ const buildPointerEvent = (init: FakePointerInit): PlatformSurfaceEventMap['poin
     twist: 0,
     isPrimary: init.isPrimary ?? true,
     button: 0,
-    preventDefault: () => undefined,
-    stopPropagation: () => undefined,
-    stopImmediatePropagation: () => undefined,
+    preventDefault: () => {},
+    stopPropagation: () => {},
+    stopImmediatePropagation: () => {},
   };
 
   return event as unknown as PlatformSurfaceEventMap['pointerdown'];

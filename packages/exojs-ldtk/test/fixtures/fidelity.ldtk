@@ -1,0 +1,179 @@
+{
+	"__header__": {
+		"fileType": "LDtk Project JSON",
+		"app": "LDtk",
+		"appAuthor": "Sebastien Benard",
+		"appVersion": "1.5.3"
+	},
+	"jsonVersion": "1.5.3",
+	"defaultGridSize": 16,
+	"bgColor": "#40465B",
+	"defaultLevelBgColor": "#696A79",
+	"defs": {
+		"layers": [],
+		"enums": [],
+		"externalEnums": [],
+		"levelFields": [],
+		"entities": [],
+		"tilesets": [
+			{
+				"uid": 1,
+				"identifier": "Terrain",
+				"relPath": "terrain.png",
+				"pxWid": 64,
+				"pxHei": 32,
+				"tileGridSize": 16,
+				"spacing": 0,
+				"padding": 0,
+				"tags": [],
+				"customData": [
+					{
+						"tileId": 0,
+						"data": "grass"
+					},
+					{
+						"tileId": 5,
+						"data": "{\"hp\":3}"
+					},
+					{
+						"tileId": 99,
+						"data": "outside the atlas"
+					}
+				],
+				"enumTags": [
+					{
+						"enumValueId": "Solid",
+						"tileIds": [
+							1,
+							5
+						]
+					},
+					{
+						"enumValueId": "Water",
+						"tileIds": [
+							2
+						]
+					},
+					{
+						"enumValueId": "Lava",
+						"tileIds": []
+					}
+				]
+			}
+		]
+	},
+	"levels": [
+		{
+			"identifier": "Meadow",
+			"uid": 10,
+			"iid": "meadow",
+			"worldX": 0,
+			"worldY": 0,
+			"pxWid": 64,
+			"pxHei": 32,
+			"bgColor": null,
+			"__bgColor": "#696A79",
+			"externalRelPath": null,
+			"fieldInstances": [],
+			"__neighbours": [],
+			"layerInstances": [
+				{
+					"__identifier": "Entities",
+					"__type": "Entities",
+					"__cWid": 4,
+					"__cHei": 2,
+					"__gridSize": 16,
+					"layerDefUid": 20,
+					"levelId": 10,
+					"visible": true,
+					"iid": "ent-layer",
+					"__tilesetDefUid": null,
+					"pxOffsetX": 0,
+					"pxOffsetY": 0,
+					"opacity": 1,
+					"entityInstances": [
+						{
+							"__identifier": "Slime",
+							"__type": "Slime",
+							"px": [
+								24,
+								32
+							],
+							"width": 16,
+							"height": 16,
+							"__pivot": [
+								0.5,
+								1
+							],
+							"iid": "slime-1",
+							"defUid": 30,
+							"__tags": [
+								"Enemy",
+								"Small"
+							],
+							"__tile": {
+								"tilesetUid": 1,
+								"x": 16,
+								"y": 0,
+								"w": 16,
+								"h": 16
+							},
+							"__worldX": 24,
+							"__worldY": 32,
+							"__smartColor": "#BE4A2F",
+							"fieldInstances": [
+								{
+									"__identifier": "ldtkTags",
+									"__type": "String",
+									"__value": "authored field"
+								},
+								{
+									"__identifier": "hp",
+									"__type": "Int",
+									"__value": 2
+								}
+							]
+						},
+						{
+							"__identifier": "Sign",
+							"__type": "Sign",
+							"px": [
+								0,
+								0
+							],
+							"width": 16,
+							"height": 16,
+							"__pivot": [
+								0,
+								0
+							],
+							"iid": "sign-1",
+							"defUid": 31,
+							"__tags": [],
+							"__tile": null,
+							"__worldX": 0,
+							"__worldY": 0,
+							"__smartColor": "#FFFFFF",
+							"fieldInstances": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"identifier": "Cave",
+			"uid": 11,
+			"iid": "cave",
+			"worldX": 64,
+			"worldY": 0,
+			"pxWid": 64,
+			"pxHei": 32,
+			"bgColor": "#102030",
+			"__bgColor": "#102030",
+			"externalRelPath": null,
+			"fieldInstances": [],
+			"__neighbours": [],
+			"layerInstances": []
+		}
+	]
+}

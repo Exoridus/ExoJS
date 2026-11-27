@@ -11,9 +11,11 @@ const validateSizeInput = (width: number, height: number): void => {
   if (!Number.isFinite(width) || !Number.isFinite(height)) {
     throw new Error(`NineSliceSprite: width and height must be finite numbers (got ${width}, ${height}).`);
   }
+
   if (width < 0) {
     throw new Error(`NineSliceSprite: width must be non-negative (got ${width}).`);
   }
+
   if (height < 0) {
     throw new Error(`NineSliceSprite: height must be non-negative (got ${height}).`);
   }
@@ -136,6 +138,11 @@ export class NineSliceSprite extends Drawable {
       this._height = height;
       this._geometryDirty = true;
       this.invalidateCache();
+
+      // A zero anchor leaves an explicitly set origin alone.
+      if (this.anchor.x !== 0 || this.anchor.y !== 0) {
+        this._updateOrigin();
+      }
     }
 
     return this;
@@ -154,6 +161,7 @@ export class NineSliceSprite extends Drawable {
     this._slices = normalized;
     this._geometryDirty = true;
     this.invalidateCache();
+
     return this;
   }
 
@@ -169,6 +177,7 @@ export class NineSliceSprite extends Drawable {
     this._border = normalized;
     this._geometryDirty = true;
     this.invalidateCache();
+
     return this;
   }
 
@@ -183,6 +192,7 @@ export class NineSliceSprite extends Drawable {
     this._modes = normalized;
     this._geometryDirty = true;
     this.invalidateCache();
+
     return this;
   }
 

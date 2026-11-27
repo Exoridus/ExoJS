@@ -2,7 +2,7 @@ import { AssetCacheError, type AssetCacheOperation } from '#assets/cache/AssetCa
 import { supportsIndexedDb } from '#core/utils';
 
 import type { Database } from './Database';
-import { openIndexedDb, requestResult, transactionComplete } from './indexedDbSupport';
+import { issueWrite, openIndexedDb, requestResult, transactionComplete } from './indexedDbSupport';
 
 /** A record as written into an object store keyed by `name`. */
 interface StoredRecord<T> {
@@ -60,7 +60,11 @@ export class IndexedDbDatabase implements Database {
     migrations?: Record<number, (db: IDBDatabase, transaction: IDBTransaction) => boolean>,
   ) {
     if (!supportsIndexedDb) {
-      throw new AssetCacheError({ operation: 'connect', message: 'This host provides no IndexedDB, so no database can be opened.', store: name });
+      throw new AssetCacheError({
+        operation: 'connect',
+        message: 'This host provides no IndexedDB, so no database can be opened.',
+        store: name,
+      });
     }
 
     this.name = name;
@@ -85,29 +89,38 @@ export class IndexedDbDatabase implements Database {
   }
 
   public async load<T = unknown>(type: string, name: string): Promise<T | null> {
+    const record = await this._loadRecord<T>(type, name);
+
+    return record?.data ?? null;
+  }
+
+  /** @internal */
+  public async _has(type: string, name: string): Promise<boolean> {
+    return (await this._loadRecord(type, name)) !== undefined;
+  }
+
+  private async _loadRecord<T>(type: string, name: string): Promise<StoredRecord<T> | undefined> {
     const store = await this._objectStore('read', type, 'readonly', name);
-    const record = await requestResult(store.get(name) as IDBRequest<StoredRecord<T> | undefined>, {
+
+    return requestResult(store.get(name) as IDBRequest<StoredRecord<T> | undefined>, {
       operation: 'read',
       message: 'An error occurred while loading an item.',
       store: type,
       key: name,
     });
-
-    return record?.data ?? null;
   }
 
   public async save(type: string, name: string, data: unknown): Promise<void> {
     const store = await this._objectStore('write', type, 'readwrite', name);
-    const committed = transactionComplete(store.transaction, {
+    const failure = {
       operation: 'write',
       message: 'An error occurred while saving an item.',
       store: type,
       key: name,
-    });
+    } as const;
+    const committed = transactionComplete(store.transaction, failure);
 
-    store.put({ name, data });
-
-    return committed;
+    return issueWrite(store.transaction, committed, failure, () => store.put({ name, data }));
   }
 
   public async delete(type: string, name: string): Promise<boolean> {
@@ -119,15 +132,21 @@ export class IndexedDbDatabase implements Database {
       key: name,
     });
 
+    const existing = store.get(name);
+
     store.delete(name);
     await committed;
 
-    return true;
+    return existing.result !== undefined;
   }
 
   public async clearStorage(type: string): Promise<boolean> {
     const store = await this._objectStore('clear', type, 'readwrite');
-    const committed = transactionComplete(store.transaction, { operation: 'clear', message: 'An error occurred while clearing a storage.', store: type });
+    const committed = transactionComplete(store.transaction, {
+      operation: 'clear',
+      message: 'An error occurred while clearing a storage.',
+      store: type,
+    });
 
     store.clear();
     await committed;
@@ -170,7 +189,12 @@ export class IndexedDbDatabase implements Database {
    * on a closing connection. Both would otherwise escape as bare
    * `DOMException`s and break the promise this class makes about its failures.
    */
-  private async _objectStore(operation: AssetCacheOperation, type: string, mode: IDBTransactionMode, key?: string): Promise<IDBObjectStore> {
+  private async _objectStore(
+    operation: AssetCacheOperation,
+    type: string,
+    mode: IDBTransactionMode,
+    key?: string,
+  ): Promise<IDBObjectStore> {
     const database = await this._connect();
 
     try {
@@ -197,7 +221,10 @@ export class IndexedDbDatabase implements Database {
         if (this._destroyed) {
           database.close();
 
-          throw new AssetCacheError({ operation: 'connect', message: `The database "${this.name}" was destroyed while it was connecting.` });
+          throw new AssetCacheError({
+            operation: 'connect',
+            message: `The database "${this.name}" was destroyed while it was connecting.`,
+          });
         }
 
         database.addEventListener('close', this._onCloseHandler);

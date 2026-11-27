@@ -209,7 +209,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Priority for the LowestPriority strategy. Default 0."
+          "description": "Priority shared by every voice this generator starts. The LowestPriority strategy cannot tell such voices apart, so it evicts the oldest; this field does not change eviction. Default 0."
         },
         {
           "name": "type",

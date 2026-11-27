@@ -39,7 +39,7 @@ class TextGlitchScene extends Scene {
     this.text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100, align: 'center' });
     this.text.setAnchor(0.5, 0.5);
     this.text.setPosition(width / 2, height / 2);
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uShift: 0 } });
+    this.filter = this.track(new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uShift: 0 } }));
     this.text.filters = [this.filter];
   }
 
@@ -61,9 +61,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(TextGlitchScene);

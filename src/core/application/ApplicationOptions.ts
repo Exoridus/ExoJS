@@ -1,3 +1,4 @@
+import type { AssetTypeDefinitionEntry } from '#assets/AssetTypes';
 import type { LoaderOptions } from '#assets/Loader';
 import type { Color } from '#core/Color';
 import type { Connectivity } from '#core/Connectivity';
@@ -136,6 +137,14 @@ export interface RenderingApplicationOptions {
   /** WebGL2 sprite renderer batch size. Ignored by WebGPU. */
   spriteRendererBatchSize?: number;
   /**
+   * Explicitly lose the WebGL2 context after all backend resources have been
+   * destroyed. Default: true when ExoJS created the canvas, false for a
+   * caller-provided canvas, whose last frame and reusable context belong to
+   * its owner. Enable for a provided canvas only if its pixels and context
+   * are no longer needed. Ignored by WebGPU.
+   */
+  releaseContext?: boolean;
+  /**
    * The application's output transform - exposure and the HDR-to-SDR mapping
    * applied once, at the end of every frame. See {@link OutputTransformOptions}.
    */
@@ -240,15 +249,12 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    */
   displayFrameTime?: number;
   /**
-   * Extension selection - the only way an Application is equipped.
+   * Extension selection for an application.
    *
    * `undefined` or `[]` → Core only. `[a, b, ...]` → Core plus exactly these.
    *
-   * There is no global registry to fall back on: what an application can do is
-   * decided here, at its construction, and nowhere else. That is what lets two
-   * Applications in one process hold different extension sets - an editor next
-   * to its runtime preview, two canvases with different renderers, a test that
-   * must not see what a neighbouring test installed.
+   * The selection belongs to this application alone. An editor and its
+   * runtime preview, for example, can use different extensions in one process.
    *
    * ```ts
    * import { tilemapExtension } from '@codexo/exojs-tilemap';
@@ -259,6 +265,8 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    * Materialised once at construction.
    */
   extensions?: readonly Extension[];
+  /** Asset types to define on this application, in declaration order. */
+  assetTypes?: readonly AssetTypeDefinitionEntry[];
   /**
    * Registry of navigable {@link Scene} constructors, keyed by a name used
    * for diagnostics (shown in {@link UnregisteredSceneError} messages and
@@ -307,6 +315,7 @@ export const defaultLoaderFetchOptions: RequestInit = {
 const defaultRenderingSettings: Omit<Required<RenderingApplicationOptions>, 'color'> = {
   alphaMode: 'opaque',
   debug: false,
+  releaseContext: false,
   spriteRendererBatchSize: 4096, // ~ 262kb
   webglAttributes: {
     antialias: false,
@@ -332,6 +341,7 @@ export type ResolvedRenderingOptions = Omit<Required<RenderingApplicationOptions
 export const resolveRenderingOptions = (renderingOptions: RenderingApplicationOptions): ResolvedRenderingOptions => ({
   alphaMode: renderingOptions.alphaMode ?? defaultRenderingSettings.alphaMode,
   debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
+  releaseContext: renderingOptions.releaseContext ?? defaultRenderingSettings.releaseContext,
   webglAttributes: { ...defaultRenderingSettings.webglAttributes, ...renderingOptions.webglAttributes },
   spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
   color: resolveOutputTransformOptions(renderingOptions.color),

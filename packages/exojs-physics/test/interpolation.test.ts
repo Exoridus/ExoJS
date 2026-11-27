@@ -83,7 +83,9 @@ describe('previous fixed state', () => {
   it('reports previous === current for a body that did not move', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     // Far from the mover's path: nothing touches it, so it never moves.
-    const still = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 400, y: 400 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    const still = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 400, y: 400 }, colliders: [{ shape: new BoxShape(10, 10) }] }),
+    );
     const mover = movingBody(world, 600);
 
     world.step(FIXED * 2);
@@ -227,8 +229,8 @@ describe('system-driven interpolation', () => {
     node.setPosition(-1, -1);
 
     // Two fixed steps for this frame: neither may present.
-    world.fixedUpdate(Time.seconds(0));
-    world.fixedUpdate(Time.seconds(0));
+    world.fixedUpdate(Time.seconds(FIXED));
+    world.fixedUpdate(Time.seconds(FIXED));
 
     expect(node.x).toBe(-1);
 
@@ -247,7 +249,7 @@ describe('system-driven interpolation', () => {
     const node = fakeNode();
 
     world.bind(body, node as unknown as SceneNode);
-    world.fixedUpdate(Time.seconds(0));
+    world.fixedUpdate(Time.seconds(FIXED));
 
     expect(node.x).toBeCloseTo(body.x, 6);
 

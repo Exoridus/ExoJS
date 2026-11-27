@@ -2,15 +2,23 @@ import { requestTimestampFeature } from '../../page/gpuFrameTimer';
 import type { ProbeCell, ProbeCellResult, ProbeMode, ProbeResult, ProbeSceneId } from '../matrix';
 import { buildProbeMatrix, PROBE_PIXEL_RATIOS, PROBE_SCENES, PROBE_SCHEMA_VERSION, serializeProbeResult } from '../matrix';
 import type { ProbeBackendRequest, StageSize, VisualPreview } from '../runner';
-import { DEFAULT_MEASURE_MS, measureTimerResolutionMs, runProbeCell, startVisualPreview, SUSTAINED_MEASURE_MS, WARMUP_FRAMES } from '../runner';
+import {
+  DEFAULT_MEASURE_MS,
+  measureTimerResolutionMs,
+  runProbeCell,
+  startVisualPreview,
+  SUSTAINED_MEASURE_MS,
+  WARMUP_FRAMES,
+} from '../runner';
 import { STAGE_SIZE } from '../scenes';
 
 /**
  * Manual DPR / internal-render-target probe page.
  *
- * Opened by hand on a real device; there is no driver, no result collector and
- * no remote control. Everything the run produces stays in the page until the
- * tester presses `Copy JSON`.
+ * Opened by hand on a real device. There is no remote-control UI, but the page
+ * exposes `__dprProbe` for headless driving and the serve script accepts a
+ * `POST /submit`; otherwise everything the run produces stays in the page
+ * until the tester presses `Copy JSON`.
  */
 
 // Same reason as the matrix harness: a device's feature set is immutable, so
@@ -61,7 +69,10 @@ const copyButton = element<HTMLButtonElement>('copy-json');
 const clearButton = element<HTMLButtonElement>('clear-results');
 const jsonOutput = element<HTMLTextAreaElement>('json-output');
 
-/** `Application.resolveAutoPixelRatio` - mirrored so the capture records what `auto` WOULD have chosen. */
+/**
+ * Mirrors the engine's internal auto-ratio clamp so the capture records what
+ * `auto` WOULD have chosen.
+ */
 const ENGINE_MAX_AUTO_PIXEL_RATIO = 2;
 const engineAutoPixelRatio = Math.min(window.devicePixelRatio || 1, ENGINE_MAX_AUTO_PIXEL_RATIO);
 
@@ -104,7 +115,9 @@ const resolveStage = (): StageSize => {
 };
 
 const collected: ProbeCellResult[] = [];
+let nextRunId = 0;
 let busy = false;
+let previewTransition: Promise<void> = Promise.resolve();
 
 const requestedBackend = new URLSearchParams(globalThis.location.search).get('backend');
 
@@ -148,7 +161,9 @@ const formatMs = (value: number | null): string => (value === null ? '—' : val
 const describeTargets = (result: Pick<ProbeCellResult, 'internalTargets'>): string =>
   result.internalTargets.length === 0
     ? 'none'
-    : result.internalTargets.map(target => `${target.kind} ${target.width}×${target.height}${target.count > 1 ? ` ×${target.count}` : ''}`).join(', ');
+    : result.internalTargets
+        .map(target => `${target.kind} ${target.width}×${target.height}${target.count > 1 ? ` ×${target.count}` : ''}`)
+        .join(', ');
 
 const renderEnvironment = (): void => {
   environmentEl.textContent = [
@@ -181,36 +196,48 @@ const addButton = (host: HTMLElement, value: string, label: string, onClick: () 
  * a time, and two `Application`s sharing the page would also compete for GPU
  * contexts.
  */
-const refreshPreview = async (): Promise<void> => {
-  if (busy) {
-    return;
-  }
+const refreshPreview = (): Promise<void> => {
+  previewTransition = previewTransition.then(async () => {
+    try {
+      if (busy) {
+        return;
+      }
 
-  await visual.preview?.stop();
-  visual.preview = null;
-  visualReadout.textContent = 'starting…';
+      await visual.preview?.stop();
+      visual.preview = null;
 
-  try {
-    const preview = await startVisualPreview({
-      scene: visual.scene,
-      mode: visual.mode,
-      pixelRatio: visual.dpr,
-      ...(visual.textRatio !== null && { textPixelRatio: visual.textRatio }),
-      stage: resolveStage(),
-      backend: backendRequest(),
-      host: stageHost,
-    });
+      if (busy) {
+        return;
+      }
 
-    visual.preview = preview;
-    visualReadout.textContent = [
-      `${visual.scene}  ·  DPR ${visual.dpr}  ·  text ${visual.textRatio === null ? `inherit (${visual.dpr})` : visual.textRatio}  ·  ${visual.mode}  ·  ${preview.backendType}`,
-      `css ${preview.cssWidth}×${preview.cssHeight}  ·  backing ${preview.backingWidth}×${preview.backingHeight} (${preview.backingWidth * preview.backingHeight} px)`,
-      `internal targets: ${describeTargets({ internalTargets: preview.internalTargets })}`,
-      PROBE_SCENES.find(scene => scene.id === visual.scene)?.purpose ?? '',
-    ].join('\n');
-  } catch (error) {
-    visualReadout.textContent = `preview failed: ${error instanceof Error ? error.message : String(error)}`;
-  }
+      // The preview is not a run: restore the section title and drop the run's
+      // DONE/ABORTED line, which describes a state the tester has left.
+      setProgress('', 'idle');
+      visualReadout.textContent = 'starting…';
+
+      const preview = await startVisualPreview({
+        scene: visual.scene,
+        mode: visual.mode,
+        pixelRatio: visual.dpr,
+        ...(visual.textRatio !== null && { textPixelRatio: visual.textRatio }),
+        stage: resolveStage(),
+        backend: backendRequest(),
+        host: stageHost,
+      });
+
+      visual.preview = preview;
+      visualReadout.textContent = [
+        `${visual.scene}  ·  DPR ${visual.dpr}  ·  text ${visual.textRatio === null ? `inherit (${visual.dpr})` : visual.textRatio}  ·  ${visual.mode}  ·  ${preview.backendType}`,
+        `css ${preview.cssWidth}×${preview.cssHeight}  ·  backing ${preview.backingWidth}×${preview.backingHeight} (${preview.backingWidth * preview.backingHeight} px)`,
+        `internal targets: ${describeTargets({ internalTargets: preview.internalTargets })}`,
+        PROBE_SCENES.find(scene => scene.id === visual.scene)?.purpose ?? '',
+      ].join('\n');
+    } catch (error) {
+      visualReadout.textContent = `preview failed: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  });
+
+  return previewTransition;
 };
 
 const buildControls = (): void => {
@@ -281,7 +308,21 @@ const buildControls = (): void => {
   setPressed(stageButtons, stagePreset);
 };
 
-const HEADERS = ['scene', 'mode', 'dpr', 'text px', 'backing', 'main px', 'internal', 'int/main', 'cpu med', 'cpu p95', 'gpu med', 'raf med', 'frames'];
+const HEADERS = [
+  'scene',
+  'mode',
+  'dpr',
+  'text px',
+  'backing',
+  'main px',
+  'internal',
+  'int/main',
+  'cpu med',
+  'cpu p95',
+  'gpu med',
+  'raf med',
+  'frames',
+];
 
 const renderResults = (): void => {
   resultsTable.replaceChildren();
@@ -338,7 +379,7 @@ const renderResults = (): void => {
  */
 const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | null): string[] => {
   const notes = [
-    'Both modes are ordinary production settings since NEU-S4 shipped: `inherit` leaves `Filter.resolution` / `RenderNode.cacheResolution` at their default, `logical` pins both to 1 and reproduces the pre-NEU-S4 sizing exactly. No bench-only sizing hook is involved; every cell measures the production path.',
+    'Both modes are ordinary production settings: `inherit` leaves `Filter.resolution` / `RenderNode.cacheResolution` at their default, `logical` pins both to 1 and reproduces the earlier fixed-logical sizing exactly. No bench-only sizing hook is involved; every cell measures the production path.',
     'BlurFilter.radius is in LOGICAL units, so it is identical in both arms - the filter converts it into target texels itself. The arms therefore blur over the same on-screen distance and differ only in how finely it is sampled.',
     'The `cache-texture` scene is static: the cache is baked once and replayed, so its CPU column is a REPLAY cost and its interesting property is sharpness. The `cache-dirty` scene is the same content moved every frame, so the cache re-bakes every frame - that column is the bake cost, and it is the one that scales with the target resolution.',
     `Cells are ordered scene → mode → ascending DPR, so the four ratios of one pair are adjacent in time. Each result carries \`index\` and \`startOffsetMs\` so a thermal drift across the run stays visible.`,
@@ -365,7 +406,7 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
   }
 
   notes.push(
-    stagePreset === 'fixed'
+    runStagePreset === 'fixed'
       ? `The stage is a fixed ${STAGE_SIZE}x${STAGE_SIZE} CSS square, far smaller than a full-screen game. It is the preset that compares across devices; use "fill the screen" for a number that reflects what an app actually renders.`
       : "The stage was the device's usable area, so these numbers reflect a full-screen app but do not compare to a capture taken on a differently sized screen.",
   );
@@ -386,6 +427,7 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
  * probe exists to avoid.
  */
 let runStage: StageSize = { width: STAGE_SIZE, height: STAGE_SIZE };
+let runStagePreset: 'fixed' | 'fill' = 'fixed';
 let lastBackendSelected: string | null = null;
 let lastWebgpuTimestampQuery: boolean | null = null;
 let lastGpuTimerSource = 'not determined yet';
@@ -411,7 +453,7 @@ const buildResult = (): ProbeResult => {
     timerResolutionMs,
     stageWidth: runStage.width,
     stageHeight: runStage.height,
-    stagePreset,
+    stagePreset: runStagePreset,
     cells: collected,
     notes: buildNotes(backendSelected, lastWebgpuTimestampQuery),
   };
@@ -427,24 +469,35 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
     return;
   }
 
+  const nextStage = resolveStage();
+  const nextStagePreset = stagePreset;
+
+  if (
+    collected.length > 0 &&
+    (nextStagePreset !== runStagePreset || nextStage.width !== runStage.width || nextStage.height !== runStage.height)
+  ) {
+    setStatus('Stage changed; clear results before measuring another stage.', true);
+
+    return;
+  }
+
+  runStage = nextStage;
+  runStagePreset = nextStagePreset;
   busy = true;
   runMatrixButton.disabled = true;
   runSustained2Button.disabled = true;
   runSustained3Button.disabled = true;
 
-  await visual.preview?.stop();
-  visual.preview = null;
-  visualReadout.textContent = 'preview stopped while measuring — one variant on screen at a time.';
-
-  const runStartedAt = performance.now();
-  const backend = backendRequest();
-
-  // Frozen for the whole run: `fill` reads the viewport, and a rotation or a
-  // browser-chrome change mid-run would silently make the later cells a
-  // different measurement than the earlier ones.
-  runStage = resolveStage();
-
   try {
+    await previewTransition;
+    await visual.preview?.stop();
+    visual.preview = null;
+    visualReadout.textContent = 'preview stopped while measuring — one variant on screen at a time.';
+
+    const runStartedAt = performance.now();
+    const runId = nextRunId++;
+    const backend = backendRequest();
+
     for (let i = 0; i < cells.length; i++) {
       const cell = cells[i]!;
 
@@ -459,6 +512,7 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
         backend,
         stage: runStage,
         host: stageHost,
+        runId,
         index: collected.length,
         runStartedAt,
         measureMs,
@@ -511,7 +565,8 @@ const probeEnvironmentOnce = async (): Promise<void> => {
         : 'none — the WebGPU device exposes no timestamp-query feature';
   } else {
     lastWebgpuTimestampQuery = null;
-    lastGpuTimerSource = 'EXT_disjoint_timer_query_webgl2 when the browser exposes it; otherwise none (gpuMs stays null — never derived from frame cadence)';
+    lastGpuTimerSource =
+      'EXT_disjoint_timer_query_webgl2 when the browser exposes it; otherwise none (gpuMs stays null — never derived from frame cadence)';
   }
 };
 
@@ -627,9 +682,12 @@ buildControls();
 renderResults();
 setStatus(`idle — the full matrix is ${buildProbeMatrix().length} cells, roughly ${estimatedMinutes} minutes.`);
 
-void (async (): Promise<void> => {
-  await probeEnvironmentOnce();
-  renderEnvironment();
-  refreshJson();
-  await refreshPreview();
-})();
+previewTransition = probeEnvironmentOnce()
+  .then(() => {
+    renderEnvironment();
+    refreshJson();
+  })
+  .catch((error: unknown) => {
+    setStatus(`Environment probe failed: ${error instanceof Error ? error.message : String(error)}`, true);
+  });
+void refreshPreview();

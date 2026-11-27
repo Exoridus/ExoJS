@@ -31,18 +31,20 @@ describe('SceneNode.destroy() idempotence', () => {
     const filterDestroy = vi.fn();
 
     node.filters = [
-      { destroy: filterDestroy, _attachOwner: (): void => {}, _detachOwner: (): void => {} } as unknown as NonNullable<typeof node.filters>[number],
+      { destroy: filterDestroy, _attachOwner: (): void => {}, _detachOwner: (): void => {} } as unknown as NonNullable<
+        typeof node.filters
+      >[number],
     ];
 
     node.destroy();
 
     expect(positionDestroy).toHaveBeenCalledTimes(1);
-    expect(filterDestroy).toHaveBeenCalledTimes(1);
+    expect(filterDestroy).not.toHaveBeenCalled();
 
     node.destroy();
 
     expect(positionDestroy).toHaveBeenCalledTimes(1);
-    expect(filterDestroy).toHaveBeenCalledTimes(1);
+    expect(filterDestroy).not.toHaveBeenCalled();
   });
 
   test('a second destroy() on a RenderNode subclass releases nothing twice', () => {

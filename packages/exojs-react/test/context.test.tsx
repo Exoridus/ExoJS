@@ -10,11 +10,10 @@ import { useExoApp } from '../src/useExoApp';
 // React context, so no behaviour is exercised on it.
 const fakeApp = {} as Application;
 
-function withProvider(app: Application | null): ({ children }: { children: ReactNode }) => ReactElement {
-  return function Wrapper({ children }: { children: ReactNode }): ReactElement {
+const withProvider = (app: Application | null): (({ children }: { children: ReactNode }) => ReactElement) =>
+  function Wrapper({ children }: { children: ReactNode }): ReactElement {
     return <ExoContext.Provider value={app}>{children}</ExoContext.Provider>;
   };
-}
 
 describe('ExoContext / useExoContext', () => {
   it('useExoContext returns null when rendered outside any provider', () => {

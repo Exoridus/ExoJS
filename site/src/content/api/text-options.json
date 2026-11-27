@@ -102,7 +102,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Use a colour-glyph (emoji) atlas + the text-color shader. Construction-only."
+          "description": "Use a colour-glyph (emoji) atlas + the text-color shader. Construction-only. Colour glyphs keep their RGBA content and draw fill/tint only: an outline or visible shadow throws TextEffectError with 'no-distance-field'."
         },
         {
           "name": "decorationColor",
@@ -293,7 +293,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "A pre-constructed FontFace to use as the font for this node. When passed to Text, the face is automatically registered with document.fonts. Load the face via FontFactory before constructing the node so glyphs render immediately. Takes precedence over fontFamily when both are set. ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); "
+          "description": "A pre-constructed FontFace to use as the font for this node. When passed to Text, the face is automatically registered with document.fonts. Load the face via FontFactory before constructing the node so glyphs render immediately. Takes precedence over fontFamily when both are set. ts const face = await loader.load({ type: 'font', source: 'roboto.woff2', family: 'Roboto' }); const label = new Text('Score: 0', { font: face, fontSize: 24 }); "
         },
         {
           "name": "fontFamily",
@@ -343,7 +343,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Must be a positive finite number; otherwise the constructor and setter throw RangeError."
         },
         {
           "name": "fontStyle",
@@ -526,7 +526,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Multiplier of fontSize for the distance between lines. Default 1.2 - not a pixel value."
+          "description": "Multiplier of fontSize for the distance between lines. Default 1.2 - not a pixel value. Must be a positive finite number, else RangeError."
         },
         {
           "name": "locale",
@@ -601,7 +601,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Hard cap on the number of laid-out lines, counted after wrapping. Unlike maxHeight this clips on its own, whatever overflow says - capping the line count is the whole point of asking for one. Pair it with overflow: 'ellipsis' to mark the last kept line. When both a cap and a maxHeight apply, the smaller one wins. Must be a positive integer."
+          "description": "Hard cap on the number of laid-out lines, counted after wrapping. Unlike maxHeight this clips on its own, whatever overflow says - capping the line count is the whole point of asking for one. Pair it with overflow: 'ellipsis' to mark the last kept line. When both a cap and a maxHeight apply, the smaller one wins. Must be a positive safe integer. Invalid values throw RangeError in every build, including for empty text."
         },
         {
           "name": "maxWidth",
@@ -676,7 +676,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Outline width in SDF units (0..0.5). 0 disables the outline."
+          "description": "Outline extent outside the glyph edge, in logical pixels of the node's local space. 0 disables the outline. Must be finite and not negative, else RangeError; a width the node cannot draw throws TextEffectError."
         },
         {
           "name": "overflow",
@@ -767,7 +767,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "SDF buffer radius in pixels. Construction-only."
+          "description": "Fixes the distance-field reach in logical pixels: how far outside each glyph the atlas tile and its field extend. Omit it for the usual case - the reach is then chosen automatically in tiers starting at 4 pixels as the style asks for outlines and shadows, never shrinks, and costs nothing for text without large effects. An explicit value is a hard limit instead: outlineWidth, and a shadow's larger offset axis plus its blur, may each use sdfRadius - 1 logical pixels (one is reserved for the antialiased edge), and anything larger is rejected. Use it to pin atlas memory or to pre-size a node whose effects animate across tiers. The 8-bit field spreads over twice the reach, so a larger reach gives coarser edges under strong magnification. Must be a positive finite number, else RangeError. Construction-only."
         },
         {
           "name": "shadowAlpha",
@@ -792,7 +792,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shadow opacity (0..1). 0 disables the shadow."
+          "description": "Shadow opacity (0..1). 0 disables the shadow; offsets and blur only matter above it."
         },
         {
           "name": "shadowBlur",
@@ -817,7 +817,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shadow blur softness (0..1). Larger values soften the shadow edge."
+          "description": "Half-width of the shadow's soft edge in logical pixels of the node's local space: the shadow fades from full strength shadowBlur pixels inside the offset glyph edge to nothing shadowBlur pixels outside it. A smooth ramp, not a Gaussian. 0 keeps a crisp, antialiased edge. Must be finite and not negative, else RangeError."
         },
         {
           "name": "shadowColor",
@@ -867,7 +867,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Horizontal shadow offset in pixels."
+          "description": "Horizontal shadow offset in logical pixels of the node's local space."
         },
         {
           "name": "shadowOffsetY",
@@ -892,7 +892,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Vertical shadow offset in pixels."
+          "description": "Vertical shadow offset in logical pixels of the node's local space."
         },
         {
           "name": "shaping",
@@ -983,7 +983,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Tab stop spacing, counted in space characters. Defaults to 8, the CSS tab-size initial value. A tab advances the pen to the next multiple of tabSize space widths from the start of its line, so a run of tabs lines columns up instead of adding a fixed gap each. Only reachable under whiteSpace: 'pre'; the collapsing modes turn a tab into a single space before layout runs, as CSS does. Must be a positive finite number. Ignored for browser-shaped lines, which the platform's text engine lays out whole."
+          "description": "Tab stop spacing, counted in space characters. Defaults to 8, the CSS tab-size initial value. A tab advances the pen to the next multiple of tabSize space widths from the start of its line, so a run of tabs lines columns up instead of adding a fixed gap each. Only reachable under whiteSpace: 'pre'; the collapsing modes turn a tab into a single space before layout runs, as CSS does. Must be a positive finite number. Invalid values throw RangeError in every build, including for empty text. Valid values have no effect on browser-shaped lines, which the platform's text engine lays out whole."
         },
         {
           "name": "textTransform",

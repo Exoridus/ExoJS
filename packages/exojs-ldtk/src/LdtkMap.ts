@@ -1,4 +1,4 @@
-import type { MapWorld, TileMap } from '@codexo/exojs-tilemap';
+import type { MapWorld, TileMap } from '@codexo/exojs/tilemap';
 
 import type { LdtkData } from './LdtkData';
 import { getLdtkLevelEntries } from './ldtkLevelEntries';
@@ -48,11 +48,13 @@ export class LdtkMap {
    *
    * This is metadata about *where* levels are, independent of the runtime maps
    * in {@link levels}. Use it to navigate; use
-   * {@link import('./LdtkWorld').LdtkWorld} instead when levels should be
-   * loaded on demand rather than all at once.
+   * {@link import('./LdtkProject').LdtkProject} with
+   * {@link import('@codexo/exojs/tilemap').MapWorldRuntime} instead when levels
+   * should be loaded on demand rather than all at once.
    */
   public get worlds(): readonly MapWorld[] {
     this._worlds ??= ldtkToMapWorld(this.data);
+
     return this._worlds;
   }
 
@@ -84,7 +86,11 @@ export class LdtkMap {
    */
   public getLevelByName(identifier: string): TileMap | undefined {
     const index = getLdtkLevelEntries(this.data).findIndex(entry => entry.level.identifier === identifier);
-    if (index === -1) return undefined;
+
+    if (index === -1) {
+      return undefined;
+    }
+
     return this.levels[index];
   }
 

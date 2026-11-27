@@ -233,7 +233,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Sprite map, validated against the sound's buffer. A path-backed sound validates these clips when it loads. For a sound constructed without a buffer or path, add clips through Sound.setSprites once it has a buffer."
         },
         {
           "name": "volume",

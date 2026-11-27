@@ -4,7 +4,7 @@
   "symbol": "TileMapBandDefinition",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "The layers composing one band, by id or unique name, in any order. Tile and image layers may be freely mixed. Rendering order always follows the map's combined document order (import('./TileMap').TileMap.renderableLayers) regardless of the order listed here - a definition *selects* layers, it never reorders them. The band's name is the key it is registered under in TileMapViewOptions.bands."
       ],
-      "importLine": "import { TileMapBandDefinition } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileMapBandDefinition } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

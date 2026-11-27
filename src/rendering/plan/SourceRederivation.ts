@@ -110,11 +110,24 @@ export class SourceRederivation {
    * and prepacked rows are stale; a content mark does not, it is what a
    * child-list change leaves on the container itself.
    *
+   * One case reports `true` without recording the group: a re-derived
+   * container that started reading the view has to become a live entry, which
+   * only a rebuild can express. The whole re-derivation is marked failed
+   * ({@link end}) and the caller must discard the scope, so nothing may read
+   * it between that `true` and the failure answer.
+   *
    * The lookup walks the previous scope's `others` rather than a map: nested
    * containers are few per scope, and a per-frame map over them is the
    * allocation the delta exists to avoid.
    */
-  public carryGroup(host: SourceRederivationHost, node: RenderNode, scope: SourceScope, previous: SourceScope, seq: number, zIndex: number): boolean {
+  public carryGroup(
+    host: SourceRederivationHost,
+    node: RenderNode,
+    scope: SourceScope,
+    previous: SourceScope,
+    seq: number,
+    zIndex: number,
+  ): boolean {
     const group = recordedGroupOf(previous, node);
 
     if (group === null) {
@@ -123,14 +136,19 @@ export class SourceRederivation {
 
     const cursor = this._cursor;
 
-    if (node._transformMarkSequence > cursor || node._tintMarkSequence > cursor || group.preserveDrawOrder !== host._resolvePreserveDrawOrder(node)) {
+    if (
+      node._transformMarkSequence > cursor ||
+      node._tintMarkSequence > cursor ||
+      group.preserveDrawOrder !== host._resolvePreserveDrawOrder(node)
+    ) {
       return false;
     }
 
     const mark = scope.items.count;
+    const isTarget = this._targets!.isTarget(group);
 
-    if (node._structureMarkSequence > cursor) {
-      if (!this._targets!.isTarget(group)) {
+    if (node._structureMarkSequence > cursor || isTarget) {
+      if (!isTarget) {
         return false;
       }
 

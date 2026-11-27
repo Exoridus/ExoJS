@@ -14,11 +14,11 @@ import '@codexo/exojs-aseprite';
 import '@codexo/exojs-ldtk';
 import '@codexo/exojs-tiled';
 
-import { Asset, type AssetRef, Assets, type KindByPath, type Loader, type LoadingQueue, type Texture } from '@codexo/exojs';
+import { type AssetRef, Assets, type KindByPath, type Loader, type LoadingQueue, type Texture } from '@codexo/exojs';
+import type { TileMap } from '@codexo/exojs/tilemap';
 import type { AsepriteSheet } from '@codexo/exojs-aseprite';
 import type { LdtkMap } from '@codexo/exojs-ldtk';
 import type { TiledMap } from '@codexo/exojs-tiled';
-import type { TileMap } from '@codexo/exojs-tilemap';
 
 import type { CatalogValueLeaf } from './helpers/catalog-leaf';
 
@@ -62,20 +62,23 @@ const ldtkLeaf = loader.get('levels/world.ldtk');
 type _LdtkGetIsRef = Expect<Equal<typeof ldtkLeaf, AssetRef<LdtkMap>>>;
 
 // The same contract on the descriptor path, which was already reachable before
-// bare paths were (`Asset.type(...)` brands a value kind as `ValueAsset<T>`, and
+// bare paths were (a `{ type, source }` descriptor of a value kind is typed as an `AssetRef`, and
 // both `get(descriptor)` and a catalog leaf resolve it to `AssetRef<T>`).
 // Unlike the bare-path results above, a descriptor leaf is minted by `createLeaf`
 // and therefore comes back BRANDED - still an `AssetRef` for a value kind.
-const tiledFromDescriptor = loader.get(Asset.type('tiledSource', 'world.tmj'));
+const tiledFromDescriptor = loader.get({ type: 'tiledSource', source: 'world.tmj' });
 type _TiledDescriptorIsRef = Expect<Equal<typeof tiledFromDescriptor, CatalogValueLeaf<TiledMap>>>;
 const tiledPlainRef: AssetRef<TiledMap> = tiledFromDescriptor;
 
-const asepriteFromDescriptor = loader.get(Asset.type('asepriteSheet', 'hero.aseprite.json'));
+const asepriteFromDescriptor = loader.get({ type: 'asepriteSheet', source: 'hero.aseprite.json' });
 type _AsepriteDescriptorIsRef = Expect<Equal<typeof asepriteFromDescriptor, CatalogValueLeaf<AsepriteSheet>>>;
 
 void tiledPlainRef;
 
-const catalog = Assets.from({ map: Asset.type('tileMap', 'world.tmj'), sheet: Asset.type('asepriteSheet', 'hero.aseprite.json') });
+const catalog = Assets.from({
+  map: { type: 'tileMap', source: 'world.tmj' },
+  sheet: { type: 'asepriteSheet', source: 'hero.aseprite.json' },
+});
 type _CatalogLeavesAreRefs = Expect<Equal<(typeof catalog)['map'], CatalogValueLeaf<TileMap>>>;
 type _CatalogSheetIsRef = Expect<Equal<(typeof catalog)['sheet'], CatalogValueLeaf<AsepriteSheet>>>;
 

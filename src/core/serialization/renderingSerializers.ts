@@ -13,16 +13,32 @@ import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 
-import type { NodeSerializer } from './NodeSerializer';
+import { initializeDeserializedNode } from './deserializeOwnership';
+import type { DeserializeContext, NodeSerializer } from './NodeSerializer';
 import { asNumberArray, asObject, asSerializedNode, readEnum, REPEAT_FITS, REPEAT_MODES } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } from './serializerHelpers';
 
 // ── Small helpers ────────────────────────────────────────────────────────────
 
-const toF32 = (value: unknown): Float32Array => (Array.isArray(value) ? new Float32Array(value.map(Number)) : new Float32Array());
-const toU16 = (value: unknown): Uint16Array => (Array.isArray(value) ? new Uint16Array(value.map(Number)) : new Uint16Array());
-const toU32 = (value: unknown): Uint32Array => (Array.isArray(value) ? new Uint32Array(value.map(Number)) : new Uint32Array());
+const toF32 = (value: unknown): Float32Array => new Float32Array(asNumberArray(value) ?? []);
+const toU32 = (value: unknown): Uint32Array => new Uint32Array(asNumberArray(value) ?? []);
+
+/** Reads a Uint16 index array, rejecting the wrap a fractional or out-of-range index would suffer when it is stored. */
+const toU16 = (value: unknown, vertexCount: number): Uint16Array => {
+  if (!Array.isArray(value)) {
+    return new Uint16Array();
+  }
+
+  const limit = Math.min(vertexCount, 0x10000);
+
+  if (!value.every(entry => Number.isInteger(entry) && entry >= 0 && entry < limit)) {
+    throw new Error(`Cannot deserialize Mesh: indices must be integers in [0, ${limit}).`);
+  }
+
+  return new Uint16Array(value);
+};
+
 const num = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 
 /** Read a {@link NineSliceInsets} from JSON, defaulting any missing/invalid edge to 0 (never `undefined` - `slices` is required and `undefined` would crash `normalizeInsets`). */
@@ -48,21 +64,52 @@ const readModes = (value: unknown): NineSliceModes | undefined => {
   const out: { -readonly [K in keyof NineSliceModes]: NineSliceModes[K] } = {};
 
   const edges = readEnum(source, 'edges', REPEAT_MODES);
-  if (edges !== undefined) out.edges = edges;
+
+  if (edges !== undefined) {
+    out.edges = edges;
+  }
+
   const center = readEnum(source, 'center', REPEAT_MODES);
-  if (center !== undefined) out.center = center;
+
+  if (center !== undefined) {
+    out.center = center;
+  }
+
   const top = readEnum(source, 'top', REPEAT_MODES);
-  if (top !== undefined) out.top = top;
+
+  if (top !== undefined) {
+    out.top = top;
+  }
+
   const right = readEnum(source, 'right', REPEAT_MODES);
-  if (right !== undefined) out.right = right;
+
+  if (right !== undefined) {
+    out.right = right;
+  }
+
   const bottom = readEnum(source, 'bottom', REPEAT_MODES);
-  if (bottom !== undefined) out.bottom = bottom;
+
+  if (bottom !== undefined) {
+    out.bottom = bottom;
+  }
+
   const left = readEnum(source, 'left', REPEAT_MODES);
-  if (left !== undefined) out.left = left;
+
+  if (left !== undefined) {
+    out.left = left;
+  }
+
   const edgeFit = readEnum(source, 'edgeFit', REPEAT_FITS);
-  if (edgeFit !== undefined) out.edgeFit = edgeFit;
+
+  if (edgeFit !== undefined) {
+    out.edgeFit = edgeFit;
+  }
+
   const centerFit = readEnum(source, 'centerFit', REPEAT_FITS);
-  if (centerFit !== undefined) out.centerFit = centerFit;
+
+  if (centerFit !== undefined) {
+    out.centerFit = centerFit;
+  }
 
   return out;
 };
@@ -73,12 +120,23 @@ const meshSerializer: NodeSerializer<Mesh> = {
   write(node, ctx) {
     const out: Record<string, unknown> = { vertices: [...node.vertices] };
 
-    if (node.indices !== null) out.indices = [...node.indices];
-    if (node.uvs !== null) out.uvs = [...node.uvs];
-    if (node.colors !== null) out.colors = [...node.colors];
+    if (node.indices !== null) {
+      out.indices = [...node.indices];
+    }
+
+    if (node.uvs !== null) {
+      out.uvs = [...node.uvs];
+    }
+
+    if (node.colors !== null) {
+      out.colors = [...node.colors];
+    }
 
     const source = ctx.keyFor(node.texture);
-    if (source !== null) out.texture = source;
+
+    if (source !== null) {
+      out.texture = source;
+    }
 
     if (node.material !== null) {
       logger.warn('Mesh.material is not serialized (custom materials are deferred); the deserialized mesh uses the default material.', {
@@ -90,10 +148,12 @@ const meshSerializer: NodeSerializer<Mesh> = {
     return out;
   },
   read(data, ctx) {
+    const vertices = toF32(data.vertices);
+
     return new Mesh(
       compact({
-        vertices: toF32(data.vertices),
-        indices: data.indices !== undefined ? toU16(data.indices) : undefined,
+        vertices,
+        indices: data.indices !== undefined ? toU16(data.indices, vertices.length / 2) : undefined,
         uvs: data.uvs !== undefined ? toF32(data.uvs) : undefined,
         colors: data.colors !== undefined ? toU32(data.colors) : undefined,
         texture: ctx.resolveAsset(data.texture, Texture),
@@ -117,17 +177,19 @@ const graphicsSerializer: NodeSerializer<Graphics> = {
     return { children: node.children.map(child => ctx.writeNode(child)) };
   },
   read(data, ctx) {
-    const node = new Graphics();
-    const children = data.children;
+    return initializeDeserializedNode(new Graphics(), node => {
+      const children = data.children;
 
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        const childNode = asSerializedNode(child);
-        if (childNode !== null) node.addChild(ctx.readNode(childNode) as RenderNode);
+      if (Array.isArray(children)) {
+        for (const child of children) {
+          const childNode = asSerializedNode(child);
+
+          if (childNode !== null) {
+            node.addChild(ctx.readNode(childNode) as RenderNode);
+          }
+        }
       }
-    }
-
-    return node;
+    });
   },
 };
 
@@ -144,7 +206,10 @@ const nineSliceSerializer: NodeSerializer<NineSliceSprite> = {
     };
 
     const source = ctx.keyFor(node.texture);
-    if (source !== null) out.texture = source;
+
+    if (source !== null) {
+      out.texture = source;
+    }
 
     return out;
   },
@@ -184,7 +249,10 @@ const repeatingSerializer: NodeSerializer<RepeatingSprite> = {
     };
 
     const source = ctx.keyFor(node.texture);
-    if (source !== null) out.texture = source;
+
+    if (source !== null) {
+      out.texture = source;
+    }
 
     return out;
   },
@@ -220,7 +288,10 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
     const out: Record<string, unknown> = {};
 
     const source = ctx.keyFor(node.texture);
-    if (source !== null) out.texture = source;
+
+    if (source !== null) {
+      out.texture = source;
+    }
 
     const clips: Record<string, unknown> = {};
 
@@ -231,13 +302,19 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
         repeat: clip.repeat,
         frameDurations: clip.frameDurations ? [...clip.frameDurations] : undefined,
         frameOffsets: clip.frameOffsets ? clip.frameOffsets.map(offset => [offset.x, offset.y]) : undefined,
+        sourceSize: clip.sourceSize ? [clip.sourceSize.width, clip.sourceSize.height] : undefined,
       });
     }
 
     out.clips = clips;
 
-    if (node.currentClip !== null) out.currentClip = node.currentClip;
-    if (node.playing) out.playing = true;
+    if (node.currentClip !== null) {
+      out.currentClip = node.currentClip;
+    }
+
+    if (node.playing) {
+      out.playing = true;
+    }
 
     return out;
   },
@@ -273,8 +350,10 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
               return { x: values[0] ?? 0, y: values[1] ?? 0 };
             })
           : undefined;
+        const size = asNumberArray(clip.sourceSize);
+        const sourceSize = size === null ? undefined : { width: size[0] ?? 0, height: size[1] ?? 0 };
 
-        clips[name] = compact({ frames, fps: num(clip.fps), repeat: num(clip.repeat), frameDurations, frameOffsets });
+        clips[name] = compact({ frames, fps: num(clip.fps), repeat: num(clip.repeat), frameDurations, frameOffsets, sourceSize });
       }
     }
 
@@ -299,33 +378,50 @@ const bitmapTextSerializer: NodeSerializer<BitmapText> = {
     const out: Record<string, unknown> = { text: node.text };
 
     const source = ctx.keyFor(node.font);
-    if (source !== null) out.font = source;
 
-    if (node.msdf) out.msdf = true;
-    if (node.fontScale !== 1) out.scale = node.fontScale;
+    if (source !== null) {
+      out.font = source;
+    }
+
+    if (node.msdf) {
+      out.msdf = true;
+    }
+
+    if (node.fontScale !== 1) {
+      out.scale = node.fontScale;
+    }
 
     const style = serializeStyle(node.style);
-    if (style !== undefined) out.style = style;
-    if (Object.keys(node.layout).length > 0) out.layout = { ...node.layout };
+
+    if (style !== undefined) {
+      out.style = style;
+    }
+
+    if (Object.keys(node.layout).length > 0) {
+      out.layout = { ...node.layout };
+    }
 
     return out;
   },
   read(data, ctx) {
-    const font = ctx.resolveAsset(typeof data.font === 'string' ? data.font : null, BmFont);
+    const font = ctx.resolveAsset(data.font, BmFont);
 
     if (font === null) {
       throw new Error('BitmapText deserialize requires its BmFont to be pre-loaded into the Loader.');
     }
 
     const layout = readLayoutOptions(data.layout);
+    const msdf = data.msdf === true;
+    const scale = num(data.scale);
+    const style = deserializeStyleOptions(data.style);
 
     return new BitmapText(
       typeof data.text === 'string' ? data.text : '',
       font,
       compact({
-        ...deserializeStyleOptions(data.style),
-        msdf: data.msdf === true,
-        scale: num(data.scale),
+        ...style,
+        msdf,
+        scale,
         layout,
       }),
     );
@@ -337,23 +433,69 @@ const bitmapTextSerializer: NodeSerializer<BitmapText> = {
 // `<video>` element (requires a DOM); the live decode/audio graph is rebuilt by
 // the Video constructor.
 
+// Setting `src` starts a network request, so an untrusted document must not
+// reach it for a foreign origin. An opaque origin ("null", e.g. file: or a
+// sandboxed frame) never matches: "null" === "null" would admit everything.
+const isSameOriginVideoSource = (url: URL): boolean => {
+  const { origin } = url;
+
+  if (origin === 'null' || origin !== location.origin || url.username !== '' || url.password !== '') {
+    return false;
+  }
+
+  return url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'blob:';
+};
+
+const assertVideoSourceAllowed = (source: string, ctx: DeserializeContext): void => {
+  let url: URL | null = null;
+
+  try {
+    url = new URL(source, document.baseURI);
+  } catch {
+    // An unparseable source is refused below.
+  }
+
+  if (url === null || !(isSameOriginVideoSource(url) || ctx.allowVideoSource?.(url) === true)) {
+    throw new Error(
+      `Refused to deserialize a Video with source "${source}": only same-origin HTTP(S) and blob: sources are allowed by default. Pass { allowVideoSource } to approve others.`,
+    );
+  }
+};
+
 const videoSerializer: NodeSerializer<Video> = {
   write(node) {
     const out: Record<string, unknown> = { src: node.videoElement.src };
 
-    if (node.volume !== 1) out.volume = node.volume;
-    if (node.loop) out.loop = true;
-    if (node.playbackRate !== 1) out.playbackRate = node.playbackRate;
-    if (node.muted) out.muted = true;
-    if (node.currentTime > 0) out.time = node.currentTime;
+    if (node.volume !== 1) {
+      out.volume = node.volume;
+    }
+
+    if (node.loop) {
+      out.loop = true;
+    }
+
+    if (node.playbackRate !== 1) {
+      out.playbackRate = node.playbackRate;
+    }
+
+    if (node.muted) {
+      out.muted = true;
+    }
+
+    if (node.currentTime > 0) {
+      out.time = node.currentTime;
+    }
 
     return out;
   },
-  read(data) {
+  read(data, ctx) {
     const element = document.createElement('video');
 
-    if (typeof data.src === 'string') {
-      element.src = data.src;
+    const { src } = data;
+
+    if (typeof src === 'string') {
+      assertVideoSourceAllowed(src, ctx);
+      element.src = src;
     }
 
     return new Video(

@@ -158,4 +158,15 @@ describe('IndexedDbStore', () => {
 
     expect(store.id).toBe('indexeddb:name-only-store');
   });
+
+  test('a value the engine cannot clone rejects as an AssetCacheError carrying the cause', async () => {
+    const { store, fake } = await loadStore();
+    const cause = new Error('could not be cloned');
+
+    fake.throwOnNextPut(cause);
+
+    const failure: unknown = await store.set(key(), 'value').catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({ name: 'AssetCacheError', operation: 'write', cause });
+  });
 });

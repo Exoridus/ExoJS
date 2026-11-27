@@ -9,7 +9,7 @@ const createTextureStub = (): Texture =>
     width: 128,
     height: 64,
     flipY: false,
-    updateSource: () => undefined,
+    updateSource: () => {},
   }) as unknown as Texture;
 
 /**
@@ -324,6 +324,88 @@ describe('AnimatedSprite', () => {
     ).toThrow(/frameOffsets/);
   });
 
+  test.each(['anchor', 'origin'])('authored source size preserves the %s and scale across differently trimmed clips', pivot => {
+    const sprite = new AnimatedSprite(null, {
+      idle: {
+        frames: [new Rectangle(0, 0, 12, 10)],
+        frameOffsets: [{ x: 58, y: 86 }],
+        sourceSize: { width: 128, height: 128 },
+      },
+      walk: {
+        frames: [new Rectangle(12, 0, 20, 12), new Rectangle(32, 0, 12, 10)],
+        fps: 10,
+        frameOffsets: [
+          { x: 54, y: 84 },
+          { x: 58, y: 86 },
+        ],
+        sourceSize: { width: 128, height: 128 },
+      },
+    });
+
+    sprite.setPosition(100, 200).setScale(2);
+
+    if (pivot === 'anchor') {
+      sprite.setAnchor(0.5, 0.75);
+    } else {
+      sprite.setOrigin(64, 96);
+    }
+
+    sprite.play('idle');
+
+    expect(sprite.origin.x).toBe(64);
+    expect(sprite.origin.y).toBe(96);
+    expect(Array.from(sprite.vertices)).toEqual([88, 180, 112, 180, 112, 200, 88, 200]);
+
+    sprite.play('walk');
+
+    expect(sprite.scale.x).toBe(2);
+    expect(sprite.scale.y).toBe(2);
+    expect(sprite.origin.x).toBe(64);
+    expect(sprite.origin.y).toBe(96);
+    expect(Array.from(sprite.vertices)).toEqual([80, 176, 120, 176, 120, 200, 80, 200]);
+
+    sprite.update(0.1);
+
+    expect(sprite.currentFrame).toBe(1);
+    expect(Array.from(sprite.vertices)).toEqual([88, 180, 112, 180, 112, 200, 88, 200]);
+    expect(sprite.x).toBe(100);
+    expect(sprite.y).toBe(200);
+    sprite.destroy();
+  });
+
+  test('copies authored source dimensions on input and when exporting clip definitions', () => {
+    const sourceSize = { width: 128, height: 128 };
+    const sprite = new AnimatedSprite(null, { idle: { frames: [new Rectangle(0, 0, 12, 10)], sourceSize } });
+
+    sourceSize.width = 256;
+    sprite.setAnchor(0.5).play('idle');
+
+    expect(sprite.origin.x).toBe(64);
+
+    const exported = sprite._getClipDefinitions();
+
+    expect(exported.idle!.sourceSize).toEqual({ width: 128, height: 128 });
+    (exported.idle!.sourceSize as { width: number }).width = 512;
+    sprite.setAnchor(0.25);
+
+    expect(sprite.origin.x).toBe(32);
+    sprite.destroy();
+  });
+
+  test.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('rejects invalid source dimensions %s before replacing a clip', value => {
+    const sprite = new AnimatedSprite(null, {
+      idle: { frames: [new Rectangle(0, 0, 12, 10)], sourceSize: { width: 128, height: 128 } },
+    });
+
+    expect(() => sprite.addClip('idle', { frames: createFrames(), sourceSize: { width: value, height: 128 } })).toThrow(/sourceSize/);
+    expect(() => sprite.addClip('idle', { frames: createFrames(), sourceSize: { width: 128, height: value } })).toThrow(/sourceSize/);
+
+    sprite.setAnchor(0.5).play('idle');
+    expect(sprite.origin.x).toBe(64);
+    expect(sprite.origin.y).toBe(64);
+    sprite.destroy();
+  });
+
   describe('repeat', () => {
     test('repeat: 3 stops after exactly 3 full cycles and dispatches onComplete on the 3rd', () => {
       const frames = createFrames();
@@ -589,4 +671,170 @@ describe('AnimatedSprite', () => {
       expect(frameSpy).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('playback changes from an onFrame handler', () => {
+    const createLongClipSprite = (): AnimatedSprite =>
+      new AnimatedSprite(null, {
+        walk: { frames: [...createFrames(), new Rectangle(48, 0, 16, 16), new Rectangle(64, 0, 16, 16)], fps: 10 },
+        idle: { frames: createFrames(), fps: 10 },
+      });
+
+    test('pause() stops the remaining frames of the same update', () => {
+      const sprite = createLongClipSprite();
+      const frames: number[] = [];
+
+      sprite.play('walk');
+      sprite.onFrame.add((_clip, frame) => {
+        frames.push(frame);
+
+        if (frame === 1) {
+          sprite.pause();
+        }
+      });
+
+      sprite.update(seconds(450));
+
+      expect(frames).toEqual([1]);
+      expect(sprite.currentFrame).toBe(1);
+      expect(sprite.playing).toBe(false);
+    });
+
+    test('pause() on a wrapped frame stops the remaining frames of the same update', () => {
+      const sprite = new AnimatedSprite(null, { loop: { frames: createFrames(), fps: 10 } });
+      const frames: number[] = [];
+
+      sprite.play('loop');
+      sprite.onFrame.add((_clip, frame) => {
+        frames.push(frame);
+
+        if (frame === 0) {
+          sprite.pause();
+        }
+      });
+
+      sprite.update(seconds(550));
+
+      expect(frames).toEqual([1, 2, 0]);
+      expect(sprite.currentFrame).toBe(0);
+    });
+
+    test('resuming after a pause from onFrame does not replay the time the pause cut off', () => {
+      const sprite = createLongClipSprite();
+
+      sprite.play('walk');
+      sprite.onFrame.add((_clip, frame) => {
+        if (frame === 1) {
+          sprite.pause();
+        }
+      });
+
+      sprite.update(seconds(450));
+      sprite.resume();
+      sprite.update(seconds(50));
+
+      expect(sprite.currentFrame).toBe(1);
+    });
+
+    test('play() of another clip continues from that clip, not the one being advanced', () => {
+      const sprite = createLongClipSprite();
+      const events: string[] = [];
+
+      sprite.play('walk');
+      sprite.onFrame.add((clip, frame) => {
+        events.push(`${clip}:${frame}`);
+
+        if (clip === 'walk' && frame === 1) {
+          sprite.play('idle');
+        }
+      });
+
+      sprite.update(seconds(450));
+
+      expect(events).toEqual(['walk:1', 'idle:0']);
+      expect(sprite.currentClip).toBe('idle');
+      expect(sprite.currentFrame).toBe(0);
+    });
+
+    test('destroy() ends the update without touching the released frames or signals', () => {
+      const sprite = createLongClipSprite();
+      const frames: number[] = [];
+
+      sprite.play('walk');
+      sprite.onFrame.add((_clip, frame) => {
+        frames.push(frame);
+
+        if (frame === 1) {
+          sprite.destroy();
+        }
+      });
+
+      expect(() => sprite.update(seconds(450))).not.toThrow();
+      expect(frames).toEqual([1]);
+      expect(sprite.destroyed).toBe(true);
+    });
+  });
+});
+
+describe('AnimatedSprite clip registry changes', () => {
+  const build = (): AnimatedSprite =>
+    new AnimatedSprite(null, {
+      walk: { frames: createFrames(), fps: 10 },
+      run: { frames: createFrames(), fps: 20 },
+    });
+
+  test('removing the active clip clears currentClip and keeps resume() inert', () => {
+    const sprite = build();
+
+    sprite.play('walk');
+    sprite.removeClip('walk');
+
+    expect(sprite.currentClip).toBeNull();
+
+    sprite.resume();
+
+    expect(sprite.playing).toBe(false);
+  });
+
+  test('setClips without the active clip clears it, and keeps it when the name survives', () => {
+    const sprite = build();
+
+    sprite.play('walk');
+    sprite.setClips({ walk: { frames: createFrames(), fps: 5 } });
+    expect(sprite.currentClip).toBe('walk');
+
+    sprite.setClips({ run: { frames: createFrames(), fps: 5 } });
+    expect(sprite.currentClip).toBeNull();
+    expect(sprite.playing).toBe(false);
+  });
+});
+
+test('pause from the initial frame signal remains paused after play returns', () => {
+  const sprite = new AnimatedSprite(null, { walk: { frames: createFrames(), fps: 10 } });
+
+  sprite.onFrame.add(() => sprite.pause());
+  sprite.play('walk');
+  expect(sprite.playing).toBe(false);
+  sprite.update(seconds(500));
+  expect(sprite.currentFrame).toBe(0);
+  sprite.destroy();
+});
+
+test('stop from a frame signal rewinds once without recursively notifying', () => {
+  const sprite = new AnimatedSprite(null, { walk: { frames: createFrames(), fps: 10 } });
+
+  sprite.play('walk');
+  const frames: number[] = [];
+
+  sprite.onFrame.add((_clip, frame) => {
+    frames.push(frame);
+
+    if (frames.length < 5) {
+      sprite.stop();
+    }
+  });
+  sprite.update(seconds(500));
+  expect(frames).toEqual([1, 0]);
+  expect(sprite.playing).toBe(false);
+  expect(sprite.currentFrame).toBe(0);
+  sprite.destroy();
 });

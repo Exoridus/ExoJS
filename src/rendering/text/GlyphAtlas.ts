@@ -18,12 +18,29 @@ import type { FontVariantKey, GlyphInfo, GlyphKey, GlyphProvider, SolidTexel, Te
 export type AtlasMode = 'sdf' | 'color';
 
 /**
- * SDF buffer radius in pixels - the maximum distance outside a glyph that the
- * SDF field encodes. Determines the maximum usable outline/shadow reach.
- * Exported so applications can import this constant when computing shader uniforms.
+ * Default distance-field reach in logical pixels: how far outside each glyph
+ * the runtime SDF tile and its field extend. Outline widths and shadow
+ * offset-plus-blur may use this minus one logical pixel of antialiasing
+ * reserve (see `Text` `sdfRadius`).
+ *
+ * Kept small on purpose: the 8-bit field spans twice the reach, so every
+ * extra pixel of reach coarsens the edge of every glyph, which shows on
+ * magnified text where a sampler filters at 8-bit output precision.
  */
+export const SDF_RADIUS = 4;
 
-export const SDF_RADIUS = 8;
+/**
+ * Raster parameters for a distance field that ends exactly `sdfRadius` logical
+ * pixels outside the glyph: the tile padding covers that reach, and the field
+ * spans twice it so its zero lands on the padding's outer edge. Not rounded:
+ * the shader derives the field scale from the logical radius alone, so the
+ * normalisation has to match it exactly at any ratio.
+ * @internal
+ */
+export const sdfRasterSpan = (sdfRadius: number, pixelRatio: number): { buffer: number; radius: number } => ({
+  buffer: Math.max(1, Math.ceil(sdfRadius * pixelRatio)),
+  radius: 2 * sdfRadius * pixelRatio,
+});
 
 const glyphPadding = 2;
 
@@ -45,15 +62,18 @@ const solidBlockSize = 4;
  * @internal
  */
 export const claimSolidTexel = (allocate: (w: number, h: number) => { page: AtlasPage; slot: { x: number; y: number } }): SolidTexel => {
-  const { page, slot } = allocate(solidBlockSize, solidBlockSize);
+  const {
+    page,
+    slot: { x, y },
+  } = allocate(solidBlockSize, solidBlockSize);
 
-  page.fillSolid(slot.x, slot.y, solidBlockSize, solidBlockSize);
+  page.fillSolid(x, y, solidBlockSize, solidBlockSize);
   page.uploadDirtyRegion();
 
   return {
     page: page.index,
-    u: (slot.x + solidBlockSize / 2) / page.width,
-    v: (slot.y + solidBlockSize / 2) / page.height,
+    u: (x + solidBlockSize / 2) / page.width,
+    v: (y + solidBlockSize / 2) / page.height,
   };
 };
 
@@ -76,10 +96,15 @@ class ShelfPacker {
   }
 
   public insert(width: number, height: number): { x: number; y: number } | null {
+    if (width > this._width) {
+      return null;
+    }
+
     for (const shelf of this._shelves) {
       if (shelf.height >= height && shelf.cursorX + width <= this._width) {
         const x = shelf.cursorX;
         shelf.cursorX += width;
+
         return { x, y: shelf.y };
       }
     }
@@ -92,6 +117,7 @@ class ShelfPacker {
     }
 
     this._shelves.push({ y: bottomY, height, cursorX: width });
+
     return { x: 0, y: bottomY };
   }
 
@@ -108,7 +134,11 @@ const makeCtx = (width: number, height: number): { canvas: HTMLCanvasElement | O
   if (typeof OffscreenCanvas !== 'undefined') {
     const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext('2d')!;
-    if (!ctx) throw new Error('GlyphAtlas: could not obtain OffscreenCanvas 2D context.');
+
+    if (!ctx) {
+      throw new Error('GlyphAtlas: could not obtain OffscreenCanvas 2D context.');
+    }
+
     return { canvas, ctx };
   }
 
@@ -116,7 +146,11 @@ const makeCtx = (width: number, height: number): { canvas: HTMLCanvasElement | O
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('GlyphAtlas: could not obtain canvas 2D context.');
+
+  if (!ctx) {
+    throw new Error('GlyphAtlas: could not obtain canvas 2D context.');
+  }
+
   return { canvas, ctx };
 };
 
@@ -227,14 +261,17 @@ export class AtlasPage {
   public measureGlyph(char: string, state: CanvasTextState): TextMetrics {
     if (this._ctx !== null) {
       applyCanvasTextState(this._ctx, state);
+
       return this._ctx.measureText(char);
     }
+
     // SDF pages own no drawing context, so measuring needs a scratch one. Kept
     // for the page's lifetime rather than created per call: this runs once per
     // uncached glyph, and a fresh canvas per measurement is a whole allocation
     // (plus a context) for one `measureText`.
     const ctx = (this._measureCtx ??= makeCtx(1, 1).ctx);
     applyCanvasTextState(ctx, state);
+
     return ctx.measureText(char);
   }
 
@@ -242,9 +279,11 @@ export class AtlasPage {
   public rasterize(char: string, slotX: number, slotY: number, ascent: number, bbLeft: number, state: CanvasTextState): void {
     const ctx = this._ctx!;
     applyCanvasTextState(ctx, state);
+
     if (!this._colorGlyphs) {
       (ctx as CanvasRenderingContext2D).fillStyle = '#ffffff';
     }
+
     ctx.fillText(char, slotX + glyphPadding + bbLeft, slotY + glyphPadding + ascent);
   }
 
@@ -287,6 +326,7 @@ export class AtlasPage {
 
   public reset(): void {
     this._packer.reset();
+
     if (this._sdfBuffer !== null && this._sdfTexture !== null) {
       this._sdfBuffer.fill(0);
       this._sdfTexture.commit();
@@ -340,14 +380,16 @@ export class GlyphAtlas implements GlyphProvider {
   private readonly _mode: AtlasMode;
   private readonly _sdfRadius: number;
   private readonly _pixelRatio: number;
-  private readonly _rasterSdfRadius: number;
+  private readonly _rasterSpan: { buffer: number; radius: number };
   private readonly _metrics: GlyphMetrics;
 
   /**
-   * Dispatched whenever a new atlas page is allocated.
+   * Dispatched whenever a page beyond the base one is allocated.
    *
-   * Listen here to detect unexpected atlas growth (e.g. many unique CJK glyphs
-   * or an oversized font size). The payload is the zero-based page index.
+   * The page the constructor creates is not reported, so the first event
+   * carries index 1. Listen here to detect unexpected atlas growth (e.g. many
+   * unique CJK glyphs or an oversized font size). The payload is the
+   * zero-based page index.
    *
    * ```ts
    * const atlas = pool.getAtlas({ family: 'Roboto', fontWeight: '400' });
@@ -372,7 +414,14 @@ export class GlyphAtlas implements GlyphProvider {
   /** Solid block for decoration quads, claimed on first use and dropped by {@link clear}. */
   private _solidTexel: SolidTexel | null = null;
 
-  public constructor(font: FontVariantKey, pageSize = 1024, mode: AtlasMode = 'sdf', sdfRadius = SDF_RADIUS, pixelRatio = 1, metrics?: GlyphMetrics) {
+  public constructor(
+    font: FontVariantKey,
+    pageSize = 1024,
+    mode: AtlasMode = 'sdf',
+    sdfRadius = SDF_RADIUS,
+    pixelRatio = 1,
+    metrics?: GlyphMetrics,
+  ) {
     this._font = font;
     this._pageSize = pageSize;
     this._mode = mode;
@@ -381,7 +430,7 @@ export class GlyphAtlas implements GlyphProvider {
     // The SDF buffer has to grow with the raster grid, or the encoded distance
     // field would reach `sdfRadius / pixelRatio` LOGICAL pixels past the glyph
     // and an outline or shadow would silently shorten as the ratio rises.
-    this._rasterSdfRadius = Math.max(1, Math.round(sdfRadius * pixelRatio));
+    this._rasterSpan = sdfRasterSpan(sdfRadius, pixelRatio);
     // A variant measured elsewhere hands its metrics in so every atlas of the
     // same typeface answers with the same advances; a standalone atlas measures
     // for itself.
@@ -408,9 +457,9 @@ export class GlyphAtlas implements GlyphProvider {
   }
 
   /**
-   * SDF buffer radius in LOGICAL pixels - the outline/shadow reach this atlas
-   * can encode. Independent of {@link pixelRatio}: the raster buffer grows with
-   * the ratio so the logical reach stays put.
+   * Distance-field reach in LOGICAL pixels: tile padding and field both end this
+   * far outside each glyph. Independent of {@link pixelRatio}: the raster buffer
+   * grows with the ratio so the logical reach stays put.
    */
   public get sdfRadius(): number {
     return this._sdfRadius;
@@ -424,7 +473,11 @@ export class GlyphAtlas implements GlyphProvider {
   public getGlyph(char: string, size: number): GlyphInfo {
     const key: GlyphKey = `${char}:${size}`;
     const cached = this._cache.get(key);
-    if (cached !== undefined) return cached;
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
     return this._mode === 'sdf' ? this._rasterizeSdf(char, size, key) : this._rasterizeCanvas(char, size, key);
   }
 
@@ -447,6 +500,7 @@ export class GlyphAtlas implements GlyphProvider {
     // Reset with the pages: the block's slot is about to be handed back to the
     // packer, and a stale UV would point at whatever glyph lands there next.
     this._solidTexel = null;
+
     // Pages are reset in place, not discarded: a fresh page would own a new
     // DataTexture/Texture (and GPU resource) while the old one leaks, and
     // reuse needs nothing a fresh page would have had anyway - `reset()`
@@ -454,16 +508,27 @@ export class GlyphAtlas implements GlyphProvider {
     for (const page of this._pages) {
       page.reset();
     }
+
     this.onCleared.dispatch();
   }
 
   // ── Private ──────────────────────────────────────────────────────────────
 
   private _addPage(): AtlasPage {
-    const index = this._pages.length;
-    const page = new AtlasPage(index, this._pageSize, this._pageSize, this._mode);
+    return this._attachPage(this._createPage());
+  }
+
+  private _createPage(): AtlasPage {
+    return new AtlasPage(this._pages.length, this._pageSize, this._pageSize, this._mode);
+  }
+
+  private _attachPage(page: AtlasPage): AtlasPage {
     this._pages.push(page);
-    if (index > 0) this.onPageAdded.dispatch(index);
+
+    if (page.index > 0) {
+      this.onPageAdded.dispatch(page.index);
+    }
+
     return page;
   }
 
@@ -478,6 +543,7 @@ export class GlyphAtlas implements GlyphProvider {
 
   private _getSdf(rasterFontSize: number): GlyphSdf {
     let instance = this._sdfInstances.get(rasterFontSize);
+
     if (instance === undefined) {
       instance = new GlyphSdf({
         fontSize: rasterFontSize,
@@ -485,18 +551,20 @@ export class GlyphAtlas implements GlyphProvider {
         fontWeight: this._font.fontWeight ?? 'normal',
         fontStyle: this._font.fontStyle ?? 'normal',
         fontVariant: this._font.fontVariant ?? 'normal',
-        buffer: this._rasterSdfRadius,
-        radius: this._rasterSdfRadius,
+        buffer: this._rasterSpan.buffer,
+        radius: this._rasterSpan.radius,
         cutoff: 0.5,
+        maxTileSize: this._pageSize,
       });
       this._sdfInstances.set(rasterFontSize, instance);
     }
+
     return instance;
   }
 
   private _rasterizeSdf(char: string, size: number, key: GlyphKey): GlyphInfo {
     const ratio = this._pixelRatio;
-    const result = this._getSdf(this._rasterFontSize(size)).draw(char);
+    const result = this._getSdf(this._rasterFontSize(size)).draw(char, ratio);
 
     const { page, slot } = this._allocateSlot(result.width, result.height, char, size);
     page.writeSdf(result.data, slot.x, slot.y, result.width, result.height);
@@ -508,6 +576,15 @@ export class GlyphAtlas implements GlyphProvider {
       // Slot origin and UVs stay in ATLAS TEXELS - they address the raster grid.
       // Everything else is divided back into logical pixels, which is the space
       // the quad, the cursor and the node's bounds live in.
+      fill:
+        result.fill === null
+          ? null
+          : {
+              x: result.fill.x / ratio,
+              y: result.fill.y / ratio,
+              width: result.fill.width / ratio,
+              height: result.fill.height / ratio,
+            },
       width: result.width / ratio,
       height: result.height / ratio,
       // Not `result.glyphAdvance`: the advance is a logical typographic number
@@ -522,11 +599,12 @@ export class GlyphAtlas implements GlyphProvider {
       uvBottom: (slot.y + result.height) / ps,
       // Shift the quad left/up by the SDF buffer so the glyph content aligns
       // with the logical cursor position (bearing = −buffer on both axes).
-      xBearing: -result.glyphLeft / ratio,
-      yBearing: -result.glyphTop / ratio,
+      xBearing: result.xBearing / ratio,
+      yBearing: result.yBearing / ratio,
     };
 
     this._cache.set(key, info);
+
     return info;
   }
 
@@ -546,10 +624,14 @@ export class GlyphAtlas implements GlyphProvider {
     const metrics = this._pages[0]!.measureGlyph(char, state);
 
     const ascent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? rasterSize * 0.8,
+      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ??
+        metrics.actualBoundingBoxAscent ??
+        rasterSize * 0.8,
     );
     const descent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? rasterSize * 0.2,
+      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ??
+        metrics.actualBoundingBoxDescent ??
+        rasterSize * 0.2,
     );
     const bbLeft = metrics.actualBoundingBoxLeft ?? 0;
     const bbRight = metrics.actualBoundingBoxRight ?? 0;
@@ -582,16 +664,22 @@ export class GlyphAtlas implements GlyphProvider {
     };
 
     this._cache.set(key, info);
+
     return info;
   }
 
   private _allocateSlot(w: number, h: number, char: string, size: number): { page: AtlasPage; slot: { x: number; y: number } } {
     for (const page of this._pages) {
       const slot = page.insert(w, h);
-      if (slot !== null) return { page, slot };
+
+      if (slot !== null) {
+        return { page, slot };
+      }
     }
 
-    const newPage = this._addPage();
+    // Built detached: a tile that cannot fit even an empty page must not leave
+    // that page attached, or the atlas would grow by one empty page per failure.
+    const newPage = this._createPage();
     const slot = newPage.insert(w, h);
 
     if (slot === null) {
@@ -604,6 +692,8 @@ export class GlyphAtlas implements GlyphProvider {
           `Lower the font size, lower the text pixelRatio, or use a larger atlas page size.`,
       );
     }
+
+    this._attachPage(newPage);
 
     return { page: newPage, slot };
   }

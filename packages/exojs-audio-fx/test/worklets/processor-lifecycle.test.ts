@@ -39,6 +39,7 @@ const buildProcessorClass = (source: string): ProcessorConstructor => {
   g['AudioWorkletProcessor'] = class {
     public readonly port: ProcessorPort = { postMessage: (): void => undefined, onmessage: null };
   };
+
   g['registerProcessor'] = (_name: string, cls: ProcessorConstructor): void => {
     klass = cls;
   };
@@ -50,7 +51,10 @@ const buildProcessorClass = (source: string): ProcessorConstructor => {
   delete g['AudioWorkletProcessor'];
   delete g['registerProcessor'];
 
-  if (!klass) throw new Error('registerProcessor was not called');
+  if (!klass) {
+    throw new Error('registerProcessor was not called');
+  }
+
   return klass;
 };
 
@@ -58,7 +62,11 @@ const param = (value: number): Float32Array => new Float32Array([value]);
 
 const tone = (freq: number, offset: number): Float32Array => {
   const block = new Float32Array(BLOCK);
-  for (let i = 0; i < BLOCK; i++) block[i] = 0.8 * Math.sin((2 * Math.PI * freq * (offset + i)) / SAMPLE_RATE);
+
+  for (let i = 0; i < BLOCK; i++) {
+    block[i] = 0.8 * Math.sin((2 * Math.PI * freq * (offset + i)) / SAMPLE_RATE);
+  }
+
   return block;
 };
 
@@ -204,7 +212,13 @@ describe('a reactivated channel does not replay its previous activation', () => 
 
       // Stereo again, with a silent right input: nothing may come out on the right.
       for (let block = 0; block < 8; block++, offset += BLOCK) {
-        const { outputs } = runBlock(processor, testCase, [tone(440, offset), new Float32Array(BLOCK)], offset, testCase.reactivatedParameters);
+        const { outputs } = runBlock(
+          processor,
+          testCase,
+          [tone(440, offset), new Float32Array(BLOCK)],
+          offset,
+          testCase.reactivatedParameters,
+        );
 
         expect(outputs[1]!.every(sample => sample === 0)).toBe(true);
       }

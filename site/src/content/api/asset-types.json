@@ -1,0 +1,706 @@
+{
+  "title": "AssetTypes",
+  "description": "Asset type definitions on a single application.",
+  "symbol": "AssetTypes",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 4,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Asset type definitions on a single application."
+      ],
+      "importLine": "import { AssetTypes } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "define",
+          "signature": "define(target: AssetConstructor<Resource>, definition: DocumentAssetTypeDefinition<NoInfer<Resource>, Document, Options, Version, Min, Chain> & CheckedHistory<NoInfer<Document>, Version, Min, Chain>): void",
+          "signatureTokens": [
+            {
+              "text": "define",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "definition",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DocumentAssetTypeDefinition",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NoInfer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Version",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Min",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Chain",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CheckedHistory",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NoInfer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Version",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Min",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Chain",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "AssetConstructor<Resource>",
+              "optional": false
+            },
+            {
+              "name": "definition",
+              "type": "DocumentAssetTypeDefinition<NoInfer<Resource>, Document, Options, Version, Min, Chain> & CheckedHistory<NoInfer<Document>, Version, Min, Chain>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Defines how the application loads a class. decode receives the fetched data and returns the resource, synchronously or as a promise; fetching, caching, deduplication and ownership stay with the loader. read chooses whether decode gets bytes (the default), text, parsed JSON or a Blob. A document parser validates and migrates versioned documents before decode runs, and a codec takes full control of how the response is read. A loader factory replaces decode when the type needs per-application state; supply a separate instance for each application, which owns and destroys it. The type id names the type in caches and saved documents, so keep it stable across releases; it cannot be shared with another class. Define the same class and id again before its first request to replace its factory."
+        },
+        {
+          "name": "define",
+          "signature": "define(target: AssetConstructor<Resource>, definition: ReadAssetTypeDefinition<NoInfer<Resource>, Read, Options> & NonDocumentDefinition): void",
+          "signatureTokens": [
+            {
+              "text": "define",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "definition",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadAssetTypeDefinition",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NoInfer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Read",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NonDocumentDefinition",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "AssetConstructor<Resource>",
+              "optional": false
+            },
+            {
+              "name": "definition",
+              "type": "ReadAssetTypeDefinition<NoInfer<Resource>, Read, Options> & NonDocumentDefinition",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Defines how the application loads a class. decode receives the fetched data and returns the resource, synchronously or as a promise; fetching, caching, deduplication and ownership stay with the loader. read chooses whether decode gets bytes (the default), text, parsed JSON or a Blob. A document parser validates and migrates versioned documents before decode runs, and a codec takes full control of how the response is read. A loader factory replaces decode when the type needs per-application state; supply a separate instance for each application, which owns and destroys it. The type id names the type in caches and saved documents, so keep it stable across releases; it cannot be shared with another class. Define the same class and id again before its first request to replace its factory."
+        },
+        {
+          "name": "define",
+          "signature": "define(target: AssetConstructor<Resource>, definition: AssetTypeDefinition<NoInfer<Resource>, ArrayBuffer, Options, ArrayBuffer> & NonDocumentDefinition): void",
+          "signatureTokens": [
+            {
+              "text": "define",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "definition",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetTypeDefinition",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NoInfer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NonDocumentDefinition",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "AssetConstructor<Resource>",
+              "optional": false
+            },
+            {
+              "name": "definition",
+              "type": "AssetTypeDefinition<NoInfer<Resource>, ArrayBuffer, Options, ArrayBuffer> & NonDocumentDefinition",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Defines how the application loads a class. decode receives the fetched data and returns the resource, synchronously or as a promise; fetching, caching, deduplication and ownership stay with the loader. read chooses whether decode gets bytes (the default), text, parsed JSON or a Blob. A document parser validates and migrates versioned documents before decode runs, and a codec takes full control of how the response is read. A loader factory replaces decode when the type needs per-application state; supply a separate instance for each application, which owns and destroys it. The type id names the type in caches and saved documents, so keep it stable across releases; it cannot be shared with another class. Define the same class and id again before its first request to replace its factory."
+        },
+        {
+          "name": "define",
+          "signature": "define(target: AssetConstructor<Resource>, definition: AssetTypeDefinition<NoInfer<Resource>, Source, Options, Stored> & NonDocumentDefinition & { codec: AssetSourceCodec<NoInfer<Source>, Stored> }): void",
+          "signatureTokens": [
+            {
+              "text": "define",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "definition",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetTypeDefinition",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NoInfer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Source",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NonDocumentDefinition",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "codec",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetSourceCodec",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NoInfer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Source",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "AssetConstructor<Resource>",
+              "optional": false
+            },
+            {
+              "name": "definition",
+              "type": "AssetTypeDefinition<NoInfer<Resource>, Source, Options, Stored> & NonDocumentDefinition & { codec: AssetSourceCodec<NoInfer<Source>, Stored> }",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Defines how the application loads a class. decode receives the fetched data and returns the resource, synchronously or as a promise; fetching, caching, deduplication and ownership stay with the loader. read chooses whether decode gets bytes (the default), text, parsed JSON or a Blob. A document parser validates and migrates versioned documents before decode runs, and a codec takes full control of how the response is read. A loader factory replaces decode when the type needs per-application state; supply a separate instance for each application, which owns and destroys it. The type id names the type in caches and saved documents, so keep it stable across releases; it cannot be shared with another class. Define the same class and id again before its first request to replace its factory."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetTypes.ts"
+}

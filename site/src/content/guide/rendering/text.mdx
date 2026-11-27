@@ -13,6 +13,27 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 `Text` is a [`Drawable`](/ExoJS/en/api/drawable/) (via [`AbstractText`](/ExoJS/en/api/abstract-text/)), not a [`Container`](/ExoJS/en/api/container/): it carries the full transform, tint, blend mode, pixel-snap, filter, and mask surface of any other drawable, but it holds no children of its own. Nest it inside a `Container` when you need to group it with other nodes.
 
+## Choose a font path
+
+`Text` and `BitmapText` already share `AbstractText`, layout concepts, and renderer infrastructure. `BmFont` is a resource containing metrics and atlas pages, not another text node.
+
+| Path | Construction and size | Layout and style capabilities | Readiness and lifetime |
+| --- | --- | --- | --- |
+| System font | `new Text(text, { fontFamily, fontSize })`; font size is logical pixels. | Flat layout options; runtime SDF effects, gradients and decorations. Browser-shaped/color runs have their own rendering path. | The family must exist in the host; glyph atlases are shared runtime caches. |
+| Web font | `new Text(text, { font: loadedFace, fontSize })` or its registered family. | Same Text API; await the face before dimensions-dependent layout. | Load a `font` descriptor in the intended scope; the loader owns that FontFace registration. |
+| Bitmap/color atlas | `new BitmapText(text, loadedFont, { scale, layout })`. | Baked glyph metrics and character coverage, tint/gradient; no distance-field outline or underline/strikethrough. | Preload BmFont and its pages. Font `scale`/`fontScale` scales the baked metrics. |
+| RGB MSDF atlas | The same BitmapText constructor with `msdf: true`. | RGB median distance rendering around zero 0.5; distance outline/shadow effects. | A compatible loaded atlas is required; imported metadata alone does not select a mode. |
+
+BitmapText's font comes from its second constructor argument. Inherited `font`, `fontFamily`, `fontWeight`, `fontStyle`, and `fontVariant` style fields do not replace the baked font or synthesize glyph variants. Use `scale`/`fontScale` for baked metrics rather than treating them as a new runtime font size. Text's `outlineWidth` remains a normalized distance threshold (0 to 0.5), not a pixel width; the same numeric threshold can look different across atlases, scales, and distance ranges. Shadow offsets are logical pixels and `shadowBlur` is a normalized softness value.
+
+## System, web, and bitmap fonts in one scene
+
+The complete program below loads a web font and an ordinary RGBA bitmap font from `@codexo/exojs-demo-assets`, mounts its canvas, and builds the nodes only after readiness. The web-font title uses gradient, outline, and shadow; the bitmap score uses the effects its atlas supports. Install the demo-assets package alongside Core.
+
+<SourceSnippet source="examples/guides/text/font-types.ts" region="font-types" language="ts" title="Three real font sources and their supported effects" />
+
+The scene owns loader claims and nodes. A loader-managed FontFace is removed from the browser font set when its owning payload is disposed; another scope's claim can keep it alive. A FontFace registered directly by Text has a different lifetime, and shared glyph-atlas caches are not evicted merely because a scene ends. Prefer loader-managed fonts for deterministic loading/failure handling; do not describe scene teardown as clearing every global font cache.
+
 ## A minimal text node
 
 ```ts
@@ -36,9 +57,11 @@ label.style.fontSize = 32;            // re-lays out the glyphs on the next draw
 label.style.fillColor = new Color(0xff6347); // shader-side colour only — no atlas work
 ```
 
+Styles can be deliberately shared by assigning the same `TextStyle` to several nodes. Each node observes layout/font changes independently; measuring one text does not consume another's invalidation. Pure fill/tint changes remain shader work rather than forcing every reader to re-layout.
+
 ## Font loading
 
-System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load one via `Asset.type('font', ...)` in the scene's `load` hook — fonts aren't a seamless type, so a bare path isn't enough; an explicit descriptor is required even for a literal path, and `family` is a required option:
+System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load one via `{ type: 'font', source }` in the scene's `load` hook — fonts aren't a seamless type, so a bare path isn't enough; an explicit descriptor is required even for a literal path, and `family` is a required option:
 
 <SourceSnippet
   source="examples/guides/text/custom-font.ts"
@@ -58,9 +81,54 @@ You can also hand the loaded face to the node directly through the `font` style 
   title="examples/guides/text/custom-font.ts"
 />
 
-`font` takes precedence over `fontFamily` when both are set.
+`font` takes precedence over `fontFamily` when both are set. Direct face loading inside Text can fall back while pending and does not provide the same caller-facing load/error queue as the loader. Await loader loading when a failed font must prevent activation or layout must use final metrics.
 
 Text colours (`fillColor`, outline and shadow colours) are authored sRGB `Color` values, converted to linear light once like every other authored colour. Glyph coverage held in a signed-distance-field atlas is numeric data, not colour, and is never decoded; only colour glyphs rasterized through a canvas are colour. See [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/).
+
+### Offline bitmap and distance fonts
+
+[`BitmapText`](/ExoJS/en/api/bitmap-text/) uses a loaded [`BmFont`](/ExoJS/en/api/bm-font/). The `bmFont` asset type accepts AngelCode BMFont text and the BMFont JSON shape emitted by [msdf-bmfont-xml](https://github.com/soimy/msdf-bmfont-xml). Request JSON explicitly as `bmFont`; ordinary `.json` assets keep their usual meaning.
+
+```ts
+import { BitmapText, type Loader } from '@codexo/exojs';
+
+declare const loader: Loader;
+const font = await loader.load({ type: 'bmFont', source: 'fonts/ui.json' });
+const label = new BitmapText('Score: 0', font, { msdf: true });
+```
+
+The supported `distanceField` extension contains `fieldType` (`sdf`, `msdf` or `mtsdf`) and an optional `distanceRange`. It uses the symmetric `msdf-bmfont-xml` convention: the range is the **full span in atlas texels**, with zero distance encoded as 0.5. Range 4 represents approximately -2 through +2 texels; it is not a four-pixel outer radius. A missing range is retained as `null`. The equivalent text tag `distanceField fieldType=msdf distanceRange=4` is also supported, but it is not part of standard BMFont and some text exporters omit it.
+
+For missing or asymmetric encoding metadata, supply an explicit [`BmFontAssetOptions`](/ExoJS/en/api/bm-font-asset-options/) declaration. This replaces the descriptor's distance metadata for that request. For example, an increasing encoding covering -6 through +2 atlas texels has span 8 and zero at 0.75:
+
+```ts
+import { type Loader } from '@codexo/exojs';
+
+declare const loader: Loader;
+const font = await loader.load({ type: 'bmFont', source: 'fonts/custom.fnt', distanceField: {
+        fieldType: 'mtsdf',
+        distanceRange: 8,
+        zeroDistanceValue: 0.75,
+    } });
+```
+
+Both `distanceRange` and `zeroDistanceValue` accept `null` when unknown; an explicit declaration never infers a radius or assumes symmetry. For known values, signed distance in atlas texels is `(sample - zeroDistanceValue) * distanceRange`, positive inside the glyph. When converting [msdf-atlas-gen metadata](https://github.com/Chlumsky/msdf-atlas-gen), its `distanceRangeMiddle` is a distance, so the normalized zero is `0.5 - distanceRangeMiddle / distanceRange`. Native `msdf-atlas-gen` JSON uses different glyph geometry and is not directly imported; convert its geometry to BMFont metrics first or construct `BmFontData` yourself. PSDF, XML and binary BMFont are not supported by this importer.
+
+Declared distance pages use numeric texture decoding, including the independent alpha distance channel of MTSDF. They are loaded without color conversion or premultiplication; an environment without numeric image decoding reports an error. Ordinary bitmap and color fonts keep the color decoder and its image-element fallback. Fonts sharing a page URL retain separate numeric and color interpretations, and pages remain owned by their font's asset dependency scope.
+
+Read the preserved encoding from `font.fontData.distanceField`. `padding` follows top/right/bottom/left order, `spacing` is separate, `atlasWidth`/`atlasHeight` retain declared dimensions, and each glyph retains its sampled rectangle and optional channel mask. Missing values remain absent; nothing is inferred from atlas or font size. `BitmapText.fontScale` scales glyph metrics; it does not rewrite atlas-texel metadata. The construction-time `msdf` switch remains explicit. With `msdf: true`, the declared range, zero value and padding decide how far outlines and shadows can reach, as described under [Outlines and shadows](#outlines-and-shadows); the shader always reads the RGB median.
+
+### Import support is not shader support
+
+| Font data | Import / numeric preservation | Current rendering path |
+| --- | --- | --- |
+| Runtime Text SDF | Generated by Text's glyph rasterizer. | Scalar SDF rendering for runtime glyphs. |
+| External RGB MSDF with symmetric zero 0.5 | BMFont-compatible geometry and declared numeric distance pages are preserved. | `BitmapText(..., { msdf: true })` uses the RGB median path. |
+| External scalar SDF | Distance metadata/pages can be preserved. | No automatic external scalar-SDF selection through the current `msdf` boolean. |
+| MTSDF | Metadata and the independent alpha distance channel can be preserved. | The RGB MSDF path does not consume the independent alpha distance as full MTSDF rendering. |
+| Asymmetric/unknown range or zero | Explicit values or null remain data. | Current external MSDF shaders use zero 0.5; preserved asymmetric metadata does not change that shader contract. |
+
+Use the RGB-MSDF loading example above only with compatible atlas data. Import tests that preserve an MTSDF channel establish data integrity, not support for every distance-field effect. These import capabilities do not change TextStyle units.
 
 ## Style properties
 
@@ -75,17 +143,17 @@ The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-o
 | `fontVariant` | `'normal' \| 'small-caps'` | `'normal'` | Caps variant. Small caps come from the family's own glyphs where it has them, otherwise from the browser's synthesis |
 | `fontSize` | `number` | `20` | Font size in pixels |
 | `fillColor` | `Color` | `Color.white` | Glyph fill colour |
-| `outlineColor` | `Color` | `Color.black` | SDF outline colour |
-| `outlineWidth` | `number` | `0` | Outline width in SDF units (`0`–`0.5`); `0` disables the outline |
+| `outlineColor` | `Color` | `Color.black` | Outline colour |
+| `outlineWidth` | `number` | `0` | Outline extent outside the glyph edge in logical pixels; `0` disables the outline |
 | `align` | [`TextAlignment`](/ExoJS/en/api/text-alignment/) — `'left' \| 'center' \| 'right' \| 'justify'` | `'left'` | Horizontal alignment |
 | `textTransform` | `'none' \| 'uppercase' \| 'lowercase' \| 'capitalize'` | `'none'` | Case mapping applied before layout; the node's `text` is untouched |
 | `lineHeight` | `number` | `1.2` | Line-height multiplier on `fontSize` |
 | `leading` | `number` | `0` | Extra pixel gap between lines |
 | `shadowColor` | `Color` | `Color.black` | Drop-shadow colour |
-| `shadowOffsetX` | `number` | `0` | Horizontal shadow offset in pixels |
-| `shadowOffsetY` | `number` | `0` | Vertical shadow offset in pixels |
+| `shadowOffsetX` | `number` | `0` | Horizontal shadow offset in logical pixels |
+| `shadowOffsetY` | `number` | `0` | Vertical shadow offset in logical pixels |
 | `shadowAlpha` | `number` | `0` | Shadow opacity (`0`–`1`); `0` disables the shadow |
-| `shadowBlur` | `number` | `0` | Shadow blur softness (`0`–`1`) |
+| `shadowBlur` | `number` | `0` | Half-width of the shadow's soft edge in logical pixels |
 | `underline` | `boolean` | `false` | Draw a rule under each line |
 | `strikethrough` | `boolean` | `false` | Draw a rule through each line |
 | `decorationColor` | `Color \| null` | `null` | Rule colour; `null` follows the fill, gradient included |
@@ -112,6 +180,59 @@ const banner = new Text('Level Up', {
 ```
 
 Stop offsets are clamped to `0`–`1` and sorted on the way in, and the colours are cloned, so the object you pass is never aliased. Reading `style.gradient` back gives the normalized form. The ramp is evaluated in the fragment shader from the node's own packed style, so changing it costs no atlas work — it is a `'tint'` change like `fillColor`.
+
+### Outlines and shadows
+
+`outlineWidth`, `shadowOffsetX`, `shadowOffsetY` and `shadowBlur` are **logical pixels in the node's local space**: an outline of 2 is two pixels wide around every glyph, the same at every canvas pixel ratio and every font size, and it grows with the node's scale and the camera's zoom exactly like the glyphs do. `shadowBlur` is the half-width of the shadow's soft edge: the shadow fades from full strength `shadowBlur` pixels inside its offset outline to nothing `shadowBlur` pixels outside it. That is a smooth ramp, not a CSS Gaussian.
+
+An effect is requested by `outlineWidth > 0` or `shadowAlpha > 0`; offsets and blur of an invisible shadow are free. A requested effect has to fit the glyph's distance field:
+
+| Glyphs | Outline and shadow | Reach |
+|--------|--------------------|-------|
+| `Text` (runtime SDF) | Supported | Chosen automatically; an explicit `sdfRadius` fixes it |
+| `Text` with `colorGlyphs: true` | Not supported (`'no-distance-field'`) | Fill and tint only; RGBA content is kept |
+| `BitmapText` without `msdf` | Not supported (`'no-distance-field'`) | Fill and tint only; RGBA content is kept |
+| `BitmapText` with `msdf` and declared range, zero value and padding | Supported | `min(zeroDistanceValue × distanceRange, padding) × fontScale` |
+| `BitmapText` with `msdf` but missing metadata | Not supported (`'unknown-range'`) | Fill only |
+| `BitmapText` with `msdf` and unusable metadata | Not supported (`'invalid-range'`) | Fill only |
+
+One logical pixel of the reach is kept for the antialiased edge, so `outlineWidth` — and, for a shadow, the larger of `|shadowOffsetX|` and `|shadowOffsetY|` plus `shadowBlur` — may use the reach minus one.
+
+Runtime SDF text starts with 4 pixels of reach and grows to 8, 16, 32, 63.75 or 127.5 when effects need more. For example, `outlineWidth: 4` selects an 8-pixel field. Growth switches to a new atlas tier. A smaller effect reuses the current tier, and text using the same typeface, tier and raster density shares rasterized glyphs. `Label` and `Button` use the same sizing.
+
+The two largest automatic tiers use half-pixel and whole-pixel steps in the R8 distance field. Integer effect lengths then shift the threshold by a whole number of steps. An explicit larger radius trades away that precision. Each glyph tile gains `2 × ceil(sdfRadius × rasterPixelRatio)` texels along both dimensions, so more reach reduces the number of tiles that fit in a 1024 × 1024 page (1 MiB for the R8 pixels per page). Very large fonts, densities and effects can exceed the space available for a single glyph tile.
+
+Pass `sdfRadius` to fix the reach instead. It then also becomes a hard limit that never grows - useful to pin atlas memory. A larger reach costs atlas space for the wider tile padding, and because the 8-bit field spreads over twice the reach, it coarsens glyph edges under strong magnification, which is why the reach is not simply set to the maximum.
+
+```ts
+import { Color, Text, TextEffectError } from '@codexo/exojs';
+
+const title = new Text('Game Over', { fontSize: 64, outlineColor: Color.black, outlineWidth: 4 });
+
+title.style.shadowAlpha = 0.6;
+title.style.shadowOffsetX = 6; // fits: the node moves to the 8px tier
+
+const issue = title.checkEffects({ shadowAlpha: 0.6, shadowOffsetX: 200 });
+
+if (issue !== null) {
+    console.warn(issue.reason, issue.required, issue.available); // 'insufficient-effect-capacity', 201, 127.5
+}
+
+try {
+    title.style.shadowOffsetX = 200;
+} catch (error) {
+    if (!(error instanceof TextEffectError)) {
+        throw error;
+    }
+    // The style still holds 6: a rejected change is never partially applied.
+}
+```
+
+Every operation that could produce an undrawable combination validates it synchronously and leaves everything unchanged when it fails: the constructor, assigning `text.style`, mutating a style in place — including a style shared by several nodes, which has to fit all of them — `TextStyle.copy()`, `BitmapText.setFont()`, `BitmapText.fontScale`, `Label.setTextStyle()` and `Button.setTextStyle()`, UI theme and skin text styles (when `createUITheme` or `setTheme` applies them, not when a widget first lays out) and deserialization. The effect setter rejects values that exceed the field budget.
+
+Widths are exact in the antialiasing guarantee domain: once an effect covers at least two device pixels on screen, the measured width matches the request to within a fraction of a raster pixel. Narrower than that, the half-pixel fades of the effect edge and the glyph edge merge and a one-device-pixel outline reads somewhat thinner. Under strong minification the outer fade narrows instead of tinting the tile around each glyph.
+
+Scene and prefab format 4 stores effect lengths in logical pixels. Re-export documents from versions 0 through 3 with the desired pixel lengths before loading them.
 
 ### Underline and strikethrough
 
@@ -423,12 +544,20 @@ Antialiasing is not part of this decision. The shader derives its edge width fro
 <a id="typographic-styling"></a>
 <ExamplePreview chapter="text-fonts" slug="typographic-styling" />
 
-A loaded font beside the default, with a gradient, outline, shadow and underline in one scene.
+A live text-layout sample with a draggable wrap boundary, font selection, heading effects and a genuine missing-font fallback.
 
 <a id="multiline-and-wrap"></a>
 <ExamplePreview chapter="text-fonts" slug="multiline-and-wrap" />
 
-Multiline text with alignment and line-height control.
+Compare word wrapping, long-token breaking and deliberate no-wrap overflow. Alignment, line height and underline are described above.
+
+### Font layout and decorations
+
+The compact Text Layout and Bitmap Text examples focus on one comparison at a time. The recipes below retain loaded-font comparison, underline, gradient, outline, shadow, atlas glyphs, kerning and bitmap wrapping. Alignment and line-height recipes remain in the sections above.
+
+<ExamplePreview chapter="guide-fixtures" slug="text-styles" />
+
+<ExamplePreview chapter="guide-fixtures" slug="bitmap-layout" />
 
 ## Where to go next
 

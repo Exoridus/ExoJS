@@ -6,11 +6,11 @@
   "subsystem": "tiled",
   "importPath": "@codexo/exojs-tiled",
   "tier": "stable",
-  "memberCount": 18,
+  "memberCount": 19,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 18,
+    "properties": 19,
     "events": 0
   },
   "sections": [
@@ -144,6 +144,43 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "instanceFields",
+          "signature": "instanceFields?: readonly TiledTemplateField[]",
+          "signatureTokens": [
+            {
+              "text": "instanceFields",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledTemplateField",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "For an object placed from a template whose template has not been merged in yet, the fields the map file sets on the instance itself. Absent once the template is resolved, and for objects without a template."
         },
         {
           "name": "name",
@@ -346,7 +383,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Path to a .tx object template this object was instantiated from."
+          "description": "Path of the object template (.tj) this object was placed from, relative to the map. Loading the map through the Loader merges the template in."
         },
         {
           "name": "text",

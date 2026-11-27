@@ -17,7 +17,14 @@
  * the game's concern, not the engine's.
  */
 export interface KeyValueStore {
-  /** Read the value at `key`, or `null` when absent. */
+  /**
+   * Read the value at `key`, or `null` when absent.
+   *
+   * `null` is also the absent sentinel, so a payload stored as `null` reads
+   * back as absent. An `undefined` payload is backend-specific: IndexedDB
+   * stores read it back as `null`, while `MemoryStore` returns it unchanged.
+   * Wrap such a payload in an object rather than storing it bare.
+   */
   get<T>(key: string): Promise<T | null>;
   /** Write `value` at `key`, replacing any existing entry. */
   set(key: string, value: unknown): Promise<void>;

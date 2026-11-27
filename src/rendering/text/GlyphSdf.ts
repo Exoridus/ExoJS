@@ -5,16 +5,16 @@
  * Euclidean Distance Transform (Felzenszwalb & Huttenlocher, 2012) to
  * produce a single-channel R8 SDF buffer.
  *
- * Output encoding: 128/255 ≈ 0.502 is the glyph edge. Values above 0.5
- * are inside the glyph, values below 0.5 are outside. The range encoded
- * by the SDF extends `radius` pixels beyond the geometric edge.
+ * Output encoding: 127.5/255 = 0.5 is the glyph edge. Values above 0.5
+ * are inside the glyph, values below 0.5 are outside. With `cutoff = 0.5`
+ * the field saturates `radius / 2` pixels on either side of the edge.
  *
  * Compatible with `cutoff = 0.5` in the shader's `smoothstep(0.5 − soft, 0.5 + soft, sd)`.
  */
 
 import type { CanvasTextState } from './canvasTextState';
 import { applyCanvasTextState, cssFontString } from './canvasTextState';
-import type { FontStyle, FontVariant } from './types';
+import type { FontStyle, FontVariant, GlyphFillBounds } from './types';
 
 const inf = 1e20;
 
@@ -35,9 +35,12 @@ export interface GlyphSdfOptions {
    * Defaults to 8.
    */
   buffer?: number;
+  /** Largest tile dimension the destination atlas can store. @internal */
+  maxTileSize?: number;
   /**
-   * EDT search radius. Values above `radius` pixels from the edge are
-   * clamped. Must be ≥ `buffer` for full-range SDF coverage.
+   * Distance span, in pixels, the 0..1 output range is normalised over:
+   * the value moves by `1 / radius` per pixel and saturates `radius × cutoff`
+   * pixels inside and `radius × (1 − cutoff)` pixels outside the edge.
    * Defaults to `buffer`.
    */
   radius?: number;
@@ -64,6 +67,11 @@ export interface GlyphSdfOptions {
 
 /** Result of {@link GlyphSdf.draw}. */
 export interface GlyphSdfResult {
+  /** Visible fill relative to the raster tile, in texels. @internal */
+  fill: GlyphFillBounds | null;
+  /** Tile offsets relative to the pen and line top, in texels. @internal */
+  xBearing: number;
+  yBearing: number;
   /** R8 SDF values: 0 = far outside, 255 = deep inside, ~128 = edge. */
   data: Uint8ClampedArray;
   /** Tile width in pixels (= glyphWidth + 2 × buffer). */
@@ -78,7 +86,7 @@ export interface GlyphSdfResult {
   glyphTop: number;
   /** Pixels from tile left to glyph left = buffer. */
   glyphLeft: number;
-  /** Logical horizontal advance for cursor movement. */
+  /** Horizontal advance in raster pixels - the units of the `fontSize` given. */
   glyphAdvance: number;
 }
 
@@ -90,13 +98,15 @@ type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
  * SDF generator for a single font variant.
  *
  * Maintains an internal canvas that is resized per glyph and a set of reusable
- * EDT working arrays that grow on demand (no per-call allocations once the
- * largest glyph has been processed).
+ * EDT working arrays that grow on demand. The draw path itself still allocates
+ * per call: the alpha readback plus the fresh result buffer {@link draw} hands
+ * back.
  * @advanced
  */
 export class GlyphSdf {
   private readonly _buffer: number;
   private readonly _radius: number;
+  private readonly _maxTileSize: number;
   private readonly _cutoff: number;
   private readonly _fontSize: number;
   private readonly _textState: CanvasTextState;
@@ -126,6 +136,8 @@ export class GlyphSdf {
   public constructor(options: GlyphSdfOptions) {
     this._buffer = options.buffer ?? 8;
     this._radius = options.radius ?? this._buffer;
+    // EDT site indices are stored in an Int16Array.
+    this._maxTileSize = Math.min(options.maxTileSize ?? 32768, 32768);
     this._cutoff = options.cutoff ?? 0.5;
     this._fontSize = options.fontSize;
 
@@ -149,13 +161,6 @@ export class GlyphSdf {
   }
 
   /**
-   * Rasterize `char` and compute its SDF.
-   *
-   * Returns a new {@link GlyphSdfResult} each call. The `data` buffer is a
-   * fresh `Uint8ClampedArray`; the caller may hold a reference to it safely
-   * across subsequent `draw()` calls.
-   */
-  /**
    * Ensure font-level ascent/descent are measured. Called once per GlyphSdf
    * instance - deferred to the first draw() so the canvas context is ready.
    * Uses `fontBoundingBoxAscent/Descent` when available; falls back to
@@ -165,7 +170,10 @@ export class GlyphSdf {
    * consistent height and a consistent baseline position within the tile.
    */
   private _ensureFontMetrics(): void {
-    if (this._metricsReady) return;
+    if (this._metricsReady) {
+      return;
+    }
+
     const ctx = this._ctx;
     applyCanvasTextState(ctx, this._textState);
     const m = ctx.measureText('HgjpqyÉÅ');
@@ -176,11 +184,21 @@ export class GlyphSdf {
       actualBoundingBoxDescent?: number;
     };
     this._fontAscent = Math.max(1, Math.ceil((m as M).fontBoundingBoxAscent ?? (m as M).actualBoundingBoxAscent ?? this._fontSize * 0.8));
-    this._fontDescent = Math.max(1, Math.ceil((m as M).fontBoundingBoxDescent ?? (m as M).actualBoundingBoxDescent ?? this._fontSize * 0.2));
+    this._fontDescent = Math.max(
+      1,
+      Math.ceil((m as M).fontBoundingBoxDescent ?? (m as M).actualBoundingBoxDescent ?? this._fontSize * 0.2),
+    );
     this._metricsReady = true;
   }
 
-  public draw(char: string): GlyphSdfResult {
+  /**
+   * Rasterize `char` and compute its SDF.
+   *
+   * Returns a new {@link GlyphSdfResult} each call. The `data` buffer is a
+   * fresh `Uint8ClampedArray`; the caller may hold a reference to it safely
+   * across subsequent `draw()` calls.
+   */
+  public draw(char: string, pixelRatio = 1): GlyphSdfResult {
     this._ensureFontMetrics();
 
     const ctx = this._ctx;
@@ -206,9 +224,16 @@ export class GlyphSdf {
     // buf + _fontAscent from the tile top. If per-glyph actualBoundingBoxAscent
     // were used here instead, different glyphs would have their baselines at
     // different positions in world space (the visual baseline-jump bug).
-    const glyphHeight = this._fontAscent + this._fontDescent;
+    const glyphAscent = Math.max(this._fontAscent, Math.ceil(m.actualBoundingBoxAscent || 0));
+    const glyphHeight = glyphAscent + Math.max(this._fontDescent, Math.ceil(m.actualBoundingBoxDescent || 0));
     const tileW = glyphWidth + 2 * buf;
     const tileH = glyphHeight + 2 * buf;
+
+    if (tileW > this._maxTileSize || tileH > this._maxTileSize) {
+      throw new RangeError(
+        `GlyphSdf: ${tileW}x${tileH}px tile at pixelRatio ${pixelRatio} exceeds the ${this._maxTileSize}px atlas page. Reduce the font size, pixel ratio or effect reach.`,
+      );
+    }
 
     // ── Resize canvas if the tile dimensions changed ───────────────────────
     if (this._canvasW !== tileW || this._canvasH !== tileH) {
@@ -223,23 +248,25 @@ export class GlyphSdf {
     applyCanvasTextState(ctx, this._textState);
     ctx.fillStyle = '#ffffff';
     // Baseline at buf + _fontAscent - consistent across all glyphs.
-    ctx.fillText(char, buf + bbLeft, buf + this._fontAscent);
+    ctx.fillText(char, buf + bbLeft, buf + glyphAscent);
 
     const rgba = ctx.getImageData(0, 0, tileW, tileH).data;
     const n = tileW * tileH;
 
     // ── Grow working arrays lazily ────────────────────────────────────────
     if (n > this._gridOuter.length) {
-      const maxDim = Math.max(tileW, tileH);
       this._gridOuter = new Float64Array(n);
       this._gridInner = new Float64Array(n);
+      this._out = new Uint8ClampedArray(n);
+    }
+
+    const maxDim = Math.max(tileW, tileH);
+
+    if (maxDim > this._f.length) {
       this._f = new Float64Array(maxDim);
       this._d = new Float64Array(maxDim);
       this._z = new Float64Array(maxDim + 1);
       this._v = new Int16Array(maxDim);
-    }
-    if (n > this._out.length) {
-      this._out = new Uint8ClampedArray(n);
     }
 
     // ── Initialise EDT grids from the alpha channel ───────────────────────
@@ -251,6 +278,7 @@ export class GlyphSdf {
     for (let i = 0; i < n; i++) {
       // In-bounds: rgba holds n RGBA texels (4*n entries).
       const a = rgba[i * 4 + 3]! / 255; // alpha 0..1 from the R channel (white glyph)
+
       if (a === 1) {
         this._gridOuter[i] = 0;
         this._gridInner[i] = inf;
@@ -291,6 +319,17 @@ export class GlyphSdf {
       glyphTop: buf, // glyph content starts buf px from tile top
       glyphLeft: buf, // glyph content starts buf px from tile left
       glyphAdvance: advance,
+      xBearing: -buf,
+      yBearing: this._fontAscent - glyphAscent - buf,
+      fill:
+        m.actualBoundingBoxLeft + m.actualBoundingBoxRight > 0 && m.actualBoundingBoxAscent + m.actualBoundingBoxDescent > 0
+          ? {
+              x: buf + bbLeft - m.actualBoundingBoxLeft,
+              y: buf + glyphAscent - m.actualBoundingBoxAscent,
+              width: m.actualBoundingBoxLeft + m.actualBoundingBoxRight,
+              height: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent,
+            }
+          : null,
     };
   }
 }
@@ -299,20 +338,40 @@ export class GlyphSdf {
 // 2D Euclidean Distance Transform (Felzenszwalb & Huttenlocher, TPAMI 2012).
 // Applied separably: one pass per column, then one pass per row + sqrt.
 
-const _edt2d = (data: Float64Array, width: number, height: number, f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array): void => {
+const _edt2d = (
+  data: Float64Array,
+  width: number,
+  height: number,
+  f: Float64Array,
+  d: Float64Array,
+  v: Int16Array,
+  z: Float64Array,
+): void => {
   // Vertical pass: transform along each column. All indices are in-bounds:
   // y*width+x < width*height <= data.length, and y/x < height/width <= f/d.length.
   for (let x = 0; x < width; x++) {
-    for (let y = 0; y < height; y++) f[y] = data[y * width + x]!;
+    for (let y = 0; y < height; y++) {
+      f[y] = data[y * width + x]!;
+    }
+
     _edt1d(f, d, v, z, height);
-    for (let y = 0; y < height; y++) data[y * width + x] = d[y]!;
+
+    for (let y = 0; y < height; y++) {
+      data[y * width + x] = d[y]!;
+    }
   }
 
   // Horizontal pass + sqrt: transform along each row, then take sqrt
   for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) f[x] = data[y * width + x]!;
+    for (let x = 0; x < width; x++) {
+      f[x] = data[y * width + x]!;
+    }
+
     _edt1d(f, d, v, z, width);
-    for (let x = 0; x < width; x++) data[y * width + x] = Math.sqrt(d[x]!);
+
+    for (let x = 0; x < width; x++) {
+      data[y * width + x] = Math.sqrt(d[x]!);
+    }
   }
 };
 
@@ -329,11 +388,16 @@ const _edt1d = (f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array
   for (let q = 1; q < n; q++) {
     // Find the parabola intersection s (break-point) for site q.
     let s: number;
+
     do {
       // k and q index within the valid envelope; v/f/z are sized >= n (+1 for z).
       const r = v[k]!;
       s = (f[q]! + q * q - f[r]! - r * r) / (2 * (q - r));
-      if (s > z[k]!) break;
+
+      if (s > z[k]!) {
+        break;
+      }
+
       k--;
     } while (k >= 0);
 
@@ -344,8 +408,12 @@ const _edt1d = (f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array
   }
 
   k = 0;
+
   for (let q = 0; q < n; q++) {
-    while (z[k + 1]! < q) k++;
+    while (z[k + 1]! < q) {
+      k++;
+    }
+
     const r = v[k]!;
     d[q] = (q - r) * (q - r) + f[r]!;
   }

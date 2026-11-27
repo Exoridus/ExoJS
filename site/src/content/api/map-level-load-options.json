@@ -4,7 +4,7 @@
   "symbol": "MapLevelLoadOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for a MapWorldRuntime.loadLevel that also spawns the level's map objects. `spawner` and `context` travel together: the context exists to be handed to that spawner's factories."
       ],
-      "importLine": "import { MapLevelLoadOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapLevelLoadOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

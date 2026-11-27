@@ -16,7 +16,7 @@
  * the browser lane (`webgl2-text-pixel-ratio.test.ts`).
  */
 
-import { GlyphAtlas } from '#rendering/text/GlyphAtlas';
+import { GlyphAtlas, SDF_RADIUS } from '#rendering/text/GlyphAtlas';
 import { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 
 // ---------------------------------------------------------------------------
@@ -72,7 +72,7 @@ beforeEach(() => {
 afterEach(() => {
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
-    value: () => ({ fillStyle: '', fillRect: () => undefined, drawImage: () => undefined }),
+    value: () => ({ fillStyle: '', fillRect: () => {}, drawImage: () => {} }),
   });
 });
 
@@ -95,14 +95,18 @@ describe('GlyphAtlasPool identity', () => {
   test('returns the same atlas for a repeated request', () => {
     const pool = new GlyphAtlasPool();
 
-    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 2)).toBe(pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 2));
+    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 2)).toBe(
+      pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 2),
+    );
   });
 
   test('defaults to ratio 1', () => {
     const pool = new GlyphAtlasPool();
 
     expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' }).pixelRatio).toBe(1);
-    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' })).toBe(pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', 8, 1));
+    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' })).toBe(
+      pool.getAtlas({ family: 'Roboto', fontWeight: '400' }, 'sdf', SDF_RADIUS, 1),
+    );
   });
 
   // The whole reason layout survives a ratio change: the numbers a line break
@@ -121,7 +125,9 @@ describe('GlyphAtlasPool identity', () => {
   test('separates metrics per font variant', () => {
     const pool = new GlyphAtlasPool();
 
-    expect(pool.getMetrics({ family: 'Roboto', fontWeight: '400' })).not.toBe(pool.getMetrics({ family: 'Roboto', fontStyle: 'italic', fontWeight: '400' }));
+    expect(pool.getMetrics({ family: 'Roboto', fontWeight: '400' })).not.toBe(
+      pool.getMetrics({ family: 'Roboto', fontStyle: 'italic', fontWeight: '400' }),
+    );
     expect(pool.getMetrics({ family: 'Roboto', fontWeight: '400' })).not.toBe(pool.getMetrics({ family: 'Roboto', fontWeight: '700' }));
     expect(pool.getMetrics({ family: 'Roboto', fontWeight: '400' })).not.toBe(pool.getMetrics({ family: 'Inter', fontWeight: '400' }));
   });
@@ -132,8 +138,12 @@ describe('GlyphAtlasPool identity', () => {
     // The key is a string built from the object, so a field left out has to
     // resolve to `'normal'` BEFORE it is concatenated - otherwise the two
     // spellings below would hold two atlases of the same font.
-    expect(pool.getAtlas({ family: 'Roboto' })).toBe(pool.getAtlas({ family: 'Roboto', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }));
-    expect(pool.getMetrics({ family: 'Roboto' })).toBe(pool.getMetrics({ family: 'Roboto', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }));
+    expect(pool.getAtlas({ family: 'Roboto' })).toBe(
+      pool.getAtlas({ family: 'Roboto', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }),
+    );
+    expect(pool.getMetrics({ family: 'Roboto' })).toBe(
+      pool.getMetrics({ family: 'Roboto', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }),
+    );
     expect(pool.getShapedMetrics({ family: 'Roboto' })).toBe(
       pool.getShapedMetrics({ family: 'Roboto', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }),
     );
@@ -144,7 +154,9 @@ describe('GlyphAtlasPool identity', () => {
 
     // A small-cap 'a' is a different raster and a different advance from an
     // ordinary one, so sharing either cache would hand back the wrong glyph.
-    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' })).not.toBe(pool.getAtlas({ family: 'Roboto', fontWeight: '400', fontVariant: 'small-caps' }));
+    expect(pool.getAtlas({ family: 'Roboto', fontWeight: '400' })).not.toBe(
+      pool.getAtlas({ family: 'Roboto', fontWeight: '400', fontVariant: 'small-caps' }),
+    );
     expect(pool.getMetrics({ family: 'Roboto', fontWeight: '400' })).not.toBe(
       pool.getMetrics({ family: 'Roboto', fontWeight: '400', fontVariant: 'small-caps' }),
     );
@@ -235,5 +247,41 @@ describe('GlyphAtlas rasterization at a pixel ratio', () => {
     expect(info.uvTop).toBe(2 / 1024);
     expect(info.uvRight).toBe((2 + 9) / 1024);
     expect(info.uvBottom).toBe((2 + 18) / 1024);
+  });
+});
+
+test('clearVariant clears standalone metrics across caps variants, preserving other typefaces', () => {
+  const pool = new GlyphAtlasPool();
+  const ordinary = pool.getMetrics({ family: 'Loaded' });
+  const caps = pool.getMetrics({ family: 'Loaded', fontVariant: 'small-caps' });
+  const other = pool.getMetrics({ family: 'Other' });
+  expect(ordinary.advance('M', 32)).toBe(10);
+  expect(caps.advance('M', 32)).toBe(10);
+  expect(other.advance('M', 32)).toBe(10);
+  const ordinaryClear = vi.spyOn(ordinary, 'clear');
+  const capsClear = vi.spyOn(caps, 'clear');
+  const otherClear = vi.spyOn(other, 'clear');
+  measured.width = 23;
+  pool.clearVariant({ family: 'Loaded' });
+  expect(ordinaryClear).toHaveBeenCalledOnce();
+  expect(capsClear).toHaveBeenCalledOnce();
+  expect(otherClear).not.toHaveBeenCalled();
+  expect(ordinary.advance('M', 32)).toBe(23);
+  expect(caps.advance('M', 32)).toBe(23);
+  expect(other.advance('M', 32)).toBe(10);
+  measured.width = 10;
+});
+
+describe('GlyphAtlas oversized tile', () => {
+  test('a tile larger than a page leaves the atlas with its existing pages', () => {
+    const atlas = new GlyphAtlas({ family: 'Roboto', fontWeight: '400' }, 16, 'color', 8, 4);
+    const added: number[] = [];
+
+    atlas.onPageAdded.add(index => added.push(index));
+
+    expect(() => atlas.getGlyph('A', 12)).toThrow(/exceeds/);
+    expect(() => atlas.getGlyph('B', 12)).toThrow(/exceeds/);
+    expect(atlas.pages).toHaveLength(1);
+    expect(added).toEqual([]);
   });
 });

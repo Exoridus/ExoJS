@@ -3,18 +3,16 @@ import { describe, expect, it } from 'vitest';
 import type { MapLevel } from '../src/MapWorld';
 import { MapLevelSide, MapWorld } from '../src/MapWorld';
 
-const level = (id: string, x: number, y: number, overrides: Partial<MapLevel> = {}): MapLevel => {
-  return {
-    id,
-    name: id.toUpperCase(),
-    index: 0,
-    bounds: { x, y, width: 100, height: 100 },
-    external: false,
-    neighbours: [],
-    properties: {},
-    ...overrides,
-  };
-};
+const level = (id: string, x: number, y: number, overrides: Partial<MapLevel> = {}): MapLevel => ({
+  id,
+  name: id.toUpperCase(),
+  index: 0,
+  bounds: { x, y, width: 100, height: 100 },
+  external: false,
+  neighbours: [],
+  properties: {},
+  ...overrides,
+});
 
 describe('MapWorld', () => {
   it('rejects duplicate level ids', () => {

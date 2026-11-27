@@ -3,11 +3,10 @@ import { describe, expect, it } from 'vitest';
 
 import echoWorkerSource from './fixtures/inline-worker-echo.worker.ts?worker';
 
-const nextMessage = <T>(worker: Worker): Promise<T> => {
-  return new Promise<T>(resolve => {
+const nextMessage = <T>(worker: Worker): Promise<T> =>
+  new Promise<T>(resolve => {
     worker.addEventListener('message', (event: MessageEvent<T>) => resolve(event.data), { once: true });
   });
-};
 
 describe('InlineWorker - real Worker', () => {
   it('runs a bundled source string, including its relative imports', async () => {

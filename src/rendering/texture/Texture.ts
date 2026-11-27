@@ -1,5 +1,7 @@
+import { _readMeta, _stampMeta, type CatalogResourceLeaf } from '#assets/assetMeta';
 import type { Color } from '#core/Color';
 import { LoadState, type LoadStateValue } from '#core/LoadState';
+import { Signal } from '#core/Signal';
 import type { TextureSource } from '#core/types';
 import { getTextureSourceSize } from '#core/utils';
 import { Size } from '#math/Size';
@@ -10,6 +12,7 @@ import { createCanvas, createCheckerCanvas } from '#rendering/utils';
 import type { CompressedTexturePayload } from './compressedPayload';
 import { validateCompressedPayload } from './compressedPayload';
 import type { CompressedTextureFormat } from './CompressedTextureFormat';
+import type { FrameSource } from './FrameSource';
 import type { Rgba8TexturePayload } from './pixelPayload';
 import { validateRgba8Payload } from './pixelPayload';
 import { resolveTextureFormat } from './textureFormatInfo';
@@ -147,13 +150,22 @@ export class Texture {
 
   private _version = 0;
   private _source: TextureSource = null;
+  private _frameProvider: FrameSource | null = null;
+  private _ownsFrameProvider = false;
+  private _seenFrameRevision = Number.NaN;
+  private readonly _onProviderFrame = (): void => {
+    this._syncFrameProvider();
+  };
+  private _assetBitmap: ImageBitmap | null = null;
   private _sourceMetadata: DecodedImageMetadata | null = null;
   private _pixels: Rgba8TexturePayload | null = null;
   private _compressed: CompressedTexturePayload | null = null;
   private _size: Size = new Size(0, 0);
   private _isDestroyed = false;
+  private _isDestroying = false;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
   private readonly _releaseListeners: Set<() => void> = new Set<() => void>();
+  private _updates: Signal<[Texture]> | null = null;
   /** @internal - load lifecycle, driven by the Loader's seamless pipeline. */
   public readonly _loadState = new LoadState<Texture>();
   private _scaleMode: ScaleModes;
@@ -171,7 +183,8 @@ export class Texture {
     mipLevelCount: 0,
   });
 
-  public constructor(source: TextureSource = null, options?: Partial<TextureOptions>) {
+  /** A path stays idle until a scene uses this texture or a loader claims it. */
+  public constructor(source: TextureSource | string = null, options?: Partial<TextureOptions>) {
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
       ...Texture.defaultOptions,
       ...options,
@@ -187,10 +200,26 @@ export class Texture {
     this._requestedAlphaMode = options?.alphaMode;
     this._applyResolvedMetadata(this._resolveMetadata(null, null, null), false);
 
-    if (source !== null) {
+    if (typeof source === 'string') {
+      this._loadState.markIdle();
+      _stampMeta(this, {
+        kind: 'texture',
+        src: source,
+        live: true,
+        opts: options === undefined ? undefined : { textureOptions: { ...options } },
+      });
+    } else if (source !== null) {
       this.setSource(source);
     }
   }
+
+  /** @internal */
+  public _pathAsset(): CatalogResourceLeaf<Texture> | null {
+    return _readMeta(this)?.live === true ? (this as unknown as CatalogResourceLeaf<Texture>) : null;
+  }
+
+  /** The chosen asset's pixels per logical unit. Does not affect upload dimensions. @internal */
+  public _assetResolution = 1;
 
   public get source(): TextureSource {
     return this._source;
@@ -198,6 +227,11 @@ export class Texture {
 
   public set source(source: TextureSource) {
     this.setSource(source);
+  }
+
+  /** Immutable bitmap owned by the asset decoder and shared by its handles. @internal */
+  public get _decodedAssetBitmap(): ImageBitmap | null {
+    return this._assetBitmap;
   }
 
   /** RGBA8 payload this texture uploads instead of a browser source, or `null`. */
@@ -282,6 +316,7 @@ export class Texture {
     this.releaseGpu();
     this._compressed = compressed;
     this._source = null;
+    this._assetBitmap = null;
     this._sourceMetadata = null;
     this._pixels = null;
     this._applyResolvedMetadata(metadata);
@@ -313,6 +348,16 @@ export class Texture {
 
   public set height(height: number) {
     this.setSize(this.width, height);
+  }
+
+  /** Width in logical units, after accounting for the density of a selected asset variant. */
+  public get logicalWidth(): number {
+    return this.width / this._assetResolution;
+  }
+
+  /** Height in logical units, after accounting for the density of a selected asset variant. */
+  public get logicalHeight(): number {
+    return this.height / this._assetResolution;
   }
 
   public get scaleMode(): ScaleModes {
@@ -370,13 +415,15 @@ export class Texture {
    * backends resolve sampling state separately, so changing it costs no upload.
    */
   public get version(): number {
+    this._syncFrameProvider();
+
     return this._version;
   }
 
   /**
    * Load lifecycle of this texture. Directly constructed textures are
    * `'ready'`; deferred handles returned by `loader.get('hero.png')` /
-   * `loader.get(Asset.type('texture', src))` start `'loading'` and become `'ready'` once
+   * `loader.get({ type: 'texture', source: src })` start `'loading'` and become `'ready'` once
    * the payload fills in, or `'failed'` (showing the {@link Texture.missing}
    * checker) when the load errors.
    */
@@ -415,7 +462,19 @@ export class Texture {
    * data through paths the base setters don't cover.
    */
   protected _bumpVersion(): void {
-    this._version++;
+    this._touch();
+  }
+
+  /** Observe upload-affecting changes after the payload metadata and dimensions are current. @internal */
+  public _addUpdateListener(listener: (texture: Texture) => void): void {
+    if (!this._isDestroyed) {
+      (this._updates ??= new Signal<[Texture]>()).add(listener);
+    }
+  }
+
+  /** Stop observing upload-affecting changes. @internal */
+  public _removeUpdateListener(listener: (texture: Texture) => void): void {
+    this._updates?.remove(listener);
   }
 
   /**
@@ -496,12 +555,83 @@ export class Texture {
    * sRGB, straight-alpha interpretation.
    */
   public setSource(source: TextureSource): this {
+    this._detachFrameProvider();
+
     return this._setSource(source, browserImageMetadata);
+  }
+
+  /** A frame provider makes the existing Texture a live image without another GPU texture type. @internal */
+  public _attachFrameSource(source: FrameSource | null, ownsSource = false): this {
+    if (source === this._frameProvider) {
+      return this;
+    }
+
+    this._detachFrameProvider();
+    this._frameProvider = source;
+    this._ownsFrameProvider = ownsSource;
+    this._seenFrameRevision = Number.NaN;
+
+    if (source !== null) {
+      const provider = source as FrameSource & { onFrame?: Signal };
+
+      provider.onFrame?.add(this._onProviderFrame);
+      this._syncFrameProvider();
+    }
+
+    return this;
+  }
+
+  /** The attached source, if this Texture is receiving changing frames. @internal */
+  public _getFrameSource(): FrameSource | null {
+    return this._frameProvider;
+  }
+
+  private _detachFrameProvider(): void {
+    const source = this._frameProvider;
+
+    if (source === null) {
+      return;
+    }
+
+    (source as FrameSource & { onFrame?: Signal }).onFrame?.remove(this._onProviderFrame);
+    this._frameProvider = null;
+    this._seenFrameRevision = Number.NaN;
+
+    if (this._ownsFrameProvider) {
+      source.destroy();
+    }
+
+    this._ownsFrameProvider = false;
+  }
+
+  private _syncFrameProvider(): void {
+    const source = this._frameProvider;
+
+    if (source === null || this._isDestroyed) {
+      return;
+    }
+
+    const revision = source.revision;
+
+    if (revision === this._seenFrameRevision) {
+      return;
+    }
+
+    this._seenFrameRevision = revision;
+    const image = source.image;
+
+    if (image !== this._source) {
+      this._setSource(image, browserImageMetadata);
+    } else if (image !== null) {
+      this.updateSource();
+    }
   }
 
   /** Installs a factory-decoded source whose conversion and alpha behavior were selected before decoding. @internal */
   public _setDecodedImageSource(source: TextureSource, colorSpace: TextureColorSpace): this {
-    return this._setSource(source, { colorSpace, alphaMode: 'straight' });
+    const bitmap = typeof ImageBitmap !== 'undefined' && source instanceof ImageBitmap ? source : null;
+
+    return this._setSource(source, { colorSpace, alphaMode: 'straight' }, bitmap);
   }
 
   /** Installs a visible failure source without changing the handle's declared interpretation. @internal */
@@ -511,6 +641,10 @@ export class Texture {
 
   /** Copies only payload data and source interpretation. Handle-local options remain unchanged. @internal */
   public _copyPayloadFrom(donor: Texture): this {
+    // Borrow the residency-owned decoder from the shared donor. Only its
+    // factory closes it after the last claim is released; handles never do.
+    this._attachFrameSource(donor._getFrameSource());
+
     if (donor.pixels !== null) {
       return this.setPixels(donor.pixels);
     }
@@ -519,17 +653,18 @@ export class Texture {
       return this.setCompressed(donor.compressed);
     }
 
-    return this._setSource(donor.source, donor._sourceMetadata ?? browserImageMetadata);
+    return this._setSource(donor.source, donor._sourceMetadata ?? browserImageMetadata, donor._assetBitmap);
   }
 
-  private _setSource(source: TextureSource, sourceMetadata: DecodedImageMetadata): this {
-    if (this._source !== source || this._pixels !== null || this._compressed !== null) {
+  private _setSource(source: TextureSource, sourceMetadata: DecodedImageMetadata, assetBitmap: ImageBitmap | null = null): this {
+    if (this._source !== source || this._assetBitmap !== assetBitmap || this._pixels !== null || this._compressed !== null) {
       const metadata = this._resolveMetadata(source, null, null, sourceMetadata);
 
       this._validateResolvedMetadata(metadata);
 
       this.releaseGpu();
       this._source = source;
+      this._assetBitmap = assetBitmap;
       this._sourceMetadata = source === null ? null : sourceMetadata;
       // A pixel source and a compressed payload are two answers to the same
       // question, and the backends pick the compressed one - so leaving a stale
@@ -549,6 +684,13 @@ export class Texture {
    * to notify backends that a re-upload is needed.
    */
   public updateSource(): this {
+    // A compressed payload has no source to measure; its size is the one it was given.
+    if (this._compressed !== null) {
+      this._touch();
+
+      return this;
+    }
+
     const { width, height } = getTextureSourceSize(this._source);
 
     this.setSize(width, height);
@@ -575,23 +717,32 @@ export class Texture {
     // Idempotent by contract. Without this guard a second call would take
     // `_size` through a second `destroy()` and re-fire any listener registered
     // after the first call, against GPU state that is already released.
-    if (this._isDestroyed) {
+    if (this._isDestroyed || this._isDestroying) {
       return;
     }
 
-    this._isDestroyed = true;
+    this._isDestroying = true;
 
-    for (const listener of [...this._destroyListeners]) {
-      listener();
+    // Backends must finish queued draws before the resource becomes unbindable.
+    try {
+      for (const listener of [...this._destroyListeners]) {
+        listener();
+      }
+    } finally {
+      this._isDestroyed = true;
+      this._isDestroying = false;
+      this._destroyListeners.clear();
+      this._releaseListeners.clear();
+      this._updates?.destroy();
+      this._updates = null;
+      this._detachFrameProvider();
+      this._size.destroy();
+      this._source = null;
+      this._assetBitmap = null;
+      this._sourceMetadata = null;
+      this._pixels = null;
+      this._compressed = null;
     }
-
-    this._destroyListeners.clear();
-    this._releaseListeners.clear();
-    this._size.destroy();
-    this._source = null;
-    this._sourceMetadata = null;
-    this._pixels = null;
-    this._compressed = null;
   }
 
   /**
@@ -611,8 +762,12 @@ export class Texture {
     }
   }
 
-  private _touch(): void {
+  private _touch(notify = true): void {
     this._version++;
+
+    if (notify && this._updates !== null && this._updates.count > 0) {
+      this._updates.dispatch(this);
+    }
   }
 
   /** Install RGBA8 bytes, replacing a browser or compressed source. */
@@ -641,6 +796,7 @@ export class Texture {
 
     this.releaseGpu();
     this._source = null;
+    this._assetBitmap = null;
     this._sourceMetadata = null;
     this._pixels = pixels;
     this._compressed = null;
@@ -667,6 +823,7 @@ export class Texture {
       this._validateResolvedMetadata(metadata);
     } catch (error) {
       this._requestedColorSpace = previous;
+
       throw error;
     }
 
@@ -693,6 +850,7 @@ export class Texture {
       this._validateResolvedMetadata(metadata);
     } catch (error) {
       this._requestedAlphaMode = previous;
+
       throw error;
     }
 
@@ -725,7 +883,12 @@ export class Texture {
         payloadAlphaMode: sourceMetadata.alphaMode,
       });
 
-      return Object.freeze({ storageFormat: resolved.storageFormat, colorSpace: resolved.colorSpace, alphaMode: resolved.alphaMode, mipLevelCount: 1 });
+      return Object.freeze({
+        storageFormat: resolved.storageFormat,
+        colorSpace: resolved.colorSpace,
+        alphaMode: resolved.alphaMode,
+        mipLevelCount: 1,
+      });
     }
 
     if (pixels !== null) {
@@ -783,7 +946,9 @@ export class Texture {
     this._premultiplyAlpha = nextPremultiplyAlpha;
 
     if (touch && (metadataChanged || premultiplyChanged)) {
-      this._touch();
+      // Payload setters still have dimensions to install. Their final touch
+      // notifies consumers only after all of the new payload is observable.
+      this._touch(false);
     }
   }
 

@@ -10,11 +10,11 @@ export interface MouseJointOptions {
   body: PhysicsBody;
   /** World point to pull the body toward - also the grab point on the body at creation. */
   target: Readonly<PointLike>;
-  /** Soft-spring frequency in Hz (higher = snappier). Default `5`. */
+  /** Positive finite soft-spring frequency in Hz (higher = snappier). Default `5`. */
   hertz?: number;
-  /** Soft-spring damping ratio. Default `0.7`. */
+  /** Nonnegative finite soft-spring damping ratio; zero is undamped. Default `0.7`. */
   dampingRatio?: number;
-  /** Maximum pulling force - clamps the per-step impulse so heavy bodies lag. Default `Infinity`. */
+  /** Positive maximum pulling force, finite or `Infinity`. Clamps the per-step impulse so heavy bodies lag. Default `Infinity`. */
   maxForce?: number;
 }
 
@@ -30,12 +30,9 @@ const scratch: PointLike = { x: 0, y: 0 };
  * constraint that touches only the dragged body.
  */
 export class MouseJoint extends Joint {
-  /** Soft-spring frequency in Hz. */
-  public hertz: number;
-  /** Soft-spring damping ratio. */
-  public dampingRatio: number;
-  /** Maximum pulling force. */
-  public maxForce: number;
+  private _hertz = 5;
+  private _dampingRatio = 0.7;
+  private _maxForce = Infinity;
 
   private readonly _localAnchorX: number;
   private readonly _localAnchorY: number;
@@ -55,6 +52,7 @@ export class MouseJoint extends Joint {
   private _impulseX = 0;
   private _impulseY = 0;
   private _maxImpulse = 0;
+  private _h = 0;
 
   public constructor(options: MouseJointOptions) {
     // Single-body constraint: a private static ground stands in for bodyA so the
@@ -71,6 +69,45 @@ export class MouseJoint extends Joint {
     this.hertz = options.hertz ?? 5;
     this.dampingRatio = options.dampingRatio ?? 0.7;
     this.maxForce = options.maxForce ?? Infinity;
+  }
+
+  /** Positive finite soft-spring frequency in Hz. Invalid assignments throw `RangeError`. */
+  public get hertz(): number {
+    return this._hertz;
+  }
+
+  public set hertz(value: number) {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new RangeError('MouseJoint.hertz must be finite and greater than zero.');
+    }
+
+    this._hertz = value;
+  }
+
+  /** Nonnegative finite damping ratio. Invalid assignments throw `RangeError`; zero is undamped. */
+  public get dampingRatio(): number {
+    return this._dampingRatio;
+  }
+
+  public set dampingRatio(value: number) {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new RangeError('MouseJoint.dampingRatio must be finite and nonnegative.');
+    }
+
+    this._dampingRatio = value;
+  }
+
+  /** Positive pulling force limit, finite or `Infinity`. Invalid assignments throw `RangeError`. */
+  public get maxForce(): number {
+    return this._maxForce;
+  }
+
+  public set maxForce(value: number) {
+    if (!(value > 0)) {
+      throw new RangeError('MouseJoint.maxForce must be greater than zero.');
+    }
+
+    this._maxForce = value;
   }
 
   /** The world point the body is pulled toward. Reassigning wakes the body so a drag tracks live. */
@@ -114,6 +151,7 @@ export class MouseJoint extends Joint {
     this._invK12 = -invDet * k12;
     this._invK22 = invDet * k11;
     this._maxImpulse = this.maxForce * h;
+    this._h = h;
 
     const omega = 2 * Math.PI * this.hertz;
     const a1 = 2 * this.dampingRatio + h * omega;
@@ -145,8 +183,12 @@ export class MouseJoint extends Joint {
     // Velocity of the grab point.
     const cdotX = body.linearVelocityX - body.angularVelocity * this._ry;
     const cdotY = body.linearVelocityY + body.angularVelocity * this._rx;
-    const rhsX = cdotX + (useBias ? this._biasRate * this._cx : 0);
-    const rhsY = cdotY + (useBias ? this._biasRate * this._cy : 0);
+    // The spring is a real force, so the relax pass keeps its bias (a bias-free relax would
+    // drive the grab point to rest and brake a throw). Positions advanced since _prepare, so
+    // the relax pass measures the error at the advanced grab point to avoid applying it twice.
+    const advance = useBias ? 0 : this._h;
+    const rhsX = cdotX + this._biasRate * (this._cx + advance * cdotX);
+    const rhsY = cdotY + this._biasRate * (this._cy + advance * cdotY);
 
     const solvedX = this._invK11 * rhsX + this._invK12 * rhsY;
     const solvedY = this._invK12 * rhsX + this._invK22 * rhsY;

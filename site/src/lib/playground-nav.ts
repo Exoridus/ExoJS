@@ -1,8 +1,17 @@
 // The navigation uses the thematic examples.json keys, while each entry's
 // source path keeps its original directory for stable routes and guide links.
 
-import { PLAYGROUND_CATEGORY_BY_SLUG } from './playground-categories';
+import { resolveExampleAlias } from './example-aliases';
+import { PLAYGROUND_CATEGORY_BY_SLUG, type PlaygroundCategory } from './playground-categories';
 import type { Example } from './types';
+
+export const buildPlaygroundLaunchHref = (path: string, locale: 'en' | 'de', base: string): string => {
+  const canonical = resolveExampleAlias(path);
+
+  return canonical === 'debug-layer/asset-browser.js'
+    ? `${base + locale}/tools/asset-browser/`
+    : `${base + locale}/playground/?version=current&example=${canonical.replace(/\.js$/, '')}`;
+};
 
 export interface PlaygroundNavCategory {
   /** Catalog category slug, e.g. `"particles"` (matches the `examples.json` key). */
@@ -15,12 +24,11 @@ export interface PlaygroundNavCategory {
 }
 
 // Title-cases an unknown category slug as a last resort.
-const humanizeSlug = (slug: string): string => {
-  return slug
+const humanizeSlug = (slug: string): string =>
+  slug
     .split(/[-/]/)
     .map(word => (word ? word[0].toUpperCase() + word.slice(1) : word))
     .join(' ');
-};
 
 /**
  * Reduces an example path or route to its canonical slug form so two
@@ -31,11 +39,14 @@ const humanizeSlug = (slug: string): string => {
  *   normalizeExamplePath('/particles/bonfire.js?x=1#frag') === 'particles/bonfire'
  */
 export const normalizeExamplePath = (value: string | null | undefined): string => {
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
 
   let path = value.trim();
 
   const queryOrHash = path.search(/[?#]/);
+
   if (queryOrHash !== -1) {
     path = path.slice(0, queryOrHash);
   }
@@ -50,7 +61,10 @@ export const normalizeExamplePath = (value: string | null | undefined): string =
  * `input/keyboard` and `input/keyboard-extra` never both match.
  */
 export const isExampleRouteActive = (candidatePath: string, activePath: string | null | undefined): boolean => {
-  if (!activePath) return false;
+  if (!activePath) {
+    return false;
+  }
+
   return normalizeExamplePath(candidatePath) === normalizeExamplePath(activePath);
 };
 
@@ -61,11 +75,24 @@ export const isExampleRouteActive = (candidatePath: string, activePath: string |
  * Categories that end up empty (e.g. after search/tag filtering upstream) are
  * not produced.
  */
-export const buildPlaygroundNavModel = (examples: ReadonlyArray<Example>): Array<PlaygroundNavCategory> => {
+export const buildPlaygroundNavModel = (
+  examples: ReadonlyArray<Example>,
+  categoryBySlug: ReadonlyMap<string, PlaygroundCategory> = PLAYGROUND_CATEGORY_BY_SLUG,
+  query = '',
+): Array<PlaygroundNavCategory> => {
   const bySection = new Map<string, Array<Example>>();
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
 
   for (const example of examples) {
+    const category = categoryBySlug.get(example.section)?.title ?? humanizeSlug(example.section);
+    const text = `${example.title} ${example.description} ${example.tags?.join(' ') ?? ''} ${category}`.toLowerCase();
+
+    if (!terms.every(term => text.includes(term))) {
+      continue;
+    }
+
     const existing = bySection.get(example.section);
+
     if (existing) {
       existing.push(example);
     } else {
@@ -74,8 +101,9 @@ export const buildPlaygroundNavModel = (examples: ReadonlyArray<Example>): Array
   }
 
   const categories: Array<PlaygroundNavCategory> = [];
+
   for (const [slug, sectionExamples] of bySection) {
-    const meta = PLAYGROUND_CATEGORY_BY_SLUG.get(slug);
+    const meta = categoryBySlug.get(slug);
     categories.push({
       slug,
       title: meta?.title ?? humanizeSlug(slug),
@@ -85,5 +113,6 @@ export const buildPlaygroundNavModel = (examples: ReadonlyArray<Example>): Array
   }
 
   categories.sort((a, b) => a.order - b.order || a.slug.localeCompare(b.slug));
+
   return categories;
 };

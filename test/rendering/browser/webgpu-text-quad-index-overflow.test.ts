@@ -76,7 +76,9 @@ describe('WebGPU: a live text flush past the old 16384-quad index ceiling still 
     root.addChild(marker);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root))) {
+        return;
+      }
 
       const read = readWebGpuPixels(backend, canvasSize);
       const ink = read(3, 10);

@@ -4,7 +4,7 @@
   "symbol": "BurstSpawn",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Discrete-burst spawner. Fires at scheduled times with a fixed count per burst. Useful for explosions, hit-impacts, level-up effects."
       ],
-      "importLine": "import { BurstSpawn } from '@codexo/exojs-particles'",
+      "importLine": "import { BurstSpawn } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

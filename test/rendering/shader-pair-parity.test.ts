@@ -17,6 +17,7 @@
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { crtShader } from '#rendering/filters/CrtFilter';
 import { displacementShader } from '#rendering/filters/DisplacementFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
@@ -30,6 +31,7 @@ const pairs: ReadonlyArray<{ readonly name: string; readonly source: AnyShader; 
   { name: 'BlurFilter', source: blurShader, fragment: 'blur.frag' },
   { name: 'BloomFilter', source: bloomThresholdShader, fragment: 'bloom-threshold.frag' },
   { name: 'ColorMatrixFilter', source: colorMatrixShader, fragment: 'color-matrix.frag' },
+  { name: 'CrtFilter', source: crtShader, fragment: 'crt.frag' },
   { name: "LutFilter 'rgb1d'", source: lutRgb1dShaderSource, fragment: 'lut-rgb1d.frag' },
   { name: "LutFilter '3d'", source: lut3dShaderSource, fragment: 'lut-3d.frag' },
   { name: 'DropShadowFilter', source: dropShadowShader, fragment: 'drop-shadow.frag' },
@@ -72,9 +74,7 @@ interface Declaration {
   readonly type: string;
 }
 
-const stripComments = (source: string): string => {
-  return source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/\/\/[^\n]*/g, '');
-};
+const stripComments = (source: string): string => source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/\/\/[^\n]*/g, '');
 
 const matchAll = (source: string, pattern: RegExp): RegExpExecArray[] => {
   const regex = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
@@ -90,14 +90,12 @@ const matchAll = (source: string, pattern: RegExp): RegExpExecArray[] => {
 };
 
 /** `uniform <type> <name>;` in declaration order. */
-const glslUniforms = (source: string): Declaration[] => {
-  return matchAll(stripComments(source), /\buniform\s+(?:lowp\s+|mediump\s+|highp\s+)?(\w+)\s+(\w+)\s*;/).map(m => ({ type: m[1]!, name: m[2]! }));
-};
+const glslUniforms = (source: string): Declaration[] =>
+  matchAll(stripComments(source), /\buniform\s+(?:lowp\s+|mediump\s+|highp\s+)?(\w+)\s+(\w+)\s*;/).map(m => ({ type: m[1]!, name: m[2]! }));
 
 /** `in <type> <name>;` / `out <type> <name>;` at file scope, in order. */
-const glslStageVariables = (source: string, direction: 'in' | 'out'): Declaration[] => {
-  return matchAll(stripComments(source), new RegExp(`^\\s*${direction}\\s+(\\w+)\\s+(\\w+)\\s*;`, 'm')).map(m => ({ type: m[1]!, name: m[2]! }));
-};
+const glslStageVariables = (source: string, direction: 'in' | 'out'): Declaration[] =>
+  matchAll(stripComments(source), new RegExp(`^\\s*${direction}\\s+(\\w+)\\s+(\\w+)\\s*;`, 'm')).map(m => ({ type: m[1]!, name: m[2]! }));
 
 interface WgslBinding extends Declaration {
   readonly group: number;
@@ -105,11 +103,10 @@ interface WgslBinding extends Declaration {
 }
 
 /** `@group(g) @binding(b) var[<...>] name: type;`, sorted by group then binding. */
-const wgslBindings = (source: string): WgslBinding[] => {
-  return matchAll(stripComments(source), /@group\(\s*(\d+)\s*\)\s*@binding\(\s*(\d+)\s*\)\s*var(?:<[^>]*>)?\s+(\w+)\s*:\s*([^;]+);/)
+const wgslBindings = (source: string): WgslBinding[] =>
+  matchAll(stripComments(source), /@group\(\s*(\d+)\s*\)\s*@binding\(\s*(\d+)\s*\)\s*var(?:<[^>]*>)?\s+(\w+)\s*:\s*([^;]+);/)
     .map(m => ({ group: Number(m[1]), binding: Number(m[2]), name: m[3]!, type: m[4]!.trim() }))
     .sort((a, b) => a.group - b.group || a.binding - b.binding);
-};
 
 /** Members of `struct <name> { ... }`, in declaration order. */
 const wgslStructMembers = (source: string, structName: string): Declaration[] => {
@@ -139,7 +136,11 @@ const wgslEntryPoint = (source: string, stage: 'vertex' | 'fragment'): WgslEntry
 
   return {
     name: match[1]!,
-    parameters: matchAll(match[2]!, /@location\(\s*(\d+)\s*\)\s*(\w+)\s*:\s*([\w<>]+)/).map(m => ({ location: Number(m[1]), name: m[2]!, type: m[3]! })),
+    parameters: matchAll(match[2]!, /@location\(\s*(\d+)\s*\)\s*(\w+)\s*:\s*([\w<>]+)/).map(m => ({
+      location: Number(m[1]),
+      name: m[2]!,
+      type: m[3]!,
+    })),
   };
 };
 
@@ -168,7 +169,9 @@ describe.each(pairs)('$name shader pair', ({ source }) => {
     expect(wgslAttributes.map(a => a.name)).toEqual(['aPosition', 'aUv']);
     // The vertex buffer layout is hard-coded: slot 0 is position, slot 1 is UV.
     expect(wgslAttributes.map(a => a.location)).toEqual([0, 1]);
-    expect(wgslAttributes.map(a => wgslTypeForGlsl[glslAttributes[wgslAttributes.indexOf(a)]!.type])).toEqual(wgslAttributes.map(a => a.type));
+    expect(wgslAttributes.map(a => wgslTypeForGlsl[glslAttributes[wgslAttributes.indexOf(a)]!.type])).toEqual(
+      wgslAttributes.map(a => a.type),
+    );
   });
 
   test('passes the same varying into the fragment stage', () => {

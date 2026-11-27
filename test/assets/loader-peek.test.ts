@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
@@ -7,6 +6,7 @@ import { materializeAssetTypes } from '#extensions/materialize';
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -89,16 +89,35 @@ describe('Loader.peek — pure in-memory lookup', () => {
     loader.destroy();
   });
 
-  test('accepts an Asset.type(...) descriptor for the same lookup', async () => {
+  test('accepts an { type, source } descriptor for the same lookup', async () => {
     const loader = createCoreLoader();
     mockFetchJson({ level: 3 });
 
-    expect(loader.peek(Asset.type('json', 'data/config.json'))).toBeUndefined();
+    expect(loader.peek({ type: 'json', source: 'data/config.json' })).toBeUndefined();
 
     await loader.load('data/config.json');
 
-    expect(loader.peek(Asset.type('json', 'data/config.json'))).toEqual({ level: 3 });
+    expect(loader.peek({ type: 'json', source: 'data/config.json' })).toEqual({ level: 3 });
 
+    loader.destroy();
+  });
+
+  test('applies a descriptor parser to the resident raw value without claiming it', async () => {
+    const loader = createCoreLoader();
+    const scope = loader.createScope();
+    const descriptor = { type: 'json', source: 'data/config.json', parse: vi.fn(raw => (raw === null ? 'empty' : 'other')) } as const;
+    mockFetchJson(null);
+
+    expect(loader.peek(descriptor)).toBeUndefined();
+    expect(descriptor.parse).not.toHaveBeenCalled();
+    await scope.load('data/config.json');
+
+    expect(loader.peek(descriptor)).toBe('empty');
+    expect(descriptor.parse).toHaveBeenCalledExactlyOnceWith(null);
+    expect(loader.peek('data/config.json')).toBeUndefined();
+    scope.release('data/config.json');
+    expect(loader.peek(descriptor)).toBeUndefined();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
     loader.destroy();
   });
 
@@ -122,7 +141,7 @@ describe('Loader.peek — pure in-memory lookup', () => {
   test('throws for an input that is neither a path nor a descriptor', () => {
     const loader = createCoreLoader();
 
-    expect(() => untyped(loader).peek({ not: 'an asset' })).toThrow(/path string or an Asset\.type/i);
+    expect(() => untyped(loader).peek({ not: 'an asset' })).toThrow(/path string or an asset descriptor/i);
 
     loader.destroy();
   });

@@ -4,7 +4,7 @@
   "symbol": "LineSegment",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 6,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Random point on a line segment between `(x0, y0)` and `(x1, y1)`. Uniform parameter distribution: `t = Math.random()` then `lerp(start, end, t)`."
       ],
-      "importLine": "import { LineSegment } from '@codexo/exojs-particles'",
+      "importLine": "import { LineSegment } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

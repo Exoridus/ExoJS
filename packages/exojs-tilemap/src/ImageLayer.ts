@@ -38,6 +38,14 @@ export interface ImageLayerOptions {
   readonly properties?: TileProperties;
 }
 
+const validateOpacity = (opacity: number): number => {
+  if (typeof opacity !== 'number' || !Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
+    throw new Error(`ImageLayer opacity must be 0..1 (got ${opacity}).`);
+  }
+
+  return opacity;
+};
+
 /**
  * A data-only image layer: a single image (texture + resolved URL) placed as a
  * background or foreground layer. The layer itself holds no scene-graph state -
@@ -96,15 +104,17 @@ export class ImageLayer {
     this.image = options.image;
     this.texture = options.texture ?? null;
     this.visible = options.visible ?? true;
-    this.opacity = options.opacity ?? 1;
+    this.opacity = validateOpacity(options.opacity ?? 1);
     this.offsetX = options.offsetX ?? 0;
     this.offsetY = options.offsetY ?? 0;
     this.parallaxX = options.parallaxX ?? 1;
     this.parallaxY = options.parallaxY ?? 1;
     this.parallaxScale = options.parallaxScale ?? 1;
+
     if (!Number.isFinite(this.parallaxScale) || this.parallaxScale <= 0) {
       throw new Error('ImageLayer parallaxScale must be a positive finite number.');
     }
+
     this.tintColor = options.tintColor ?? null;
     this.repeatX = options.repeatX ?? false;
     this.repeatY = options.repeatY ?? false;

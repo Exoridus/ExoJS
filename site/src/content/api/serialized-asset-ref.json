@@ -1,6 +1,6 @@
 {
   "title": "SerializedAssetRef",
-  "description": "Serialized reference to a loaded asset (e.g. a Texture). Names the request the asset was loaded with, never the asset data: the logical source the caller wrote - the one an asset variant rule was declared for, not the file one device happened to select - and, when they change which resource the request produces, the identity-relevant options. The contract is that referenced assets are pre-loaded into the target Loader before Scene.deserialize runs; the reference then resolves to whatever that loader holds for the same request, including its own variant choice. A reference that needs no options is written as the bare source string, which is also the only form version 1 documents contain.",
+  "description": "Serialized reference to a loaded asset (e.g. a Texture). Names the request the asset was loaded with, never the asset data: the logical source the caller wrote - the one an asset variant rule was declared for, not the file one device happened to select - along with the options that identify the resource and any presentation options its type saves. The receiving loader chooses its own source variant. Preload assets whose node serializers use DeserializeContext.resolveAsset. A Sprite with a typed texture reference loads when attached to a scene. A typed reference carries the registered type ID beside its logical source.",
   "symbol": "SerializedAssetRef",
   "kind": "type",
   "subsystem": "core",
@@ -20,8 +20,8 @@
       "members": [],
       "paragraphs": [
         "Serialized reference to a loaded asset (e.g. a Texture).",
-        "Names the request the asset was loaded with, never the asset data: the logical source the caller wrote - the one an asset variant rule was declared for, not the file one device happened to select - and, when they change which resource the request produces, the identity-relevant options. The contract is that referenced assets are pre-loaded into the target Loader before Scene.deserialize runs; the reference then resolves to whatever that loader holds for the same request, including its own variant choice.",
-        "A reference that needs no options is written as the bare source string, which is also the only form version 1 documents contain."
+        "Names the request the asset was loaded with, never the asset data: the logical source the caller wrote - the one an asset variant rule was declared for, not the file one device happened to select - along with the options that identify the resource and any presentation options its type saves. The receiving loader chooses its own source variant. Preload assets whose node serializers use DeserializeContext.resolveAsset. A Sprite with a typed texture reference loads when attached to a scene.",
+        "A typed reference carries the registered type ID beside its logical source."
       ],
       "importLine": "import { SerializedAssetRef } from '@codexo/exojs'",
       "sourceLink": null
@@ -32,30 +32,18 @@
       "members": [
         {
           "name": "SerializedAssetRef",
-          "signature": "string | { options: Readonly<Record<string, unknown>>; source: string }",
+          "signature": "AssetReference | Omit<AssetReference, \"$type\"> | string",
           "signatureTokens": [
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "AssetReference",
+              "kind": "type"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Readonly",
+              "text": "Omit",
               "kind": "type"
             },
             {
@@ -63,23 +51,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "Record",
+              "text": "AssetReference",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
             },
             {
               "text": ", ",
               "kind": "punctuation"
             },
             {
-              "text": "unknown",
+              "text": "\"$type\"",
               "kind": "keyword"
             },
             {
@@ -87,28 +67,12 @@
               "kind": "punctuation"
             },
             {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "source",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
+              "text": " | ",
               "kind": "punctuation"
             },
             {
               "text": "string",
               "kind": "keyword"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
             }
           ],
           "params": [],

@@ -50,7 +50,7 @@
 }
 
 .dialog::backdrop {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgb(0 0 0 / 0.55);
   backdrop-filter: blur(3px);
 }
 
@@ -183,7 +183,7 @@
   line-height: 1.6;
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .dialog {
     margin-top: 8vh;
   }

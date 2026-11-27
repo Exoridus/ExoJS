@@ -70,7 +70,10 @@ const entryFor = (channel: SiteChannel, { manifest, source }: ChannelRecord): Ch
   source,
 });
 
-export const pairingOf = (stable: Pick<ChannelEntry, 'sourceSha' | 'contentHash'>, next: Pick<ChannelEntry, 'sourceSha' | 'contentHash'> | null): string =>
+export const pairingOf = (
+  stable: Pick<ChannelEntry, 'sourceSha' | 'contentHash'>,
+  next: Pick<ChannelEntry, 'sourceSha' | 'contentHash'> | null,
+): string =>
   createHash('sha256')
     .update(JSON.stringify([stable.sourceSha, stable.contentHash, next?.sourceSha ?? null, next?.contentHash ?? null]))
     .digest('hex');

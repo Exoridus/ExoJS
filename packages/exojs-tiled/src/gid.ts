@@ -2,10 +2,8 @@
 // The high four bits of a 32-bit GID encode flip/rotation state; the
 // remaining 28 bits are the actual tileset-relative global tile id.
 //
-// These constants exist only to mask flip bits off before resolving a GID
-// against a tileset's [firstgid, firstgid + tilecount) range during source
-// validation. Converting flip bits into a runtime `TileTransform` is a C2
-// (runtime conversion) concern and is intentionally not implemented here.
+// The runtime conversion reads the flip flags into a `TileTransform`; on a
+// hexagonal map the diagonal and 120-degree flags encode rotations it rejects.
 // @internal
 
 export const TILED_FLIPPED_HORIZONTALLY_FLAG = 0x80000000;

@@ -5,8 +5,13 @@ import { get2dContext } from '#platform/RenderSurface';
  * Each quad is split into two triangles using vertex order `0-1-2, 0-2-3`,
  * producing six indices per quad. Use with an interleaved vertex buffer where
  * every four vertices form one quad.
+ * @throws RangeError if `size` is not an integer from 0 to 16384, the most quads 16-bit indices can address.
  */
 export const createQuadIndices = (size: number): Uint16Array => {
+  if (!Number.isInteger(size) || size < 0 || size * 4 > 65536) {
+    throw new RangeError(`createQuadIndices: size must be an integer from 0 to 16384, received ${size}.`);
+  }
+
   const data = new Uint16Array(size * 6);
   const len = data.length;
 

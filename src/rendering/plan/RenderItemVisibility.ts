@@ -21,8 +21,17 @@ import type { MembershipBits, VisibilityQueryStats } from './SourceVisibilityInd
  * the delta needs. A predicate answers one item at a time in recorded order,
  * which forces the caller to visit every item; a set lets an index answer "what
  * does this rect contain" and lets the caller diff two answers word-wise.
+ *
+ * `select` receives `bits` already cleared for the scope and only ever sets
+ * bits in it; it never clears one. `stats` is accumulated, not reset, so the
+ * caller owns its lifetime and a query only adds to `cells`/`candidates`.
  */
 export interface RenderItemVisibility {
-  /** Set a bit in `bits` for every item of `scope` that `rect` admits. */
+  /**
+   * Set a bit in `bits` for every item of `scope` that `rect` admits.
+   *
+   * `bits` must arrive cleared and `stats` must be a running total; an
+   * implementation sets bits and adds counters, never the reverse.
+   */
   select(scope: SourceScope, rect: ReadonlyRectangle, bits: MembershipBits, stats: VisibilityQueryStats): void;
 }

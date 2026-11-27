@@ -1,0 +1,81 @@
+{
+ "compressionlevel": -1,
+ "height": 3,
+ "hexsidelength": 16,
+ "infinite": false,
+ "layers": [
+  {
+   "data": [
+    1,
+    2,
+    1,
+    2,
+    1,
+    2,
+    1,
+    2,
+    1
+   ],
+   "height": 3,
+   "id": 1,
+   "name": "Ground",
+   "opacity": 1,
+   "type": "tilelayer",
+   "visible": true,
+   "width": 3,
+   "x": 0,
+   "y": 0
+  },
+  {
+   "draworder": "topdown",
+   "id": 2,
+   "name": "Markers",
+   "objects": [
+    {
+     "height": 0,
+     "id": 1,
+     "name": "spawn",
+     "point": true,
+     "rotation": 0,
+     "type": "Spawn",
+     "visible": true,
+     "width": 0,
+     "x": 42,
+     "y": 40
+    }
+   ],
+   "opacity": 1,
+   "type": "objectgroup",
+   "visible": true,
+   "x": 0,
+   "y": 0
+  }
+ ],
+ "nextlayerid": 3,
+ "nextobjectid": 2,
+ "orientation": "hexagonal",
+ "renderorder": "right-down",
+ "staggeraxis": "y",
+ "staggerindex": "odd",
+ "tiledversion": "1.10.2",
+ "tileheight": 32,
+ "tilesets": [
+  {
+   "columns": 2,
+   "firstgid": 1,
+   "image": "hex-tiles.png",
+   "imageheight": 32,
+   "imagewidth": 56,
+   "margin": 0,
+   "name": "hex",
+   "spacing": 0,
+   "tilecount": 2,
+   "tileheight": 32,
+   "tilewidth": 28
+  }
+ ],
+ "tilewidth": 28,
+ "type": "map",
+ "version": "1.10",
+ "width": 3
+}

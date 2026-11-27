@@ -8,7 +8,12 @@ import type { MockInstance } from 'vitest';
  */
 import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
-import { SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession } from '#core/scene/SceneTransition';
+import {
+  SceneTransition,
+  type SceneTransitionEnvironment,
+  type SceneTransitionRequirements,
+  type SceneTransitionSession,
+} from '#core/scene/SceneTransition';
 
 import { isFrameLoopActive } from '../support/application-frame-loop';
 
@@ -53,9 +58,7 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   }),
 }));
 
-const frameLoopActive = (app: Application): boolean => {
-  return isFrameLoopActive(app);
-};
+const frameLoopActive = (app: Application): boolean => isFrameLoopActive(app);
 
 const sessionActive = (app: Application): boolean => {
   const scenes = app.scenes as unknown as Record<string, unknown>;
@@ -72,6 +75,7 @@ describe('Application — _frameLoopActive', () => {
     rafCallbacks = [];
     rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(cb => {
       rafCallbacks.push(cb);
+
       return rafCallbacks.length;
     });
     cafSpy = vi.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation(() => undefined);

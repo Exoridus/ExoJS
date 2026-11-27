@@ -76,9 +76,7 @@ describe('EqualizerEffect', () => {
       const highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
-        return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
-      });
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => nodes[nodeCallCount++] as unknown as BiquadFilterNode);
 
       const filter = new EqualizerEffect();
       expect(lowShelf.type).toBe('lowshelf');
@@ -97,9 +95,7 @@ describe('EqualizerEffect', () => {
       const highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
-        return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
-      });
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => nodes[nodeCallCount++] as unknown as BiquadFilterNode);
 
       const filter = new EqualizerEffect();
       expect(lowShelf.connect).toHaveBeenCalledWith(peaking);
@@ -115,9 +111,7 @@ describe('EqualizerEffect', () => {
       const highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
-        return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
-      });
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => nodes[nodeCallCount++] as unknown as BiquadFilterNode);
 
       const filter = new EqualizerEffect();
       expect(filter.inputNode).toBe(lowShelf);
@@ -132,9 +126,7 @@ describe('EqualizerEffect', () => {
       const highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
-        return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
-      });
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => nodes[nodeCallCount++] as unknown as BiquadFilterNode);
 
       const filter = new EqualizerEffect();
       expect(filter.outputNode).toBe(highShelf);
@@ -157,9 +149,7 @@ describe('EqualizerEffect', () => {
       highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
-        return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
-      });
+      spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => nodes[nodeCallCount++] as unknown as BiquadFilterNode);
     });
 
     afterEach(() => {
@@ -219,9 +209,7 @@ describe('EqualizerEffect', () => {
       const highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
-        return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
-      });
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => nodes[nodeCallCount++] as unknown as BiquadFilterNode);
 
       const filter = new EqualizerEffect();
       filter.destroy();
@@ -259,9 +247,7 @@ describe('EqualizerEffect', () => {
       highShelf = makeBiquadFilterNode(ctx, 'highshelf');
       const nodes = [lowShelf, peaking, highShelf];
       let nodeCallCount = 0;
-      spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
-        return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
-      });
+      spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => nodes[nodeCallCount++] as unknown as BiquadFilterNode);
     });
 
     afterEach(() => {
@@ -393,6 +379,30 @@ describe('EqualizerEffect', () => {
         filter.high = 20;
       }).not.toThrow();
       expect(filter.high).toBe(20);
+    });
+  });
+
+  describe('frequency bounds', () => {
+    it('rejects a non-finite frequency at construction and floors a negative one', () => {
+      expect(() => new EqualizerEffect({ midFrequency: Number.NaN })).toThrow(RangeError);
+      expect(new EqualizerEffect({ highFrequency: -5 }).highFrequency).toBe(0);
+    });
+
+    it('caps a cutoff above Nyquist at setup', () => {
+      const ctx = getAudioContext();
+      const frequencies: number[] = [];
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
+        const node = makeBiquadFilterNode(ctx, 'lowshelf');
+
+        node.frequency.setValueAtTime.mockImplementation((value: number) => frequencies.push(value));
+
+        return node as unknown as BiquadFilterNode;
+      });
+
+      new EqualizerEffect({ lowFrequency: 1e9 });
+
+      expect(Math.max(...frequencies)).toBeLessThanOrEqual(ctx.sampleRate / 2);
+      spy.mockRestore();
     });
   });
 });

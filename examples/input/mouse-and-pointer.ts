@@ -1,4 +1,14 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type Pointer,
+  type RenderingContext,
+  Scene,
+  Sprite,
+} from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 // Everything the pointer pipeline reports, surfaced at once:
@@ -18,6 +28,21 @@ class MouseAndPointerScene extends Scene {
   private clicks = 0;
   private hud!: ReturnType<typeof mountControls>;
 
+  private readonly onMove = (pointer: Pointer): void => {
+    this.pointer.x = pointer.x;
+    this.pointer.y = pointer.y;
+    this.buttons = pointer.buttons;
+  };
+  private readonly onButtons = (pointer: Pointer): void => {
+    this.buttons = pointer.buttons;
+  };
+  private readonly onCancel = (): void => {
+    this.buttons = 0;
+  };
+  private readonly onTap = (): void => {
+    this.clicks++;
+  };
+
   override init(): void {
     const app = this.app;
     const { width, height } = app;
@@ -25,36 +50,20 @@ class MouseAndPointerScene extends Scene {
     this.pointer = { x: width / 2, y: height / 2 };
     this.previous = { x: width / 2, y: height / 2 };
 
-    this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.ship = new Sprite(assets.ship.source).setAnchor(0.5).setPosition(width / 2, height / 2);
     this.ship.interactive = true;
     this.ship.draggable = true;
     this.root.addChild(this.ship);
     this.crosshair = new Graphics();
 
-    app.input.onPointerMove.add(pointer => {
-      this.pointer.x = pointer.x;
-      this.pointer.y = pointer.y;
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerDown.add(pointer => {
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerUp.add(pointer => {
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerTap.add(() => {
-      this.clicks++;
-    });
+    app.input.onPointerMove.add(this.onMove);
+    app.input.onPointerDown.add(this.onButtons);
+    app.input.onPointerUp.add(this.onButtons);
+    app.input.onPointerCancel.add(this.onCancel);
+    app.input.onPointerTap.add(this.onTap);
 
     this.hud = mountControls({
-      title: 'Mouse and Pointer',
-      controls: [
-        { keys: 'Move', action: 'track position + delta' },
-        { keys: 'Click', action: 'count taps' },
-        { keys: 'Drag', action: 'move the ship sprite' },
-      ],
-      status: '',
-      hint: 'Drag the ship to move it; the crosshair follows the cursor.',
+      theme: 'site',
     });
   }
 
@@ -65,6 +74,7 @@ class MouseAndPointerScene extends Scene {
   }
 
   override update(): void {
+    this.hud.fit(this.app, this.app.canvas as HTMLCanvasElement);
     this.deltaX = this.pointer.x - this.previous.x;
     this.deltaY = this.pointer.y - this.previous.y;
     this.previous.x = this.pointer.x;
@@ -85,6 +95,17 @@ class MouseAndPointerScene extends Scene {
     this.crosshair.drawLine(this.pointer.x, this.pointer.y - 12, this.pointer.x, this.pointer.y + 12);
     context.render(this.crosshair);
   }
+
+  override destroy(): void {
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.app.input.onPointerDown.remove(this.onButtons);
+    this.app.input.onPointerUp.remove(this.onButtons);
+    this.app.input.onPointerCancel.remove(this.onCancel);
+    this.app.input.onPointerTap.remove(this.onTap);
+    this.hud.dispose();
+    this.crosshair.destroy();
+    super.destroy();
+  }
 }
 
 const app = new Application({
@@ -96,9 +117,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(10, 12, 20),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(MouseAndPointerScene);

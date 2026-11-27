@@ -1,9 +1,11 @@
+import type { AssetOwner } from '#assets/ApplicationAssets';
 import type { Application } from '#core/Application';
 import type { ComponentClass } from '#core/Component';
 import type { ComponentQuery } from '#core/ComponentQuery';
 import { DestroyScope } from '#core/DestroyScope';
-import { deserializeInto, migrate, serializeTree } from '#core/serialization/serialize';
-import { SERIALIZATION_VERSION, type SerializedScene, type SerializeOptions } from '#core/serialization/types';
+import { destroyFailedRead } from '#core/serialization/deserializeOwnership';
+import { deserializeSceneInto, migrate, serializeSceneTrees } from '#core/serialization/serialize';
+import type { DeserializeOptions, SerializedScene, SerializeOptions } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
 import type { SystemRegistry } from '#core/SystemRegistry';
 import type { Destroyable, Synchronous } from '#core/types';
@@ -127,8 +129,12 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /**
    * Aborted the moment this scene's permanent teardown begins - before
    * {@link Scene.unload} is called, and also on the paths where `unload()`
-   * never runs at all (a failed activation, a preload cancelled before it was
-   * ever consumed, {@link Application.destroy}).
+   * never runs at all (preparation failed or was cancelled before reaching
+   * `Ready`). {@link Application.destroy} aborts it for every scene the
+   * application owns as soon as it is called, even for a scene whose own
+   * teardown has to wait behind another scene's; a retained scene a
+   * `restore()` in flight is handing back follows once that navigation
+   * settles.
    *
    * Pass it to anything that takes an `AbortSignal` - `fetch()` above all -
    * so work started in {@link Scene.load} stops when the scene goes away
@@ -139,7 +145,8 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * This is what keeps teardown bounded: `Application.destroy()` waits a fixed
    * grace period for scene teardown and then proceeds without it. A scene
    * whose asynchronous work watches this signal settles well inside that
-   * window; one that ignores it can be abandoned mid-teardown.
+   * window; one that ignores it can be abandoned mid-teardown, which
+   * {@link Application.destroyOutcome} then reports as `forced`.
    *
    * @example
    * ```ts
@@ -214,6 +221,21 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    */
   public get loader(): SceneLoader {
     return this._requireScope('loader').loader;
+  }
+
+  /**
+   * Loads assets this scene owns. They are released when the scene ends
+   * permanently, unless another owner still holds them.
+   *
+   * @example
+   * ```ts
+   * override async load(): Promise<void> {
+   *   const { hero, theme } = await this.assets.load({ hero: 'hero.png', theme: 'theme.ogg' });
+   * }
+   * ```
+   */
+  public get assets(): AssetOwner {
+    return this.loader;
   }
 
   /**
@@ -319,10 +341,11 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   }
 
   private _ui: UIRoot | null = null;
+  private _pendingUI: UIRoot | null = null;
 
   /**
    * Scene-bound UI layer, rendered screen-fixed on top of the scene content
-   * (after {@link Scene.draw}). Lazily created and destroyed with the scene;
+   * after transitions and frame effects, before the output transform. Lazily created and destroyed with the scene;
    * add widgets via `this.ui.addChild(...)`.
    *
    * Unlike {@link Scene.root}, whose pass an overridden {@link Scene.draw}
@@ -332,17 +355,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * keyboard input route to them ahead of the world layer.
    */
   public get ui(): UIRoot {
-    if (this._ui === null) {
-      this._ui = this._destroyScope.track(this._anchorComponents(new UIRoot()));
-
-      // If the scene is already active (its root carries a stage), bind the UI
-      // layer now; otherwise the director attaches it when the scene activates.
-      if (this._root._getStage() !== null) {
-        this._app?.interaction.attachUIRoot(this._ui);
-      }
-    }
-
-    return this._ui;
+    return this._ui ?? this._pendingUI ?? this._publishUI(this._createUI());
   }
 
   /** @internal - the UI layer if materialized, else `null` (no lazy allocation). */
@@ -408,42 +421,65 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * resolve to their {@link Loader} source keys. Reattach behaviour in code
    * after {@link Scene.deserialize}.
    *
-   * @throws If a node under the root or UI layer carries components, unless
-   *   {@link SerializeOptions.omitComponents} is set - a save never drops them
-   *   silently.
+   * @throws If a descendant carries an unregistered component, or a component
+   *   is attached to the root or UI layer itself. Use
+   *   {@link SerializeOptions.omitComponents} to omit all components.
    */
   public serialize(options?: SerializeOptions): SerializedScene {
     const loader = this._app?.loader ?? null;
     const registry = this._app?.serializers;
-    const data: SerializedScene = { version: SERIALIZATION_VERSION, root: serializeTree(this._root, loader, registry, options) };
-    const ui = this._peekUI();
 
-    if (ui !== null) {
-      data.ui = serializeTree(ui, loader, registry, options);
-    }
-
-    return data;
+    return serializeSceneTrees(this._root, this._peekUI(), loader, registry, options);
   }
 
   /**
-   * Rebuild this scene's root subtree from a {@link SerializedScene} produced
-   * by {@link Scene.serialize}. Existing root children are removed first, then
-   * the descriptor's children are reconstructed under {@link Scene.root}.
+   * Rebuild this scene's root and optional UI subtrees from a {@link SerializedScene}
+   * produced by {@link Scene.serialize}. Both trees are read before existing
+   * children are detached. If a node cannot be read, provisional nodes are
+   * destroyed and the existing scene trees remain unchanged.
    *
    * Assets referenced by the data must already be loaded into the
-   * application's {@link Loader} (pre-load contract). Older documents are
-   * migrated to the current format; documents newer than the running engine
-   * throw. Returns `this`.
+   * application's {@link Loader} when their serializer uses
+   * {@link DeserializeContext.resolveAsset}. Serializers using
+   * {@link DeserializeContext.resolve} reserve deferred handles under the
+   * scene's asset scope without fetching.
+   * Requires the current scene format. Returns `this`.
+   *
+   * @throws If the document holds a `Video` whose source the default policy
+   *   (same-origin only) refuses and {@link DeserializeOptions.allowVideoSource}
+   *   does not approve.
    */
-  public deserialize(data: SerializedScene): this {
+  public deserialize(data: SerializedScene, options?: DeserializeOptions): this {
     const migrated = migrate(data);
     const loader = this._app?.loader ?? null;
     const registry = this._app?.serializers;
 
-    deserializeInto(this._root, migrated.root, loader, registry);
+    // Links must resolve to the actual UI root even before it joins the scene.
+    const pending = this._pendingUI;
+    const candidate =
+      this._ui === null && pending === null && migrated.ui !== undefined && Object.hasOwn(migrated.ui, '$id') ? this._createUI() : null;
+    const ui = this._ui ?? pending ?? candidate ?? (() => this.ui);
+    this._pendingUI = pending ?? candidate;
 
-    if (migrated.ui !== undefined) {
-      deserializeInto(this.ui, migrated.ui, loader, registry);
+    try {
+      deserializeSceneInto(
+        this._root,
+        ui,
+        migrated,
+        loader,
+        registry,
+        options,
+        this._scope?.loader,
+        candidate === null ? undefined : () => this._publishUI(candidate),
+      );
+    } catch (error) {
+      if (candidate !== null && this._ui !== candidate) {
+        destroyFailedRead(candidate);
+      }
+
+      throw error;
+    } finally {
+      this._pendingUI = pending;
     }
 
     return this;
@@ -467,6 +503,13 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * scene becomes active: register scene systems, connect stable scene
    * objects, bind input, register interaction roots, start scene audio.
    * Override in subclass.
+   *
+   * Not called when {@link Scene.lifecycleSignal} has been aborted by the
+   * time `load()` completes - the navigation preparing the scene was aborted
+   * or failed before its commit (the application stopped or was destroyed, a
+   * transition ended early), or the preload preparing it was discarded. Such
+   * a scene never becomes active: {@link Scene.destroy} runs and
+   * {@link Scene.unload} does not.
    *
    * Must be synchronous: `async init()` is a compile error (see
    * {@link Synchronous}) and, for callers the type system cannot reach, a
@@ -494,8 +537,10 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /**
    * Fixed-timestep logic hook. Called zero or more times per frame with a
    * constant `delta` ({@link Application.fixedTimeStep}) before {@link Scene.update},
-   * so physics and deterministic gameplay advance at a frame-rate-independent
-   * rate. Put `physicsWorld.step(delta)` and movement here; leave camera, UI and
+   * so deterministic gameplay advances at a frame-rate-independent rate. Put
+   * movement and other simulation commands here; a physics world registered in
+   * {@link Scene.systems} steps right after this hook and the scene's behaviours
+   * in the same fixed step, so it applies what they issued. Leave camera, UI and
    * purely visual work in {@link Scene.update}. Default is a no-op. Override in
    * subclass.
    *
@@ -544,12 +589,13 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   }
 
   /**
-   * Optional asynchronous teardown hook for a scene that completed
-   * activation successfully and is ending permanently. Use the loader to
-   * release assets that are scene-private and not shared with a scene that
-   * remains active. Not called for a scene that never completed activation
-   * (see the definition spec's failed-activation cleanup). Override in
-   * subclass.
+   * Optional asynchronous teardown hook for a scene that completed preparation
+   * and is ending permanently. A preloaded scene that reached `Ready` also runs
+   * this hook when discarded, even without activation. Use it for additional
+   * asynchronous cleanup. The scene scope releases its asset claims automatically
+   * after teardown, including when this hook throws; assets with other owners
+   * remain resident. Preparation that fails or is cancelled before `Ready` skips
+   * this hook but still runs {@link destroy}. Override in subclass.
    */
   public unload(): Promise<void> | void {
     // override in subclass
@@ -584,6 +630,8 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   public _attach(app: Application, scope: SceneScope<Data>): void {
     this._app = app as ApplicationOf<AppLike>;
     this._scope = scope;
+    this._root._setAssetScope(scope.loader);
+    this._ui?._setAssetScope(scope.loader);
   }
 
   /**
@@ -605,24 +653,66 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * structural root, and the attachment to `app`/`scope`. Called once by
    * `SceneScope` immediately after `scene.destroy()`, on both the normal
    * teardown path and the failed-activation cleanup path.
+   *
+   * A throwing tracked resource or node `destroy()` does not stop the steps
+   * after it: every step runs, then the first failure is rethrown, or an
+   * `AggregateError` when several steps failed.
    * @internal
    */
   public _teardownInternals(): void {
-    this._destroyScope.destroy();
+    // Collected rather than left to `DestroyScope.destroy()`, which swallows
+    // tracked-resource failures in production builds: scene teardown reports
+    // them in every build.
+    const trackedFailure = this._destroyScope._destroyCollectingFailures();
+    let failures: unknown[] | null = trackedFailure === null ? null : [trackedFailure];
+
     this.onActivate.destroy();
     this.onSuspend.destroy();
     this.onPause.destroy();
     this.onResume.destroy();
-    this._root.destroy();
+
+    try {
+      this._root.destroy();
+    } catch (error) {
+      (failures ??= []).push(error);
+    }
+
     this._app = null;
     this._scope = null;
+
+    if (failures !== null) {
+      throw failures.length === 1
+        ? failures[0]
+        : new AggregateError(failures, '[ExoJS] Scene teardown: several engine-owned cleanup steps threw.');
+    }
   }
 
   /** Make `container` the top of a component tree belonging to this scene. */
   private _anchorComponents<C extends Container>(container: C): C {
     container._setComponentAnchor({ componentRuntime: create => this._scope?.componentRuntime(create) ?? null });
+    container._setAssetScope(this._scope?.loader ?? null);
 
     return container;
+  }
+
+  private _createUI(): UIRoot {
+    if (this._destroyScope.destroyed) {
+      throw new Error('Scene.ui is unavailable after the scene was destroyed.');
+    }
+
+    return this._anchorComponents(new UIRoot());
+  }
+
+  private _publishUI(root: UIRoot): UIRoot {
+    this._ui = this._destroyScope.track(root);
+
+    // The director binds inactive scenes on activation. Active scenes must
+    // bind here, before adding children so they inherit the UI stage.
+    if (this._root._getStage() !== null) {
+      this._app?.interaction.attachUIRoot(root);
+    }
+
+    return root;
   }
 
   private _requireScope(name: string): SceneScope<Data> {

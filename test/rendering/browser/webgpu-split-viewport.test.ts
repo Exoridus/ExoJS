@@ -51,7 +51,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 
 // On the software (SwiftShader) adapter the WebGPU device can drop mid-test;
 // treat that as an unavailable-adapter skip rather than a failure.
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const createSolidTexture = (color: string, width = 16, height = 16): Texture => {
   const source = document.createElement('canvas');

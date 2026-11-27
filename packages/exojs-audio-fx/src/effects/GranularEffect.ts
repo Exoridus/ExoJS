@@ -15,7 +15,10 @@ export interface GranularEffectOptions {
   pitchMax?: number;
   /** Dry/wet mix, 0..1. Default 1.0. */
   wet?: number;
-  /** Internal circular-buffer length in seconds. Compile-time, not runtime. Default 2. */
+  /**
+   * Internal circular-buffer length in seconds. Must be positive and finite,
+   * yielding at least one sample at the context sample rate. Compile-time, not runtime. Default 2.
+   */
   bufferSeconds?: number;
   /**
    * Compensate the density/grainSize-dependent loudness so the wet level stays
@@ -49,13 +52,19 @@ export class GranularEffect extends WorkletEffect {
   private readonly _normalizeGain: boolean;
 
   public constructor(options: GranularEffectOptions = {}) {
+    const bufferSeconds = options.bufferSeconds ?? 2;
+
+    if (!Number.isFinite(bufferSeconds) || bufferSeconds <= 0) {
+      throw new RangeError('GranularEffect bufferSeconds must be positive and finite.');
+    }
+
     super();
     this._grainSize = Math.max(0.005, Math.min(0.5, options.grainSize ?? 0.05));
     this._density = Math.max(1, Math.min(500, options.density ?? 50));
     this._spread = Math.max(0, Math.min(1, options.spread ?? 0.5));
     this._pitchMin = Math.max(0.25, Math.min(4, options.pitchMin ?? 1));
     this._pitchMax = Math.max(0.25, Math.min(4, options.pitchMax ?? 1));
-    this._bufferSeconds = options.bufferSeconds ?? 2;
+    this._bufferSeconds = bufferSeconds;
     this._normalizeGain = options.normalizeGain ?? false;
     this.wet = options.wet ?? 1;
   }
@@ -63,9 +72,11 @@ export class GranularEffect extends WorkletEffect {
   protected get _workletName(): string {
     return 'exojs-granular';
   }
+
   protected get _workletSource(): string {
     return granularWorkletSource;
   }
+
   protected override get _workletOptions(): AudioWorkletNodeOptions {
     return {
       numberOfInputs: 1,
@@ -86,6 +97,7 @@ export class GranularEffect extends WorkletEffect {
   public get grainSize(): number {
     return this._grainSize;
   }
+
   public set grainSize(value: number) {
     this._grainSize = Math.max(0.005, Math.min(0.5, value));
     this._setAudioParam('grainSize', this._grainSize);
@@ -95,6 +107,7 @@ export class GranularEffect extends WorkletEffect {
   public get density(): number {
     return this._density;
   }
+
   public set density(value: number) {
     this._density = Math.max(1, Math.min(500, value));
     this._setAudioParam('density', this._density);
@@ -104,6 +117,7 @@ export class GranularEffect extends WorkletEffect {
   public get spread(): number {
     return this._spread;
   }
+
   public set spread(value: number) {
     this._spread = Math.max(0, Math.min(1, value));
     this._setAudioParam('spread', this._spread);
@@ -113,6 +127,7 @@ export class GranularEffect extends WorkletEffect {
   public get pitchMin(): number {
     return this._pitchMin;
   }
+
   public set pitchMin(value: number) {
     this._pitchMin = Math.max(0.25, Math.min(4, value));
     this._setAudioParam('pitchMin', this._pitchMin);
@@ -122,6 +137,7 @@ export class GranularEffect extends WorkletEffect {
   public get pitchMax(): number {
     return this._pitchMax;
   }
+
   public set pitchMax(value: number) {
     this._pitchMax = Math.max(0.25, Math.min(4, value));
     this._setAudioParam('pitchMax', this._pitchMax);

@@ -54,7 +54,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 /**
  * Make every adapter requested from here on report no `float32-filterable`, so
@@ -134,7 +135,12 @@ const floatTable = (): DataTexture<TextureFormat.Rgba32F> =>
     data: new Float32Array([1, 0, 0, 1, 0, 0, 1, 1]),
   });
 
-const readTexturePixel = (backend: WebGpuBackend, texture: RenderTexture, x: number, y: number): readonly [number, number, number, number] => {
+const readTexturePixel = (
+  backend: WebGpuBackend,
+  texture: RenderTexture,
+  x: number,
+  y: number,
+): readonly [number, number, number, number] => {
   const mesh = new Mesh({
     vertices: new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]),
     uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]),

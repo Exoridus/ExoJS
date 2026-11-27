@@ -1,4 +1,5 @@
-import { Application, Color, Ease, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Tween } from '@codexo/exojs';
+import { Application, Color, Ease, FixedResolutionCanvasSizing, Scene, Sprite, type Tween } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 // A closed loop of waypoints expressed as fractions of the canvas so the path
 // spreads across the wider 16:9 frame instead of staying in an 800×600 box.
@@ -15,14 +16,15 @@ const waypointFractions = [
 
 class TweenFromArrayScene extends Scene {
   private sprite!: Sprite;
-  private waypoints: { x: number; y: number }[] = [];
+  private waypoints: Array<{ x: number; y: number }> = [];
 
   override init(): void {
     const app = this.app;
     const { width, height } = app;
 
     this.waypoints = waypointFractions.map(({ fx, fy }) => ({ x: fx * width, y: fy * height }));
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(this.waypoints[0].x, this.waypoints[0].y);
+    this.sprite = new Sprite(assets.ship.source).setAnchor(0.5).setPosition(this.waypoints[0].x, this.waypoints[0].y);
+    this.root.addChild(this.sprite);
     this.buildPath();
   }
 
@@ -30,21 +32,26 @@ class TweenFromArrayScene extends Scene {
     const app = this.app;
     let first: Tween | null = null;
     let prev: Tween | null = null;
+
     for (let i = 1; i < this.waypoints.length; i++) {
       const next = app.tweens.create(this.sprite.position).to(this.waypoints[i], 0.35).easing(Ease.sineInOut);
-      if (first === null) first = next;
-      if (prev !== null) prev.chain(next);
+
+      if (first === null) {
+        first = next;
+      }
+
+      if (prev !== null) {
+        prev.chain(next);
+      }
+
       prev = next;
     }
+
     prev!.onComplete(() => {
       this.sprite.setPosition(this.waypoints[0].x, this.waypoints[0].y);
       this.buildPath();
     });
     first!.start();
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.sprite);
   }
 }
 
@@ -57,9 +64,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(TweenFromArrayScene);

@@ -22,8 +22,8 @@
  *      every lag) and the ACF uses the BIASED / zero-lag-normalised estimator (÷n, not
  *      ÷(n−lag)) so long lags are gently tapered rather than inflated.  [computeAcf]
  *   2. Each candidate `f` is scored by a periodicity comb over its own SUB-multiples
- *      (`f`, `f/2`, `f/3` → lags `p, 2p, 3p`) MINUS a penalty for energy at its
- *      SUPER-harmonics (`2f`, `3f` → lags `p/2, p/3`). A true fundamental has no
+ *      (`f`, `f/2`, `f/3` -> lags `p, 2p, 3p`) MINUS a penalty for energy at its
+ *      SUPER-harmonics (`2f`, `3f` -> lags `p/2, p/3`). A true fundamental has no
  *      super-harmonic energy, so it keeps its full comb; a sub-harmonic candidate is
  *      demoted because its super-harmonic (the real beat) is strong. Metrical support
  *      therefore reinforces the fundamental rather than a lone sub-harmonic peak, over
@@ -32,10 +32,10 @@
  *      The super-harmonic penalty is SUBDIVISION-AWARE: a candidate `kf` (k = 2, 3) only
  *      demotes `f` when `kf` could itself be the beat, i.e. `kf` lies within the tempo
  *      band `[minBpm, maxBpm]`. Energy at a super-harmonic ABOVE `maxBpm` is a subdivision
- *      (e.g. hi-hats on 8th-notes riding over a 180 BPM kick → strong energy at 360 BPM),
+ *      (e.g. hi-hats on 8th-notes riding over a 180 BPM kick -> strong energy at 360 BPM),
  *      NOT a competing fundamental, so it must NOT penalise the true beat. Without this
  *      gate a realistic kit pattern whose fundamental carries subdivision energy is wrongly
- *      demoted in favour of an unrelated in-band multiple (180 → 120). Pure clicktracks
+ *      demoted in favour of an unrelated in-band multiple (180 -> 120). Pure clicktracks
  *      are unaffected: they have no super-harmonic energy, so the gate changes nothing.
  *   3. A soft log-Gaussian tempo prior centred on ~140 BPM breaks residual ties toward
  *      the musical core (100-200 BPM) without hard-clamping the edges.  [tempoPrior]
@@ -44,7 +44,10 @@
 export interface TempoCandidateResult {
   /** BPM value. */
   bpm: number;
-  /** Selection score (periodicity comb × tempo prior; not normalised to 0..1). */
+  /**
+   * Raw ACF peak height from {@link findTempoPeaks}, or the comb x tempo-prior score
+   * from {@link scoreTempoHypotheses} afterwards. Never normalised to 0..1.
+   */
   score: number;
   /** ACF lag in hops that produced this peak. */
   lag: number;
@@ -66,7 +69,7 @@ export interface TempoScoringOptions {
 
 /** Prior centre - geometric mean of the 100-200 BPM "precise" band. */
 export const defaultPriorMu = 140;
-/** Prior width: ≈ ±1 octave at ~0.6 weight. */
+/** Prior width: ~ +/-1 octave at ~0.6 weight. */
 export const defaultPriorSigma = Math.log(2) * 0.9;
 /**
  * Relative tolerance on the candidate-acceptance BPM band. A tempo sitting exactly on
@@ -131,17 +134,21 @@ export const computeAcfInto = (flux: Float32Array, n: number, minLag: number, ma
 
   // Window mean - subtracted before correlation to remove the DC pedestal.
   let mean = 0;
+
   for (let t = 0; t < n; t++) {
     mean += flux[t]!;
   }
+
   mean = n > 0 ? mean / n : 0;
 
   // Zero-lag energy (variance) of the centred signal - the normaliser.
   let zeroLag = 0;
+
   for (let t = 0; t < n; t++) {
     const c = flux[t]! - mean;
     zeroLag += c * c;
   }
+
   zeroLag = n > 0 ? zeroLag / n : 1;
   const norm = zeroLag > 0 ? zeroLag : 1;
 
@@ -149,9 +156,11 @@ export const computeAcfInto = (flux: Float32Array, n: number, minLag: number, ma
   for (let lagIndex = 0; lagIndex < lagCount; lagIndex++) {
     const lag = minLag + lagIndex;
     let sum = 0;
+
     for (let t = lag; t < n; t++) {
       sum += (flux[t]! - mean) * (flux[t - lag]! - mean);
     }
+
     out[lagIndex] = n > 0 ? sum / n / norm : 0;
   }
 };
@@ -164,11 +173,16 @@ export const computeAcfInto = (flux: Float32Array, n: number, minLag: number, ma
 export const acfAtLag = (acf: Float32Array, minLag: number, lag: number): number => {
   const maxIndex = acf.length - 1;
   const f = lag - minLag;
-  if (f < 0 || f > maxIndex) return 0;
+
+  if (f < 0 || f > maxIndex) {
+    return 0;
+  }
+
   const i0 = Math.floor(f);
   const i1 = i0 < maxIndex ? i0 + 1 : maxIndex;
   const frac = f - i0;
   const v = acf[i0]! * (1 - frac) + acf[i1]! * frac;
+
   return v > 0 ? v : 0;
 };
 
@@ -176,7 +190,7 @@ export const acfAtLag = (acf: Float32Array, minLag: number, lag: number): number
  * Sub-lag peak refinement. Fit a parabola through the three samples around an interior
  * local maximum (acf[i-1], acf[i], acf[i+1]) and return the vertex offset in [-0.5, 0.5].
  *
- * The lag grid is coarse at the top of the BPM band (a 300 BPM beat sits at lag ≈ 18.75
+ * The lag grid is coarse at the top of the BPM band (a 300 BPM beat sits at lag ~ 18.75
  * hops, ~5 ms / lag), so rounding a peak to its nearest integer lag costs several BPM.
  * Interpolating the vertex recovers sub-hop BPM resolution without shrinking the hop.
  * Returns 0 when the three points are not strictly concave (cannot happen for a genuine
@@ -184,10 +198,19 @@ export const acfAtLag = (acf: Float32Array, minLag: number, lag: number): number
  */
 export const parabolicPeakOffset = (yPrev: number, yMid: number, yNext: number): number => {
   const denom = yPrev - 2 * yMid + yNext;
-  if (denom >= 0) return 0;
+
+  if (denom >= 0) {
+    return 0;
+  }
+
   let d = (0.5 * (yPrev - yNext)) / denom;
-  if (d < -0.5) d = -0.5;
-  else if (d > 0.5) d = 0.5;
+
+  if (d < -0.5) {
+    d = -0.5;
+  } else if (d > 0.5) {
+    d = 0.5;
+  }
+
   return d;
 };
 
@@ -206,7 +229,13 @@ export const parabolicPeakOffset = (yPrev: number, yMid: number, yNext: number):
  * @param sampleRate Audio sample rate in Hz.
  * @param topK       Number of peaks to return (default 3).
  */
-export const findTempoPeaks = (acf: Float32Array, minLag: number, hopSize: number, sampleRate: number, topK = 3): TempoCandidateResult[] => {
+export const findTempoPeaks = (
+  acf: Float32Array,
+  minLag: number,
+  hopSize: number,
+  sampleRate: number,
+  topK = 3,
+): TempoCandidateResult[] => {
   const peaks: TempoCandidateResult[] = [];
   const last = acf.length - 1;
 
@@ -231,12 +260,14 @@ export const findTempoPeaks = (acf: Float32Array, minLag: number, hopSize: numbe
   }
 
   peaks.sort((a, b) => b.score - a.score);
+
   return peaks.slice(0, topK);
 };
 
 /** Soft log-Gaussian tempo prior: 1 at `mu`, decaying symmetrically in log-BPM. */
 export const tempoPrior = (bpm: number, mu = defaultPriorMu, sigma = defaultPriorSigma): number => {
   const z = Math.log(bpm / mu) / sigma;
+
   return Math.exp(-0.5 * z * z);
 };
 
@@ -244,17 +275,18 @@ export const tempoPrior = (bpm: number, mu = defaultPriorMu, sigma = defaultPrio
  * Re-score raw ACF peaks into musically-disambiguated tempo candidates.
  *
  * For each candidate fundamental `f` (lag `p`):
- *   support  = 1.0·ACF(p) + 0.5·ACF(2p) + 0.3·ACF(3p)      // its own sub-multiples (f, f/2, f/3)
- *   penalty  = 1.0·ACF(p/2)[if 2f ≤ maxBpm] + 0.5·ACF(p/3)[if 3f ≤ maxBpm]   // super-harmonics
+ *   support  = 1.0*ACF(p) + 0.5*ACF(2p) + 0.3*ACF(3p)      // its own sub-multiples (f, f/2, f/3)
+ *   penalty  = 1.0*ACF(p/2)[if 2f <= maxBpm] + 0.5*ACF(p/3)[if 3f <= maxBpm]   // super-harmonics
  *   comb     = max(0, support − penalty)
- *   score    = comb · prior(bpm)
+ *   score    = comb * prior(bpm)
  *
  * The penalty is what defeats the octave-down bias: a sub-harmonic candidate has a strong
  * super-harmonic (the real beat), so it is demoted; the true fundamental has no
  * super-harmonic energy and keeps its full comb.
  *
  * The penalty is gated to be SUBDIVISION-AWARE: a super-harmonic
- * `kf` only counts against `f` when `kf` is itself a plausible beat (`kf ≤ maxBpm`). Energy
+ * `kf` only counts against `f` when `kf` could itself be the beat
+ * (`kf <= maxBpm x (1 + candidateEdgeTolerance)`, the same slack the candidate band uses). Energy
  * at a super-harmonic above the tempo band is a subdivision (e.g. hats on 8th-notes over a
  * 180 BPM kick), not a competing fundamental, and must not demote the true beat. Returns
  * candidates sorted by score.
@@ -283,17 +315,21 @@ export const scoreTempoHypotheses = (
     const penaltyDouble = p.bpm * 2 <= superHarmonicMaxBpm ? combPenaltyDouble * aDouble : 0;
     const penaltyTriple = p.bpm * 3 <= superHarmonicMaxBpm ? combPenaltyTriple * aTriple : 0;
     let comb = support - penaltyDouble - penaltyTriple;
-    if (comb < 0) comb = 0;
+
+    if (comb < 0) {
+      comb = 0;
+    }
 
     return { bpm: p.bpm, score: comb * tempoPrior(p.bpm, mu, sigma), lag: p.lag };
   });
 
   scored.sort((a, b) => b.score - a.score);
+
   return scored;
 };
 
 /**
- * Full tempo-candidate pipeline: ACF → peaks → comb + super-harmonic penalty + prior.
+ * Full tempo-candidate pipeline: ACF -> peaks -> comb + super-harmonic penalty + prior.
  *
  * This is the single function the worklet mirrors and `worklet-parity.test.ts` checks.
  *
@@ -322,19 +358,24 @@ export const computeTempoCandidates = (
   const hiBpm = maxBpm * (1 + candidateEdgeTolerance);
   const inRange = peaks.filter(p => p.bpm >= loBpm && p.bpm <= hiBpm);
   const scored = scoreTempoHypotheses(inRange, acf, acfMinLag, options);
+
   return scored.slice(0, topK);
 };
 
 /**
- * True when `bpm` is a metrically-related multiple of `reference` - a ½×, 2×, 3× or ⅓×
+ * True when `bpm` is a metrically-related multiple of `reference` - a 0.5x, 2x, 3x or 1/3x
  * octave, OR a 3:2 / 2:3 (dotted ↔ triple) relative. Switching across any of these needs the
  * stronger hysteresis margin: they are the same beat counted at a different metrical level
  * (e.g. 180 BPM kick vs the 120 BPM "dotted" grouping its 8th-note subdivisions create), not
  * a genuine tempo change.
  */
 export const isOctaveRelated = (bpm: number, reference: number): boolean => {
-  if (reference <= 0) return false;
+  if (reference <= 0) {
+    return false;
+  }
+
   const r = bpm / reference;
+
   return (
     Math.abs(r - 0.5) < 0.05 ||
     Math.abs(r - 2) < 0.1 ||

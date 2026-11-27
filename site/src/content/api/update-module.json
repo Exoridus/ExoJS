@@ -4,7 +4,7 @@
   "symbol": "UpdateModule",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 8,
   "counts": {
@@ -23,7 +23,7 @@
         "GPU support is explicit per backend: `wgsl()` opts into WebGPU compute, `glsl()` into WebGL2 transform feedback. If any module lacks the attached backend's contribution, the entire system uses the supported CPU fallback. Built-in modules provide all three implementations. GPU bodies must preserve the CPU operation, channel ownership and module ordering.",
         "Shader sources and lookup tables are captured when the module list is compiled. Remove and re-add a module after replacing lookup configuration; uniform values are refreshed each frame without recompilation."
       ],
-      "importLine": "import { UpdateModule } from '@codexo/exojs-particles'",
+      "importLine": "import { UpdateModule } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

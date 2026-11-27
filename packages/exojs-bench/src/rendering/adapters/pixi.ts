@@ -30,9 +30,23 @@ import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../
 import { BLUR_KERNEL_SIGMAS, BLUR_TAPS_PER_SIDE } from '../archetypes';
 import { pixiCulledCovers } from '../coverage';
 import type { ArchetypeSpec, Backend, EngineAdapter, LayoutDigestReport } from '../EngineAdapter';
-import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_PREROLL_STEPS, PARTICLE_STEP, particleSeedAt } from '../particles';
+import {
+  isParticleLifecycle,
+  isParticles,
+  PARTICLE_ALPHA,
+  PARTICLE_LIFETIME,
+  PARTICLE_PREROLL_STEPS,
+  PARTICLE_STEP,
+  particleSeedAt,
+} from '../particles';
 import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
-import { createBlurSourceCanvas, createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
+import {
+  createBlurSourceCanvas,
+  createDistinctTextureCanvas,
+  createParticleCanvas,
+  createTileAtlasCanvas,
+  TEXT_FONT_SIZE,
+} from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import {
   isTilemap,
@@ -247,7 +261,12 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
    * filtered source sprite, which is what a Pixi app writes: Pixi has no
    * pipeline object to declare a multipass with.
    */
-  let bloom: { readonly capture: RenderTexture; readonly blurred: RenderTexture; readonly source: Sprite; readonly overlay: Sprite } | null = null;
+  let bloom: {
+    readonly capture: RenderTexture;
+    readonly blurred: RenderTexture;
+    readonly source: Sprite;
+    readonly overlay: Sprite;
+  } | null = null;
 
   /** Drop the bloom stack so a rebuild (or teardown) leaks no GPU resources. */
   const releaseBloom = (): void => {
@@ -295,6 +314,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
   let tileIds: Uint8Array = new Uint8Array(0);
   /** The tile atlas every chunk draws from, kept so a rebuilt chunk gets the identical tileset. */
   let tileAtlas: TextureSource | null = null;
+  /** The owning Texture of {@link tileAtlas}, kept so releaseTilemap can destroy the GPU texture itself. */
+  let tileAtlasTexture: Texture | null = null;
 
   /** Paint one chunk from {@link tileIds} into its (empty) tilemap. */
   const paintChunk = (chunk: TileChunk): void => {
@@ -353,6 +374,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     const atlas = Texture.from(createTileAtlasCanvas());
 
     tileAtlas = atlas.source;
+    tileAtlasTexture = atlas;
 
     tileTextures = Array.from(
       { length: TILE_VARIANTS },
@@ -429,7 +451,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     const bottom = top + VIEWPORT_HEIGHT / TILE_SIZE;
 
     for (const chunk of tileChunks) {
-      chunk.tilemap.visible = chunk.originX < right && chunk.originX + chunk.width > left && chunk.originY < bottom && chunk.originY + chunk.height > top;
+      chunk.tilemap.visible =
+        chunk.originX < right && chunk.originX + chunk.width > left && chunk.originY < bottom && chunk.originY + chunk.height > top;
     }
   };
 
@@ -441,6 +464,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     tileChunks = [];
     tileTextures = [];
     tileIds = new Uint8Array(0);
+    tileAtlasTexture?.destroy(true);
+    tileAtlasTexture = null;
     tileAtlas = null;
     tilemapSpec = null;
   };
@@ -554,14 +579,6 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
   let blurTexture: Texture | null = null;
 
   /**
-   * Build the blur scene: one textured quad under a separable two-pass Gaussian,
-   * configured to the same nine taps and the same reach as every other arm.
-   *
-   * `quality` is how many times Pixi repeats the pair of sweeps, so it stays at
-   * one: raising it would run the filter several times over and publish the
-   * extra passes as a slower blur rather than as the different effect they are.
-   */
-  /**
    * Standard deviation, in texels, of Pixi's nine-tap weight table at unit tap
    * spacing.
    *
@@ -578,6 +595,14 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
    */
   const PIXI_KERNEL_SIGMA = 2.021;
 
+  /**
+   * Build the blur scene: one textured quad under a separable two-pass Gaussian,
+   * configured to the same nine taps and the same reach as every other arm.
+   *
+   * `quality` is how many times Pixi repeats the pair of sweeps, so it stays at
+   * one: raising it would run the filter several times over and publish the
+   * extra passes as a slower blur rather than as the different effect they are.
+   */
   const buildBlurScene = (spec: ArchetypeSpec, nodeCount: number): void => {
     const texture = Texture.from(createBlurSourceCanvas());
     const sprite = new Sprite(texture);
@@ -802,7 +827,12 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         for (const leaf of row.children) {
           const box = leaf.layout!.computedLayout;
 
-          rects.push({ x: columnBox.left + rowBox.left + box.left, y: columnBox.top + rowBox.top + box.top, width: box.width, height: box.height });
+          rects.push({
+            x: columnBox.left + rowBox.left + box.left,
+            y: columnBox.top + rowBox.top + box.top,
+            width: box.width,
+            height: box.height,
+          });
         }
       }
     }
@@ -988,7 +1018,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       textUpdating = isTextUpdating(spec);
 
       /** Resting grid position of leaf `index`, from the shared layout helpers. */
-      const leafPosition = (index: number): { x: number; y: number } => (overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN));
+      const leafPosition = (index: number): { x: number; y: number } =>
+        overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN);
 
       /**
        * Build (but do not parent) the leaf at global index `index`. Extracted for
@@ -1113,7 +1144,9 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         const overlay = new Sprite(blurred);
 
         source.scale.set(BLOOM_DOWNSCALE);
-        source.filters = [new BlurFilter({ strength: bloomStrength, quality: 2 })];
+        source.filters = [
+          new BlurFilter({ strength: bloomStrength / PIXI_KERNEL_SIGMA, quality: 1, kernelSize: BLUR_TAPS_PER_SIDE * 2 + 1 }),
+        ];
         overlay.width = VIEWPORT_WIDTH;
         overlay.height = VIEWPORT_HEIGHT;
         overlay.blendMode = 'add';
@@ -1298,9 +1331,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
 
       // Pixi v8's WebGPU renderer exposes the live GPU object (adapter + device)
       // as `renderer.gpu`; `renderer.gpu.device` is the `GPUDevice` the harness
-      // attaches its structural probe and submit→done timer to. This is what
-      // fixes the "webgpu backend did not expose a GPUDevice" probe blocker for
-      // the Pixi arm.
+      // attaches its structural probe and submit→done timer to.
       const renderer = app.renderer as WebGPURenderer;
 
       return renderer.gpu?.device ?? null;

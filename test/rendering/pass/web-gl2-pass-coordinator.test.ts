@@ -29,13 +29,15 @@ const createMockBackend = (root: RenderTarget) => {
     clearColor.copy(color);
   });
   const clear = vi.fn((color?: Color) => {
-    if (color) clearColor.copy(color);
+    if (color) {
+      clearColor.copy(color);
+    }
   });
-  const flush = vi.fn(() => undefined);
-  const pushScissorRect = vi.fn((_bounds: Rectangle) => undefined);
-  const popScissorRect = vi.fn(() => undefined);
-  const pushStencilClip = vi.fn((_shape: Geometry, _transform: Matrix) => undefined);
-  const popStencilClip = vi.fn(() => undefined);
+  const flushPending = vi.fn(() => {});
+  const pushScissorRect = vi.fn((_bounds: Rectangle) => {});
+  const popScissorRect = vi.fn(() => {});
+  const pushStencilClip = vi.fn((_shape: Geometry, _transform: Matrix) => {});
+  const popStencilClip = vi.fn(() => {});
 
   const backend: WebGl2PassBackend = {
     clearColor,
@@ -49,14 +51,26 @@ const createMockBackend = (root: RenderTarget) => {
     setRenderTarget,
     setView,
     clear,
-    flush,
+    flushPending,
     pushScissorRect,
     popScissorRect,
     pushStencilClip,
     popStencilClip,
   };
 
-  return { backend, setRenderTarget, setView, clear, clearColor, setClearColor, flush, pushScissorRect, popScissorRect, pushStencilClip, popStencilClip };
+  return {
+    backend,
+    setRenderTarget,
+    setView,
+    clear,
+    clearColor,
+    setClearColor,
+    flushPending,
+    pushScissorRect,
+    popScissorRect,
+    pushStencilClip,
+    popStencilClip,
+  };
 };
 
 const descriptor = (
@@ -168,13 +182,13 @@ describe('WebGl2PassCoordinator', () => {
 
   test('endPass flushes the active renderer', () => {
     const root = new RenderTarget(64, 64, true);
-    const { backend, flush } = createMockBackend(root);
+    const { backend, flushPending } = createMockBackend(root);
     const coordinator = new WebGl2PassCoordinator(backend);
 
     try {
       coordinator.endPass();
 
-      expect(flush).toHaveBeenCalledTimes(1);
+      expect(flushPending).toHaveBeenCalledTimes(1);
     } finally {
       root.destroy();
     }
@@ -194,6 +208,29 @@ describe('WebGl2PassCoordinator', () => {
       expect(popScissorRect).toHaveBeenCalledTimes(1);
     } finally {
       bounds.destroy();
+      root.destroy();
+    }
+  });
+
+  test('the descriptor stencil mode does not change the WebGL2 pass; stencil state follows the clip stack', () => {
+    const root = new RenderTarget(64, 64, true);
+    const child = new RenderTexture(32, 32);
+
+    const calls = (mode: StencilAttachmentMode): string[] => {
+      const { backend, setRenderTarget, setView, clear, pushStencilClip } = createMockBackend(root);
+      const coordinator = new WebGl2PassCoordinator(backend);
+
+      coordinator.beginPass(descriptor(child, null, 'clear', null, mode));
+
+      return [setRenderTarget.mock.calls.length, setView.mock.calls.length, clear.mock.calls.length, pushStencilClip.mock.calls.length].map(
+        String,
+      );
+    };
+
+    try {
+      expect(calls(StencilAttachmentMode.Enabled)).toEqual(calls(StencilAttachmentMode.None));
+    } finally {
+      child.destroy();
       root.destroy();
     }
   });

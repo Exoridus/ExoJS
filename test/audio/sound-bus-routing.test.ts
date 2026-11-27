@@ -2,8 +2,8 @@ import type { MockInstance } from 'vitest';
 
 import { AudioBus } from '#audio/AudioBus';
 import { getAudioContext } from '#audio/audioContext';
-import { AudioStream } from '#audio/AudioStream';
 import { AudioSystem } from '#audio/AudioSystem';
+import { Music } from '#audio/Music';
 import { Sound } from '#audio/Sound';
 import { Video } from '#rendering/video/Video';
 
@@ -16,6 +16,7 @@ const createAudioBufferStub = (): AudioBuffer => ({ duration: 2 }) as AudioBuffe
 const createAudioElementStub = (): HTMLAudioElement => {
   const el = document.createElement('audio');
   Object.defineProperty(el, 'duration', { configurable: true, value: 5 });
+
   return el;
 };
 
@@ -26,6 +27,7 @@ const createVideoElementStub = (): HTMLVideoElement => {
   Object.defineProperty(el, 'playbackRate', { configurable: true, writable: true, value: 1 });
   Object.defineProperty(el, 'loop', { configurable: true, writable: true, value: false });
   Object.defineProperty(el, 'muted', { configurable: true, writable: true, value: false });
+
   return el;
 };
 
@@ -57,8 +59,10 @@ const spyOnGainConnect = (): ConnectSpy => {
   const spy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
     if (firstCall) {
       firstCall = false;
+
       return gainNode as unknown as GainNode;
     }
+
     return original();
   });
 
@@ -72,7 +76,7 @@ const spyOnGainConnect = (): ConnectSpy => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('Bus routing (Sound / AudioStream / Video)', () => {
+describe('Bus routing (Sound / Music / Video)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -127,11 +131,11 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
     customBus.destroy();
   });
 
-  // 4. AudioStream voice routes to the music bus by default
+  // 4. Music voice routes to the music bus by default
   test('system.play(stream) routes the voice output to the music bus by default', () => {
     const system = new AudioSystem();
     const spy = spyOnGainConnect();
-    const stream = new AudioStream(createAudioElementStub());
+    const stream = new Music(createAudioElementStub());
 
     const voice = system.play(stream);
 
@@ -147,7 +151,7 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
   test('setting voice.bus reconnects the output to a custom bus inputNode', () => {
     const system = new AudioSystem();
     const spy = spyOnGainConnect();
-    const stream = new AudioStream(createAudioElementStub());
+    const stream = new Music(createAudioElementStub());
     const voice = system.play(stream);
 
     const customBus = new AudioBus('custom3');
@@ -165,7 +169,7 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
   test('setting voice.bus to the same bus is a no-op', () => {
     const system = new AudioSystem();
     const spy = spyOnGainConnect();
-    const stream = new AudioStream(createAudioElementStub());
+    const stream = new Music(createAudioElementStub());
     const voice = system.play(stream);
 
     const customBus = new AudioBus('custom-noop');
@@ -183,9 +187,9 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
   });
 
   // 7. Playing a stream again stops the previous voice (single playhead)
-  test('playing an AudioStream again stops the previous voice', () => {
+  test('playing an Music again stops the previous voice', () => {
     const system = new AudioSystem();
-    const stream = new AudioStream(createAudioElementStub());
+    const stream = new Music(createAudioElementStub());
 
     const first = system.play(stream);
     const second = system.play(stream);

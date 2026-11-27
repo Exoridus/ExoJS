@@ -427,13 +427,17 @@ const toArtifact = (artifact: ApiArtifact, runId: number): ArtifactMeta => ({
 });
 
 const listArtifacts = async (client: GitHubClient, runId: number): Promise<ArtifactMeta[]> => {
-  const page = await client.getJson<{ artifacts: ApiArtifact[] }>(`/repos/${client.repository}/actions/runs/${runId}/artifacts?per_page=100`);
+  const page = await client.getJson<{ artifacts: ApiArtifact[] }>(
+    `/repos/${client.repository}/actions/runs/${runId}/artifacts?per_page=100`,
+  );
 
   return (page?.artifacts ?? []).map(artifact => toArtifact(artifact, runId));
 };
 
 const listRuns = async (client: GitHubClient, workflowId: number, query: string): Promise<WorkflowRunMeta[]> => {
-  const page = await client.getJson<{ workflow_runs: ApiRun[] }>(`/repos/${client.repository}/actions/workflows/${workflowId}/runs?${query}`);
+  const page = await client.getJson<{ workflow_runs: ApiRun[] }>(
+    `/repos/${client.repository}/actions/workflows/${workflowId}/runs?${query}`,
+  );
 
   return (page?.workflow_runs ?? []).map(toRun);
 };
@@ -441,7 +445,11 @@ const listRuns = async (client: GitHubClient, workflowId: number, query: string)
 const withArtifacts = async (client: GitHubClient, runs: readonly WorkflowRunMeta[]): Promise<CandidateRun[]> =>
   Promise.all(runs.map(async run => ({ run, artifacts: await listArtifacts(client, run.id) })));
 
-const findPrevious = async (client: GitHubClient, publisherWorkflowId: number, currentRunId: number): Promise<PreviousPublication | null> => {
+const findPrevious = async (
+  client: GitHubClient,
+  publisherWorkflowId: number,
+  currentRunId: number,
+): Promise<PreviousPublication | null> => {
   for (const run of await listRuns(client, publisherWorkflowId, 'status=success&per_page=30')) {
     if (run.id === currentRunId) {
       continue;
@@ -455,7 +463,9 @@ const findPrevious = async (client: GitHubClient, publisherWorkflowId: number, c
     }
 
     const zip = await client.download(`/repos/${client.repository}/actions/artifacts/${record.id}/zip`);
-    const channels = parseChannelsDocument(JSON.parse(readZipFile(zip, CHANNELS_FILE, { maxUnpackedBytes: 1_000_000 }).toString('utf8')) as unknown);
+    const channels = parseChannelsDocument(
+      JSON.parse(readZipFile(zip, CHANNELS_FILE, { maxUnpackedBytes: 1_000_000 }).toString('utf8')) as unknown,
+    );
 
     return { runId: run.id, channels, pagesArtifact: artifacts.find(artifact => artifact.name === PAGES_ARTIFACT_NAME) ?? null };
   }
@@ -464,9 +474,12 @@ const findPrevious = async (client: GitHubClient, publisherWorkflowId: number, c
 };
 
 const distanceTo = async (client: GitHubClient, sha: string, head: string): Promise<number | null> => {
-  const comparison = await client.getJson<{ status: string; ahead_by: number }>(`/repos/${client.repository}/compare/${sha}...${head}?per_page=1`, {
-    allowMissing: true,
-  });
+  const comparison = await client.getJson<{ status: string; ahead_by: number }>(
+    `/repos/${client.repository}/compare/${sha}...${head}?per_page=1`,
+    {
+      allowMissing: true,
+    },
+  );
 
   if (comparison === null) {
     return null;

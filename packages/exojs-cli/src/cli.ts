@@ -12,7 +12,8 @@ Commands:
                          cross-origin isolation headers
   create [name]          Scaffold a new app
   doctor [dir]           Check an installed project's environment
-  assets pack <file>     Pack assets into an .exoa container, optionally under a
+  assets pack <pack-description>
+                         Pack assets into an .exoa container, optionally under a
                          content-addressed name plus an asset manifest
 
 Options:
@@ -88,11 +89,15 @@ export const runCli = async (argv: readonly string[]): Promise<number> => {
         throw new CliError(`unknown command "${command}"`, { hint: 'Run `exo --help` to see the commands this tool accepts.' });
     }
   } catch (error: unknown) {
-    if (!(error instanceof CliError)) throw error;
+    if (!(error instanceof CliError)) {
+      throw error;
+    }
 
     console.error(`exo: ${error.message}`);
 
-    if (error.hint !== undefined) console.error(error.hint);
+    if (error.hint !== undefined) {
+      console.error(error.hint);
+    }
 
     return error.exitCode;
   }

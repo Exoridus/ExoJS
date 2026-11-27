@@ -1,3 +1,4 @@
+import { _stampMeta } from '#assets/assetMeta';
 import { LoadState, type LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/Logger';
 import { clamp } from '#math/utils';
@@ -53,6 +54,11 @@ export interface SoundOptions {
   poolSize?: number;
   poolStrategy?: SoundPoolStrategy;
   priority?: number;
+  /**
+   * Sprite map, validated against the sound's buffer. A path-backed sound
+   * validates these clips when it loads. For a sound constructed without a
+   * buffer or path, add clips through {@link Sound.setSprites} once it has a buffer.
+   */
   sprites?: Readonly<Record<string, AudioSpriteClip>>;
   /** Default volume for voices created from this sound. Range [0, 1]. Default: 1. */
   volume?: number;
@@ -79,10 +85,6 @@ export interface SoundPlayOptions extends PlayOptions {
 /** Internal record tracking an active voice for pool management. */
 interface PooledVoice {
   readonly voice: SoundVoice;
-  /** audioContext.currentTime when the voice was started. */
-  readonly startedAt: number;
-  /** Finite playback duration in seconds, or Infinity for looping. */
-  readonly effectiveDuration: number;
 }
 
 /**
@@ -114,6 +116,7 @@ export class Sound implements Playable {
    * playing stale audio after the reload.
    */
   private _parent: Sound | null = null;
+  private _destroyed = false;
   /**
    * @internal - load lifecycle, driven by the Loader's seamless pipeline. Only
    * a root sound's is ever driven; a sub-Sound reports its root's state.
@@ -180,7 +183,7 @@ export class Sound implements Playable {
 
   /**
    * Load lifecycle of this sound. Directly constructed sounds are `'ready'`;
-   * deferred handles returned by `loader.get('theme.ogg')` / `loader.get(Asset.type('sound', src))`
+   * deferred handles returned by `loader.get('theme.ogg')` / `loader.get({ type: 'sound', source: src })`
    * start `'loading'` and become `'ready'` once the payload fills in, or
    * `'failed'` when the load errors. A {@link Sound.clip} / {@link Sound.sprite}
    * reports its root's lifecycle - it has no payload of its own to load.
@@ -226,6 +229,14 @@ export class Sound implements Playable {
     return this._parent === null ? this._audioBuffer : this._parent._rootBuffer;
   }
 
+  /**
+   * `true` once {@link Sound.destroy} has run on this sound or on the sound it
+   * was cut from. A destroyed sound is not reusable - playing it throws.
+   */
+  public get destroyed(): boolean {
+    return this._destroyed || (this._parent?.destroyed ?? false);
+  }
+
   /** The load lifecycle that governs this sound: its own, or its root's. */
   private get _rootLoadState(): LoadState<Sound> {
     return this._parent === null ? this._loadState : this._parent._rootLoadState;
@@ -264,8 +275,9 @@ export class Sound implements Playable {
     this._priority = value;
   }
 
-  public constructor(audioBuffer: AudioBuffer | null = null, options: SoundOptions = {}) {
-    this._audioBuffer = audioBuffer;
+  /** A path creates an idle handle. An owning loader fills it when the sound is needed. */
+  public constructor(source: AudioBuffer | string | null = null, options: SoundOptions = {}) {
+    this._audioBuffer = typeof source === 'string' ? null : source;
 
     const { poolSize, poolStrategy, priority, sprites, volume, loop, playbackRate, muted } = options;
 
@@ -278,11 +290,21 @@ export class Sound implements Playable {
     this._poolStrategy = poolStrategy ?? SoundPoolStrategy.FirstInFirstOut;
     this._priority = priority ?? 0;
 
-    if (sprites) {
+    if (typeof source === 'string') {
+      this._loadState.markIdle();
+      const playbackOptions = { volume, loop, playbackRate, muted };
+      _stampMeta(this, { kind: 'sound', src: source, opts: { playbackOptions, poolSize, sprites } });
+    } else if (sprites) {
       this.setSprites(sprites);
     }
   }
 
+  /**
+   * Shrinking the pool stops the voices over the new capacity, chosen by the
+   * pool strategy. A voice started from an `onEnd` listener of a voice stopped
+   * here is admitted by the normal play-time eviction, not trimmed again by this
+   * call, so a listener that replays the sound cannot stall it.
+   */
   public setPoolSize(poolSize: number): this {
     const normalizedPoolSize = Math.max(1, Math.floor(poolSize));
 
@@ -298,13 +320,13 @@ export class Sound implements Playable {
 
   /**
    * Replace the whole sprite table. Every sub-{@link Sound} previously handed
-   * out by {@link Sound.sprite} is destroyed - the definitions they were
-   * derived from are gone, so keeping them alive would keep stale windows (and
-   * their voices) playing.
+   * out by {@link Sound.sprite} stops its voices and is forgotten - the
+   * definitions they were derived from are gone, so keeping them would keep
+   * stale windows playing. The next lookup returns a fresh sub-Sound.
    */
   public setSprites(sprites: Readonly<Record<string, AudioSpriteClip>>): this {
     this._sprites.clear();
-    this._destroySpriteSounds();
+    this._releaseSpriteSounds();
 
     for (const [name, clip] of Object.entries(sprites)) {
       this.addSprite(name, clip);
@@ -317,6 +339,11 @@ export class Sound implements Playable {
    * Define (or redefine) a named sub-region of the buffer. Redefining a name
    * discards the sub-{@link Sound} {@link Sound.sprite} memoized for it, so the
    * next lookup reflects the new window.
+   *
+   * @throws If the name is empty or trims to nothing, a time is not finite,
+   * `start` is negative, `end` is not greater than `start`, or `end` exceeds
+   * the sound's current duration. A bufferless (deferred) sound has duration
+   * `0`, so it rejects every definition.
    */
   public addSprite(name: string, clip: AudioSpriteClip): this {
     if (name.trim().length === 0) {
@@ -353,7 +380,7 @@ export class Sound implements Playable {
   }
 
   /**
-   * Remove a sprite definition and destroy the sub-{@link Sound}
+   * Remove a sprite definition and forget the sub-{@link Sound}
    * {@link Sound.sprite} memoized for it, stopping anything it still had
    * playing.
    */
@@ -451,23 +478,65 @@ export class Sound implements Playable {
     return sub;
   }
 
-  /** Destroy and forget the sub-{@link Sound} memoized for `name`, if any. */
+  /** Release and forget the sub-{@link Sound} memoized for `name`, if any. */
   private _dropSpriteSound(name: string): void {
     const sprite = this._spriteSounds.get(name);
 
     if (sprite !== undefined) {
       this._spriteSounds.delete(name);
-      sprite.destroy();
+      sprite._release();
     }
   }
 
-  /** Destroy and forget every memoized sprite sub-{@link Sound}. */
-  private _destroySpriteSounds(): void {
-    for (const sprite of this._spriteSounds.values()) {
-      sprite.destroy();
+  /**
+   * Release and forget every memoized sprite sub-{@link Sound}. Released, not
+   * destroyed: an asset reload redefines the sprites in place, and a handle the
+   * caller still holds must stay playable across it.
+   */
+  private _releaseSpriteSounds(): void {
+    // Detach the cache before stopping any sprite: onEnd listeners may reenter
+    // sprite management, and a failed stop must not strand a cached handle.
+    const sprites = [...this._spriteSounds.values()];
+    this._spriteSounds.clear();
+
+    let failure: { error: unknown } | null = null;
+
+    for (const sprite of sprites) {
+      try {
+        sprite._release();
+      } catch (error) {
+        failure ??= { error };
+      }
     }
 
-    this._spriteSounds.clear();
+    if (failure !== null) {
+      throw failure.error;
+    }
+  }
+
+  /** Stop every voice and drop the sprite state, leaving the sound playable. */
+  private _release(): void {
+    let failure: { error: unknown } | null = null;
+
+    try {
+      this._stopAllVoices();
+    } catch (error) {
+      failure = { error };
+    } finally {
+      // Listener errors must not skip the rest of the release, including
+      // memoized sprites that have their own independent voice pools.
+      this._sprites.clear();
+
+      try {
+        this._releaseSpriteSounds();
+      } catch (error) {
+        failure ??= { error };
+      }
+    }
+
+    if (failure !== null) {
+      throw failure.error;
+    }
   }
 
   /**
@@ -479,6 +548,18 @@ export class Sound implements Playable {
     this._audioBuffer = buffer;
     this._clipStart = 0;
     this._clipEnd = Infinity;
+  }
+
+  /** Fill a deferred handle with decoded content, preserving its own playback settings. @internal */
+  public _fillFrom(donor: Sound): void {
+    const buffer = donor.audioBuffer;
+
+    if (buffer === null) {
+      throw new Error('Sound._fillFrom: donor has no decoded buffer.');
+    }
+
+    this._setBuffer(buffer);
+    this.setSprites(Object.fromEntries(donor._sprites));
   }
 
   /**
@@ -499,8 +580,14 @@ export class Sound implements Playable {
    * Creates one {@link SoundVoice} backed by a single `AudioBufferSourceNode`.
    * Pool limits are enforced: if the pool is full the configured eviction
    * strategy picks a victim to stop before the new voice starts.
+   * If an `onEnd` callback destroys this sound or its parent while stopping a
+   * previous voice, this call returns an already-ended voice.
    */
   public createVoice(system: AudioSystem, options: SoundPlayOptions): Voice {
+    if (this.destroyed) {
+      throw new Error('Cannot play a destroyed Sound. Load the asset again to obtain a playable sound.');
+    }
+
     const bus = options.bus ?? system.sound;
 
     // A suspended context's `currentTime` stands still, so `source.start(0, ...)`
@@ -510,6 +597,7 @@ export class Sound implements Playable {
     // skip it, like `AudioGenerator` does.
     if (!isAudioContextReady()) {
       system._warnPlaybackWhileLocked('sound');
+
       return new NoopVoice(bus);
     }
 
@@ -567,13 +655,18 @@ export class Sound implements Playable {
 
     if (loadState.value === 'failed') {
       logger.warn('AudioSystem.play() called on a sound that failed to load; playing silence.', { source: 'Sound' });
+
       return new NoopVoice(bus);
     }
 
     if (buffer === null || loadState.value === 'loading') {
-      logger.warn('AudioSystem.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().', {
-        source: 'Sound',
-      });
+      logger.warn(
+        'AudioSystem.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().',
+        {
+          source: 'Sound',
+        },
+      );
+
       return new NoopVoice(bus);
     }
 
@@ -585,7 +678,13 @@ export class Sound implements Playable {
    * pool limit, builds the {@link SoundVoice}, seeds spatialization from the
    * play-time options, and tracks the voice for eviction.
    */
-  private _buildVoice(system: AudioSystem, options: SoundPlayOptions, buffer: AudioBuffer, offset: number, window: SoundVoiceWindow): Voice {
+  private _buildVoice(
+    system: AudioSystem,
+    options: SoundPlayOptions,
+    buffer: AudioBuffer,
+    offset: number,
+    window: SoundVoiceWindow,
+  ): Voice {
     const loop = options.loop ?? this.loop;
     const playbackRate = clamp(options.playbackRate ?? this.playbackRate, 0.1, 20);
     const detune = options.detune ?? 0;
@@ -604,11 +703,18 @@ export class Sound implements Playable {
       if (this._activeVoices.length >= this._poolSize) {
         const victimIndex = this._pickEvictionVictim();
         const victim = this._activeVoices[victimIndex];
+
         if (victim) {
           this._activeVoices.splice(victimIndex, 1);
           victim.voice.stop();
         }
       }
+    }
+
+    // Stopping a victim dispatches onEnd after createVoice captured the buffer.
+    // The callback may have made this sound or its parent terminal.
+    if (this.destroyed) {
+      return new NoopVoice(bus);
     }
 
     const audioContext = getAudioContext();
@@ -631,12 +737,11 @@ export class Sound implements Playable {
     seedVoiceFromPlayOptions(voice, options);
     seedVoiceSends(voice, options);
 
-    const startedAt = audioContext.currentTime;
-    const effectiveDuration = loop ? Infinity : window.end - offset;
-    const pooledVoice: PooledVoice = { voice, startedAt, effectiveDuration };
+    const pooledVoice: PooledVoice = { voice };
 
     voice.onEnd.add((): void => {
       const index = this._activeVoices.indexOf(pooledVoice);
+
       if (index !== -1) {
         this._activeVoices.splice(index, 1);
       }
@@ -651,15 +756,44 @@ export class Sound implements Playable {
   public _stopAllVoices(): void {
     const voices = [...this._activeVoices];
     this._activeVoices.length = 0;
+
+    // onEnd is user code. One failing listener must not leave later voices
+    // playing after their pool entries have already been detached.
+    let failure: { error: unknown } | null = null;
+
     for (const pv of voices) {
-      pv.voice.stop();
+      try {
+        pv.voice.stop();
+      } catch (error) {
+        failure ??= { error };
+      }
+    }
+
+    if (failure !== null) {
+      throw failure.error;
     }
   }
 
+  /**
+   * Stop the voices of this sound and of its {@link Sound.sprite} sounds, and
+   * release the decoded buffer. Final and idempotent: playing this sound, or
+   * a clip or sprite cut from it, throws afterwards. Create or load a new sound
+   * to play the audio again.
+   */
   public destroy(): void {
-    this._stopAllVoices();
-    this._sprites.clear();
-    this._destroySpriteSounds();
+    if (this._destroyed) {
+      return;
+    }
+
+    this._destroyed = true;
+
+    try {
+      this._release();
+    } finally {
+      // A terminal Sound must never retain its decoded payload, even when
+      // one or several onEnd callbacks throw during the voice teardown.
+      this._audioBuffer = null;
+    }
   }
 
   private _pruneEndedVoices(): void {
@@ -674,14 +808,12 @@ export class Sound implements Playable {
    * Index of the voice to stop when the pool is at capacity, or `-1` when the
    * pool is empty.
    *
-   * Paused voices are considered only as a last resort. A paused voice is not a
-   * stale one - it is frozen exactly where a scene pause or retention
-   * suspension left it, waiting for `resume()` - but its pool bookkeeping
-   * (`startedAt`) keeps aging against the still-running context clock, so both
-   * strategies would otherwise single it out: FIFO sees the oldest entry, LRU
-   * the one with the least time left. Evicting it stops it for good, and
-   * {@link SceneAudio.restore} then passes over it (it is `ended`, not
-   * `paused`), so the ambience never comes back.
+   * Silent voices - paused by their caller or held by a paused or retained
+   * scene - are considered only as a last resort. Such a voice is not a stale
+   * one - it is frozen exactly where it stopped, waiting to play on - but
+   * both strategies would otherwise single it out: FIFO sees the oldest entry,
+   * LRU the one with the least time left. Evicting it stops it for good, so
+   * the ambience never comes back.
    */
   private _pickEvictionVictim(): number {
     const unpaused = this._pickVictim(false);
@@ -695,6 +827,7 @@ export class Sound implements Playable {
       case SoundPoolStrategy.LeastRecentlyUsed: {
         return this._pickClosestToEnd(includePaused);
       }
+
       case SoundPoolStrategy.LowestPriority:
       // All pooled instances of this Sound share the same priority,
       // so LowestPriority degenerates to FIFO within a single Sound.
@@ -709,7 +842,7 @@ export class Sound implements Playable {
     for (let i = 0; i < this._activeVoices.length; i++) {
       const candidate = this._activeVoices[i];
 
-      if (candidate !== undefined && (includePaused || !candidate.voice.paused)) {
+      if (candidate !== undefined && (includePaused || !candidate.voice._isHalted)) {
         return i;
       }
     }
@@ -718,17 +851,17 @@ export class Sound implements Playable {
   }
 
   private _pickClosestToEnd(includePaused: boolean): number {
-    const now = isAudioContextReady() ? getAudioContext().currentTime : 0;
     let minRemaining = Infinity;
     let minIndex = -1;
 
     for (let i = 0; i < this._activeVoices.length; i++) {
       const src = this._activeVoices[i];
-      if (src === undefined || (!includePaused && src.voice.paused)) {
+
+      if (src === undefined || (!includePaused && src.voice._isHalted)) {
         continue;
       }
-      const elapsed = now - src.startedAt;
-      const remaining = src.effectiveDuration - elapsed;
+
+      const remaining = src.voice._remainingTime;
 
       if (minIndex === -1 || remaining < minRemaining) {
         minRemaining = remaining;
@@ -740,14 +873,37 @@ export class Sound implements Playable {
   }
 
   private _trimActiveVoices(): void {
+    // Victims are chosen and removed before any is stopped: stopping fires
+    // `onEnd`, and a listener that plays this sound again would otherwise refill
+    // the pool inside the loop and keep it from ever reaching the target size.
+    const victims: Voice[] = [];
+
     while (this._activeVoices.length > this._poolSize) {
       const victimIndex = this._pickEvictionVictim();
       const victim = this._activeVoices[victimIndex];
 
-      if (!victim) break;
+      if (!victim) {
+        break;
+      }
 
       this._activeVoices.splice(victimIndex, 1);
-      victim.voice.stop();
+      victims.push(victim.voice);
+    }
+
+    // Every victim is already out of the pool, so each must be stopped even if
+    // an earlier one's listener throws - a skipped one would play on untracked.
+    let failure: { error: unknown } | null = null;
+
+    for (const voice of victims) {
+      try {
+        voice.stop();
+      } catch (error) {
+        failure ??= { error };
+      }
+    }
+
+    if (failure !== null) {
+      throw failure.error;
     }
   }
 }

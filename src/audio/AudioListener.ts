@@ -3,7 +3,13 @@ import { Vector } from '#math/Vector';
 import type { View } from '#rendering/View';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
-import { createSpatialSmoothingSettings, createVelocitySample, deriveVelocity, type SpatialSmoothingSettings, type VelocitySample } from './spatialSmoothing';
+import {
+  createSpatialSmoothingSettings,
+  createVelocitySample,
+  deriveVelocity,
+  type SpatialSmoothingSettings,
+  type VelocitySample,
+} from './spatialSmoothing';
 
 /**
  * Anything {@link AudioListener.target} can be set to. The listener reads
@@ -85,6 +91,7 @@ export class AudioListener {
    */
   public constructor(settings: SpatialSmoothingSettings = createSpatialSmoothingSettings()) {
     this._settings = settings;
+
     if (isAudioContextReady()) {
       this._setup(getAudioContext());
     } else {
@@ -110,11 +117,9 @@ export class AudioListener {
    * @internal
    */
   public _tick(): void {
-    if (this.target === null) {
-      return;
+    if (this.target !== null) {
+      this._readTargetPosition();
     }
-
-    this._readTargetPosition();
 
     if (!this._explicitVelocity && this._ctx !== null && this._settings.dopplerFactor !== 0) {
       deriveVelocity(this._velocitySample, this.position.x, this.position.y, this._ctx.currentTime);
@@ -132,22 +137,29 @@ export class AudioListener {
 
   private _readTargetPosition(): void {
     const target = this.target;
-    if (target === null) return;
+
+    if (target === null) {
+      return;
+    }
 
     // Check for SceneNode (has getWorldTransform). World - not global - so a
     // node inside a RetainedContainer transform group reports its true
     // on-screen position (AU1).
     const asSceneNode = target as Partial<SceneNode>;
+
     if (typeof asSceneNode.getWorldTransform === 'function') {
       const m = asSceneNode.getWorldTransform();
       this.position.set(m.x, m.y);
+
       return;
     }
 
     // Check for View (has center with x/y)
     const asView = target as Partial<View & { center: { x: number; y: number } }>;
+
     if (asView.center !== undefined && typeof asView.center === 'object') {
       this.position.set(asView.center.x, asView.center.y);
+
       return;
     }
 

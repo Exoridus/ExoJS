@@ -27,7 +27,7 @@ Omit `--template` to use the interactive picker, or choose one explicitly:
 | `minimal` | One scene and one visible animated object. |
 | `game-starter` | Keyboard-controlled gameplay, player code, and a game-over scene. |
 | `platformer` | Side-scrolling movement, physics bodies, camera follow, and jump handling. |
-| `top-down` | Tilemaps, physics, and click-to-move pathfinding, with procedural or Tiled input. |
+| `top-down` | A Tiled map whose walls and door drive physics and click-to-move pathfinding, with a procedural variant. |
 | `ui-app` | A settings screen using the Core UI widgets. |
 | `audio-reactive` | Shapes and animation driven by an audio analyser. |
 
@@ -53,7 +53,7 @@ my-game/
 
 `src/main.ts` creates the application, registers the scene class, mounts the canvas, and awaits `app.start(MainScene)`. `src/scenes/MainScene.ts` holds the objects, frame updates, and drawing. The next chapter explains both files using the maintained template source.
 
-Keep asset files under `public/assets/` when you want them served unchanged. `public/` is not part of the URL: `public/assets/hero.png` is requested as `assets/hero.png`. A loader `basePath` can supply the common directory; do not repeat it in individual asset paths. Deployment under a subdirectory needs the base-path treatment in [Deployment](/ExoJS/en/guide/shipping/deployment/).
+Keep asset files under `public/assets/` when you want them served unchanged. `public/` is not part of the URL: `public/assets/hero.png` is requested as `assets/hero.png`. A loader `basePath` can supply the common directory; do not repeat it in individual asset paths. A path then names the file directly: `new Sprite('hero.png')` loads it when the scene first needs it, as [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/) explains. Deployment under a subdirectory needs the base-path treatment in [Deployment](/ExoJS/en/guide/shipping/deployment/).
 
 ## Production build
 
@@ -70,7 +70,7 @@ npm run preview
 npm install --save-exact @codexo/exojs
 ```
 
-Use the package's ESM entry point from your bundler. TypeScript declarations are included. Pin compatible exact versions for any official runtime packages you add.
+Use the package's ESM entry point from your bundler. TypeScript declarations are included and resolve with `"moduleResolution": "bundler"`, the setting the starters use; `node16` and `nodenext` resolution are not supported. Pin compatible exact versions for any official runtime packages you add.
 
 A canvas can be supplied or created by the application:
 

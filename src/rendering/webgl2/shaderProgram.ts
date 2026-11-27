@@ -9,7 +9,7 @@ import type { WebGl2Shader, WebGl2ShaderProgram } from '#rendering/webgl2/WebGl2
 import { WebGl2ShaderAttribute } from '#rendering/webgl2/WebGl2ShaderAttribute';
 import { WebGl2ShaderUniform } from '#rendering/webgl2/WebGl2ShaderUniform';
 
-import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './shaderMappings';
+import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveComponentCountMapping } from './shaderMappings';
 import { WebGl2ShaderBlock } from './WebGl2ShaderBlock';
 
 type UniformUploadFunction = (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => void;
@@ -145,6 +145,20 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
     pendingShader = shader;
   };
 
+  const releaseReflection = (): void => {
+    for (const block of uniformBlocks) {
+      block.destroy();
+    }
+
+    for (const binding of schemaBlocks) {
+      gl.deleteBuffer(binding.buffer);
+    }
+
+    managedUniforms.length = 0;
+    uniformBlocks.length = 0;
+    schemaBlocks.length = 0;
+  };
+
   const finalize = (): void => {
     if (pendingShader === null || program === null || vertexShader === null || fragmentShader === null) {
       return;
@@ -182,10 +196,17 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
       });
     }
 
-    extractAttributes(gl, program, pendingShader);
-    extractUniforms(gl, program, pendingShader, managedUniforms);
-    extractUniformBlocks(gl, program, uniformBlocks);
-    bindSchemaBlocks(gl, program, pendingShader.uniformBlockData, schemaBlocks);
+    try {
+      extractAttributes(gl, program, pendingShader);
+      extractUniforms(gl, program, pendingShader, managedUniforms);
+      extractUniformBlocks(gl, program, uniformBlocks);
+      bindSchemaBlocks(gl, program, pendingShader.uniformBlockData, schemaBlocks);
+    } catch (error) {
+      // The next bind reflects again from scratch, so partial results must not survive.
+      releaseReflection();
+
+      throw error;
+    }
 
     pendingShader = null;
   };
@@ -249,25 +270,24 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
     },
 
     destroy: (shader: WebGl2Shader): void => {
+      // Deleting the current program only marks it for deletion. A temporary
+      // pass would capture that handle, finish deleting it when switching away,
+      // then try to restore it. sync() can bind outside the backend cache, so
+      // inspect the actual binding only at this ownership boundary.
+      if (program !== null && gl.getParameter(gl.CURRENT_PROGRAM) === program) {
+        gl.useProgram(null);
+      }
+
       gl.deleteShader(vertexShader);
       gl.deleteShader(fragmentShader);
       gl.deleteProgram(program);
 
-      for (const block of uniformBlocks) {
-        block.destroy();
-      }
-
-      for (const binding of schemaBlocks) {
-        gl.deleteBuffer(binding.buffer);
-      }
+      releaseReflection();
 
       vertexShader = null;
       fragmentShader = null;
       program = null;
       pendingShader = null;
-      managedUniforms.length = 0;
-      uniformBlocks.length = 0;
-      schemaBlocks.length = 0;
 
       shader.disconnect();
     },
@@ -332,9 +352,14 @@ const extractAttributes = (gl: WebGL2RenderingContext, program: WebGLProgram, sh
   }
 };
 
-const extractUniforms = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: WebGl2Shader, managedUniforms: ManagedUniform[]): void => {
+const extractUniforms = (
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+  shader: WebGl2Shader,
+  managedUniforms: ManagedUniform[],
+): void => {
   const activeCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-  const activeIndices = new Uint8Array(activeCount).map((_, index) => index);
+  const activeIndices = new Uint32Array(activeCount).map((_, index) => index);
   const blocks = gl.getActiveUniforms(program, activeIndices, gl.UNIFORM_BLOCK_INDEX) as number[];
   const indices = activeIndices.filter(index => blocks[index] === -1);
 
@@ -346,14 +371,14 @@ const extractUniforms = (gl: WebGL2RenderingContext, program: WebGLProgram, shad
     }
 
     const arrayConstructor = webGl2PrimitiveArrayConstructors[info.type];
-    const byteSize = webGl2PrimitiveByteSizeMapping[info.type];
+    const componentCount = webGl2PrimitiveComponentCountMapping[info.type];
     const uploadFn = uniformUploadFunctions[info.type];
 
-    if (arrayConstructor === undefined || byteSize === undefined || uploadFn === undefined) {
+    if (arrayConstructor === undefined || componentCount === undefined || uploadFn === undefined) {
       throw new Error(`Unsupported uniform type ${info.type} for uniform "${info.name}".`);
     }
 
-    const data = new arrayConstructor(byteSize * info.size);
+    const data = new arrayConstructor(componentCount * info.size);
     const uniform = new WebGl2ShaderUniform(index, info.type, info.size, info.name, data);
     const location = gl.getUniformLocation(program, uniform.name);
 
@@ -397,7 +422,12 @@ interface SchemaBlockBinding {
  * index and is skipped: allocating for it would cost a buffer per material for
  * bytes the program cannot address.
  */
-const bindSchemaBlocks = (gl: WebGL2RenderingContext, program: WebGLProgram, blocks: readonly UniformBlockData[], bindings: SchemaBlockBinding[]): void => {
+const bindSchemaBlocks = (
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+  blocks: readonly UniformBlockData[],
+  bindings: SchemaBlockBinding[],
+): void => {
   for (const [point, data] of blocks.entries()) {
     const index = gl.getUniformBlockIndex(program, data.layout.typeName);
 

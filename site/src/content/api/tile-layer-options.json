@@ -4,7 +4,7 @@
   "symbol": "TileLayerOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 20,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for constructing a TileLayer."
       ],
-      "importLine": "import { TileLayerOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileLayerOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

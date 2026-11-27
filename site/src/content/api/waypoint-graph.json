@@ -4,7 +4,7 @@
   "symbol": "WaypointGraph",
   "kind": "class",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 16,
   "counts": {
@@ -23,7 +23,7 @@
         "This is the representation for worlds a grid cannot describe: a platformer where traversal is a topology of walk, jump and fall links rather than cell walkability, or a purely abstract graph with no geometry at all. Nodes carry an optional position, edges carry a cost, a WaypointEdgeOptions.kind and an arbitrary payload, and the resulting path reports the edges it took so the game can execute each step in its own way.",
         "With positions the search is A* over straight-line distance; without them the heuristic is zero and the same search degrades cleanly to Dijkstra."
       ],
-      "importLine": "import { WaypointGraph } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { WaypointGraph } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

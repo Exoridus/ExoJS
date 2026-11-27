@@ -50,6 +50,19 @@ describe('IndexedDbDatabase', () => {
     vi.resetModules();
   });
 
+  test('key-value has distinguishes present null and undefined from missing', async () => {
+    await loadWithFakeIndexedDb();
+    const { IndexedDbKeyValueStore } = await import('#assets/storage/IndexedDbKeyValueStore');
+    const store = new IndexedDbKeyValueStore('presence');
+
+    await store.set('null', null);
+    await store.set('undefined', undefined);
+    await expect(store.has('null')).resolves.toBe(true);
+    await expect(store.has('undefined')).resolves.toBe(true);
+    await expect(store.has('missing')).resolves.toBe(false);
+    store.destroy();
+  });
+
   test('throws when the host does not support IndexedDB', async () => {
     setGlobalIndexedDb(undefined);
     vi.resetModules();
@@ -153,7 +166,9 @@ describe('IndexedDbDatabase', () => {
 
       fakeIdb.blockNextOpen();
 
-      await expect(db.connect()).rejects.toThrow('Opening the database "blocked-db" is blocked by another connection holding an older version.');
+      await expect(db.connect()).rejects.toThrow(
+        'Opening the database "blocked-db" is blocked by another connection holding an older version.',
+      );
     });
 
     test('rejects when the open request itself errors', async () => {
@@ -412,7 +427,11 @@ describe('IndexedDbDatabase', () => {
       const { IndexedDbDatabase } = await loadWithFakeIndexedDb();
       const db = new IndexedDbDatabase('unknown-store-ops-db', 1, ['image']);
 
-      const operations = await Promise.all([rejection(db.save('nope', 'hero', 1)), rejection(db.delete('nope', 'hero')), rejection(db.clearStorage('nope'))]);
+      const operations = await Promise.all([
+        rejection(db.save('nope', 'hero', 1)),
+        rejection(db.delete('nope', 'hero')),
+        rejection(db.clearStorage('nope')),
+      ]);
 
       expect(operations.map(error => (error as TypedCacheError).operation)).toEqual(['write', 'delete', 'clear']);
       // `clearStorage` targets a whole store, so it carries no record key.

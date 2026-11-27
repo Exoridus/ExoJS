@@ -4,7 +4,7 @@
   "symbol": "RateSpawn",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -22,7 +22,7 @@
         "Continuous, rate-based spawner. Emits a RateSpawnConfig.rate sample per second; sub-frame fractions accumulate so low rates (e.g. 0.5 particles/s) remain accurate over time.",
         "Each property is independently randomised via its Distribution. Every spawned particle gets a fresh sample for every configured field."
       ],
-      "importLine": "import { RateSpawn } from '@codexo/exojs-particles'",
+      "importLine": "import { RateSpawn } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

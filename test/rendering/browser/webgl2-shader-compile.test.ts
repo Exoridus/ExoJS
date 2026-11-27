@@ -19,6 +19,7 @@ import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShad
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { crtShader } from '#rendering/filters/CrtFilter';
 import { displacementShader } from '#rendering/filters/DisplacementFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
@@ -27,15 +28,21 @@ import { INSTANCE_TRANSFORM_GLSL } from '#rendering/shader/instanceContract';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { composeSpriteMaterialFragmentGlsl } from '#rendering/sprite/materialSources';
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots';
+import { buildUniformSchemaLayout } from '#rendering/uniforms/uniformSchema';
 import { generateGlslUniformDeclarations, withGlslUniformDeclarations } from '#rendering/uniforms/uniformSource';
 
-import { lightCompositeShader } from '../../../packages/exojs-lighting/src/backends/FrameLightingBackend';
+import { galleryDissolveShader } from '../../../examples/shared/gallery-transitions';
+import { lightCompositeShader, lightQuadUniforms } from '../../../packages/exojs-lighting/src/backends/FrameLightingBackend';
 import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
-import { angularAverageShader, transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
+import {
+  angularAverageShader,
+  transportCascadeShader,
+  transportGatherShader,
+} from '../../../packages/exojs-lighting/src/backends/transportShaders';
 import { litSpriteShader } from '../../../packages/exojs-lighting/src/LitMaterial';
 import { composeParticleGlSource } from '../../../packages/exojs-particles/src/gpu/particleGlSource';
-import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
+import { TILE_DIAGONAL_BIT, TILE_ROW_MASK, TILE_TEXTURE_SLOT_SHIFT } from '../../../packages/exojs-tilemap/src/tileWord';
 
 // Core shaders plus the extension packages' own - the particle stage ships
 // from `@codexo/exojs-particles`, so a glob over `src/` alone would leave the
@@ -77,7 +84,7 @@ interface ShaderEntry {
 // keyed by file. Imported from the module that owns each value rather than
 // restated here, so a changed constant cannot leave the two out of step.
 const placeholderValues: Readonly<Record<string, Readonly<Record<string, number>>>> = {
-  'tile-chunk.vert': { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT },
+  'tile-chunk.vert': { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT, tileTextureSlotShift: TILE_TEXTURE_SLOT_SHIFT },
 };
 
 /**
@@ -89,14 +96,17 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['bloom-threshold.frag', generateGlslUniformDeclarations(bloomThresholdShader.uniformSchema!)],
   ['blur.frag', generateGlslUniformDeclarations(blurShader.uniformSchema!)],
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
+  ['crt.frag', generateGlslUniformDeclarations(crtShader.uniformSchema!)],
   ['displacement.frag', generateGlslUniformDeclarations(displacementShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
+  ['gallery-dissolve.frag', generateGlslUniformDeclarations(galleryDissolveShader.uniformSchema!)],
   ['lut-3d.frag', generateGlslUniformDeclarations(lut3dShaderSource.uniformSchema!)],
   ['lut-rgb1d.frag', generateGlslUniformDeclarations(lutRgb1dShaderSource.uniformSchema!)],
   ['lit-sprite.frag', generateGlslUniformDeclarations(litSpriteShader.uniformSchema!)],
   ['angular-average.frag', generateGlslUniformDeclarations(angularAverageShader.uniformSchema!)],
   ['shadow-march.frag', generateGlslUniformDeclarations(shadowMarchShader.uniformSchema!)],
   ['light-composite.frag', generateGlslUniformDeclarations(lightCompositeShader.uniformSchema!)],
+  ['light-quad.frag', generateGlslUniformDeclarations(buildUniformSchemaLayout(lightQuadUniforms, undefined)!)],
 ]);
 
 /**
@@ -111,13 +121,30 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
  */
 const composedCascade = transportCascadeShader(cascadeUniforms);
 const composedGather = transportGatherShader(gatherUniforms);
+const composedNormalGather = transportGatherShader(gatherUniforms, true);
 const composedFragments: ReadonlyMap<string, string> = new Map([
-  ['cascade-transport.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
-  ['cascade-gather-transport.frag', withGlslUniformDeclarations(composedGather.glsl!.fragment, generateGlslUniformDeclarations(composedGather.uniformSchema!))],
+  [
+    'cascade-transport.frag',
+    withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!)),
+  ],
+  [
+    'cascade-gather-transport.frag',
+    withGlslUniformDeclarations(composedGather.glsl!.fragment, generateGlslUniformDeclarations(composedGather.uniformSchema!)),
+  ],
+  [
+    'cascade-gather-transport-normals.frag',
+    withGlslUniformDeclarations(composedNormalGather.glsl!.fragment, generateGlslUniformDeclarations(composedNormalGather.uniformSchema!)),
+  ],
   // Neither the chunk nor the preamble has a body of its own; the cascade's
   // composition is the smallest whole program that contains them.
-  ['transport.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
-  ['transport-filter.frag', withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!))],
+  [
+    'transport.frag',
+    withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!)),
+  ],
+  [
+    'transport-filter.frag',
+    withGlslUniformDeclarations(composedCascade.glsl!.fragment, generateGlslUniformDeclarations(composedCascade.uniformSchema!)),
+  ],
 ]);
 
 // Stages that call the shared colour helpers directly (tint decode,
@@ -147,7 +174,10 @@ const needsColorHelpers: ReadonlySet<string> = new Set([
 // handing a source to the driver, so a shader that reads the shared transform
 // store only compiles in its resolved form - the same form the renderer submits.
 const composeRuntimeSource = (name: string, source: string): string => {
-  if (name === 'particle-simulate.vert') return composeParticleGlSource([], source);
+  if (name === 'particle-simulate.vert') {
+    return composeParticleGlSource([], source);
+  }
+
   const composedChunk = composedFragments.get(name);
 
   if (composedChunk !== undefined) {
@@ -169,7 +199,7 @@ const composeRuntimeSource = (name: string, source: string): string => {
 ${INSTANCE_TRANSFORM_GLSL}
 ${filled}`
     : name.startsWith('text-') && name.endsWith('.frag')
-      ? composeTextAtlasFragmentGlsl(filled)
+      ? composeTextAtlasFragmentGlsl(filled, name !== 'text-color.frag')
       : name === 'lit-sprite.frag'
         ? composeSpriteMaterialFragmentGlsl(filled)
         : filled;
@@ -193,6 +223,17 @@ const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
       stage: path.endsWith('.vert') ? 'vertex' : 'fragment',
     };
   })
+  .concat([
+    {
+      name: 'gallery-dissolve.frag',
+      source: galleryDissolveShader.glsl!.fragment,
+      runtimeSource: withGlslUniformDeclarations(
+        galleryDissolveShader.glsl!.fragment,
+        generateGlslUniformDeclarations(galleryDissolveShader.uniformSchema!),
+      ),
+      stage: 'fragment',
+    },
+  ])
   .sort((a, b) => a.name.localeCompare(b.name));
 
 const sourceByName: Record<string, string> = Object.fromEntries(shaders.map(entry => [entry.name, entry.runtimeSource]));
@@ -231,8 +272,10 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['default-vertex.vert', 'bloom-threshold.frag'],
   ['default-vertex.vert', 'blur.frag'],
   ['default-vertex.vert', 'color-matrix.frag'],
+  ['default-vertex.vert', 'crt.frag'],
   ['default-vertex.vert', 'displacement.frag'],
   ['default-vertex.vert', 'drop-shadow.frag'],
+  ['default-vertex.vert', 'gallery-dissolve.frag'],
   ['default-vertex.vert', 'lut-3d.frag'],
   ['default-vertex.vert', 'lut-rgb1d.frag'],
   ['default-vertex.vert', 'output.frag'],
@@ -302,6 +345,10 @@ describe('WebGL2 GLSL shader sources', () => {
     }
 
     gl = context;
+  });
+
+  afterAll(() => {
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
   });
 
   test('imports the real shader sources', () => {

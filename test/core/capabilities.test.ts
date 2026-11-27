@@ -88,6 +88,44 @@ describe('Capabilities', () => {
     }
   });
 
+  test('reuses a successful renderer context without a second WebGL2 probe', async () => {
+    const previousGetContext = HTMLCanvasElement.prototype.getContext;
+    const previousReady = Reflect.get(Capabilities, '_readyPromise');
+    const previousObservedWebGl2 = Reflect.get(Capabilities, '_observedWebGl2');
+    const previousObservedOffscreen = Reflect.get(Capabilities, '_observedOffscreenWebGl2');
+    let webGlProbes = 0;
+
+    Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+      configurable: true,
+      value: (kind: string) => {
+        if (kind === 'webgl2') {
+          webGlProbes++;
+        }
+
+        return null;
+      },
+    });
+    Reflect.set(Capabilities, '_readyPromise', null);
+    Reflect.set(Capabilities, '_observedWebGl2', false);
+    Reflect.set(Capabilities, '_observedOffscreenWebGl2', false);
+
+    try {
+      Capabilities._observeWebGl2Context(document.createElement('canvas'));
+      const capabilities = await Capabilities.ready;
+
+      expect(capabilities.webgl2).toBe(true);
+      expect(webGlProbes).toBe(0);
+    } finally {
+      Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+        configurable: true,
+        value: previousGetContext,
+      });
+      Reflect.set(Capabilities, '_readyPromise', previousReady);
+      Reflect.set(Capabilities, '_observedWebGl2', previousObservedWebGl2);
+      Reflect.set(Capabilities, '_observedOffscreenWebGl2', previousObservedOffscreen);
+    }
+  });
+
   test('Capabilities cannot be constructed externally via the public API', () => {
     // The constructor is TS-private. Compile-time, `new Capabilities(...)`
     // is rejected. Runtime, TS-private is not enforced, so a cast can

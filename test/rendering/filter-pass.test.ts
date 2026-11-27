@@ -4,6 +4,7 @@ import { Filter } from '#rendering/filters/Filter';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { View } from '#rendering/View';
 
 /** One `apply` call, recorded by identity so a test can assert what a stage read and wrote. */
 interface Application {
@@ -206,4 +207,38 @@ describe('FilterPass', () => {
     expect(backend.acquired).toHaveLength(0);
     expect(backend.draws).toHaveLength(0);
   });
+});
+
+test.each([false, true])('blitting to the active target uses its full pixel extent and restores the camera (throw=%s)', fails => {
+  const backend = new BackendStub();
+  const camera = View.from().reset(300, 200, 20, 10);
+  const input = new RenderTexture(64, 32);
+  const pass = new FilterPass(input);
+
+  camera.rotation = 35;
+  backend.view = camera;
+  vi.spyOn(backend, 'draw').mockImplementation(() => {
+    const view = backend.view as View;
+
+    expect(view.size.width).toBe(64);
+    expect(view.size.height).toBe(32);
+    expect(view.center.x).toBe(32);
+    expect(view.center.y).toBe(16);
+    expect(view.rotation).toBe(0);
+
+    if (fails) {
+      throw new Error('draw failed');
+    }
+  });
+
+  if (fails) {
+    expect(() => pass.execute(contextFor(backend))).toThrow('draw failed');
+  } else {
+    pass.execute(contextFor(backend));
+  }
+
+  expect(backend.view).toBe(camera);
+  pass.destroy();
+  input.destroy();
+  camera.destroy();
 });

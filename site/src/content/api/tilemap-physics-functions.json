@@ -1,10 +1,10 @@
 {
   "title": "Tilemap-physics Functions",
-  "description": "Free functions and constants exported from @codexo/exojs-tilemap-physics.",
+  "description": "Free functions and constants exported from @codexo/exojs/tilemap-physics.",
   "symbol": "Tilemap-physics Functions",
   "kind": "namespace",
   "subsystem": "tilemap-physics",
-  "importPath": "@codexo/exojs-tilemap-physics",
+  "importPath": "@codexo/exojs/tilemap-physics",
   "tier": "stable",
   "memberCount": 1,
   "counts": {
@@ -19,7 +19,7 @@
       "title": "Overview",
       "members": [],
       "paragraphs": [
-        "Free functions and constants exported from @codexo/exojs-tilemap-physics. Import any of them directly, for example `import { buildObjectLayerColliders } from '@codexo/exojs-tilemap-physics'`."
+        "Free functions and constants exported from @codexo/exojs/tilemap-physics. Import any of them directly, for example `import { buildObjectLayerColliders } from '@codexo/exojs/tilemap-physics'`."
       ],
       "importLine": null,
       "sourceLink": null

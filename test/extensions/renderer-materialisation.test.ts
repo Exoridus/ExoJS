@@ -15,25 +15,25 @@ const createStubRenderer = (): Renderer<RenderBackend> & {
   destroy: ReturnType<typeof vi.fn>;
   render: ReturnType<typeof vi.fn>;
   flush: ReturnType<typeof vi.fn>;
-} => {
-  return {
+} =>
+  ({
     connect: vi.fn(),
     disconnect: vi.fn(),
     destroy: vi.fn(),
     render: vi.fn(),
     flush: vi.fn(),
-  } as unknown as Renderer<RenderBackend> & {
+  }) as unknown as Renderer<RenderBackend> & {
     connect: ReturnType<typeof vi.fn>;
     disconnect: ReturnType<typeof vi.fn>;
     destroy: ReturnType<typeof vi.fn>;
     render: ReturnType<typeof vi.fn>;
     flush: ReturnType<typeof vi.fn>;
   };
-};
 
 // Stub backend
 const createStubBackend = (): RenderBackend & { rendererRegistry: RendererRegistry<RenderBackend> } => {
   const registry = new RendererRegistry<RenderBackend>();
+
   return {
     backendType: RenderBackendType.WebGl2,
     rendererRegistry: registry,
@@ -109,7 +109,7 @@ describe('materializeRendererBindings', () => {
     const backend = createStubBackend();
     const binding: RendererBinding = {
       targets: [CustomDrawableA],
-      create: () => undefined,
+      create: () => {},
     };
 
     materializeRendererBindings(backend, [binding]);
@@ -123,7 +123,9 @@ describe('materializeRendererBindings', () => {
     const bindingA: RendererBinding = { targets: [CustomDrawableA], create: () => rendererA };
     const bindingB: RendererBinding = { targets: [CustomDrawableA], create: () => rendererB };
 
-    expect(() => materializeRendererBindings(backend, [bindingA, bindingB])).toThrow('Two bindings target the same drawable type CustomDrawableA');
+    expect(() => materializeRendererBindings(backend, [bindingA, bindingB])).toThrow(
+      'Two bindings target the same drawable type CustomDrawableA',
+    );
   });
 
   it('does not call create() on an earlier, valid binding when a later binding conflicts', () => {
@@ -133,7 +135,9 @@ describe('materializeRendererBindings', () => {
     const bindingA: RendererBinding = { targets: [CustomDrawableA], create: createA };
     const bindingB: RendererBinding = { targets: [CustomDrawableB, CustomDrawableB], create: createB };
 
-    expect(() => materializeRendererBindings(backend, [bindingA, bindingB])).toThrow('Two bindings target the same drawable type CustomDrawableB');
+    expect(() => materializeRendererBindings(backend, [bindingA, bindingB])).toThrow(
+      'Two bindings target the same drawable type CustomDrawableB',
+    );
     expect(createA).not.toHaveBeenCalled();
     expect(createB).not.toHaveBeenCalled();
   });
@@ -155,7 +159,9 @@ describe('materializeRendererBindings', () => {
     const rendererA = createStubRenderer();
     const rendererB = createStubRenderer();
     backend.rendererRegistry.bindRenderer([CustomDrawableA], rendererA);
-    expect(() => backend.rendererRegistry.bindRenderer([CustomDrawableA], rendererB)).toThrow('A renderer is already registered for CustomDrawableA');
+    expect(() => backend.rendererRegistry.bindRenderer([CustomDrawableA], rendererB)).toThrow(
+      'A renderer is already registered for CustomDrawableA',
+    );
     // rendererA still registered (no partial mutation)
     expect(backend.rendererRegistry.resolve(new CustomDrawableA())).toBe(rendererA);
   });

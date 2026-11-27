@@ -21,7 +21,7 @@ const createRuntime = (): RenderBackend => {
   const renderTarget = new RenderTarget(100, 100, true);
   const stats = createRenderStats();
   const runtime: RenderBackend = {
-    ...createRenderBackendDouble({ renderTarget: renderTarget, stats }),
+    ...createRenderBackendDouble({ renderTarget, stats }),
     stats,
     renderTarget,
     get view() {
@@ -96,6 +96,12 @@ const createRenderer = (): Renderer<RenderBackend, BaseDrawable> => ({
   flush: vi.fn(),
 });
 
+describe('Renderer', () => {
+  it('declares destroy as an optional lifecycle hook', () => {
+    expectTypeOf<Renderer['destroy']>().toEqualTypeOf<(() => void) | undefined>();
+  });
+});
+
 describe('RendererRegistry', () => {
   test('rejects duplicate renderer registration for the same drawable type', () => {
     const registry = new RendererRegistry<RenderBackend>();
@@ -112,7 +118,9 @@ describe('RendererRegistry', () => {
 
     expect(() => {
       registry.resolve(new BaseDrawable());
-    }).toThrow('No renderer registered for BaseDrawable.');
+    }).toThrow(
+      'No renderer registered for BaseDrawable. If it comes from an ExoJS extension, pass that extension in ApplicationOptions.extensions; importing the package does not install it.',
+    );
   });
 
   test('resolves the nearest registered prototype renderer', () => {

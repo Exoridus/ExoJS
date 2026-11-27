@@ -16,13 +16,12 @@ const rootDir = resolve(here, '..');
 const packageJsonPath = resolve(rootDir, 'package.json');
 const packageJson: PackageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
 
-const normalizePath = (value: string): string => {
-  return value.replace(/\\/g, '/').replace(/^\.\//, '');
-};
+const normalizePath = (value: string): string => value.replace(/\\/g, '/').replace(/^\.\//, '');
 
 const collectExportTargets = (value: unknown, targets: Set<string>): void => {
   if (typeof value === 'string') {
     targets.add(value);
+
     return;
   }
 
@@ -36,10 +35,11 @@ const collectExportTargets = (value: unknown, targets: Set<string>): void => {
 };
 
 const targets = new Set<string>();
-const entryPointKeys: readonly (keyof PackageJson)[] = ['main', 'module', 'browser', 'types'];
+const entryPointKeys: ReadonlyArray<keyof PackageJson> = ['main', 'module', 'browser', 'types'];
 
 for (const key of entryPointKeys) {
   const value = packageJson[key];
+
   if (typeof value === 'string') {
     targets.add(value);
   }
@@ -47,7 +47,9 @@ for (const key of entryPointKeys) {
 
 collectExportTargets(packageJson.exports, targets);
 
-const filesAllowList: readonly string[] = Array.isArray(packageJson.files) ? packageJson.files.map(value => normalizePath(String(value))) : [];
+const filesAllowList: readonly string[] = Array.isArray(packageJson.files)
+  ? packageJson.files.map(value => normalizePath(String(value)))
+  : [];
 
 const missingTargets: string[] = [];
 const filesCoverageIssues: string[] = [];
@@ -73,6 +75,7 @@ for (const target of targets) {
     if (entry.endsWith('/')) {
       return normalizedTarget.startsWith(entry);
     }
+
     return normalizedTarget === entry;
   });
 
@@ -83,6 +86,7 @@ for (const target of targets) {
 
 if (missingTargets.length > 0) {
   console.error('Missing package entry targets:');
+
   for (const target of missingTargets) {
     console.error(`- ${target}`);
   }
@@ -90,6 +94,7 @@ if (missingTargets.length > 0) {
 
 if (filesCoverageIssues.length > 0) {
   console.error('Package allow-list coverage issues:');
+
   for (const issue of filesCoverageIssues) {
     console.error(`- ${issue}`);
   }

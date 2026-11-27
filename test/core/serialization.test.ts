@@ -6,8 +6,8 @@ import { Scene } from '#core/scene/Scene';
 import { SceneNode } from '#core/SceneNode';
 import { Prefab } from '#core/serialization/Prefab';
 import { defaultSerializationRegistry, registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';
-import { _resetDefaultSerializers, deserializeTree, serializeTree } from '#core/serialization/serialize';
-import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
+import { _resetDefaultSerializers, deserializeInto, deserializeTree, serializeTree } from '#core/serialization/serialize';
+import { SERIALIZATION_VERSION, type SerializedNode, type SerializedScene } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
 import { Time } from '#core/units';
 import { Rectangle } from '#math/Rectangle';
@@ -48,7 +48,19 @@ const createTexture = (width: number, height: number): Texture => {
 
 // Text uses GlyphAtlasPool internally; inject a mock pool so Text construction
 // works without a real canvas 2D context (mirrors test/rendering/text/text.test.ts).
-const fixedGlyphInfo: GlyphInfo = { x: 0, y: 0, width: 8, height: 16, advance: 10, ascent: 13, page: 0, uvLeft: 0, uvTop: 0, uvRight: 0.01, uvBottom: 0.02 };
+const fixedGlyphInfo: GlyphInfo = {
+  x: 0,
+  y: 0,
+  width: 8,
+  height: 16,
+  advance: 10,
+  ascent: 13,
+  page: 0,
+  uvLeft: 0,
+  uvTop: 0,
+  uvRight: 0.01,
+  uvBottom: 0.02,
+};
 const mockPage = {
   texture: {
     width: 1024,
@@ -62,7 +74,7 @@ const mockPage = {
     flipY: false,
     addDestroyListener: () => mockPage.texture,
     removeDestroyListener: () => mockPage.texture,
-    destroy: () => undefined,
+    destroy: () => {},
   },
   index: 0,
   mode: 'sdf' as const,
@@ -85,12 +97,12 @@ afterEach(() => resetDefaultGlyphAtlasPool());
 afterEach(_resetDefaultSerializers);
 
 /**
- * Minimal {@link Loader} stand-in implementing only the two methods the
+ * Minimal {@link Loader} stand-in implementing the methods the
  * serialization context calls - keeps the round-trip tests free of real asset
  * loading while exercising the exact asset-reference wiring.
  */
-const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader => {
-  return {
+const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader =>
+  ({
     keyFor(resource: object) {
       const hit = entries.find(entry => entry.resource === resource);
 
@@ -99,15 +111,17 @@ const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; res
     _assetReference(resource: object) {
       const hit = entries.find(entry => entry.resource === resource);
 
-      return hit ? { kind: 'request', source: hit.source } : null;
+      return hit ? { kind: 'request', $type: hit.type === BmFont ? 'bmFont' : 'texture', source: hit.source } : null;
+    },
+    _matchesAssetType(type: Loadable, id: string) {
+      return id === (type === BmFont ? 'bmFont' : 'texture');
     },
     _peekResource(type: Loadable, source: string) {
       const hit = entries.find(entry => entry.type === type && entry.source === source);
 
       return hit ? hit.resource : null;
     },
-  } as unknown as Loader;
-};
+  }) as unknown as Loader;
 
 describe('serialization — registry', () => {
   it('resolves a registered type by name and by node (prototype walk)', () => {
@@ -220,11 +234,11 @@ describe('serialization — Sprite', () => {
     const data = serializeTree(sprite, loader);
 
     expect(data.type).toBe('Sprite');
-    expect(data.texture).toBe('hero.png');
+    expect(data.texture).toEqual({ $type: 'texture', source: 'hero.png' });
     expect(data.tint).toEqual([255, 0, 0, 0.5]);
     expect(data.blendMode).toBe(BlendModes.Additive);
 
-    const restored = deserializeTree(data, loader) as Sprite;
+    const restored = deserializeTree(data, loader, undefined, 2) as Sprite;
 
     expect(restored.texture).toBe(texture);
     expect(restored.tint.r).toBe(255);
@@ -243,7 +257,7 @@ describe('serialization — Sprite', () => {
     const data = serializeTree(sprite, loader);
     expect(data.frame).toEqual([32, 0, 32, 32]);
 
-    const restored = deserializeTree(data, loader) as Sprite;
+    const restored = deserializeTree(data, loader, undefined, 2) as Sprite;
     expect(restored.textureFrame.x).toBe(32);
     expect(restored.textureFrame.width).toBe(32);
   });
@@ -323,6 +337,7 @@ describe('serialization — custom serializer', () => {
       read: data => {
         const marker = new Marker();
         marker.kind = String(data.kind);
+
         return marker;
       },
     });
@@ -378,7 +393,7 @@ describe('serialization — default-registry reset', () => {
 
 describe('serialization — errors & version', () => {
   it('stamps the current version on a serialized scene shape', () => {
-    expect(SERIALIZATION_VERSION).toBe(2);
+    expect(SERIALIZATION_VERSION).toBe(4);
   });
 
   it('throws on an unknown type during deserialize', () => {
@@ -423,11 +438,311 @@ describe('serialization — Scene entry point', () => {
     scene.destroy();
   });
 
+  it.each([undefined, 0, 1, 2, 3])('rejects scene and prefab format %s before reading nodes', version => {
+    const data = { version, root: { type: 'Container', children: [{ type: 'Text', style: { outlineWidth: 0.5 } }] } };
+    expect(() => new Scene().deserialize(data as Parameters<Scene['deserialize']>[0])).toThrow(/requires version 4/);
+    expect(() => Prefab.fromJSON(data)).toThrow(/requires version 4/);
+  });
+
   it('rejects a document newer than the supported version', () => {
     const scene = new Scene();
 
     expect(() => scene.deserialize({ version: 999, root: { type: 'Container' } })).toThrow(/newer than/);
     scene.destroy();
+  });
+
+  it('leaves the existing root subtree intact when a child fails to deserialize', () => {
+    const scene = new Scene();
+    const existing = new Container();
+
+    scene.addChild(existing);
+
+    expect(() =>
+      scene.deserialize({
+        version: SERIALIZATION_VERSION,
+        root: { type: 'Container', children: [{ type: 'Container' }, { type: 'NopeNode' }] },
+      } as SerializedScene),
+    ).toThrow(/No serializer registered for type/);
+
+    expect(scene.root.children).toEqual([existing]);
+    scene.destroy();
+  });
+
+  it('releases staged labels after each failed replacement without changing the existing root', () => {
+    const scene = new Scene();
+    const existing = new Container();
+    const listeners = mockAtlas.onCleared!.count;
+
+    scene.root.name = 'original';
+    scene.addChild(existing);
+
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        expect(() =>
+          scene.deserialize({
+            version: SERIALIZATION_VERSION,
+            root: { type: 'Container', name: 'replacement', children: [{ type: 'Label', text: 'ABC' }, { type: 'NopeNode' }] },
+          }),
+        ).toThrow(/No serializer registered for type/);
+
+        expect(scene.root.children).toEqual([existing]);
+        expect(scene.root.name).toBe('original');
+        expect(mockAtlas.onCleared!.count).toBe(listeners);
+      }
+    } finally {
+      scene.destroy();
+    }
+  });
+
+  it('preserves both scene trees when reading the UI fails after the world was prepared', () => {
+    const scene = new Scene();
+    const world = new Container();
+    const ui = new Container();
+    const listeners = mockAtlas.onCleared!.count;
+
+    scene.root.addChild(world);
+    scene.ui.addChild(ui);
+    scene.root.x = 7;
+    scene.ui.x = 11;
+
+    try {
+      expect(() =>
+        scene.deserialize({
+          version: SERIALIZATION_VERSION,
+          root: { type: 'Container', x: 70, children: [{ type: 'Label', text: 'world' }] },
+          ui: { type: 'UIRoot', x: 110, children: [{ type: 'Label', text: 'ui' }, { type: 'NopeNode' }] },
+        }),
+      ).toThrow(/No serializer registered for type/);
+
+      expect(scene.root.children).toEqual([world]);
+      expect(scene.ui.children).toEqual([ui]);
+      expect(scene.root.x).toBe(7);
+      expect(scene.ui.x).toBe(11);
+      expect(mockAtlas.onCleared!.count).toBe(listeners);
+    } finally {
+      scene.destroy();
+    }
+  });
+
+  it('does not materialize the UI layer for a document that fails to read', () => {
+    const scene = new Scene();
+    const existing = new Container();
+
+    scene.addChild(existing);
+
+    try {
+      expect(() =>
+        scene.deserialize({
+          version: SERIALIZATION_VERSION,
+          root: { type: 'Container', children: [{ type: 'Container' }] },
+          ui: { type: 'UIRoot', children: [{ type: 'NopeNode' }] },
+        }),
+      ).toThrow(/No serializer registered for type/);
+
+      expect(scene._peekUI()).toBeNull();
+      expect(scene.root.children).toEqual([existing]);
+    } finally {
+      scene.destroy();
+    }
+  });
+});
+
+describe('serialization failure ownership', () => {
+  it('rolls back a failed recursive read even when its caller returns a fallback', () => {
+    const listeners = mockAtlas.onCleared!.count;
+    const failure = new Error('nested read failed');
+    let failedChild: SceneNode | undefined;
+
+    class ReadFailure extends Container {}
+    class Fallback extends Container {}
+
+    registerSerializer('ReadFailure', ReadFailure, {
+      write: () => ({}),
+      read: (_data, ctx) => {
+        failedChild = ctx.readNode({ type: 'Label', text: 'discard' });
+
+        throw failure;
+      },
+    });
+    registerSerializer('Fallback', Fallback, {
+      write: () => ({}),
+      read: (_data, ctx) => {
+        const node = new Fallback();
+
+        node.addChild(ctx.readNode({ type: 'Label', text: 'keep' }) as Label);
+
+        try {
+          ctx.readNode({ type: 'ReadFailure' });
+        } catch (error) {
+          expect(error).toBe(failure);
+        }
+
+        return node;
+      },
+    });
+
+    const fallback = deserializeTree({ type: 'Fallback' }) as Fallback;
+
+    try {
+      expect(failedChild?.destroyed).toBe(true);
+      expect(fallback.children).toHaveLength(1);
+      expect(fallback.children[0]!.destroyed).toBe(false);
+      expect((fallback.children[0] as Label).text).toBe('keep');
+      expect(mockAtlas.onCleared!.count).toBe(listeners + 1);
+    } finally {
+      fallback.destroy();
+    }
+
+    expect(mockAtlas.onCleared!.count).toBe(listeners);
+  });
+
+  it.each(['Container', 'Panel', 'ScrollContainer', 'Stack', 'DockContainer', 'UIRoot'])(
+    'destroys an unfinished %s and its descendants when a nested read fails',
+    type => {
+      const listeners = mockAtlas.onCleared!.count;
+      const failure = new Error('child read failed');
+      const created: Label[] = [];
+      const ancestors: Container[] = [];
+
+      class AllocatedLabel extends Label {}
+      class ReadFailure extends Container {}
+
+      registerSerializer('AllocatedLabel', AllocatedLabel, {
+        write: () => ({}),
+        read: () => {
+          const node = new AllocatedLabel('ABC');
+
+          created.push(node);
+
+          return node;
+        },
+      });
+      registerSerializer('ReadFailure', ReadFailure, {
+        write: () => ({}),
+        read: () => {
+          let parent = created[0]!.parent;
+
+          while (parent !== null) {
+            ancestors.push(parent);
+            parent = parent.parent;
+          }
+
+          throw failure;
+        },
+      });
+
+      expect(() => deserializeTree({ type, children: [{ type: 'AllocatedLabel' }, { type: 'ReadFailure' }] })).toThrow(failure);
+      expect(created).toHaveLength(1);
+      expect(ancestors.length).toBeGreaterThan(0);
+      expect(created[0]!.destroyed).toBe(true);
+      expect(ancestors.every(parent => parent.destroyed)).toBe(true);
+      expect(mockAtlas.onCleared!.count).toBe(listeners);
+    },
+  );
+
+  it('releases a decoded child that Graphics rejects before attaching it', () => {
+    const listeners = mockAtlas.onCleared!.count;
+    let child: Label | undefined;
+
+    class AllocatedLabel extends Label {}
+
+    registerSerializer('AllocatedLabel', AllocatedLabel, {
+      write: () => ({}),
+      read: () => {
+        child = new AllocatedLabel('ABC');
+
+        return child;
+      },
+    });
+
+    expect(() => deserializeTree({ type: 'Graphics', children: [{ type: 'AllocatedLabel' }] })).toThrow(
+      'Graphics can only contain Mesh children.',
+    );
+    expect(child?.destroyed).toBe(true);
+    expect(mockAtlas.onCleared!.count).toBe(listeners);
+  });
+
+  it('preserves the read error and releases every staged sibling when a teardown throws', () => {
+    const failure = new Error('read failed');
+    const created: Container[] = [];
+    const root = new Container();
+
+    class ThrowingCleanup extends Container {
+      public override destroy(): void {
+        super.destroy();
+
+        throw new Error('teardown failed');
+      }
+    }
+
+    class ReadFailure extends Container {}
+
+    registerSerializer('ThrowingCleanup', ThrowingCleanup, {
+      write: () => ({}),
+      read: () => {
+        const node = new ThrowingCleanup();
+
+        created.push(node);
+
+        return node;
+      },
+    });
+    registerSerializer('ReadFailure', ReadFailure, {
+      write: () => ({}),
+      read: () => {
+        throw failure;
+      },
+    });
+
+    try {
+      expect(() =>
+        deserializeInto(root, {
+          type: 'Container',
+          children: [{ type: 'ThrowingCleanup' }, { type: 'ThrowingCleanup' }, { type: 'ReadFailure' }],
+        }),
+      ).toThrow(failure);
+      expect(created.map(node => node.destroyed)).toEqual([true, true]);
+    } finally {
+      root.destroy();
+    }
+  });
+
+  it.each(['tree', 'prefab', 'container'] as const)('cleans up completed recursive reads when a custom serializer throws (%s)', entry => {
+    const listeners = mockAtlas.onCleared!.count;
+    const failure = new Error('custom read failed');
+    const destination = new Container();
+    let child: SceneNode | undefined;
+
+    class ReadFailure extends Container {}
+
+    registerSerializer('ReadFailure', ReadFailure, {
+      write: () => ({}),
+      read: (_data, ctx) => {
+        child = ctx.readNode({ type: 'Label', text: 'ABC' });
+
+        throw failure;
+      },
+    });
+
+    const data: SerializedNode = { type: 'ReadFailure' };
+
+    const attempt = (): void => {
+      if (entry === 'tree') {
+        deserializeTree(data);
+      } else if (entry === 'prefab') {
+        Prefab.fromJSON({ version: SERIALIZATION_VERSION, root: data }).instantiate();
+      } else {
+        deserializeInto(destination, { type: 'Container', children: [data] });
+      }
+    };
+
+    try {
+      expect(attempt).toThrow(failure);
+      expect(child?.destroyed).toBe(true);
+      expect(mockAtlas.onCleared!.count).toBe(listeners);
+    } finally {
+      destination.destroy();
+    }
   });
 });
 
@@ -524,7 +839,7 @@ describe('serialization — NineSliceSprite', () => {
     const data = serializeTree(ns, loader);
 
     expect(data.type).toBe('NineSliceSprite');
-    expect(data.texture).toBe('panel.png');
+    expect(data.texture).toEqual({ $type: 'texture', source: 'panel.png' });
     expect(data.slices).toEqual({ top: 16, bottom: 16, left: 16, right: 16 });
     expect(data.width).toBe(100);
 
@@ -627,6 +942,72 @@ describe('serialization — AnimatedSprite', () => {
     expect(restored.getLocalBounds().y).toBe(-2);
   });
 
+  it('round-trips authored source dimensions without rescaling trimmed clips', () => {
+    const texture = createTexture(64, 16);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const sprite = new AnimatedSprite(texture, {
+      idle: {
+        frames: [new Rectangle(0, 0, 12, 10)],
+        frameOffsets: [{ x: 58, y: 86 }],
+        sourceSize: { width: 128, height: 128 },
+      },
+      walk: {
+        frames: [new Rectangle(12, 0, 20, 12)],
+        frameOffsets: [{ x: 54, y: 84 }],
+        sourceSize: { width: 128, height: 128 },
+      },
+    });
+
+    sprite.setAnchor(0.5, 0.75).setScale(2).play('idle');
+
+    const data = serializeTree(sprite, loader);
+
+    expect((data.clips as Record<string, { sourceSize: number[] }>).idle!.sourceSize).toEqual([128, 128]);
+
+    const restored = deserializeTree(data, loader) as AnimatedSprite;
+
+    restored.play('walk');
+
+    expect(restored.origin.x).toBe(64);
+    expect(restored.origin.y).toBe(96);
+    expect(restored.scale.x).toBe(2);
+    expect(restored.scale.y).toBe(2);
+    sprite.destroy();
+    restored.destroy();
+  });
+
+  it.each([1, 2, 3])('preserves derived pivots and display size in legacy version %s clips without sourceSize', version => {
+    const texture = createTexture(64, 16);
+    const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
+    const data: SerializedNode = Object.freeze({
+      type: 'AnimatedSprite',
+      texture: 'hero.png',
+      anchorX: 0.5,
+      anchorY: 0.5,
+      currentClip: 'idle',
+      clips: {
+        idle: { frames: [[0, 0, 12, 12]], frameOffsets: [[0, 0]] },
+        walk: { frames: [[12, 0, 8, 12]], frameOffsets: [[8, 0]] },
+      },
+    });
+    const sprite = deserializeTree(data, loader, undefined, version) as AnimatedSprite;
+
+    expect(sprite.origin.x).toBe(6);
+    expect(sprite.origin.y).toBe(6);
+    sprite.play('walk');
+
+    expect(sprite.origin.x).toBe(8);
+    expect(sprite.origin.y).toBe(6);
+    expect(sprite.width).toBe(12);
+    expect(sprite.scale.x).toBe(1.5);
+
+    const clips = serializeTree(sprite, loader).clips as Record<string, { sourceSize?: unknown }>;
+
+    expect(clips.idle!.sourceSize).toBeUndefined();
+    expect(clips.walk!.sourceSize).toBeUndefined();
+    sprite.destroy();
+  });
+
   it('round-trips a finite repeat count', () => {
     const texture = createTexture(64, 16);
     const loader = fakeLoader([{ type: Texture, source: 'hero.png', resource: texture }]);
@@ -672,7 +1053,7 @@ describe('serialization — anchor', () => {
     expect(data.anchorX).toBe(0.5);
     expect(data.anchorY).toBe(0.25);
 
-    const restored = deserializeTree(data, loader) as Sprite;
+    const restored = deserializeTree(data, loader, undefined, 2) as Sprite;
 
     expect(restored.anchor.x).toBe(0.5);
     expect(restored.anchor.y).toBe(0.25);
@@ -742,7 +1123,7 @@ describe('serialization — BitmapText', () => {
     const data = serializeTree(bitmapText, loader);
 
     expect(data.type).toBe('BitmapText');
-    expect(data.font).toBe('ui.fnt');
+    expect(data.font).toEqual({ $type: 'bmFont', source: 'ui.fnt' });
     expect(data.msdf).toBe(true);
     expect(data.scale).toBe(2);
 
@@ -772,6 +1153,71 @@ describe('serialization — Video', () => {
 
     expect(restored).toBeInstanceOf(Video);
     expect(restored.loop).toBe(true);
+  });
+
+  describe('source policy', () => {
+    const videoNode = (src: string): SerializedNode => ({ type: 'Video', src });
+    const origin = location.origin;
+
+    it.each([`${origin}/clip.mp4`, 'clip.mp4', '/media/clip.webm', `blob:${origin}/3f2a`])('accepts the same-origin source %s', src => {
+      expect(deserializeTree(videoNode(src))).toBeInstanceOf(Video);
+    });
+
+    it.each([
+      'https://evil.example/clip.mp4',
+      '//evil.example/clip.mp4',
+      'data:video/mp4;base64,AAAA',
+      'javascript:alert(1)',
+      'blob:https://evil.example/3f2a',
+      'http://[',
+      `${origin.replace(/^https?/, m => m.toUpperCase())}@evil.example/clip.mp4`,
+      'HTTPS://evil.example/clip.mp4',
+      `${location.protocol}//user:pw@${location.host}/clip.mp4`,
+      'file:///clip.mp4',
+    ])('refuses the source %s by default', src => {
+      expect(() => deserializeTree(videoNode(src))).toThrow(/Refused to deserialize a Video/);
+    });
+
+    it('accepts an uppercase scheme on the page origin', () => {
+      const { protocol, host } = location;
+
+      expect(deserializeTree(videoNode(`${protocol.toUpperCase()}//${host}/clip.mp4`))).toBeInstanceOf(Video);
+    });
+
+    it.each(['data:video/mp4;base64,AAAA', 'blob:https://other.example/3f2a'])('lets allowVideoSource approve %s', src => {
+      const allowVideoSource = vi.fn(() => true);
+
+      expect(deserializeTree(videoNode(src), null, undefined, SERIALIZATION_VERSION, { allowVideoSource })).toBeInstanceOf(Video);
+      expect(allowVideoSource).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a foreign source reached through a prefab or a scene', () => {
+      const data = videoNode('https://evil.example/clip.mp4');
+      const container: SerializedNode = { type: 'Container', children: [data] };
+
+      expect(() => Prefab.fromJSON({ version: SERIALIZATION_VERSION, root: container }).instantiate()).toThrow(/Refused/);
+      expect(() => new Scene().deserialize({ version: SERIALIZATION_VERSION, root: container })).toThrow(/Refused/);
+    });
+
+    it('lets allowVideoSource approve a foreign source and receive the resolved URL', () => {
+      const allowVideoSource = vi.fn((url: URL) => url.hostname === 'cdn.example');
+      const container: SerializedNode = { type: 'Container', children: [videoNode('https://cdn.example/clip.mp4')] };
+      const prefab = Prefab.fromJSON({ version: SERIALIZATION_VERSION, root: container });
+
+      expect(() => prefab.instantiate(null, undefined, { allowVideoSource })).not.toThrow();
+      expect(allowVideoSource).toHaveBeenCalledWith(expect.objectContaining({ hostname: 'cdn.example' }));
+
+      expect(() => new Scene().deserialize({ version: SERIALIZATION_VERSION, root: container }, { allowVideoSource })).not.toThrow();
+      expect(() => prefab.instantiate(null, undefined, { allowVideoSource: () => false })).toThrow(/Refused/);
+    });
+
+    it('applies the policy to the ui layer of a scene', () => {
+      const ui: SerializedNode = { type: 'Container', children: [videoNode('https://evil.example/clip.mp4')] };
+      const document = { version: SERIALIZATION_VERSION, root: { type: 'Container' }, ui };
+
+      expect(() => new Scene().deserialize(document)).toThrow(/Refused/);
+      expect(() => new Scene().deserialize(document, { allowVideoSource: () => true })).not.toThrow();
+    });
   });
 });
 
@@ -820,7 +1266,8 @@ describe('serialization — Prefab', () => {
 
   it('rejects a document that is not a valid prefab frame', () => {
     // The pre-version bare-descriptor form is no longer accepted: it has no root.
-    expect(() => Prefab.fromJSON({ type: 'Container' })).toThrow(/no valid root node/);
+    expect(() => Prefab.fromJSON({ type: 'Container' })).toThrow(/requires version 4/);
+    expect(() => Prefab.fromJSON({ version: SERIALIZATION_VERSION })).toThrow(/no valid root node/);
     expect(() => Prefab.fromJSON(null)).toThrow(/not an object/);
   });
 });

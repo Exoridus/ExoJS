@@ -616,7 +616,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Playback progress in 0..1, advancing in discrete steps as each stage completes. Equals 1 when the entire sequence has finished."
+          "description": "Playback progress in 0..1, advancing in discrete steps as each stage completes in either direction; it resets to 0 when a repeat starts. Equals 1 when the entire sequence has finished."
         },
         {
           "name": "state",

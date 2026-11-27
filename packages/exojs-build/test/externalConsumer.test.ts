@@ -88,7 +88,9 @@ const extractTarball = (tarball: string, destination: string): void => {
     const header = archive.subarray(offset, offset + 512);
     const name = field(header, 0, 100);
 
-    if (name === '') break;
+    if (name === '') {
+      break;
+    }
 
     const prefix = field(header, 345, 155);
     const size = Number.parseInt(field(header, 124, 12).trim(), 8) || 0;
@@ -142,7 +144,9 @@ beforeAll(() => {
 
   manifest = JSON.parse(readFileSync(join(installed, 'package.json'), 'utf8')) as PackedManifest;
 
-  for (const dependency of ['esbuild', 'vite', 'rollup']) link(dependency);
+  for (const dependency of ['esbuild', 'vite', 'rollup']) {
+    link(dependency);
+  }
 
   cpSync(join(packageDir, 'test', 'fixtures', 'consumer'), consumer, { recursive: true });
   cpSync(join(packageDir, 'test', 'worklet-globals.d.ts'), join(consumer, 'worklet-globals.d.ts'));
@@ -194,7 +198,15 @@ beforeAll(() => {
     join(consumer, 'tsconfig.worklets.json'),
     `${JSON.stringify(
       {
-        compilerOptions: { target: 'es2022', module: 'esnext', moduleResolution: 'bundler', lib: ['es2022'], types: [], strict: true, noEmit: true },
+        compilerOptions: {
+          target: 'es2022',
+          module: 'esnext',
+          moduleResolution: 'bundler',
+          lib: ['es2022'],
+          types: [],
+          strict: true,
+          noEmit: true,
+        },
         include: ['**/*.worklet.ts', 'worklet-globals.d.ts', 'my-effect/dsp.ts'],
       },
       null,
@@ -412,7 +424,11 @@ describe('external consumer', () => {
   });
 
   it('strips shader comments under `minify`, and leaves a `?raw` import alone', () => {
-    succeeds(process.execPath, [join(consumer, 'node_modules', 'vite', 'bin', 'vite.js'), 'build', '--config', 'vite.config.min.ts'], consumer);
+    succeeds(
+      process.execPath,
+      [join(consumer, 'node_modules', 'vite', 'bin', 'vite.js'), 'build', '--config', 'vite.config.min.ts'],
+      consumer,
+    );
 
     const bundle = readFileSync(join(consumer, 'dist-min', 'consumer-min.js'), 'utf8');
     // The same file twice: bare (stripped by the plugin) and `?raw` (verbatim,

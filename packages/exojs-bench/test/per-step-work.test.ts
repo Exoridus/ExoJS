@@ -7,7 +7,7 @@ const joints = PHYSICS_ARCHETYPES.find(archetype => archetype.id === 'joints') a
 
 /** An arm whose only observable behaviour is which body it was told to drive, and when. */
 const recordingOps = () => {
-  const kicks: { slot: number; vx: number; vy: number }[] = [];
+  const kicks: Array<{ slot: number; vx: number; vy: number }> = [];
   const handles: number[] = [];
 
   return {

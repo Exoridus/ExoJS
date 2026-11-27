@@ -1,21 +1,33 @@
-import type { Voice } from '@codexo/exojs';
-import { Asset, AudioStream, Scene, Sound } from '@codexo/exojs';
+import { Button, Keyboard, Music, Scene, SceneAvailability, type Sound } from '@codexo/exojs';
 
 // #region guide:audio-scene
 class AudioScene extends Scene {
   private laser!: Sound;
-  private theme!: AudioStream;
-  private themeVoice!: Voice;
+  private theme!: Music;
 
-  async load() {
-    const [laser, theme] = await Promise.all([this.loader.load('audio/laser.ogg'), this.loader.load(Asset.type('music', 'audio/theme.ogg'))]);
+  override async load(): Promise<void> {
+    const { laser, theme } = await this.assets.load({ laser: 'audio/laser.ogg', theme: { type: Music, source: 'audio/theme.ogg' } });
+
     this.laser = laser;
     this.theme = theme;
   }
 
-  init() {
-    // Playing returns a live Voice - keep it to control this instance.
-    this.themeVoice = this.app.audio.play(this.theme, { loop: true, volume: 0.6 });
+  override init(): void {
+    // Scene playback waits for activation; music additionally waits for unlock.
+    this.audio.play(this.theme, { loop: true, volume: 0.6, when: SceneAvailability.Active });
+
+    const fire = (): void => {
+      if (!this.app.audio.locked) {
+        this.audio.play(this.laser, { when: SceneAvailability.Active });
+      }
+    };
+
+    const button = new Button({ label: 'Play sound', width: 180 });
+
+    button.anchorIn(this.ui, 'center');
+    button.onClick.add(fire);
+    this.ui.addChild(button);
+    this.inputs.onStart(Keyboard.Space, fire);
   }
 }
 // #endregion guide:audio-scene

@@ -12,6 +12,7 @@ import {
   Sprite,
   TextureFormat,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class TrailFeedbackScene extends Scene {
   // Two render targets, ping-ponged each frame. Reading from and writing to
@@ -37,7 +38,7 @@ class TrailFeedbackScene extends Scene {
     // format: eight bits of linear storage quantize the dark end of the fade coarsely.
     this.rtA = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
     this.rtB = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
-    this.bunny = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5);
+    this.bunny = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5);
 
     this.decayA = new Sprite(this.rtA);
     this.decayB = new Sprite(this.rtB);
@@ -80,7 +81,7 @@ class TrailFeedbackScene extends Scene {
     this.decayTint.set(255, 255, 255, Math.pow(0.93, delta * 60));
     this.decayA.setTint(this.decayTint);
     this.decayB.setTint(this.decayTint);
-    this.bunny.setPosition(width / 2 + Math.cos(this.time * 2.0) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
+    this.bunny.setPosition(width / 2 + Math.cos(this.time * 2) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
   }
 
   override draw(context: RenderingContext): void {
@@ -106,9 +107,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(TrailFeedbackScene);

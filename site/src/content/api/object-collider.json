@@ -4,7 +4,7 @@
   "symbol": "ObjectCollider",
   "kind": "interface",
   "subsystem": "tilemap-physics",
-  "importPath": "@codexo/exojs-tilemap-physics",
+  "importPath": "@codexo/exojs/tilemap-physics",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "One static body built from one object, paired with its source."
       ],
-      "importLine": "import { ObjectCollider } from '@codexo/exojs-tilemap-physics'",
+      "importLine": "import { ObjectCollider } from '@codexo/exojs/tilemap-physics'",
       "sourceLink": null
     },
     {

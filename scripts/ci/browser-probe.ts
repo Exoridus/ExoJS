@@ -123,22 +123,33 @@ export const PAGE_PROBE = `(async () => {
 })()`;
 
 const isCapabilityResult = (value: unknown): value is CapabilityResult =>
-  typeof value === 'object' && value !== null && typeof (value as CapabilityResult).ok === 'boolean' && typeof (value as CapabilityResult).detail === 'string';
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as CapabilityResult).ok === 'boolean' &&
+  typeof (value as CapabilityResult).detail === 'string';
 
 /** Rejects a report the page returned in an unexpected shape rather than trusting it. */
 export const parseProbeReport = (raw: unknown): ProbeReport | ProbeFailure => {
-  if (typeof raw !== 'object' || raw === null) return { error: 'the page returned no report' };
+  if (typeof raw !== 'object' || raw === null) {
+    return { error: 'the page returned no report' };
+  }
 
   const { browser, capabilities, info } = raw as { browser?: unknown; capabilities?: unknown; info?: unknown };
 
-  if (typeof browser !== 'string' || typeof capabilities !== 'object' || capabilities === null) return { error: 'the page returned a malformed report' };
+  if (typeof browser !== 'string' || typeof capabilities !== 'object' || capabilities === null) {
+    return { error: 'the page returned a malformed report' };
+  }
 
   const entries = Object.entries(capabilities as Record<string, unknown>);
 
-  if (!entries.every(([, value]) => isCapabilityResult(value))) return { error: 'the page returned a malformed capability entry' };
+  if (!entries.every(([, value]) => isCapabilityResult(value))) {
+    return { error: 'the page returned a malformed capability entry' };
+  }
 
   const infoEntries =
-    typeof info === 'object' && info !== null ? Object.entries(info as Record<string, unknown>).map(([key, value]) => [key, String(value)] as const) : [];
+    typeof info === 'object' && info !== null
+      ? Object.entries(info as Record<string, unknown>).map(([key, value]) => [key, String(value)] as const)
+      : [];
 
   return { browser, capabilities: Object.fromEntries(entries) as Record<string, CapabilityResult>, info: Object.fromEntries(infoEntries) };
 };
@@ -147,14 +158,20 @@ const settle = async <T>(work: Promise<T>, ms: number, label: string): Promise<T
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   try {
-    return await Promise.race([work, new Promise<never>((_, reject) => (timer = setTimeout(() => reject(new Error(`${label} exceeded ${ms} ms`)), ms)))]);
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => (timer = setTimeout(() => reject(new Error(`${label} exceeded ${ms} ms`)), ms))),
+    ]);
   } finally {
     clearTimeout(timer);
   }
 };
 
 /** Runs {@link PAGE_PROBE} in the browser `profileId` names; never throws. */
-export const probeBrowser = async (profileId: BrowserProfileId, env: NodeJS.ProcessEnv = process.env): Promise<ProbeReport | ProbeFailure> => {
+export const probeBrowser = async (
+  profileId: BrowserProfileId,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<ProbeReport | ProbeFailure> => {
   const profile = browserProfile(profileId, env);
   let browser: import('playwright').Browser | undefined;
 

@@ -1,11 +1,12 @@
 import { Signal } from '#core/Signal';
+import type { InteractionEvent } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
 import { Text } from '#rendering/text/Text';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import type { UIThemeRole, UIWidgetState } from './theme';
-import { resolveUISkin } from './theme';
+import { assertSkinSetTextEffects, resolveUISkin, themeSkinSet, type UITheme } from './theme';
 import { Widget } from './Widget';
 
 /** Options shared by the two-state controls ({@link Checkbox}, {@link Toggle}). */
@@ -40,6 +41,7 @@ export abstract class CheckableWidget extends Widget {
   private _appliedText: TextStyleOptions | null = null;
   private _pointerInside = false;
   private _explicitSize = false;
+  private _layingOutLabel = false;
 
   protected constructor(options: CheckableOptions, textRole: UIThemeRole) {
     super();
@@ -51,8 +53,15 @@ export abstract class CheckableWidget extends Widget {
     if (options.label === undefined) {
       this._labelNode = null;
     } else {
-      this._appliedText = resolveUISkin(this.theme[textRole], 'normal').text;
+      this._appliedText = resolveUISkin(themeSkinSet(this.theme, textRole), 'normal').text;
       this._labelNode = new Text(options.label, { ...this._appliedText, ...this._textStyle });
+
+      this._labelNode._onLayout = () => {
+        if (!this._layingOutLabel) {
+          this._syncLabel();
+        }
+      };
+
       this.addChild(this._labelNode);
     }
 
@@ -94,10 +103,14 @@ export abstract class CheckableWidget extends Widget {
     return this._labelNode?.text ?? '';
   }
 
+  /**
+   * Replace the label text. A control constructed without `options.label`
+   * has no label node, so assigning here is a no-op.
+   */
   public set label(value: string) {
     if (this._labelNode !== null && this._labelNode.text !== value) {
       this._labelNode.text = value;
-      this._invalidateLayout();
+      this._labelNode.syncDirty();
     }
   }
 
@@ -123,28 +136,59 @@ export abstract class CheckableWidget extends Widget {
   /** Paint the control itself at `(0, 0)`, sized by {@link _controlSize}. */
   protected abstract _paintControl(): void;
 
+  protected override _validateTheme(theme: UITheme): void {
+    assertSkinSetTextEffects(themeSkinSet(theme, this._textRole()), this._textStyle, this._labelNode);
+  }
+
   protected override _relayout(): void {
+    this._applyTextStyle();
+    this._layingOutLabel = true;
+
+    try {
+      this._labelNode?.syncDirty();
+    } finally {
+      this._layingOutLabel = false;
+    }
+
+    if (!this._syncLabel()) {
+      super._relayout();
+    }
+  }
+
+  private _syncLabel(): boolean {
     const control = this._controlSize();
-    const labelBounds = this._labelNode?.getLocalBounds() ?? null;
+    const labelBounds = this._labelNode?.textBounds ?? null;
 
     if (!this._explicitSize) {
       const width = control.width + (labelBounds === null ? 0 : this._labelGap + labelBounds.width);
       const height = Math.max(control.height, labelBounds?.height ?? 0);
 
-      // Straight to the base setter: going through this class's own would flip
-      // the explicit-size flag and freeze the widget at its first measurement.
-      super.setSize(width, height);
+      if (width !== this._uiWidth || height !== this._uiHeight) {
+        // Straight to the base setter: going through this class's own would flip
+        // the explicit-size flag and freeze the widget at its first measurement.
+        // A changed size re-enters this method, which completes the pass at the
+        // new size, so continuing here would place and paint everything twice.
+        super.setSize(width, height);
+
+        return true;
+      }
     }
 
     if (this._labelNode !== null && labelBounds !== null) {
-      this._labelNode.setPosition(control.width + this._labelGap, (this._uiHeight - labelBounds.height) / 2);
+      const fill = this._labelNode._fillBounds;
+      this._labelNode.setPosition(control.width + this._labelGap - fill.x, (this._uiHeight - fill.height) / 2 - fill.y);
     }
 
-    super._relayout();
+    return false;
   }
 
   protected override _repaint(): void {
-    this._applyTextStyle();
+    if (this._applyTextStyle()) {
+      this._relayout();
+
+      return;
+    }
+
     this._paintControl();
   }
 
@@ -165,19 +209,21 @@ export abstract class CheckableWidget extends Widget {
   /** The role the label's text style comes from - the control's own surface role. */
   protected abstract _textRole(): UIThemeRole;
 
-  private _applyTextStyle(): void {
+  private _applyTextStyle(): boolean {
     if (this._labelNode === null) {
-      return;
+      return false;
     }
 
-    const skinText = resolveUISkin(this.theme[this._textRole()], this._skinState).text;
+    const skinText = resolveUISkin(themeSkinSet(this.theme, this._textRole()), this._skinState).text;
 
     if (skinText === this._appliedText) {
-      return;
+      return false;
     }
 
     this._appliedText = skinText;
     this._labelNode.style = { ...skinText, ...this._textStyle };
+
+    return true;
   }
 
   private readonly _onPointerOver = (): void => {
@@ -190,8 +236,8 @@ export abstract class CheckableWidget extends Widget {
     this._refreshState();
   };
 
-  private readonly _onPointerDown = (): void => {
-    if (this.effectiveEnabled) {
+  private readonly _onPointerDown = (event: InteractionEvent): void => {
+    if (this.effectiveEnabled && event.button === 0) {
       this._setSkinState('pressed');
     }
   };
@@ -200,8 +246,8 @@ export abstract class CheckableWidget extends Widget {
     this._refreshState();
   };
 
-  private readonly _onTap = (): void => {
-    if (this.effectiveEnabled) {
+  private readonly _onTap = (event: InteractionEvent): void => {
+    if (this.effectiveEnabled && event.button === 0) {
       this.toggle();
     }
   };

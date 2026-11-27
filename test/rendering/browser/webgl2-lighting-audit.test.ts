@@ -21,7 +21,7 @@ import {
   PolygonOccluder,
   RadianceLighting,
   SpotLight,
-} from '@codexo/exojs-lighting';
+} from '@codexo/exojs/lighting';
 
 import { type Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -38,6 +38,8 @@ import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { describeLightmapReference } from './_lightmapReferenceSuite';
+import { describeLightmapSilhouettes } from './_lightmapSilhouetteSuite';
 
 const canvasSize = 128;
 
@@ -399,7 +401,9 @@ describe('the cascade chain against an analytic reference', () => {
       // would produce is many times either term.
       const tolerated = 1.5 * here.radius + 0.05 * mean;
 
-      expect(Math.abs(here.product - previous.product), `step at r=${here.radius} of ${tolerated.toFixed(0)} in: ${shown}`).toBeLessThan(tolerated);
+      expect(Math.abs(here.product - previous.product), `step at r=${here.radius} of ${tolerated.toFixed(0)} in: ${shown}`).toBeLessThan(
+        tolerated,
+      );
     }
 
     // Around one circle the tolerance is the quantisation, not a fraction:
@@ -597,15 +601,18 @@ describe('the shadow filter as the fragment crosses a bin', () => {
     }
   };
 
-  test.each([{ softness: 0.35 }, { softness: 1 }])('the penumbra has no step at a bin boundary at softness $softness', async ({ softness }) => {
-    const profile = await denseProfile(softness);
-    const range = Math.max(...profile) - Math.min(...profile);
+  test.each([{ softness: 0.35 }, { softness: 1 }])(
+    'the penumbra has no step at a bin boundary at softness $softness',
+    async ({ softness }) => {
+      const profile = await denseProfile(softness);
+      const range = Math.max(...profile) - Math.min(...profile);
 
-    // There is an edge to measure at all.
-    expect(range).toBeGreaterThan(30);
-    // And it crosses several bins without a jump.
-    expect(largestStep(profile), `softness ${softness}: ${profile.join(' ')}`).toBeLessThan(0.1);
-  });
+      // There is an edge to measure at all.
+      expect(range).toBeGreaterThan(30);
+      // And it crosses several bins without a jump.
+      expect(largestStep(profile), `softness ${softness}: ${profile.join(' ')}`).toBeLessThan(0.1);
+    },
+  );
 });
 
 describe('two spots that overlap', () => {
@@ -818,19 +825,35 @@ describe('the shadow filter as the fragment moves away from the light', () => {
     }
   };
 
-  test('a wall crossed at a slant darkens smoothly instead of in steps', async () => {
-    const profile = await rayProfile([100, 100, 200, 150], 60, 205);
+  test('a wall crossed at a slant cuts the light off at its face, sharply and without steps', async () => {
+    const from = 60;
+    const profile = await rayProfile([100, 100, 200, 150], from, 205);
     const shown = profile.join(' ');
 
-    // The ray really does leave the light and reach full shadow, so the step
-    // below is measured against a transition that happened.
+    // The ray really does leave the light and reach full shadow, so the
+    // transition below is one that happened.
     expect(Math.max(...profile), `${shown}`).toBeGreaterThan(200);
     expect(Math.min(...profile), `${shown}`).toBeLessThan(4);
 
-    // Comparing against each bin's own distance alone leaves one step per tap:
-    // measured at 26 of 205 counts here, against 7 for a filter that reads a
-    // coverage. The falloff's own slope is a couple of counts per sample.
-    expect(largestStep(profile), `${shown}`).toBeLessThan(0.06);
+    // A bin compared against one distance flips as a whole, and along a wall at
+    // a slant the bins under the kernel flip at different distances: the
+    // profile then climbs down in plateaus. Following the face through each bin
+    // leaves it falling the whole way, within an 8-bit read.
+    for (let index = 1; index < profile.length; index++) {
+      expect(profile[index]!, `${shown}`).toBeLessThanOrEqual(profile[index - 1]! + 2);
+    }
+
+    // The wall crosses the light's row 116 pixels out. The shadow starts there
+    // - its contact is where the penumbra is narrowest - rather than smeared
+    // over the kernel's width either side of it.
+    const edge = 116 - from;
+    const before = profile[edge - 4]!;
+    const crossing = profile.findIndex(value => value < before / 2);
+    const top = profile.findIndex(value => value < before * 0.9);
+    const bottom = profile.findIndex(value => value < before * 0.1);
+
+    expect(Math.abs(crossing - edge), `${shown}`).toBeLessThanOrEqual(1.5);
+    expect(bottom - top, `${shown}`).toBeLessThanOrEqual(6);
   });
 
   test('a wall square-on to the ray keeps its contact edge', async () => {
@@ -997,3 +1020,6 @@ describe('the cascade merge along a lit edge', () => {
     expect(Math.max(...row), `${shown}`).toBeLessThanOrEqual(1);
   }, 30_000);
 });
+
+describeLightmapSilhouettes('webgl2');
+describeLightmapReference('webgl2');

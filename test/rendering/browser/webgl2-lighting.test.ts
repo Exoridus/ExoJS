@@ -7,7 +7,7 @@
  * Run via:  pnpm test:browser:webgl2
  */
 
-import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, LineLight, LitMaterial, NormalMap, PointLight } from '@codexo/exojs/lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -58,7 +58,9 @@ const createAlbedo = (): Texture => {
 
   const context = source.getContext('2d');
 
-  if (!context) throw new Error('2D context is required to create test textures.');
+  if (!context) {
+    throw new Error('2D context is required to create test textures.');
+  }
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, 4, 4);
@@ -79,7 +81,9 @@ const createFlatNormalMap = (): Texture => {
 
   const context = source.getContext('2d');
 
-  if (!context) throw new Error('2D context is required to create test textures.');
+  if (!context) {
+    throw new Error('2D context is required to create test textures.');
+  }
 
   context.fillStyle = 'rgb(128, 128, 255)';
   context.fillRect(0, 0, 4, 4);
@@ -127,6 +131,51 @@ describe('lighting WebGL2 browser', () => {
       expect(far[0]).toBeLessThan(100);
       expect(near[0] - far[0]).toBeGreaterThan(60);
       expect(Math.abs(mirroredNear[0] - near[0])).toBeLessThanOrEqual(2);
+    } finally {
+      root.destroy();
+      material.destroy();
+      lighting.destroy();
+      normalMap.destroy();
+      albedo.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a forward line lights along its rotated capsule, not the midpoint disc', async () => {
+    const backend = await createBackend();
+    const albedo = createAlbedo();
+    const normalMap = createFlatNormalMap();
+    const lighting = new ForwardLighting({ maxLights: 1, ambient: Color.black });
+    const material = new LitMaterial({ lighting, normals: new NormalMap(normalMap) });
+    const root = new Container();
+    const surface = new Sprite(albedo);
+
+    surface.material = material;
+    surface.setPosition(0, 0).setScale(canvasSize, canvasSize);
+    root.addChild(surface);
+
+    const line = lighting.add(new LineLight({ length: 40, radius: 8, height: 16, intensity: 1 })).setPosition(32, 32);
+
+    const render = (): void => {
+      lighting.update();
+      backend.clear(Color.black);
+      root.render(backend);
+      backend.flush();
+    };
+
+    try {
+      render();
+
+      // The endpoint is as bright as the centre. Off the capsule by 13px,
+      // light must be absent even though the centre-to-fragment distance
+      // is inside the old oversized (20 + 8) pixel point-light radius.
+      expect(readWebGl2Pixel(backend, 50, 32)[0]).toBeGreaterThan(170);
+      expect(readWebGl2Pixel(backend, 32, 45)[0]).toBeLessThan(10);
+
+      line.rotation = 90;
+      render();
+      expect(readWebGl2Pixel(backend, 32, 50)[0]).toBeGreaterThan(170);
+      expect(readWebGl2Pixel(backend, 50, 32)[0]).toBeLessThan(10);
     } finally {
       root.destroy();
       material.destroy();

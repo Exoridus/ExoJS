@@ -12,11 +12,15 @@ import { PLAYGROUND_CATEGORIES } from '../../site/src/lib/playground-categories'
 // Vite, so it can't be used to resolve a filesystem path here.
 const examplesDir = join(process.cwd(), 'examples');
 
+// Catalog routes are generated .js paths; only their TypeScript sources are tracked.
+// The generation contract is verified separately by examples:sync:check.
+const hasSource = (jsPath: string): boolean => jsPath.endsWith('.js') && existsSync(join(examplesDir, jsPath.replace(/\.js$/, '.ts')));
+
 const entries = Object.entries(EXAMPLES_CATALOG).flatMap(([category, list]) => list.map(entry => ({ ...entry, category })));
 
 describe('examples catalog integrity', () => {
   it('points every catalog entry at a source file that exists', () => {
-    const missing = entries.filter(entry => !existsSync(join(examplesDir, entry.path)));
+    const missing = entries.filter(entry => !hasSource(entry.path));
     expect(missing.map(entry => entry.path)).toEqual([]);
   });
 
@@ -24,6 +28,7 @@ describe('examples catalog integrity', () => {
     const sourceChapters = new Set(CHAPTERS.map(chapter => chapter.slug));
     const mismatched = entries.filter(entry => {
       const [chapter, file] = entry.path.split('/');
+
       return !sourceChapters.has(chapter) || file !== `${entry.slug}.js`;
     });
     expect(mismatched.map(entry => entry.path)).toEqual([]);
@@ -55,7 +60,7 @@ describe('examples catalog integrity', () => {
 
   it('every featured entry points at a source file that exists', () => {
     const featured = entries.filter(entry => entry.featured === true);
-    const missing = featured.filter(entry => !existsSync(join(examplesDir, entry.path)));
+    const missing = featured.filter(entry => !hasSource(entry.path));
     expect(missing.map(entry => entry.path)).toEqual([]);
   });
 

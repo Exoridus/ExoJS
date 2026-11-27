@@ -102,7 +102,7 @@ These are alternative hosting patterns, not two components to mount for one appl
 
 ### Reactivity model
 
-The `Application` is recreated only when an **identity** option changes — the render `backend` (WebGL2 ↔ WebGPU cannot be hot-swapped). Other supported options are applied **live**:
+The `Application` is created when the canvas attaches and recreated when that element or the render `backend` changes (WebGL2 and WebGPU cannot be hot-swapped). Detaching the canvas destroys the application. Other supported options are applied **live**:
 
 - `canvas.width` / `canvas.height` → `app.resize(...)`
 - `clearColor` → `app.clearColor`

@@ -4,7 +4,7 @@
   "symbol": "WeldJoint",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 9,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Rigidly fixes the relative position and orientation of two bodies (they move as one rigid body). A 2-DOF point constraint (like RevoluteJoint) plus a 1-DOF angular constraint, solved in the sub-step loop. Both locks default to rigid; set `linearHertz`/`angularHertz` for a springy weld."
       ],
-      "importLine": "import { WeldJoint } from '@codexo/exojs-physics'",
+      "importLine": "import { WeldJoint } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

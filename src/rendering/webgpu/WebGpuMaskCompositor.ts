@@ -1,13 +1,14 @@
 /// <reference types="@webgpu/types" />
 
-import { Matrix } from '#math/Matrix';
+import type { Matrix } from '#math/Matrix';
+import { packAffineMat4 } from '#rendering/affinePacking';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
 
 import { getWebGpuBlendState } from './blendState';
 import compositorShaderSourceModule from './shaders/mask-compositor.wgsl';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 
 /** WGSL source for the mask compositor pipeline. @internal */
@@ -22,19 +23,19 @@ const projectionUniformBytes = 64;
 /**
  * Single-quad two-texture compositor used by
  * `WebGpuBackend.composeWithAlphaMask`. Renders the content texture
- * onto the active render target with each output texel's alpha multiplied
- * by the mask texture's alpha. Both textures are sampled with stretched-fit
- * UVs over the destination rectangle.
+ * onto the active render target with each output texel's color and alpha both
+ * scaled by the mask texture's alpha, so the result stays premultiplied. Both
+ * textures are sampled with stretched-fit UVs over the destination rectangle.
  *
- * Pipelines are cached per (target format, blend mode). The compositor is
- * not a {@link AbstractWebGpuRenderer} and never participates in renderer
- * registry dispatch - the manager invokes it directly.
+ * Pipelines are cached per (target format, blend mode, and whether the
+ * geometric stencil clip is active). The compositor is not a
+ * {@link AbstractWebGpuRenderer} and never participates in renderer registry
+ * dispatch - the manager invokes it directly.
  */
 export class WebGpuMaskCompositor {
   private readonly _projectionData: Float32Array = new Float32Array(16);
   private readonly _vertexData: Float32Array = new Float32Array(16); // 4 verts * 4 floats
   private readonly _indexData: Uint16Array = new Uint16Array([0, 1, 2, 0, 2, 3]);
-  private readonly _projectionMatrix: Matrix = new Matrix();
   private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
   private _device: GPUDevice | null = null;
@@ -174,7 +175,7 @@ export class WebGpuMaskCompositor {
     // pushes the clip outermost), so the compositor may draw into a
     // stencil-enabled pass. Select the matching pipeline variant - a stencil-free
     // pipeline is incompatible with the pass's depth/stencil attachment.
-    const stencil = manager.passCoordinator.stencilActive;
+    const stencil = manager.passCoordinator.stencilMode;
     const pipeline = this._getOrCreatePipeline(targetFormat, blendMode, stencil);
 
     // The coordinator owns the GPU pass (load/clear resolution, pass count and
@@ -195,8 +196,8 @@ export class WebGpuMaskCompositor {
     manager.passCoordinator.endPass();
   }
 
-  private _getOrCreatePipeline(format: GPUTextureFormat, blendMode: BlendModes, stencil: boolean): GPURenderPipeline {
-    const key = `${format}|${blendMode}|${stencil ? 's' : 'n'}`;
+  private _getOrCreatePipeline(format: GPUTextureFormat, blendMode: BlendModes, stencil: WebGpuStencilMode): GPURenderPipeline {
+    const key = `${format}|${blendMode}|${stencil}`;
     const cached = this._pipelines.get(key);
 
     if (cached !== undefined) {
@@ -236,8 +237,8 @@ export class WebGpuMaskCompositor {
     // Under an active clip the coordinator's pass carries a depth/stencil
     // attachment; test (never write) the stencil so the composite is restricted
     // to the clipped region, mirroring the sprite/mesh content pipelines.
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = device.createRenderPipeline(descriptor);
@@ -276,30 +277,6 @@ export class WebGpuMaskCompositor {
   }
 
   private _writeProjectionMatrix(viewMatrix: Matrix): void {
-    // Pack the 3x3 affine view matrix into a 4x4 column-major mat4x4
-    // for WGSL.
-    const m = this._projectionMatrix.copy(viewMatrix);
-    const data = this._projectionData;
-
-    // col 0
-    data[0] = m.a;
-    data[1] = m.c;
-    data[2] = 0;
-    data[3] = 0;
-    // col 1
-    data[4] = m.b;
-    data[5] = m.d;
-    data[6] = 0;
-    data[7] = 0;
-    // col 2
-    data[8] = 0;
-    data[9] = 0;
-    data[10] = 1;
-    data[11] = 0;
-    // col 3
-    data[12] = m.x;
-    data[13] = m.y;
-    data[14] = 0;
-    data[15] = 1;
+    packAffineMat4(viewMatrix, this._projectionData);
   }
 }

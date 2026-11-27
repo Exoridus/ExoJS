@@ -31,14 +31,17 @@ import { getBackendDevice } from './webgpu-test-helpers';
  * construction. The canvas keeps the default opaque `alphaMode` and
  * `preserveDrawingBuffer` is on so a rendered frame can be read back unmodified.
  */
-export const makeTestApp = (canvas: RenderSurface, size: number, pixelRatio?: number): Application =>
+export const makeTestApp = (canvas: RenderSurface, size: number, pixelRatio?: number, releaseContext = true): Application =>
   ({
     canvas,
     options: {
-      canvas: { width: size, height: size, ...(pixelRatio !== undefined && { pixelRatio }) },
+      // The fixture supplies the canvas and releases its context at test teardown.
+      // Tests asserting GL state after destruction explicitly opt out.
+      canvas: { element: canvas, width: size, height: size, ...(pixelRatio !== undefined && { pixelRatio }) },
       clearColor: Color.black,
       rendering: {
         debug: false,
+        releaseContext,
         webglAttributes: {
           antialias: false,
           preserveDrawingBuffer: true,
@@ -83,7 +86,8 @@ export const createWebGpuOffscreenBackend = async (size: number): Promise<WebGpu
 };
 
 /** Software WebGPU adapters drop the device under load; such a run is skipped, not failed. */
-export const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+export const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 /**
  * Whether this browser can hand out a WebGPU adapter at all.
@@ -94,7 +98,9 @@ export const isDeviceLoss = (error: unknown): boolean => error instanceof DOMExc
  * result, not a broken test - callers record it rather than failing.
  */
 export const webGpuAvailable = async (): Promise<boolean> => {
-  if (typeof navigator.gpu === 'undefined') return false;
+  if (typeof navigator.gpu === 'undefined') {
+    return false;
+  }
 
   try {
     return (await navigator.gpu.requestAdapter()) !== null;
@@ -106,14 +112,22 @@ export const webGpuAvailable = async (): Promise<boolean> => {
 /** The same question for WebGL2, which no shipping browser currently answers with `false`. */
 export const webGl2Available = (): boolean => {
   try {
-    return document.createElement('canvas').getContext('webgl2') !== null;
+    const gl = document.createElement('canvas').getContext('webgl2');
+
+    if (gl === null) {
+      return false;
+    }
+
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+
+    return true;
   } catch {
     return false;
   }
 };
 
-export const createWebGl2TestBackend = async (size: number, pixelRatio?: number): Promise<WebGl2Backend> => {
-  const app = makeTestApp(makeTestCanvas(size), size, pixelRatio);
+export const createWebGl2TestBackend = async (size: number, pixelRatio?: number, releaseContext = true): Promise<WebGl2Backend> => {
+  const app = makeTestApp(makeTestCanvas(size), size, pixelRatio, releaseContext);
   const backend = new WebGl2Backend(app);
 
   await backend.initialize();
@@ -146,7 +160,10 @@ const encodedFrameTargets = new WeakMap<WebGl2Backend, RenderTexture>();
 export const useEncodedFrameTarget = (backend: WebGl2Backend): void => {
   const existing = encodedFrameTargets.get(backend);
   const { width, height } = backend.renderTarget;
-  const target = existing?.width === width && existing.height === height ? existing : new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
+  const target =
+    existing?.width === width && existing.height === height
+      ? existing
+      : new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
 
   if (target !== existing) {
     existing?.destroy();
@@ -216,7 +233,9 @@ export const drawWebGpuEncoded = async (
   const target = new RenderTexture(width, height, { format: TextureFormat.Rgba8Srgb });
 
   try {
-    if (!(await drawWebGpuFrame(ctx, backend, draw, clear, target))) return false;
+    if (!(await drawWebGpuFrame(ctx, backend, draw, clear, target))) {
+      return false;
+    }
 
     encodedWebGpuFrames.set(backend, { width, pixels: await backend.readPixels(target, 0, 0, width, height) });
   } finally {
@@ -319,7 +338,9 @@ export const readWebGpuPixels = (backend: WebGpuBackend, size: number): ((x: num
 
   const rctx = readback.getContext('2d');
 
-  if (rctx === null) throw new Error('A 2D context is required for WebGPU readback.');
+  if (rctx === null) {
+    throw new Error('A 2D context is required for WebGPU readback.');
+  }
 
   rctx.drawImage(backend.context.canvas as HTMLCanvasElement, 0, 0);
 
@@ -334,7 +355,9 @@ export const readWebGpuPixels = (backend: WebGpuBackend, size: number): ((x: num
 export const readWebGpuFrame = (backend: WebGpuBackend, size: number): Uint8ClampedArray => {
   const encoded = encodedWebGpuFrames.get(backend);
 
-  if (encoded !== undefined) return encoded.pixels;
+  if (encoded !== undefined) {
+    return encoded.pixels;
+  }
 
   const readback = document.createElement('canvas');
 
@@ -343,7 +366,9 @@ export const readWebGpuFrame = (backend: WebGpuBackend, size: number): Uint8Clam
 
   const rctx = readback.getContext('2d');
 
-  if (rctx === null) throw new Error('A 2D context is required for WebGPU readback.');
+  if (rctx === null) {
+    throw new Error('A 2D context is required for WebGPU readback.');
+  }
 
   rctx.drawImage(backend.context.canvas as HTMLCanvasElement, 0, 0);
 

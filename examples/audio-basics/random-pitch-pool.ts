@@ -1,4 +1,16 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, type Seconds, Sound, Text } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  type Sound,
+  Text,
+} from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const DETUNE_RANGE = 200; // ± cents
@@ -31,14 +43,16 @@ class RandomPitchPoolScene extends Scene {
     // Path-only get() infers Sound from the .ogg extension - sidesteps a
     // compile-time overload ambiguity between Sound and the Json token form
     // when passing the Sound token explicitly.
-    this.sound = this.loader.get(assets.demo.audio.impactLight);
+    this.sound = this.loader.get(assets.soundImpactLight);
     this.sound.poolSize = 20;
 
     this.graphics = new Graphics();
     this.label = new Text('Hold Space to retrigger with a random pitch', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height * 0.3);
-    this.readout = new Text('', { fillColor: Color.white, fontSize: 18, align: 'center' }).setAnchor(0.5, 0.5).setPosition(width / 2, this.trackY + 80);
+    this.readout = new Text('', { fillColor: Color.white, fontSize: 18, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, this.trackY + 80);
 
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it. Holding Space becomes audible once
@@ -71,9 +85,12 @@ class RandomPitchPoolScene extends Scene {
 
     // A Sound played before the AudioContext unlocks on the first gesture
     // is a no-op, so skip firing while audio is still locked.
-    if (!this.active || app.audio.locked) return;
+    if (!this.active || app.audio.locked) {
+      return;
+    }
 
     this.timer += delta;
+
     while (this.timer > FIRE_INTERVAL) {
       this.timer -= FIRE_INTERVAL;
       this.lastCents = Math.random() * (DETUNE_RANGE * 2) - DETUNE_RANGE;

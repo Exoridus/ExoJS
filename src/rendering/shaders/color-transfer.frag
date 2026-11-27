@@ -5,8 +5,10 @@
 // `#version` and no `main`, because the author or engine owns those.
 //
 // Every float is precision-qualified. A GLSL ES 3.00 fragment has no default
-// float precision, and this text is spliced in ahead of whatever `precision`
-// statement a custom material declared.
+// float precision, so the qualifiers are required wherever the chunk lands:
+// spliceGlslPrologue inserts it after any leading `#version`/`precision` lines,
+// and a material that declares no default precision must qualify its own
+// floats.
 
 highp vec3 srgbToLinear(highp vec3 value) {
     // pow() is undefined for a negative base, and internal HDR work may hand

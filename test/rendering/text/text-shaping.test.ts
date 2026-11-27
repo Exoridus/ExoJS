@@ -108,6 +108,11 @@ describe('resolveShaping', () => {
     expect(resolveShaping('a‮b', {})).toBe('browser');
   });
 
+  test('a string made only of the Arabic letter mark needs browser shaping', () => {
+    expect(resolveShaping('\u061C', {})).toBe('browser');
+    expect(resolveShaping('a\u061Cb', {})).toBe('browser');
+  });
+
   test.each([
     ['simple', 'simple'],
     ['browser', 'browser'],
@@ -164,10 +169,27 @@ describe('layoutText with a browser shaper', () => {
     expect(layout.placements).toHaveLength(layout.lines.length);
   });
 
+  test('an unspaced Thai paragraph wraps at word boundaries without breakWords', () => {
+    const text = 'ภาษาไทยเป็นภาษาที่สวยงาม';
+    const shaper = makeShaper();
+
+    const layout = layoutText(text, style(), { maxWidth: 100, locale: 'th' }, makeProvider(), shaper);
+
+    expect(layout.lines.length).toBeGreaterThan(1);
+    expect(shaper.shaped.join('')).toBe(text);
+    expect(layout.advance.width).toBeLessThanOrEqual(100);
+  });
+
   test('the ellipsis candidate is measured complete, ellipsis included', () => {
     const shaper = makeShaper();
 
-    layoutText('alpha beta\ngamma', style(), { maxWidth: 60, maxHeight: 16, overflow: 'ellipsis', shaping: 'browser' }, makeProvider(), shaper);
+    layoutText(
+      'alpha beta\ngamma',
+      style(),
+      { maxWidth: 60, maxHeight: 16, overflow: 'ellipsis', shaping: 'browser' },
+      makeProvider(),
+      shaper,
+    );
 
     expect(shaper.measured.some(line => line.endsWith('…'))).toBe(true);
     expect(shaper.shaped.at(-1)?.endsWith('…')).toBe(true);
@@ -203,5 +225,40 @@ describe('layoutText with a browser shaper', () => {
     expect(layout.lines).toHaveLength(3);
     expect(layout.placements).toHaveLength(2);
     expect(layout.advance.height).toBe(48);
+  });
+
+  test('ellipsis truncation measures the shaped candidate including its marker', () => {
+    const shaper = makeShaper();
+
+    const layout = layoutText(
+      'a'.repeat(200),
+      style(),
+      { maxWidth: 40, maxLines: 1, overflow: 'ellipsis', shaping: 'browser' },
+      makeProvider(),
+      shaper,
+    );
+
+    expect(layout.lines).toHaveLength(1);
+    expect(shaper.measured).toContain('aaa…');
+    expect(shaper.shaped).toEqual(['aaa…']);
+    expect(layout.lines[0]?.sourceEnd).toBe(3);
+  });
+
+  test('ellipsis keeps the longest fitting prefix when shaped widths decrease', () => {
+    const shaper = makeShaper();
+    const widths: Record<string, number> = { 'a…': 30, 'ab…': 48, 'abc…': 38 };
+
+    shaper.measureLine = line => widths[line] ?? 75;
+
+    const layout = layoutText(
+      'abcd',
+      style(),
+      { maxWidth: 40, maxLines: 1, overflow: 'ellipsis', shaping: 'browser' },
+      makeProvider(),
+      shaper,
+    );
+
+    expect(shaper.shaped).toEqual(['abc…']);
+    expect(layout.lines[0]?.sourceEnd).toBe(3);
   });
 });

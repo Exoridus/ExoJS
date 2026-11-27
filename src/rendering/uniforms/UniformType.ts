@@ -29,7 +29,9 @@ export enum UniformType {
 export type UniformComponentKind = 'f32' | 'i32' | 'u32';
 
 /** Component storage, byte alignment and byte size of every {@link UniformType}. @internal */
-export const uniformTypeInfo: Readonly<Record<UniformType, { readonly kind: UniformComponentKind; readonly align: number; readonly size: number }>> = {
+export const uniformTypeInfo: Readonly<
+  Record<UniformType, { readonly kind: UniformComponentKind; readonly align: number; readonly size: number }>
+> = {
   [UniformType.Float]: { kind: 'f32', align: 4, size: 4 },
   [UniformType.Int]: { kind: 'i32', align: 4, size: 4 },
   [UniformType.Uint]: { kind: 'u32', align: 4, size: 4 },

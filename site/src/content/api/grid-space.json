@@ -4,7 +4,7 @@
   "symbol": "GridSpace",
   "kind": "class",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 28,
   "counts": {
@@ -24,7 +24,7 @@
         "Cost `0` blocks a cell, `1` is ordinary ground and larger values are terrain an agent will route around when it is cheaper to do so. Diagonal steps cost their length, so the metric stays consistent with the octile heuristic.",
         "The space carries no scene node and no rendering: it is data plus a neighbour relation, and it is built and mutated entirely by the application."
       ],
-      "importLine": "import { GridSpace } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { GridSpace } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {
@@ -1103,7 +1103,7 @@
             }
           ],
           "returnType": "number[]",
-          "description": "String-pulls the path: keeps a node only when the straight line past it is blocked, so the result is the same route with its staircase removed. The returned nodes are no longer adjacent - the guarantee is that the straight segment between two consecutive ones stays inside walkable cells an agent of agentSize fits through, and never crosses terrain more expensive than the section it replaces."
+          "description": "String-pulls the path: keeps a node only when the straight line past it is blocked, so the staircase between kept nodes is removed. On a weighted grid a kept segment may cross cells up to the cost of the most expensive cell of the section it replaces, endpoints included; smoothing does not recompute PathResult.cost, which still describes the search result. The returned nodes are no longer adjacent - the guarantee is that the straight segment between two consecutive ones stays inside walkable cells an agent of agentSize fits through, and never crosses terrain more expensive than the section it replaces."
         },
         {
           "name": "from",

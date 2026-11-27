@@ -35,7 +35,7 @@ import { readdir } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import ts from 'typescript';
+import { isStringLiteralLikeNode, isTemplateExpression, withNativeSourceFile } from '@codexo/exojs-config/typescript/ast';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const SELF_PATH = fileURLToPath(import.meta.url);
@@ -101,7 +101,7 @@ const SOURCE_KINDS: readonly SourceKind[] = [
  * Literals that are legitimately source-as-data, with the reason each one is.
  * An entry is a claim that the string is not a module this repository maintains.
  */
-const ALLOWED: readonly { readonly file: string; readonly reason: string }[] = [
+const ALLOWED: ReadonlyArray<{ readonly file: string; readonly reason: string }> = [
   {
     file: 'scripts/check-inline-source.ts',
     reason: 'this gate names the markers it looks for',
@@ -115,7 +115,9 @@ if (ALLOWED.some(entry => entry.reason.trim() === '')) {
 const isAllowed = (file: string): boolean => ALLOWED.some(entry => entry.file === file);
 
 const inScope = (kind: SourceKind, file: string): boolean => {
-  if (kind.except?.some(prefix => file.startsWith(prefix))) return false;
+  if (kind.except?.some(prefix => file.startsWith(prefix))) {
+    return false;
+  }
 
   return kind.scope === 'everywhere' || kind.scope.some(prefix => file.startsWith(prefix));
 };
@@ -131,26 +133,29 @@ const GENERATED_BANNER_LINES = 5;
 
 const isGenerated = (text: string): boolean => GENERATED_BANNER.test(text.split('\n', GENERATED_BANNER_LINES).join('\n'));
 
-/** Every string and template literal in `source`, with its 1-based line. */
-const collectLiterals = (source: ts.SourceFile): { text: string; line: number }[] => {
-  const literals: { text: string; line: number }[] = [];
+/** Every string and template literal in one leased native syntax tree. */
+const collectLiterals = (filename: string, text: string): Array<{ text: string; line: number }> =>
+  withNativeSourceFile(filename, text, source => {
+    const literals: Array<{ text: string; line: number }> = [];
 
-  const visit = (node: ts.Node): void => {
-    if (ts.isStringLiteralLike(node) || ts.isTemplateExpression(node)) {
-      // A template with substitutions still reads as one body of code; taking
-      // the raw text of every span keeps an interpolated worker visible.
-      const text = ts.isTemplateExpression(node) ? node.head.text + node.templateSpans.map(span => span.literal.text).join('\n') : node.text;
+    const visit = (node: Parameters<Parameters<typeof source.forEachChild>[0]>[0]): void => {
+      if (isStringLiteralLikeNode(node) || isTemplateExpression(node)) {
+        const literalText = isTemplateExpression(node)
+          ? node.head.text + node.templateSpans.map(span => span.literal.text).join('\n')
+          : node.text;
 
-      literals.push({ text, line: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1 });
-    }
+        literals.push({ text: literalText, line: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1 });
+      }
 
-    ts.forEachChild(node, visit);
-  };
+      node.forEachChild(child => {
+        visit(child);
+      });
+    };
 
-  visit(source);
+    visit(source);
 
-  return literals;
-};
+    return literals;
+  });
 
 const collectFiles = async (root: string): Promise<string[]> => {
   const absoluteRoot = resolve(REPO_ROOT, root);
@@ -158,7 +163,9 @@ const collectFiles = async (root: string): Promise<string[]> => {
 
   const walk = async (directory: string): Promise<void> => {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
-      if (entry.name.startsWith('.') || SKIPPED_DIRECTORIES.has(entry.name)) continue;
+      if (entry.name.startsWith('.') || SKIPPED_DIRECTORIES.has(entry.name)) {
+        continue;
+      }
 
       const path = join(directory, entry.name);
 
@@ -170,7 +177,9 @@ const collectFiles = async (root: string): Promise<string[]> => {
     }
   };
 
-  if (!statSync(absoluteRoot, { throwIfNoEntry: false })) return found;
+  if (!statSync(absoluteRoot, { throwIfNoEntry: false })) {
+    return found;
+  }
 
   if (statSync(absoluteRoot).isDirectory()) {
     await walk(absoluteRoot);
@@ -190,21 +199,31 @@ interface Violation {
 const checkFile = (absolutePath: string): Violation[] => {
   const file = relative(REPO_ROOT, absolutePath).split(sep).join('/');
 
-  if (isAllowed(file)) return [];
+  if (isAllowed(file)) {
+    return [];
+  }
 
   const text = readFileSync(absolutePath, 'utf8');
 
-  if (isGenerated(text)) return [];
+  if (isGenerated(text)) {
+    return [];
+  }
 
-  const source = ts.createSourceFile(absolutePath, text, ts.ScriptTarget.Latest, true);
   const violations: Violation[] = [];
 
-  for (const literal of collectLiterals(source)) {
-    if (literal.text.length < MINIMUM_INTERESTING_LENGTH || !isMultiLine(literal.text)) continue;
+  for (const literal of collectLiterals(absolutePath, text)) {
+    if (literal.text.length < MINIMUM_INTERESTING_LENGTH || !isMultiLine(literal.text)) {
+      continue;
+    }
 
     for (const kind of SOURCE_KINDS) {
-      if (!inScope(kind, file)) continue;
-      if (!kind.markers.some(marker => marker.test(literal.text))) continue;
+      if (!inScope(kind, file)) {
+        continue;
+      }
+
+      if (!kind.markers.some(marker => marker.test(literal.text))) {
+        continue;
+      }
 
       violations.push({ file, line: literal.line, kind });
       break;
@@ -224,7 +243,7 @@ const main = async (): Promise<void> => {
   const violations = files.flatMap(checkFile);
 
   if (violations.length > 0) {
-    console.error(`\x1b[31mExecutable source found in ${violations.length} string literal(s):\x1b[0m`);
+    console.error(`\x1B[31mExecutable source found in ${violations.length} string literal(s):\x1B[0m`);
 
     for (const violation of violations) {
       console.error(`  ${violation.file}:${violation.line}  ${violation.kind.label} source in a string literal - ${violation.kind.remedy}`);
@@ -234,7 +253,7 @@ const main = async (): Promise<void> => {
     process.exit(1);
   }
 
-  console.log(`\x1b[32m${files.length} file(s) checked, no executable source in string literals.\x1b[0m`);
+  console.log(`\x1B[32m${files.length} file(s) checked, no executable source in string literals.\x1B[0m`);
 };
 
 await main();

@@ -21,7 +21,7 @@ Omit `width` and `height` together (they are paired — provide both or neither)
 - `pixelWidth` and `pixelHeight` are `undefined` — **not** `Infinity`. There is no finite extent to report, so there is no number to give.
 
 ```ts
-import { TileLayer, TileMap } from '@codexo/exojs-tilemap';
+import { TileLayer, TileMap } from '@codexo/exojs/tilemap';
 
 // No width/height: the layer (and map) are unbounded. Chunk storage now
 // accepts any signed chunk coordinate instead of a fixed 0..N grid.
@@ -65,7 +65,7 @@ Both must be pure and deterministic, for the reason the callout above spells out
 
 ```ts
 import { View } from '@codexo/exojs';
-import { ChunkStreamer, createSampledChunkSource, TILE_TRANSFORM_IDENTITY, TileLayer, type TileSet } from '@codexo/exojs-tilemap';
+import { ChunkStreamer, createSampledChunkSource, TILE_TRANSFORM_IDENTITY, TileLayer, type TileSet } from '@codexo/exojs/tilemap';
 
 // The tileset you built from your tilesheet (see the Tilesets guide).
 declare const tileset: TileSet;
@@ -151,7 +151,7 @@ A sampling function that is expensive per tile can stall the main thread while a
 You cannot hand it a live function: functions cannot cross a `postMessage` boundary. Instead you pass `workerSource` — a complete, self-contained worker script as a **string** (a template literal in your own module). It is Blob-URL'd into a real `Worker` at construction, the same technique the audio package uses to spin up AudioWorklet processors from a source string. Because it shares no scope with your module, the worker must carry its own copy of the sampling code. The script implements a small request/response protocol:
 
 ```ts
-import { createWorkerSampledChunkSource, TILE_TRANSFORM_IDENTITY, type TileLayer, type TileSet } from '@codexo/exojs-tilemap';
+import { createWorkerSampledChunkSource, TILE_TRANSFORM_IDENTITY, type TileLayer, type TileSet } from '@codexo/exojs/tilemap';
 
 declare const terrain: TileLayer;
 declare const tileset: TileSet;
@@ -217,7 +217,7 @@ You do not have to generate terrain procedurally — you can stream a hand-autho
 
 ```ts
 import { View } from '@codexo/exojs';
-import { ChunkStreamer } from '@codexo/exojs-tilemap';
+import { ChunkStreamer } from '@codexo/exojs/tilemap';
 import type { TiledMap } from '@codexo/exojs-tiled';
 
 declare const tiled: TiledMap; // loaded through the @codexo/exojs-tiled Loader

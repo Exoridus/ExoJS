@@ -90,6 +90,7 @@ const walkOnly = [
   'backends/shaders/angular-average.frag',
   'backends/shaders/cascade-transport.frag',
   'backends/shaders/cascade-gather-transport.frag',
+  'backends/shaders/cascade-gather-transport-normals.frag',
   'backends/shaders/mask-blocks.frag',
 ] as const;
 
@@ -114,7 +115,12 @@ describe('lighting import graph', () => {
   test('the forward system links neither frame composition nor the shadow rows', () => {
     const forward = linkedBy('ForwardLighting.ts');
 
-    for (const module of ['backends/FrameLightingBackend.ts', 'backends/LightmapBackend.ts', 'occluders/shadowMap.ts', 'backends/shadowMarch.ts']) {
+    for (const module of [
+      'backends/FrameLightingBackend.ts',
+      'backends/LightmapBackend.ts',
+      'occluders/shadowMap.ts',
+      'backends/shadowMarch.ts',
+    ]) {
       expect({ module, linked: forward.has(module) }).toEqual({ module, linked: false });
     }
 

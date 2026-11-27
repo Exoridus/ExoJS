@@ -4,7 +4,7 @@
   "symbol": "ContactModifier",
   "kind": "type",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -22,7 +22,7 @@
         "Called once per solid contact per fixed step, after contact generation and before the solver runs, to adjust that contact for this step - the hook one-way platforms, conditional friction and per-pair material overrides are built on.",
         "A world has at most one modifier. It runs before islands are built, so disabling a contact also keeps the two bodies from sleeping as one."
       ],
-      "importLine": "import { ContactModifier } from '@codexo/exojs-physics'",
+      "importLine": "import { ContactModifier } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

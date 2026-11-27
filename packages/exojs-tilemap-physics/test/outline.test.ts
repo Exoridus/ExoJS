@@ -26,7 +26,7 @@ const cells = (...coordinates: number[]): number[] => coordinates;
 const flat = (loop: readonly PointLike[]): number[] => loop.flatMap(vertex => [vertex.x, vertex.y]);
 
 /** Loops as comparable strings, order-independent. */
-const normalise = (loops: readonly (readonly PointLike[])[]): string[] => loops.map(loop => flat(loop).join(',')).sort();
+const normalise = (loops: ReadonlyArray<readonly PointLike[]>): string[] => loops.map(loop => flat(loop).join(',')).sort();
 
 describe('traceCellOutlines', () => {
   it('traces one cell as a four-vertex island loop', () => {
@@ -57,7 +57,10 @@ describe('traceCellOutlines', () => {
 
     for (let y = 0; y < 3; y++) {
       for (let x = 0; x < 3; x++) {
-        if (x === 1 && y === 1) continue;
+        if (x === 1 && y === 1) {
+          continue;
+        }
+
         ring.push(x, y);
       }
     }
@@ -83,6 +86,7 @@ describe('traceCellOutlines', () => {
     const total = loops.reduce((sum, loop) => sum + signedArea(loop), 0);
 
     expect(total).toBe(7);
+
     for (const loop of loops) {
       expect(signedArea(loop)).toBeGreaterThan(0);
     }

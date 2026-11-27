@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { GridSpace } from '../src/spaces/GridSpace';
 import { gridFrom } from './helpers';
 
-const neighborsOf = (grid: GridSpace, x: number, y: number, agentSize = 1): [number, number][] => {
+const neighborsOf = (grid: GridSpace, x: number, y: number, agentSize = 1): Array<[number, number]> => {
   const nodes = new Int32Array(8);
   const costs = new Float64Array(8);
   const count = grid.neighbors(grid.nodeAt(x, y), agentSize, nodes, costs);
-  const out: [number, number][] = [];
+  const out: Array<[number, number]> = [];
 
   for (let index = 0; index < count; index++) {
     out.push([grid.nodeX(nodes[index]!), grid.nodeY(nodes[index]!)]);
@@ -32,7 +32,7 @@ describe('GridSpace', () => {
   });
 
   it('passes absolute cell coordinates to the cost callback', () => {
-    const seen: [number, number][] = [];
+    const seen: Array<[number, number]> = [];
 
     GridSpace.from(
       2,

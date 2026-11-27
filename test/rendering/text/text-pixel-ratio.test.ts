@@ -18,7 +18,7 @@
  */
 
 import { Signal } from '#core/Signal';
-import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
+import { type GlyphAtlas, SDF_RADIUS } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { Text } from '#rendering/text/Text';
@@ -245,7 +245,12 @@ describe('Text atlas acquisition', () => {
     text._setSurfacePixelRatio(3);
     text.syncDirty();
 
-    expect(getAtlas).toHaveBeenCalledWith({ family: 'Arial', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }, 'color', 8, 3);
+    expect(getAtlas).toHaveBeenCalledWith(
+      { family: 'Arial', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' },
+      'color',
+      SDF_RADIUS,
+      3,
+    );
   });
 
   // A ratio nobody can rasterize into (an unsized canvas, a stand-in backend)
@@ -259,4 +264,30 @@ describe('Text atlas acquisition', () => {
     expect(text.rasterPixelRatio).toBe(1);
     expect(requestedRatios()).toEqual([1]);
   });
+});
+
+test('production build rejects an invalid pixelRatio instead of treating it as inherit', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { resolve } = await import('node:path');
+  const { runInNewContext } = await import('node:vm');
+  const ts = (await import('typescript')).default;
+  const source = readFileSync(resolve(import.meta.dirname!, '../../../src/rendering/text/Text.ts'), 'utf8');
+  const code = ts.transpileModule(source.replaceAll('__DEV__', 'false'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const exports: { Text?: typeof Text } = {};
+  const modules: Record<string, unknown> = {
+    './AbstractText': await import('#rendering/text/AbstractText'),
+    './GlyphAtlas': await import('#rendering/text/GlyphAtlas'),
+    './GlyphAtlasPool': await import('#rendering/text/GlyphAtlasPool'),
+    './ShapedTextSource': await import('#rendering/text/ShapedTextSource'),
+    './shaping': await import('#rendering/text/shaping'),
+    './textLayout': await import('#rendering/text/textLayout'),
+    './TextStyle': await import('#rendering/text/TextStyle'),
+    './textEffects': await import('#rendering/text/textEffects'),
+  };
+  runInNewContext(code, { exports, require: (id: string) => modules[id], RangeError, Number });
+
+  expect(() => new exports.Text!('Hi', { fontSize: 16, pixelRatio: 0 })).toThrow(/positive finite/);
+  expect(() => new exports.Text!('Hi', { fontSize: 16, pixelRatio: Number.NaN })).toThrow(/positive finite/);
 });

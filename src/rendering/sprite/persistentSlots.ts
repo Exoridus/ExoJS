@@ -203,7 +203,12 @@ export const rekeyPersistentSpriteSlotTable = (
  * once per selection no matter how the arrivals are ordered.
  * @internal
  */
-export const writePersistentSpriteSlots = (store: PersistentSpriteSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void => {
+export const writePersistentSpriteSlots = (
+  store: PersistentSpriteSlotStore,
+  source: RenderRootSource,
+  entered: Int32Array,
+  count: number,
+): void => {
   const scopes = source.scopes;
   const textureIndexOfHandle = store.textureIndexOfHandle;
   let highest = -1;

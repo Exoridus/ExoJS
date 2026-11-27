@@ -11,18 +11,22 @@ import { benchRunOptions, benchTimeoutMs } from './runOptions';
 
 const rng = (seed: number) => {
   let s = seed;
+
   return () => {
     s = (s * 1664525 + 1013904223) & 0xffffffff;
+
     return (s >>> 0) / 0xffffffff;
   };
 };
 
 const makeRegularPolygon = (cx: number, cy: number, radius: number, sides: number): Polygon => {
   const points: Vector[] = [];
+
   for (let i = 0; i < sides; i++) {
     const angle = (2 * Math.PI * i) / sides;
     points.push(new Vector(Math.cos(angle) * radius, Math.sin(angle) * radius));
   }
+
   return new Polygon(points, cx, cy);
 };
 
@@ -68,7 +72,10 @@ describe('collision', { timeout: benchTimeoutMs }, () => {
       for (let i = 0; i < PAIRS; i++) {
         const ax = rand() * 5000;
         const ay = rand() * 5000;
-        circles.push([new Circle(ax, ay, 10 + rand() * 30), new Circle(ax + (rand() - 0.5) * 80, ay + (rand() - 0.5) * 80, 10 + rand() * 30)]);
+        circles.push([
+          new Circle(ax, ay, 10 + rand() * 30),
+          new Circle(ax + (rand() - 0.5) * 80, ay + (rand() - 0.5) * 80, 10 + rand() * 30),
+        ]);
       }
 
       for (let iter = 0; iter < ITERATIONS; iter++) {
@@ -97,9 +104,11 @@ describe('collision', { timeout: benchTimeoutMs }, () => {
 
       for (let iter = 0; iter < ITERATIONS; iter++) {
         const qt = new Quadtree<number>(new Rectangle(0, 0, 5000, 5000));
+
         for (const item of items) {
           qt.insert(item);
         }
+
         qt.destroy();
       }
 
@@ -118,12 +127,14 @@ describe('collision', { timeout: benchTimeoutMs }, () => {
       const queryPoints: Array<[number, number]> = [];
 
       const qt = new Quadtree<number>(new Rectangle(0, 0, 5000, 5000));
+
       for (let i = 0; i < ITEMS; i++) {
         qt.insert({
           bounds: new Rectangle(rand() * 4900, rand() * 4900, 20 + rand() * 60, 20 + rand() * 60),
           payload: i,
         });
       }
+
       for (let i = 0; i < QUERIES; i++) {
         queryPoints.push([rand() * 5000, rand() * 5000]);
       }
@@ -157,8 +168,13 @@ describe('collision', { timeout: benchTimeoutMs }, () => {
         }
       }
 
-      for (const r of statics) r.destroy();
-      for (const { rect } of movers) rect.destroy();
+      for (const r of statics) {
+        r.destroy();
+      }
+
+      for (const { rect } of movers) {
+        rect.destroy();
+      }
     }).run(benchRunOptions);
   });
 });

@@ -4,7 +4,8 @@
  * Lives in `shared/` (not any one domain) because every domain's cross-arm
  * fairness contract needs the SAME seeded stream: the rendering domain draws it
  * to select which sprites mutate per frame (see `shared/mutation.ts`), and a
- * future physics domain would draw it to pick which bodies to perturb. Keeping a
+ * physics domain draws it to choose and place bodies and to give them their
+ * initial perturbation velocity. Keeping a
  * single implementation here is what lets `mutationSignature` assert byte-for-byte
  * identical selection across arms.
  */

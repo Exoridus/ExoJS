@@ -6,11 +6,11 @@
   "subsystem": "ldtk",
   "importPath": "@codexo/exojs-ldtk",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 8,
+    "properties": 10,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,80 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "customData",
+          "signature": "customData?: readonly LdtkTileCustomData[]",
+          "signatureTokens": [
+            {
+              "text": "customData",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkTileCustomData",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Free text attached to single tiles in the editor."
+        },
+        {
+          "name": "enumTags",
+          "signature": "enumTags?: readonly LdtkTileEnumTag[]",
+          "signatureTokens": [
+            {
+              "text": "enumTags",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkTileEnumTag",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Enum values tagged on tiles in the editor, each with the ids of the tiles it marks."
+        },
         {
           "name": "identifier",
           "signature": "identifier: string",

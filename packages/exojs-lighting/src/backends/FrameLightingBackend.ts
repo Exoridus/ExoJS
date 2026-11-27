@@ -32,18 +32,17 @@ import { assertNumericNormalTexture, normalGreenSign } from '../normals/NormalSo
 import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import type { OccluderDrawable } from '../occluders/OccluderSource';
-import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
+import { buildShadowRow, buildSunShadowRow, shadowRowStride, shadowRowTexels } from '../occluders/shadowMap';
+import { pickDebugTexture, releaseDestroyedBatches } from './backendHelpers';
 import { fieldGrid } from './fieldGrid';
 import type { LightingBackend } from './LightingBackend';
+import { acquireNormalBatch, releaseUnusedNormalBatches } from './normalBatches';
 import lightCompositeFragment from './shaders/light-composite.frag';
 import lightCompositeVertex from './shaders/light-composite.vert';
 import lightCompositeWgsl from './shaders/light-composite.wgsl';
 import lightQuadFragment from './shaders/light-quad.frag';
 import lightQuadVertex from './shaders/light-quad.vert';
 import lightQuadWgsl from './shaders/light-quad.wgsl';
-import normalPrepassFragment from './shaders/normal-prepass.frag';
-import normalPrepassVertex from './shaders/normal-prepass.vert';
-import normalPrepassWgsl from './shaders/normal-prepass.wgsl';
 import occluderDebugFragment from './shaders/occluder-debug.frag';
 import occluderDebugVertex from './shaders/occluder-debug.vert';
 import occluderDebugWgsl from './shaders/occluder-debug.wgsl';
@@ -54,9 +53,8 @@ import sunQuadFragment from './shaders/sun-quad.frag';
 import sunQuadVertex from './shaders/sun-quad.vert';
 import sunQuadWgsl from './shaders/sun-quad.wgsl';
 import { ShadowMarchFiller } from './shadowMarch';
-import { removeStaleShadowRows, ShadowGeometryRevision, type ShadowRowState, type SunShadowRowState } from './shadowRows';
+import { claimShadowRow, removeStaleShadowRows, ShadowGeometryRevision, type ShadowRowState, type SunShadowRowState } from './shadowRows';
 
-/** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 /**
  * The composite that multiplies the frame by the light: one instanced quad,
  * told the debug exposure and nothing else.
@@ -68,9 +66,43 @@ export const lightCompositeShader = new Shader({
   wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightCompositeWgsl}`,
 });
 
+/**
+ * What the light quads read besides their instances and textures.
+ *
+ * `u_shadowClearance` keeps an occluder's lit face out of its own shadow, in
+ * light-target fragments along the ray. The fragment in front of a face on a
+ * fragment boundary is half a fragment from it: a quarter keeps that one lit
+ * and the occluder's own first fragment dark, where lighting it too draws a lit
+ * seam along every face. Where a light texel spans several output pixels the
+ * composite filters across it, so the texel behind the face must stay lit as
+ * well or the floor in front goes dark; three quarters does that.
+ * @internal
+ */
+export const lightQuadUniforms = { u_shadowPrecision: UniformType.Float, u_shadowClearance: UniformType.Float } as const;
+
+type LightQuadMaterial = MeshMaterial<typeof lightQuadUniforms>;
+
+/**
+ * How far a distance stored in a half-float shadow row can have rounded,
+ * relative to itself: half a unit in the last of its ten mantissa bits. The
+ * `RGBA32F` rows round some ten thousand times finer, below anything a fragment
+ * resolves, and are read as exact.
+ */
+const halfFloatRounding = 2 ** -11;
+
+/** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 const noCone = -1;
 /** Shadow row a light without occluders in reach carries: the shader reads it as "nothing blocks". */
 const noShadow = -1;
+/**
+ * Where along its half-length a finite line traces each of its shadow rows,
+ * stratified over the segment. `light-quad` derives the same offsets from the
+ * row index, so the two must change together.
+ */
+const lineShadowSamples = [-0.75, -0.25, 0.25, 0.75] as const;
+/** The single row of any light that emits from a point, traced from its centre. */
+const pointShadowSample = [0] as const;
+const shadowSamples = (half: number): readonly number[] => (half > 0 ? lineShadowSamples : pointShadowSample);
 /** Width of a debug occluder line, in world pixels. */
 const debugLineWidth = 2;
 
@@ -155,15 +187,18 @@ export interface FrameLightingBackendOptions {
  * The trade against the forward renderer is the one that matters for a lit
  * scene: light no longer costs a loop iteration per fragment per light, so
  * there is no light cap, and the accumulated field is a texture a shadow term
- * can be folded into. What it gives up is normal mapping - the light target
- * has no surface normals to shade against, because the frame it multiplies is
+ * can be folded into. Normal mapping comes from a prepass over the registered
+ * surfaces instead of from the sprite stage, because the frame it multiplies is
  * already flat.
  *
- * One instanced draw covers every visible light. The instance transform
- * carries position, radius and cone rotation, the tint carries colour, and two
- * instance attributes carry the cone, the intensity, the light's row in the
- * shadow map and its softness. The quad is the light's bounding square, so a
- * light costs the fill of its own radius rather than of the screen.
+ * Local lights batch by cookie texture: one instanced draw per distinct
+ * cookie, and directional lights draw in a batch of their own. The instance
+ * transform carries position, radius and cone rotation, the tint carries
+ * colour, and three instance attributes carry the cone, the intensity, the
+ * segment half-length, the light's row in the shadow map, its softness, and
+ * the falloff radius, height and axis the surface-normal term reads. The quad is
+ * the light's bounding square, so a light costs the fill of its own radius
+ * rather than of the screen.
  *
  * # Accumulation
  *
@@ -228,8 +263,8 @@ export abstract class FrameLightingBackend implements LightingBackend {
    * field's own resolution and size, so a fragment's position in one is its
    * position in the other.
    *
-   * Parked at one texel and switched off unless something reads it. Nothing
-   * marches it yet - the `mask` debug view is its only consumer - and a pass
+   * Parked at one texel and switched off unless something reads it - the
+   * `mask` debug view, the shadow march, or the cascade chain - and a pass
    * that runs for nobody is the defect `post` shipped with once already.
    */
   protected readonly _maskTarget: RenderTexture;
@@ -244,6 +279,7 @@ export abstract class FrameLightingBackend implements LightingBackend {
   private readonly _normalTarget: RenderTexture;
   /** One batch per albedo/normal-map pair: a batch binds two textures and draws every surface sharing them. */
   private readonly _normalBatches = new Map<Texture | RenderTexture, Map<Texture, RenderBatch>>();
+  private readonly _inactiveNormalBatches = new Set<RenderBatch>();
   private readonly _normalPass: CallbackRenderPass;
   private readonly _lightPass: CallbackRenderPass;
   private readonly _compositePass: CallbackRenderPass;
@@ -270,7 +306,7 @@ export abstract class FrameLightingBackend implements LightingBackend {
    * wrong for them.
    */
   private readonly _ambientClear: Color = Color.black.clone();
-  private _shadowMap: DataTexture<TextureFormat.R32F>;
+  private _shadowMap: DataTexture<TextureFormat.Rgba32F>;
   /**
    * The directional lights' rows, in a texture of their own. A sun's row is
    * linear where a point light's is polar, so the two are numbered per texture
@@ -281,11 +317,15 @@ export abstract class FrameLightingBackend implements LightingBackend {
   /** Built only where a float render target exists; `null` pins the renderer to the CPU filler. */
   private readonly _filler: ShadowMarchFiller | null;
   private _fillerRequest: ShadowFillerOption = 'auto';
-  private readonly _shadowRows = new Map<Light, ShadowRowState>();
+  /** What each light's rows were last built from, one entry per emitter sample. */
+  private readonly _shadowRows = new Map<Light, ShadowRowState[]>();
   private readonly _sunShadowRows = new Map<Light, SunShadowRowState>();
   private readonly _shadowGeometry = new ShadowGeometryRevision();
   private _shadowEpoch = 0;
+  private _shadowClearance = 0.25;
   private _shadowRowsRebuilt = 0;
+  private _firstDirtyRow = Infinity;
+  private _lastDirtyRow = -1;
   private _shadowBytesUploaded = 0;
   private _walkMaskEnabled = true;
   private _compositeScale = 0;
@@ -309,7 +349,7 @@ export abstract class FrameLightingBackend implements LightingBackend {
       format: this.hdr ? TextureFormat.Rgba16F : TextureFormat.Rgba8,
       scaleMode: ScaleModes.Linear,
     });
-    this._shadowMap = new DataTexture({ width: this._shadowResolution, height: 1, format: TextureFormat.R32F });
+    this._shadowMap = new DataTexture({ width: this._shadowResolution * shadowRowTexels, height: 1, format: TextureFormat.Rgba32F });
     this._sunShadowMap = new DataTexture({ width: this._shadowResolution, height: 1, format: TextureFormat.R32F });
 
     this._sunMaterial = new MeshMaterial({
@@ -410,7 +450,8 @@ ${sunQuadWgsl}`,
     // whole reason to filter here instead of on a node is to see the light the
     // system produced, and an `rgba8` intermediate would clip it away again
     // between the composite and the first filter.
-    this._shaded = options.post.length === 0 ? null : new RenderTexture(1, 1, { format: this._target.format, scaleMode: ScaleModes.Linear });
+    this._shaded =
+      options.post.length === 0 ? null : new RenderTexture(1, 1, { format: this._target.format, scaleMode: ScaleModes.Linear });
     this._compositePass = new CallbackRenderPass(pass => this._drawComposite(pass), {
       label: 'lighting:composite',
       ...(this._shaded !== null && { target: this._shaded, clear: Color.transparentBlack }),
@@ -442,8 +483,20 @@ ${sunQuadWgsl}`,
       this._app.framePasses.addPass(this._filler.pass);
     }
 
+    // The radiance gather reads the normals while it builds the light field, so
+    // the prepass has to be ahead of the cascades; the quads read them in the
+    // light pass, after the field passes.
+    if (this._cascading) {
+      this._app.framePasses.addPass(this._normalPass);
+    }
+
     this._attachFieldPasses();
-    this._app.framePasses.addPass(this._normalPass).addPass(this._lightPass).addPass(this._compositePass);
+
+    if (!this._cascading) {
+      this._app.framePasses.addPass(this._normalPass);
+    }
+
+    this._app.framePasses.addPass(this._lightPass).addPass(this._compositePass);
 
     if (this._postPass !== null) {
       this._app.framePasses.addPass(this._postPass);
@@ -465,7 +518,15 @@ ${sunQuadWgsl}`,
     this._app.onResize.remove(this._onResize);
     this._detachOwnPasses();
 
-    for (const pass of [this._maskPass, this._filler?.pass, this._normalPass, this._lightPass, this._compositePass, this._postPass, this._debugPass]) {
+    for (const pass of [
+      this._maskPass,
+      this._filler?.pass,
+      this._normalPass,
+      this._lightPass,
+      this._compositePass,
+      this._postPass,
+      this._debugPass,
+    ]) {
       if (pass) {
         this._app.framePasses.removePass(pass);
       }
@@ -503,15 +564,11 @@ ${sunQuadWgsl}`,
   }
 
   /**
-   * The light quads shade against the prepass; a walk does not. Radiance
-   * carries a direction per probe ray but the gather averages a probe's rays
-   * into one arriving colour, so there is no incident direction left at a
-   * fragment for a normal to be measured against - and running the prepass
-   * anyway would draw a screen-sized target nothing reads.
+   * Both of this renderer's modes shade against the prepass: the light quads
+   * measure each light's direction against it, and the radiance gather weights
+   * the finest cascade's four directions by it.
    */
-  public get readsSurfaces(): boolean {
-    return !this._cascading;
-  }
+  public readonly readsSurfaces = true;
 
   public get activeLightCount(): number {
     return this._activeCount;
@@ -556,13 +613,8 @@ ${sunQuadWgsl}`,
     this._compositeMaterial.setTexture('u_light', this._debugTexture(view));
   }
 
-  /** The intermediate a debug view multiplies the white frame by. */
-  private _debugTexture(view: LightingDebugView): RenderTexture {
-    if (view === 'normals') {
-      return this._normalTarget;
-    }
-
-    return view === 'mask' ? this._maskTarget : this._target;
+  private _debugTexture(view: LightingDebugView): RenderTexture | Texture {
+    return pickDebugTexture(view, this._normalPass.enabled ? this._normalTarget : transparentTexture(), this._maskTarget, this._target);
   }
 
   /** The accumulated light, for a debug view that wants to show it. @internal */
@@ -609,7 +661,7 @@ ${sunQuadWgsl}`,
     this._syncMask();
 
     for (const batch of this._lightBatches.values()) {
-      batch.material?.setTexture('u_shadow', this._boundShadows());
+      this._bindShadows(batch.material as LightQuadMaterial);
     }
   }
 
@@ -646,7 +698,7 @@ ${sunQuadWgsl}`,
   }
 
   public publish(lights: readonly Light[], ambient: Color, occluders: OccluderField, surfaces: readonly NormalSurface[]): void {
-    this._writeSurfaces(this.readsSurfaces ? surfaces : []);
+    this._writeSurfaces(surfaces);
     this._resize();
     this._followCamera();
     this._ambient.copy(ambient);
@@ -667,7 +719,9 @@ ${sunQuadWgsl}`,
    * the marcher's own uniforms then have to be pointed at.
    */
   private _writeLights(lights: readonly Light[], occluders: OccluderField): boolean {
-    this._growShadowMap(lights.length);
+    const rowBudget = lights.reduce((rows, light) => rows + shadowSamples(lightHalfLength(light)).length, 0);
+
+    this._growShadowMap(rowBudget);
 
     for (const batch of this._lightBatches.values()) {
       batch.clear();
@@ -686,12 +740,14 @@ ${sunQuadWgsl}`,
     this._shadowBytesUploaded = 0;
 
     if (casting && marching) {
-      this._filler!.begin(lights.length);
+      this._filler!.begin(rowBudget);
     }
 
     let written = 0;
-    let firstDirtyRow = Infinity;
-    let lastDirtyRow = -1;
+    let shadowRow = 0;
+
+    this._firstDirtyRow = Infinity;
+    this._lastDirtyRow = -1;
 
     for (const light of lights) {
       if (!light.enabled || light.intensity <= 0) {
@@ -716,12 +772,8 @@ ${sunQuadWgsl}`,
       if (!casting) {
         scratchInstance.a_shadow[0] = noShadow;
       } else {
-        scratchInstance.a_shadow[0] = written;
-
-        if (this._writeShadowRow(light, written, radius, segments, segmentCount, geometryRevision, epoch, marching)) {
-          firstDirtyRow = Math.min(firstDirtyRow, written);
-          lastDirtyRow = written;
-        }
+        scratchInstance.a_shadow[0] = shadowRow;
+        shadowRow += this._writeShadowRows(light, shadowRow, half, radius, segments, segmentCount, geometryRevision, epoch, marching);
       }
 
       scratchInstance.a_shadow[1] = light.softness;
@@ -757,11 +809,11 @@ ${sunQuadWgsl}`,
       removeStaleShadowRows(this._shadowRows, epoch);
     }
 
-    if (lastDirtyRow >= firstDirtyRow) {
-      const rows = lastDirtyRow - firstDirtyRow + 1;
+    if (this._lastDirtyRow >= this._firstDirtyRow) {
+      const rows = this._lastDirtyRow - this._firstDirtyRow + 1;
 
-      this._shadowMap.commitRect(0, firstDirtyRow, this._shadowResolution, rows);
-      this._shadowBytesUploaded += this._shadowResolution * rows * Float32Array.BYTES_PER_ELEMENT;
+      this._shadowMap.commitRect(0, this._firstDirtyRow, this._shadowResolution * shadowRowTexels, rows);
+      this._shadowBytesUploaded += this._shadowResolution * rows * shadowRowStride * Float32Array.BYTES_PER_ELEMENT;
     }
 
     const suns = this._writeSuns(lights, casting, segments, segmentCount, geometryRevision, epoch);
@@ -832,87 +884,75 @@ ${sunQuadWgsl}`,
    */
   private _writeAmbientClear(ambient: Color): void {
     ambient.writeLinear(scratchLinearAmbient);
-    this._ambientClear.set(scratchLinearAmbient[0]! * 255, scratchLinearAmbient[1]! * 255, scratchLinearAmbient[2]! * 255, scratchLinearAmbient[3]);
+    this._ambientClear.set(
+      scratchLinearAmbient[0]! * 255,
+      scratchLinearAmbient[1]! * 255,
+      scratchLinearAmbient[2]! * 255,
+      scratchLinearAmbient[3],
+    );
   }
 
   /**
-   * Give one light the polar row the shader will sample, from whichever filler
-   * is active. The light's position and axis are the ones the caller has just
-   * read into the shared scratch.
+   * Give one light the polar rows the shader will sample, one per emitter
+   * sample, from whichever filler is active, and answer how many it took. The
+   * light's position and axis are the ones the caller has just read into the
+   * shared scratch. A finite line's samples see out to the opposite end of the
+   * segment plus the falloff, which is `radius + half`.
    */
-  private _writeShadowRow(
+  private _writeShadowRows(
     light: Light,
-    row: number,
+    firstRow: number,
+    half: number,
     radius: number,
     segments: Float32Array,
     segmentCount: number,
     geometryRevision: number,
     epoch: number,
     marching: boolean,
-  ): boolean {
+  ): number {
+    const offsets = shadowSamples(half);
+    const reach = radius + half;
+    const axisX = scratchDirection.x;
+    const axisY = scratchDirection.y;
     const bins = this._shadowResolution;
+    // Empty while marching: `_writeLights` clears the cache for the GPU filler.
+    let states = this._shadowRows.get(light);
 
-    if (marching) {
-      this._filler!.write(row, scratchPosition.x, scratchPosition.y, radius, scratchDirection.x, scratchDirection.y);
-      this._shadowRowsRebuilt++;
-
-      return false;
+    if (states === undefined && !marching) {
+      states = [];
+      this._shadowRows.set(light, states);
+    } else if (states !== undefined && states.length > offsets.length) {
+      // A line shortened to a point leaves its other samples' rows to the next light.
+      states.length = offsets.length;
     }
 
-    const state = this._shadowRows.get(light);
+    for (let sample = 0; sample < offsets.length; sample++) {
+      const row = firstRow + sample;
+      const x = scratchPosition.x + axisX * half * offsets[sample]!;
+      const y = scratchPosition.y + axisY * half * offsets[sample]!;
 
-    if (
-      state?.row === row &&
-      state.x === scratchPosition.x &&
-      state.y === scratchPosition.y &&
-      state.axisX === scratchDirection.x &&
-      state.axisY === scratchDirection.y &&
-      state.radius === radius &&
-      state.geometryRevision === geometryRevision
-    ) {
-      state.epoch = epoch;
-
-      return false;
+      if (marching) {
+        this._filler!.write(row, x, y, reach, axisX, axisY);
+        this._shadowRowsRebuilt++;
+      } else if (claimShadowRow(states!, sample, row, x, y, axisX, axisY, reach, geometryRevision, epoch)) {
+        buildShadowRow(
+          segments,
+          segmentCount,
+          x,
+          y,
+          axisX,
+          axisY,
+          reach,
+          this._shadowMap.buffer.subarray(row * bins * shadowRowStride, (row + 1) * bins * shadowRowStride),
+          bins,
+        );
+        this._shadowRowsRebuilt++;
+        this._firstDirtyRow = Math.min(this._firstDirtyRow, row);
+        this._lastDirtyRow = row;
+      }
     }
 
-    buildShadowRow(
-      segments,
-      segmentCount,
-      scratchPosition.x,
-      scratchPosition.y,
-      scratchDirection.x,
-      scratchDirection.y,
-      radius,
-      this._shadowMap.buffer.subarray(row * bins, (row + 1) * bins),
-      bins,
-    );
-    this._shadowRowsRebuilt++;
-
-    if (state === undefined) {
-      const next: ShadowRowState = {
-        row,
-        x: scratchPosition.x,
-        y: scratchPosition.y,
-        axisX: scratchDirection.x,
-        axisY: scratchDirection.y,
-        radius,
-        geometryRevision,
-        epoch,
-      };
-
-      this._shadowRows.set(light, next);
-    } else {
-      state.row = row;
-      state.x = scratchPosition.x;
-      state.y = scratchPosition.y;
-      state.axisX = scratchDirection.x;
-      state.axisY = scratchDirection.y;
-      state.radius = radius;
-      state.geometryRevision = geometryRevision;
-      state.epoch = epoch;
-    }
-
-    return true;
+    return offsets.length;
   }
 
   /**
@@ -1121,6 +1161,7 @@ ${sunQuadWgsl}`,
     }
 
     this._normalBatches.clear();
+    this._inactiveNormalBatches.clear();
     this._shadowRows.clear();
     this._sunShadowRows.clear();
     this._shadowGeometry.clear();
@@ -1189,6 +1230,8 @@ ${sunQuadWgsl}`,
    * screen-space normal buffer cannot take from the scene graph.
    */
   private _writeSurfaces(surfaces: readonly NormalSurface[]): void {
+    this._inactiveNormalBatches.clear();
+
     for (const byNormal of this._normalBatches.values()) {
       for (const batch of byNormal.values()) {
         batch.clear();
@@ -1200,13 +1243,21 @@ ${sunQuadWgsl}`,
     for (const { drawable, normals } of surfaces) {
       const albedo = drawable.texture;
 
-      if (albedo === null || !drawable.visible) {
+      if (albedo === null || albedo.destroyed || normals.texture.destroyed) {
         continue;
       }
 
-      const box = drawable.getLocalBounds();
+      const box = drawable.visible ? drawable.getLocalBounds() : null;
 
-      if (box.width === 0 || box.height === 0) {
+      if (box === null || box.width === 0 || box.height === 0) {
+        // Visibility can change every frame. Keep a registered pair's existing
+        // material warm, but never allocate a batch just to keep it inactive.
+        const existing = this._normalBatches.get(albedo)?.get(normals.texture);
+
+        if (existing !== undefined) {
+          this._inactiveNormalBatches.add(existing);
+        }
+
         continue;
       }
 
@@ -1245,9 +1296,15 @@ ${sunQuadWgsl}`,
       scratchSurface.a_basis[3] = world.d * greenSign;
 
       assertNumericNormalTexture(normals.texture);
-      this._normalBatch(albedo, normals.texture).add(this._transform, Color.white, scratchSurface);
+      acquireNormalBatch(this._normalBatches, this._normalGeometry, albedo, normals.texture).add(
+        this._transform,
+        Color.white,
+        scratchSurface,
+      );
       written++;
     }
+
+    releaseUnusedNormalBatches(this._normalBatches, this._inactiveNormalBatches);
 
     const describes = written > 0;
 
@@ -1263,6 +1320,8 @@ ${sunQuadWgsl}`,
       }
 
       this._sunMaterial.setTexture('u_normal', this._boundNormals());
+      this._compositeMaterial.setTexture('u_light', this._debugTexture(this._debug));
+      this._shadeAgainstNormals(describes ? this._normalTarget : null);
     }
 
     this._surfaceCount = written;
@@ -1281,8 +1340,11 @@ ${sunQuadWgsl}`,
       return existing;
     }
 
+    releaseDestroyedBatches(this._lightBatches);
+
     const material = new MeshMaterial({
       shader: new Shader({
+        uniforms: lightQuadUniforms,
         glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${lightQuadVertex}`, fragment: lightQuadFragment },
         wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightQuadWgsl}`,
       }),
@@ -1292,6 +1354,9 @@ ${sunQuadWgsl}`,
       textures: { u_shadow: this._boundShadows(), u_normal: this._boundNormals(), u_cookie: cookie },
       blendMode: BlendModes.Additive,
     });
+
+    this._bindShadows(material);
+
     const batch = new RenderBatch(this._lightGeometry, material, {
       instanceAttributes: [
         { name: 'a_light', format: 'float32x4' },
@@ -1306,8 +1371,15 @@ ${sunQuadWgsl}`,
   }
 
   /** The polar rows the light shader should read: the marched atlas, or the walked ones. */
-  private _boundShadows(): DataTexture<TextureFormat.R32F> | RenderTexture {
+  private _boundShadows(): DataTexture<TextureFormat.Rgba32F> | RenderTexture {
     return this.shadowFiller === 'gpu' ? this._filler!.texture : this._shadowMap;
+  }
+
+  /** Point a light material at the bound rows, and at how finely their format stores a distance. */
+  private _bindShadows(material: LightQuadMaterial): void {
+    material.setTexture('u_shadow', this._boundShadows());
+    material.uniforms.u_shadowPrecision.set(this.shadowFiller === 'gpu' ? halfFloatRounding : 0);
+    material.uniforms.u_shadowClearance.set(this._shadowClearance);
   }
 
   /**
@@ -1345,60 +1417,20 @@ ${sunQuadWgsl}`,
 
   /** One mask texel in world units, along whichever axis resolves it worse. */
   protected _maskTexel(): number {
-    return Math.max(this._fieldView.width / Math.max(1, this._maskTarget.width), this._fieldView.height / Math.max(1, this._maskTarget.height));
+    return Math.max(
+      this._fieldView.width / Math.max(1, this._maskTarget.width),
+      this._fieldView.height / Math.max(1, this._maskTarget.height),
+    );
+  }
+
+  /** Hand a walk the prepass while it describes a surface, or take it back with `null`. */
+  protected _shadeAgainstNormals(_normals: RenderTexture | null): void {
+    // The light quads read the prepass in their own pass and have nothing to bind.
   }
 
   /** The normal field the light shader should read: the prepass, or nothing at all. */
   private _boundNormals(): Texture | RenderTexture {
     return this._normalPass.enabled ? this._normalTarget : transparentTexture();
-  }
-
-  /**
-   * The batch for one albedo/normal-map pair, built on first use. Batches are
-   * kept for the backend's life: an atlas pair that was drawn once is drawn
-   * again, and rebuilding a material per frame would recompile nothing but cost
-   * a pipeline lookup on every draw.
-   */
-  private _normalBatch(albedo: Texture | RenderTexture, normalMap: Texture): RenderBatch {
-    let byNormal = this._normalBatches.get(albedo);
-
-    if (byNormal === undefined) {
-      byNormal = new Map();
-      this._normalBatches.set(albedo, byNormal);
-    }
-
-    const existing = byNormal.get(normalMap);
-
-    if (existing !== undefined) {
-      return existing;
-    }
-
-    const material = new MeshMaterial({
-      shader: new Shader({
-        glsl: {
-          vertex: `#version 300 es
-${INSTANCE_TRANSFORM_GLSL}
-${normalPrepassVertex}`,
-          fragment: normalPrepassFragment,
-        },
-        wgsl: `${INSTANCE_TRANSFORM_WGSL}
-${normalPrepassWgsl}`,
-      }),
-      // Declaration order is the group(2) binding order on WebGPU: albedo at
-      // bindings 1/2, normal map at 3/4, matching `normal-prepass.wgsl`.
-      textures: { u_albedo: albedo, u_normalMap: normalMap },
-      blendMode: BlendModes.Normal,
-    });
-    const batch = new RenderBatch(this._normalGeometry, material, {
-      instanceAttributes: [
-        { name: 'a_frame', format: 'float32x4' },
-        { name: 'a_basis', format: 'float32x4' },
-      ],
-    });
-
-    byNormal.set(normalMap, batch);
-
-    return batch;
   }
 
   /** Rasterise this frame's blocking edges, through the field's own view. */
@@ -1466,7 +1498,14 @@ ${normalPrepassWgsl}`,
 
       // Lengthened by a texel at each end as well: two edges meeting at a corner
       // would otherwise leave a hole exactly one texel wide at the join.
-      this._transform.set(dirX * (length + texel * 2), -dirY * texel * 2, x1 - dirX * texel, dirY * (length + texel * 2), dirX * texel * 2, y1 - dirY * texel);
+      this._transform.set(
+        dirX * (length + texel * 2),
+        -dirY * texel * 2,
+        x1 - dirX * texel,
+        dirY * (length + texel * 2),
+        dirX * texel * 2,
+        y1 - dirY * texel,
+      );
       this._maskBatch.add(this._transform, Color.white);
     }
   }
@@ -1510,13 +1549,13 @@ ${normalPrepassWgsl}`,
   }
 
   /**
-   * One shadow row per light, so a row index is the light's own index in the
-   * batch. The map only ever grows: a scene that once lit with fifty lights
-   * keeps the rows, which is a few hundred kilobytes and saves reallocating
-   * whenever a light is toggled.
+   * One shadow row per emitter sample, numbered in light order, so a finite
+   * line takes four consecutive rows. The map only ever grows: a scene that
+   * once lit with fifty lights keeps the rows, which is a few hundred kilobytes
+   * and saves reallocating whenever a light is toggled.
    */
-  private _growShadowMap(lights: number): void {
-    const rows = Math.max(1, lights);
+  private _growShadowMap(needed: number): void {
+    const rows = Math.max(1, needed);
 
     if (this._shadowMap.height >= rows) {
       return;
@@ -1526,11 +1565,11 @@ ${normalPrepassWgsl}`,
     this._sunShadowMap.destroy();
     this._shadowRows.clear();
     this._sunShadowRows.clear();
-    this._shadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.R32F });
+    this._shadowMap = new DataTexture({ width: this._shadowResolution * shadowRowTexels, height: rows, format: TextureFormat.Rgba32F });
     this._sunShadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.R32F });
 
     for (const batch of this._lightBatches.values()) {
-      batch.material?.setTexture('u_shadow', this._boundShadows());
+      this._bindShadows(batch.material as LightQuadMaterial);
     }
 
     this._sunMaterial.setTexture('u_shadow', this._sunShadowMap);
@@ -1553,6 +1592,11 @@ ${normalPrepassWgsl}`,
     const logicalHeight = Math.max(1, this._app.height);
     const width = Math.max(1, Math.round(logicalWidth * this._resolution));
     const height = Math.max(1, Math.round(logicalHeight * this._resolution));
+    this._shadowClearance = this._app.frameTexture.width > width ? 0.75 : 0.25;
+
+    for (const batch of this._lightBatches.values()) {
+      this._bindShadows(batch.material as LightQuadMaterial);
+    }
 
     // Ahead of the guard below, and off the frame rather than off the logical
     // size: what a filter reads has to match the frame texel for texel, and the
@@ -1584,7 +1628,12 @@ ${normalPrepassWgsl}`,
     // shrunk to fit.
     const scale = this._debug === 'mask' ? 1 + 2 * this._fieldMargin : 1;
 
-    if (this._target.width === width && this._target.height === height && this._compositeBatch.count > 0 && this._compositeScale === scale) {
+    if (
+      this._target.width === width &&
+      this._target.height === height &&
+      this._compositeBatch.count > 0 &&
+      this._compositeScale === scale
+    ) {
       return;
     }
 
@@ -1595,7 +1644,14 @@ ${normalPrepassWgsl}`,
     this._compositeScale = scale;
     this._compositeBatch.clear();
     this._compositeBatch.add(
-      this._transform.set(logicalWidth * scale, 0, (logicalWidth * (1 - scale)) / 2, 0, logicalHeight * scale, (logicalHeight * (1 - scale)) / 2),
+      this._transform.set(
+        logicalWidth * scale,
+        0,
+        (logicalWidth * (1 - scale)) / 2,
+        0,
+        logicalHeight * scale,
+        (logicalHeight * (1 - scale)) / 2,
+      ),
       Color.white,
     );
   }

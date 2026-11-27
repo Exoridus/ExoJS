@@ -14,8 +14,9 @@
 // worker realm never runs - and where the pre-bundler resolved an engine module
 // through `package.json#imports`, Vite's `define` did not reach it either.
 import './worker-dev-global';
+import './application-host.progress';
 
-import { Application } from '#core/Application';
+import { Application, ApplicationState } from '#core/Application';
 import { Color } from '#core/Color';
 import { Scene } from '#core/scene/Scene';
 import { OffscreenPlatform } from '#platform/OffscreenPlatform';
@@ -25,10 +26,15 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
+import { progress, traceWebGl2Contexts } from './application-host.progress';
+
+export type SceneMode = 'fail-load' | 'abort-load' | 'fail-unload';
+
 interface InitMessage {
   readonly kind: 'init';
   readonly surface: OffscreenCanvas;
   readonly size: number;
+  readonly sceneMode?: SceneMode;
 }
 
 interface PointerMessage {
@@ -52,7 +58,9 @@ const red = (edge: number): OffscreenCanvas => {
   const canvas = new OffscreenCanvas(edge, edge);
   const context = canvas.getContext('2d');
 
-  if (context === null) throw new Error('No 2D context in this worker.');
+  if (context === null) {
+    throw new Error('No 2D context in this worker.');
+  }
 
   context.fillStyle = '#ff0000';
   context.fillRect(0, 0, edge, edge);
@@ -63,7 +71,25 @@ const red = (edge: number): OffscreenCanvas => {
 class WorkerScene extends Scene {
   private readonly _content = new Container();
 
-  public override load(): void {
+  public override load(): void | Promise<void> {
+    if (sceneMode === 'fail-load') {
+      throw new Error('Worker scene load failed');
+    }
+
+    if (sceneMode === 'abort-load') {
+      return new Promise<void>(resolve => {
+        this.lifecycleSignal.addEventListener(
+          'abort',
+          () => {
+            loadAborted = true;
+            resolve();
+          },
+          { once: true },
+        );
+        self.postMessage({ kind: 'loading' });
+      });
+    }
+
     const sprite = new Sprite(new Texture(red(16)));
 
     sprite.setPosition(8, 8);
@@ -75,7 +101,12 @@ class WorkerScene extends Scene {
   }
 
   public override unload(): void {
+    unloads++;
     this._content.destroy();
+
+    if (sceneMode === 'fail-unload') {
+      throw new Error('Worker scene unload failed');
+    }
   }
 }
 
@@ -88,10 +119,14 @@ const realmSchedulesFrames = typeof (globalThis as { requestAnimationFrame?: unk
 let app: Application | null = null;
 let platform: OffscreenPlatform | null = null;
 let pointerPositions: Array<{ x: number; y: number }> = [];
+let sceneMode: SceneMode | undefined;
+let closing = false;
+let loadAborted = false;
+let unloads = 0;
 
 /** Read the frame straight out of the worker's own GL context, top-left indexed. */
-const readFrame = (size: number): Uint8Array => {
-  const gl = (app!.backend as WebGl2Backend).context;
+const readFrame = (application: Application, size: number): Uint8Array => {
+  const gl = (application.backend as WebGl2Backend).context;
   const flipped = new Uint8Array(size * size * 4);
 
   gl.readPixels(0, 0, size, size, gl.RGBA, gl.UNSIGNED_BYTE, flipped);
@@ -107,47 +142,114 @@ const readFrame = (size: number): Uint8Array => {
   return out;
 };
 
+const initialize = async (message: InitMessage): Promise<void> => {
+  progress('init', 'start');
+  const restoreGetContext = traceWebGl2Contexts();
+  sceneMode = message.sceneMode;
+
+  try {
+    progress('application-construction', 'start');
+    platform = new OffscreenPlatform(message.surface);
+
+    const application = new Application({
+      platform,
+      hello: false,
+      clearColor: Color.black,
+      backend: { type: 'webgl2' },
+      scenes: { main: WorkerScene },
+      canvas: { element: message.surface, width: message.size, height: message.size, pixelRatio: 1 },
+      rendering: {
+        releaseContext: true,
+        webglAttributes: { antialias: false, preserveDrawingBuffer: true, depth: false },
+      },
+    });
+    app = application;
+    application.input.onPointerDown.add((_pointer, x, y) => void pointerPositions.push({ x, y }));
+    progress('application-construction', 'end');
+
+    progress('application-start', 'start');
+
+    try {
+      await application.start(WorkerScene);
+    } catch (error) {
+      if (!closing) {
+        throw error;
+      }
+    } finally {
+      progress('application-start', 'end');
+    }
+
+    if (closing) {
+      return;
+    }
+
+    // The first image must not depend on the worker realm supplying display frames.
+    progress('render', 'start');
+    application.update(0);
+    application.update(16);
+    progress('render', 'end');
+
+    progress('pixel-readback', 'start');
+    const frame = readFrame(application, message.size);
+    progress('pixel-readback', 'end');
+
+    self.postMessage({
+      kind: 'ready',
+      realm: application.capabilities.realm,
+      offscreenCanvas: application.capabilities.offscreenCanvas,
+      offscreenWebgl2: application.capabilities.offscreenWebgl2,
+      webgl2: application.capabilities.webgl2,
+      pointer: application.capabilities.pointer,
+      audio: application.capabilities.audio,
+      devicePixelRatio: application.capabilities.devicePixelRatio,
+      realmSchedulesFrames,
+      surfaceIsOffscreen: application.canvas instanceof OffscreenCanvas,
+      hasElement: application.element !== null,
+      frame,
+    });
+  } finally {
+    restoreGetContext();
+    progress('init', 'end');
+  }
+};
+
+const shutdown = async (): Promise<void> => {
+  closing = true;
+  progress('teardown', 'start');
+  let contextLost = false;
+
+  try {
+    if (app !== null) {
+      const gl = (app.backend as WebGl2Backend).context;
+
+      // This fixture owns the worker lifetime, so the Application's explicit
+      // releaseContext policy must lose the transferred context itself.
+      await app.destroy();
+      contextLost = gl.isContextLost();
+
+      const outcome = app.destroyOutcome;
+
+      if (app.state !== ApplicationState.Destroyed || outcome?.status !== 'completed') {
+        throw new Error(`Application teardown ${outcome?.status ?? app.state}: ${outcome?.errors.map(String).join('; ') ?? ''}`);
+      }
+    }
+  } finally {
+    // The worker supplied the platform, so the application does not own it.
+    platform?.destroy();
+    platform = null;
+    app = null;
+    progress('teardown', 'end');
+  }
+
+  self.postMessage({ kind: 'closed', loadAborted, unloads, contextLost });
+};
+
 self.onmessage = async (event: MessageEvent<HostMessage>): Promise<void> => {
   const message = event.data;
 
   try {
     if (message.kind === 'init') {
-      platform = new OffscreenPlatform(message.surface);
-
-      app = new Application({
-        platform,
-        hello: false,
-        clearColor: Color.black,
-        backend: { type: 'webgl2' },
-        scenes: { main: WorkerScene },
-        canvas: { element: message.surface, width: message.size, height: message.size, pixelRatio: 1 },
-        rendering: { webglAttributes: { antialias: false, preserveDrawingBuffer: true, depth: false } },
-      });
-
-      app.input.onPointerDown.add((_pointer, x, y) => void pointerPositions.push({ x, y }));
-
-      await app.start(WorkerScene);
-
-      // One frame, driven by hand: whether this realm schedules display frames
-      // at all is exactly what the host is asking about, so the reply must not
-      // depend on one arriving.
-      app.update(0);
-      app.update(16);
-
-      self.postMessage({
-        kind: 'ready',
-        realm: app.capabilities.realm,
-        offscreenCanvas: app.capabilities.offscreenCanvas,
-        offscreenWebgl2: app.capabilities.offscreenWebgl2,
-        webgl2: app.capabilities.webgl2,
-        pointer: app.capabilities.pointer,
-        audio: app.capabilities.audio,
-        devicePixelRatio: app.capabilities.devicePixelRatio,
-        realmSchedulesFrames,
-        surfaceIsOffscreen: app.canvas instanceof OffscreenCanvas,
-        hasElement: app.element !== null,
-        frame: readFrame(message.size),
-      });
+      await initialize(message);
 
       return;
     }
@@ -169,7 +271,9 @@ self.onmessage = async (event: MessageEvent<HostMessage>): Promise<void> => {
         app!.onFrame.add(onFrame);
       });
 
-      self.postMessage({ kind: 'frames-result', frames: timestamps.length, realmSchedulesFrames });
+      if (!closing) {
+        self.postMessage({ kind: 'frames-result', frames: timestamps.length, realmSchedulesFrames });
+      }
 
       return;
     }
@@ -215,14 +319,11 @@ self.onmessage = async (event: MessageEvent<HostMessage>): Promise<void> => {
       return;
     }
 
-    await app?.destroy();
-    app = null;
-    platform = null;
-
-    self.postMessage({ kind: 'closed' });
+    await shutdown();
   } catch (error) {
     self.postMessage({
       kind: 'error',
+      request: message.kind,
       message:
         error instanceof Error
           ? `${error.name}: ${error.message}
@@ -231,3 +332,5 @@ ${error.stack ?? ''}`
     });
   }
 };
+
+progress('module-evaluation', 'end');

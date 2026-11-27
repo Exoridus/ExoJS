@@ -1,16 +1,21 @@
 import type { LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/Logger';
 import type { Signal } from '#core/Signal';
+import { Texture } from '#rendering/texture/Texture';
 
 import type { AssetConstructor } from './AssetConstructor';
 import type { AssetDecoder } from './AssetDecoder';
+import { reportAssetObserverFailure, sameOptions, warnMissingAssetSource } from './assetDiagnostics';
+import { hasFailedAssetHandle, retryAssetHandles } from './assetHandleRetry';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import { type AssetReferenceLookup, AssetRequestLog } from './AssetRequestLog';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
-import type { AssetLocator, CanonicalAsset, ResourceKey } from './canonicalKey';
-import { _bindLeaves as bindCatalogLeaves } from './catalogLeaf';
-import type { LoaderScope, LoaderScopeKind } from './LoaderScope';
+import type { CanonicalAsset, ResourceKey } from './canonicalKey';
+import { _assertLeafOwner, _bindLeaves as bindCatalogLeaves, _foreignBindingRevision } from './catalogLeaf';
+import { failPendingAssets } from './failPendingAssets';
+import { type AssetInspection, type AssetSizeStats, type AssetStats, inspectState } from './inspectAssetState';
+import type { LoaderScope } from './LoaderScope';
 import { residentBytes } from './residentBytes';
 import type { SeamlessAdapter } from './seamless';
 import { isAbortError, SharedAbort } from './SharedAbort';
@@ -36,127 +41,7 @@ export interface AssetResidencySignals {
   readonly onError: Signal<[type: AssetConstructor, alias: string, error: Error]>;
 }
 
-/**
- * One row of {@link Loader.inspect}'s diagnostic snapshot: everything a
- * developer needs to reason about a single canonical asset without reaching
- * into `Loader`'s private residency bookkeeping - its lifecycle state, how many
- * independent claim scopes hold it, and whether its fetch is queued, in flight,
- * or settled. Every row is plain, frozen data: numbers, strings, booleans, and
- * the asset's constructor token - never a `Set`, a claim symbol, or a live
- * handle/ref object, so nothing returned here can be used to mutate residency
- * state.
- */
-export interface AssetOwnerInspection {
-  /** Stable, unique per loader run. */
-  readonly id: number;
-  /** The scope's human-readable label, when it was given one. Never an identity. */
-  readonly name?: string;
-  readonly kind: LoaderScopeKind;
-}
-
-export interface AssetInspection {
-  /** The canonical key this row describes - the same key the claim, in-flight and resource maps use. */
-  readonly canonicalKey: ResourceKey;
-  /** The asset type constructor this key was resolved under. */
-  readonly type: AssetConstructor;
-  /** The canonicalized source this asset resolves to. */
-  readonly locator: AssetLocator;
-  /** Every source string seen for this key, sorted. Several spellings can name one canonical asset. */
-  readonly aliases: readonly string[];
-  /**
-   * Where this key currently sits in the load lifecycle: `'idle'` (claimed
-   * but its fetch has not started), `'queued'` (parked in the low-priority
-   * background lane), `'loading'` (fetch in flight), `'ready'` (payload
-   * resident and readable), or `'failed'` (the last fetch attempt errored).
-   * A row reports exactly one of these five, chosen by priority: a `'failed'`
-   * or `'ready'` outcome always wins over `'queued'`/`'loading'`, so a row can
-   * never claim to be both settled and still pending.
-   *
-   * A key can have more than one live handle/ref sharing it - multiple
-   * `Assets.from()` leaves or `get()` calls joined onto the same source, whose
-   * individual outcomes CAN diverge (e.g. one ref's `parse()` throws while a
-   * sibling ref's succeeds; `AssetRef._fill` fails only the ref whose `parse`
-   * threw). `state` reports the REPRESENTATIVE handle/ref's outcome - the
-   * first one registered for this key - not an aggregate across every
-   * handle/ref sharing it; a divergent sibling's outcome is not visible here.
-   */
-  readonly state: 'idle' | 'queued' | 'loading' | 'ready' | 'failed';
-  /**
-   * The number of distinct claim scopes currently holding this key - the same
-   * refcount a release decrements and that reaches zero to evict.
-   * This is a scope count, not a count of consumer handles/refs or `get()`
-   * calls: several handles sharing one scope, or several `get()` calls for
-   * the same source, still report `1` here.
-   */
-  readonly claims: number;
-  /** The scopes currently holding this key, sorted by id. Empty for a resident-but-unowned asset. */
-  readonly owners: readonly AssetOwnerInspection[];
-  /** `true` while a fetch for this key is actively in flight (network request or handler load). */
-  readonly inFlight: boolean;
-  /**
-   * `true` only while this key is genuinely parked in the low-priority
-   * background queue - always in lockstep with `state === 'queued'`, and
-   * never `true` on a row whose `state` has already settled to `'ready'` or
-   * `'failed'`.
-   */
-  readonly background: boolean;
-}
-
-/** One resident asset, sized, as reported by {@link AssetStats.largest}. */
-export interface AssetSizeStats {
-  readonly canonicalKey: ResourceKey;
-  /** The asset type's id, or the dispatch token's name for a type not installed on this loader. */
-  readonly type: string;
-  /** Estimated resident bytes; see {@link AssetStats.bytes}. */
-  readonly bytes: number;
-}
-
-/** Residency totals for one asset type, as reported by {@link AssetStats.byType}. */
-export interface AssetTypeStats {
-  /** The asset type's id, or the dispatch token's name for a type not installed on this loader. */
-  readonly type: string;
-  /** Assets of this type whose payload is resident and readable. */
-  readonly ready: number;
-  /** Assets of this type that are claimed but not settled - idle, queued in the background lane, or fetching. */
-  readonly pending: number;
-  /** Assets of this type whose last fetch attempt errored. */
-  readonly failed: number;
-  /** Estimated resident bytes across this type's ready assets; see {@link AssetStats.bytes}. */
-  readonly bytes: number;
-}
-
-/**
- * Aggregate view of what a loader currently holds, for HUDs and memory
- * dashboards that want counters rather than the per-asset rows
- * {@link Loader.inspect} returns.
- *
- * Counts follow the same five lifecycle states {@link AssetInspection} reports,
- * collapsed to ready / pending / failed.
- */
-export interface AssetStats {
-  /** Assets whose payload is resident and readable. */
-  readonly ready: number;
-  /** Assets that are claimed but not settled - idle, queued in the background lane, or fetching. */
-  readonly pending: number;
-  /** Assets whose last fetch attempt errored. */
-  readonly failed: number;
-  /**
-   * Estimated resident bytes over every ready asset.
-   *
-   * The loader cannot see inside a type's resource, so payloads are sized by
-   * shape: binary buffers and blobs by their length, strings by their UTF-16
-   * length, decoded audio by its PCM footprint, and anything carrying pixel
-   * dimensions at four bytes per texel. A structured payload (parsed JSON, an
-   * XML document, a font face) contributes nothing, and GPU-side copies are not
-   * counted at all - read `RenderStats.gpuMemoryBytes` for those. Treat this as
-   * a floor on CPU-side asset memory, not an accounting of it.
-   */
-  readonly bytes: number;
-  /** Per type, largest resident footprint first, ties broken by type id. */
-  readonly byType: readonly AssetTypeStats[];
-  /** The heaviest resident assets, largest first, as many as were asked for. */
-  readonly largest: readonly AssetSizeStats[];
-}
+export type { AssetInspection, AssetOwnerInspection, AssetSizeStats, AssetStats, AssetTypeStats } from './inspectAssetState';
 
 /**
  * One open load operation's stake in a key, from the moment the load claims it
@@ -205,11 +90,8 @@ export class AssetResidency {
   private readonly _resources = new Map<ResourceKey, ResidentEntry>();
   // Identity this residency binds catalog leaves to; see `_bindLeaves`.
   private readonly _leafOwner = {};
-  // Reverse lookup: loaded resource object → the (type, source) it was first
-  // stored under. Backs Loader.keyFor for scene serialization. A WeakMap so
-  // it never retains resources; only object resources participate.
-  private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string; key: ResourceKey }>();
   private readonly _inFlight = new Map<ResourceKey, Promise<unknown>>();
+  private readonly _acquisitionOptions = new Map<ResourceKey, unknown>();
   private readonly _preventStoreKeys = new Set<ResourceKey>();
 
   // One {@link SharedAbort} per in-flight fetch. Holders are the consumers
@@ -219,21 +101,32 @@ export class AssetResidency {
   private readonly _requestLog: AssetRequestLog;
 
   // ── Seamless deferred handles ──────────────────────────────────────────────
-  private readonly _deferred = new Map<ResourceKey, { readonly asset: CanonicalAsset; readonly handles: WeakHandleSet; readonly options: unknown }>();
+  private readonly _deferred = new Map<
+    ResourceKey,
+    { readonly asset: CanonicalAsset; readonly handles: WeakHandleSet; readonly options: unknown }
+  >();
   private readonly _deferredFinalization = new FinalizationRegistry<ResourceKey>((key: ResourceKey): void => {
     const entry = this._deferred.get(key);
 
     if (entry !== undefined && !entry.handles.prune()) {
       this._deferred.delete(key);
-      this._evicted.delete(key);
+
+      if (this._evicted.delete(key)) {
+        this._acquisitionOptions.delete(key);
+      }
     }
   });
 
   // Value-asset refs
-  private readonly _refs = new Map<ResourceKey, { readonly asset: CanonicalAsset; readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
+  private readonly _refs = new Map<
+    ResourceKey,
+    { readonly asset: CanonicalAsset; readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }
+  >();
 
   // ── Refcount / claims ───────────────────────────────────────────────────────
   private readonly _claims = new Map<ResourceKey, ClaimEntry>();
+  // Keys a scope may hold, so releasing a scope never walks the whole claim map. May name keys the scope no longer holds; never omits one it does.
+  private readonly _scopeKeys = new Map<LoaderScope, Set<ResourceKey>>();
   // The scope that owns whatever sub-assets a key's own load pulled in. Owned by
   // the PARENT KEY, never by whichever consumer happened to start the fetch: a
   // deduped load serves many consumers, and the first one to release must not
@@ -248,8 +141,9 @@ export class AssetResidency {
   // true regardless of unrelated unload/reset ordering that happened since.
   private readonly _everRegisteredHandles = new WeakSet();
 
-  private _concurrency: number;
-  private _backgroundQueue: QueueEntry[] = [];
+  private _concurrency = 0;
+  // Keyed for O(1) membership, boost and drop; a Map iterates in insertion order, so draining stays FIFO.
+  private readonly _backgroundQueue = new Map<ResourceKey, QueueEntry>();
   private _backgroundActive = 0;
   private _backgroundTotal = 0;
   private _backgroundLoaded = 0;
@@ -258,12 +152,18 @@ export class AssetResidency {
   private readonly _backgroundResolvers = new Set<() => void>();
 
   /** @internal */
-  public constructor(typeRegistry: AssetTypeRegistry, decoder: AssetDecoder, signals: AssetResidencySignals, concurrency: number, hooks: AssetResidencyHooks) {
+  public constructor(
+    typeRegistry: AssetTypeRegistry,
+    decoder: AssetDecoder,
+    signals: AssetResidencySignals,
+    concurrency: number,
+    hooks: AssetResidencyHooks,
+  ) {
     this._typeRegistry = typeRegistry;
     this._requestLog = new AssetRequestLog(typeRegistry);
     this._decoder = decoder;
     this._signals = signals;
-    this._concurrency = concurrency;
+    this.setConcurrency(concurrency);
     this._hooks = hooks;
   }
 
@@ -276,14 +176,13 @@ export class AssetResidency {
    * @internal
    */
   public _inspect(): readonly AssetInspection[] {
-    const backgroundKeys = new Set(this._backgroundQueue.map(entry => entry.asset.key));
     const assets = new Map<ResourceKey, CanonicalAsset>();
 
-    for (const [key, entry] of this._resources) assets.set(key, entry.asset);
-    for (const [key, entry] of this._claims) assets.set(key, entry.asset);
-    for (const [key, entry] of this._deferred) assets.set(key, entry.asset);
-    for (const [key, entry] of this._refs) assets.set(key, entry.asset);
-    for (const entry of this._backgroundQueue) assets.set(entry.asset.key, entry.asset);
+    for (const entries of [this._resources, this._claims, this._deferred, this._refs, this._backgroundQueue]) {
+      for (const [key, entry] of entries) {
+        assets.set(key, entry.asset);
+      }
+    }
 
     const rows: AssetInspection[] = [];
 
@@ -296,15 +195,15 @@ export class AssetResidency {
       // but a remembered handle identity kept for healing. Reporting those would
       // bury the rows that matter - including the one case this walk exists for,
       // a payload resident with no owner left.
-      if (!stored && !inFlight && !claimed && !backgroundKeys.has(key)) {
+      if (!stored && !inFlight && !claimed && !this._backgroundQueue.has(key)) {
         continue;
       }
 
       // Raw queue membership only - a settled row must never report `background: true`
       // (see below), so this is an INPUT to `state`, not the field's own value.
-      const queuedInBackground = backgroundKeys.has(key);
+      const queuedInBackground = this._backgroundQueue.has(key);
       const handleState = this._inspectHandleState(key, asset.type);
-      const state = this._inspectState({ stored, handleState, queuedInBackground, inFlight });
+      const state = inspectState({ stored, handleState, queuedInBackground, inFlight });
       const scopes = this._holders(this._claims.get(key)).sort((left, right) => left.id - right.id);
 
       rows.push(
@@ -315,7 +214,9 @@ export class AssetResidency {
           aliases: this._requestLog.aliases(key, asset.source),
           state,
           claims: scopes.length,
-          owners: Object.freeze(scopes.map(scope => Object.freeze({ id: scope.id, ...(scope.name !== undefined && { name: scope.name }), kind: scope.kind }))),
+          owners: Object.freeze(
+            scopes.map(scope => Object.freeze({ id: scope.id, ...(scope.name !== undefined && { name: scope.name }), kind: scope.kind })),
+          ),
           inFlight,
           // Derived from `state`, not from raw queue membership: a producer that
           // stores a payload without draining the background queue first must
@@ -328,10 +229,17 @@ export class AssetResidency {
     // A plain codepoint comparison, not `localeCompare`: the sort order is part
     // of a diagnostic snapshot's contract and must not vary by ICU locale/runtime.
     rows.sort((left, right) => {
-      if (left.canonicalKey < right.canonicalKey) return -1;
-      if (left.canonicalKey > right.canonicalKey) return 1;
+      if (left.canonicalKey < right.canonicalKey) {
+        return -1;
+      }
+
+      if (left.canonicalKey > right.canonicalKey) {
+        return 1;
+      }
+
       return 0;
     });
+
     return Object.freeze(rows);
   }
 
@@ -389,8 +297,14 @@ export class AssetResidency {
         return rightBytes - leftBytes;
       }
 
-      if (leftName < rightName) return -1;
-      if (leftName > rightName) return 1;
+      if (leftName < rightName) {
+        return -1;
+      }
+
+      if (leftName > rightName) {
+        return 1;
+      }
+
       return 0;
     };
 
@@ -424,43 +338,6 @@ export class AssetResidency {
     return deferred !== undefined && adapter !== undefined ? adapter.stateOf(deferred) : undefined;
   }
 
-  /**
-   * Resolve one {@link AssetInspection} row's `state`, by priority: a `'failed'`
-   * handle/ref always wins over a merely-`stored` payload. This matters for a
-   * value key: `_storeResource` stores the raw fetched payload unconditionally,
-   * even when the ref's OWN `parse()` step subsequently failed it (e.g. a
-   * thenable rejected by the synchronous-parse contract) - so `stored` alone
-   * cannot be trusted to mean "readable". A failed/settled outcome then always
-   * wins over `'queued'`/`'loading'`, so a row can never claim to be both
-   * settled and still pending. Backs {@link _inspect}.
-   */
-  private _inspectState(input: {
-    stored: boolean;
-    handleState: LoadStateValue | undefined;
-    queuedInBackground: boolean;
-    inFlight: boolean;
-  }): AssetInspection['state'] {
-    const { stored, handleState, queuedInBackground, inFlight } = input;
-
-    if (handleState === 'failed') {
-      return 'failed';
-    }
-
-    if (stored) {
-      return 'ready';
-    }
-
-    if (queuedInBackground) {
-      return 'queued';
-    }
-
-    if (inFlight || handleState === 'loading') {
-      return 'loading';
-    }
-
-    return handleState === 'ready' ? 'ready' : 'idle';
-  }
-
   // -----------------------------------------------------------------------
   // Claim / release
   // -----------------------------------------------------------------------
@@ -473,6 +350,7 @@ export class AssetResidency {
    */
   public _claim(asset: CanonicalAsset, claimer: LoaderScope): void {
     this._claimEntry(asset).scopes.add(claimer);
+    this._indexScopeKey(claimer, asset.key);
     this._refetchIfEvicted(asset);
   }
 
@@ -494,6 +372,7 @@ export class AssetResidency {
     }
 
     open.add(participation);
+    this._indexScopeKey(claimer, asset.key);
     this._refetchIfEvicted(asset);
 
     return participation;
@@ -563,8 +442,15 @@ export class AssetResidency {
     let entry = this._claims.get(asset.key);
 
     if (entry === undefined) {
+      this._typeRegistry.markUsed(asset.type);
       entry = { asset, scopes: new Set<LoaderScope>(), pending: new Map<LoaderScope, Set<ClaimParticipation>>() };
       this._claims.set(asset.key, entry);
+    }
+
+    if (__DEV__) {
+      const active = this._resources.get(asset.key)?.asset ?? (this._inFlight.has(asset.key) ? entry.asset : asset);
+
+      this._warnIgnoredOptions(asset, this._optionsFor(asset.key, active.options), asset.options);
     }
 
     this._requestLog.record(asset);
@@ -577,14 +463,11 @@ export class AssetResidency {
     if (this._evicted.has(asset.key)) {
       this._evicted.delete(asset.key);
 
-      // The handle/ref was re-armed to 'loading' during eviction; just re-drive
-      // the fetch. A value key with no ref left (evicted after a bare `load()`)
-      // still refetches: nothing but this would restore its resident payload.
-      if (this._typeRegistry.hasSeamlessAdapter(asset.type)) {
-        this._startFetch(asset, this._deferred.get(asset.key)?.options);
-      } else {
-        this._startFetch(asset, this._refs.get(asset.key)?.options);
-      }
+      // Cancellation settles old promises before a reclaim can re-arm them.
+      const adapter = this._typeRegistry.getSeamlessAdapter(asset.type);
+      const entry = adapter !== undefined ? this._deferred.get(asset.key) : this._refs.get(asset.key);
+      retryAssetHandles(entry, adapter);
+      this._startFetch(asset, entry === undefined ? this._optionsFor(asset.key, asset.options) : entry.options);
     }
   }
 
@@ -604,6 +487,7 @@ export class AssetResidency {
     // none of them can turn back into a claim when it settles.
     entry.scopes.delete(claimer);
     entry.pending.delete(claimer);
+    this._scopeKeys.get(claimer)?.delete(key);
 
     if (!this._isHeld(entry)) {
       this._claims.delete(key);
@@ -618,17 +502,15 @@ export class AssetResidency {
    * @internal
    */
   public _releaseScope(claimer: LoaderScope): void {
-    const held: ResourceKey[] = [];
+    const held = this._scopeKeys.get(claimer);
 
-    for (const [key, entry] of this._claims) {
-      if (entry.scopes.has(claimer) || entry.pending.has(claimer)) {
-        held.push(key);
-      }
-    }
+    this._scopeKeys.delete(claimer);
 
-    for (const key of held) {
-      this._release(key, claimer);
-    }
+    held?.forEach(key => this._release(key, claimer));
+  }
+
+  private _indexScopeKey(scope: LoaderScope, key: ResourceKey): void {
+    this._scopeKeys.set(scope, (this._scopeKeys.get(scope) ?? new Set<ResourceKey>()).add(key));
   }
 
   /**
@@ -647,42 +529,25 @@ export class AssetResidency {
    */
   private _evictKey(asset: CanonicalAsset): void {
     const { key, type } = asset;
-    const adapter = this._typeRegistry.getSeamlessAdapter(type);
+    const adapter = Object.hasOwn(asset, 'directSource') ? undefined : this._typeRegistry.getSeamlessAdapter(type);
     const stored = this._resources.get(key)?.value;
 
     if (adapter !== undefined && stored !== undefined) {
       const entry = this._deferred.get(key);
-      // Re-arm every live consumer handle in place: the representative AND any
-      // co-handle adopted from the stored donor, so a later claim
-      // heals them all - not just the canonical one. The stored donor is itself
-      // a member (registered at store time); guard the fallback for the (defensive)
-      // case where no entry exists.
-      let evictedStored = false;
+      const handles = new Set(entry?.handles);
+      const dependencies = this._dependencyScopes.get(key);
 
-      if (entry !== undefined) {
-        for (const handle of entry.handles) {
-          adapter.evict(handle);
-
-          if (handle === stored) {
-            evictedStored = true;
-          }
-        }
-      }
-
-      if (!evictedStored) {
-        adapter.evict(stored);
-      }
-
+      handles.add(stored as object);
       this._resources.delete(key);
+      this._dependencyScopes.delete(key);
 
       // Keep the handles registered (weakly) so the next claim heals them in
       // place; the entry persists from store time, carrying the original options.
       if (entry === undefined) {
-        this._createDeferredEntry(asset, stored as object);
+        this._createDeferredEntry(asset, stored as object, this._optionsFor(key, asset.options));
       }
 
       this._evicted.add(key);
-      this._releaseDependencies(key);
       // A load that just settled may leave a resolved-but-not-yet-cleaned
       // in-flight entry (its `.finally` cleanup is a pending microtask). Drop it
       // so the reclaim's re-fetch starts fresh instead of deduping onto that
@@ -690,33 +555,41 @@ export class AssetResidency {
       // The reclaim's fresh entry is protected from this stale `.finally` by the
       // self-entry identity guard in `_trackInFlight`.
       this._inFlight.delete(key);
-    }
-    // A value payload may legitimately BE `null`/`undefined` (a JSON `null`, a
-    // nullish payload from a `bindAsset`-bound custom type), so this asks the
-    // resource map where the seamless branch above can read the value itself -
-    // for a seamless type the stored resource is always the handle object.
-    else if (adapter === undefined && this._resources.has(key)) {
+
+      // Publish the new load cycle before calling user code, but keep the old
+      // payload available to its disposer. A synchronous reclaim must observe
+      // a fresh `.loaded`, and the subsequent evict must preserve that promise.
+      for (const handle of handles) {
+        adapter.begin(handle);
+      }
+
+      this._dropQueuedBackground(key);
+      this._disposeResource(asset, stored);
+
+      // Snapshot membership above: handles adopted during disposal already
+      // belong to the replacement and must not be torn down by this eviction.
+      for (const handle of handles) {
+        adapter.evict(handle);
+      }
+
+      // Reentry may have installed a new dependency scope and in-flight fetch.
+      // Release only the old scope, without touching the replacement's maps.
+      if (dependencies !== undefined) {
+        this._releaseScope(dependencies);
+      }
+
+      return;
+    } else if (adapter === undefined && this._resources.has(key)) {
+      // A value payload may legitimately BE `null`/`undefined` (a JSON `null`, a
+      // nullish payload from a `bindAsset`-bound custom type), so this asks the
+      // resource map where the seamless branch above can read the value itself -
+      // for a seamless type the stored resource is always the handle object.
       this._evictValueKey(asset, stored);
-    }
-    // Nothing resident: whatever fetch is running for this key (if any) has no
-    // claimer left waiting on it. Cancel it, and mark the key evicted so a later
-    // claim re-drives the fetch into the handles this abort leaves behind.
-    else if (this._abortInFlight(key)) {
-      this._evicted.add(key);
-      this._releaseDependencies(key);
+    } else {
+      this._abortInFlight(asset);
     }
 
-    const queued = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
-
-    if (queued !== -1) {
-      this._backgroundQueue.splice(queued, 1);
-      // The entry counted towards the queue's total when it was enqueued, and
-      // dropping it is the only way it can leave the queue without completing.
-      // Without this, an awaitBackground() outstanding over the eviction of the
-      // last queued entry never settles, and onProgress stays below its total.
-      this._backgroundTotal--;
-      this._onBackgroundItemDone();
-    }
+    this._dropQueuedBackground(key);
   }
 
   /**
@@ -738,23 +611,42 @@ export class AssetResidency {
    * teardown for them.
    */
   private _evictValueKey(asset: CanonicalAsset, stored: unknown): void {
-    this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(stored);
+    const dependencies = this._dependencyScopes.get(asset.key);
+
     this._resources.delete(asset.key);
+    this._dependencyScopes.delete(asset.key);
 
-    const entry = this._refs.get(asset.key);
-
-    if (entry !== undefined) {
-      for (const ref of entry.refs) {
-        ref._begin();
-      }
+    for (const ref of this._refs.get(asset.key)?.refs ?? []) {
+      ref._begin();
     }
 
-    this._evicted.add(asset.key);
-    this._releaseDependencies(asset.key);
+    if (!Object.hasOwn(asset, 'directSource')) {
+      this._evicted.add(asset.key);
+    }
+
     // Drop a resolved-but-not-yet-cleaned in-flight entry so the reclaim's
     // re-fetch starts fresh instead of deduping onto it - see the seamless
     // branch above for the full reasoning; it applies verbatim here.
     this._inFlight.delete(asset.key);
+
+    this._disposeResource(asset, stored);
+
+    // A disposer may reclaim the key; release only the previous resource's dependencies.
+    if (dependencies !== undefined) {
+      this._releaseScope(dependencies);
+    }
+  }
+
+  /** Hand an evicted payload to its type's `AssetFactory.dispose`; a throwing disposer is logged, never propagated. */
+  private _disposeResource(asset: CanonicalAsset, resource: unknown): void {
+    try {
+      this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(resource);
+    } catch (error) {
+      logger.error(`Asset disposer failed for "${asset.source}".`, {
+        source: 'assets',
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -769,6 +661,16 @@ export class AssetResidency {
    */
   public _bindLeaves(leaves: Iterable<object>): void {
     bindCatalogLeaves(leaves, this._leafOwner);
+  }
+
+  /** Validate a prospective claim without changing the handle or its owner. @internal */
+  public _assertLeafOwner(leaf: object): void {
+    _assertLeafOwner(leaf, this._leafOwner);
+  }
+
+  /** First bindings outside this residency invalidate ownership preflights. @internal */
+  public get _ownershipRevision(): number {
+    return _foreignBindingRevision(this._leafOwner);
   }
 
   /**
@@ -786,12 +688,14 @@ export class AssetResidency {
    * With `background`, the leaf is still registered + claimed + healed in place,
    * but its fetch is diverted into the low-priority background queue instead of
    * started immediately.
+   * A lazy reservation registers and claims the leaf without starting or
+   * retrying the fetch.
    * @internal
    */
   // Claim tracking, multi-handle fill and options equivalence are one branchy
   // state machine; splitting the branches apart would hide the transitions.
   // eslint-disable-next-line complexity
-  public _adopt(handle: object, claimer: LoaderScope, background = false, participations?: ClaimParticipation[]): void {
+  public _adopt(handle: object, claimer: LoaderScope, background = false, participations?: ClaimParticipation[], lazy = false): void {
     const meta = _readMeta(handle);
 
     if (meta === undefined) {
@@ -810,10 +714,18 @@ export class AssetResidency {
     // is a retry request and must be re-armed before the shared fetch restarts.
     const leafState = (handle as { _loadState?: { value: string; begin(): void } })._loadState;
     const retryingFailedLeaf = leafState?.value === 'failed';
-    if (leafState?.value === 'idle' || retryingFailedLeaf) leafState.begin();
+
+    if (!lazy && (leafState?.value === 'idle' || retryingFailedLeaf)) {
+      leafState.begin();
+    }
 
     const asset = this._hooks.canonicalize(ctor, meta.src, meta.opts);
     const key = asset.key;
+
+    if (meta.live === true && handle instanceof Texture) {
+      const density = asset.variantResolution ?? 1;
+      handle._assetResolution = Number.isFinite(density) && density > 0 ? density : 1;
+    }
 
     if (handle instanceof AssetRef) {
       // The generic re-arm above only re-enters 'loading' on the shared
@@ -822,10 +734,13 @@ export class AssetResidency {
       // ref that was 'ready' before a LATER failure (`_onTrackedFailure` fails
       // every ref of a key regardless of its prior state) carries a stale value
       // behind the `'loading'` gate until this fuller reset runs.
-      if (retryingFailedLeaf) handle._begin();
+      if (!lazy && retryingFailedLeaf) {
+        handle._begin();
+      }
 
       const existingRef = this._refs.get(key);
       const stored = this._resources.get(key)?.value;
+      const hasStored = this._resources.has(key);
 
       if (existingRef === undefined) {
         this._refs.set(key, { asset, refs: new Set([handle]), options: meta.opts });
@@ -834,11 +749,11 @@ export class AssetResidency {
         // Mirrors _getRef's stored-fast-path: a value already sitting in the
         // resource map (stored elsewhere before this leaf was adopted) fills
         // this ref immediately instead of leaving it 'loading' forever.
-        if (stored !== undefined) {
+        if (hasStored) {
           handle._fill(stored);
-        } else if (background) {
+        } else if (background && !lazy) {
           this._enqueueBackgroundFetch(asset, meta.opts);
-        } else {
+        } else if (!lazy) {
           this._startFetch(asset, meta.opts);
         }
       } else if (!existingRef.refs.has(handle)) {
@@ -849,7 +764,7 @@ export class AssetResidency {
         this._registerHandle(handle, key);
 
         // A retry re-fills the key's whole ref set (this one included) below.
-        if (stored !== undefined && !retryingFailedLeaf) {
+        if (hasStored && !retryingFailedLeaf) {
           handle._fill(stored);
         }
       }
@@ -876,11 +791,15 @@ export class AssetResidency {
       // solely on the adopted ref's own retry, unchanged: a ref's `parse()` can
       // reject a payload that fetched fine, and re-running it for every joining
       // ref would turn an unrelated adopt into a silent re-parse of the set.
-      if (existingRef !== undefined && (retryingFailedLeaf || (stored === undefined && this._hasFailedRef(existingRef)))) {
-        if (stored === undefined) {
-          for (const ref of existingRef.refs) if (ref.state === 'failed') ref._begin();
-          if (background) this._enqueueBackgroundFetch(asset, existingRef.options);
-          else this._startFetch(asset, existingRef.options);
+      if (!lazy && existingRef !== undefined && (retryingFailedLeaf || (!hasStored && hasFailedAssetHandle(existingRef)))) {
+        if (!hasStored) {
+          retryAssetHandles(existingRef);
+
+          if (background) {
+            this._enqueueBackgroundFetch(asset, existingRef.options);
+          } else {
+            this._startFetch(asset, existingRef.options);
+          }
         } else {
           // The payload is already resident, so there is nothing to refetch:
           // re-filling IS the retry here. The resource map and `_refs`
@@ -891,14 +810,20 @@ export class AssetResidency {
           // 'loading' with no fetch in flight, forever. Mirrors
           // _storeResource's fill loop: an already-'ready' ref is left untouched.
           for (const ref of existingRef.refs) {
-            if (ref.state === 'ready') continue;
-            if (ref.state === 'failed') ref._begin();
+            if (ref.state === 'ready') {
+              continue;
+            }
+
+            if (ref.state === 'failed') {
+              ref._begin();
+            }
+
             ref._fill(stored);
           }
         }
       }
 
-      this._claimFor(asset, claimer, participations);
+      this._claimFor(asset, claimer, participations, lazy, background);
 
       return;
     }
@@ -909,11 +834,11 @@ export class AssetResidency {
 
     if (deferredEntry === undefined && stored === undefined) {
       this._createDeferredEntry(asset, handle, meta.opts);
-      this._claimFor(asset, claimer, participations);
+      this._claimFor(asset, claimer, participations, lazy, background);
 
-      if (background) {
+      if (background && !lazy) {
         this._enqueueBackgroundFetch(asset, meta.opts);
-      } else {
+      } else if (!lazy) {
         this._startFetch(asset, meta.opts);
       }
 
@@ -973,23 +898,57 @@ export class AssetResidency {
     // `fill()` is a plain in-place transplant with no per-handle `parse()` that
     // could reject a payload the fetch delivered, so handle state and the
     // resource map cannot diverge the way a ref's can.
-    if (stored === undefined && deferredEntry !== undefined && adapter !== undefined && (retryingFailedLeaf || this._hasFailedHandle(deferredEntry, adapter))) {
-      for (const candidate of deferredEntry.handles) {
-        if (adapter.stateOf(candidate) === 'failed') adapter.begin(candidate);
+    if (
+      !lazy &&
+      stored === undefined &&
+      deferredEntry !== undefined &&
+      adapter !== undefined &&
+      (retryingFailedLeaf || hasFailedAssetHandle(deferredEntry, adapter))
+    ) {
+      retryAssetHandles(deferredEntry, adapter);
+
+      if (background) {
+        this._enqueueBackgroundFetch(asset, deferredEntry.options);
+      } else {
+        this._startFetch(asset, deferredEntry.options);
       }
-      if (background) this._enqueueBackgroundFetch(asset, deferredEntry.options);
-      else this._startFetch(asset, deferredEntry.options);
     }
 
-    this._claimFor(asset, claimer, participations);
+    this._claimFor(asset, claimer, participations, lazy, background);
   }
 
   /** Claim for `claimer`, or - when the caller collects participations - open one for the load in progress. */
-  private _claimFor(asset: CanonicalAsset, claimer: LoaderScope, participations: ClaimParticipation[] | undefined): void {
+  private _claimFor(
+    asset: CanonicalAsset,
+    claimer: LoaderScope,
+    participations: ClaimParticipation[] | undefined,
+    lazy: boolean,
+    background: boolean,
+  ): void {
+    if (lazy) {
+      // A later explicit claim follows the same fetch path as an evicted handle.
+      if (!this._resources.has(asset.key) && !this._inFlight.has(asset.key) && !this._backgroundQueue.has(asset.key)) {
+        this._evicted.add(asset.key);
+      }
+
+      this._claimEntry(asset).scopes.add(claimer);
+      this._indexScopeKey(claimer, asset.key);
+
+      return;
+    }
+
+    const demandInBackground = background && this._evicted.delete(asset.key);
+
     if (participations === undefined) {
       this._claim(asset, claimer);
     } else {
       participations.push(this._participate(asset, claimer));
+    }
+
+    if (demandInBackground) {
+      this._enqueueBackgroundFetch(asset, this._optionsFor(asset.key, asset.options));
+    } else if (!background) {
+      this._boostFromQueue(asset.key);
     }
   }
 
@@ -1000,12 +959,12 @@ export class AssetResidency {
    * @internal
    */
   public _getSeamless(asset: CanonicalAsset, adapter: SeamlessAdapter<unknown>, options?: unknown): unknown {
+    this._typeRegistry.markUsed(asset.type);
+
     const stored = this._resources.get(asset.key)?.value;
     const entry = this._deferred.get(asset.key);
 
     if (stored !== undefined) {
-      this._warnIgnoredOptions(asset, entry?.options, options);
-
       return stored;
     }
 
@@ -1013,8 +972,6 @@ export class AssetResidency {
       const representative = entry.handles.first();
 
       if (representative !== undefined) {
-        this._warnIgnoredOptions(asset, entry.options, options);
-
         if (adapter.stateOf(representative) === 'failed') {
           adapter.begin(representative);
           this._startFetch(asset, entry.options);
@@ -1026,6 +983,7 @@ export class AssetResidency {
       }
     }
 
+    options = this._optionsFor(asset.key, options);
     const handle = adapter.createPlaceholder(options);
 
     this._createDeferredEntry(asset, handle as object, options);
@@ -1034,25 +992,28 @@ export class AssetResidency {
     return handle;
   }
 
-  /**
-   * Dev-only diagnostic for the first-wins options contract: an existing
-   * instance keeps the options it was created with, so options a later `get()`
-   * asks for are dropped. Warns ONCE per source. Stripped in production.
-   *
-   * Options that take part in identity never reach this: they resolve to their
-   * own key, and therefore to their own instance, so nothing is ignored.
-   */
+  /** Diagnose conflicting shared acquisition options once per canonical key, independently of the acquiring call shape. */
   private _warnIgnoredOptions(asset: CanonicalAsset, existing: unknown, requested: unknown): void {
     if (!__DEV__ || requested === undefined || requested === null || sameOptions(existing, requested)) {
       return;
     }
 
     logger.warn(
-      `Asset "${asset.source}" is already loaded or loading, so the options this get() asked for were ignored - ` +
-        `the first call's options win, and an instance keeps the options it was created with. ` +
-        `Pass the options on the first acquisition, or use an Assets catalog leaf / Asset.type(...) for an independent instance.`,
+      `Asset "${asset.source}" already has a canonical acquisition, so conflicting options were ignored for the shared payload. ` +
+        `The first acquisition's options win. Pass shared acquisition options on that first call; ` +
+        `a catalog or descriptor leaf may retain its own local settings but does not create an independent acquisition.`,
       { source: 'Loader', once: `loader:ignored-options:${asset.key}` },
     );
+  }
+
+  private _optionsFor(key: ResourceKey, fallback: unknown): unknown {
+    if (this._acquisitionOptions.has(key)) {
+      return this._acquisitionOptions.get(key);
+    }
+
+    const queued = this._backgroundQueue.get(key);
+
+    return queued === undefined ? fallback : queued.options;
   }
 
   /**
@@ -1068,14 +1029,14 @@ export class AssetResidency {
 
   /** Value-asset twin of {@link _getSeamless}: stable ref, retry-on-failed. @internal */
   public _getRef(asset: CanonicalAsset, options?: unknown): AssetRef<unknown> {
+    this._typeRegistry.markUsed(asset.type);
+
     const entry = this._refs.get(asset.key);
 
     if (entry !== undefined) {
-      const representative = this._representative(entry.refs);
+      const representative = entry.refs.values().next().value;
 
       if (representative !== undefined) {
-        this._warnIgnoredOptions(asset, entry.options, options);
-
         if (representative.loadState === 'failed') {
           representative._begin();
           this._startFetch(asset, entry.options);
@@ -1087,6 +1048,7 @@ export class AssetResidency {
       }
     }
 
+    options = this._optionsFor(asset.key, options);
     const ref = new AssetRef<unknown>();
 
     this._refs.set(asset.key, { asset, refs: new Set([ref]), options });
@@ -1110,7 +1072,7 @@ export class AssetResidency {
   // -----------------------------------------------------------------------
 
   /**
-   * Wire the reverse `handle → key` lookup and mark `handle` as a real,
+   * Wire the reverse `handle -> key` lookup and mark `handle` as a real,
    * residency-issued handle/ref for the lifetime of the object - the latter
    * (`_everRegisteredHandles`) is never cleared, unlike `_handleKeys`, which
    * {@link _forgetKey} (via {@link unloadAll}) deletes for a settled key. The
@@ -1124,7 +1086,7 @@ export class AssetResidency {
 
   /**
    * Register a fresh deferred entry for `key` holding `handle` weakly, wire the
-   * reverse `handle → key` lookup, and arm GC pruning. Returns the entry so the
+   * reverse `handle -> key` lookup, and arm GC pruning. Returns the entry so the
    * caller can add further co-handles.
    */
   private _createDeferredEntry(
@@ -1149,47 +1111,15 @@ export class AssetResidency {
   public _addDeferredHandle(key: ResourceKey, entry: { readonly handles: WeakHandleSet }, handle: object): void {
     this._registerHandle(handle, key);
 
-    if (entry.handles.has(handle)) {
-      return;
+    if (entry.handles.add(handle)) {
+      this._deferredFinalization.register(handle, key);
     }
-
-    entry.handles.add(handle);
-    this._deferredFinalization.register(handle, key);
   }
 
-  /**
-   * Does any live handle registered for a seamless key sit in `'failed'`? Then
-   * the key's last attempt ended in failure, and an adoption joining it is a
-   * retry - whatever state the adopted handle itself was in. Restarting is
-   * harmless in the one case where a fetch IS already running past a `'failed'`
-   * straggler ({@link _getSeamless} re-arms only the representative):
-   * {@link _loadSingle} dedupes on the key's in-flight entry, and the straggler
-   * needed the re-arm regardless.
-   */
-  private _hasFailedHandle(entry: { readonly handles: WeakHandleSet }, adapter: SeamlessAdapter<unknown>): boolean {
-    for (const handle of entry.handles) {
-      if (adapter.stateOf(handle) === 'failed') {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Value-ref twin of {@link _hasFailedHandle}: does any ref registered for a
-   * value key sit in `'failed'`? Then the key's last attempt ended in failure
-   * and an adoption joining it is a retry, whatever state the adopted ref
-   * itself was in.
-   */
-  private _hasFailedRef(entry: { readonly refs: ReadonlySet<AssetRef<unknown>> }): boolean {
-    for (const ref of entry.refs) {
-      if (ref.state === 'failed') {
-        return true;
-      }
-    }
-
-    return false;
+  /** Release a disposable co-handle without unregistering the resident donor. @internal */
+  public _forgetDeferredHandle(key: ResourceKey, handle: object): void {
+    this._deferred.get(key)?.handles.delete(handle);
+    this._handleKeys.delete(handle);
   }
 
   // -----------------------------------------------------------------------
@@ -1214,6 +1144,19 @@ export class AssetResidency {
     const inFlight = this._inFlight.get(asset.key);
 
     if (inFlight !== undefined) {
+      const abort = this._abort.get(asset.key);
+
+      if (abort?.cancelled === true) {
+        // Finish the cancelled attempt's cleanup before sharing a replacement.
+        await inFlight.catch(() => undefined);
+
+        if (!this._claims.has(asset.key)) {
+          throw abort.reason;
+        }
+
+        return this._loadSingle(asset, options);
+      }
+
       return inFlight;
     }
 
@@ -1244,6 +1187,12 @@ export class AssetResidency {
    * never released and the queue wedges.
    */
   private _dispatchTracked(asset: CanonicalAsset, options: unknown): Promise<unknown> {
+    // Only locator-backed handles can reuse acquisition options after eviction.
+    if (!Object.hasOwn(asset, 'directSource') && !this._acquisitionOptions.has(asset.key)) {
+      this._acquisitionOptions.set(asset.key, options);
+    }
+
+    options = this._optionsFor(asset.key, options);
     const abort = new SharedAbort(asset.key);
 
     this._abort.set(asset.key, abort);
@@ -1271,6 +1220,10 @@ export class AssetResidency {
    * @internal
    */
   public _trackInjection(asset: CanonicalAsset, injection: Promise<unknown>): Promise<unknown> {
+    if (!this._acquisitionOptions.has(asset.key)) {
+      this._acquisitionOptions.set(asset.key, asset.options);
+    }
+
     return this._trackInFlight(asset, injection);
   }
 
@@ -1304,17 +1257,29 @@ export class AssetResidency {
   }
 
   /**
-   * Drop `key`'s interest in whatever fetch is running for it. Returns whether
-   * it was actually aborted - a fetch another holder still needs stays running.
+   * Cancel unclaimed work while retaining its tracking through settlement.
    */
-  private _abortInFlight(key: ResourceKey): boolean {
-    if (this._abort.get(key)?.release(key) !== true) {
-      return false;
+  private _abortInFlight(asset: CanonicalAsset): void {
+    const abort = this._abort.get(asset.key);
+
+    if (abort === undefined) {
+      return;
     }
 
-    this._abort.delete(key);
+    if (abort.cancelled) {
+      this._onFetchAborted(asset, abort.reason);
+    } else {
+      abort.release(asset.key, reason => this._onFetchAborted(asset, reason));
+    }
+  }
 
-    return true;
+  private _onFetchAborted(asset: CanonicalAsset, reason: unknown): void {
+    if (!Object.hasOwn(asset, 'directSource')) {
+      this._evicted.add(asset.key);
+    }
+
+    this._onTrackedFailure(asset, reason);
+    this._releaseDependencies(asset.key);
   }
 
   private _trackInFlight(asset: CanonicalAsset, promise: Promise<unknown>, abort?: SharedAbort): Promise<unknown> {
@@ -1342,8 +1307,13 @@ export class AssetResidency {
 
     // Non-swallowing observer: fails deferred handles / value refs (fresh
     // error each attempt) and dispatches onError exactly once for the failed
-    // fetch, regardless of which verb (get/load/background) started it.
-    trackedPromise.catch((error: unknown) => this._onTrackedFailure(asset, error));
+    // fetch, regardless of which verb (get/load/background) started it. An
+    // aborted attempt already failed its handles before they could be re-armed.
+    trackedPromise.catch((error: unknown) => {
+      if (abort?.signal.aborted !== true) {
+        this._onTrackedFailure(asset, error);
+      }
+    });
     this._inFlight.set(key, trackedPromise);
 
     return trackedPromise;
@@ -1362,8 +1332,12 @@ export class AssetResidency {
    * `get()`/`_adopt`/claim already knows how to heal.
    */
   private _onTrackedFailure(asset: CanonicalAsset, error: unknown): void {
-    const err = this._normalizeError(error);
+    if (!this._resources.has(asset.key) && !this._deferred.has(asset.key) && !this._refs.has(asset.key) && !this._inFlight.has(asset.key)) {
+      this._acquisitionOptions.delete(asset.key);
+    }
+
     const cancelled = isAbortError(error);
+    const err = cancelled ? (error as Error) : this._normalizeError(error);
     const deferredEntry = this._deferred.get(asset.key);
 
     if (deferredEntry !== undefined) {
@@ -1372,51 +1346,23 @@ export class AssetResidency {
       for (const handle of deferredEntry.handles) {
         adapter?.fail(handle, err);
       }
-
-      if (!cancelled) {
-        this._warnMissingSource(asset, err);
-      }
     } else {
-      const refEntry = this._refs.get(asset.key);
-
-      if (refEntry !== undefined) {
-        for (const ref of refEntry.refs) {
-          ref._fail(err);
-        }
-
-        if (!cancelled) {
-          this._warnMissingSource(asset, err);
-        }
+      for (const ref of this._refs.get(asset.key)?.refs ?? []) {
+        ref._fail(err);
       }
     }
 
     if (!cancelled) {
+      if (deferredEntry !== undefined || this._refs.has(asset.key)) {
+        warnMissingAssetSource(asset, err);
+      }
+
       // The asset never materialized, so nothing owns whatever its handler
       // managed to pull in before failing. A cancel is left alone: the key's own
       // eviction path already released them.
       this._releaseDependencies(asset.key);
-      this._signals.onError.dispatch(asset.type, asset.source, err);
+      this._signals.onError.dispatchIsolated(reportAssetObserverFailure, asset.type, asset.source, err);
     }
-  }
-
-  /**
-   * Dev-only diagnostic for the seamless silent-404 trap: a `get('x.png')` /
-   * adopted-catalog / `Assets.from(...)` leaf whose fetch ends in a 404 or
-   * network error only ever surfaces a `'failed'` placeholder. Warns ONCE per
-   * source. Stripped in production.
-   */
-  private _warnMissingSource(asset: CanonicalAsset, error: Error): void {
-    logger.warn(
-      `Asset "${asset.source}" failed to load: ${error.message} ` +
-        `Seamless get()/Assets.from() fetch the literal path and heal a placeholder in place, so a typo or an ` +
-        `un-preloaded alias 404s without throwing. Check the path and the loader basePath, and preload it via Assets.from() / load().`,
-      { source: 'Loader', once: `loader:missing-source:${asset.key}` },
-    );
-  }
-
-  /** The representative (first-inserted) member of a ref set, or `undefined` if empty. */
-  private _representative<T>(members: ReadonlySet<T> | undefined): T | undefined {
-    return members === undefined ? undefined : members.values().next().value;
   }
 
   private _normalizeError(error: unknown): Error {
@@ -1430,8 +1376,11 @@ export class AssetResidency {
   /**
    * Store a resolved resource under its canonical key: fills every deferred
    * handle / value-ref waiting on the key (multi-handle fill), respects
-   * "free on arrival" for a key unloaded mid-fetch, and registers the
-   * canonical reverse (resource → key) lookup. Called from `AssetDecoder`
+   * "free on arrival" for a key whose last claim was released mid-fetch, and
+   * registers the canonical reverse (resource -> key) lookup. An explicit
+   * unload during fetch instead fails waiting handles and disposes the result
+   * without storing it. Called from
+   * `AssetDecoder`
    * via the `storeResource` callback `Loader`'s constructor wires to this
    * method.
    * @internal
@@ -1440,12 +1389,17 @@ export class AssetResidency {
   // eslint-disable-next-line complexity
   public _storeResource(asset: CanonicalAsset, resource: unknown): unknown {
     const key = asset.key;
+    const direct = Object.hasOwn(asset, 'directSource');
     // Marked evicted while unclaimed: every holder left while this payload was
     // still being produced, and the abort could not stop a factory that ignores
     // its signal.
     const abandoned = this._evicted.has(key) && !this._claims.has(key);
 
     this._requestLog.record(asset);
+
+    if (!direct && !this._acquisitionOptions.has(key)) {
+      this._acquisitionOptions.set(key, asset.options);
+    }
 
     if (this._preventStoreKeys.delete(key)) {
       // The asset was unloaded while its fetch was in flight. A deferred handle
@@ -1504,7 +1458,7 @@ export class AssetResidency {
         }
 
         // A non-get producer (load(), container, background) may store into a
-        // key whose handle is 'failed' (e.g. an earlier get() 404'd). fill() →
+        // key whose handle is 'failed' (e.g. an earlier get() 404'd). fill() ->
         // settle() must run from a re-armed state so `.loaded` re-materializes a
         // resolved promise; without begin() the handle would read 'ready' while
         // its cached `.loaded` stayed permanently rejected. Skip a handle
@@ -1547,9 +1501,10 @@ export class AssetResidency {
 
     this._resources.set(key, { asset, value: resource });
 
-    // Record the canonical reverse key (first source wins) for object resources.
-    if (typeof resource === 'object' && resource !== null && !this._resourceKeys.has(resource)) {
-      this._resourceKeys.set(resource, { type: asset.type, source: asset.source, key });
+    const handle = (typeof resource === 'object' && resource !== null) || (direct && typeof resource === 'function') ? resource : undefined;
+
+    if (handle !== undefined) {
+      this._requestLog.recordResource(asset, handle, direct);
     }
 
     // Register the stored seamless resource as its key's representative so a
@@ -1557,11 +1512,11 @@ export class AssetResidency {
     // set. A resource that already came from a deferred handle is a member
     // already; a plain `load()` donor (no prior get()) is added here. Held
     // weakly, so a fully-released source does not pin its evicted payload.
-    if (typeof resource === 'object' && resource !== null && this._typeRegistry.hasSeamlessAdapter(asset.type) && !this._deferred.has(key)) {
-      this._createDeferredEntry(asset, resource);
+    if (!direct && handle !== undefined && this._typeRegistry.hasSeamlessAdapter(asset.type) && !this._deferred.has(key)) {
+      this._createDeferredEntry(asset, handle, this._optionsFor(key, asset.options));
     }
 
-    this._signals.onLoaded.dispatch(asset.type, asset.source, resource);
+    this._signals.onLoaded.dispatchIsolated(reportAssetObserverFailure, asset.type, asset.source, resource);
 
     // Free-on-arrival: a deferred handle whose every claimer released
     // during the in-flight fetch has now converged into the resource map at
@@ -1590,56 +1545,52 @@ export class AssetResidency {
    * @internal
    */
   public _enqueueBackgroundFetch(asset: CanonicalAsset, options: unknown): void {
-    if (this._resources.has(asset.key)) return;
-    if (this._inFlight.has(asset.key)) return;
-    if (this._isQueuedInBackground(asset.key)) return;
+    if (this._resources.has(asset.key) || this._inFlight.has(asset.key) || this._backgroundQueue.has(asset.key)) {
+      return;
+    }
 
-    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+    if (this._backgroundQueue.size === 0 && this._backgroundActive === 0) {
       this._backgroundLoaded = 0;
       this._backgroundTotal = 0;
     }
 
-    this._backgroundQueue.push({ asset, options });
+    this._backgroundQueue.set(asset.key, { asset, options });
     this._backgroundTotal++;
     this._drainBackground();
   }
 
   private _drainBackground(): void {
-    while (this._backgroundActive < this._concurrency && this._backgroundQueue.length > 0) {
-      const entry = this._backgroundQueue.shift();
-      if (!entry) {
-        continue;
+    for (const [key, entry] of this._backgroundQueue) {
+      if (this._backgroundActive >= this._concurrency) {
+        return;
       }
 
-      if (this._resources.has(entry.asset.key) || this._inFlight.has(entry.asset.key)) {
-        this._backgroundLoaded++;
-        this._onBackgroundItemDone();
-        continue;
-      }
-
+      this._backgroundQueue.delete(key);
       this._startBackgroundEntry(entry);
     }
   }
 
   private _boostFromQueue(key: ResourceKey): void {
-    const index = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
+    const entry = this._backgroundQueue.get(key);
 
-    if (index === -1) return;
-
-    const [entry] = this._backgroundQueue.splice(index, 1);
-    if (entry === undefined) return;
-
-    this._startBackgroundEntry(entry);
+    if (entry !== undefined) {
+      this._backgroundQueue.delete(key);
+      this._startBackgroundEntry(entry);
+    }
   }
 
-  private _isQueuedInBackground(key: ResourceKey): boolean {
-    return this._backgroundQueue.some(entry => entry.asset.key === key);
+  private _dropQueuedBackground(key: ResourceKey): void {
+    if (this._backgroundQueue.delete(key)) {
+      // Dropped work cannot complete, so remove it from the total and settle waiters if the queue drained.
+      this._backgroundTotal--;
+      this._onBackgroundItemDone();
+    }
   }
 
   private _onBackgroundItemDone(): void {
-    this._signals.onProgress.dispatch(this._backgroundLoaded, this._backgroundTotal);
+    this._signals.onProgress.dispatchIsolated(reportAssetObserverFailure, this._backgroundLoaded, this._backgroundTotal);
 
-    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+    if (this._backgroundQueue.size === 0 && this._backgroundActive === 0) {
       this._settleBackgroundWaiters();
     }
   }
@@ -1662,9 +1613,19 @@ export class AssetResidency {
   }
 
   private _startBackgroundEntry(entry: QueueEntry): void {
+    if (this._resources.has(entry.asset.key)) {
+      this._backgroundLoaded++;
+      this._onBackgroundItemDone();
+
+      return;
+    }
+
     this._backgroundActive++;
 
-    this._dispatchTracked(entry.asset, entry.options)
+    // An acquisition already in flight is joined, not restarted, and the queue
+    // stays busy until it settles: draining must not report a decode that is
+    // still running as finished.
+    (this._inFlight.get(entry.asset.key) ?? this._dispatchTracked(entry.asset, entry.options))
       .catch(() => {
         /* Failure handled centrally in _onTrackedFailure. */
       })
@@ -1685,7 +1646,7 @@ export class AssetResidency {
     return new Promise<void>(resolve => {
       this._drainBackground();
 
-      if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+      if (this._backgroundQueue.size === 0 && this._backgroundActive === 0) {
         resolve();
 
         return;
@@ -1695,8 +1656,12 @@ export class AssetResidency {
     });
   }
 
-  /** Sets the maximum number of simultaneous background-queue fetches. */
+  /** Sets a nonnegative integer limit; zero pauses queued background fetches. */
   public setConcurrency(n: number): void {
+    if (!Number.isInteger(n) || n < 0) {
+      throw new RangeError('Background concurrency must be a nonnegative integer.');
+    }
+
     this._concurrency = n;
   }
 
@@ -1727,13 +1692,14 @@ export class AssetResidency {
     }
 
     this._forgetKey(key, liveFetch);
+    this._dropQueuedBackground(key);
   }
 
   /**
    * Hard, claim-forgetting reset of the resident store. If `type` is provided,
    * only that type's assets are cleared; otherwise all types are flushed.
    * Does not cancel in-flight fetches - but forgets each key's claim/handle
-   * bookkeeping so repeated load→reset cycles cannot accumulate stale entries.
+   * bookkeeping so repeated load->reset cycles cannot accumulate stale entries.
    *
    * Deliberately NOT public on {@link Loader}: it discards every scope's claim,
    * so a caller could free assets another scope still owns. Scope-aware release
@@ -1749,11 +1715,15 @@ export class AssetResidency {
       const assets = new Map<ResourceKey, CanonicalAsset>();
 
       for (const [key, entry] of this._resources) {
-        if (entry.asset.type === type) assets.set(key, entry.asset);
+        if (entry.asset.type === type) {
+          assets.set(key, entry.asset);
+        }
       }
 
       for (const [key, entry] of this._claims) {
-        if (entry.asset.type === type) assets.set(key, entry.asset);
+        if (entry.asset.type === type) {
+          assets.set(key, entry.asset);
+        }
       }
 
       for (const asset of assets.values()) {
@@ -1778,7 +1748,10 @@ export class AssetResidency {
         continue;
       }
 
-      for (const handle of entry.handles) this._handleKeys.delete(handle);
+      for (const handle of entry.handles) {
+        this._handleKeys.delete(handle);
+      }
+
       this._deferred.delete(key);
       this._inFlight.delete(key);
     }
@@ -1789,7 +1762,10 @@ export class AssetResidency {
         continue;
       }
 
-      for (const ref of entry.refs) this._handleKeys.delete(ref);
+      for (const ref of entry.refs) {
+        this._handleKeys.delete(ref);
+      }
+
       this._refs.delete(key);
       this._inFlight.delete(key);
     }
@@ -1798,10 +1774,21 @@ export class AssetResidency {
       this._inFlight.delete(key);
     }
 
+    for (const key of this._acquisitionOptions.keys()) {
+      if (!this._inFlight.has(key)) {
+        this._acquisitionOptions.delete(key);
+      }
+    }
+
     this._claims.clear();
+    this._scopeKeys.clear();
     this._evicted.clear();
     this._requestLog.clear();
     this._dependencyScopes.clear();
+
+    for (const key of [...this._backgroundQueue.keys()]) {
+      this._dropQueuedBackground(key);
+    }
   }
 
   /**
@@ -1815,6 +1802,10 @@ export class AssetResidency {
    * handle) - only a SETTLED key's handles are forgotten here.
    */
   private _forgetKey(key: ResourceKey, liveFetch: boolean): void {
+    for (const scope of this._holders(this._claims.get(key))) {
+      this._scopeKeys.get(scope)?.delete(key);
+    }
+
     this._claims.delete(key);
     this._evicted.delete(key);
     this._releaseDependencies(key);
@@ -1826,16 +1817,25 @@ export class AssetResidency {
     this._inFlight.delete(key);
     this._preventStoreKeys.delete(key);
     this._requestLog.delete(key);
+    this._acquisitionOptions.delete(key);
 
     const deferred = this._deferred.get(key);
+
     if (deferred !== undefined) {
-      for (const handle of deferred.handles) this._handleKeys.delete(handle);
+      for (const handle of deferred.handles) {
+        this._handleKeys.delete(handle);
+      }
+
       this._deferred.delete(key);
     }
 
     const refEntry = this._refs.get(key);
+
     if (refEntry !== undefined) {
-      for (const ref of refEntry.refs) this._handleKeys.delete(ref);
+      for (const ref of refEntry.refs) {
+        this._handleKeys.delete(ref);
+      }
+
       this._refs.delete(key);
     }
   }
@@ -1847,12 +1847,14 @@ export class AssetResidency {
   /**
    * Non-throwing in-memory lookup: the resource stored under `key`, or `null`
    * if none is held. Backs `Loader._peekResource` (scene deserialization).
-   * Coalesces a legitimately-stored `null`/`undefined` to `null`; use
-   * {@link _hasStored} when the distinction matters.
+   * A legitimately stored nullish value is returned as-is. Use {@link _hasStored}
+   * to distinguish it from absence.
    * @internal
    */
   public _peekResource(key: ResourceKey): unknown {
-    return this._resources.get(key)?.value ?? null;
+    const stored = this._resources.get(key);
+
+    return stored === undefined ? null : stored.value;
   }
 
   /**
@@ -1881,9 +1883,9 @@ export class AssetResidency {
    * @internal
    */
   public _keyFor(resource: object): { readonly type: AssetConstructor; readonly source: string } | null {
-    const entry = this._resourceKeys.get(resource);
+    const entry = this._requestLog.origin(resource);
 
-    return entry === undefined ? null : { type: entry.type, source: entry.source };
+    return entry === undefined || entry.direct ? null : { type: entry.type, source: entry.source };
   }
 
   /**
@@ -1892,28 +1894,32 @@ export class AssetResidency {
    *
    * It names the logical source (the one a variant rule was declared for, not
    * the file this device happened to select) and the identity-relevant
-   * options. When several distinct logical requests resolved to the same
-   * resource - two variant rules selecting one file, or two names for one
-   * payload - no single request is honest, and the answer is an error naming
-   * them rather than whichever was loaded first.
+   * options plus the handle's persistable presentation. When several
+   * distinct logical requests resolved to the same resource - two variant
+   * rules selecting one file, or two names for one payload - the answer is
+   * an error naming them.
    * @internal
    */
   public _referenceFor(resource: object): AssetReferenceLookup | null {
-    const key = this._resourceKeys.get(resource)?.key ?? this._handleKeys.get(resource);
+    const loaded = this._requestLog.origin(resource);
+    const key = loaded?.key ?? this._handleKeys.get(resource);
+    const meta = _readMeta(resource);
 
     if (key === undefined) {
-      return null;
+      return meta?.live === true ? this._requestLog.declared(meta, resource) : null;
     }
 
-    return this._requestLog.lookup(key, this._resourceKeys.get(resource)?.source);
+    return this._requestLog.lookup(key, loaded, resource, this._resources.get(key)?.value, meta?.live === true ? meta.src : undefined);
   }
 
-  /**
-   * The canonical key a deferred handle / value-ref is registered under, or
-   * `undefined`. Backs releasing a handle. @internal
-   */
+  /** The key a deferred handle or value ref is held under. @internal */
   public _getHandleKey(handle: object): ResourceKey | undefined {
     return this._handleKeys.get(handle);
+  }
+
+  /** Owner-scoped claim keys for a direct resource, or undefined for an object never directly loaded. @internal */
+  public _getDirectKeys(resource: object, scope: LoaderScope): ResourceKey[] | undefined {
+    return this._requestLog.directKeys(resource, this._scopeKeys.get(scope), this._resources);
   }
 
   /**
@@ -1935,55 +1941,40 @@ export class AssetResidency {
 
   /**
    * Clears all resident-resource, in-flight, claim, and background-queue state,
-   * cancelling every fetch still running. Called from `Loader.destroy()` - the
-   * loader is going away, so no holder can possibly still want a result, and a
-   * download left running would only compete for bandwidth with whatever
-   * replaces it.
+   * cancelling every fetch still running and rejecting every pending handle/ref.
+   * Ready and failed handles keep their settled state. Completes cleanup before
+   * rethrowing the first adapter failure, if any.
    */
   public destroy(): void {
     for (const abort of this._abort.values()) {
       abort.abort();
     }
 
+    const errors = failPendingAssets(this._typeRegistry, this._deferred.values(), this._refs.values());
+
     this._abort.clear();
     this._resources.clear();
     this._inFlight.clear();
+    this._acquisitionOptions.clear();
     this._preventStoreKeys.clear();
     this._requestLog.clear();
     this._deferred.clear();
     this._refs.clear();
     this._claims.clear();
+    this._scopeKeys.clear();
     this._evicted.clear();
     this._dependencyScopes.clear();
 
-    this._backgroundQueue.length = 0;
+    this._backgroundQueue.clear();
     this._backgroundActive = 0;
     this._backgroundLoaded = 0;
     this._backgroundTotal = 0;
 
     // A pending awaitBackground() caller must not hang forever past destroy().
     this._settleBackgroundWaiters();
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
   }
 }
-
-/**
- * Structural comparison of two option bags, for the dev-only ignored-options
- * diagnostic. Depth-limited: an option value nested deeper than an asset type's
- * own configuration ever goes is compared by identity rather than risking an
- * unbounded walk of whatever a caller put there.
- */
-const sameOptions = (a: unknown, b: unknown, depth = 0): boolean => {
-  if (Object.is(a, b)) {
-    return true;
-  }
-
-  if (depth >= 4 || typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) {
-    return false;
-  }
-
-  const keys = Object.keys(a);
-
-  return (
-    keys.length === Object.keys(b).length && keys.every(key => sameOptions((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], depth + 1))
-  );
-};

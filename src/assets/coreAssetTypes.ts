@@ -3,7 +3,7 @@ import { subtitleType } from '#assets/types/data';
 import { bmFontType, fontType } from '#assets/types/font';
 import { imageType, svgType } from '#assets/types/image';
 import { textureType } from '#assets/types/image';
-import { musicType, videoType } from '#assets/types/media';
+import { audioStreamType, musicType, videoType } from '#assets/types/media';
 import { soundType } from '#assets/types/media';
 
 import type { AssetTypeName } from './AssetDefinitions';
@@ -13,9 +13,8 @@ import { normalizeExtension } from './extensions';
 /**
  * The asset types every {@link Application} installs.
  *
- * The set is fixed at build time and cannot be added to or replaced at runtime:
- * a type an application brings of its own is installed alongside these, on that
- * application only. Their ids are short rather than reverse-DNS because the
+ * An application can add its own definitions and replace a constructor-bound
+ * factory before its first request. Their ids are short rather than reverse-DNS because the
  * engine owns them, and because they double as the cache namespaces a
  * persistent store writes under.
  *
@@ -29,6 +28,7 @@ export const coreAssetTypes: readonly AnyAssetType[] = Object.freeze([
   textureType,
   soundType,
   musicType,
+  audioStreamType,
   videoType,
   jsonType,
   textType,
@@ -53,7 +53,9 @@ const byId = new Map<string, AnyAssetType>(coreAssetTypes.map(type => [type.id, 
  * from a bare path.
  */
 const byExtension = new Map<string, AssetTypeName>(
-  coreAssetTypes.filter(type => type.leaf !== 'none').flatMap(type => type.extensions.map(extension => [normalizeExtension(extension), type.id])),
+  coreAssetTypes
+    .filter(type => type.leaf !== 'none')
+    .flatMap(type => type.extensions.map(extension => [normalizeExtension(extension), type.id])),
 );
 
 /** The built-in type a file suffix names, or `undefined`. @internal */
@@ -80,6 +82,11 @@ export const builtinTypeForPath = (path: string): AssetTypeName | undefined => {
 
   return undefined;
 };
+
+const byToken = new Map<unknown, AnyAssetType>(coreAssetTypes.flatMap(type => (type._token === undefined ? [] : [[type._token, type]])));
+
+/** The built-in type dispatching on `token` (`Texture`, `Music`, ...), or `undefined`. @internal */
+export const builtinTypeForToken = (token: unknown): AnyAssetType | undefined => byToken.get(token);
 
 /** What a built-in type hands out as a catalog leaf, or `undefined` for a name no built-in claims. @internal */
 export const builtinLeaf = (type: string): AssetLeaf<unknown> | undefined => byId.get(type)?.leaf as AssetLeaf<unknown> | undefined;

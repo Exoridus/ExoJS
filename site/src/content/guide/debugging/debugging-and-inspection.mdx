@@ -38,8 +38,15 @@ Call the returned disposer when the development host no longer needs the tools. 
 | Hit test | Interactive, hovered, and captured nodes. | F3 |
 | Pointer stack | Candidate nodes under the pointer and their ordering. | F4 |
 | Render-pass inspector | Attached filters, masks, cache flags, and an optional logical pipeline. | F6 |
+| Asset cache (`AssetCacheLayer`) | Loader residency, claims, owners, and pending work. | F7 |
 
 Shortcuts apply while the canvas has focus. F5 remains available for the browser's reload action. The overlay releases its shortcut claims on destruction.
+
+## Inspect asset ownership
+
+Enable `debug.layers.assetCache.visible` or press F7 to inspect the application's loader. `app.loader.inspect()` provides resident entries and their claims/owners; `app.loader.stats()` provides aggregate status and estimated residency sizes. Use these to check whether a scene, child scope, or application claim still holds a resource after a transition.
+
+The [Asset Browser](/ExoJS/en/tools/asset-browser/) is a media catalog and preview tool, while the AssetCacheLayer describes this application's live residency. Estimated payload bytes are not measured GPU memory. Performance counters and available GPU timing answer different questions; the render-pass inspector describes structure, not hardware time per pass.
 
 ## Visibility and input
 
@@ -77,6 +84,8 @@ export const reportStartupFailure = (error: unknown): void => {
 Keep logging at the boundary that can add meaningful context: which scene, asset, or user action failed. Avoid repeating the same message every frame. Production severity filtering does not make expensive argument construction free; guard costly diagnostic work instead of assuming a JavaScript minifier removes it.
 
 A logger sink is an external subscription. Retain and call its unsubscribe function when its owner ends. Do not log private save data, access tokens, or full user documents merely to identify a decoding failure.
+
+In the playground, the Output panel under the preview shows what the running example writes with `console.log`, `info`, `debug`, `warn` and `error`, together with uncaught errors and unhandled promise rejections. It records the console of the preview page itself; workers and audio worklets have consoles of their own, and their messages stay in the browser's developer tools. The panel keeps the most recent messages of the current run and drops a burst it cannot keep up with, counting what it dropped, while the developer tools still receive every message.
 
 ## Turn the observation into a regression test
 

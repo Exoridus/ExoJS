@@ -7,9 +7,9 @@ This directory preserves the published, machine-specific rendering and physics p
 Set up the repository with `pnpm bootstrap:dev`, then run the complete reference workload three times in separate invocations:
 
 ```sh
-pnpm --filter @codexo/exojs-bench bench:reference --out run-1
-pnpm --filter @codexo/exojs-bench bench:reference --out run-2
-pnpm --filter @codexo/exojs-bench bench:reference --out run-3
+pnpm bench:reference --out run-1
+pnpm bench:reference --out run-2
+pnpm bench:reference --out run-3
 ```
 
 Output paths are relative to the benchmark package. On macOS and Linux, supply `--platform=<major>[-beta]` with the actual OS release; the browser cannot reliably report the required major version. Windows detection uses the harness's supported platform signals. A missing or assumed platform value is not equivalent to a verified stable release.
@@ -22,9 +22,11 @@ For diagnosis, narrowing counts, scenarios, or other workload settings is useful
 
 ```sh
 pnpm --filter @codexo/exojs-bench bench:compare --profile \
-  --rendering run-1/rendering/results.json run-2/rendering/results.json run-3/rendering/results.json \
-  --physics run-1/physics/results.json run-2/physics/results.json run-3/physics/results.json
+  --rendering run-1/rendering/results.json --rendering run-2/rendering/results.json --rendering run-3/rendering/results.json \
+  --physics run-1/physics/results.json --physics run-2/physics/results.json --physics run-3/physics/results.json
 ```
+
+Each results file needs its own `--rendering` or `--physics` flag. The command refuses a path that follows another path without a flag of its own.
 
 Follow the command's output path and validation diagnostics. Do not rename a profile to disguise a different machine or splice measurements from different runs into it. The comparison code selects the eligible loads and verdicts; the README does not define an alternative calculation.
 

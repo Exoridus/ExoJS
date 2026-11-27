@@ -1,4 +1,5 @@
-import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, Tween } from '@codexo/exojs';
+import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, Scene, Sprite, type Tween } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const WAYPOINTS = [
@@ -19,17 +20,15 @@ class TweenSequencesScene extends Scene {
     this.path = new Graphics();
     this.path.lineWidth = 3;
     this.path.lineColor = new Color(60, 100, 150);
+
     for (let i = 0; i < points.length; i++) {
       const next = points[(i + 1) % points.length];
       this.path.drawLine(points[i].x, points[i].y, next.x, next.y);
     }
 
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(points[0].x, points[0].y);
-    this.hud = mountControls({
-      title: 'Tween Sequences',
-      status: 'Leg 1 / 4',
-      hint: 'Four tweens are chained once, then the final completion restarts the sequence.',
-    });
+    this.sprite = new Sprite(assets.ship.source).setAnchor(0.5).setPosition(points[0].x, points[0].y);
+    this.root.addChild(this.path, this.sprite);
+    this.hud = mountControls({ status: 'Leg 1 / 4' });
 
     this.steps = points
       .slice(1)
@@ -41,16 +40,13 @@ class TweenSequencesScene extends Scene {
           .easing(Ease.sineInOut)
           .onStart(() => this.hud.setStatus(`Leg ${index + 1} / ${points.length}`)),
       );
+
     for (let i = 0; i < this.steps.length - 1; i++) {
       this.steps[i].chain(this.steps[i + 1]);
     }
+
     this.steps.at(-1)!.onComplete(() => this.steps[0].start());
     this.steps[0].start();
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.path);
-    context.render(this.sprite);
   }
 
   override destroy(): void {
@@ -64,7 +60,6 @@ const app = new Application({
   scenes: { TweenSequencesScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(TweenSequencesScene);

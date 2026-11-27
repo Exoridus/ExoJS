@@ -73,12 +73,10 @@ describe('baseline harness smoke', () => {
     // catches an empty-shader or empty-scene harness measuring nothing.
     expect(result.structural.drawCalls).toBeGreaterThan(0);
 
-    // Deterministic structural gate: this fixed 1k static-heavy scene issues
-    // exactly ONE draw call per frame (one texture, one batch; culling is
-    // disabled cross-arm, see `archetypes.ts`). Structural
-    // counters are noise-free, so a change in this number for the fixed scene
-    // is a real regression, not timing drift.
-    expect(result.structural.drawCalls).toBe(1);
+    // The scene is one batched draw. Color-correct presentation is a second,
+    // measured fullscreen draw through the production output shader. The
+    // benchmark must not appear faster by omitting that final pass.
+    expect(result.structural.drawCalls).toBe(2);
 
     // A real per-frame CPU time was measured. No timing THRESHOLD is asserted.
     expect(result.cpuMsMedian).toBeGreaterThan(0);

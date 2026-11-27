@@ -88,14 +88,19 @@ export const spriteVertexGlsl: string = spriteVertexGlslModule;
  * becomes the number of distinct intensities the antialiased edge can have.
  * @internal
  */
-export const buildSpriteMaterialSlotGlsl = (textureSlots: number, samplerPrecision: 'lowp' | 'mediump' | 'highp' = 'lowp'): string => {
+export const buildSpriteMaterialSlotGlsl = (
+  textureSlots: number,
+  samplerPrecision: 'lowp' | 'mediump' | 'highp' = 'lowp',
+  baseMipOnly = false,
+): string => {
+  const sample = (slot: number): string => (baseMipOnly ? `textureLod(u_texture${slot}, uv, 0.0)` : `texture(u_texture${slot}, uv)`);
   // GLSL ES 3.00 orders a qualifier list storage-then-precision, so the
   // qualifier goes between `uniform` and the type, not ahead of it.
   const samplers = Array.from({ length: textureSlots }, (_, slot) => `uniform ${samplerPrecision} sampler2D u_texture${slot};`).join('\n');
   // The last slot is the else branch so every uint value maps to a texture.
   const dispatch = Array.from(
     { length: textureSlots - 1 },
-    (_, slot) => `${slot === 0 ? '    if' : '    else if'} (slot == ${slot}u) sampleColor = texture(u_texture${slot}, uv);`,
+    (_, slot) => `${slot === 0 ? '    if' : '    else if'} (slot == ${slot}u) sampleColor = ${sample(slot)};`,
   ).join('\n');
 
   // Every FLOAT-typed declaration carries an explicit precision qualifier: a
@@ -120,7 +125,7 @@ highp vec4 sampleBase(uint packedSlotFlags, highp vec2 uv) {
     highp vec4 sampleColor;
 ${dispatch}
     else {
-        sampleColor = texture(u_texture${textureSlots - 1}, uv);
+        sampleColor = ${sample(textureSlots - 1)};
     }
     return associateSampledColor(sampleColor, premultiplySample);
 }`;
@@ -220,9 +225,10 @@ ${spriteVertexMainWgsl}`;
  * @internal
  */
 export const buildSpriteTextureSlotWgsl = (textureSlots: number): string => {
-  const textureBindings = Array.from({ length: textureSlots }, (_, slot) => `@group(1) @binding(${slot})\nvar spriteTexture${slot}: texture_2d<f32>;`).join(
-    '\n',
-  );
+  const textureBindings = Array.from(
+    { length: textureSlots },
+    (_, slot) => `@group(1) @binding(${slot})\nvar spriteTexture${slot}: texture_2d<f32>;`,
+  ).join('\n');
   const samplerBindings = Array.from(
     { length: textureSlots },
     (_, slot) => `@group(1) @binding(${textureSlots + slot})\nvar spriteSampler${slot}: sampler;`,

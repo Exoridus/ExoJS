@@ -390,7 +390,12 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
   // sprite; it must now collapse to the plateau of a single instanced draw.
   test('four distinct base textures under one material collapse to a single draw', async () => {
     const backend = await createBackend();
-    const textures = [createSolidTexture(200, 0, 0), createSolidTexture(0, 200, 0), createSolidTexture(0, 0, 200), createSolidTexture(200, 200, 0)];
+    const textures = [
+      createSolidTexture(200, 0, 0),
+      createSolidTexture(0, 200, 0),
+      createSolidTexture(0, 0, 200),
+      createSolidTexture(200, 200, 0),
+    ];
     const material = createTintMaterial([1, 1, 1, 1]);
     const root = new Container();
 

@@ -433,10 +433,10 @@ describe('render plan', () => {
     const custom = new CustomDrawable();
     const rendererToken: Renderer = {
       backendType: RenderBackendType.WebGl2,
-      connect: () => undefined,
-      disconnect: () => undefined,
-      render: () => undefined,
-      flush: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
+      render: () => {},
+      flush: () => {},
     };
 
     vi.spyOn(backend.rendererRegistry, 'resolve').mockReturnValue(rendererToken);
@@ -583,6 +583,7 @@ describe('render plan', () => {
 
     try {
       const plan = builder.build(root, backend);
+
       const collectNodeIndices = (entries: readonly any[], target: Map<Drawable, number>): void => {
         for (const entry of entries) {
           if (entry.kind === RenderEntryKind.Draw) {
@@ -595,6 +596,7 @@ describe('render plan', () => {
           }
         }
       };
+
       const before = new Map<Drawable, number>();
       collectNodeIndices(plan.passes[0].root.entries, before);
 
@@ -645,7 +647,10 @@ describe('render plan', () => {
     });
 
     const { backend } = createRuntime();
-    const plan = createRenderPlanDouble(backend.view, createGroupScopeDouble([createDraw(a, { pk: 100, bk: 100 }), createDraw(b, { pk: 100, bk: 100 })]));
+    const plan = createRenderPlanDouble(
+      backend.view,
+      createGroupScopeDouble([createDraw(a, { pk: 100, bk: 100 }), createDraw(b, { pk: 100, bk: 100 })]),
+    );
 
     RenderPlanOptimizer.optimize(plan);
 

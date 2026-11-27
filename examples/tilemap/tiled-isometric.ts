@@ -1,107 +1,130 @@
-import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, SystemOrder } from '@codexo/exojs';
-import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
+import { type TileMap, TileMapNode, TileProjection } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { type TileMap, TileMapNode } from '@codexo/exojs-tilemap';
-import { buildObjectLayerColliders, TilePhysicsBinding } from '@codexo/exojs-tilemap-physics';
-import { mountControls } from '@examples/runtime';
-
-const scale = 0.72;
-const origin = { x: 165, y: 115 };
+import { choice, demoPanel, startExample } from '@examples/runtime';
 
 class IsometricScene extends Scene {
   private map!: TileMap;
   private readonly worldRoot = new Container();
   private readonly selection = new Graphics();
-  private readonly actor = new Graphics();
-  private readonly world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
-  private body!: PhysicsBody;
-  private binding!: TilePhysicsBinding;
-  private target = { x: 99, y: 99 };
-  private hud!: ReturnType<typeof mountControls>;
+  private readonly hexRoot = new Container();
+  private readonly hexCells = new Graphics();
+  private readonly hexSelection = new Graphics();
+  private readonly hexProjection = new TileProjection({
+    orientation: 'hexagonal',
+    tileWidth: 64,
+    tileHeight: 72,
+    hexSideLength: 36,
+    staggerAxis: 'y',
+  });
+  private selectedTile = { tx: 3, ty: 3 };
+  private hexCell = { tx: 2, ty: 2 };
+  private hud!: ReturnType<typeof demoPanel>;
 
   override async load(): Promise<void> {
-    this.map = await this.loader.load(Asset.type('tileMap', assets.demo.isometricLandscape));
+    this.map = await this.loader.load({ type: 'tileMap', source: assets.isometricLandscape.source });
   }
 
   override init(): void {
-    this.worldRoot.setPosition(origin.x, origin.y).setScale(scale);
-    this.worldRoot.addChild(new TileMapNode(this.map));
-    const gameplay = this.map.getObjectLayer('Gameplay')!;
-    buildObjectLayerColliders(this.world, gameplay, { accept: object => object.type === 'Wall', friction: 0 });
-    const outlines = new Graphics();
-    outlines.lineColor = new Color(72, 226, 218, 0.7);
-    outlines.lineWidth = 2;
-    outlines.fillColor = new Color(72, 226, 218, 0.07);
-    for (const object of gameplay.objects) {
-      const display = gameplay.getDisplayObject(object);
-      if (display.kind === 'polygon') outlines.drawPolygon(display.points.flatMap(point => [display.x + point.x, display.y + point.y]));
+    this.worldRoot.addChild(new TileMapNode(this.map), this.selection);
+    this.hexRoot.addChild(this.hexCells, this.hexSelection);
+
+    for (let ty = 0; ty < 7; ty++) {
+      for (let tx = 0; tx < 7; tx++) {
+        const corner = this.hexProjection.tileToPixel(tx, ty);
+        this.hexCells.fillColor = new Color(tx % 3 === 0 ? 80 : 111, 151 + ty * 4, 114);
+        this.hexCells.lineColor = new Color(39, 72, 57);
+        this.hexCells.lineWidth = 2;
+        this.hexCells.drawPolygon(this.hexOutline(corner.x, corner.y));
+      }
     }
-    const spawn = gameplay.objects.find(object => object.name === 'Spawn')!;
-    this.body = this.world.add(
-      new PhysicsBody({ position: { x: spawn.x, y: spawn.y }, fixedRotation: true, colliders: [{ shape: new CircleShape(12), friction: 0 }] }),
-    );
-    this.actor.fillColor = new Color(255, 211, 89);
-    this.actor.lineColor = new Color(56, 43, 29);
-    this.actor.lineWidth = 3;
-    this.actor.drawEllipse(0, -4, 14, 10).drawCircle(0, -20, 12);
-    this.binding = new TilePhysicsBinding(this.body, this.actor, this.map.projection);
-    this.binding.sync();
-    this.worldRoot.addChild(outlines, this.selection, this.actor);
-    this.systems.add(this.world, { order: SystemOrder.Physics });
-    this.systems.add(
-      {
-        fixedUpdate: () => {
-          const dx = this.target.x - this.body.x;
-          const dy = this.target.y - this.body.y;
-          const distance = Math.hypot(dx, dy);
-          const speed = Math.min(145, distance * 5);
-          this.body.linearVelocityX = distance > 1 ? (dx / distance) * speed : 0;
-          this.body.linearVelocityY = distance > 1 ? (dy / distance) * speed : 0;
-        },
-      },
-      { order: SystemOrder.Physics - 1 },
-    );
-    this.hud = mountControls({
-      title: 'Isometric Landscape',
-      controls: [{ keys: 'Click', action: 'pick a diamond and move toward it' }],
-      status: 'Cross the canal through the central bridge. Cyan outlines show solid banks.',
-      hint: 'Kenney Isometric Tiles Landscape (CC0). The actor collides in logical space; its position is projected onto the map.',
+
+    this.hud = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls: { projection: choice('Projection', ['isometric', 'hexagonal']) },
     });
-    this.app.input.onPointerTap.add(this.onTap);
+    this.app.input.onPointerTap.add(this.onPoint);
+    this.app.input.onPointerMove.add(this.onPoint);
   }
 
-  private readonly onTap = (pointer: { x: number; y: number }): void => {
-    const x = (pointer.x - origin.x) / scale;
-    const y = (pointer.y - origin.y) / scale;
-    const { tx, ty } = this.map.pixelToTile(x, y);
-    if (tx < 0 || ty < 0 || tx >= 10 || ty >= 10) return;
-    const projection = this.map.projection;
-    this.target = { x: (tx + 0.5) * projection.logicalTileWidth, y: (ty + 0.5) * projection.logicalTileHeight };
-    this.selection.clear();
-    this.selection.fillColor = new Color(255, 234, 126, 0.25);
-    this.selection.lineColor = new Color(255, 234, 126);
-    this.selection.lineWidth = 3;
-    this.selection.drawPolygon(
-      [
-        [tx, ty],
-        [tx + 1, ty],
-        [tx + 1, ty + 1],
-        [tx, ty + 1],
-      ].flatMap(([cx, cy]) => {
-        const point = projection.tileToPixel(cx!, cy!);
-        return [point.x, point.y];
-      }),
-    );
-    this.hud.setStatus(`Cell (${tx}, ${ty}) - logical target (${this.target.x}, ${this.target.y}). Click the bridge to pass the banks.`);
+  private hexOutline(x: number, y: number): number[] {
+    return [x + 32, y, x + 64, y + 18, x + 64, y + 54, x + 32, y + 72, x, y + 54, x, y + 18];
+  }
+
+  private readonly onPoint = (pointer: { x: number; y: number }): void => {
+    const hex = this.hud.values.projection === 'hexagonal';
+    const root = hex ? this.hexRoot : this.worldRoot;
+    const projection = hex ? this.hexProjection : this.map.projection;
+    const { tx, ty } = projection.pixelToTile((pointer.x - root.x) / root.scale.x, (pointer.y - root.y) / root.scale.y);
+    const size = hex ? 7 : 10;
+
+    if (tx < 0 || ty < 0 || tx >= size || ty >= size) {
+      return;
+    }
+
+    if (hex) {
+      this.hexCell = { tx, ty };
+    } else {
+      this.selectedTile = { tx, ty };
+    }
   };
 
+  override update(): void {
+    const { scale: k, contentHeight } = this.hud.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const hex = this.hud.values.projection === 'hexagonal';
+    const root = hex ? this.hexRoot : this.worldRoot;
+    const projection = hex ? this.hexProjection : this.map.projection;
+    const size = hex ? 7 : 10;
+    const bounds = projection.getBounds(0, 0, size, size);
+    const height = contentHeight * k;
+    const scale = Math.min((this.app.width - 64 * k) / bounds.width, (height - 80 * k) / bounds.height);
+
+    root
+      .setScale(scale)
+      .setPosition((this.app.width - bounds.width * scale) / 2 - bounds.x * scale, (height - bounds.height * scale) / 2 - bounds.y * scale);
+    this.worldRoot.visible = !hex;
+    this.hexRoot.visible = hex;
+    const { tx, ty } = hex ? this.hexCell : this.selectedTile;
+    const highlight = hex ? this.hexSelection : this.selection;
+
+    highlight.clear();
+    highlight.fillColor = new Color(255, 221, 120, 0.3);
+    highlight.lineColor = new Color(255, 221, 120);
+    highlight.lineWidth = (3 * k) / scale;
+
+    if (hex) {
+      const point = projection.tileToPixel(tx, ty);
+      highlight.drawPolygon(this.hexOutline(point.x, point.y));
+    } else {
+      highlight.drawPolygon(
+        [
+          [tx, ty],
+          [tx + 1, ty],
+          [tx + 1, ty + 1],
+          [tx, ty + 1],
+        ].flatMap(([x, y]) => {
+          const point = projection.tileToPixel(x!, y!);
+
+          return [point.x, point.y];
+        }),
+      );
+    }
+
+    const pixel = projection.tileToPixel(tx, ty);
+    this.hud.status(`Cell (${tx}, ${ty}) | display (${pixel.x}, ${pixel.y})`);
+  }
+
   override draw(context: RenderingContext): void {
-    this.binding.sync();
     context.render(this.worldRoot);
+    context.render(this.hexRoot);
   }
 
   override destroy(): void {
-    this.app.input.onPointerTap.remove(this.onTap);
+    this.app.input.onPointerTap.remove(this.onPoint);
+    this.app.input.onPointerMove.remove(this.onPoint);
+    this.hexRoot.destroy();
     this.hud?.dispose();
     this.worldRoot.destroy();
     super.destroy();
@@ -113,7 +136,6 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(30, 43, 57),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 
-await app.start(IsometricScene);
+await startExample(app, () => app.start(IsometricScene));

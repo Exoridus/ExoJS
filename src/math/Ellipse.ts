@@ -20,6 +20,8 @@ import type { Line } from './Line';
 import type { Polygon } from './Polygon';
 import { Rectangle } from './Rectangle';
 import type { ShapeLike } from './ShapeLike';
+import { ShapeRevision } from './ShapeRevision';
+import { ShapeVector } from './ShapeVector';
 import { Vector } from './Vector';
 
 /**
@@ -28,17 +30,24 @@ import { Vector } from './Vector';
  * {@link Collidable} for use in the intersection pipeline.
  *
  * `collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and
- * Ellipse. Ellipse-vs-Line always returns `null` - use `intersectsWith`.
+ * Ellipse. Point and Line targets always return `null` - use
+ * `intersectsWith`.
  */
-export class Ellipse implements ShapeLike {
+export class Ellipse extends ShapeRevision implements ShapeLike {
   public readonly collisionType: CollisionType = CollisionType.Ellipse;
 
-  private readonly _position: Vector;
-  private readonly _radius: Vector;
+  private readonly _position: ShapeVector;
+  private readonly _radius: ShapeVector;
 
   public constructor(x = 0, y = 0, halfWidth = 0, halfHeight = halfWidth) {
-    this._position = new Vector(x, y);
-    this._radius = new Vector(halfWidth, halfHeight);
+    super();
+    this._position = new ShapeVector(this, x, y);
+    this._radius = new ShapeVector(this, halfWidth, halfHeight);
+  }
+
+  /** @internal */
+  public _onObservableChange(): void {
+    this._notifyGeometry();
   }
 
   public get position(): Vector {
@@ -102,17 +111,18 @@ export class Ellipse implements ShapeLike {
   }
 
   public set(x: number, y: number, radiusX: number, radiusY: number): this {
-    this._position.set(x, y);
-    this._radius.set(radiusX, radiusY);
+    const moved = this._position._setSilently(x, y);
+    const resized = this._radius._setSilently(radiusX, radiusY);
+
+    if (moved || resized) {
+      this._notifyGeometry();
+    }
 
     return this;
   }
 
   public copy(ellipse: Ellipse): this {
-    this._position.copy(ellipse.position);
-    this._radius.copy(ellipse.radius);
-
-    return this;
+    return this.set(ellipse.x, ellipse.y, ellipse.rx, ellipse.ry);
   }
 
   public clone(): this {
@@ -123,6 +133,11 @@ export class Ellipse implements ShapeLike {
     return out.set(this.x - this.rx, this.y - this.ry, this.rx * 2, this.ry * 2);
   }
 
+  /**
+   * An ellipse has no discrete edge normals, so this returns an empty array and
+   * SAT (for example `collidesWith(Polygon)`) separates using only the other
+   * shape's axes, which is approximate.
+   */
   public getNormals(): Vector[] {
     return [];
   }
@@ -137,7 +152,7 @@ export class Ellipse implements ShapeLike {
   public intersectsWith(target: Collidable): boolean {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return intersectionRectEllipse((target as SceneNode).getBounds(), this);
+        return intersectionRectEllipse((target as SceneNode)._getWorldBounds(), this);
       case CollisionType.Rectangle:
         return intersectionRectEllipse(target as Rectangle, this);
       case CollisionType.Polygon:
@@ -158,7 +173,7 @@ export class Ellipse implements ShapeLike {
   public collidesWith(target: Collidable): CollisionResponse | null {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return getCollisionEllipseRectangle(this, (target as SceneNode).getBounds());
+        return getCollisionEllipseRectangle(this, (target as SceneNode)._getWorldBounds());
       case CollisionType.Rectangle:
         return getCollisionEllipseRectangle(this, target as Rectangle);
       case CollisionType.Circle:
@@ -178,12 +193,17 @@ export class Ellipse implements ShapeLike {
 
   public equals({ x, y, rx, ry }: Partial<Ellipse> = {}): boolean {
     return (
-      (x === undefined || this.x === x) && (y === undefined || this.y === y) && (rx === undefined || this.rx === rx) && (ry === undefined || this.ry === ry)
+      (x === undefined || this.x === x) &&
+      (y === undefined || this.y === y) &&
+      (rx === undefined || this.rx === rx) &&
+      (ry === undefined || this.ry === ry)
     );
   }
 
   public destroy(): void {
     this._position.destroy();
     this._radius.destroy();
+
+    this._releaseGeometryListeners();
   }
 }

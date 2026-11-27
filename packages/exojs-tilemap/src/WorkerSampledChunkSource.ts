@@ -92,7 +92,7 @@ const isWorkerErrorMessage = (message: WorkerResponseMessage): message is Worker
 
 interface PendingRequest {
   readonly resolve: (payload: ChunkPayload | null) => void;
-  readonly reject: (error: Error) => void;
+  readonly reject: (error: unknown) => void;
   readonly cx: number;
   readonly cy: number;
   readonly chunkWidth: number;
@@ -124,7 +124,10 @@ interface PendingRequest {
  * deployment sets one; the constructor names that cause when it is refused.
  * @advanced
  */
-export const createWorkerSampledChunkSource = (layer: TileLayer, options: WorkerSampledChunkSourceOptions): ChunkSource & { destroy(): void } => {
+export const createWorkerSampledChunkSource = (
+  layer: TileLayer,
+  options: WorkerSampledChunkSourceOptions,
+): ChunkSource & { destroy(): void } => {
   const mapValueToTile = options.mapValueToTile.bind(options);
 
   const inline = new InlineWorker(options.workerSource, { name: 'exojs-tilemap-chunk-sampler' });
@@ -143,21 +146,44 @@ export const createWorkerSampledChunkSource = (layer: TileLayer, options: Worker
     const startTy = cy * chunkHeight;
 
     let out: Uint32Array | null = null;
+
     for (let ty = startTy; ty < startTy + chunkHeight; ty++) {
       for (let tx = startTx; tx < startTx + chunkWidth; tx++) {
         // Bounded-layer edge chunks may be smaller than a full chunk - same
         // clamp createSampledChunkSource applies, computed here (not asked
         // of the worker) since only this side knows the layer's bounds.
-        if (layer.width !== undefined && layer.height !== undefined && (tx >= layer.width || ty >= layer.height)) continue;
+        if (layer.width !== undefined && layer.height !== undefined && (tx >= layer.width || ty >= layer.height)) {
+          continue;
+        }
 
         const localIndex = (ty - startTy) * chunkWidth + (tx - startTx);
         const value = values[localIndex];
-        if (value === undefined) continue; // defensive: malformed/short values array
+
+        if (value === undefined) {
+          continue;
+        } // defensive: malformed/short values array
+
         const resolved = mapValueToTile(value, tx, ty);
-        if (!resolved) continue;
+
+        if (!resolved) {
+          continue;
+        }
+
+        const tilesetIndex = layer.tilesets.indexOf(resolved.tileset);
+
+        if (tilesetIndex === -1) {
+          throw new Error(
+            `Sampled chunk (${tx}, ${ty}) resolved a tile from tileset "${resolved.tileset.name}", which is not part of this layer.`,
+          );
+        }
+
+        if (resolved.localTileId < 0 || resolved.localTileId >= resolved.tileset.tileCount) {
+          throw new Error(
+            `Sampled chunk (${tx}, ${ty}) resolved local tile ${resolved.localTileId}, outside tileset "${resolved.tileset.name}" (${resolved.tileset.tileCount} tiles).`,
+          );
+        }
 
         out ??= new Uint32Array(chunkWidth * chunkHeight);
-        const tilesetIndex = layer.tilesets.indexOf(resolved.tileset);
         out[localIndex] = packTile(tilesetIndex, resolved.localTileId, resolved.transform);
       }
     }
@@ -168,22 +194,33 @@ export const createWorkerSampledChunkSource = (layer: TileLayer, options: Worker
   worker.onmessage = (event: MessageEvent<WorkerResponseMessage>): void => {
     const message = event.data;
     const entry = pending.get(message.requestId);
-    if (!entry) return; // stale/unknown requestId (e.g. arrived after destroy())
+
+    if (!entry) {
+      return;
+    } // stale/unknown requestId (e.g. arrived after destroy())
+
     pending.delete(message.requestId);
 
     if (isWorkerErrorMessage(message)) {
       entry.reject(new Error(message.error));
+
       return;
     }
 
-    entry.resolve(composePayload(message.values, entry));
+    try {
+      entry.resolve(composePayload(message.values, entry));
+    } catch (error) {
+      entry.reject(error);
+    }
   };
 
   worker.onerror = (event: ErrorEvent): void => {
     const error = new Error(`WorkerSampledChunkSource worker error: ${event.message}`);
+
     for (const entry of pending.values()) {
       entry.reject(error);
     }
+
     pending.clear();
   };
 
@@ -205,11 +242,16 @@ export const createWorkerSampledChunkSource = (layer: TileLayer, options: Worker
     },
 
     destroy(): void {
-      if (inline.destroyed) return;
+      if (inline.destroyed) {
+        return;
+      }
+
       const error = new Error('WorkerSampledChunkSource destroyed.');
+
       for (const entry of pending.values()) {
         entry.reject(error);
       }
+
       pending.clear();
       inline.destroy();
     },

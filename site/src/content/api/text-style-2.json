@@ -4,7 +4,7 @@
   "symbol": "TextStyle",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 11,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Text styling options carried by a TextObject."
       ],
-      "importLine": "import { TextStyle } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TextStyle } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

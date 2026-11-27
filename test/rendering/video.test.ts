@@ -1,10 +1,12 @@
 import type { MockInstance } from 'vitest';
 
 import { AudioBus } from '#audio/AudioBus';
-import { getAudioContext } from '#audio/audioContext';
+import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import type { Rectangle } from '#math/Rectangle';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
+import { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
+import { VideoTexture } from '#rendering/video/VideoTexture';
 import { View } from '#rendering/View';
 
 // ---------------------------------------------------------------------------
@@ -226,16 +228,36 @@ describe('Video', () => {
       video.destroy();
     });
 
-    test('does not register metadata listeners when dimensions are already known at construction', () => {
+    test('fits the frame to dimensions already known at construction', () => {
       const mockVideo = createMockVideoElement({ width: 64, height: 32 });
-      const addEventListenerSpy = vi.spyOn(mockVideo.element, 'addEventListener');
 
       const video = new Video(mockVideo.element);
 
-      expect(addEventListenerSpy).not.toHaveBeenCalledWith('loadedmetadata', expect.anything());
-      expect(addEventListenerSpy).not.toHaveBeenCalledWith('resize', expect.anything());
+      expect(video.texture).toBeInstanceOf(VideoTexture);
       expect(video.textureFrame.width).toBe(64);
       expect(video.textureFrame.height).toBe(32);
+
+      video.destroy();
+    });
+  });
+
+  describe('duration', () => {
+    test('follows metadata that arrives after construction', () => {
+      const mockVideo = createMockVideoElement();
+      let duration = Number.NaN;
+
+      Object.defineProperty(mockVideo.element, 'duration', { configurable: true, get: () => duration });
+
+      const video = new Video(mockVideo.element);
+
+      expect(video.duration).toBeNaN();
+
+      duration = 12;
+      mockVideo.setDimensions(320, 180);
+      mockVideo.element.dispatchEvent(new Event('loadedmetadata'));
+
+      expect(video.duration).toBe(12);
+      expect(video.progress).toBe(0);
 
       video.destroy();
     });
@@ -340,6 +362,40 @@ describe('Video', () => {
     });
   });
 
+  describe('before the audio context is ready', () => {
+    test('volume and muted act on the element, then hand over to the gain node', () => {
+      const audioContext = getAudioContext() as { state: AudioContextState } & AudioContext;
+      const mockVideo = createMockVideoElement();
+
+      audioContext.state = 'suspended';
+
+      try {
+        const video = new Video(mockVideo.element);
+
+        video.muted = true;
+        video.volume = 1.5;
+        expect(mockVideo.element.muted).toBe(true);
+        expect(mockVideo.element.volume).toBe(1);
+
+        video.volume = 0.25;
+        expect(mockVideo.element.volume).toBe(0.25);
+
+        audioContext.state = 'running';
+        onAudioContextReady.dispatch(audioContext);
+
+        expect(mockVideo.element.muted).toBe(false);
+        expect(mockVideo.element.volume).toBe(1);
+        expect(video.muted).toBe(true);
+        expect(video.volume).toBe(0.25);
+        expect(gainTarget(video)).not.toBeNull();
+
+        video.destroy();
+      } finally {
+        audioContext.state = 'running';
+      }
+    });
+  });
+
   describe('muted', () => {
     test('setMuted no-ops when unchanged and updates the gain target when changed', () => {
       const mockVideo = createMockVideoElement();
@@ -362,7 +418,7 @@ describe('Video', () => {
   });
 
   describe('paused / playing', () => {
-    test('play() dispatches onStart only when transitioning from paused', () => {
+    test('play() dispatches onStart only when transitioning from paused', async () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);
       const startSpy = vi.fn();
@@ -371,12 +427,72 @@ describe('Video', () => {
       mockVideo.setPaused(true);
 
       video.play();
+      mockVideo.setPaused(false);
+      await Promise.resolve();
       expect(startSpy).toHaveBeenCalledTimes(1);
 
-      // Simulate the video now actually playing; a second play() is a no-op.
-      mockVideo.setPaused(false);
+      // Already playing - a second play() is a no-op.
       video.play();
+      await Promise.resolve();
       expect(startSpy).toHaveBeenCalledTimes(1);
+
+      video.destroy();
+    });
+
+    test('play() dispatches onStart only once the element has started playing', async () => {
+      const mockVideo = createMockVideoElement();
+      let resolvePlay!: () => void;
+
+      mockVideo.element.play = () =>
+        new Promise<void>(resolve => {
+          resolvePlay = resolve;
+        });
+
+      const video = new Video(mockVideo.element);
+      const startSpy = vi.fn();
+
+      video.onStart.add(startSpy);
+      video.play();
+      expect(startSpy).not.toHaveBeenCalled();
+
+      mockVideo.setPaused(false);
+      resolvePlay();
+      await Promise.resolve();
+      expect(startSpy).toHaveBeenCalledTimes(1);
+
+      video.destroy();
+    });
+
+    test('play() dispatches nothing when the browser refuses or a pause supersedes the start', async () => {
+      const mockVideo = createMockVideoElement();
+      const video = new Video(mockVideo.element);
+      const startSpy = vi.fn();
+
+      video.onStart.add(startSpy);
+
+      mockVideo.element.play = () => Promise.reject(new DOMException('blocked', 'NotAllowedError'));
+      video.play();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // The start resolves only after the element has been paused again.
+      let resolvePlay!: () => void;
+
+      mockVideo.element.play = () => {
+        mockVideo.setPaused(false);
+
+        return new Promise<void>(resolve => {
+          resolvePlay = resolve;
+        });
+      };
+
+      video.play();
+      video.pause();
+      mockVideo.setPaused(true);
+      resolvePlay();
+      await Promise.resolve();
+
+      expect(startSpy).not.toHaveBeenCalled();
 
       video.destroy();
     });
@@ -472,7 +588,13 @@ describe('Video', () => {
     test('an empty options bag touches nothing', () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);
-      const before = { volume: video.volume, loop: video.loop, playbackRate: video.playbackRate, time: video.currentTime, muted: video.muted };
+      const before = {
+        volume: video.volume,
+        loop: video.loop,
+        playbackRate: video.playbackRate,
+        time: video.currentTime,
+        muted: video.muted,
+      };
 
       video.applyOptions({});
 
@@ -609,6 +731,98 @@ describe('Video', () => {
       video.destroy();
     });
 
+    test('uses delivered frame callbacks instead of the continuously advancing playback clock', () => {
+      const mockVideo = createMockVideoElement({ width: 64, height: 32, withFrameCallback: true });
+      const video = new Video(mockVideo.element);
+      const builder = createBuilder() as unknown as RenderPlanBuilder;
+      const handler = mockVideo.requestVideoFrameCallback!.mock.calls[0]![0] as (now: number, metadata: unknown) => void;
+
+      handler(0, {});
+      video.collect(builder);
+      const sourceSpy = vi.spyOn(video.texture!, 'updateSource');
+      const revision = video._contentRevision;
+
+      for (let frame = 1; frame <= 10; frame++) {
+        mockVideo.element.currentTime = frame / 144;
+        video.collect(builder);
+      }
+
+      expect(sourceSpy).not.toHaveBeenCalled();
+      expect(video._contentRevision).toBe(revision);
+
+      handler(100, {});
+      video.collect(builder);
+      video.collect(builder);
+      expect(sourceSpy).toHaveBeenCalledTimes(1);
+      expect(video._contentRevision).not.toBe(revision);
+      video.destroy();
+    });
+
+    test.each([false, true])('polls playback until a frame callback actually arrives (supported: %s)', withFrameCallback => {
+      const mockVideo = createMockVideoElement({ width: 64, height: 32, withFrameCallback });
+      const video = new Video(mockVideo.element);
+      const builder = createBuilder() as unknown as RenderPlanBuilder;
+
+      video.collect(builder);
+      const sourceSpy = vi.spyOn(video.texture!, 'updateSource');
+      mockVideo.element.currentTime = 1;
+      video.collect(builder);
+      expect(sourceSpy).toHaveBeenCalledTimes(1);
+      video.destroy();
+    });
+
+    test('keeps timeupdate recovery when previously delivered callbacks stop', () => {
+      const mockVideo = createMockVideoElement({ width: 64, height: 32, withFrameCallback: true });
+      const video = new Video(mockVideo.element);
+      const builder = createBuilder() as unknown as RenderPlanBuilder;
+      const handler = mockVideo.requestVideoFrameCallback!.mock.calls[0]![0] as (now: number, metadata: unknown) => void;
+
+      handler(0, {});
+      video.collect(builder);
+      const sourceSpy = vi.spyOn(video.texture!, 'updateSource');
+      const revision = video._contentRevision;
+
+      mockVideo.element.currentTime = 2;
+      mockVideo.element.dispatchEvent(new Event('timeupdate'));
+      expect(video._contentRevision).not.toBe(revision);
+      video.collect(builder);
+      expect(sourceSpy).toHaveBeenCalledTimes(1);
+      video.destroy();
+    });
+
+    test('returns to playback polling when an external media load empties the element', () => {
+      const mockVideo = createMockVideoElement({ width: 64, height: 32, withFrameCallback: true });
+      const video = new Video(mockVideo.element);
+      const builder = createBuilder() as unknown as RenderPlanBuilder;
+      const handler = mockVideo.requestVideoFrameCallback!.mock.calls[0]![0] as (now: number, metadata: unknown) => void;
+
+      handler(0, {});
+      video.collect(builder);
+      const sourceSpy = vi.spyOn(video.texture!, 'updateSource');
+      mockVideo.element.dispatchEvent(new Event('emptied'));
+      mockVideo.element.currentTime = 1;
+      video.collect(builder);
+      expect(sourceSpy).toHaveBeenCalledTimes(1);
+      video.destroy();
+    });
+
+    test('refreshes a paused seek through the next presented-frame callback', () => {
+      const mockVideo = createMockVideoElement({ width: 64, height: 32, withFrameCallback: true });
+      const video = new Video(mockVideo.element);
+      const builder = createBuilder() as unknown as RenderPlanBuilder;
+      const handler = mockVideo.requestVideoFrameCallback!.mock.calls[0]![0] as (now: number, metadata: unknown) => void;
+
+      handler(0, {});
+      video.collect(builder);
+      const sourceSpy = vi.spyOn(video.texture!, 'updateSource');
+      mockVideo.setPaused(true);
+      video.currentTime = 3;
+      handler(100, {});
+      video.collect(builder);
+      expect(sourceSpy).toHaveBeenCalledTimes(1);
+      video.destroy();
+    });
+
     test('skips the texture refresh while invisible', () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);
@@ -690,21 +904,6 @@ describe('Video', () => {
       video.destroy();
     });
 
-    test('a second registration attempt while a callback is already pending is a no-op', () => {
-      const mockVideo = createMockVideoElement({ withFrameCallback: true });
-      const video = new Video(mockVideo.element);
-
-      expect(mockVideo.requestVideoFrameCallback).toHaveBeenCalledTimes(1);
-
-      // Re-entering the private scheduling method directly while a callback
-      // handle is already outstanding must not schedule a second one.
-      (video as unknown as { _requestVideoFrameCallback(): void })._requestVideoFrameCallback();
-
-      expect(mockVideo.requestVideoFrameCallback).toHaveBeenCalledTimes(1);
-
-      video.destroy();
-    });
-
     test('cancels the pending frame callback on destroy', () => {
       const mockVideo = createMockVideoElement({ withFrameCallback: true });
       const video = new Video(mockVideo.element);
@@ -713,23 +912,25 @@ describe('Video', () => {
 
       expect(mockVideo.cancelVideoFrameCallback).toHaveBeenCalledTimes(1);
     });
-
-    test('a second cancel attempt once already cancelled is a no-op', () => {
-      const mockVideo = createMockVideoElement({ withFrameCallback: true });
-      const video = new Video(mockVideo.element);
-
-      (video as unknown as { _cancelVideoFrameCallback(): void })._cancelVideoFrameCallback();
-      expect(mockVideo.cancelVideoFrameCallback).toHaveBeenCalledTimes(1);
-
-      // Handle is already null - a second cancel call must not call through again.
-      (video as unknown as { _cancelVideoFrameCallback(): void })._cancelVideoFrameCallback();
-      expect(mockVideo.cancelVideoFrameCallback).toHaveBeenCalledTimes(1);
-
-      video.destroy();
-    });
   });
 
   describe('destroy', () => {
+    test('destroys its original VideoTexture when Sprite.texture is replaced, without owning the replacement', () => {
+      const mock = createMockVideoElement({ withFrameCallback: true });
+      const video = new Video(mock.element);
+      const original = video.texture as VideoTexture;
+      const other = new Texture();
+
+      video.texture = other;
+      video.destroy();
+
+      expect(original.destroyed).toBe(true);
+      expect(other.destroyed).toBe(false);
+      expect(mock.cancelVideoFrameCallback).toHaveBeenCalledTimes(1);
+
+      other.destroy();
+    });
+
     test('tears down audio nodes, listeners, and signals without throwing', () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);
@@ -750,7 +951,7 @@ describe('Video', () => {
       const revisionBeforeFrame = video._contentRevision;
 
       // Simulate the requestVideoFrameCallback firing with a new decoded frame.
-      (video as unknown as { _onVideoFrame: (now: number, metadata: unknown) => void })._onVideoFrame(0, {});
+      (video.texture as VideoTexture).frameSource.onFrame.dispatch();
 
       expect(video._contentRevision).not.toBe(revisionBeforeFrame);
 

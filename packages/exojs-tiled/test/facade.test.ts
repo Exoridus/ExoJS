@@ -1,4 +1,4 @@
-import { TileLayer, TileLayerNode, TileMap, TileMapBand, TileMapNode, TileMapView, TileSet } from '@codexo/exojs-tilemap';
+import { TileLayer, TileLayerNode, TileMap, TileMapBand, TileMapNode, TileMapView, TileSet } from '@codexo/exojs/tilemap';
 import { describe, expect, it } from 'vitest';
 
 import * as tiled from '../src/public';

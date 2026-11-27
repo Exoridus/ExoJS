@@ -68,7 +68,10 @@ const expectedOffsets: ReadonlyArray<readonly [path: string, offset: number, siz
 
 const expectedByteLength = 320;
 
-const flatten = (members: ReadonlyArray<{ readonly name: string; readonly node: UniformNodeLayout }>, prefix: string): Map<string, UniformNodeLayout> => {
+const flatten = (
+  members: ReadonlyArray<{ readonly name: string; readonly node: UniformNodeLayout }>,
+  prefix: string,
+): Map<string, UniformNodeLayout> => {
   const flat = new Map<string, UniformNodeLayout>();
 
   for (const member of members) {
@@ -77,11 +80,15 @@ const flatten = (members: ReadonlyArray<{ readonly name: string; readonly node: 
     flat.set(path, member.node);
 
     if (member.node.kind === 'struct') {
-      for (const [key, node] of flatten(member.node.members, `${path}.`)) flat.set(key, node);
+      for (const [key, node] of flatten(member.node.members, `${path}.`)) {
+        flat.set(key, node);
+      }
     }
 
     if (member.node.kind === 'array' && member.node.element.kind === 'struct') {
-      for (const [key, node] of flatten(member.node.element.members, `${path}.`)) flat.set(key, node);
+      for (const [key, node] of flatten(member.node.element.members, `${path}.`)) {
+        flat.set(key, node);
+      }
     }
   }
 
@@ -191,6 +198,12 @@ describe('uniform block layout', () => {
     expect(explicit.blocks.map(entry => entry.instance)).toEqual(['camera', 'material']);
     expect(generateWgslUniformDeclarations(explicit, 1)).toContain('@group(1) @binding(0) var<uniform> camera: ExoUniforms_camera;');
     expect(generateWgslUniformDeclarations(explicit, 1)).toContain('@group(1) @binding(1) var<uniform> material: ExoUniforms_material;');
+  });
+
+  test.each(['my-block', '1block', 'gl_block', 'a__b', ''])('a block key %j that is not a shader identifier is rejected', key => {
+    expect(() => buildUniformSchemaLayout(undefined, { [key]: new UniformBlock({ tint: UniformType.Vec4 }) })).toThrow(
+      /valid shader identifier/,
+    );
   });
 
   test('`uniforms` and `uniformBlocks` cannot both be declared', () => {

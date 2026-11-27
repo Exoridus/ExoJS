@@ -1,5 +1,20 @@
 import type { LibraryProvenance } from '../shared/provenance';
-import { csvField, formatCount as count, formatMs as ms, mergeCellResults, mergeLibraries, readExistingReport, writeReportArtifacts } from '../shared/report';
+import {
+  csvField,
+  formatCount as count,
+  formatMs as ms,
+  isReportShape,
+  markdownCell,
+  mergeCellResults,
+  mergeLibraries,
+  mergePlan,
+  PLAN_CSV_HEADER,
+  planCsvFields,
+  planMarkdownLines,
+  readExistingReport,
+  writeReportArtifacts,
+} from '../shared/report';
+import type { RunPlanMeta } from '../suite/plan';
 import type { PhysicsProvenance } from './driver';
 import type { PhysicsCellResult } from './PhysicsAdapter';
 
@@ -9,7 +24,8 @@ import type { PhysicsCellResult } from './PhysicsAdapter';
  * Not `0.0 us`: a clock whose step no probe could read is the absence of the
  * reading, and printing a zero there reads as the finest clock on record.
  */
-const formatClockResolution = (resolutionMs: number | null): string => (resolutionMs === null ? 'not observed' : `${(resolutionMs * 1000).toFixed(1)} us`);
+const formatClockResolution = (resolutionMs: number | null): string =>
+  resolutionMs === null ? 'not observed' : `${(resolutionMs * 1000).toFixed(1)} us`;
 
 /** Everything one physics run produces: the provenance stamp, arm versions, and per-cell results. */
 export interface PhysicsReportData {
@@ -19,9 +35,11 @@ export interface PhysicsReportData {
   readonly libraries: readonly LibraryProvenance[];
   /** One result per matrix cell. */
   readonly results: readonly PhysicsCellResult[];
+  /** Plan the run was resolved against; absent in data written before plans were recorded. */
+  readonly plan?: RunPlanMeta;
 }
 
-/** Ordered columns shared by the CSV and the Markdown table. */
+/** Ordered columns shared by the CSV and the Markdown table; the plan columns are CSV-only. */
 const COLUMNS = [
   'engine',
   'config',
@@ -62,7 +80,11 @@ const toRow = (result: PhysicsCellResult): string[] => {
   ];
 };
 
-const toCsv = (data: PhysicsReportData): string => [COLUMNS.join(','), ...data.results.map(result => toRow(result).map(csvField).join(','))].join('\n');
+const toCsv = (data: PhysicsReportData): string =>
+  [
+    [...COLUMNS, ...PLAN_CSV_HEADER].join(','),
+    ...data.results.map(result => [...toRow(result), ...planCsvFields(data.plan)].map(csvField).join(',')),
+  ].join('\n');
 
 /**
  * Human-readable Markdown: the arm versions and the browser/host provenance
@@ -77,6 +99,7 @@ const toMarkdown = (data: PhysicsReportData): string => {
   const lines: string[] = [];
 
   lines.push('# Physics Benchmark Results', '');
+  lines.push(...planMarkdownLines(data.plan));
 
   lines.push('## Arms', '');
 
@@ -117,11 +140,7 @@ const toMarkdown = (data: PhysicsReportData): string => {
   lines.push(`| ${COLUMNS.map(() => '---').join(' | ')} |`);
 
   for (const result of data.results) {
-    lines.push(
-      `| ${toRow(result)
-        .map(field => field.replaceAll('|', '\\|'))
-        .join(' | ')} |`,
-    );
+    lines.push(`| ${toRow(result).map(markdownCell).join(' | ')} |`);
   }
 
   lines.push('');
@@ -136,14 +155,20 @@ const toMarkdown = (data: PhysicsReportData): string => {
  * the whole matrix, and the latest run is the one whose browser and clock
  * produced the newest cells.
  */
-export const mergePhysicsReportData = (existing: PhysicsReportData | undefined, incoming: PhysicsReportData): PhysicsReportData =>
-  existing === undefined
-    ? incoming
-    : {
-        provenance: incoming.provenance,
-        libraries: mergeLibraries(existing.libraries, incoming.libraries),
-        results: mergeCellResults(existing.results, incoming.results),
-      };
+export const mergePhysicsReportData = (existing: PhysicsReportData | undefined, incoming: PhysicsReportData): PhysicsReportData => {
+  if (existing === undefined) {
+    return incoming;
+  }
+
+  const plan = mergePlan(existing.plan, incoming.plan);
+
+  return {
+    provenance: incoming.provenance,
+    libraries: mergeLibraries(existing.libraries, incoming.libraries),
+    results: mergeCellResults(existing.results, incoming.results),
+    ...(plan !== undefined && { plan }),
+  };
+};
 
 /**
  * Writes the three physics report artifacts into `outDir`:
@@ -156,7 +181,7 @@ export const mergePhysicsReportData = (existing: PhysicsReportData | undefined, 
  * the merged data, so all three artifacts describe the same cell set.
  */
 export const writePhysicsReport = (run: PhysicsReportData, outDir: string): void => {
-  const data = mergePhysicsReportData(readExistingReport<PhysicsReportData>(outDir), run);
+  const data = mergePhysicsReportData(readExistingReport<PhysicsReportData>(outDir, isReportShape), run);
 
   writeReportArtifacts(outDir, {
     json: `${JSON.stringify(data, null, 2)}\n`,

@@ -156,7 +156,13 @@ export class DerivedSelectionState {
 
   /** CPU bytes this state holds, for the memory report. */
   public get byteLength(): number {
-    return this._slotOfHandle.byteLength + this._handleOfSlot.byteLength + this._freeSlots.byteLength + this._order.byteLength + this._entered.byteLength;
+    return (
+      this._slotOfHandle.byteLength +
+      this._handleOfSlot.byteLength +
+      this._freeSlots.byteLength +
+      this._order.byteLength +
+      this._entered.byteLength
+    );
   }
 
   /** The slot `handle` owns, or -1. Test/diagnostic access. */
@@ -272,7 +278,12 @@ export class DerivedSelectionState {
    * ordinal; pass `null` when there is none, in which case every admitted item
    * is treated as entering.
    */
-  public update(rootScope: SourceScope, current: readonly MembershipBits[], previous: readonly MembershipBits[] | null, queried?: Uint8Array): void {
+  public update(
+    rootScope: SourceScope,
+    current: readonly MembershipBits[],
+    previous: readonly MembershipBits[] | null,
+    queried?: Uint8Array,
+  ): void {
     resetSlotStats(this.stats);
     this._enteredCount = 0;
     this._orderCount = 0;

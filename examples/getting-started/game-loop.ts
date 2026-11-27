@@ -1,4 +1,5 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class GameLoopScene extends Scene {
   private sprite!: Sprite;
@@ -7,7 +8,7 @@ class GameLoopScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
+    this.sprite = new Sprite(this.loader.get(assets.ship));
     this.sprite.setAnchor(0.5);
     this.sprite.setPosition(width / 2, height / 2);
   }
@@ -30,9 +31,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(GameLoopScene);

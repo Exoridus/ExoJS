@@ -1,4 +1,4 @@
-import { WangSet } from '@codexo/exojs-tilemap';
+import { WangSet } from '@codexo/exojs/tilemap';
 
 import type { TiledWangSetData } from './data';
 
@@ -10,8 +10,10 @@ import type { TiledWangSetData } from './data';
  *
  * - **`'corner'`** - Maps the four corner positions of each `wangtile` to the
  *   four corner bits of the 8-bit blob mask and returns a `WangSet` of type
- *   `'blob'`. Only color index `> 0` in the Tiled wangid is treated as "this
- *   terrain"; color index `0` means unset (not this terrain).
+ *   `'blob'`. Each set corner requires its two supporting cardinal bits; other
+ *   cardinal bits may be present independently. Only
+ *   color index `> 0` in the Tiled wangid is treated as "this terrain"; color
+ *   index `0` means unset (not this terrain).
  *
  *   Tiled corner wangid position → WangSet blob bit mapping:
  *   - `wangid[7]` (top-left)     → bit 0 (value 1)
@@ -83,14 +85,45 @@ const convertCornerWangSet = (wangSet: TiledWangSetData, tilesetIndex: number): 
     const id = wangTile.wangid;
     let mask = 0;
 
-    if ((id[cornerIndexTopLeft] ?? 0) > 0) mask |= blobBitTopLeft;
-    if ((id[cornerIndexTopRight] ?? 0) > 0) mask |= blobBitTopRight;
-    if ((id[cornerIndexBottomLeft] ?? 0) > 0) mask |= blobBitBottomLeft;
-    if ((id[cornerIndexBottomRight] ?? 0) > 0) mask |= blobBitBottomRight;
+    if ((id[cornerIndexTopLeft] ?? 0) > 0) {
+      mask |= blobBitTopLeft;
+    }
+
+    if ((id[cornerIndexTopRight] ?? 0) > 0) {
+      mask |= blobBitTopRight;
+    }
+
+    if ((id[cornerIndexBottomLeft] ?? 0) > 0) {
+      mask |= blobBitBottomLeft;
+    }
+
+    if ((id[cornerIndexBottomRight] ?? 0) > 0) {
+      mask |= blobBitBottomRight;
+    }
+
+    if ((mask & (blobBitTopLeft | blobBitTopRight)) !== 0) {
+      mask |= 2;
+    }
+
+    if ((mask & (blobBitTopRight | blobBitBottomRight)) !== 0) {
+      mask |= 16;
+    }
+
+    if ((mask & (blobBitBottomLeft | blobBitBottomRight)) !== 0) {
+      mask |= 64;
+    }
+
+    if ((mask & (blobBitTopLeft | blobBitBottomLeft)) !== 0) {
+      mask |= 8;
+    }
 
     // Last writer wins when two wangtiles produce the same mask
     // (shouldn't happen in well-formed data, but be lenient).
-    blobMap.set(mask, wangTile.tileid);
+    for (let cardinals = 0; cardinals < 256; cardinals++) {
+      if ((cardinals & ~90) === 0) {
+        blobMap.set(mask | cardinals, wangTile.tileid);
+      }
+    }
   }
 
   return new WangSet({ tilesetIndex, blobMap, type: 'blob' });
@@ -124,10 +157,21 @@ const convertEdgeWangSet = (wangSet: TiledWangSetData, tilesetIndex: number): Wa
     const id = wangTile.wangid;
     let mask = 0;
 
-    if ((id[edgeIndexTop] ?? 0) > 0) mask |= edgeBitTop;
-    if ((id[edgeIndexRight] ?? 0) > 0) mask |= edgeBitRight;
-    if ((id[edgeIndexBottom] ?? 0) > 0) mask |= edgeBitBottom;
-    if ((id[edgeIndexLeft] ?? 0) > 0) mask |= edgeBitLeft;
+    if ((id[edgeIndexTop] ?? 0) > 0) {
+      mask |= edgeBitTop;
+    }
+
+    if ((id[edgeIndexRight] ?? 0) > 0) {
+      mask |= edgeBitRight;
+    }
+
+    if ((id[edgeIndexBottom] ?? 0) > 0) {
+      mask |= edgeBitBottom;
+    }
+
+    if ((id[edgeIndexLeft] ?? 0) > 0) {
+      mask |= edgeBitLeft;
+    }
 
     blobMap.set(mask, wangTile.tileid);
   }

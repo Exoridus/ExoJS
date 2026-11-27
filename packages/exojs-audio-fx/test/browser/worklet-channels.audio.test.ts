@@ -25,7 +25,13 @@ const expectSeparateTones = (left: Float32Array, right: Float32Array, leftHz: nu
 
 const changeIndices = (buf: Float32Array): number[] => {
   const indices: number[] = [];
-  for (let i = 1; i < buf.length; i++) if (buf[i] !== buf[i - 1]) indices.push(i);
+
+  for (let i = 1; i < buf.length; i++) {
+    if (buf[i] !== buf[i - 1]) {
+      indices.push(i);
+    }
+  }
+
   return indices;
 };
 

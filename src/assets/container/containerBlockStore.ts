@@ -69,7 +69,9 @@ export const cacheApiBlockStore = (cacheName: string = DEFAULT_BLOCK_CACHE_NAME)
     put: async (hash, bytes) => {
       const cache = await open();
 
-      if (cache === null) return;
+      if (cache === null) {
+        return;
+      }
 
       try {
         // eslint-disable-next-line @typescript-eslint/naming-convention -- an HTTP header name, not an identifier

@@ -4,7 +4,7 @@
   "symbol": "AutoTileOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for autoTile and refreshCell."
       ],
-      "importLine": "import { AutoTileOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { AutoTileOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

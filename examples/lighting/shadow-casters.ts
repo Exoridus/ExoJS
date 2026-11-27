@@ -2,177 +2,210 @@ import {
   Application,
   Color,
   Container,
-  FixedResolutionCanvasSizing,
-  type RenderingContext,
+  type InteractionEvent,
+  Keyboard,
+  type Pointer,
+  RepeatingSprite,
+  ResponsiveCanvasSizing,
   ScaleModes,
   Scene,
   type Seconds,
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaOccluder, Lighting, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { AlphaOccluder, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs/lighting';
+import { choice, demoPanel, slider, startExample, toggle } from '@examples/runtime';
 
-// Nothing here models a shadow. Each wall registers the outline it already
-// has - its own rectangle, or, for the pillar, the silhouette traced out of
-// its alpha channel - and the lightmap renderer turns that into a shadow for
-// every light on screen, in one instanced draw.
-//
-// `softness` is a property of the light, not a second pass: it widens the
-// shadow sample kernel, so the slider below costs nothing per light.
-
-const canvasTexture = (width: number, height: number, paint: (context: CanvasRenderingContext2D) => void): Texture => {
+const canvasTexture = (width: number, height: number, paint: (context: CanvasRenderingContext2D) => void): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d');
+
   if (context === null) {
     throw new Error('2D canvas context unavailable.');
   }
+
   paint(context);
-  return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
+
+  return canvas;
 };
 
-const floorTexture = canvasTexture(64, 64, context => {
-  context.fillStyle = '#b3aea5';
+const floorCanvas = canvasTexture(64, 64, context => {
+  context.fillStyle = '#777b82';
   context.fillRect(0, 0, 64, 64);
-  context.fillStyle = '#a19c94';
+  context.fillStyle = '#6b7078';
   context.fillRect(0, 0, 32, 32);
   context.fillRect(32, 32, 32, 32);
 });
 
-const wallTexture = canvasTexture(8, 8, context => {
-  context.fillStyle = '#cfc9be';
+const wallCanvas = canvasTexture(8, 8, context => {
+  context.fillStyle = '#ece3d2';
   context.fillRect(0, 0, 8, 8);
 });
 
 // A cross, so the traced outline is visibly NOT the sprite's bounding box.
 const pillarSize = 96;
-const pillarTexture = canvasTexture(pillarSize, pillarSize, context => {
+const pillarCanvas = canvasTexture(pillarSize, pillarSize, context => {
   const arm = pillarSize / 3;
-  context.fillStyle = '#d8cbb0';
+  context.fillStyle = '#ead3a4';
   context.fillRect(arm, 0, arm, pillarSize);
   context.fillRect(0, arm, pillarSize, arm);
 });
 
-const wall = (x: number, y: number, width: number, height: number): Sprite => {
-  const sprite = new Sprite(wallTexture).setAnchor(0.5);
-
-  sprite.width = width;
-  sprite.height = height;
-  sprite.setPosition(x, y);
-  sprite.tint = new Color(150, 146, 138);
-
-  return sprite;
+const controls = {
+  radius: slider('Radius', { min: 80, max: 360, step: 10, value: 310 }),
+  softness: slider('Softness', { min: 0, max: 1, step: 0.05, value: 0.35 }),
+  occluders: toggle('Show occluders'),
+  type: choice('Light', ['Point', 'Spot']),
 };
-
 class ShadowCastersScene extends Scene {
-  private world!: Container;
-  private lighting!: Lighting;
+  private readonly world = new Container();
+  private lighting!: LightmapLighting;
   private torch!: PointLight;
   private beam!: SpotLight;
   private turntable!: Sprite;
+  private panel!: ReturnType<typeof demoPanel<typeof controls>>;
   private elapsed = 0;
-  private hud!: ReturnType<typeof mountControls>;
+  private playing = true;
+  private dragPointer: number | null = null;
+  private lightX = 0.47;
+  private lightY = 0.58;
+  private scale = 1;
+  private width = 1280;
+  private height = 600;
+  private walls: Sprite[] = [];
 
   override init(): void {
-    const { width, height } = this.app;
-
-    this.world = new Container();
-    this.lighting = new LightmapLighting(this.app, {
-      ambient: new Color(34, 36, 50),
-      lightResolution: 1,
-    });
+    const floor = new RepeatingSprite(this.track(new Texture(floorCanvas, { scaleMode: ScaleModes.Linear })));
+    this.world.addChild(floor);
+    const wallTexture = this.track(new Texture(wallCanvas));
+    const pillarTexture = this.track(new Texture(pillarCanvas));
+    this.lighting = new LightmapLighting(this.app, { scene: this, ambient: new Color(82, 87, 100), lightResolution: 1 });
     this.systems.add(this.lighting);
 
-    const floor = new Sprite(floorTexture);
-
-    floor.width = width;
-    floor.height = height;
-    this.world.addChild(floor);
-
-    // Level geometry. Every wall is an opaque sprite, so its silhouette is the
-    // rectangle it is drawn as - there is nothing to author, and the outline
-    // follows the sprite however it is sized, moved or turned.
-    const walls = [wall(320, 200, 360, 28), wall(940, 250, 28, 320), wall(520, 560, 300, 28)];
-
-    this.turntable = wall(880, 560, 220, 24);
-    walls.push(this.turntable);
-
-    for (const piece of walls) {
+    for (let i = 0; i < 3; i++) {
+      const piece = new Sprite(i === 1 ? pillarTexture : wallTexture).setAnchor(0.5);
+      this.walls.push(piece);
       this.world.addChild(piece);
       this.lighting.occludeFrom(new AlphaOccluder(piece));
     }
 
-    // The cross is the same one line, and the same nothing to author: what
-    // differs is that its silhouette is a cross rather than its bounding box.
-    const pillar = new Sprite(pillarTexture).setAnchor(0.5).setPosition(640, 380);
-
-    this.world.addChild(pillar);
-    this.lighting.occludeFrom(new AlphaOccluder(pillar));
-
-    this.torch = this.lighting.add(new PointLight({ radius: 520, intensity: 2.1, softness: 0.35, color: new Color(255, 196, 140) }));
-    this.beam = this.lighting.add(
-      new SpotLight({ radius: 760, angle: 28, coneSoftness: 0.35, intensity: 2.3, softness: 0.2, color: new Color(150, 210, 255) }),
+    this.turntable = this.walls[2];
+    this.root.addChild(this.world);
+    this.torch = this.track(
+      this.lighting.add(new PointLight({ radius: 500, intensity: 2.1, softness: 0.35, color: new Color(255, 210, 160) })),
     );
-    this.beam.setPosition(120, 660);
-
-    this.hud = mountControls({
-      title: 'Shadow Casters',
-      hint: 'No object declares that it casts a shadow, and nothing here authors an outline: every caster is one line handing the lighting system the sprite it already draws.',
-      status: '',
-    });
-
-    const panel = mountControlPanel({ title: 'Shadows', corner: 'top-right' });
-
-    panel.addSlider({
-      label: 'Softness',
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: this.torch.softness,
-      onChange: value => {
-        this.torch.softness = value;
-        this.beam.softness = value;
+    this.beam = this.track(
+      this.lighting.add(
+        new SpotLight({ radius: 500, angle: 40, coneSoftness: 0.35, intensity: 0, softness: 0.35, color: new Color(255, 210, 160) }),
+      ),
+    );
+    this.panel = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls,
+      actions: {
+        'Pause / Resume': () => {
+          this.playing = !this.playing;
+        },
       },
     });
-
-    panel.addToggle({
-      label: 'Show occluders',
-      value: false,
-      onChange: value => {
-        this.lighting.debug = value ? 'occluders' : null;
-      },
+    this.inputs.onTrigger(Keyboard.Space, () => {
+      this.playing = !this.playing;
     });
+    // Hit-tested scene input respects the UI layer, including open control menus.
+    this.root.interactive = true;
+    this.root.onPointerDown.add(this.onDown);
+    this.app.input.onPointerMove.add(this.onMove);
+    this.app.input.onPointerUp.add(this.onUp);
+    this.app.input.onPointerCancel.add(this.onUp);
+    window.addEventListener('pointerup', this.onWindowEnd);
+    window.addEventListener('blur', this.onBlur);
+    this.onSuspend.add(this.onBlur);
   }
+
+  private readonly onDown = (event: InteractionEvent): void => {
+    if (event.button !== 0 || this.dragPointer !== null) {
+      return;
+    }
+
+    this.dragPointer = event.pointer.id;
+    this.onMove(event.pointer, event.x, event.y);
+  };
+  private readonly onMove = (pointer: Pointer, x: number, y: number): void => {
+    if (pointer.id === this.dragPointer) {
+      this.lightX = Math.max(0, Math.min(1, x / this.scale / this.width));
+      this.lightY = Math.max(0, Math.min(1, y / this.scale / this.height));
+    }
+  };
+  private readonly onUp = (pointer: Pointer): void => {
+    if (pointer.id === this.dragPointer) {
+      this.onBlur();
+    }
+  };
+  private readonly onWindowEnd = (event: PointerEvent): void => {
+    if (event.pointerId === this.dragPointer) {
+      this.onBlur();
+    }
+  };
+  private readonly onBlur = (): void => {
+    this.dragPointer = null;
+  };
 
   override update(delta: Seconds): void {
-    this.elapsed += delta;
+    // This layout uses top-left coordinates even as the host changes aspect.
+    this.app.rendering.view.setCenter(this.app.width / 2, this.app.height / 2);
+    const v = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.scale = v.scale;
+    this.width = v.width;
+    this.height = v.contentHeight;
+    this.root.setScale(v.scale);
+    const floor = this.world.children[0] as Sprite;
+    floor.width = v.width;
+    floor.height = v.contentHeight;
 
-    this.torch.setPosition(640 + Math.cos(this.elapsed * 0.55) * 250, 360 + Math.sin(this.elapsed * 0.83) * 150);
-    // Aiming a spot is rotating it, so the beam sweeps by turning its node.
-    // Counter-clockwise from +x: up the screen is a POSITIVE angle, however
-    // far down the screen the world's y grows.
-    this.beam.rotation = 55 - Math.sin(this.elapsed * 0.4) * 35;
-    // A moving occluder needs no bookkeeping: the outline is local to the node.
+    if (this.playing) {
+      this.elapsed += delta;
+    }
+
+    this.walls[0].setPosition(v.width * 0.48, v.contentHeight * 0.27);
+    this.walls[0].width = v.width * 0.3;
+    this.walls[0].height = 12;
+    this.walls[1].setPosition(v.width * 0.58, v.contentHeight * 0.63).setScale(Math.min(1, v.contentHeight / 270));
+    this.walls[2].setPosition(v.width * 0.8, v.contentHeight * 0.4);
+    this.walls[2].width = v.width * 0.2;
+    this.walls[2].height = 12;
     this.turntable.rotation = this.elapsed * 22;
+
+    for (const light of [this.torch, this.beam]) {
+      light.setPosition(this.lightX * v.width * v.scale, this.lightY * v.contentHeight * v.scale);
+      light.radius = this.panel.values.radius * v.scale;
+      light.softness = this.panel.values.softness;
+    }
+
+    this.torch.intensity = this.panel.values.type === 'Point' ? 2.1 : 0;
+    this.beam.intensity = this.panel.values.type === 'Spot' ? 2.1 : 0;
+    this.beam.rotation = 0;
+    this.lighting.debug = this.panel.values.occluders ? 'occluders' : null;
+    this.panel.status(
+      `Drag the scene | ${this.panel.values.type} light | ${this.playing ? 'wall rotating' : 'paused'} | rectangle and alpha-cross cast real shadows`,
+    );
   }
 
-  override draw(context: RenderingContext): void {
-    context.render(this.world);
-    this.hud.setStatus(`${this.lighting.activeLightCount} lights - draw calls ${context.stats.drawCalls}`);
+  override destroy(): void {
+    this.onBlur();
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.app.input.onPointerUp.remove(this.onUp);
+    this.app.input.onPointerCancel.remove(this.onUp);
+    window.removeEventListener('pointerup', this.onWindowEnd);
+    window.removeEventListener('blur', this.onBlur);
   }
 }
 
 const app = new Application({
   scenes: { ShadowCastersScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new ResponsiveCanvasSizing({ minAspect: 1 }) },
   clearColor: new Color(6, 7, 12),
 });
-
-await app.start(ShadowCastersScene);
+await startExample(app, () => app.start(ShadowCastersScene));

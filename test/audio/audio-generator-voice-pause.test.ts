@@ -86,12 +86,14 @@ const setupSpy = (): Spy => {
   const oscillatorSpy = vi.spyOn(ctx, 'createOscillator').mockImplementation(() => {
     const node = createOscillatorMock();
     oscillators.push(node);
+
     return node as unknown as OscillatorNode;
   });
 
   const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
     const node = createGainMock();
     gains.push(node);
+
     return node as unknown as GainNode;
   });
 
@@ -112,6 +114,7 @@ const setupSpy = (): Spy => {
  */
 const envelopeGainOf = (spy: Spy): MockGainNode => {
   expect(spy.gains.length).toBe(2);
+
   return spy.gains[1]!;
 };
 

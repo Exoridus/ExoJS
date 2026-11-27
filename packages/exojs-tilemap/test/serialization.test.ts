@@ -8,18 +8,16 @@ import { TileMapNode } from '../src/TileMapNode';
 import { tileMapNodeSerializer } from '../src/tilemapSerializers';
 
 /** Minimal Loader stand-in implementing the methods the serialization context uses. */
-const fakeLoader = (map: TileMap, source: string): Loader => {
-  return {
+const fakeLoader = (map: TileMap, source: string): Loader =>
+  ({
     keyFor: (resource: object) => (resource === map ? { type: TileMap, source } : null),
-    _assetReference: (resource: object) => (resource === map ? { kind: 'request', source } : null),
+    _assetReference: (resource: object) => (resource === map ? { kind: 'request', $type: 'tileMap', source } : null),
+    _matchesAssetType: (type: Loadable, id: string) => type === TileMap && id === 'tileMap',
     _peekResource: (type: Loadable, source_: string) => (type === TileMap && source_ === source ? map : null),
-  } as unknown as Loader;
-};
+  }) as unknown as Loader;
 
 /** Wrap a hand-written node descriptor in the versioned document frame `fromJSON` expects. */
-const prefabDocument = (root: SerializedNode) => {
-  return { version: SERIALIZATION_VERSION, root };
-};
+const prefabDocument = (root: SerializedNode) => ({ version: SERIALIZATION_VERSION, root });
 
 // Register the serializer into the default registry, exactly as the extension's
 // `serializers` binding does at Application construction.
@@ -42,7 +40,7 @@ describe('tilemap serialization', () => {
 
     expect(data.version).toBe(SERIALIZATION_VERSION);
     expect(data.root.type).toBe('TileMapNode');
-    expect(data.root.map).toBe('world.tmj');
+    expect(data.root.map).toEqual({ $type: 'tileMap', source: 'world.tmj' });
     expect(data.root.pixelSnapMode).toBe('position');
 
     const restored = Prefab.fromJSON(data).instantiate(loader) as TileMapNode;
@@ -59,7 +57,9 @@ describe('tilemap serialization', () => {
   it('throws when the referenced map is not pre-loaded', () => {
     const emptyLoader = { keyFor: () => null, _assetReference: () => null, _peekResource: () => null } as unknown as Loader;
 
-    expect(() => Prefab.fromJSON(prefabDocument({ type: 'TileMapNode', map: 'missing.tmj' })).instantiate(emptyLoader)).toThrow(/pre-loaded/);
+    expect(() => Prefab.fromJSON(prefabDocument({ type: 'TileMapNode', map: 'missing.tmj' })).instantiate(emptyLoader)).toThrow(
+      /pre-loaded/,
+    );
   });
 
   it('throws when no map field is present at all (procedural map, never given a source key)', () => {

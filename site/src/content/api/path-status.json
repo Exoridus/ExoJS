@@ -4,7 +4,7 @@
   "symbol": "PathStatus",
   "kind": "type",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -22,7 +22,7 @@
         "Outcome of a path query.",
         "- `found` - a complete path from start to goal (or, with `snapToNearest`, to the reachable node closest to the goal). - `unreachable` - the search exhausted the space without reaching the goal. - `budget-exceeded` - `maxExpandedNodes` ran out first. The result still carries the best partial path found so far."
       ],
-      "importLine": "import { PathStatus } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { PathStatus } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

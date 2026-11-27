@@ -48,6 +48,7 @@ class BatchScene extends Scene {
   // #region guide:draw-batch
   override draw(context: RenderingContext): void {
     this.batch.clear();
+
     for (const spark of this.sparks) {
       const x = this.centerX + Math.cos(spark.angle) * spark.radius;
       const y = this.centerY + Math.sin(spark.angle) * spark.radius;

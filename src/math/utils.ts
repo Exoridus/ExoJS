@@ -48,8 +48,8 @@ export const sign = (value: number): number => value && (value < 0 ? -1 : 1);
 /** Linear interpolation between `startValue` and `endValue` at normalized `ratio` ∈ [0, 1]. */
 export const lerp = (startValue: number, endValue: number, ratio: number): number => (1 - ratio) * startValue + ratio * endValue;
 
-/** Return `true` when `value` is a non-zero power of two. */
-export const isPowerOfTwo = (value: number): boolean => value !== 0 && (value & (value - 1)) === 0;
+/** Return `true` when `value` is a positive integer power of two (`1`, `2`, `4`, ...). */
+export const isPowerOfTwo = (value: number): boolean => value >= 1 && Number.isInteger(Math.log2(value));
 
 /**
  * Return `true` when `value` lies within `[min, max]` (inclusive, regardless
@@ -94,7 +94,10 @@ export const bezierCurveTo = (
     const t2 = j * j;
     const t3 = t2 * j;
 
-    path.push(dt3 * fromX + 3 * dt2 * j * cpX1 + 3 * dt1 * t2 * cpX2 + t3 * toX, dt3 * fromY + 3 * dt2 * j * cpY1 + 3 * dt1 * t2 * cpY2 + t3 * toY);
+    path.push(
+      dt3 * fromX + 3 * dt2 * j * cpX1 + 3 * dt1 * t2 * cpX2 + t3 * toX,
+      dt3 * fromY + 3 * dt2 * j * cpY1 + 3 * dt1 * t2 * cpY2 + t3 * toY,
+    );
   }
 
   return path;
@@ -105,7 +108,16 @@ export const bezierCurveTo = (
  * (including `t = 0` and `t = 1`) and append the resulting `(x, y)` pairs to
  * `path`. Returns `path` for chaining.
  */
-export const quadraticCurveTo = (fromX: number, fromY: number, cpX: number, cpY: number, toX: number, toY: number, path: number[] = [], len = 20): number[] => {
+export const quadraticCurveTo = (
+  fromX: number,
+  fromY: number,
+  cpX: number,
+  cpY: number,
+  toX: number,
+  toY: number,
+  path: number[] = [],
+  len = 20,
+): number[] => {
   for (let i = 0; i <= len; i++) {
     const ratio = i / len;
 

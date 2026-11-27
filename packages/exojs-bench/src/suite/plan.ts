@@ -54,6 +54,39 @@ export interface RunPlanMeta {
   readonly exploratory: boolean;
 }
 
+/** Whether a parsed JSON value is a complete {@link RunPlanMeta}. */
+export const isRunPlanMeta = (value: unknown): value is RunPlanMeta => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const meta = value as Record<string, unknown>;
+
+  return (
+    (meta.suite === 'reference' || meta.suite === 'full') &&
+    meta.planId === 'exojs-comparison' &&
+    typeof meta.planRevision === 'number' &&
+    typeof meta.planHash === 'string' &&
+    (meta.domain === 'rendering' || meta.domain === 'physics') &&
+    typeof meta.extreme === 'boolean' &&
+    typeof meta.exploratory === 'boolean'
+  );
+};
+
+/** One-line statement of a plan identity for reports and error messages. */
+export const describePlan = (meta: RunPlanMeta | undefined): string =>
+  meta === undefined
+    ? 'no recorded plan (legacy data)'
+    : `${meta.planId} suite=${meta.suite} rev=${String(meta.planRevision)} hash=${meta.planHash} domain=${meta.domain} extreme=${String(meta.extreme)} exploratory=${String(meta.exploratory)}`;
+
+/**
+ * Whether two optional plan identities may describe one set of cells. Data
+ * without a recorded plan matches only other data without one, so old cells
+ * are never relabelled as belonging to a current plan.
+ */
+export const isSamePlan = (left: RunPlanMeta | undefined, right: RunPlanMeta | undefined): boolean =>
+  left === undefined || right === undefined ? left === right : describePlan(left) === describePlan(right);
+
 /** A resolved plan: its identity and the workloads it selected. */
 export interface RunPlan {
   readonly meta: RunPlanMeta;
@@ -78,7 +111,10 @@ export const PLAN_REVISION = 1;
  * contract difference. A changed load value or unit is.
  */
 export const computePlanHash = (suite: SuiteKind, domain: PlanDomain, workloads: readonly WorkloadSpec[]): string => {
-  const body = workloads.map(workload => `${workload.scenarioId}/${workload.loadId}/${String(workload.value)}/${workload.unit}`).join('\n');
+  const body = workloads
+    .map(workload => `${workload.scenarioId}/${workload.loadId}/${String(workload.value)}/${workload.unit}`)
+    .sort()
+    .join('\n');
 
   return createHash('sha256')
     .update(`exojs-bench-plan/v1\n${suite}\n${domain}\n${String(PLAN_REVISION)}\n${body}`)
@@ -87,12 +123,10 @@ export const computePlanHash = (suite: SuiteKind, domain: PlanDomain, workloads:
 };
 
 /**
- * Canonical key of one measured cell.
- *
- * Carries the arm, its configuration, the backend, the scenario revision and the
- * load, because each of those changes what was measured. Two results may only be
- * pooled when their keys match; anything coarser pools a WebGPU cell with a
- * WebGL2 one, or this revision of a scene with the previous one.
+ * Key of one measured cell: the domain, the arm, its configuration, the backend,
+ * the scenario and the load. Two results may only be pooled when their keys
+ * match and the surrounding plan identity is compatible; anything coarser pools
+ * a WebGPU cell with a WebGL2 one.
  */
 export const cellKey = (parts: {
   readonly domain: PlanDomain;
@@ -137,7 +171,9 @@ export const resolveSuitePlan = (options: {
   const extreme = options.extreme ?? false;
 
   if (extreme && options.suite !== 'full') {
-    throw new Error('--extreme is only valid with --suite=full: an extreme load is a development probe and is never part of a published reference comparison.');
+    throw new Error(
+      '--extreme is only valid with --suite=full: an extreme load is a development probe and is never part of a published reference comparison.',
+    );
   }
 
   const workloads: WorkloadSpec[] = [];
@@ -198,11 +234,16 @@ export const resolveSuitePlan = (options: {
   };
 };
 
-/** Load values the plan selected for one scenario, ascending. */
+/** Load values the plan selected for one scenario, in plan order. */
 export const loadValuesFor = (plan: RunPlan, scenarioId: string): readonly number[] =>
   plan.workloads.filter(workload => workload.scenarioId === scenarioId).map(workload => workload.value);
 
-/** Parse and validate the `--suite` selector. */
+/**
+ * Parse and validate the `--suite` selector.
+ *
+ * An absent selector resolves to `full`; any value besides `reference` and
+ * `full` throws.
+ */
 export const parseSuite = (raw: string | undefined): SuiteKind => {
   if (raw === undefined || raw === 'full') {
     return 'full';

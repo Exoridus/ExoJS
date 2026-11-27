@@ -1,20 +1,19 @@
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import { createRng } from '../../shared/rng';
-import type { PhysicsArchetypeSpec, PhysicsSceneShape } from '../PhysicsAdapter';
+import type { PhysicsArchetypeSpec } from '../PhysicsAdapter';
 
 /**
  * Engine-neutral description of a physics scene - the fairness backbone the
  * matter.js, planck.js, nape-js and rapier arms build from.
  *
- * The native `adapters/exojs-physics.ts` arm builds its scene inline against the
- * `@codexo/exojs-physics` API. The competitor arms cannot share that code (they
- * speak different body APIs), so the risk is several hand-written transcriptions
- * quietly drifting into different scenes. This module removes that risk for the
- * competitor arms: it produces one neutral list of {@link BodyDesc}s, drawn from
- * the SAME shared deterministic RNG in the SAME order as the exojs arm, so
- * all competitor arms simulate a byte-identical body configuration to each other,
- * and - because the draw order is a faithful transcription of exojs-physics.ts -
- * to the native arm as well.
+ * Every arm builds from this module, the native `adapters/exojs-physics.ts` one
+ * included. The arms speak different body APIs, so the risk it removes is
+ * several hand-written transcriptions quietly drifting into different scenes:
+ * here one neutral list of {@link BodyDesc}s is drawn from the SAME shared
+ * deterministic RNG in the SAME order, and each arm only maps those descriptors
+ * onto its own bodies. The native arm used to transcribe its scene inline;
+ * routing it through the same descriptor is what makes the identical scene a
+ * fact rather than a maintained coincidence.
  *
  * The perturbed-body selection is routed through the shared
  * {@link selectMutationIndices} exactly as the native arm does, and its
@@ -32,7 +31,9 @@ export const BODY_SIZE = 16;
 export const PERTURB_SPEED = 400;
 
 /** A box (full width/height) or circle collider shape, engine-neutral. */
-export type ShapeDesc = { readonly kind: 'box'; readonly width: number; readonly height: number } | { readonly kind: 'circle'; readonly radius: number };
+export type ShapeDesc =
+  | { readonly kind: 'box'; readonly width: number; readonly height: number }
+  | { readonly kind: 'circle'; readonly radius: number };
 
 /** One body in the neutral scene: its role, centre position, shape and material. */
 export interface BodyDesc {
@@ -128,9 +129,8 @@ const staticBox = (x: number, y: number, width: number, height: number): BodyDes
 
 /**
  * `box-stack`: `columns` independent stacks of boxes settling on a wide static
- * floor. Transcribes `exojs-physics.ts::buildBoxStack` draw-for-draw: the floor
- * is added first (no RNG), then one `rng()` jitter is drawn per placed dynamic
- * body in column-major order.
+ * floor. The floor is added first (no RNG), then one `rng()` jitter is drawn per
+ * placed dynamic body in column-major order.
  */
 const buildBoxStack = (bodies: BodyDesc[], bodyCount: number, rng: () => number): void => {
   const rows = 8;
@@ -169,9 +169,9 @@ const MANY_DYNAMIC_MATERIAL = { friction: 0, restitution: 0.4 } as const;
 
 /**
  * `many-dynamic`: a grid of small dynamic circles inside a bounded box, every
- * body given a deterministic initial impulse. Transcribes
- * `exojs-physics.ts::buildManyDynamic`: four static walls first (no RNG), then
- * two `rng()` draws (vx, vy) per perturbed body in ascending index order.
+ * body given a deterministic initial impulse. Four static walls are added first
+ * (no RNG), then two `rng()` draws (vx, vy) per perturbed body in ascending
+ * index order.
  *
  * `material` is the only thing that can distinguish an archetype simulating
  * this scene from `many-dynamic` itself - every position, shape and impulse
@@ -223,9 +223,8 @@ const buildManyDynamic = (
 
 /**
  * `mixed-static-dynamic`: a static floor plus a lattice of static peg obstacles,
- * with dynamic boxes raining from above. Transcribes
- * `exojs-physics.ts::buildMixed`: floor then pegs (no RNG), then one `rng()`
- * jitter per dynamic body in index order.
+ * with dynamic boxes raining from above. Floor then pegs are added first (no
+ * RNG), then one `rng()` jitter per dynamic body in index order.
  */
 const buildMixed = (bodies: BodyDesc[], bodyCount: number, rng: () => number): void => {
   const spacing = BODY_SIZE + 10;
@@ -334,8 +333,8 @@ const buildJointChains = (
 };
 
 /** World extent (px) each scene shape occupies, used to lay out the ray sweep across it. */
-const sceneExtent = (shape: PhysicsSceneShape, bodyCount: number): { width: number; height: number } => {
-  switch (shape) {
+const sceneExtent = (spec: PhysicsArchetypeSpec, bodyCount: number): { width: number; height: number } => {
+  switch (spec.scene) {
     case 'box-stack': {
       const columns = Math.max(1, Math.ceil(bodyCount / 8));
 
@@ -352,9 +351,10 @@ const sceneExtent = (shape: PhysicsSceneShape, bodyCount: number): { width: numb
       return { width: columns * (BODY_SIZE + 10) + 200, height: 1_440 };
     }
     case 'joint-chains': {
-      const chains = Math.max(1, Math.ceil(bodyCount / 8));
+      const length = Math.max(1, spec.jointChainLength ?? 1);
+      const chains = Math.max(1, Math.ceil(bodyCount / length));
 
-      return { width: 120 + chains * BODY_SIZE * 4 + 120, height: 1_000 };
+      return { width: 120 + chains * BODY_SIZE * 4 + 120, height: Math.max(1_000, 320 + Math.min(bodyCount, length) * BODY_SIZE) };
     }
   }
 };
@@ -373,7 +373,12 @@ const sceneExtent = (shape: PhysicsSceneShape, bodyCount: number): { width: numb
  * the origin by an irrational fraction of the height, so the sweep never falls
  * into a short repeating cycle.
  */
-export const rayForStep = (index: number, total: number, step: number, extent: { readonly width: number; readonly height: number }): RayDesc => {
+export const rayForStep = (
+  index: number,
+  total: number,
+  step: number,
+  extent: { readonly width: number; readonly height: number },
+): RayDesc => {
   const count = Math.max(1, total);
   const originY = extent.height * (((index / count + step * GOLDEN_STEP) % 1) + 0);
   // Fan across the full height of the far edge, so the sweep covers the extent
@@ -391,13 +396,13 @@ const GOLDEN_STEP = 0.618_033_988_749_895;
 
 /**
  * Describe an archetype's scene as an engine-neutral body list, consuming the
- * shared RNG in the identical order the native exojs arm does so every arm
- * simulates the same bodies at the same positions with the same perturbations.
+ * shared RNG in one fixed order so every arm simulates the same bodies at the
+ * same positions with the same perturbations.
  *
- * The two RNG streams mirror `exojs-physics.ts` exactly: the perturbed-body set
+ * The two RNG streams are independent: the perturbed-body set
  * is selected via {@link selectMutationIndices} on `createRng(seed)`, and body
  * placement/velocity jitter is drawn from an independent `createRng(seed ^
- * 0x5f356495)` stream - same seed, separate instance - so selection and
+ * 0x5f356495)` stream - derived from the same cell seed, separate instance - so selection and
  * placement never share a stream position.
  */
 export const describePhysicsScene = (spec: PhysicsArchetypeSpec, bodyCount: number, seed: number): SceneDescription => {
@@ -432,6 +437,6 @@ export const describePhysicsScene = (spec: PhysicsArchetypeSpec, bodyCount: numb
     dynamicOffset: bodies.findIndex(body => body.type === 'dynamic'),
     joints,
     churnIndices: spec.churn === true ? perturbed : [],
-    extent: sceneExtent(spec.scene, bodyCount),
+    extent: sceneExtent(spec, bodyCount),
   };
 };

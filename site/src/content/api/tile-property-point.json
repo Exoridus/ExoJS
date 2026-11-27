@@ -4,7 +4,7 @@
   "symbol": "TilePropertyPoint",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A 2D point-valued tile property (e.g. an LDtk `Point` field)."
       ],
-      "importLine": "import { TilePropertyPoint } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TilePropertyPoint } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

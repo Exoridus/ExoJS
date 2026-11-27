@@ -59,15 +59,17 @@ describe('particle colour rendering - authored tint decode', () => {
   });
 });
 
-describe('particle colour rendering - fragment stage untouched', () => {
-  // The tint decode lives entirely in the vertex stage; every fragment stage's
-  // existing sample/tint combine (GLSL: no association yet, matching the
-  // sprite/mesh gaps this track documents elsewhere; WGSL: the existing
-  // uniforms.flags.x-gated premultiply) stays unchanged.
-  test('GLSL fragment stages keep their existing sample/tint combine', () => {
-    expect(particleFragmentGlsl).toContain('fragColor = texture(u_texture, v_texcoord) * v_color;');
-    expect(ribbonFragmentGlsl).toContain('fragColor = texture(u_texture, v_texcoord) * v_color;');
-    expect(trailFragmentGlsl).toContain('fragColor = texture(u_texture, v_texcoord) * v_color;');
+describe('particle colour rendering - fragment stage', () => {
+  // The tint decode lives entirely in the vertex stage. The fragment stage's
+  // sample/tint combine now carries the same sample-alpha association on both
+  // backends: GLSL under u_associateSample, WGSL under uniforms.flags.x, each
+  // set from the backend's texture policy.
+  test('GLSL fragment stages associate a straight-alpha sample under the backend flag', () => {
+    for (const source of [particleFragmentGlsl, ribbonFragmentGlsl, trailFragmentGlsl]) {
+      expect(source).toContain('uniform float u_associateSample;');
+      expect(source).toContain('texel.rgb * texel.a');
+      expect(source).toContain('fragColor = texel * v_color;');
+    }
   });
 
   test('WGSL fragment stages keep their existing sample-alpha association', () => {
@@ -130,7 +132,9 @@ describe('particle colour rendering - shared gradient lookup parity', () => {
     for (const gradient of gradients) {
       const data = lookup.get(gradient);
 
-      for (const t of [0, 0.1, 0.25, 0.41, 0.5, 0.73, 0.9, 1]) expectLookupParity(data, t);
+      for (const t of [0, 0.1, 0.25, 0.41, 0.5, 0.73, 0.9, 1]) {
+        expectLookupParity(data, t);
+      }
     }
   });
 

@@ -1,26 +1,23 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class ResizeScene extends Scene {
   private sprite!: Sprite;
   private info!: Text;
 
   override init(): void {
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
+    this.sprite = new Sprite(assets.ship.source);
     this.sprite.setAnchor(0.5);
 
     this.info = new Text('', { fillColor: Color.white, fontSize: 16 });
     this.info.setAnchor(0.5, 0);
+    this.root.addChild(this.sprite, this.info);
 
     this.layout();
   }
 
   override update(): void {
     this.layout();
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.sprite);
-    context.render(this.info);
   }
 
   // #region guide:layout
@@ -45,9 +42,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 // #endregion guide:app-setup
 

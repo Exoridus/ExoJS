@@ -4,7 +4,7 @@
   "symbol": "TileRegionMode",
   "kind": "type",
   "subsystem": "tilemap-physics",
-  "importPath": "@codexo/exojs-tilemap-physics",
+  "importPath": "@codexo/exojs/tilemap-physics",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -23,7 +23,7 @@
         "`'boxes'` keeps the merged rectangles as solid `BoxShape` colliders: the region has an interior, so point queries, overlaps and sensors behave, and a body that starts inside solid tiles is pushed out. Adjacent rectangles share an internal edge, which a body sliding across can catch on.",
         "`'outline'` traces the boundary of each solid region into closed one-sided chains. Nothing is left to catch on inside a region, which is what a side-scroller wants, but the region has no interior: queries inside it find nothing and a body spawned inside it falls through."
       ],
-      "importLine": "import { TileRegionMode } from '@codexo/exojs-tilemap-physics'",
+      "importLine": "import { TileRegionMode } from '@codexo/exojs/tilemap-physics'",
       "sourceLink": null
     },
     {

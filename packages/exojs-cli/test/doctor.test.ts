@@ -37,9 +37,17 @@ afterEach(() => {
 
 /** A project that passes every required check, so a test can break exactly one thing. */
 const healthyProject = (): void => {
-  writeManifest({ name: 'app', dependencies: { '@codexo/exojs': '^0.17.0' }, packageManager: 'npm@11.0.0', browserslist: ['chrome >= 120', 'firefox >= 141'] });
+  writeManifest({
+    name: 'app',
+    dependencies: { '@codexo/exojs': '^0.17.0' },
+    packageManager: 'npm@11.0.0',
+    browserslist: ['chrome >= 120', 'firefox >= 141'],
+  });
   write('package-lock.json', '{}');
-  install('@codexo/exojs', { version: '0.17.0', devEngines: { runtime: { name: 'node', version: `^${process.versions.node.split('.')[0]}` } } });
+  install('@codexo/exojs', {
+    version: '0.17.0',
+    devEngines: { runtime: { name: 'node', version: `^${process.versions.node.split('.')[0]}` } },
+  });
   install(join('@codexo', 'exojs-particles'), { version: '0.17.0' });
 };
 
@@ -106,7 +114,12 @@ describe('exo doctor', () => {
 
   test('a browser target that cannot run WebGL2 is a failure', () => {
     healthyProject();
-    writeManifest({ name: 'app', dependencies: { '@codexo/exojs': '^0.17.0' }, packageManager: 'npm@11.0.0', browserslist: ['safari >= 14'] });
+    writeManifest({
+      name: 'app',
+      dependencies: { '@codexo/exojs': '^0.17.0' },
+      packageManager: 'npm@11.0.0',
+      browserslist: ['safari >= 14'],
+    });
 
     expect(runDoctor([projectDir])).toBe(1);
     expect(report()).toContain("safari 14 cannot run WebGL2, the engine's baseline backend");
@@ -114,7 +127,12 @@ describe('exo doctor', () => {
 
   test('a target that runs WebGL2 but not WebGPU is reported, not failed', () => {
     healthyProject();
-    writeManifest({ name: 'app', dependencies: { '@codexo/exojs': '^0.17.0' }, packageManager: 'npm@11.0.0', browserslist: ['chrome >= 90'] });
+    writeManifest({
+      name: 'app',
+      dependencies: { '@codexo/exojs': '^0.17.0' },
+      packageManager: 'npm@11.0.0',
+      browserslist: ['chrome >= 90'],
+    });
 
     expect(runDoctor([projectDir])).toBe(0);
     expect(report()).toContain('WebGPU falls back to WebGL2 on chrome 90');
@@ -126,6 +144,26 @@ describe('exo doctor', () => {
 
     expect(runDoctor([projectDir])).toBe(1);
     expect(report()).toContain('safari 14 cannot run WebGL2');
+  });
+
+  test('reads only the production section of .browserslistrc', () => {
+    healthyProject();
+    write('.browserslistrc', '[production]\nchrome >= 120\n\n[development]\nsafari >= 14\n');
+
+    expect(runDoctor([projectDir])).toBe(0);
+    expect(report()).not.toContain('safari 14');
+  });
+
+  test('a range with a minor component is unevaluated rather than satisfied', () => {
+    healthyProject();
+    const [major, minor] = process.versions.node.split('.');
+    install('@codexo/exojs', {
+      version: '0.17.0',
+      devEngines: { runtime: { name: 'node', version: `^${major}.${Number(minor) + 1}` } },
+    });
+
+    expect(runDoctor([projectDir])).toBe(0);
+    expect(report()).toContain('cannot evaluate the declared range');
   });
 });
 

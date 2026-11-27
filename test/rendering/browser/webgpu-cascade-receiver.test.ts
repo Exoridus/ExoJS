@@ -49,7 +49,9 @@ const runCase = async (ctx: { skip: (reason: string) => void }, scenario: Receiv
     },
   });
   // The finest cascade, one constant everywhere: the filter's own input.
-  const texture = Texture.fromColor(new Color(FINEST_LEVEL, FINEST_LEVEL, FINEST_LEVEL), RECEIVER_PROBES * RECEIVER_TILE, { colorSpace: 'none' });
+  const texture = Texture.fromColor(new Color(FINEST_LEVEL, FINEST_LEVEL, FINEST_LEVEL), RECEIVER_PROBES * RECEIVER_TILE, {
+    colorSpace: 'none',
+  });
   const root = new Container();
   const sprite = new Sprite(texture);
 
@@ -79,7 +81,9 @@ const runCase = async (ctx: { skip: (reason: string) => void }, scenario: Receiv
   filter.uniforms.uMaskOffset.set(0, 0);
 
   try {
-    if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+    if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+      return;
+    }
 
     scenario.check(readWebGpuPixels(backend, RECEIVER_SIZE)(RECEIVER_PIXEL, RECEIVER_SIZE - 1 - RECEIVER_PIXEL)[0]!);
   } finally {

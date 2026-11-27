@@ -1,0 +1,9 @@
+---
+/**
+ * Channel metadata for a page head. Next is an unreleased preview, so search
+ * engines are asked not to index it; that is a hint, not an access control.
+ */
+import { siteBuild } from '../lib/site-build-info';
+---
+
+{siteBuild.channel === 'next' && <meta name="robots" content="noindex, nofollow" />}

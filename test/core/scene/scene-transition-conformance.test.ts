@@ -4,7 +4,11 @@
  * the same one the engine's own transitions are proven against.
  */
 import { Color } from '#core/Color';
-import { PhasedSceneTransition, type SceneTransitionPhaseContext, type SceneTransitionPhaseRequirements } from '#core/scene/PhasedSceneTransition';
+import {
+  PhasedSceneTransition,
+  type SceneTransitionPhaseContext,
+  type SceneTransitionPhaseRequirements,
+} from '#core/scene/PhasedSceneTransition';
 import { CrossFadeSceneTransition } from '#core/scene/transitions/CrossFadeSceneTransition';
 import { FadeSceneTransition } from '#core/scene/transitions/FadeSceneTransition';
 import { SlideSceneTransition } from '#core/scene/transitions/SlideSceneTransition';
@@ -66,8 +70,14 @@ const fastDuration = Time.seconds(0.05);
 describeSceneTransitionConformance('FadeSceneTransition', () => new FadeSceneTransition({ duration: fastDuration }));
 describeSceneTransitionConformance('CrossFadeSceneTransition', () => new CrossFadeSceneTransition({ duration: fastDuration }));
 describeSceneTransitionConformance('SlideSceneTransition (push)', () => new SlideSceneTransition({ duration: fastDuration, mode: 'push' }));
-describeSceneTransitionConformance('SlideSceneTransition (cover)', () => new SlideSceneTransition({ duration: fastDuration, mode: 'cover' }));
-describeSceneTransitionConformance('SlideSceneTransition (reveal)', () => new SlideSceneTransition({ duration: fastDuration, mode: 'reveal' }));
+describeSceneTransitionConformance(
+  'SlideSceneTransition (cover)',
+  () => new SlideSceneTransition({ duration: fastDuration, mode: 'cover' }),
+);
+describeSceneTransitionConformance(
+  'SlideSceneTransition (reveal)',
+  () => new SlideSceneTransition({ duration: fastDuration, mode: 'reveal' }),
+);
 // A session allocates one phase state per side, so a definition whose sessions
 // have all ended is back at zero - once, not twice.
 let phased: MinimalPhasedSceneTransition;

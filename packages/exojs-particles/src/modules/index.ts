@@ -9,7 +9,12 @@ export { DeathModule } from './DeathModule';
 export { Drag } from './Drag';
 export type { GlslContribution } from './GlslContribution';
 export { OrbitalForce } from './OrbitalForce';
-export type { ParticleShaderContribution, ParticleTextureBinding, ParticleUniformField, ParticleUniformPrimitive } from './ParticleShaderContribution';
+export type {
+  ParticleShaderContribution,
+  ParticleTextureBinding,
+  ParticleUniformField,
+  ParticleUniformPrimitive,
+} from './ParticleShaderContribution';
 export type { RateSpawnConfig } from './RateSpawn';
 export { RateSpawn } from './RateSpawn';
 export { RepelFromPoint } from './RepelFromPoint';

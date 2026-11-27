@@ -11,6 +11,7 @@ const makeContext = () => {
   const ctx = {
     audioWorklet: { addModule },
   } as unknown as BaseAudioContext;
+
   return { ctx, addModule };
 };
 
@@ -25,7 +26,7 @@ describe('registerAudioWorkletProcessor', () => {
   beforeEach(() => {
     // Ensure fresh URL mocks per test
     createObjectURL = vi.fn((_obj: Blob | MediaSource) => 'blob:mock-url');
-    revokeObjectURL = vi.fn((_url: string) => undefined);
+    revokeObjectURL = vi.fn((_url: string) => {});
     vi.spyOn(URL, 'createObjectURL').mockImplementation(createObjectURL);
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(revokeObjectURL);
   });

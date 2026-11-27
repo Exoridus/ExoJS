@@ -1,16 +1,16 @@
 {
   "title": "Toggle",
-  "description": "A switch that slides between off and on, with an optional label beside it. Behaviourally identical to Checkbox - same state machine, same keyboard activation, same CheckableWidget.onChange - and different only in what it paints: the `toggleTrack` role carries the interaction states, and the `toggleKnob` role slides to the side `checked` selects.",
+  "description": "A switch that slides between off and on, with an optional label beside it. Behaviourally identical to Checkbox - same state machine, same keyboard activation, same CheckableWidget.onChange - and different only in what it paints: the `toggleTrack` role carries the interaction states, the `toggleFill` role covers the track while `checked`, and the `toggleKnob` role slides to the side `checked` selects.",
   "symbol": "Toggle",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 137,
+  "memberCount": 138,
   "counts": {
     "constructors": 1,
     "methods": 69,
-    "properties": 52,
+    "properties": 53,
     "events": 15
   },
   "sections": [
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A switch that slides between off and on, with an optional label beside it.",
-        "Behaviourally identical to Checkbox - same state machine, same keyboard activation, same CheckableWidget.onChange - and different only in what it paints: the `toggleTrack` role carries the interaction states, and the `toggleKnob` role slides to the side `checked` selects."
+        "Behaviourally identical to Checkbox - same state machine, same keyboard activation, same CheckableWidget.onChange - and different only in what it paints: the `toggleTrack` role carries the interaction states, the `toggleFill` role covers the track while `checked`, and the `toggleKnob` role slides to the side `checked` selects."
       ],
       "importLine": "import { Toggle } from '@codexo/exojs'",
       "sourceLink": null
@@ -777,7 +777,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Follow keyboard focus on this widget, so it can paint the focused state and react in Widget._onFocusChanged. Interactive subclasses call this in their constructor; it is opt-in because subscribing allocates the focus signals, which a decorative widget would never fire."
+          "description": "Follow keyboard focus on this widget, so it can paint the focused state and react in Widget._onFocusChanged. Pointer presses request focus. Interactive subclasses call this in their constructor; it is opt-in because subscribing allocates the focus signals, which a decorative widget would never fire."
         },
         {
           "name": "[iterator]",
@@ -1354,7 +1354,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - either shape is a Polygon that encloses no area (empty, fewer than three distinct vertices, or collinear vertices) and the other is a filled shape (Rectangle, Circle, Ellipse or Polygon); such a polygon overlaps no filled shape, and intersectsWith returns false for the same pairs. Line and Point queries are unchanged: they test the polygon's outline and vertices as before, **or** - the specific shape-pair combination does not support response generation (for example Line against any shape, or Ellipse against a Point). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
         },
         {
           "name": "contains",
@@ -1451,7 +1451,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change. Idempotent: a second call is a no-op."
+          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change. Idempotent: a second call is a no-op."
         },
         {
           "name": "focus",
@@ -3801,7 +3801,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer (WebGL2). Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
+          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer on both backends. Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
         },
         {
           "name": "clipShape",
@@ -3999,6 +3999,35 @@
           "description": "The widget's own enabled flag, independent of any ancestor's. Disabling a container widget does not change this on its children - see effectiveEnabled for the value interaction and keyboard focus actually consult, and for what disabling a container does to them."
         },
         {
+          "name": "fillNode",
+          "signature": "fillNode: UIBackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "fillNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the checked fill, or null while unchecked or the fill paints nothing."
+        },
+        {
           "name": "filters",
           "signature": "filters: readonly Filter[]",
           "signatureTokens": [
@@ -4029,7 +4058,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Filters are borrowed; destroying this node detaches them without destroying them."
         },
         {
           "name": "focused",

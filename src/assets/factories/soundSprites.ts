@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import type { AssetDependencyScope } from '#assets/AssetFactory';
 import type { AudioSpriteClip } from '#audio/Sound';
@@ -35,7 +34,7 @@ const fail = (source: string, detail: string): never => {
  * @internal
  */
 export const loadSoundSpriteSheet = async (source: string, scope: AssetDependencyScope): Promise<SoundSpriteSheet> => {
-  const data: unknown = await scope.load(Asset.type('json', source));
+  const data: unknown = await scope.load({ type: 'json', source });
 
   if (data === null || typeof data !== 'object' || Array.isArray(data)) {
     fail(source, 'expected an object mapping sprite names to clips');
@@ -58,7 +57,14 @@ export const loadSoundSpriteSheet = async (source: string, scope: AssetDependenc
       fail(source, `the entry "${name}" has a non-boolean "loop"`);
     }
 
-    sheet[name] = { start: start as number, end: end as number, ...(loop !== undefined && { loop: loop as boolean }) };
+    // `sheet[name] = clip` would invoke Object.prototype's setter for the name
+    // "__proto__"; define the entry so every sidecar key stays an own property.
+    Object.defineProperty(sheet, name, {
+      value: { start: start as number, end: end as number, ...(loop !== undefined && { loop: loop as boolean }) },
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
   }
 
   return sheet;

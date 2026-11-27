@@ -1,17 +1,24 @@
 // Default import on purpose: the package's ESM build exports the plugin as
 // `default` only (the .d.ts advertises a named export it doesn't ship).
-import codecovAstroPlugin from '@codecov/astro-plugin';
-import { defineConfig } from 'astro/config';
-import mdx from '@astrojs/mdx';
-import react from '@astrojs/react';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import mdx from '@astrojs/mdx';
+import react from '@astrojs/react';
+import codecovAstroPlugin from '@codecov/astro-plugin';
+import { defineConfig } from 'astro/config';
+
 import { isGeneratedAstroDirective } from './scripts/astro-warning-policy';
+import { installSiteBaseLinks } from './scripts/site-base-links';
+import { resolveSiteBuild, writeProvisionalSiteBuild } from './scripts/write-site-build';
 import { SHIKI_THEMES } from './src/lib/shiki-theme';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// The channel contract decides the base of every URL the build emits, so it is
+// resolved and validated here, once, before anything renders.
+const siteBuild = resolveSiteBuild(process.env);
 
 // Codecov Bundle Analysis for the site bundle - upload only when the token is
 // present (CI); local builds stay offline. Placed after all other integrations
@@ -28,9 +35,24 @@ const codecovIntegrations = process.env.CODECOV_TOKEN
   : [];
 
 export default defineConfig({
-  integrations: [react(), mdx(), ...codecovIntegrations],
+  integrations: [
+    react(),
+    mdx(),
+    {
+      name: 'exojs-site-build',
+      hooks: {
+        'astro:config:setup': ({ config }) => installSiteBaseLinks(config.markdown.processor, siteBuild.basePath),
+        'astro:build:done': ({ dir }) => writeProvisionalSiteBuild(fileURLToPath(dir), siteBuild),
+      },
+    },
+    ...codecovIntegrations,
+  ],
   output: 'static',
-  base: '/ExoJS/',
+  base: siteBuild.basePath,
+  redirects: {
+    '/en/playground/tools': `${siteBuild.basePath}en/playground/`,
+    '/de/playground/tools': `${siteBuild.basePath}de/playground/`,
+  },
   i18n: {
     locales: ['en', 'de'],
     defaultLocale: 'en',
@@ -49,6 +71,9 @@ export default defineConfig({
     assets: '_astro',
   },
   vite: {
+    define: {
+      __EXOJS_SITE_BUILD__: JSON.stringify(siteBuild),
+    },
     resolve: {
       alias: {
         '~examples': path.resolve(__dirname, '../examples'),
@@ -75,7 +100,10 @@ export default defineConfig({
       rollupOptions: {
         onwarn(warning, warn) {
           // Astro carries propagated styles and links in this generated module's exports.
-          if (isGeneratedAstroDirective(warning, path.resolve(__dirname, 'src/content'))) return;
+          if (isGeneratedAstroDirective(warning, path.resolve(__dirname, 'src/content'))) {
+            return;
+          }
+
           warn(warning);
         },
         output: {
@@ -83,15 +111,19 @@ export default defineConfig({
             // Monaco editor core - isolated so its hash is stable across
             // app-code changes and workers/language-packs are kept separate
             // by Monaco's own internal dynamic imports.
-            if (id.includes('/node_modules/monaco-editor/')) return 'vendor-monaco';
+            if (id.includes('/node_modules/monaco-editor/')) {
+              return 'vendor-monaco';
+            }
+
             // React runtime - shared by all hydrated islands; stable vendor chunk.
             if (
               id.includes('/node_modules/react/') ||
               id.includes('/node_modules/react-dom/') ||
               id.includes('/node_modules/@astrojs/react/') ||
               id.includes('/node_modules/@monaco-editor/react/')
-            )
+            ) {
               return 'vendor-react';
+            }
           },
         },
       },

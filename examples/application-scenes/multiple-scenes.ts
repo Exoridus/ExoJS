@@ -1,111 +1,96 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FadeSceneTransition,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  Text,
+} from '@codexo/exojs';
+import { startExample, unitsPerCssPixel } from '@examples/runtime';
 
 const history: string[] = [];
+
 const record = (event: string): void => {
   history.push(event);
+
   if (history.length > 8) {
     history.shift();
   }
 };
 
-const makeReadout = (width: number): Text =>
-  new Text('', { fillColor: Color.white, fontSize: 19, align: 'center' }).setAnchor(0.5, 0).setPosition(width / 2, 390);
+const wipe = new FadeSceneTransition();
 
-const makeBackground = (width: number, height: number, color: Color): Graphics => {
-  const background = new Graphics();
-  background.fillColor = color;
-  background.drawRectangle(0, 0, width, height);
-  return background;
-};
-
-class MenuScene extends Scene {
-  private background!: Graphics;
+class LifecycleScene extends Scene {
+  protected sceneName = '';
   private title!: Text;
   private readout!: Text;
+  private readonly background = this.track(new Graphics());
   private updates = 0;
   private draws = 0;
+  private changing = false;
 
-  override async load(): Promise<void> {
-    record('Menu: load');
+  override load(): void {
+    record(`${this.sceneName}: load`);
   }
 
   override init(): void {
-    record('Menu: init');
-    this.onActivate.add(() => record('Menu: activate'));
-    this.background = makeBackground(this.app.width, this.app.height, new Color(18, 38, 72));
-    this.title = new Text('MENU\nSpace: start game', { align: 'center', fillColor: Color.white, fontSize: 36, fontWeight: 'bold' });
-    this.title.setAnchor(0.5).setPosition(this.app.width / 2, 220);
-    this.readout = makeReadout(this.app.width);
-    this.inputs.onTrigger(Keyboard.Space, () => void this.app.scenes.change(GameScene));
+    record(`${this.sceneName}: init`);
+    this.onActivate.add(() => record(`${this.sceneName}: activate`));
+    this.title = this.track(new Text(this.sceneName, { fillColor: Color.white, fontWeight: 'bold' }));
+    this.readout = this.track(new Text('', { fillColor: new Color(168, 175, 181) }));
+    this.background.fillColor = this.sceneName === 'Menu' ? new Color(26, 43, 48) : new Color(22, 58, 48);
+    this.background.drawRectangle(0, 0, this.app.width, this.app.height);
+    this.background.interactive = true;
+    this.background.onPointerTap.add(() => this.change());
+    this.inputs.onTrigger(Keyboard.Space, () => this.change());
+    this.root.addChild(this.background, this.title, this.readout);
+  }
+
+  private change(): void {
+    if (this.changing) {
+      return;
+    }
+
+    this.changing = true;
+    void this.app.scenes.change(this.sceneName === 'Menu' ? GameScene : MenuScene, { transition: wipe });
   }
 
   override update(): void {
-    this.updates++;
+    if (this.updates++ === 0) {
+      record(`${this.sceneName}: update`);
+    }
   }
 
   override draw(context: RenderingContext): void {
-    this.draws++;
-    this.readout.text = `Menu update ${this.updates} · draw ${this.draws}\n${history.join('\n')}`;
-    context.render(this.background);
-    context.render(this.title);
-    context.render(this.readout);
+    const k = unitsPerCssPixel(this.app, this.app.canvas as HTMLCanvasElement);
+    const width = this.app.width / k;
+    const compact = width < 600;
+    this.title.style.fontSize = (compact ? 30 : 48) * k;
+    this.title.setPosition(24 * k, 50 * k);
+    this.readout.style.fontSize = 14 * k;
+    this.readout.text = `Update ${this.updates} | draw ${++this.draws}\n${history.join('\n')}`;
+    this.readout.setPosition((compact ? width * 0.47 : width * 0.62) * k, 28 * k);
+    context.render(this.root);
   }
 
   override destroy(): void {
-    record('Menu: destroy');
+    record(`${this.sceneName}: destroy`);
     super.destroy();
   }
 }
-
-class GameScene extends Scene {
-  private background!: Graphics;
-  private title!: Text;
-  private readout!: Text;
-  private updates = 0;
-  private draws = 0;
-
-  override async load(): Promise<void> {
-    record('Game: load');
-  }
-
-  override init(): void {
-    record('Game: init');
-    this.onActivate.add(() => record('Game: activate'));
-    this.background = makeBackground(this.app.width, this.app.height, new Color(24, 72, 42));
-    this.title = new Text('GAME\nEsc: return to menu', { align: 'center', fillColor: Color.white, fontSize: 36, fontWeight: 'bold' });
-    this.title.setAnchor(0.5).setPosition(this.app.width / 2, 220);
-    this.readout = makeReadout(this.app.width);
-    this.inputs.onTrigger(Keyboard.Escape, () => void this.app.scenes.change(MenuScene));
-  }
-
-  override update(): void {
-    this.updates++;
-  }
-
-  override draw(context: RenderingContext): void {
-    this.draws++;
-    this.readout.text = `Game update ${this.updates} · draw ${this.draws}\n${history.join('\n')}`;
-    context.render(this.background);
-    context.render(this.title);
-    context.render(this.readout);
-  }
-
-  override destroy(): void {
-    record('Game: destroy');
-    super.destroy();
-  }
+class MenuScene extends LifecycleScene {
+  protected override sceneName = 'Menu';
+}
+class GameScene extends LifecycleScene {
+  protected override sceneName = 'Game';
 }
 
 const app = new Application({
   scenes: { MenuScene, GameScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
-
-await app.start(MenuScene);
+await startExample(app, () => app.start(MenuScene));

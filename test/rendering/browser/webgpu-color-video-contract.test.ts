@@ -30,7 +30,8 @@ interface SkipCtx {
   skip: (reason: string) => void;
 }
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const setupBackend = async (): Promise<WebGpuBackend> => {
   const { WebGpuBackend } = await import('#rendering/webgpu/WebGpuBackend');

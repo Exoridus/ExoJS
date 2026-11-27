@@ -32,7 +32,8 @@ export function createImportBoundaries(opts = {}) {
   if (forbidExtensions) crossPackage.unshift('@codexo/exojs-*');
   patterns.push({
     group: crossPackage,
-    message: 'Do not import another package via its /src internals' + (forbidExtensions ? '; Core must not import extension packages.' : '.'),
+    message:
+      'Do not import another package via its /src internals' + (forbidExtensions ? '; Core must not import extension packages.' : '.'),
   });
   return patterns;
 }

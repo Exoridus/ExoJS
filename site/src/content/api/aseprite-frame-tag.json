@@ -6,11 +6,11 @@
   "subsystem": "aseprite",
   "importPath": "@codexo/exojs-aseprite",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -51,7 +51,32 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Tag colour from the editor, as #RRGGBBAA."
+        },
+        {
+          "name": "data",
+          "signature": "data?: string",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Free-form user data attached to the tag in the editor."
         },
         {
           "name": "direction",

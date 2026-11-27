@@ -6,11 +6,19 @@ import type { Rectangle } from '#math/Rectangle';
  * text to place over the current selection (an IME commit, a typed character,
  * a paste); `deleteContent` removes the selection, or the range a granularity
  * step spans next to the caret; `historyUndo`/`historyRedo` ask for the
- * widget's own undo ring, not the host's.
+ * widget's own undo ring, not the host's. An optional `range` supplies the
+ * host's authoritative UTF-16 target offsets, including replacements whose
+ * target differs from the model's selection. Without it, edits use the
+ * model's current selection.
  */
 export type TextEditIntent =
-  | { kind: 'insert'; text: string }
-  | { kind: 'deleteContent'; direction: 'backward' | 'forward'; granularity: 'character' | 'word' | 'line' }
+  | { kind: 'insert'; text: string; source?: 'input' | 'paste'; range?: { readonly start: number; readonly end: number } }
+  | {
+      kind: 'deleteContent';
+      direction: 'backward' | 'forward';
+      granularity: 'character' | 'word' | 'line';
+      range?: { readonly start: number; readonly end: number };
+    }
   | { kind: 'historyUndo' }
   | { kind: 'historyRedo' };
 
@@ -46,6 +54,9 @@ export interface PlatformTextInputHints {
  * focus, but rejects edits.
  */
 export interface PlatformTextInput {
+  /** Built-in transports accept synchronous editing commands before native default handling. @internal */
+  readonly _synchronousKeyboard?: boolean;
+
   /** Give the transport host focus, so keyboards and IMEs attach. */
   focus(): void;
 

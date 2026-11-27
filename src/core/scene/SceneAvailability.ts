@@ -1,3 +1,5 @@
+import { SceneState } from '#core/scene/SceneState';
+
 /**
  * When a scene-scoped registration stays live relative to the owning scene's
  * pause flag. Shared by every scene facility that accepts a `when` option -
@@ -27,3 +29,16 @@ export enum SceneAvailability {
   /** Live regardless of the pause flag. */
   Always = 'always',
 }
+
+/**
+ * Whether a registration with policy `when` may run in a scope that is in
+ * `state` with the given pause flag. Only an `Active` scope runs anything.
+ * @internal
+ */
+export const sceneAvailabilityAllows = (when: SceneAvailability, state: SceneState, paused: boolean): boolean => {
+  if (state !== SceneState.Active) {
+    return false;
+  }
+
+  return when === SceneAvailability.Always || (when === SceneAvailability.Active) !== paused;
+};

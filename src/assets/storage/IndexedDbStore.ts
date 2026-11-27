@@ -4,7 +4,7 @@ import { cacheNamespacePrefix, type CacheRecordKey, serializeCacheRecordKey } fr
 import type { CacheStore } from '#assets/cache/CacheStore';
 import { supportsIndexedDb } from '#core/utils';
 
-import { openIndexedDb, requestResult, transactionComplete } from './indexedDbSupport';
+import { issueWrite, openIndexedDb, requestResult, transactionComplete } from './indexedDbSupport';
 
 /** The one object store every cache record lives in. */
 const recordStoreName = 'records';
@@ -94,7 +94,11 @@ export class IndexedDbStore implements CacheStore {
     const options = typeof nameOrOptions === 'string' ? { name: nameOrOptions } : nameOrOptions;
 
     if (!supportsIndexedDb) {
-      throw new AssetCacheError({ operation: 'connect', message: 'IndexedDbStore requires a host with IndexedDB support.', store: options.name });
+      throw new AssetCacheError({
+        operation: 'connect',
+        message: 'IndexedDbStore requires a host with IndexedDB support.',
+        store: options.name,
+      });
     }
 
     this._name = options.name;
@@ -120,16 +124,15 @@ export class IndexedDbStore implements CacheStore {
   public async set(key: CacheRecordKey, value: unknown): Promise<void> {
     const serialized = serializeCacheRecordKey(key);
     const store = await this._objectStore('write', 'readwrite', serialized);
-    const committed = transactionComplete(store.transaction, {
+    const failure = {
       operation: 'write',
       message: 'Writing a cache record failed.',
       store: key.namespace,
       key: serialized,
-    });
+    } as const;
+    const committed = transactionComplete(store.transaction, failure);
 
-    store.put({ key: serialized, value } satisfies StoredRecord);
-
-    return committed;
+    return issueWrite(store.transaction, committed, failure, () => store.put({ key: serialized, value } satisfies StoredRecord));
   }
 
   public async delete(key: CacheRecordKey): Promise<void> {
@@ -149,7 +152,11 @@ export class IndexedDbStore implements CacheStore {
 
   public async clear(namespace?: string): Promise<void> {
     const store = await this._objectStore('clear', 'readwrite');
-    const committed = transactionComplete(store.transaction, { operation: 'clear', message: 'Clearing the cache failed.', store: namespace });
+    const committed = transactionComplete(store.transaction, {
+      operation: 'clear',
+      message: 'Clearing the cache failed.',
+      store: namespace,
+    });
 
     if (namespace === undefined) {
       store.clear();

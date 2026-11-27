@@ -1,3 +1,4 @@
+import { logger } from '#core/Logger';
 import type { BrowserGamepad } from '#input/gamepadDefinitions';
 
 import type {
@@ -328,11 +329,17 @@ export class OffscreenPlatform implements PlatformAdapter {
     this._cancelFrame?.(handle);
   }
 
-  public onSurfaceEvent<K extends keyof PlatformSurfaceEventMap>(type: K, listener: (event: PlatformSurfaceEventMap[K]) => void): PlatformSubscription {
+  public onSurfaceEvent<K extends keyof PlatformSurfaceEventMap>(
+    type: K,
+    listener: (event: PlatformSurfaceEventMap[K]) => void,
+  ): PlatformSubscription {
     return subscribe(this._surfaceListeners, type, listener);
   }
 
-  public onWindowEvent<K extends keyof PlatformWindowEventMap>(type: K, listener: (event: PlatformWindowEventMap[K]) => void): PlatformSubscription {
+  public onWindowEvent<K extends keyof PlatformWindowEventMap>(
+    type: K,
+    listener: (event: PlatformWindowEventMap[K]) => void,
+  ): PlatformSubscription {
     return subscribe(this._windowListeners, type, listener);
   }
 
@@ -358,18 +365,34 @@ export class OffscreenPlatform implements PlatformAdapter {
     }
 
     let suppressed = false;
+
     const suppress = (): void => {
       suppressed = true;
     };
+
     // The data arrives without the suppression calls, and the pipeline above
     // this seam calls them unconditionally. Binding them per dispatch is what
     // turns "the engine consumed this" into an answer the host can act on.
     const delivered = { ...event, preventDefault: suppress, stopImmediatePropagation: suppress };
 
     // Copied because a listener may unsubscribe itself, or another, while the
-    // event is being delivered.
+    // event is being delivered. Each call is isolated the way DOM dispatch
+    // isolates its listeners: a throwing subscriber must not suppress the rest
+    // of the event or unwind into the host's forwarder.
     for (const listener of [...listeners]) {
-      (listener as (event: unknown) => void)(delivered);
+      try {
+        (listener as (event: unknown) => void)(delivered);
+      } catch (error) {
+        logger.error('A platform event listener threw while handling a forwarded event.', {
+          source: 'OffscreenPlatform',
+          // String() itself throws on a null-prototype payload, which would
+          // escape this catch and defeat the isolation it exists for.
+          error:
+            error instanceof Error
+              ? error
+              : new Error(typeof error === 'string' ? error : 'A platform event listener threw a non-Error value.'),
+        });
+      }
     }
 
     return suppressed;

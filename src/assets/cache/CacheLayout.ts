@@ -11,7 +11,10 @@ import type { CacheReadResult } from './CacheReadResult';
  * @advanced
  */
 export interface CacheLayoutContext {
-  /** Read one of this layout's records. Rejects when the store could not answer. */
+  /**
+   * Read one of this layout's records. Resolves to a miss when no read store
+   * held it; rejects when a store failed and no later store supplied a hit.
+   */
   read(record: string): Promise<CacheReadResult>;
   /** Write one of this layout's records. */
   write(record: string, value: unknown): Promise<void>;

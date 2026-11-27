@@ -48,7 +48,14 @@ describe('RenderingContext.readImageData - pre-flight validation', () => {
   test('rejects a zero-alpha pixel carrying nonzero color, without a background', async () => {
     const backend: RenderBackend = {
       ...createRenderBackendDouble(),
-      readPixels: (<T extends PixelDataType = 'uint8'>(source: RenderTexture, _x: number, _y: number, width: number, height: number, _dataType?: T) => {
+      readPixels: (<T extends PixelDataType = 'uint8'>(
+        source: RenderTexture,
+        _x: number,
+        _y: number,
+        width: number,
+        height: number,
+        _dataType?: T,
+      ) => {
         // One violating pixel (zero alpha, red channel 200) among otherwise-valid ones.
         const data = new Uint8ClampedArray(width * height * 4);
 
@@ -67,7 +74,14 @@ describe('RenderingContext.readImageData - pre-flight validation', () => {
   test('a fully-covered region passes the orphaned-emission check and reaches the output transform', async () => {
     const backend: RenderBackend = {
       ...createRenderBackendDouble(),
-      readPixels: (<T extends PixelDataType = 'uint8'>(_source: RenderTexture, _x: number, _y: number, width: number, height: number, _dataType?: T) => {
+      readPixels: (<T extends PixelDataType = 'uint8'>(
+        _source: RenderTexture,
+        _x: number,
+        _y: number,
+        width: number,
+        height: number,
+        _dataType?: T,
+      ) => {
         const data = new Uint8ClampedArray(width * height * 4);
 
         data.fill(255); // opaque white everywhere - never zero alpha with nonzero color.

@@ -4,7 +4,7 @@
 
 ```ts
 import { getAudioContext } from '@codexo/exojs';
-import { PcmStreamSource } from '@codexo/exojs-audio-fx';
+import { PcmStreamSource } from '@codexo/exojs/audio-fx';
 
 const stream = new PcmStreamSource({ channels: 2, capacityFrames: 8192, bus: app.audio.music });
 await stream.ready;

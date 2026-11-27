@@ -2,7 +2,12 @@ import type { BeatFixture } from '../fixtures/beat-fixtures';
 import { computeMirMetrics } from './beat-metrics';
 import type { BeatMessage, StateMessage } from './beat-sandbox';
 
-const fixture = (times: number[]): BeatFixture => ({ samples: new Float32Array(48000 * 4), beatTimesSec: times, bpm: 120, label: 'metric-contract' });
+const fixture = (times: number[]): BeatFixture => ({
+  samples: new Float32Array(48000 * 4),
+  beatTimesSec: times,
+  bpm: 120,
+  label: 'metric-contract',
+});
 const beat = (audioTime: number, postedAt = audioTime, status: BeatMessage['status'] = 'locked'): BeatMessage => ({
   type: 'beat',
   audioTime,

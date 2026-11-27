@@ -4,7 +4,7 @@
   "symbol": "AlphaFadeOverLifetime",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 9,
   "counts": {
@@ -23,7 +23,7 @@
         "The default curve `1 → 0` produces a linear fade-out. For a fade-in then fade-out, pass a curve like `[0,0]→[0.5,1]→[1,0]`.",
         "CPU, WebGL2 and WebGPU use the same 256-sample lookup table with explicit linear interpolation. Narrow keyframe features are approximated. Color channels are quantized to the nearest byte after interpolation."
       ],
-      "importLine": "import { AlphaFadeOverLifetime } from '@codexo/exojs-particles'",
+      "importLine": "import { AlphaFadeOverLifetime } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

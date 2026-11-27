@@ -110,7 +110,9 @@ export class GridJumpExpansion implements PrunedExpansion {
   }
 
   private walkable(x: number, y: number): boolean {
-    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return false;
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) {
+      return false;
+    }
 
     return this.costs[y * this.width + x]! > 0;
   }
@@ -128,7 +130,9 @@ export class GridJumpExpansion implements PrunedExpansion {
   ): number {
     const jump = this.jump(x, y, stepX, stepY, goalX, goalY);
 
-    if (jump < 0) return count;
+    if (jump < 0) {
+      return count;
+    }
 
     outNodes[count] = jump;
     outCosts[count] = runLength(Math.abs((jump % this.width) - x), Math.abs(((jump / this.width) | 0) - y));
@@ -151,14 +155,26 @@ export class GridJumpExpansion implements PrunedExpansion {
       const nextX = currentX + stepX;
       const nextY = currentY + stepY;
 
-      if (!this.walkable(nextX, nextY)) return -1;
-      if (stepX !== 0 && stepY !== 0 && (!this.walkable(nextX, currentY) || !this.walkable(currentX, nextY))) return -1;
-      if (nextX === goalX && nextY === goalY) return nextY * width + nextX;
+      if (!this.walkable(nextX, nextY)) {
+        return -1;
+      }
+
+      if (stepX !== 0 && stepY !== 0 && (!this.walkable(nextX, currentY) || !this.walkable(currentX, nextY))) {
+        return -1;
+      }
+
+      if (nextX === goalX && nextY === goalY) {
+        return nextY * width + nextX;
+      }
 
       if (stepY === 0) {
-        if (this.forcedBeside(currentX, nextX, nextY, 1) || this.forcedBeside(currentX, nextX, nextY, -1)) return nextY * width + nextX;
+        if (this.forcedBeside(currentX, nextX, nextY, 1) || this.forcedBeside(currentX, nextX, nextY, -1)) {
+          return nextY * width + nextX;
+        }
       } else if (stepX === 0) {
-        if (this.forcedAbove(currentY, nextY, nextX, 1) || this.forcedAbove(currentY, nextY, nextX, -1)) return nextY * width + nextX;
+        if (this.forcedAbove(currentY, nextY, nextX, 1) || this.forcedAbove(currentY, nextY, nextX, -1)) {
+          return nextY * width + nextX;
+        }
       } else if (this.jump(nextX, nextY, stepX, 0, goalX, goalY) >= 0 || this.jump(nextX, nextY, 0, stepY, goalX, goalY) >= 0) {
         return nextY * width + nextX;
       }

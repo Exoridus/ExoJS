@@ -45,6 +45,7 @@ export type LogSink = (entry: LogEntry) => void;
  * outright in production builds (`__DEV__` is `false`); `error()` always
  * reaches every registered sink. In development a {@link createConsoleSink}
  * is installed by default - see {@link logger}.
+ * Sink failures are isolated so logging cannot interrupt engine error handling.
  */
 export class Logger {
   private readonly _sinks: LogSink[] = [];
@@ -77,7 +78,11 @@ export class Logger {
     };
 
     for (const sink of this._sinks) {
-      sink(entry);
+      try {
+        sink(entry);
+      } catch {
+        // Reporting a failed sink through this logger would recurse into the same sink.
+      }
     }
   }
 
@@ -103,7 +108,10 @@ export class Logger {
 
     return () => {
       const idx = this._sinks.indexOf(sink);
-      if (idx !== -1) this._sinks.splice(idx, 1);
+
+      if (idx !== -1) {
+        this._sinks.splice(idx, 1);
+      }
     };
   }
 
@@ -128,8 +136,11 @@ export const createConsoleSink = (): LogSink => entry => {
   const prefix = entry.source !== undefined ? `%c[ExoJS][${entry.source}]` : '%c[ExoJS]';
   let method: 'log' | 'warn' | 'error' = 'log';
 
-  if (entry.severity >= LogSeverity.Error) method = 'error';
-  else if (entry.severity >= LogSeverity.Warning) method = 'warn';
+  if (entry.severity >= LogSeverity.Error) {
+    method = 'error';
+  } else if (entry.severity >= LogSeverity.Warning) {
+    method = 'warn';
+  }
 
   if (entry.error) {
     console[method](prefix, consolePrefixStyle, entry.message, entry.error);

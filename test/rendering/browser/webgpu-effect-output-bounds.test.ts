@@ -32,7 +32,9 @@ const createWhiteTexture = (): Texture => {
 
   const context = source.getContext('2d');
 
-  if (!context) throw new Error('2D context is required to create test textures.');
+  if (!context) {
+    throw new Error('2D context is required to create test textures.');
+  }
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, 16, 16);
@@ -46,7 +48,10 @@ const litSpanOnRow = (frame: Uint8ClampedArray, row: number): readonly [number, 
 
   for (let x = 0; x < size; x++) {
     if (frame[(row * size + x) * 4]! > lit) {
-      if (first === -1) first = x;
+      if (first === -1) {
+        first = x;
+      }
+
       last = x;
     }
   }
@@ -58,7 +63,9 @@ const litSpanOnRow = (frame: Uint8ClampedArray, row: number): readonly [number, 
 const rowOf = (frame: Uint8ClampedArray, row: number): number[] => {
   const values: number[] = [];
 
-  for (let x = 0; x < size; x++) values.push(frame[(row * size + x) * 4]!);
+  for (let x = 0; x < size; x++) {
+    values.push(frame[(row * size + x) * 4]!);
+  }
 
   return values;
 };
@@ -69,7 +76,10 @@ const litSpanOnColumn = (frame: Uint8ClampedArray, column: number): readonly [nu
 
   for (let y = 0; y < size; y++) {
     if (frame[(y * size + column) * 4]! > lit) {
-      if (first === -1) first = y;
+      if (first === -1) {
+        first = y;
+      }
+
       last = y;
     }
   }
@@ -103,8 +113,13 @@ const render = async (ctx: { skip: (reason: string) => void }, options: SceneOpt
   sprite.setPosition(contentLeft, contentLeft);
   root.addChild(sprite);
 
-  if (filters.length > 0) root.filters = filters;
-  if (options.clip === true) root.clip = true;
+  if (filters.length > 0) {
+    root.filters = filters;
+  }
+
+  if (options.clip === true) {
+    root.clip = true;
+  }
 
   owner['acquireRenderTexture'] = (width: number, height: number): RenderTexture => {
     sizes.push([width, height]);
@@ -115,7 +130,11 @@ const render = async (ctx: { skip: (reason: string) => void }, options: SceneOpt
   const dispose = (): void => {
     delete owner['acquireRenderTexture'];
     root.destroy();
-    for (const filter of filters) filter.destroy();
+
+    for (const filter of filters) {
+      filter.destroy();
+    }
+
     texture.destroy();
     backend.destroy();
   };
@@ -133,7 +152,9 @@ describe('WebGPU consumes the same planned effect bounds', () => {
   test('a blur tail escapes the source bounds on every edge', async ctx => {
     const scene = await render(ctx, { strengths: [5] });
 
-    if (scene === null) return;
+    if (scene === null) {
+      return;
+    }
 
     try {
       const row = litSpanOnRow(scene.frame, centre);
@@ -157,7 +178,9 @@ describe('WebGPU consumes the same planned effect bounds', () => {
     // borrows - three chain targets plus one separable-blur scratch each.
     const scene = await render(ctx, { strengths: [3, 3] });
 
-    if (scene === null) return;
+    if (scene === null) {
+      return;
+    }
 
     try {
       expect(scene.sizes).toHaveLength(5);
@@ -186,7 +209,9 @@ describe('WebGPU consumes the same planned effect bounds', () => {
       const clippedSpan = litSpanOnRow(clipped.frame, centre)!;
 
       expect(unclippedSpan[0]).toBeLessThan(contentLeft);
-      expect(clippedSpan[0], `unclipped ${unclippedSpan.join('..')} vs clipped ${clippedSpan.join('..')}`).toBeGreaterThanOrEqual(contentLeft);
+      expect(clippedSpan[0], `unclipped ${unclippedSpan.join('..')} vs clipped ${clippedSpan.join('..')}`).toBeGreaterThanOrEqual(
+        contentLeft,
+      );
       expect(clippedSpan[1], `unclipped ${unclippedSpan.join('..')} vs clipped ${clippedSpan.join('..')}`).toBeLessThan(contentRight);
     } finally {
       unclipped.dispose();
@@ -210,7 +235,9 @@ describe('WebGPU consumes the same planned effect bounds', () => {
     root.addFilter(blur);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root))) return null;
+      if (!(await renderWebGpuOnce(ctx, backend, root))) {
+        return null;
+      }
 
       return rowOf(readWebGpuFrame(backend, size), centre);
     } finally {
@@ -243,13 +270,17 @@ describe('WebGPU consumes the same planned effect bounds', () => {
     };
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root))) {
+        return;
+      }
 
       const before = litSpanOnRow(readWebGpuFrame(backend, size), centre)!;
 
       blur.strength = 7;
 
-      if (!(await renderWebGpuOnce(ctx, backend, root))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root))) {
+        return;
+      }
 
       const after = litSpanOnRow(readWebGpuFrame(backend, size), centre)!;
 

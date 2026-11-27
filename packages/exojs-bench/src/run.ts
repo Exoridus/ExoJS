@@ -9,10 +9,11 @@ import type { ArchetypeId, Backend, CellResult, MatrixSelection, RenderingBrowse
 import { isHitching, parseRenderingBrowser, profileCell, runMatrix, writeReport } from './rendering';
 import { ARCHETYPES } from './rendering/archetypes';
 import { resolveMatrixCells } from './rendering/driver';
-import { parseArgs } from './shared/args';
+import { parseArgs, parsePositiveInt } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
 import type { PlatformDeclaration } from './shared/provenance';
 import { parsePlatformDeclaration, PLATFORM_DECLARATION_SYNTAX, readPlatformVersion } from './shared/provenance';
+import { assertPlanCompatibleWithExisting } from './shared/report';
 import { printTextTable } from './shared/table';
 import { PHYSICS_LIBRARY_ARMS } from './shared/viteServer';
 import type { RunPlan } from './suite/plan';
@@ -93,7 +94,9 @@ const parseList = (flag: string, raw: string | undefined): string[] | undefined 
  */
 const resolvePlatform = (args: Map<string, string>): PlatformDeclaration | undefined => {
   if (args.has('prerelease')) {
-    throw new Error(`--prerelease has been replaced by ${PLATFORM_DECLARATION_SYNTAX}, which states the pre-release build together with the version it is of.`);
+    throw new Error(
+      `--prerelease has been replaced by ${PLATFORM_DECLARATION_SYNTAX}, which states the pre-release build together with the version it is of.`,
+    );
   }
 
   return parsePlatformDeclaration(args.get('platform'));
@@ -211,8 +214,12 @@ const printDryRun = (plan: RunPlan, backends: readonly Backend[]): void => {
   } else {
     const armCount = PHYSICS_LIBRARY_ARMS.length + 1;
 
-    console.log(`  ${String(plan.workloads.length * armCount)} cells at most, over ${String(armCount)} arms (exojs plus ${PHYSICS_LIBRARY_ARMS.join(', ')})`);
-    console.log('  Arm availability is decided by the measuring browser, so the built matrix may be smaller; a missing arm is recorded, never dropped.');
+    console.log(
+      `  ${String(plan.workloads.length * armCount)} cells at most, over ${String(armCount)} arms (exojs plus ${PHYSICS_LIBRARY_ARMS.join(', ')})`,
+    );
+    console.log(
+      '  Arm availability is decided by the measuring browser, so the built matrix may be smaller; a missing arm is recorded, never dropped.',
+    );
   }
 
   for (const workload of plan.workloads) {
@@ -270,7 +277,9 @@ const runProfileMode = async (
             console.log('\n  -- self time by FILE --');
 
             for (const file of outcome.byFile.slice(0, topRows)) {
-              console.log(`    ${file.selfPercent.toFixed(1).padStart(5)}%  ${(file.selfMs / outcome.frames).toFixed(4).padStart(9)} ms/frame  ${file.source}`);
+              console.log(
+                `    ${file.selfPercent.toFixed(1).padStart(5)}%  ${(file.selfMs / outcome.frames).toFixed(4).padStart(9)} ms/frame  ${file.source}`,
+              );
             }
 
             console.log('\n  -- self time by FUNCTION --');
@@ -316,15 +325,7 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
   const archetypes = parseList('archetype', archetypeArg) as ArchetypeId[] | undefined;
   const engines = parseList('engine', engineArg);
   const configs = parseList('config', args.get('config'));
-  const nodeCounts = parseList('nodes', nodesArg)?.map(value => {
-    const nodeCount = Number.parseInt(value, 10);
-
-    if (Number.isNaN(nodeCount)) {
-      throw new Error(`--nodes must be an integer or a comma-separated list of integers (got '${nodesArg}').`);
-    }
-
-    return nodeCount;
-  });
+  const nodeCounts = parseList('nodes', nodesArg)?.map(value => parsePositiveInt('--nodes', value));
 
   const selection: MatrixSelection = {
     ...(engines !== undefined && { engines }),
@@ -345,13 +346,7 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
   let timedFramesOverride: number | undefined;
 
   if (framesArg !== undefined) {
-    const frames = Number.parseInt(framesArg, 10);
-
-    if (Number.isNaN(frames) || frames < 1) {
-      throw new Error(`--frames must be a positive integer (got '${framesArg}').`);
-    }
-
-    timedFramesOverride = frames;
+    timedFramesOverride = parsePositiveInt('--frames', framesArg);
   }
 
   if (args.has('profile')) {
@@ -396,7 +391,9 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
   // lands (see shared/checkpoint.ts), so a later cell crash - the Pixi-WebGPU
   // probe was the observed one - can never discard the cells already measured.
-  const checkpoint = createCheckpointWriter<CellResult>(outDir);
+  assertPlanCompatibleWithExisting(outDir, plan.meta);
+
+  const checkpoint = createCheckpointWriter<CellResult>(outDir, plan.meta);
 
   // `--capture=<dir>`: write each measured cell's final frame there, for
   // checking by eye that two arms asked for one scene rendered it. A capture
@@ -435,14 +432,16 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
   }
 
   if (data.provenance.some(entry => entry.prerelease.value)) {
-    console.warn('\nPRE-RELEASE PLATFORM — this profile does not describe a shipping platform. The stamp records how that was established.');
+    console.warn(
+      '\nPRE-RELEASE PLATFORM — this profile does not describe a shipping platform. The stamp records how that was established.',
+    );
   }
 
   if (data.provenance.some(entry => entry.software)) {
     console.warn('\n!!! SOFTWARE RASTERIZER DETECTED — timings are UNTRUSTED. Fix the launch flags before trusting any number. !!!');
   }
 
-  writeReport(data, outDir);
+  writeReport({ ...data, plan: plan.meta }, outDir);
 
   // Per-cell summary. Grouped by scenario and load so the arms of one row sit
   // under one another: the comparison a reader is after is between arms, and the
@@ -526,13 +525,7 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
   if (bodiesArg !== undefined) {
     refuseSplitList('bodies', bodiesArg);
 
-    const bodyCount = Number.parseInt(bodiesArg, 10);
-
-    if (Number.isNaN(bodyCount)) {
-      throw new Error(`--bodies must be an integer (got '${bodiesArg}').`);
-    }
-
-    filter.bodyCount = bodyCount;
+    filter.bodyCount = parsePositiveInt('--bodies', bodiesArg);
   }
 
   // `--frames`: override every selected cell's timed-step count (like the
@@ -542,13 +535,7 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
   let timedStepsOverride: number | undefined;
 
   if (framesArg !== undefined) {
-    const frames = Number.parseInt(framesArg, 10);
-
-    if (Number.isNaN(frames) || frames < 1) {
-      throw new Error(`--frames must be a positive integer (got '${framesArg}').`);
-    }
-
-    timedStepsOverride = frames;
+    timedStepsOverride = parsePositiveInt('--frames', framesArg);
   }
 
   const isSubset = archetypeArg !== undefined || bodiesArg !== undefined || engineArg !== undefined || timedStepsOverride !== undefined;
@@ -574,7 +561,9 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
 
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
   // lands, reusing the same shared writer the rendering domain uses.
-  const checkpoint = createCheckpointWriter<PhysicsCellResult>(outDir);
+  assertPlanCompatibleWithExisting(outDir, plan.meta);
+
+  const checkpoint = createCheckpointWriter<PhysicsCellResult>(outDir, plan.meta);
 
   const data = await runPhysicsMatrix({
     browser,
@@ -604,7 +593,7 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
     );
   }
 
-  writePhysicsReport(data, outDir);
+  writePhysicsReport({ ...data, plan: plan.meta }, outDir);
 
   console.log('\n=== Results ===');
 
@@ -645,7 +634,9 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
   // Notes are per cell and long enough that a column would set the table's width
   // from the worst one, so they follow it instead.
   for (const result of data.results.filter(entry => entry.note !== undefined)) {
-    console.log(`  note  ${result.spec.engine} ${result.spec.config} ${result.spec.archetype} n=${String(result.spec.bodyCount)}: ${result.note ?? ''}`);
+    console.log(
+      `  note  ${result.spec.engine} ${result.spec.config} ${result.spec.archetype} n=${String(result.spec.bodyCount)}: ${result.note ?? ''}`,
+    );
   }
 
   console.log(`\nReport written to ${outDir} (results.json, results.csv, results.md)`);

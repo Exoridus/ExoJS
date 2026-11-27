@@ -2,11 +2,17 @@ import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link EqualizerEffect}. */
 export interface EqualizerEffectOptions {
+  /** Low-shelf gain in dB. Range -40..40, default 0. */
   low?: number;
+  /** Peaking mid-band gain in dB. Range -40..40, default 0. */
   mid?: number;
+  /** High-shelf gain in dB. Range -40..40, default 0. */
   high?: number;
+  /** Low-shelf cutoff frequency in Hz. Default 250. */
   lowFrequency?: number;
+  /** Peaking mid-band centre frequency in Hz. Default 1500. */
   midFrequency?: number;
+  /** High-shelf cutoff frequency in Hz. Default 6000. */
   highFrequency?: number;
 }
 
@@ -15,6 +21,14 @@ interface EqualizerEffectSetup {
   readonly peaking: BiquadFilterNode;
   readonly highShelf: BiquadFilterNode;
 }
+
+const requireFrequency = (name: string, value: number): number => {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`EqualizerEffect ${name} must be a finite number, got ${value}.`);
+  }
+
+  return Math.max(0, value);
+};
 
 /**
  * Three-band equalizer (low shelf / peaking mid / high shelf) built from a
@@ -37,19 +51,25 @@ export class EqualizerEffect extends AudioEffect {
     this._low = Math.max(-40, Math.min(40, options.low ?? 0));
     this._mid = Math.max(-40, Math.min(40, options.mid ?? 0));
     this._high = Math.max(-40, Math.min(40, options.high ?? 0));
-    this._lowFrequency = options.lowFrequency ?? 250;
-    this._midFrequency = options.midFrequency ?? 1500;
-    this._highFrequency = options.highFrequency ?? 6000;
+    this._lowFrequency = requireFrequency('lowFrequency', options.lowFrequency ?? 250);
+    this._midFrequency = requireFrequency('midFrequency', options.midFrequency ?? 1500);
+    this._highFrequency = requireFrequency('highFrequency', options.highFrequency ?? 6000);
     this._deferSetup(context => this._setupNodes(context));
   }
 
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('EqualizerEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('EqualizerEffect not yet initialized.');
+    }
+
     return this._setup.lowShelf;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('EqualizerEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('EqualizerEffect not yet initialized.');
+    }
+
     return this._setup.highShelf;
   }
 
@@ -60,6 +80,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set low(value: number) {
     this._low = Math.max(-40, Math.min(40, value));
+
     if (this._setup) {
       this._setup.lowShelf.gain.setTargetAtTime(this._low, this._setup.lowShelf.context.currentTime, 0.01);
     }
@@ -72,6 +93,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set mid(value: number) {
     this._mid = Math.max(-40, Math.min(40, value));
+
     if (this._setup) {
       this._setup.peaking.gain.setTargetAtTime(this._mid, this._setup.peaking.context.currentTime, 0.01);
     }
@@ -84,6 +106,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set high(value: number) {
     this._high = Math.max(-40, Math.min(40, value));
+
     if (this._setup) {
       this._setup.highShelf.gain.setTargetAtTime(this._high, this._setup.highShelf.context.currentTime, 0.01);
     }
@@ -96,6 +119,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set lowFrequency(value: number) {
     this._lowFrequency = Math.max(0, value);
+
     if (this._setup) {
       this._setup.lowShelf.frequency.setTargetAtTime(this._lowFrequency, this._setup.lowShelf.context.currentTime, 0.01);
     }
@@ -108,6 +132,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set midFrequency(value: number) {
     this._midFrequency = Math.max(0, value);
+
     if (this._setup) {
       this._setup.peaking.frequency.setTargetAtTime(this._midFrequency, this._setup.peaking.context.currentTime, 0.01);
     }
@@ -120,6 +145,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set highFrequency(value: number) {
     this._highFrequency = Math.max(0, value);
+
     if (this._setup) {
       this._setup.highShelf.frequency.setTargetAtTime(this._highFrequency, this._setup.highShelf.context.currentTime, 0.01);
     }
@@ -127,6 +153,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.lowShelf.disconnect();
       this._setup.peaking.disconnect();
@@ -136,19 +163,22 @@ export class EqualizerEffect extends AudioEffect {
   }
 
   private _setupNodes(ctx: AudioContext): void {
+    // A cutoff above Nyquist is out of range for a BiquadFilterNode.
+    const nyquist = ctx.sampleRate / 2;
+
     const lowShelf = ctx.createBiquadFilter();
     lowShelf.type = 'lowshelf';
-    lowShelf.frequency.setValueAtTime(this._lowFrequency, ctx.currentTime);
+    lowShelf.frequency.setValueAtTime(Math.min(this._lowFrequency, nyquist), ctx.currentTime);
     lowShelf.gain.setValueAtTime(this._low, ctx.currentTime);
 
     const peaking = ctx.createBiquadFilter();
     peaking.type = 'peaking';
-    peaking.frequency.setValueAtTime(this._midFrequency, ctx.currentTime);
+    peaking.frequency.setValueAtTime(Math.min(this._midFrequency, nyquist), ctx.currentTime);
     peaking.gain.setValueAtTime(this._mid, ctx.currentTime);
 
     const highShelf = ctx.createBiquadFilter();
     highShelf.type = 'highshelf';
-    highShelf.frequency.setValueAtTime(this._highFrequency, ctx.currentTime);
+    highShelf.frequency.setValueAtTime(Math.min(this._highFrequency, nyquist), ctx.currentTime);
     highShelf.gain.setValueAtTime(this._high, ctx.currentTime);
 
     // Series chain: lowShelf → peaking → highShelf

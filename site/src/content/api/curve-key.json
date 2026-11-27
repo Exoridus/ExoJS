@@ -4,7 +4,7 @@
   "symbol": "CurveKey",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A keyframe in a Curve: value `v` at lifetime ratio `t` in `[0, 1]`."
       ],
-      "importLine": "import { CurveKey } from '@codexo/exojs-particles'",
+      "importLine": "import { CurveKey } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

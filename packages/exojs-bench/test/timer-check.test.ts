@@ -46,6 +46,20 @@ describe('timerCheckOfRun', () => {
   it('passes a run whose durations both stand clear of its own step', () => {
     expect(timerCheckOfRun([0.5, 1.5], COARSE_STEP)).toBe<TimerCheck>('resolved');
   });
+
+  it.each([[], [null], [NaN], [Infinity, -Infinity], [null, NaN, Infinity]].map(durations => ({ durations })))(
+    'reports unknown when no finite duration was recorded: $durations',
+    ({ durations }) => {
+      expect(timerCheckOfRun(durations, COARSE_STEP)).toBe<TimerCheck>('unknown');
+    },
+  );
+
+  it('is limited by a finite short reading, and unknown when another reading is missing or nonfinite', () => {
+    expect(timerCheckOfRun([null, COARSE_STEP, NaN], COARSE_STEP)).toBe<TimerCheck>('limited');
+    expect(timerCheckOfRun([null, 0.5], 0.01)).toBe<TimerCheck>('unknown');
+    expect(timerCheckOfRun([NaN, Infinity, 0.5], 0.01)).toBe<TimerCheck>('unknown');
+    expect(timerCheckOfRun([0.5, 0.6], 0.01)).toBe<TimerCheck>('resolved');
+  });
 });
 
 describe('mergeTimerChecks', () => {

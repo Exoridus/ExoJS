@@ -36,6 +36,13 @@ const usageByGeometryUsage: Record<GeometryUsage, BufferUsage> = {
  */
 const integerAttributeTypes = new Set<AttributeType>(['u32', 'i32']);
 
+/**
+ * The `u_associateSample` flag, cached because a system is bound every frame and
+ * a fresh array per bind would allocate on the draw path.
+ */
+const SAMPLE_ASSOCIATED = new Float32Array([1]);
+const SAMPLE_STRAIGHT = new Float32Array([0]);
+
 const resolveAttributeType = (gl: WebGL2RenderingContext, type: AttributeType): number => {
   switch (type) {
     case 'f32':
@@ -74,7 +81,7 @@ interface ParticleModeResources {
   readonly primitive: RenderingPrimitives;
   readonly instanced: boolean;
   /** Indices (or vertices, when the geometry carries none) per drawn element. */
-  readonly indexCount: number;
+  indexCount: number;
   /** Byte view over the mode's scratch buffer, rebuilt whenever the mode grows it. */
   bytes: Uint8Array;
   source: ArrayBuffer | null;
@@ -90,7 +97,10 @@ interface ParticleModeResources {
  * the buffer - and this renderer is the executor: each `render(system)` flushes
  * any pending batch, sets the system-level uniforms (transform, local bounds,
  * texture) and asks the mode to build its vertex data. The next `flush()`
- * uploads that data and issues the single draw the mode declares.
+ * uploads that data and issues the single draw the mode declares. A system
+ * simulating through WebGL2 transform feedback skips the CPU build and the
+ * vertex upload: its simulation buffer already holds the instance data, which
+ * `flush()` binds for the same instanced draw.
  *
  * Everything mode-specific is read off the mode's `dataLayout`/`Material`, so a
  * new primitive is a new mode rather than a change here: the vertex array
@@ -137,11 +147,19 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
   /** @internal */
   public _trackSimulation(simulation: ParticleGlState): void {
-    if (this._simulationVaos.has(simulation)) return;
+    if (this._simulationVaos.has(simulation)) {
+      return;
+    }
+
     this._simulationVaos.set(simulation, null);
+
     simulation.onDestroy = (): void => {
       const vao = this._simulationVaos.get(simulation);
-      if (vao) simulation.gl.deleteVertexArray(vao);
+
+      if (vao) {
+        simulation.gl.deleteVertexArray(vao);
+      }
+
       this._simulationVaos.delete(simulation);
     };
   }
@@ -154,7 +172,8 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
   public render(system: ParticleSystem): this {
     const backend = this.getBackend();
-    const { texture, blendMode } = system;
+    const { texture } = system;
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? system.blendMode;
 
     // System transform / texture / UV / local-bounds are uniforms, so
     // mixing systems in one batch is invalid. Flush any prior system
@@ -167,7 +186,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     // it alone sees a texture whose payload changed under a stable identity -
     // which is what a handle from the loader does the moment its download
     // lands. Both calls collapse to nothing when the state already matches.
-    backend.bindTexture(texture);
+    backend.bindTexture(texture, 0);
     backend.setBlendMode(blendMode);
 
     const mode = system.renderMode;
@@ -185,8 +204,17 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       shader.getUniform('u_localBounds').setValue(system.vertices);
     }
 
+    if (shader.uniforms.has('u_associateSample')) {
+      shader
+        .getUniform('u_associateSample')
+        .setValue(backend.shouldPremultiplyTextureSample(texture) ? SAMPLE_ASSOCIATED : SAMPLE_STRAIGHT);
+    }
+
     const simulation = system.glState;
-    if (simulation === null) mode.build(system, system._storage);
+
+    if (simulation === null) {
+      mode.build(system, system._storage);
+    }
 
     this._pendingMode = mode;
     this._pendingResources = resources;
@@ -218,8 +246,10 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
     resources.shader.sync();
     const simulation = this._pendingGlState;
+
     if (simulation !== null) {
       this._flushSimulation(backend, mode, resources, simulation);
+
       return;
     }
 
@@ -230,8 +260,14 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     const meshGeometry = mode.vertexGeometry;
 
     if (meshGeometry !== null && resources.meshBuffer !== null && resources.meshVersion !== meshGeometry.version) {
-      resources.meshVersion = meshGeometry.version;
       resources.meshBuffer.upload(meshGeometry.vertexData);
+
+      if (resources.indexBuffer !== null && meshGeometry.indices !== null) {
+        resources.indexBuffer.upload(meshGeometry.indices);
+      }
+
+      resources.indexCount = meshGeometry.indexCount;
+      resources.meshVersion = meshGeometry.version;
     }
 
     resources.vertexBuffer.upload(this._resolveUploadSource(mode, resources), 0, this._drawCount * resources.stride);
@@ -260,26 +296,40 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     this._pendingResources = null;
   }
 
-  private _flushSimulation(backend: WebGl2Backend, mode: ParticleRenderMode, resources: ParticleModeResources, simulation: ParticleGlState): void {
+  private _flushSimulation(
+    backend: WebGl2Backend,
+    mode: ParticleRenderMode,
+    resources: ParticleModeResources,
+    simulation: ParticleGlState,
+  ): void {
     if (simulation.destroyed) {
       this._drawCount = 0;
       this._pendingMode = null;
       this._pendingResources = null;
       this._pendingGlState = null;
+
       return;
     }
+
     const gl = backend.context;
     this._trackSimulation(simulation);
     let vao = this._simulationVaos.get(simulation);
+
     if (vao == null) {
       const created = gl.createVertexArray();
-      if (created === null) throw new Error('Could not create particle simulation vertex array.');
+
+      if (created === null) {
+        throw new Error('Could not create particle simulation vertex array.');
+      }
+
       vao = created;
       this._simulationVaos.set(simulation, vao);
     }
+
     backend.bindVertexArrayObject(null);
     gl.bindVertexArray(vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, simulation.instanceBuffer);
+
     for (const attribute of mode.dataLayout.attributes) {
       const location = resources.shader.getAttribute(attribute.name).location;
       gl.enableVertexAttribArray(location);
@@ -293,11 +343,20 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       );
       gl.vertexAttribDivisor(location, 1);
     }
+
     resources.indexBuffer!.bind();
     const sampler = mode.material.sampler;
-    if (sampler !== null) backend.bindMaterialSampler(sampler, 0);
+
+    if (sampler !== null) {
+      backend.bindMaterialSampler(sampler, 0);
+    }
+
     gl.drawElementsInstanced(gl.TRIANGLES, resources.indexCount, gl.UNSIGNED_SHORT, 0, this._drawCount);
-    if (sampler !== null) backend.unbindMaterialSampler(0);
+
+    if (sampler !== null) {
+      backend.unbindMaterialSampler(0);
+    }
+
     gl.bindVertexArray(null);
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -312,8 +371,12 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
   }
 
   protected onDisconnect(): void {
-    for (const simulation of this._simulationVaos.keys()) simulation.destroy();
+    for (const simulation of this._simulationVaos.keys()) {
+      simulation.destroy();
+    }
+
     this._simulationVaos.clear();
+
     for (const resources of this._resources.values()) {
       this._destroyResources(resources);
     }
@@ -426,7 +489,9 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     const indexCount = meshGeometry !== null ? meshGeometry.indexCount : layout.indexCount;
     const indexBuffer =
       indices !== null
-        ? new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, indices, BufferUsage.StaticDraw).connect(this._createBufferRuntime(connection))
+        ? new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, indices, BufferUsage.StaticDraw).connect(
+            this._createBufferRuntime(connection),
+          )
         : null;
 
     // Pre-sized rather than capped: the mode grows its scratch buffer with the
@@ -551,7 +616,11 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     };
   }
 
-  private _createVaoRuntime(connection: ParticleRendererConnection, vaoHandle: WebGLVertexArrayObject, indexType: number): WebGl2VertexArrayObjectRuntime {
+  private _createVaoRuntime(
+    connection: ParticleRendererConnection,
+    vaoHandle: WebGLVertexArrayObject,
+    indexType: number,
+  ): WebGl2VertexArrayObjectRuntime {
     let appliedVersion = -1;
 
     return {
@@ -572,7 +641,14 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
             if (attribute.integer) {
               gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
             } else {
-              gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+              gl.vertexAttribPointer(
+                attribute.location,
+                attribute.size,
+                attribute.type,
+                attribute.normalized,
+                attribute.stride,
+                attribute.start,
+              );
             }
 
             gl.enableVertexAttribArray(attribute.location);

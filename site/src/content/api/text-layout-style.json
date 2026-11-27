@@ -97,7 +97,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "0 or omitted derives the thickness from the font's metrics."
+          "description": "0 or omitted derives the thickness from the font size; the metrics place the rules."
         },
         {
           "name": "fontSize",

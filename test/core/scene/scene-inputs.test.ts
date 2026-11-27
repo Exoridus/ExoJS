@@ -5,6 +5,7 @@ import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import { ActionMap } from '#input/actions/ActionMap';
 import { ButtonAction } from '#input/actions/ButtonAction';
+import { InputScope } from '#input/actions/InputScope';
 import type { ActionSample, ChannelEventBatch } from '#input/actions/types';
 import type { InputBinding } from '#input/InputBinding';
 import type { ActionScopeHost } from '#input/InputSystem';
@@ -26,6 +27,7 @@ const createEmptySample = (): ActionSample => ({
  * `values`, to detect its threshold-crossing edges in true order.
  */
 let nextSequence = 1;
+
 const setChannel = (sample: ActionSample, channel: number, value: number): void => {
   sample.values[channel] = value;
   const sequence = nextSequence++;
@@ -86,6 +88,7 @@ const createAppStub = (): AppStubResult => {
         const b = makeStubBinding();
         b.onStart.add(callback);
         bindings.push(b);
+
         return b as unknown as InputBinding;
       }),
       onActive: vi.fn(() => makeStubBinding() as unknown as InputBinding),
@@ -122,7 +125,7 @@ describe('SceneInputs construction', () => {
       () => false,
     );
 
-    inputs.onTrigger(Keyboard.Space, () => undefined);
+    inputs.onTrigger(Keyboard.Space, () => {});
 
     expect(app.input.onStart).toHaveBeenCalledTimes(1);
     expect(app.input.onActive).not.toHaveBeenCalled();
@@ -372,8 +375,8 @@ describe('SceneInputs — destroy()', () => {
       () => false,
     );
 
-    inputs.onStart(Keyboard.Space, () => undefined);
-    inputs.onTrigger(Keyboard.Space, () => undefined);
+    inputs.onStart(Keyboard.Space, () => {});
+    inputs.onTrigger(Keyboard.Space, () => {});
 
     inputs.destroy();
 
@@ -383,7 +386,12 @@ describe('SceneInputs — destroy()', () => {
 });
 
 describe('SceneInputs action maps', () => {
-  const createMapStub = (): { app: Application; frame: (sample: ActionSample) => void; resyncSample: ActionSample; inputs: SceneInputs } => {
+  const createMapStub = (): {
+    app: Application;
+    frame: (sample: ActionSample) => void;
+    resyncSample: ActionSample;
+    inputs: SceneInputs;
+  } => {
     const hosts = new Set<ActionScopeHost>();
     // The sample `SceneInputs.resume` re-seeds its maps from - zeroed by
     // default, so a test that only cares about registration need not know
@@ -564,6 +572,68 @@ describe('SceneInputs action maps', () => {
     advanceFrame(sample);
     frame(sample);
     expect(map.jump.active).toBe(false);
+  });
+
+  test('a rejected pushScope leaves the stack, the maps and later pushes untouched', () => {
+    const { frame, inputs } = createMapStub();
+    const clean = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const direct = new ActionMap({ fire: new ButtonAction(Keyboard.Enter) });
+    const fresh = new ActionMap({ run: new ButtonAction(Keyboard.Shift) });
+
+    inputs.attach(direct);
+
+    const bad = new InputScope([fresh, direct]);
+
+    expect(() => inputs.pushScope(bad)).toThrow(/already attached directly/);
+    expect(fresh.attached).toBe(false);
+    expect(direct.attached).toBe(true);
+
+    const sample = createEmptySample();
+
+    setChannel(sample, Keyboard.Space, 1);
+    expect(() => inputs.pushScope(new InputScope(clean))).not.toThrow();
+    frame(sample);
+    expect(clean.jump.active).toBe(true);
+    expect(inputs.popScope(bad)).toBeNull();
+  });
+
+  test('one InputScope belongs to exactly one stack until popped, destroyed or rejected', () => {
+    const a = createMapStub().inputs;
+    const b = createMapStub().inputs;
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const scope = new InputScope(map);
+    const empty = new InputScope();
+
+    a.pushScope(scope);
+    a.pushScope(empty);
+    expect(() => b.pushScope(scope)).toThrow(/another SceneInputs stack/);
+    expect(() => b.pushScope(empty)).toThrow(/another SceneInputs stack/);
+    expect(b.scopes).toEqual([]);
+    expect(map.attached).toBe(true);
+
+    a.popScope(scope);
+    expect(() => b.pushScope(scope)).not.toThrow();
+    expect(b.scopes).toEqual([scope]);
+
+    a.destroy();
+    expect(() => a.pushScope(empty)).not.toThrow();
+    a.popScope(empty);
+
+    b.destroy();
+    expect(() => a.pushScope(scope)).not.toThrow();
+  });
+
+  test('a rejected push releases scope ownership', () => {
+    const a = createMapStub().inputs;
+    const b = createMapStub().inputs;
+    const direct = new ActionMap({ fire: new ButtonAction(Keyboard.Enter) });
+    const bad = new InputScope(new ActionMap({ run: new ButtonAction(Keyboard.Shift) }));
+
+    a.attach(direct);
+    bad.add(direct);
+    expect(() => a.pushScope(bad)).toThrow(/already attached directly/);
+    bad.remove(direct);
+    expect(() => b.pushScope(bad)).not.toThrow();
   });
 });
 

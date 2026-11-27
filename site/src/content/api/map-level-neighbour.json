@@ -4,7 +4,7 @@
   "symbol": "MapLevelNeighbour",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "One adjacency edge from a level to another level in the same MapWorld."
       ],
-      "importLine": "import { MapLevelNeighbour } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapLevelNeighbour } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

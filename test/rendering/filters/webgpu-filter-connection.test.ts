@@ -11,7 +11,9 @@ describe('WebGpuShaderFilterPass connection', () => {
   const disposers: Array<() => void> = [];
 
   afterEach(() => {
-    while (disposers.length > 0) disposers.pop()!();
+    while (disposers.length > 0) {
+      disposers.pop()!();
+    }
   });
 
   const open = async (): Promise<{ environment: MockWebGpuEnvironment; backend: WebGpuBackend }> => {
@@ -84,5 +86,42 @@ describe('WebGpuShaderFilterPass connection', () => {
 
     expect(one.environment.syncPipelineCount()).toBe(1);
     expect(two.environment.syncPipelineCount()).toBe(beforeSecondDevice + 1);
+  });
+
+  test('a warm filter pass reuses its bind groups instead of building new ones', async () => {
+    const { environment, backend } = await open();
+    const filter = new ColorMatrixFilter();
+    const { input, output } = targets(TextureFormat.Rgba8Srgb);
+
+    disposers.push(() => filter.destroy());
+
+    filter.apply(backend, input, output);
+
+    const warm = environment.bindGroupCount();
+
+    filter.apply(backend, input, output);
+    filter.apply(backend, input, output);
+
+    expect(environment.bindGroupCount()).toBe(warm);
+  });
+
+  test('a filter pass rebuilds its bind group when the input view changes', async () => {
+    const { environment, backend } = await open();
+    const filter = new ColorMatrixFilter();
+    const { input, output } = targets(TextureFormat.Rgba8Srgb);
+    const other = new RenderTexture(8, 8, { format: TextureFormat.Rgba8Srgb });
+
+    disposers.push(
+      () => filter.destroy(),
+      () => other.destroy(),
+    );
+
+    filter.apply(backend, input, output);
+
+    const warm = environment.bindGroupCount();
+
+    filter.apply(backend, other, output);
+
+    expect(environment.bindGroupCount()).toBeGreaterThan(warm);
   });
 });

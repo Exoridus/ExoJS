@@ -36,13 +36,19 @@ const templateDirs = readdirSync(templatesDir, { withFileTypes: true })
 const corePkg = readManifest(resolve(repoRoot, 'package.json'));
 const packagesDir = resolve(repoRoot, 'packages');
 const publishedVersions = new Map<string, string>();
+
 if (corePkg.name !== undefined && corePkg.version !== undefined) {
   publishedVersions.set(corePkg.name, corePkg.version);
 }
+
 for (const dir of readdirSync(packagesDir, { withFileTypes: true })) {
-  if (!dir.isDirectory()) continue;
+  if (!dir.isDirectory()) {
+    continue;
+  }
+
   try {
     const manifest = readManifest(resolve(packagesDir, dir.name, 'package.json'));
+
     if (manifest.name !== undefined && manifest.version !== undefined) {
       publishedVersions.set(manifest.name, manifest.version);
     }
@@ -68,10 +74,16 @@ for (const dir of readdirSync(packagesDir, { withFileTypes: true })) {
  * `workspace:` protocol range that would break a published scaffold) fails.
  */
 const isInSyncRange = (range: string, version: string): boolean => {
-  if (range === 'lockstep') return true;
-  if (range === version || range === `^${version}`) return true;
+  if (range === 'lockstep') {
+    return true;
+  }
+
+  if (range === version || range === `^${version}`) {
+    return true;
+  }
 
   const [major, minor] = version.split('.');
+
   return range === `${major}.${minor}.x` || range === `^${major}.${minor}.0`;
 };
 
@@ -104,13 +116,18 @@ describe('create-exo-app template version sync', () => {
       it(`${template}: ${name}@"${range}" is in sync with the published version`, () => {
         const publishedVersion = publishedVersions.get(name);
         expect(publishedVersion, `no package under packages/ (or root) publishes "${name}"`).toBeDefined();
-        expect(isInSyncRange(range, publishedVersion!), `"${range}" is not in sync with ${name}@${publishedVersion} — update the template`).toBe(true);
+        expect(
+          isInSyncRange(range, publishedVersion!),
+          `"${range}" is not in sync with ${name}@${publishedVersion} — update the template`,
+        ).toBe(true);
       });
     }
   }
 
   it('every template agrees on the same @codexo/exojs range (no partial-update drift)', () => {
-    const ranges = new Set(templateDirs.map(template => readManifest(resolve(templatesDir, template, 'package.json')).dependencies?.['@codexo/exojs']));
+    const ranges = new Set(
+      templateDirs.map(template => readManifest(resolve(templatesDir, template, 'package.json')).dependencies?.['@codexo/exojs']),
+    );
     expect([...ranges]).toHaveLength(1);
   });
 });

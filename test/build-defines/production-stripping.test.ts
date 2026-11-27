@@ -57,7 +57,11 @@ const mustHaveProductionBuild = process.env['EXOJS_REQUIRE_PRODUCTION_BUILD'] ==
 
 const read = (rel: string): string => {
   const p = resolve(rootDir, rel);
-  if (!existsSync(p)) throw new Error(`Missing file: ${p}`);
+
+  if (!existsSync(p)) {
+    throw new Error(`Missing file: ${p}`);
+  }
+
   return readFileSync(p, 'utf8');
 };
 
@@ -79,6 +83,7 @@ const extractContainerCycleMessage = (): string => {
   const source = readFileSync(resolve(rootDir, 'src/rendering/Container.ts'), 'utf8');
   const match = /invariant\(\s*ancestor !== child,\s*'([^']+)'/.exec(source);
   expect(match).not.toBeNull();
+
   return match![1]!;
 };
 
@@ -91,11 +96,10 @@ const extractContainerCycleMessage = (): string => {
  * cannot be relied on. The syntax-stripping step is not what this test
  * models; the define-replace and terser passes below it are.
  */
-const transpileTs = (source: string): string => {
-  return ts.transpileModule(source, {
+const transpileTs = (source: string): string =>
+  ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-};
 
 /**
  * Runs a small snippet - importing the real `assert`/`assertDefined`/
@@ -130,8 +134,14 @@ const buildProductionSnippet = async (cycleMessage: string, pureFuncs: string[])
       return id === virtualEntryId || id === virtualDevId ? id : null;
     },
     load(id) {
-      if (id === virtualEntryId) return entryJs;
-      if (id === virtualDevId) return devJs;
+      if (id === virtualEntryId) {
+        return entryJs;
+      }
+
+      if (id === virtualDevId) {
+        return devJs;
+      }
+
       return null;
     },
   };
@@ -149,6 +159,7 @@ const buildProductionSnippet = async (cycleMessage: string, pureFuncs: string[])
 
   try {
     const { output } = await bundle.generate({ format: 'es' });
+
     return output[0]!.code;
   } finally {
     await bundle.close();
@@ -235,6 +246,7 @@ describe.runIf(hasProductionBuild || mustHaveProductionBuild)('production build 
   it('has no unresolved constants anywhere in dist/esm/', () => {
     // Spot-check a few files across the tree.
     const files = ['dist/esm/core/Application.js', 'dist/esm/rendering/text/BitmapText.js', 'dist/esm/rendering/texture/RenderTexture.js'];
+
     for (const file of files) {
       const content = read(file);
       expect(content, `${file} should not contain __DEV__`).not.toMatch(/(?<![a-zA-Z0-9_$])__DEV__(?![a-zA-Z0-9_$])/);

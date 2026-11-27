@@ -4,7 +4,7 @@
   "symbol": "ParticleDeathContext",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 10,
   "counts": {
@@ -23,7 +23,7 @@
         "A snapshot, not a view: it is copied out of the simulation when the particle dies and stays valid for the whole callback, whichever backend ran the simulation and whether or not the slot has already been reused. It carries no slot index for that reason - there is nothing to read back afterwards.",
         "Every backend captures state after the terminal integration step and all update modules. GPU callbacks arrive asynchronously in submission order; within a batch particles are ordered by slot. Clearing or destroying the system cancels pending callbacks. GPU delivery uses bounded staging and a capacity-sized backlog; overflow drops excess callbacks with a development warning. Use CPU simulation when same-update delivery is required."
       ],
-      "importLine": "import { ParticleDeathContext } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleDeathContext } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

@@ -33,12 +33,12 @@
  */
 export const upgradeFragmentShaderToGl300 = (source: string): string => {
   // Already 3.00 → return unchanged
-  if (/^\s*#version\s+300\s+es/.test(source)) {
+  if (/^[ \t]*#version\s+300\s+es/m.test(source)) {
     return source;
   }
 
   // Strip any older #version directive
-  const stripped = source.replace(/^\s*#version[^\n]*\n/, '');
+  const stripped = source.replace(/^[ \t]*#version[^\n]*(?:\n|$)/m, '');
 
   // Token-level replacements (word-boundary safe)
   const transformed = stripped

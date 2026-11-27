@@ -27,22 +27,22 @@
 type CalloutType = 'info' | 'hint' | 'warning' | 'pitfall' | 'success' | 'debug' | 'invalid' | 'broken';
 
 interface Props {
-    type?: CalloutType;
-    /** Optional heading. Falls back to the state's default label. */
-    title?: string;
-    /** Which edge the companion sits on. Alternate down a page to keep it lively. */
-    side?: 'left' | 'right';
+  type?: CalloutType;
+  /** Optional heading. Falls back to the state's default label. */
+  title?: string;
+  /** Which edge the companion sits on. Alternate down a page to keep it lively. */
+  side?: 'left' | 'right';
 }
 
 const LABELS: Record<CalloutType, string> = {
-    info: 'Good to know',
-    hint: 'Tip',
-    warning: 'Heads up',
-    pitfall: 'Common pitfall',
-    success: "You're set",
-    debug: 'Debug tip',
-    invalid: 'Not supported',
-    broken: 'Runtime error',
+  info: 'Good to know',
+  hint: 'Tip',
+  warning: 'Heads up',
+  pitfall: 'Common pitfall',
+  success: "You're set",
+  debug: 'Debug tip',
+  invalid: 'Not supported',
+  broken: 'Runtime error',
 };
 
 const { type = 'info', title, side = 'left' } = Astro.props;
@@ -54,131 +54,135 @@ const spriteFile = side === 'right' && type === 'pitfall' ? 'pitfall-flipped' : 
 ---
 
 <aside class="callout" data-callout={type} data-side={side} role="note">
-    <img
-        class="callout__companion"
-        src={`${base}brand/companion/${spriteFile}.webp`}
-        alt=""
-        aria-hidden="true"
-        width="138"
-        loading="lazy"
-        decoding="async"
-    />
-    <div class="callout__main">
-        <p class="callout__label">{heading}</p>
-        <div class="callout__body"><slot /></div>
+  <img
+    class="callout__companion"
+    src={`${base}brand/companion/${spriteFile}.webp`}
+    alt=""
+    aria-hidden="true"
+    width="138"
+    loading="lazy"
+    decoding="async"
+  />
+  <div class="callout__main">
+    <p class="callout__label">{heading}</p>
+    <div class="callout__body">
+      <slot />
     </div>
+  </div>
 </aside>
 
 <style>
+  .callout {
+    /* State colour (fixed hues — not the user-selectable --accent — so they
+         stay stable across accent themes and keep carrying meaning). */
+    --ca: oklch(80% 0.1 195); /* companion cyan #52D9D4 */
+
+    display: flex;
+    align-items: stretch;
+    gap: var(--s-4);
+    min-height: 118px;
+    margin: var(--s-5) 0;
+    padding: 17px 22px;
+    border: 1.5px solid color-mix(in oklab, var(--ca), transparent 46%);
+    border-radius: var(--r-4);
+    background: color-mix(in oklab, var(--ca), var(--bg-elevated) 91%);
+
+    /* companion sits on the bottom edge and rises past the top; overflow
+         visible keeps its head + props (bulb, sparks) uncropped. */
+    overflow: visible;
+  }
+
+  /* Companion is the leading anchor: left, native orientation (faces right,
+     into the text), cropped at the belly so the head + props read large. */
+  .callout__companion {
+    flex: 0 0 auto;
+    align-self: flex-end;
+    width: 138px;
+    height: auto;
+    margin: 0 0 -18px;
+    object-fit: contain;
+    object-position: bottom;
+    filter: drop-shadow(0 5px 15px color-mix(in oklab, var(--ca), transparent 52%));
+    -webkit-user-select: none;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  /* side="right": companion moves to the trailing edge and flips to face left
+     into the text. Pitfall keeps its transform none — it uses a pre-flipped
+     sprite (its `?` bubble must not mirror). */
+  .callout[data-side='right'] .callout__companion {
+    order: 1;
+    transform: scaleX(-1);
+  }
+
+  .callout[data-side='right'][data-callout='pitfall'] .callout__companion {
+    transform: none;
+  }
+
+  /* Broken uses the full seated (powered-off) sprite instead of a belly crop,
+     so its posture reads; it keeps the same width + seating as the others. */
+
+  .callout__main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 3px;
+  }
+
+  .callout__label {
+    margin: 0 0 8px;
+    font-size: 18.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ca);
+  }
+
+  .callout__body {
+    color: var(--fg-muted);
+    font-size: 14.5px;
+    line-height: 1.6;
+  }
+
+  .callout__body :global(p) {
+    margin: var(--s-2) 0;
+  }
+
+  .callout__body :global(p:first-child) {
+    margin-top: 0;
+  }
+
+  .callout__body :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  /* State colours. */
+  .callout[data-callout='warning'] {
+    --ca: oklch(78% 0.14 75); /* amber #F2A93B */
+  }
+
+  .callout[data-callout='success'] {
+    --ca: oklch(78% 0.12 162); /* mint-green #62D29A */
+  }
+
+  .callout[data-callout='invalid'] {
+    --ca: oklch(70% 0.02 210); /* neutral gray #9AA1A1 */
+  }
+
+  .callout[data-callout='broken'] {
+    --ca: oklch(64% 0.19 27); /* red #E0463B */
+  }
+
+  @media (width <= 560px) {
     .callout {
-        /* State colour (fixed hues — not the user-selectable --accent — so they
-           stay stable across accent themes and keep carrying meaning). */
-        --ca: oklch(80% 0.1 195); /* companion cyan #52D9D4 */
-        display: flex;
-        align-items: stretch;
-        gap: var(--s-4);
-        min-height: 118px;
-        margin: var(--s-5) 0;
-        padding: 17px 22px;
-        border: 1.5px solid color-mix(in oklab, var(--ca), transparent 46%);
-        border-radius: var(--r-4);
-        background: color-mix(in oklab, var(--ca), var(--bg-elevated) 91%);
-        /* companion sits on the bottom edge and rises past the top; overflow
-           visible keeps its head + props (bulb, sparks) uncropped. */
-        overflow: visible;
+      gap: var(--s-3);
+      padding: 14px 16px 14px 10px;
     }
 
-    /* Companion is the leading anchor: left, native orientation (faces right,
-       into the text), cropped at the belly so the head + props read large. */
     .callout__companion {
-        flex: 0 0 auto;
-        align-self: flex-end;
-        width: 138px;
-        height: auto;
-        margin: 0 0 -18px 0;
-        object-fit: contain;
-        object-position: bottom;
-        filter: drop-shadow(0 5px 15px color-mix(in oklab, var(--ca), transparent 52%));
-        -webkit-user-select: none;
-        user-select: none;
-        pointer-events: none;
+      width: 104px;
     }
-
-    /* side="right": companion moves to the trailing edge and flips to face left
-       into the text. Pitfall keeps its transform none — it uses a pre-flipped
-       sprite (its `?` bubble must not mirror). */
-    .callout[data-side='right'] .callout__companion {
-        order: 1;
-        transform: scaleX(-1);
-    }
-
-    .callout[data-side='right'][data-callout='pitfall'] .callout__companion {
-        transform: none;
-    }
-
-    /* Broken uses the full seated (powered-off) sprite instead of a belly crop,
-       so its posture reads; it keeps the same width + seating as the others. */
-
-    .callout__main {
-        flex: 1 1 auto;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        padding-top: 3px;
-    }
-
-    .callout__label {
-        margin: 0 0 8px;
-        font-size: 18.5px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        color: var(--ca);
-    }
-
-    .callout__body {
-        color: var(--fg-muted);
-        font-size: 14.5px;
-        line-height: 1.6;
-    }
-
-    .callout__body :global(p) {
-        margin: var(--s-2) 0;
-    }
-
-    .callout__body :global(p:first-child) {
-        margin-top: 0;
-    }
-
-    .callout__body :global(p:last-child) {
-        margin-bottom: 0;
-    }
-
-    /* State colours. */
-    .callout[data-callout='warning'] {
-        --ca: oklch(78% 0.14 75); /* amber #F2A93B */
-    }
-
-    .callout[data-callout='success'] {
-        --ca: oklch(78% 0.12 162); /* mint-green #62D29A */
-    }
-
-    .callout[data-callout='invalid'] {
-        --ca: oklch(70% 0.02 210); /* neutral gray #9AA1A1 */
-    }
-
-    .callout[data-callout='broken'] {
-        --ca: oklch(64% 0.19 27); /* red #E0463B */
-    }
-
-    @media (max-width: 560px) {
-        .callout {
-            gap: var(--s-3);
-            padding: 14px 16px 14px 10px;
-        }
-
-        .callout__companion {
-            width: 104px;
-        }
-    }
+  }
 </style>

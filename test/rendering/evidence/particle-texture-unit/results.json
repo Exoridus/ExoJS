@@ -1,0 +1,94 @@
+{
+  "before": {
+    "status": "FAIL",
+    "assertion": "channel 0: got 255, expected 0"
+  },
+  "after": {
+    "chromiumWebgl2": 12,
+    "firefoxWebgl2": 12,
+    "packageTypecheck": "PASS",
+    "targetedLint": "PASS"
+  },
+  "scope": "Particle textures bind to sampler unit0 instead of inheriting the last active unit.",
+  "captures": [
+    {
+      "path": "unit-inherited-1280.png",
+      "sha256": "d2ccff9894f400dd4dae7a49ef62f16be534da2da22c73ffdf2851941da6d95a"
+    },
+    {
+      "path": "unit-inherited-512.png",
+      "sha256": "9e735d8ddc1431913ba2c9f1ee0247587c09c240842f7ebae33ae79349bc02f5"
+    },
+    {
+      "path": "unit-zero-1280.png",
+      "sha256": "495960f42d250aea6d5ebc0ae72385d67dcf7ab11e10003b90e648104163e59c"
+    },
+    {
+      "path": "unit-zero-512.png",
+      "sha256": "b7ec7621fe8ee51203a7237653a0d204163f157e91324ce6338cc22d8e9af5e4"
+    }
+  ],
+  "remaining": "Full frozen GL2/WebGPU parity requires identical CPU particle data; these captures prove the isolated binding change only.",
+  "unit-inherited": {
+    "frozen": [
+      {
+        "size": [1280, 720],
+        "frozen": {
+          "particles": 120,
+          "simulation": "cpu",
+          "elapsed": 1.9999999999999978,
+          "values": {
+            "rate": 100,
+            "lifetime": 1.2,
+            "speed": 80
+          }
+        }
+      },
+      {
+        "size": [512, 288],
+        "frozen": {
+          "particles": 120,
+          "simulation": "cpu",
+          "elapsed": 1.9999999999999978,
+          "values": {
+            "rate": 100,
+            "lifetime": 1.2,
+            "speed": 80
+          }
+        }
+      }
+    ],
+    "bindingStates": ["{\"before\":18,\"supplied\":null,\"after\":18,\"forced\":false}"]
+  },
+  "unit-zero": {
+    "frozen": [
+      {
+        "size": [1280, 720],
+        "frozen": {
+          "particles": 120,
+          "simulation": "cpu",
+          "elapsed": 1.9999999999999978,
+          "values": {
+            "rate": 100,
+            "lifetime": 1.2,
+            "speed": 80
+          }
+        }
+      },
+      {
+        "size": [512, 288],
+        "frozen": {
+          "particles": 120,
+          "simulation": "cpu",
+          "elapsed": 1.9999999999999978,
+          "values": {
+            "rate": 100,
+            "lifetime": 1.2,
+            "speed": 80
+          }
+        }
+      }
+    ],
+    "bindingStates": ["{\"before\":18,\"supplied\":null,\"after\":0,\"forced\":true}"]
+  }
+}

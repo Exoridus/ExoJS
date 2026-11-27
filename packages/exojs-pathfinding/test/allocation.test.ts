@@ -54,8 +54,11 @@ const sampleBytes = async (body: () => void): Promise<number> => {
   const post = <T>(method: string, params?: Record<string, unknown>): Promise<T> =>
     new Promise((resolve, reject) => {
       session.post(method, params, (error: Error | null, result?: unknown) => {
-        if (error) reject(error);
-        else resolve(result as T);
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result as T);
+        }
       });
     });
 

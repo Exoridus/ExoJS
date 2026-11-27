@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -10,6 +11,20 @@ import { factoryContext } from './factory-context';
 
 const fixture = (name: string): ArrayBuffer => Uint8Array.from(readFileSync(`test/fixtures/${name}.ktx2`)).buffer;
 afterEach(() => vi.unstubAllGlobals());
+
+describe('Basis runtime', () => {
+  test('documented runtime checksums match the shipped files', () => {
+    const base = 'src/assets/factories/basis';
+    const readme = readFileSync(`${base}/README.md`, 'utf8');
+
+    for (const file of ['basis_transcoder.mjs', 'basis_transcoder.wasm']) {
+      const hash = createHash('sha256')
+        .update(readFileSync(`${base}/${file}`))
+        .digest('hex');
+      expect(readme).toContain(`\`${hash}\` for \`${file}\``);
+    }
+  });
+});
 
 describe('KTX2 decode dispatch', () => {
   test.each(['bc7-unorm', 'astc-4x4-unorm', 'etc2-rgba8-unorm'])('native %s never creates a worker and aliases its source', async name => {
@@ -36,16 +51,22 @@ describe('KTX2 decode dispatch', () => {
   ] as const)('selects %s from the capability order and preserves metadata/mips', async (name, formats, expected, targetId) => {
     const transcode = vi.fn(async (_buffer, _descriptor, target) => {
       expect(target.id).toBe(targetId);
+
       return Array.from({ length: 5 }, (_, index) => {
         const width = Math.max(28 >> index, 1),
           height = Math.max(12 >> index, 1);
+
         return new Uint8Array(expected === undefined ? width * height * 4 : compressedLevelByteLength(expected, width, height));
       });
     });
     const payload = await decodeKtx2(fixture(`basis/${name}`), name, formats, transcode);
     expect(transcode).toHaveBeenCalledOnce();
     expect(payload.kind).toBe(expected === undefined ? 'rgba8' : 'compressed');
-    if (payload.kind === 'compressed') expect(payload.format).toBe(expected);
+
+    if (payload.kind === 'compressed') {
+      expect(payload.format).toBe(expected);
+    }
+
     expect(payload.colorSpace).toBe(name.includes('srgb') ? 'srgb' : 'linear-srgb');
     expect(payload.alphaMode).toBe('straight');
     expect(payload.levels.map(({ width, height }) => [width, height])).toEqual([
@@ -70,7 +91,9 @@ describe('KTX2 decode dispatch', () => {
     const controller = new AbortController();
     controller.abort();
     const transcode = vi.fn();
-    await expect(decodeKtx2(fixture('basis/etc1s-alpha-srgb'), 'abort.ktx2', [], transcode, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(decodeKtx2(fixture('basis/etc1s-alpha-srgb'), 'abort.ktx2', [], transcode, controller.signal)).rejects.toMatchObject({
+      name: 'AbortError',
+    });
     expect(transcode).not.toHaveBeenCalled();
   });
 });

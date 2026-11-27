@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 11,
+  "memberCount": 12,
   "counts": {
     "constructors": 1,
     "methods": 2,
-    "properties": 8,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -204,6 +204,27 @@
           "params": [],
           "returnType": null,
           "description": "Which action kind this is - the discriminant a serialized binding is validated against."
+        },
+        {
+          "name": "tick",
+          "signature": "tick: ButtonTickState",
+          "signatureTokens": [
+            {
+              "text": "tick",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ButtonTickState",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What the current fixed step owns of this action: presses and releases counted and delivered to exactly one fixed step, plus the held state. Read it from fixed-step code instead of pressed, which describes the frame and is true in every fixed step a frame runs - or in none when the frame runs no step. See ButtonTickState."
         },
         {
           "name": "active",

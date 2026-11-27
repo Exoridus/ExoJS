@@ -60,10 +60,12 @@ const createStub = (): RenderBackend => {
     },
     resize(w: number, h: number) {
       renderTarget.resize(w, h);
+
       return this;
     },
     setView(v: View | null) {
       renderTarget.setView(v);
+
       return this;
     },
     setRenderTarget() {
@@ -86,6 +88,7 @@ const createStub = (): RenderBackend => {
     },
     draw() {
       stats.submittedNodes++;
+
       return this;
     },
     execute() {

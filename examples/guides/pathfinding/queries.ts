@@ -1,5 +1,5 @@
 import type { Vector } from '@codexo/exojs';
-import { GridSpace, Pathfinder } from '@codexo/exojs-pathfinding';
+import { GridSpace, Pathfinder } from '@codexo/exojs/pathfinding';
 
 declare const hero: { x: number; y: number; follow: (points: readonly Vector[]) => void };
 declare const target: { x: number; y: number };

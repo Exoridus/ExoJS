@@ -1,6 +1,6 @@
 {
   "title": "Video",
-  "description": "Renders an `HTMLVideoElement` as a live texture on a Sprite. `Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and keeps the underlying Texture in sync with the decoded video frame stream via `requestVideoFrameCallback` (falling back to `currentTime` polling on browsers that lack it). Audio is routed through the Web Audio API gain node and can be directed to any AudioBus. Frames are uploaded as sRGB colour, like any other browser image source, so the video is SDR content. The engine has no HDR video path: an HDR clip reaches it as whatever SDR frames the browser hands over.",
+  "description": "Renders an `HTMLVideoElement` as a live texture on a Sprite. `Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and draws its VideoTexture. Each presented frame is uploaded once, the next time the video renders; a paused video uploads nothing. Share texture with a `Mesh` or another sprite to draw the same frames elsewhere without a second upload; the video owns that texture and destroys it with itself. Audio is routed through the Web Audio API gain node and can be directed to any AudioBus. Frames are uploaded as sRGB colour, like any other browser image source, so the video is SDR content. The engine has no HDR video path: an HDR clip reaches it as whatever SDR frames the browser hands over.",
   "symbol": "Video",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Renders an `HTMLVideoElement` as a live texture on a Sprite.",
-        "`Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and keeps the underlying Texture in sync with the decoded video frame stream via `requestVideoFrameCallback` (falling back to `currentTime` polling on browsers that lack it). Audio is routed through the Web Audio API gain node and can be directed to any AudioBus.",
+        "`Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and draws its VideoTexture. Each presented frame is uploaded once, the next time the video renders; a paused video uploads nothing. Share texture with a `Mesh` or another sprite to draw the same frames elsewhere without a second upload; the video owns that texture and destroys it with itself. Audio is routed through the Web Audio API gain node and can be directed to any AudioBus.",
         "Frames are uploaded as sRGB colour, like any other browser image source, so the video is SDR content. The engine has no HDR video path: an HDR clip reaches it as whatever SDR frames the browser hands over."
       ],
       "importLine": "import { Video } from '@codexo/exojs'",
@@ -481,7 +481,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - either shape is a Polygon that encloses no area (empty, fewer than three distinct vertices, or collinear vertices) and the other is a filled shape (Rectangle, Circle, Ellipse or Polygon); such a polygon overlaps no filled shape, and intersectsWith returns false for the same pairs. Line and Point queries are unchanged: they test the polygon's outline and vertices as before, **or** - the specific shape-pair combination does not support response generation (for example Line against any shape, or Ellipse against a Point). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
         },
         {
           "name": "contains",
@@ -1296,7 +1296,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Start video playback. Dispatches onStart if the video was paused. Applies options before playing."
+          "description": "Start video playback. Applies options before playing. When the video was paused, onStart is dispatched once the element has actually started playing. A start the browser refuses (autoplay policy) or one superseded by pause() before it begins dispatches nothing."
         },
         {
           "name": "project",
@@ -2779,7 +2779,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Upload the current video frame to the GPU texture if the frame is dirty and the video dimensions are known. Called automatically by render; also safe to call manually when the video is paused on a specific frame."
+          "description": "Syncs the texture with the current video frame and fits the sprite to a changed video size. Called automatically when the video renders; the upload itself happens when a renderer binds the texture."
         },
         {
           "name": "updateTransform",
@@ -3176,7 +3176,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer (WebGL2). Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
+          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer on both backends. Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
         },
         {
           "name": "clipShape",
@@ -3371,7 +3371,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Media duration in seconds; NaN until the element has loaded its metadata."
         },
         {
           "name": "filters",
@@ -3404,7 +3404,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Filters are borrowed; destroying this node detaches them without destroying them."
         },
         {
           "name": "height",
@@ -3961,7 +3961,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space corner positions of the sprite quad, computed lazily from the current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3] (TL, TR, BR, BL). Cached until the transform is invalidated."
+          "description": "Rendering-space corner positions of the sprite quad: world space normally, group-local space below a retained transform boundary. Computed lazily from the current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3] (TL, TR, BR, BL). Cached until the transform is invalidated."
         },
         {
           "name": "videoElement",

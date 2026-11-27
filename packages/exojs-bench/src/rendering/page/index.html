@@ -3,6 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <title>ExoJS Baseline Benchmark Harness</title>
+    <!-- The capture clips to the 1280x720 viewport from (0,0); the UA body
+         margin would shift the stage and crop its right/bottom edge. -->
+    <style>
+      html,
+      body {
+        margin: 0;
+      }
+
+      canvas {
+        display: block;
+      }
+    </style>
   </head>
   <body>
     <canvas id="stage" width="1280" height="720"></canvas>

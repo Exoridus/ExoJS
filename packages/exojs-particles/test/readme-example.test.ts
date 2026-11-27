@@ -61,7 +61,7 @@ describe('README "Minimal working example"', () => {
         esModuleInterop: true,
         // The package's own source resolves its internal `#foo` subpath
         // imports through these two conditions (see package.json#imports) -
-        // without them every internal import inside @codexo/exojs-particles
+        // without them every internal import inside the particles module
         // fails to resolve and every export downgrades to `any`, masking
         // real type errors in the snippet under test.
         resolvePackageJsonImports: true,
@@ -69,7 +69,7 @@ describe('README "Minimal working example"', () => {
         baseUrl: repoRoot,
         paths: {
           '@codexo/exojs': ['./src/index.ts'],
-          '@codexo/exojs-particles': ['./packages/exojs-particles/src/index.ts'],
+          '@codexo/exojs/particles': ['./packages/exojs-particles/src/index.ts'],
         },
       };
 

@@ -4,7 +4,7 @@
   "symbol": "AudioAnalyserOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for AudioAnalyser."
       ],
-      "importLine": "import { AudioAnalyserOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { AudioAnalyserOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {
@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Minimum dBFS rendered by the byte-domain spectrum getters. Default -100."
+          "description": "Minimum dBFS rendered by byte spectra and the floor for mel float bands. Default -100."
         },
         {
           "name": "smoothingTimeConstant",

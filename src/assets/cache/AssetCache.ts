@@ -5,7 +5,7 @@ import { AssetCacheError, type AssetCacheOperation } from './AssetCacheError';
 import type { CacheLayout, CacheLayoutContext } from './CacheLayout';
 import type { CacheContext } from './CachePolicy';
 import { cacheMiss, type CacheReadResult } from './CacheReadResult';
-import type { CacheRecordKey } from './CacheRecordKey';
+import { type CacheRecordKey, serializeCacheRecordKey } from './CacheRecordKey';
 import { CacheRoute, type CacheRouteOptions } from './CacheRoute';
 import type { CacheStore } from './CacheStore';
 
@@ -326,7 +326,7 @@ class RoutedCacheContext<T> implements CacheContext<T> {
 
   /** Hand one store failure to the acquisition's diagnostics, and give back the typed error to raise. */
   private _report(error: unknown, operation: 'read' | 'write', key: CacheRecordKey): AssetCacheError {
-    const reported = asCacheError(error, operation, key.namespace, key.record);
+    const reported = asCacheError(error, operation, key.namespace, serializeCacheRecordKey(key));
 
     this._acquisition.report(reported);
 

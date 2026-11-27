@@ -168,7 +168,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Master visibility switch. When false, no layers render regardless of their individual flags."
+          "description": "Master visibility switch. When false, no layers render regardless of their individual flags, and layers release what only a drawn layer needs (such as the performance panel's GPU timing) until it is switched back on."
         }
       ],
       "paragraphs": [],

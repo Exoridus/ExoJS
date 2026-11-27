@@ -1,9 +1,9 @@
 import type { AudioBus } from '#audio/AudioBus';
-import { getAudioContext } from '#audio/audioContext';
+import { isAudioContextReady, onAudioContextReady } from '#audio/audioContext';
 import type { AudioEffect } from '#audio/AudioEffect';
 import type { AudioGenerator } from '#audio/AudioGenerator';
 import { AudioSend } from '#audio/AudioSend';
-import type { AudioStream } from '#audio/AudioStream';
+import type { MediaAudio } from '#audio/MediaAudio';
 import type {
   DistanceModel,
   Loopable,
@@ -19,7 +19,8 @@ import type {
 } from '#audio/Playable';
 import type { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
-import { SceneAvailability } from '#core/scene/SceneAvailability';
+import { logger } from '#core/Logger';
+import { SceneAvailability, sceneAvailabilityAllows } from '#core/scene/SceneAvailability';
 import { SceneState } from '#core/scene/SceneState';
 import type { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
@@ -29,18 +30,23 @@ import { Vector } from '#math/Vector';
 
 const isPausable = (voice: Voice): voice is Voice & Pausable => 'pause' in voice && 'resume' in voice;
 
+/** A voice an owner can silence without touching the caller's own pause - every engine voice that can pause. */
+const isHoldable = (voice: Voice): voice is Voice & { _setHeld(held: boolean): void } => '_setHeld' in voice && isPausable(voice);
+
 /** Options accepted by {@link SceneAudio.play}, extending the base {@link PlayOptions}. */
 export interface SceneAudioPlayOptions extends PlayOptions {
   /**
    * Availability relative to {@link SceneDirector.pause}/{@link SceneDirector.resume}.
-   * `'always'` (default) ignores scene pause entirely - today's behavior.
-   * `'active'` freezes the moment the scene pauses, resumes when it resumes.
-   * `'paused'` is the mirror image: plays only while the scene is paused.
-   * Has no effect on a {@link Voice} that doesn't support {@link Pausable}.
+   * `'always'` (default) ignores scene pause. `'active'` is audible only while
+   * the scene runs, `'paused'` only while it is paused. The policy holds from
+   * the moment the voice starts, not only from the next pause or resume.
    *
-   * Applied only at the scene's pause/resume transitions, not re-checked at
-   * creation time - a voice started while the scene is already paused plays
-   * immediately and is only corrected at the next pause/resume cycle.
+   * The scene silences a voice without pausing it: `voice.paused` keeps
+   * reporting the caller's own pause, and a voice the caller paused stays
+   * paused when the scene lets it play again. A {@link Voice} that doesn't
+   * support {@link Pausable} cannot be silenced and keeps playing; a
+   * development build warns when such a voice is given a policy other than
+   * `'always'`.
    */
   when?: SceneAvailability;
 }
@@ -200,6 +206,8 @@ class PendingVoice implements Voice {
 
   private _real: CapabilityVoice | null = null;
   private _cancelled = false;
+  private _flushing = false;
+  private _stopping = false;
   private _volume: number;
   private _bus: AudioBus | undefined;
   /** Requested start offset from a {@link Seekable} write before flush; handed to the real voice as `PlayOptions.time`. */
@@ -210,13 +218,9 @@ class PendingVoice implements Voice {
   private _playbackRate: number | undefined;
   private _detune: number | undefined;
   private readonly _pendingEffects: AudioEffect[] = [];
-  /**
-   * Sends opened before the real voice existed. Each is wired to
-   * {@link PendingVoice._dummyOutput} and re-pointed at the real output on flush,
-   * so the handle the caller already holds stays valid.
-   */
+  /** Unbound sends owned here until the real voice adopts them. */
   private readonly _sendList: AudioSend[] = [];
-  private readonly _dummyOutput: AudioNode;
+  private _sendView: readonly AudioSend[] | null = null;
   /** Volume a buffered {@link PendingVoice.fade} ramps from, or `null` when no fade is pending. */
   private _fadeFrom: number | null = null;
   private _fadeDuration: Seconds = seconds(0);
@@ -229,6 +233,7 @@ class PendingVoice implements Voice {
   public readonly onEnd = new Signal();
   /** The `when` policy this voice was created with - carried across to the real `Voice` at flush. */
   public readonly when: SceneAvailability;
+  public readonly waitForUnlock: boolean;
 
   /**
    * @param _createReal - Starts the real voice from the given options.
@@ -245,9 +250,12 @@ class PendingVoice implements Voice {
     this._volume = _options.volume ?? 1;
     this._bus = _options.bus;
     this.when = _options.when ?? SceneAvailability.Always;
-    this._dummyOutput = getAudioContext().createGain();
-
     const profile = _describe();
+    this.waitForUnlock = profile.waitForUnlock ?? false;
+
+    for (const send of _options.sends ?? []) {
+      this.addSend(send.bus, send.level);
+    }
 
     if (profile.duration !== null) {
       Object.defineProperties(this, PendingVoice._seekableMembers);
@@ -267,11 +275,15 @@ class PendingVoice implements Voice {
   }
 
   public get ended(): boolean {
-    return this._real?.ended ?? this._cancelled;
+    return this._cancelled || (this._real?.ended ?? false);
   }
 
   public get output(): AudioNode {
-    return this._real?.output ?? this._dummyOutput;
+    if (this._real === null) {
+      throw new Error('A deferred voice has no output before real playback is created. Activate the scene and unlock audio first.');
+    }
+
+    return this._real.output;
   }
 
   public get volume(): number {
@@ -319,16 +331,64 @@ class PendingVoice implements Voice {
   }
 
   public stop(fade?: Seconds): void {
+    if (this._cancelled || this._stopping) {
+      return;
+    }
+
     if (this._real) {
-      this._real.stop(fade);
+      if (this._flushing) {
+        this._stopping = true;
+
+        try {
+          this._abortReal();
+        } finally {
+          this._finish();
+          this._stopping = false;
+        }
+      } else {
+        this._real.stop(fade);
+      }
 
       return;
     }
 
-    if (!this._cancelled) {
-      this._cancelled = true;
-      this._releasePoints();
+    this._finish();
+  }
+
+  private _abortReal(): void {
+    const real = this._real;
+
+    try {
+      // An aborted flush must not leave a generator's envelope release or a
+      // requested fade playing. Halting first makes its subsequent stop final.
+      if (real !== null && isPausable(real)) {
+        real.pause();
+      }
+    } finally {
+      real?.stop();
+    }
+  }
+
+  private _finish(): void {
+    if (this._cancelled) {
+      return;
+    }
+
+    this._cancelled = true;
+
+    for (const send of this._sendList) {
+      send.destroy();
+    }
+
+    this._sendList.length = 0;
+    this._pendingEffects.length = 0;
+    this._followTarget = null;
+    this._releasePoints();
+
+    try {
       this.onEnd.dispatch();
+    } finally {
+      this.onEnd.destroy();
     }
   }
 
@@ -365,7 +425,11 @@ class PendingVoice implements Voice {
   }
 
   public addEffect(effect: AudioEffect): this {
-    if (this._real) {
+    if (this.ended) {
+      return this;
+    }
+
+    if (this._real && !this._flushing) {
       this._real.addEffect(effect);
     } else {
       this._pendingEffects.push(effect);
@@ -375,14 +439,14 @@ class PendingVoice implements Voice {
   }
 
   public removeEffect(effect: AudioEffect): this {
+    const index = this._pendingEffects.indexOf(effect);
+
+    if (index !== -1) {
+      this._pendingEffects.splice(index, 1);
+    }
+
     if (this._real) {
       this._real.removeEffect(effect);
-    } else {
-      const index = this._pendingEffects.indexOf(effect);
-
-      if (index !== -1) {
-        this._pendingEffects.splice(index, 1);
-      }
     }
 
     return this;
@@ -398,11 +462,11 @@ class PendingVoice implements Voice {
   }
 
   public set position(value: Vector | SpatialPoint | null) {
-    this._positionWritten = true;
-    this._position = copyPoint(this._position, value);
-
     if (this._real) {
       this._real.position = value;
+    } else if (!this._cancelled) {
+      this._positionWritten = true;
+      this._position = copyPoint(this._position, value);
     }
   }
 
@@ -559,17 +623,51 @@ class PendingVoice implements Voice {
   }
 
   public get sends(): readonly AudioSend[] {
-    return this._real?.sends ?? this._sendList;
+    // A caller may retain this view before activation. Forward reads instead
+    // of replacing or copying the array: zones also change the real voice's
+    // sends without going through this wrapper.
+    this._sendView ??= new Proxy(this._sendList, {
+      get: (_target, key, receiver): unknown => Reflect.get(this._currentSends(), key, receiver),
+      has: (_target, key) => Reflect.has(this._currentSends(), key),
+      ownKeys: () => Reflect.ownKeys(this._currentSends()),
+      getOwnPropertyDescriptor: (_target, key) => {
+        const descriptor = Reflect.getOwnPropertyDescriptor(this._currentSends(), key);
+
+        if (descriptor !== undefined) {
+          // A custom voice may expose a frozen array; its descriptors cannot
+          // freeze properties on this independently owned forwarding view.
+          if (key === 'length') {
+            descriptor.writable = true;
+          } else {
+            descriptor.configurable = true;
+          }
+        }
+
+        return descriptor;
+      },
+      set: () => false,
+      deleteProperty: () => false,
+      defineProperty: () => false,
+      preventExtensions: () => false,
+    });
+
+    return this._sendView;
+  }
+
+  private _currentSends(): readonly AudioSend[] {
+    return this._flushing ? this._sendList : (this._real?.sends ?? this._sendList);
   }
 
   public addSend(bus: AudioBus, level = 1): AudioSend {
-    if (this._real) {
+    if (this._real && !this._flushing) {
       return this._real.addSend(bus, level);
     }
 
-    // Wired to the placeholder output, which nothing feeds, so the send is silent
-    // until flush re-points it at the real voice.
-    const send = new AudioSend(getAudioContext(), this._dummyOutput, bus, level);
+    if (this._cancelled) {
+      throw new Error('Cannot open an audio send on a voice that has already ended.');
+    }
+
+    const send = new AudioSend(null, null, bus, level);
 
     this._sendList.push(send);
 
@@ -578,29 +676,35 @@ class PendingVoice implements Voice {
 
   /** @internal */
   public _adoptSend(send: AudioSend): void {
-    if (this._real) {
+    if (this._cancelled) {
+      send.destroy();
+
+      return;
+    }
+
+    if (this._real && !this._flushing) {
       this._real._adoptSend(send);
 
       return;
     }
 
-    send._retarget(this._dummyOutput);
+    if (send.destroyed || this._sendList.includes(send)) {
+      return;
+    }
+
+    send._retarget(null);
     this._sendList.push(send);
   }
 
   public removeSend(send: AudioSend): this {
-    if (this._real) {
-      this._real.removeSend(send);
-
-      return this;
-    }
-
     const index = this._sendList.indexOf(send);
 
     if (index !== -1) {
       this._sendList.splice(index, 1);
       send.destroy();
     }
+
+    this._real?.removeSend(send);
 
     return this;
   }
@@ -610,11 +714,11 @@ class PendingVoice implements Voice {
   }
 
   public set velocity(value: Vector | SpatialPoint | null) {
-    this._velocityWritten = true;
-    this._velocity = copyPoint(this._velocity, value);
-
     if (this._real) {
       this._real.velocity = value;
+    } else if (!this._cancelled) {
+      this._velocityWritten = true;
+      this._velocity = copyPoint(this._velocity, value);
     }
   }
 
@@ -632,57 +736,109 @@ class PendingVoice implements Voice {
    * voice still looked live, and a born-ended voice never dispatches.
    */
   public _flush(): Voice | null {
-    if (this._cancelled || this._real !== null) {
+    if (this._cancelled || this._real !== null || this._flushing) {
       return null;
     }
 
-    let options: PlayOptions = this._options;
+    this._flushing = true;
+    const { sends: _sends, ...options } = this._options;
 
     if (this._startTime !== undefined) {
-      options = { ...options, time: this._startTime };
+      options.time = this._startTime;
     }
 
-    const real: CapabilityVoice = this._createReal(options);
-    let endForwarded = false;
-
-    this._real = real;
-
-    if (this._fadeFrom === null) {
-      real.volume = this._volume;
-    } else {
-      real.volume = this._fadeFrom;
-      real.fade(this._volume, this._fadeDuration);
-      this._fadeFrom = null;
+    if (this.waitForUnlock) {
+      options._startHeld = true;
     }
 
-    if (this._bus !== undefined) {
-      real.bus = this._bus;
+    try {
+      const real: CapabilityVoice = this._createReal(options);
+
+      // Creation can stop this wrapper or destroy its scene synchronously.
+      // Take ownership before any further callback, then honor that cancellation.
+      this._real = real;
+
+      if (this._cancelled) {
+        this._abortReal();
+
+        return real;
+      }
+
+      if (real.ended) {
+        this._finish();
+
+        return real;
+      }
+
+      real.onEnd.add((): void => this._finish());
+
+      if (this._fadeFrom === null) {
+        real.volume = this._volume;
+      } else {
+        real.volume = this._fadeFrom;
+        real.fade(this._volume, this._fadeDuration);
+        this._fadeFrom = null;
+      }
+
+      if (this._bus !== undefined) {
+        real.bus = this._bus;
+      }
+
+      while (this._pendingEffects.length > 0 && !this.ended) {
+        real.addEffect(this._pendingEffects.shift()!);
+      }
+
+      this._pendingEffects.length = 0;
+
+      if (!this.ended) {
+        this._replaySpatial(real);
+        this._replayCapabilities(real);
+      }
+
+      // Keep the pending view intact until every handle is transferred. An
+      // adoption callback may append, remove, or cancel sends in this list.
+      let index = 0;
+
+      while (index < this._sendList.length && !this.ended) {
+        const send = this._sendList[index]!;
+
+        try {
+          real._adoptSend(send);
+        } catch (error) {
+          send.destroy();
+
+          throw error;
+        }
+
+        if (this._sendList[index] === send) {
+          index++;
+        }
+      }
+
+      if (real.ended) {
+        this._finish();
+      } else {
+        this._sendList.length = 0;
+      }
+
+      return real;
+    } catch (error) {
+      try {
+        this._abortReal();
+      } catch {
+        // Preserve the creation/replay error; ending listeners can also throw.
+      }
+
+      try {
+        this._finish();
+      } catch {
+        // The terminal cleanup precedes notification, whose error is secondary.
+      }
+
+      throw error;
+    } finally {
+      this._flushing = false;
     }
-
-    for (const effect of this._pendingEffects) {
-      real.addEffect(effect);
-    }
-
-    this._pendingEffects.length = 0;
-
-    // Handed over rather than re-created: the caller already holds these objects.
-    for (const send of this._sendList) {
-      real._adoptSend(send);
-    }
-
-    this._sendList.length = 0;
-    this._replaySpatial(real);
-    real.onEnd.add((): void => {
-      endForwarded = true;
-      this.onEnd.dispatch();
-    });
-    this._replayCapabilities(real);
-
-    if (real.ended && !endForwarded) {
-      this.onEnd.dispatch();
-    }
-
-    return real;
   }
 
   /**
@@ -807,10 +963,19 @@ class PendingVoice implements Voice {
  * the playback: before activation it buffers `volume`, `bus`, effects, sends,
  * `fade` and the {@link Spatializable} surface, all replayed in order onto the
  * real voice; afterwards it forwards everything to the real voice.
+ * Registration and buffered operations create no audio nodes. `output`
+ * throws until the real voice exists, even if audio has already unlocked;
+ * afterwards it returns that voice's stable output. No placeholder node is
+ * provided. A voice cancelled before materialization never gains an output.
+ *
+ * Sends, including those supplied in the play options, are immediately usable
+ * handles whose levels and removal state survive activation. Their nodes are
+ * created only when the real voice adopts them. A retained `sends` view stays
+ * live across this handoff and later changes to the real voice's routing.
  *
  * `bus` reports the bus the voice will route into from the moment `play()`
  * returns. The stand-in carries the capability mixins of the voice its source
- * starts - {@link Sound} and {@link AudioStream}: `Seekable`, `Pausable`,
+ * starts - {@link Sound} and {@link MediaAudio}: `Seekable`, `Pausable`,
  * `Loopable`, `RatePitched`; {@link AudioGenerator}: `Pausable`, `RatePitched`;
  * any other {@link Playable}: none - so a `'seek' in voice` check answers the
  * same before and after activation. Requests made before activation are
@@ -822,26 +987,27 @@ class PendingVoice implements Voice {
  * - `seek(t)` (or a `time` write) becomes the start offset.
  * - `loop`, `playbackRate` and `detune` writes are applied to the new voice.
  *
- * Activation starts playback through `app.audio` whether or not the browser has
- * unlocked audio yet, so the {@link AudioSystem.locked} rules apply exactly as
- * for a direct play call: a {@link Sound} or {@link AudioGenerator} is skipped
- * and the stand-in ends (dispatching `onEnd`), an {@link AudioStream} waits for
- * the unlock gesture.
+ * At activation, a {@link Sound} or {@link AudioGenerator} follows the
+ * {@link AudioSystem.locked} skip rule and the stand-in ends, dispatching
+ * `onEnd`. A deferred {@link MediaAudio} stays buffered until audio unlocks
+ * and the scene is active. Suspension before unlock waits for restoration;
+ * cancellation or destruction prevents the deferred start. A stream starts
+ * held until its buffered configuration and the current scene policy have
+ * been applied, so a paused or held stream makes no transient playback attempt.
  *
  * ## Pause and retention
  *
- * Two independent transitions touch tracked voices, and both act only on
- * voices that support pausing - anything else keeps playing:
- *
- * - **Scene pause** ({@link SceneDirector.pause}/{@link SceneDirector.resume})
- *   applies each voice's {@link SceneAudioPlayOptions.when} policy: `'active'`
- *   voices are paused, `'paused'` voices are started, `'always'` voices are
- *   left alone. Resuming reverses exactly what the pause did, and skips a voice
- *   the caller has since paused or resumed itself.
- * - **Retention** (a scene kept alive while another runs) pauses every tracked
- *   voice that is currently playing, whatever its `when` policy, and restores
- *   exactly that set. A retained scene's paused flag survives, so a scene
- *   retained while paused comes back paused.
+ * A tracked voice that supports pausing is audible only while the scene is
+ * `Active` and its pause flag permits the voice's
+ * {@link SceneAudioPlayOptions.when} policy - checked when the voice starts
+ * and again at every pause, resume, suspension and restore. The scene holds
+ * the voice rather than pausing it, so the caller's own pause and resume
+ * stay the caller's: a voice the caller paused is never restarted by the
+ * scene, and one the caller resumes while held starts once the hold lifts.
+ * Anything that cannot pause keeps playing, and a generator note already in
+ * its release when the scene holds it ends there, exactly as on `pause()`. A
+ * retained scene's paused flag survives, so a scene retained while paused
+ * comes back paused.
  *
  * Permanent teardown stops every tracked voice, deferred ones included, and
  * releases the tracking. A play call made during teardown is refused: a
@@ -850,13 +1016,38 @@ class PendingVoice implements Voice {
 export class SceneAudio implements Destroyable {
   private readonly _tracked = new Map<Voice, SceneAvailability>();
   private readonly _pending = new Set<PendingVoice>();
-  private _suspended: Set<Voice & Pausable> | null = null;
-  private _frozenByPause: Set<Voice & Pausable> | null = null;
-  private _thawedByPause: Set<Voice & Pausable> | null = null;
+  private _flushingPending = false;
+  private _waitingForUnlock = false;
+  private readonly _onAudioContextReady = (): void => {
+    // Signal removals during a dispatch take effect afterwards, so a stale
+    // callback must check its own subscription and the current scene state.
+    if (!this._waitingForUnlock) {
+      return;
+    }
+
+    this._waitingForUnlock = false;
+    onAudioContextReady.remove(this._onAudioContextReady);
+
+    if (this._getState() !== SceneState.Active) {
+      return;
+    }
+
+    try {
+      this._flushPending();
+    } catch (error) {
+      // One scene's failed deferred play must not interrupt the global unlock
+      // dispatch and strand the other systems and buses waiting on it.
+      logger.error('SceneAudio: deferred playback failed during audio unlock.', {
+        source: 'SceneAudio',
+        ...(error instanceof Error && { error }),
+      });
+    }
+  };
 
   public constructor(
     private readonly _app: Application,
     private readonly _getState: () => SceneState,
+    private readonly _getPaused: () => boolean = () => false,
   ) {}
 
   /**
@@ -873,13 +1064,13 @@ export class SceneAudio implements Destroyable {
    * never be scheduled); a production build returns an inert, already-
    * `ended` stand-in rather than crashing a teardown path.
    *
-   * The return type follows {@link AudioSystem.play}: an {@link AudioStream}
+   * The return type follows {@link AudioSystem.play}: an {@link MediaAudio}
    * voice always carries its capabilities, a {@link Sound} or
    * {@link AudioGenerator} voice is narrowed with a capability check because
    * the play call may yield an already-ended voice without them.
    */
   public play(source: Sound, options?: SceneAudioPlayOptions): Voice | (Voice & Seekable & Pausable & Loopable & RatePitched);
-  public play(source: AudioStream, options?: SceneAudioPlayOptions): Voice & Seekable & Pausable & Loopable & RatePitched;
+  public play(source: MediaAudio, options?: SceneAudioPlayOptions): Voice & Seekable & Pausable & Loopable & RatePitched;
   public play(source: AudioGenerator, options?: SceneAudioPlayOptions): Voice | (Voice & Pausable & RatePitched);
   public play(source: Playable, options?: SceneAudioPlayOptions): Voice;
   public play(source: Playable, options: SceneAudioPlayOptions = {}): Voice {
@@ -904,6 +1095,12 @@ export class SceneAudio implements Destroyable {
 
       this._pending.add(pending);
       this._tracked.set(pending, pending.when);
+      pending.onEnd.add((): void => {
+        this._pending.delete(pending);
+        this._tracked.delete(pending);
+        this._syncUnlockListener();
+      });
+      this._warnIfUnholdable(pending, pending.when);
 
       return pending;
     }
@@ -954,138 +1151,199 @@ export class SceneAudio implements Destroyable {
 
   /** Track an already-created {@link Voice} (e.g. from `app.audio.play(...)`) for scene-lifetime cleanup. Returns it unchanged. */
   public add(voice: Voice, options?: SceneAudioTrackOptions): Voice {
-    this._tracked.set(voice, options?.when ?? SceneAvailability.Always);
+    const when = options?.when ?? SceneAvailability.Always;
+
+    // Pruned here as well as on every sync: a scene that fires one-shots while
+    // it runs would otherwise keep every ended voice until its next pause.
+    for (const tracked of this._tracked.keys()) {
+      if (tracked.ended) {
+        this._tracked.delete(tracked);
+      }
+    }
+
+    this._tracked.set(voice, when);
+    this._warnIfUnholdable(voice, when);
+    this._hold(voice, when);
 
     return voice;
   }
 
   /**
-   * Start every voice queued by {@link SceneAudio.play} while the scope was
-   * `Preparing`. Called once, by {@link SceneScope.activate}. Swaps each
+   * Start voices queued while the scope was dormant. Called on activation,
+   * restoration and the audio unlock for an active scene. Locked streams stay
+   * pending until both activation and unlock permit creation. Swaps each
    * flushed {@link PendingVoice} wrapper in `_tracked` for the real `Voice`
-   * it created - carrying its `when` policy across - so
-   * `suspend()`/`restore()`/`pause()`/`resume()`/`destroy()` see the
-   * capability-bearing voice. The caller's own reference stays the wrapper,
+   * it created - carrying its `when` policy across - so {@link SceneAudio._sync}
+   * and {@link SceneAudio.destroy} see the capability-bearing voice. The caller's own reference stays the wrapper,
    * which forwards to the real voice transparently.
    * @internal
    */
   public _flushPending(): void {
-    for (const pending of this._pending) {
-      const real = pending._flush();
-
-      if (real !== null && this._tracked.delete(pending)) {
-        this._tracked.set(real, pending.when);
-      }
-    }
-
-    this._pending.clear();
-  }
-
-  /**
-   * Pause every tracked, currently-playing {@link Pausable} voice, recording
-   * exactly that set so {@link SceneAudio.restore} can reinstate it. Reserved
-   * for retention suspension - voices without pause support ({@link InputVoice},
-   * {@link NoopVoice}) are left playing, matching the definition's "suspended
-   * where supported" contract.
-   * @internal
-   */
-  public suspend(): void {
-    const playing = new Set<Voice & Pausable>();
-
-    for (const voice of this._tracked.keys()) {
-      if (!voice.ended && isPausable(voice) && !voice.paused) {
-        voice.pause();
-        playing.add(voice);
-      }
-    }
-
-    this._suspended = playing;
-  }
-
-  /** Restore exactly the voices paused by {@link SceneAudio.suspend}. @internal */
-  public restore(): void {
-    if (this._suspended === null) {
+    if (this._flushingPending) {
       return;
     }
 
-    for (const voice of this._suspended) {
-      if (!voice.ended) {
-        voice.resume();
+    this._flushingPending = true;
+    const active = this._getState() === SceneState.Active;
+    let failed = false;
+    let failure: unknown;
+
+    try {
+      // Creation can synchronously suspend, register more playback and restore.
+      // Re-read the eligible queue after each handoff so a nested flush request
+      // cannot strand new voices or streams whose context just became ready.
+      for (let pending = this._nextFlushablePending(); pending !== null; pending = this._nextFlushablePending()) {
+        if (active && this._getState() !== SceneState.Active) {
+          break;
+        }
+
+        // Remove before calling out: a nested flush must not start it twice,
+        // and a failed creation is terminal rather than an implicit retry.
+        this._pending.delete(pending);
+
+        try {
+          const real = pending._flush();
+
+          if (real !== null && this._tracked.delete(pending) && !real.ended) {
+            this._tracked.set(real, pending.when);
+            this._hold(real, pending.when);
+          }
+        } catch (error) {
+          this._tracked.delete(pending);
+
+          if (!failed) {
+            failed = true;
+            failure = error;
+          }
+        }
+      }
+    } finally {
+      this._flushingPending = false;
+      this._syncUnlockListener();
+    }
+
+    if (failed) {
+      throw failure;
+    }
+  }
+
+  private _nextFlushablePending(): PendingVoice | null {
+    const ready = isAudioContextReady();
+
+    for (const pending of this._pending) {
+      if (!pending.waitForUnlock || ready || pending.ended) {
+        return pending;
       }
     }
 
-    this._suspended = null;
+    return null;
+  }
+
+  private _syncUnlockListener(): void {
+    let needed = false;
+
+    if (this._getState() === SceneState.Active && !isAudioContextReady()) {
+      for (const pending of this._pending) {
+        if (pending.waitForUnlock && !pending.ended) {
+          needed = true;
+          break;
+        }
+      }
+    }
+
+    if (needed === this._waitingForUnlock) {
+      return;
+    }
+
+    this._waitingForUnlock = needed;
+
+    if (needed) {
+      onAudioContextReady.add(this._onAudioContextReady);
+    } else {
+      onAudioContextReady.remove(this._onAudioContextReady);
+    }
   }
 
   /**
-   * Apply the `when` pause policy for every tracked, `Pausable` voice:
-   * `'active'` voices currently playing are paused; `'paused'` voices
-   * currently paused are woken up early. Called by {@link SceneScope.pause}.
-   * Does not touch a `'paused'` voice that happens to already be playing -
-   * see {@link SceneAudioPlayOptions.when}, a documented, accepted
-   * limitation - or any non-`Pausable` voice.
+   * Bring every tracked voice's hold in line with the scope's current state
+   * and pause flag. Called on every scope transition that can change what a
+   * policy allows, and dropping voices that have ended on the way.
    * @internal
    */
-  public pause(): void {
-    const frozen = new Set<Voice & Pausable>();
-    const thawed = new Set<Voice & Pausable>();
+  public _sync(): void {
+    this._syncUnlockListener();
 
     for (const [voice, when] of this._tracked) {
-      if (!isPausable(voice) || voice.ended) {
+      if (voice.ended) {
+        this._tracked.delete(voice);
         continue;
       }
 
-      if (when === SceneAvailability.Active && !voice.paused) {
-        voice.pause();
-        frozen.add(voice);
-      } else if (when === SceneAvailability.Paused && voice.paused) {
-        voice.resume();
-        thawed.add(voice);
-      }
+      this._hold(voice, when);
     }
+  }
 
-    this._frozenByPause = frozen;
-    this._thawedByPause = thawed;
+  private _hold(voice: Voice, when: SceneAvailability): void {
+    if (isHoldable(voice)) {
+      voice._setHeld(!sceneAvailabilityAllows(when, this._getState(), this._getPaused()));
+    }
+  }
+
+  private _warnIfUnholdable(voice: Voice, when: SceneAvailability): void {
+    // A stand-in is held through the real voice it starts once flushed.
+    const followsPolicy = voice instanceof PendingVoice ? isPausable(voice) : isHoldable(voice);
+
+    if (__DEV__ && when !== SceneAvailability.Always && !voice.ended && !followsPolicy) {
+      logger.warn(
+        `SceneAudio: a voice the scene cannot pause was given the '${when}' policy. It keeps playing whatever the scene's pause state - only the engine's own pausable voices can follow a scene policy.`,
+        { source: 'SceneAudio' },
+      );
+    }
   }
 
   /**
-   * Undo {@link SceneAudio.pause}: resumes everything it froze, re-freezes
-   * everything it woke up early - each only if still in the state this
-   * facade left it in, so a voice the caller paused/resumed manually in
-   * between is left alone. Called by {@link SceneScope.resume}.
-   * @internal
+   * Stops every tracked voice, deferred ones included, and releases the
+   * tracking. A voice whose `stop()` throws - its own implementation, or a
+   * caller's `onEnd` listener it dispatches - is logged and released rather
+   * than retried, and the remaining voices are still stopped. Calling it again
+   * is a no-op.
    */
-  public resume(): void {
-    if (this._frozenByPause !== null) {
-      for (const voice of this._frozenByPause) {
-        if (!voice.ended && voice.paused) {
-          voice.resume();
-        }
-      }
-
-      this._frozenByPause = null;
-    }
-
-    if (this._thawedByPause !== null) {
-      for (const voice of this._thawedByPause) {
-        if (!voice.ended && !voice.paused) {
-          voice.pause();
-        }
-      }
-
-      this._thawedByPause = null;
-    }
+  public destroy(): void {
+    this._destroy(error => {
+      logger.error('SceneAudio.destroy(): a voice threw while being stopped.', {
+        source: 'SceneAudio',
+        ...(error instanceof Error && { error }),
+      });
+    });
   }
 
-  public destroy(): void {
+  /**
+   * @internal {@link SceneAudio.destroy}, handing each voice's failure to
+   * `onFailure` instead of logging it - for an owner that reports teardown
+   * failures through its own error pipeline.
+   */
+  public _destroy(onFailure: (error: unknown) => void): void {
+    const failures: unknown[] = [];
+    this._waitingForUnlock = false;
+    onAudioContextReady.remove(this._onAudioContextReady);
+
+    // Drained rather than iterated over a snapshot: an `onEnd` handler may
+    // track another voice, which a Map iterator still visits, and removing each
+    // entry before stopping it releases a voice whose stop throws exactly once.
     for (const voice of this._tracked.keys()) {
-      voice.stop();
+      this._tracked.delete(voice);
+
+      try {
+        voice.stop();
+      } catch (error) {
+        failures.push(error);
+      }
     }
 
-    this._tracked.clear();
-    this._suspended = null;
-    this._frozenByPause = null;
-    this._thawedByPause = null;
     this._pending.clear();
+
+    for (const error of failures) {
+      onFailure(error);
+    }
   }
 }

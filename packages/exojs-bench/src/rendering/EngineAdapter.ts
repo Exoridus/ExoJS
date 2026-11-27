@@ -1,11 +1,20 @@
+import type { FrameTimeSource } from '../competitive/metrics';
 import type { ClockReport } from '../shared/clock';
 import type { BaseCellResult } from '../shared/result';
+import type { CellTelemetry, MeasurementOptions } from './telemetry';
 
 /** Rendering backend under test. */
 export type Backend = 'webgl2' | 'webgpu';
 
 /** Identifier for one of the fixed set of scene archetypes exercised by the benchmark. */
 export type ArchetypeId =
+  | 'dirty-0'
+  | 'dirty-1'
+  | 'dirty-10'
+  | 'dirty-25'
+  | 'dirty-50'
+  | 'dirty-75'
+  | 'dirty-100'
   | 'static-heavy'
   | 'dynamic-heavy'
   | 'dynamic-all'
@@ -411,6 +420,8 @@ export interface ArchetypeSpec {
 
 /** One matrix cell: a single (engine, config, backend, archetype, node count) combination to measure. */
 export interface CellSpec {
+  /** Optional competitive measurement profile; omitted preserves the baseline acquisition contract. */
+  readonly measurement?: MeasurementOptions;
   /** Engine label, e.g. `'exojs'` or `'reference'`. */
   readonly engine: string;
   /** Engine configuration label, e.g. `'current'`. */
@@ -442,36 +453,50 @@ export interface StructuralCounters {
   bufferUploads: number;
 }
 
+/** Units and raw observations behind a cell's reported structural counters. */
+export interface StructuralMeasurement {
+  readonly schemaVersion: 1;
+  readonly basis: 'per-frame' | 'total';
+  readonly frames: number;
+  readonly totals: Readonly<StructuralCounters>;
+}
+
 /**
  * Measured outcome for a single matrix cell. Extends the domain-agnostic
  * {@link BaseCellResult} (spec/status/note) with the rendering-specific timing
  * fields (per-frame CPU + full-frame GPU medians/p95) and structural counters.
  */
 export interface CellResult extends BaseCellResult<CellSpec> {
+  /** Explicit source of frameMs; absent on historical results and never inferred from its numeric value. */
+  readonly frameTimeSource?: FrameTimeSource;
+  /** Raw observations, only for an explicitly selected competitive profile. */
+  readonly telemetry?: CellTelemetry;
+  /** Actual live renderer, read before teardown. Absent only in historical results; null fields mean identity was unavailable. */
+  readonly renderer?: {
+    readonly backend: Backend | 'webgl' | null;
+    readonly adapter: string | null;
+  };
   /** Median per-frame CPU time in milliseconds. */
   readonly cpuMsMedian: number;
   /** 95th-percentile per-frame CPU time in milliseconds. */
   readonly cpuMsP95: number;
-  /** Median GPU frame time in milliseconds, or null when unavailable. */
+  /** Median of the declared frameTimeSource, or null when unavailable. Legacy values may be rAF cadence. */
   readonly frameMsMedian: number | null;
-  /** 95th-percentile GPU frame time in milliseconds, or null when unavailable. */
+  /** 95th percentile of the declared frameTimeSource, or null when unavailable. */
   readonly frameMsP95: number | null;
   /**
-   * WebGPU only: median per-frame QUEUE OCCUPANCY in milliseconds, or null on
-   * every other backend.
-   *
-   * A different measurement from {@link frameMsMedian}, not a second opinion on
-   * it. `frameMs*` is hardware GPU time for the frame's render passes;
-   * `queueMs*` is the CPU-observed `queue.onSubmittedWorkDone` interval charged
-   * to the frame that caused it. Only `queueMs*` sees `queue.writeBuffer` upload
-   * cost, and only `frameMs*` resolves work below the queue's ~0.5-3.2ms
-   * completion-observation floor. The cell note states both limits.
+   * WebGPU only: median CPU-observed submit-to-completion interval in milliseconds.
+   * Includes queue backlog and callback scheduling. It neither isolates GPU execution
+   * nor bounds the complete frame's work; uploads before submission are outside its
+   * start boundary. Null when the observation is unavailable.
    */
   readonly queueMsMedian: number | null;
-  /** WebGPU only: 95th-percentile per-frame queue occupancy in milliseconds; see {@link queueMsMedian}. */
+  /** WebGPU only: 95th-percentile submit-to-completion observation; see {@link queueMsMedian}. */
   readonly queueMsP95: number | null;
   /** Structural draw-call counters gathered while measuring this cell. */
   readonly structural: StructuralCounters;
+  /** Absent on historical results, whose counter units must not be inferred from their values. */
+  readonly structuralMeasurement?: StructuralMeasurement;
   /**
    * What the clock of the page this cell was measured in resolved to, or `null`
    * where no page produced the cell.
@@ -484,7 +509,6 @@ export interface CellResult extends BaseCellResult<CellSpec> {
   readonly clock: ClockReport | null;
 }
 
-/** Neutral contract an engine arm implements so the harness can drive it identically across arms. */
 /** What an arm reports about the geometry its last layout pass produced. */
 export interface LayoutDigestReport {
   /** Index of the last pass the arm resolved, counted from the first pass of the cell (warmup included). */
@@ -493,6 +517,7 @@ export interface LayoutDigestReport {
   readonly digest: number;
 }
 
+/** Neutral contract an engine arm implements so the harness can drive it identically across arms. */
 export interface EngineAdapter {
   /** Engine label, e.g. `'exojs'` or `'reference'`. */
   readonly engine: string;

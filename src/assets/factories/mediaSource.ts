@@ -1,3 +1,4 @@
+import { logger } from '#core/Logger';
 import type { MediaCrossOrigin, StreamingLoadEvent } from '#core/types';
 
 const onceListenerOption = { once: true };
@@ -92,7 +93,10 @@ export const attachMediaSource = (options: AttachMediaSourceOptions): Promise<vo
     let settled = false;
 
     const settle = (fn: () => void): void => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
+
       settled = true;
 
       if (stallTimer !== undefined) {
@@ -101,7 +105,14 @@ export const attachMediaSource = (options: AttachMediaSourceOptions): Promise<vo
       }
 
       signal?.removeEventListener('abort', onAbort);
-      onSettled?.();
+
+      // A throwing observer must not leave the load promise pending forever.
+      try {
+        onSettled?.();
+      } catch (error: unknown) {
+        logger.error('A media load onSettled callback threw.', { source: 'Loader', ...(error instanceof Error && { error }) });
+      }
+
       fn();
     };
 
@@ -135,8 +146,13 @@ export const attachMediaSource = (options: AttachMediaSourceOptions): Promise<vo
     // so it only fails a load once it persists past an explicit timeout.
     if (stallTimeout !== undefined) {
       element.addEventListener('stalled', () => {
-        if (settled) return;
-        if (stallTimer !== undefined) clearTimeout(stallTimer);
+        if (settled) {
+          return;
+        }
+
+        if (stallTimer !== undefined) {
+          clearTimeout(stallTimer);
+        }
 
         stallTimer = setTimeout(() => fail(messages.stalled), stallTimeout);
       });

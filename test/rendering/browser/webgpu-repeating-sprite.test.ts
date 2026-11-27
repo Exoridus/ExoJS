@@ -20,6 +20,7 @@ import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
+import { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -72,7 +73,8 @@ const createSolidTexture = (color: string, size = 16): Texture => {
   return new Texture(src);
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
   const device = getBackendDevice(backend);
@@ -397,4 +399,29 @@ describe('WebGPU RepeatingSprite — geometry path', () => {
       backend.destroy();
     }
   });
+});
+
+test('repeating shader path associates straight compressed samples with alpha', async ctx => {
+  const backend = await setupBackend();
+  const texture = new Texture(null).setCompressed({
+    format: CompressedTextureFormat.Bc3RgbaUnorm,
+    colorSpace: 'linear-srgb',
+    alphaMode: 'straight',
+    levels: [{ width: 4, height: 4, data: new Uint8Array([128, 128, 0, 0, 0, 0, 0, 0, 0, 248, 0, 248, 0, 0, 0, 0]) }],
+  });
+  const sprite = new RepeatingSprite(texture, { width: 48, height: 48 });
+
+  try {
+    expect(backend.shouldPremultiplyTextureSample(texture)).toBe(true);
+
+    if (!(await renderScene(ctx, backend, sprite))) {
+      return;
+    }
+
+    expectPixelNear(readWebGpuPixels(backend, canvasSize)(24, 24), [128, 0, 0, 255]);
+  } finally {
+    sprite.destroy();
+    texture.destroy();
+    backend.destroy();
+  }
 });

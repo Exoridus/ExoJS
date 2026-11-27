@@ -18,32 +18,31 @@ const syncChunk = (payload: ChunkPayload | null | Promise<ChunkPayload | null>):
   if (payload === null || payload instanceof Promise) {
     throw new Error('SampledChunkSource.test: expected a synchronous, non-null chunk payload');
   }
+
   return payload;
 };
 
-const fakeTexture = (): Texture => {
-  return {
+const fakeTexture = (): Texture =>
+  ({
     width: 512,
     height: 512,
     uid: 0,
     label: 'test',
     destroy: vi.fn(),
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const makeTileset = (): TileSet => {
-  return new TileSet({
+const makeTileset = (): TileSet =>
+  new TileSet({
     name: 'tiles',
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
     tileWidth: 32,
     tileHeight: 32,
     tileCount: 16,
   });
-};
 
-const makeUnboundedLayer = (tileset: TileSet, chunkWidth = 4, chunkHeight = 4): TileLayer => {
-  return new TileLayer({
+const makeUnboundedLayer = (tileset: TileSet, chunkWidth = 4, chunkHeight = 4): TileLayer =>
+  new TileLayer({
     id: 0,
     name: 'l',
     tileWidth: 16,
@@ -52,7 +51,6 @@ const makeUnboundedLayer = (tileset: TileSet, chunkWidth = 4, chunkHeight = 4): 
     chunkWidth,
     chunkHeight,
   });
-};
 
 describe('createSampledChunkSource', () => {
   it('composes a full chunk when every cell resolves to a tile', () => {
@@ -68,6 +66,7 @@ describe('createSampledChunkSource', () => {
     expect(payload).not.toBeNull();
     expect(payload.width).toBe(2);
     expect(payload.height).toBe(2);
+
     for (let i = 0; i < 4; i++) {
       expect(unpackTile(payload.tiles[i])).toEqual({
         tilesetIndex: 0,
@@ -107,10 +106,11 @@ describe('createSampledChunkSource', () => {
   it('calls sample/mapValueToTile with correct absolute tile coordinates for a non-origin chunk', () => {
     const tileset = makeTileset();
     const layer = makeUnboundedLayer(tileset, 16, 16);
-    const seenCoords: { tx: number; ty: number }[] = [];
+    const seenCoords: Array<{ tx: number; ty: number }> = [];
     const source = createSampledChunkSource(layer, {
       sample: (tx, ty) => {
         seenCoords.push({ tx, ty });
+
         return 0;
       },
       mapValueToTile: () => null,
@@ -128,10 +128,11 @@ describe('createSampledChunkSource', () => {
   it('calls sample/mapValueToTile with correct negative absolute tile coordinates', () => {
     const tileset = makeTileset();
     const layer = makeUnboundedLayer(tileset, 4, 4);
-    const seenCoords: { tx: number; ty: number }[] = [];
+    const seenCoords: Array<{ tx: number; ty: number }> = [];
     const source = createSampledChunkSource(layer, {
       sample: (tx, ty) => {
         seenCoords.push({ tx, ty });
+
         return 0;
       },
       mapValueToTile: () => null,
@@ -154,7 +155,7 @@ describe('createSampledChunkSource', () => {
       mapValueToTile: () => ({ tileset: foreignTileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY }),
     });
 
-    expect(() => source.getChunk(0, 0)).toThrow(/Tileset index -1/);
+    expect(() => source.getChunk(0, 0)).toThrow(/Sampled chunk \(0, 0\).*not part of this layer/);
   });
 
   it("clamps edge-chunk cells past a bounded layer's width/height to empty", () => {
@@ -221,5 +222,16 @@ describe('createSampledChunkSource', () => {
     expect(layer.getTileAt(1, 0)).toBeNull();
     // (2,0): sample = 2, even -> resolves to localTileId 1.
     expect(layer.getTileAt(2, 0)).toEqual({ tileset, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY });
+  });
+
+  it('rejects a local tile id outside the tileset at the sampler coordinate', () => {
+    const tileset = makeTileset();
+    const layer = makeUnboundedLayer(tileset, 2, 2);
+    const source = createSampledChunkSource(layer, {
+      sample: () => 1,
+      mapValueToTile: () => ({ tileset, localTileId: 16, transform: TILE_TRANSFORM_IDENTITY }),
+    });
+
+    expect(() => source.getChunk(0, 0)).toThrow(/Sampled chunk \(0, 0\).*outside tileset/);
   });
 });

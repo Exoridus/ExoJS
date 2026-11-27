@@ -48,27 +48,27 @@ const fileTypes: FileType[] = [
     mask: [0xff, 0xff, 0xff],
   },
   {
-    mimeType: '@/audio/basic',
+    mimeType: 'audio/basic',
     pattern: [0x2e, 0x73, 0x6e, 0x64],
     mask: [0xff, 0xff, 0xff, 0xff],
   },
   {
-    mimeType: '@/audio/mpeg',
+    mimeType: 'audio/mpeg',
     pattern: [0x49, 0x44, 0x33],
     mask: [0xff, 0xff, 0xff],
   },
   {
-    mimeType: '@/audio/wave',
+    mimeType: 'audio/wav',
     pattern: [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45],
     mask: [0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff],
   },
   {
-    mimeType: '@/audio/midi',
+    mimeType: 'audio/midi',
     pattern: [0x4d, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06],
     mask: [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff],
   },
   {
-    mimeType: '@/audio/aiff',
+    mimeType: 'audio/aiff',
     pattern: [0x46, 0x4f, 0x52, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x41, 0x49, 0x46, 0x46],
     mask: [0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff],
   },
@@ -84,6 +84,32 @@ const fileTypes: FileType[] = [
   },
 ];
 
+/** The four-character brand starting at `offset`, or `''` when it is out of range. */
+const brandAt = (header: Uint8Array, offset: number): string =>
+  offset + 4 > header.length
+    ? ''
+    : String.fromCharCode(header[offset] ?? 0, header[offset + 1] ?? 0, header[offset + 2] ?? 0, header[offset + 3] ?? 0);
+
+/** ISO base media brands whose files carry video; audio-only brands such as `M4A ` are deliberately absent. */
+const mp4VideoBrands: ReadonlySet<string> = new Set([
+  'mp41',
+  'mp42',
+  'isom',
+  'iso2',
+  'iso3',
+  'iso4',
+  'iso5',
+  'iso6',
+  'avc1',
+  'dash',
+  'mmp4',
+  'M4V ',
+]);
+
+/**
+ * An MP4 video: an `ftyp` box whose major brand, or any compatible brand within
+ * the box, is a video-capable one. `ftypisom` is what most encoders write.
+ */
 const matchesMp4Video = (arrayBuffer: ArrayBuffer): boolean => {
   // The box size and the brand it precedes need 12 bytes; reading the size out
   // of a shorter payload throws instead of reporting "not an MP4".
@@ -92,19 +118,26 @@ const matchesMp4Video = (arrayBuffer: ArrayBuffer): boolean => {
   }
 
   const header = new Uint8Array(arrayBuffer);
-  const view = new DataView(arrayBuffer);
-  const boxSize = view.getUint32(0, false);
+  const boxSize = new DataView(arrayBuffer).getUint32(0, false);
 
-  if (header.length < Math.max(12, boxSize) || boxSize % 4 !== 0) {
+  if (brandAt(header, 4) !== 'ftyp' || boxSize % 4 !== 0 || header.length < boxSize) {
     return false;
   }
 
-  return String.fromCharCode(...header.subarray(4, 11)) === 'ftypmp4';
-};
+  if (mp4VideoBrands.has(brandAt(header, 8)) || brandAt(header, 8).startsWith('mp4')) {
+    return true;
+  }
 
-/** The four-character brand starting at `offset`, or `''` when it is out of range. */
-const brandAt = (header: Uint8Array, offset: number): string =>
-  offset + 4 > header.length ? '' : String.fromCharCode(header[offset] ?? 0, header[offset + 1] ?? 0, header[offset + 2] ?? 0, header[offset + 3] ?? 0);
+  const end = Math.min(boxSize >= 16 ? boxSize : header.length, header.length);
+
+  for (let offset = 16; offset + 4 <= end; offset += 4) {
+    if (mp4VideoBrands.has(brandAt(header, offset))) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 const isAvifBrand = (brand: string): boolean => brand === 'avif' || brand === 'avis';
 

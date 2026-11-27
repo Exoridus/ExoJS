@@ -109,8 +109,9 @@ export interface GroupScope {
   retainedInstructions: RetainedInstructionSet | null;
   /**
    * One render root's persistent-indexed draw spliced into this scope: the
-   * entries are EMPTY and the player asks the backend to draw the order stream
-   * instead of walking them. `null` on every other scope.
+   * draw entries are EMPTY and the player asks the backend to draw the order
+   * stream instead of walking them, with one `Group` entry per live mark played
+   * between the stream's segments. `null` on every other scope.
    */
   persistentDraw: PersistentSlotDrawRecord | null;
   /**

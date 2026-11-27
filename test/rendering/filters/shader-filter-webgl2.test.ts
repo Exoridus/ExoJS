@@ -1,4 +1,4 @@
-﻿import type { MockInstance } from 'vitest';
+import type { MockInstance } from 'vitest';
 
 /**
  * ShaderFilter unit tests for the WebGL2 half.
@@ -7,6 +7,7 @@
  * apply() flow, uniform marshalling, missing-source guard, and lifecycle
  * methods without requiring a real WebGL2RenderingContext.
  */
+import { Signal } from '#core/Signal';
 import type { ShaderFilterUniformValue } from '#rendering/filters/ShaderFilter';
 import { ShaderFilter } from '#rendering/filters/ShaderFilter';
 import { ShaderFilterBackendError } from '#rendering/filters/ShaderFilterBackendError';
@@ -17,7 +18,7 @@ import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { ShaderPrimitives } from '#rendering/types';
+import { BlendModes, ShaderPrimitives } from '#rendering/types';
 import type { View } from '#rendering/View';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -26,6 +27,8 @@ import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 // ---------------------------------------------------------------------------
 
 const makeGlMock = (): WebGL2RenderingContext => {
+  const CURRENT_PROGRAM = 0x8b8d;
+  let currentProgram: WebGLProgram | null = null;
   let programId = 1;
   let shaderId = 1;
   let bufferId = 1;
@@ -33,6 +36,7 @@ const makeGlMock = (): WebGL2RenderingContext => {
   let uniformLocation = 1;
 
   return {
+    CURRENT_PROGRAM,
     VERTEX_SHADER: 35633,
     FRAGMENT_SHADER: 35632,
     ARRAY_BUFFER: 34962,
@@ -57,7 +61,16 @@ const makeGlMock = (): WebGL2RenderingContext => {
     compileShader: vi.fn(),
     attachShader: vi.fn(),
     linkProgram: vi.fn(),
-    useProgram: vi.fn(),
+    useProgram: vi.fn((program: WebGLProgram | null) => {
+      currentProgram = program;
+    }),
+    getParameter: vi.fn((parameter: number) => {
+      if (parameter !== CURRENT_PROGRAM) {
+        throw new Error(`Unsupported getParameter query: ${parameter}`);
+      }
+
+      return currentProgram;
+    }),
     deleteShader: vi.fn(),
     deleteProgram: vi.fn(),
     deleteBuffer: vi.fn(),
@@ -87,10 +100,21 @@ const makeGlMock = (): WebGL2RenderingContext => {
 
     getShaderParameter: vi.fn(() => true),
     getProgramParameter: vi.fn((_, pname) => {
-      if (pname === 35714) return true; // LINK_STATUS
-      if (pname === 35721) return 2; // ACTIVE_ATTRIBUTES
-      if (pname === 35718) return 0; // ACTIVE_UNIFORMS
-      if (pname === 35382) return 0; // ACTIVE_UNIFORM_BLOCKS
+      if (pname === 35714) {
+        return true;
+      } // LINK_STATUS
+
+      if (pname === 35721) {
+        return 2;
+      } // ACTIVE_ATTRIBUTES
+
+      if (pname === 35718) {
+        return 0;
+      } // ACTIVE_UNIFORMS
+
+      if (pname === 35382) {
+        return 0;
+      } // ACTIVE_UNIFORM_BLOCKS
 
       return true;
     }),
@@ -109,8 +133,13 @@ const makeGlMock = (): WebGL2RenderingContext => {
     getShaderInfoLog: vi.fn(() => ''),
     getProgramInfoLog: vi.fn(() => ''),
     getAttribLocation: vi.fn((_prog, name) => {
-      if (name === 'aPosition') return 0;
-      if (name === 'aUv') return 1;
+      if (name === 'aPosition') {
+        return 0;
+      }
+
+      if (name === 'aUv') {
+        return 1;
+      }
 
       return -1;
     }),
@@ -123,6 +152,7 @@ const makeGlMock = (): WebGL2RenderingContext => {
 // ---------------------------------------------------------------------------
 
 interface MockBackendExtras {
+  setBlendMode: MockInstance;
   bindShader: MockInstance;
   bindTexture: MockInstance;
   bindVertexArrayObject: MockInstance;
@@ -135,17 +165,21 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
   const gl = glOverride ?? makeGlMock();
+  const onContextLost = new Signal();
 
   const bindShader = vi.fn();
+  const setBlendMode = vi.fn();
   const bindTexture = vi.fn();
   const bindVertexArrayObject = vi.fn();
   const execute = vi.fn(pass => {
     pass.execute(backend);
+
     return backend;
   });
 
   const backend = {
     backendType: RenderBackendType.WebGl2,
+    onContextLost,
     stats,
     context: gl,
     get renderTarget() {
@@ -159,6 +193,7 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     clear() {
@@ -169,6 +204,7 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
     },
     setView(view: View | null) {
       currentTarget.setView(view);
+
       return this;
     },
     setRenderTarget(target: RenderTarget | null) {
@@ -198,9 +234,11 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
       return this;
     },
     destroy() {
+      onContextLost.destroy();
       root.destroy();
     },
     bindShader,
+    setBlendMode,
     bindTexture,
     bindVertexArrayObject,
     execute,
@@ -228,6 +266,7 @@ const makeWebGpuBackend = (): RenderBackend => {
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     clear() {
@@ -238,10 +277,12 @@ const makeWebGpuBackend = (): RenderBackend => {
     },
     setView(view: View | null) {
       currentTarget.setView(view);
+
       return this;
     },
     setRenderTarget(target: RenderTarget | null) {
       currentTarget = target ?? root;
+
       return this;
     },
     pushScissorRect() {
@@ -264,6 +305,7 @@ const makeWebGpuBackend = (): RenderBackend => {
     },
     execute(pass: { execute(b: RenderBackend): void }) {
       pass.execute(this as unknown as RenderBackend);
+
       return this;
     },
     flush() {
@@ -302,18 +344,80 @@ const marshalOn = (name: string, value: ShaderFilterUniformValue): unknown => {
 };
 
 /** The WebGL2 pass a filter built on its first attachment, or `null`. */
-const glslPassOf = (filter: ShaderFilter): Record<string, unknown> | null => {
-  return (filter as unknown as Record<string, Record<string, unknown> | null>)['_glslPass'] ?? null;
-};
+const glslPassOf = (filter: ShaderFilter): Record<string, unknown> | null =>
+  (filter as unknown as Record<string, Record<string, unknown> | null>)['_glslPass'] ?? null;
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('ShaderFilter on WebGL2', () => {
+  test('selects source-over through the backend before drawing the fullscreen quad', () => {
+    const backend = makeWebGl2Backend();
+    const input = new RenderTexture(8, 8);
+    const output = new RenderTexture(8, 8);
+    const filter = new ShaderFilter({ glsl: { fragment: minimalFragSrc } });
+
+    vi.mocked(backend.context.drawArrays).mockImplementation(() => {
+      expect(backend.setBlendMode).toHaveBeenLastCalledWith(BlendModes.Normal);
+    });
+
+    try {
+      filter.apply(backend, input, output);
+      expect(backend.context.drawArrays).toHaveBeenCalledOnce();
+    } finally {
+      filter.destroy();
+      input.destroy();
+      output.destroy();
+      backend.destroy();
+    }
+  });
+
   // 1. Construction with a GLSL fragment only - succeeds
   test('constructs successfully with only a GLSL fragment source', () => {
     expect(() => new ShaderFilter({ glsl: { fragment: minimalFragSrc } })).not.toThrow();
+  });
+
+  test('invalidates all GL objects on loss, reconnects once and removes its listener on destroy', () => {
+    const backend = makeWebGl2Backend();
+    const gl = backend.context;
+    const filter = new ShaderFilter({ glsl: { fragment: minimalFragSrc } });
+    const input = new RenderTexture(8, 8);
+    const output = new RenderTexture(8, 8);
+
+    try {
+      expect(backend.onContextLost.count).toBe(0);
+      filter.apply(backend, input, output);
+      filter.apply(backend, input, output);
+      expect(backend.onContextLost.count).toBe(1);
+      expect(gl.createProgram).toHaveBeenCalledTimes(1);
+
+      backend.onContextLost.dispatch();
+      expect(backend.onContextLost.count).toBe(0);
+      expect(gl.deleteProgram).toHaveBeenCalledTimes(1);
+      expect(gl.deleteBuffer).toHaveBeenCalledTimes(1);
+      expect(gl.deleteVertexArray).toHaveBeenCalledTimes(1);
+
+      filter.apply(backend, input, output);
+      filter.apply(backend, input, output);
+      expect(backend.onContextLost.count).toBe(1);
+      expect(gl.createProgram).toHaveBeenCalledTimes(2);
+      expect(gl.createBuffer).toHaveBeenCalledTimes(2);
+      expect(gl.createVertexArray).toHaveBeenCalledTimes(2);
+
+      filter.destroy();
+      filter.destroy();
+      backend.onContextLost.dispatch();
+      expect(backend.onContextLost.count).toBe(0);
+      expect(gl.deleteProgram).toHaveBeenCalledTimes(2);
+      expect(gl.deleteBuffer).toHaveBeenCalledTimes(2);
+      expect(gl.deleteVertexArray).toHaveBeenCalledTimes(2);
+    } finally {
+      filter.destroy();
+      input.destroy();
+      output.destroy();
+      backend.destroy();
+    }
   });
 
   // 2. Construction without any source - throws
@@ -425,16 +529,27 @@ describe('ShaderFilter on WebGL2', () => {
   });
 
   // 10. Texture uniform binds to slot >= 1, sampler uniform = slot index
-  test('texture uniforms in user map bind to slots starting at 1', () => {
+  test.each(['texture', 'render texture'])('binds a raw %s uniform to a texture slot', kind => {
     // Build a mock gl that reports one sampler2D uniform
     const gl = makeGlMock();
     const samplerUniform = { name: 'uExtraTex', type: ShaderPrimitives.Sampler2D, size: 1 };
 
     (gl.getProgramParameter as unknown as MockInstance).mockImplementation((_prog: unknown, pname: number) => {
-      if (pname === 35714) return true; // LINK_STATUS
-      if (pname === 35721) return 2; // ACTIVE_ATTRIBUTES
-      if (pname === 35718) return 1; // ACTIVE_UNIFORMS (1 sampler)
-      if (pname === 35382) return 0; // ACTIVE_UNIFORM_BLOCKS
+      if (pname === 35714) {
+        return true;
+      } // LINK_STATUS
+
+      if (pname === 35721) {
+        return 2;
+      } // ACTIVE_ATTRIBUTES
+
+      if (pname === 35718) {
+        return 1;
+      } // ACTIVE_UNIFORMS (1 sampler)
+
+      if (pname === 35382) {
+        return 0;
+      } // ACTIVE_UNIFORM_BLOCKS
 
       return true;
     });
@@ -448,7 +563,7 @@ describe('ShaderFilter on WebGL2', () => {
 
     canvas.width = 8;
     canvas.height = 8;
-    const extraTex = new Texture(canvas);
+    const extraTex = kind === 'render texture' ? new RenderTexture(8, 8) : new Texture(canvas);
 
     const filter = new ShaderFilter({
       glsl: { fragment: minimalFragSrc },
@@ -483,10 +598,10 @@ describe('ShaderFilter on WebGL2', () => {
 
   // 12. Tuple -> Float32Array marshalling
   test('marshals 2-tuple to Float32Array([a, b])', () => {
-    const result = marshalOn('uPair', [0.5, 1.0] as unknown as readonly [number, number]) as Float32Array;
+    const result = marshalOn('uPair', [0.5, 1] as unknown as readonly [number, number]) as Float32Array;
 
     expect(result).toBeInstanceOf(Float32Array);
-    expect(Array.from(result)).toEqual([0.5, 1.0]);
+    expect(Array.from(result)).toEqual([0.5, 1]);
   });
 
   test('marshals 4-tuple to Float32Array of length 4', () => {
@@ -514,7 +629,7 @@ describe('ShaderFilter on WebGL2', () => {
   test('destroy() clears the uniforms map and nulls internal resources', () => {
     const filter = new ShaderFilter({
       glsl: { fragment: minimalFragSrc },
-      uniforms: { uTime: 1.0 },
+      uniforms: { uTime: 1 },
     });
 
     filter.destroy();

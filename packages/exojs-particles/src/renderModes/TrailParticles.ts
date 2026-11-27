@@ -111,8 +111,8 @@ export const trailParticleWgsl = `${colorShaderSourcesWgsl}${trailParticleWgslMo
  * `ParticleSystem.gpuMode`). That is also what lets the history survive a
  * death: CPU-mode slots are dense and compaction copies survivors forward
  * stably, which is what {@link build} re-aligns the history rows against. It
- * identifies a particle by its age and its lifetime, so an update module that
- * rewrites a live particle's lifetime restarts that particle's trail.
+ * tracks each particle across slot reuse, so a replacement starts a new trail.
+ * An update module that rewrites a live particle's lifetime also restarts its trail.
  *
  * @example
  * const sparks = new ParticleSystem(sparkTexture, {
@@ -163,7 +163,7 @@ export class TrailParticles extends ParticleRenderMode {
   private _ringHead = new Int32Array(0);
   private _ringCount = new Int32Array(0);
   private _lastSample = new Float32Array(0);
-  private _lastElapsed = new Float32Array(0);
+  private _lastSpawnId = new Float64Array(0);
   private _lastLifetime = new Float32Array(0);
   private _rows = 0;
 
@@ -196,7 +196,7 @@ export class TrailParticles extends ParticleRenderMode {
     return this._material;
   }
 
-  public build(_system: ParticleSystem, particles: ParticleBatch): void {
+  public build(system: ParticleSystem, particles: ParticleBatch): void {
     const limit = particles.count;
 
     if (limit === 0) {
@@ -207,7 +207,7 @@ export class TrailParticles extends ParticleRenderMode {
     }
 
     this._growHistory(particles.capacity);
-    this._record(particles, limit);
+    this._record(particles, system._storage.spawnIds, limit);
 
     // Worst case: every particle contributes its full ring plus the live head,
     // and every strip after the first is opened by two degenerate vertices.
@@ -235,7 +235,7 @@ export class TrailParticles extends ParticleRenderMode {
     this._ringHead = new Int32Array(capacity);
     this._ringCount = new Int32Array(capacity);
     this._lastSample = new Float32Array(capacity);
-    this._lastElapsed = new Float32Array(capacity);
+    this._lastSpawnId = new Float64Array(capacity);
     this._lastLifetime = new Float32Array(capacity);
     this._rows = 0;
   }
@@ -244,10 +244,10 @@ export class TrailParticles extends ParticleRenderMode {
    * Re-align the history rows carried from the last frame with this frame's
    * slots, then append a sample to each.
    */
-  private _record(particles: ParticleBatch, limit: number): void {
+  private _record(particles: ParticleBatch, spawnIds: Float64Array, limit: number): void {
     const { x: posX, y: posY } = particles.position;
     const { elapsed, lifetime } = particles.timing;
-    const lastElapsed = this._lastElapsed;
+    const lastSpawnId = this._lastSpawnId;
     const lastLifetime = this._lastLifetime;
     const rows = this._rows;
 
@@ -256,27 +256,26 @@ export class TrailParticles extends ParticleRenderMode {
     for (let i = 0; i < limit; i++) {
       const age = elapsed[i]!;
       const life = lifetime[i]!;
+      const spawnId = spawnIds[i]!;
 
-      // Compaction copies survivors forward without reordering them, so the
-      // rows of the last frame line up with this frame's slots once the rows
-      // whose particle died are skipped. A row belongs to slot `i` when it
-      // agrees on the lifetime - fixed at spawn - and its age is behind the
-      // slot's. A row whose particle expired cannot satisfy both: expiry means
-      // its age had already reached that same lifetime, which no live slot's
-      // age has.
-      while (source < rows && (lastLifetime[source] !== life || lastElapsed[source]! >= age)) {
+      // Stable compaction preserves spawn order; age and lifetime alone cannot
+      // distinguish a survivor from a replacement that reused its slot.
+      while (source < rows && lastSpawnId[source] !== spawnId) {
         source++;
       }
 
-      if (source < rows) {
+      if (source < rows && lastLifetime[source] === life) {
         this._moveRow(source, i);
         this._sample(i, posX[i]!, posY[i]!, age);
-        source++;
       } else {
         this._restartRow(i, posX[i]!, posY[i]!, age);
       }
 
-      lastElapsed[i] = age;
+      if (source < rows) {
+        source++;
+      }
+
+      lastSpawnId[i] = spawnId;
       lastLifetime[i] = life;
     }
 

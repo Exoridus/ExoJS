@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 45,
+  "memberCount": 47,
   "counts": {
     "constructors": 0,
     "methods": 16,
-    "properties": 29,
+    "properties": 31,
     "events": 0
   },
   "sections": [
@@ -1193,7 +1193,49 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Load lifecycle of this texture. Directly constructed textures are 'ready'; deferred handles returned by loader.get('hero.png') / loader.get(Asset.type('texture', src)) start 'loading' and become 'ready' once the payload fills in, or 'failed' (showing the Texture.missing checker) when the load errors."
+          "description": "Load lifecycle of this texture. Directly constructed textures are 'ready'; deferred handles returned by loader.get('hero.png') / loader.get({ type: 'texture', source: src }) start 'loading' and become 'ready' once the payload fills in, or 'failed' (showing the Texture.missing checker) when the load errors."
+        },
+        {
+          "name": "logicalHeight",
+          "signature": "logicalHeight: number",
+          "signatureTokens": [
+            {
+              "text": "logicalHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height in logical units, after accounting for the density of a selected asset variant."
+        },
+        {
+          "name": "logicalWidth",
+          "signature": "logicalWidth: number",
+          "signatureTokens": [
+            {
+              "text": "logicalWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width in logical units, after accounting for the density of a selected asset variant."
         },
         {
           "name": "mipLevelCount",

@@ -4,7 +4,7 @@
   "symbol": "Lighting",
   "kind": "class",
   "subsystem": "lighting",
-  "importPath": "@codexo/exojs-lighting",
+  "importPath": "@codexo/exojs/lighting",
   "tier": "stable",
   "memberCount": 23,
   "counts": {
@@ -30,7 +30,7 @@
         "# Ordering",
         "Register it with the registry that ticks AFTER the code moving the lights, so the frame it shades is the frame that was drawn. `app.systems` runs its update phase before the active scene's, so a system registered there sees lights the scene has not moved yet; `scene.systems` is usually what you want."
       ],
-      "importLine": "import { Lighting } from '@codexo/exojs-lighting'",
+      "importLine": "import { Lighting } from '@codexo/exojs/lighting'",
       "sourceLink": null
     },
     {
@@ -188,7 +188,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Register a light and return it, so it can be created, parented and registered in one expression. Registering the same light twice shades it twice; the second registration is ignored instead."
+          "description": "Register a light and return it, so it can be created, parented and registered in one expression. Registering the same light twice would shade it twice, so the second registration is ignored instead."
         },
         {
           "name": "clear",
@@ -372,7 +372,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Give a drawable surface normals, and return it so it can be created, parented and registered in one expression. ts lighting.normalsFrom(crate, new NormalMap(crateNormals));  Only lightmap reads these. forward shades inside the sprite stage and takes its normals from LitMaterial instead, and radiance gathers each probe's rays into one arriving colour, which leaves no incident direction at a fragment for a normal to be measured against - under both, registering a surface is recorded and ignored, and activeSurfaceCount stays at zero. Nothing is required of a drawable that is not registered: it is lit as a plane, which is what the renderer already assumed of everything. The drawable and the source are the caller's; the system only reads them. Registering the same drawable twice replaces its source rather than describing the surface twice."
+          "description": "Give a drawable surface normals, and return it so it can be created, parented and registered in one expression. ts lighting.normalsFrom(crate, new NormalMap(crateNormals));  lightmap and radiance read these. forward shades inside the sprite stage and takes its normals from LitMaterial instead, so under it registering a surface is recorded and ignored, and activeSurfaceCount stays at zero. Under radiance the finest cascade's four directions are weighted by what the surface takes of each, as if every ray arrived at a fixed elevation over the plane: a flat normal keeps exactly the light it had without normals, a tilted one takes more from the directions it faces, and ambient and bounce are not changed by it. With four directions the light direction is resolved coarsely, so a strongly tilted normal shades with a harder edge than under lightmap. Nothing is required of a drawable that is not registered: it is lit as a plane, which is what the renderer already assumed of everything. The drawable and the source are the caller's; the system only reads them. Registering the same drawable twice replaces its source rather than describing the surface twice."
         },
         {
           "name": "occludeFrom",
@@ -419,7 +419,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Register something that blocks light, and return it so it can be built and registered in one expression. Only a renderer with shadows reads them - forward has no light field to darken, and skips collecting entirely. ts lighting.occludeFrom(new PhysicsOccluder(world));  The source is asked, once per frame, for the edges in the region the visible lights jointly reach. It is the caller's; the system only reads it. Registering the same source twice collects it twice, so the second registration is ignored instead."
+          "description": "Register something that blocks light, and return it so it can be built and registered in one expression. Only a renderer with shadows reads them - forward has no light field to darken, and skips collecting entirely. ts lighting.occludeFrom(new PhysicsOccluder(world));  The source is asked, once per frame, for the edges in the region the visible lights jointly reach. It is the caller's; the system only reads it. Registering the same source twice would collect it twice, so the second registration is ignored instead."
         },
         {
           "name": "remove",
@@ -661,7 +661,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Surfaces the last frame actually took normals from. Lower than surfaces when some are hidden or carry no texture, and zero under every renderer but lightmap. See normalsFrom."
+          "description": "Surfaces the last frame actually took normals from. Lower than surfaces when some are hidden or carry no texture, and zero under forward, which takes its normals from LitMaterial. See normalsFrom."
         },
         {
           "name": "debug",

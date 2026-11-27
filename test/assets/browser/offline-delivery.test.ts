@@ -9,7 +9,6 @@
  * really stores and really reads back.
  */
 
-import { Asset } from '#assets/Asset';
 import { AssetCache } from '#assets/cache/AssetCache';
 import { AssetCacheMissError } from '#assets/cache/AssetCacheMissError';
 import { ConnectivityPolicyResolver } from '#assets/cache/ConnectivityPolicyResolver';
@@ -31,6 +30,7 @@ const silentWav = (): ArrayBuffer => {
   const samples = 64;
   const buffer = new ArrayBuffer(44 + samples);
   const view = new DataView(buffer);
+
   const ascii = (offset: number, text: string): void => {
     for (let i = 0; i < text.length; i++) {
       view.setUint8(offset + i, text.charCodeAt(i));
@@ -173,7 +173,7 @@ describe('the offline round trip', () => {
     //    stays resident - what remains is the record in IndexedDB.
     const warmer = createLoader(createStore(name), connectivity);
 
-    await warmer.cacheSource(Asset.type('json', 'levels/01.json'));
+    await warmer.cacheSource({ type: 'json', source: 'levels/01.json' });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(warmer.inspect()).toHaveLength(0);
@@ -190,11 +190,11 @@ describe('the offline round trip', () => {
     fetchSpy.mockClear();
 
     // 4. What was warmed still loads, with no network in the path.
-    await expect(reader.load(Asset.type('json', 'levels/01.json'))).resolves.toEqual({ level: 1 });
+    await expect(reader.load({ type: 'json', source: 'levels/01.json' })).resolves.toEqual({ level: 1 });
     expect(fetchSpy).not.toHaveBeenCalled();
 
     // 5. What was not warmed fails immediately, and specifically.
-    await expect(reader.load(Asset.type('json', 'levels/02.json'))).rejects.toThrow(AssetCacheMissError);
+    await expect(reader.load({ type: 'json', source: 'levels/02.json' })).rejects.toThrow(AssetCacheMissError);
     expect(fetchSpy).not.toHaveBeenCalled();
 
     connectivity.destroy();
@@ -209,13 +209,13 @@ describe('the offline round trip', () => {
     const connectivity = new Connectivity(host.source);
     const loader = createLoader(createStore(name), connectivity);
 
-    await loader.cacheSource(Asset.type('json', 'levels/01.json'));
+    await loader.cacheSource({ type: 'json', source: 'levels/01.json' });
 
     host.emit('offline');
     fetchSpy.mockClear();
 
-    await expect(loader.load(Asset.type('json', 'levels/01.json'))).resolves.toEqual({ level: 1 });
-    await expect(loader.load(Asset.type('json', 'levels/02.json'))).rejects.toThrow(AssetCacheMissError);
+    await expect(loader.load({ type: 'json', source: 'levels/01.json' })).resolves.toEqual({ level: 1 });
+    await expect(loader.load({ type: 'json', source: 'levels/02.json' })).rejects.toThrow(AssetCacheMissError);
     expect(fetchSpy).not.toHaveBeenCalled();
 
     connectivity.destroy();
@@ -233,7 +233,7 @@ describe('the offline round trip', () => {
     // An ordinary load streams this while the network is available and
     // acquires nothing, so a prewarm is a separate operation - not a separate
     // descriptor.
-    await loader.cacheSource(Asset.type('music', 'audio/theme.wav'));
+    await loader.cacheSource({ type: 'music', source: 'audio/theme.wav' });
 
     connectivity.mode = 'offline';
     fetchSpy.mockClear();
@@ -242,7 +242,7 @@ describe('the offline round trip', () => {
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL');
     const scope = loader.createScope({ name: 'level' });
 
-    const stream = await scope.load(Asset.type('music', 'audio/theme.wav'));
+    const stream = await scope.load({ type: 'music', source: 'audio/theme.wav' });
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(createObjectUrl).toHaveBeenCalledTimes(1);
@@ -274,7 +274,7 @@ describe('the offline round trip', () => {
 
     // 1. Warm the source while the network is available, from the same
     //    descriptor a scene loads.
-    await loader.cacheSource(Asset.type('music', 'audio/theme.wav'));
+    await loader.cacheSource({ type: 'music', source: 'audio/theme.wav' });
 
     // 2. Offline.
     connectivity.mode = 'offline';
@@ -286,7 +286,7 @@ describe('the offline round trip', () => {
     // 3. Request it exactly as a scene would. Online this streams from the URL
     //    and never touches the cache; offline it must not, or the element would
     //    open a network-backed source behind the policy's back.
-    const stream = await scope.load(Asset.type('music', 'audio/theme.wav'));
+    const stream = await scope.load({ type: 'music', source: 'audio/theme.wav' });
 
     // 4. The warmed blob answered.
     expect(createObjectUrl).toHaveBeenCalledTimes(1);
@@ -316,7 +316,7 @@ describe('the offline round trip', () => {
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL');
     const scope = loader.createScope({ name: 'level' });
 
-    await expect(scope.load(Asset.type('music', 'audio/never-warmed.wav'))).rejects.toThrow(AssetCacheMissError);
+    await expect(scope.load({ type: 'music', source: 'audio/never-warmed.wav' })).rejects.toThrow(AssetCacheMissError);
 
     // The failure is the cache's, before any element existed: no object URL, no
     // request, nothing to time out.
@@ -344,7 +344,7 @@ describe('the offline round trip', () => {
     // jsdom-free: a real element pointed at a URL the test server does not
     // serve fails, which is itself the proof that the URL was installed rather
     // than a blob. Assert on the element's src, not on the load resolving.
-    const pending = scope.load(Asset.type('music', 'audio/streamed.wav'));
+    const pending = scope.load({ type: 'music', source: 'audio/streamed.wav' });
 
     await expect(pending).rejects.toThrow();
     expect(createObjectUrl).not.toHaveBeenCalled();

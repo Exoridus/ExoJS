@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Emit profile. `tsc` is the whole build: the package is data plus two small factories, so there is nothing for a bundler to do. The output goes to `dist/` rather than `dist/esm/` because the default instance addresses its media with `new URL('../media/...', import.meta.url)`, which has to be correct from `src/` and from `dist/` alike. `paths` resolves `@codexo/exojs` against Core's built declarations.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "declarationDir": "dist",
+    "customConditions": [],
+    "paths": {
+      "@codexo/exojs": ["../../dist/esm/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}

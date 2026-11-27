@@ -43,14 +43,21 @@ const REGION_CLOSE_RE = /^[ \t]*\/\/ #endregion guide:(.+)$/;
  */
 const repoRoot = (): string => {
   let dir = process.cwd();
+
   for (let i = 0; i < 8; i++) {
     if (existsSync(join(dir, 'pnpm-workspace.yaml'))) {
       return dir;
     }
+
     const parent = dirname(dir);
-    if (parent === dir) break; // filesystem root
+
+    if (parent === dir) {
+      break;
+    } // filesystem root
+
     dir = parent;
   }
+
   // Last resort: return cwd and let readFileSync emit a clear error.
   return process.cwd();
 };
@@ -78,6 +85,7 @@ export const extractSnippetRegion = (filePath: string, region: string): string =
   const absolutePath = join(repoRoot(), filePath);
 
   let source: string;
+
   try {
     source = readFileSync(absolutePath, 'utf8');
   } catch {
@@ -89,6 +97,7 @@ export const extractSnippetRegion = (filePath: string, region: string): string =
   // Validate: no duplicate region names.
   const openCount = lines.filter(l => {
     const m = REGION_OPEN_RE.exec(l);
+
     return m !== null && m[1].trim() === region;
   }).length;
 
@@ -103,6 +112,7 @@ export const extractSnippetRegion = (filePath: string, region: string): string =
 
   for (const line of lines) {
     const openMatch = REGION_OPEN_RE.exec(line);
+
     if (openMatch?.[1].trim() === region) {
       inside = true;
       found = true;
@@ -110,6 +120,7 @@ export const extractSnippetRegion = (filePath: string, region: string): string =
     }
 
     const closeMatch = REGION_CLOSE_RE.exec(line);
+
     if (closeMatch?.[1].trim() === region) {
       inside = false;
       continue;
@@ -121,7 +132,9 @@ export const extractSnippetRegion = (filePath: string, region: string): string =
   }
 
   if (!found) {
-    throw new Error(`[SourceSnippet] Region "${region}" not found in ${filePath}.\n` + `  Add a "// #region guide:${region}" marker to the source file.`);
+    throw new Error(
+      `[SourceSnippet] Region "${region}" not found in ${filePath}.\n` + `  Add a "// #region guide:${region}" marker to the source file.`,
+    );
   }
 
   // Remove trailing empty lines added by formatting.
@@ -130,6 +143,7 @@ export const extractSnippetRegion = (filePath: string, region: string): string =
   }
 
   const nonEmpty = snippetLines.filter(l => l.trim() !== '');
+
   if (nonEmpty.length === 0) {
     throw new Error(`[SourceSnippet] Region "${region}" in ${filePath} is empty ` + `(contains no non-empty lines).`);
   }
@@ -137,6 +151,7 @@ export const extractSnippetRegion = (filePath: string, region: string): string =
   // Dedent: find the minimum leading whitespace across all non-empty lines.
   const minIndent = nonEmpty.reduce((min, line) => {
     const indent = /^(\s*)/.exec(line)?.[1].length ?? 0;
+
     return Math.min(min, indent);
   }, Infinity);
 

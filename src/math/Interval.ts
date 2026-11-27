@@ -6,8 +6,9 @@ let temp: Interval | null = null;
  * A closed scalar interval `[min, max]` used by the SAT collision solver to
  * represent the projection of a shape onto a separating axis.
  *
- * `Interval.temp` provides a shared scratch instance for hot paths.
- * `Interval.zero` is a read-only `[0, 0]` sentinel.
+ * `Interval.temp` provides a shared scratch instance for hot paths; never
+ * hold it across calls. `Interval.zero` is a shared `[0, 0]` constant whose
+ * fields are still writable - callers must not mutate it.
  */
 export class Interval implements Cloneable<Interval> {
   public min: number;
@@ -49,9 +50,11 @@ export class Interval implements Cloneable<Interval> {
   }
 
   /**
-   * Return the signed overlap length between this interval and `interval`.
-   * Positive when they overlap; the sign encodes which end overlaps more.
-   * Used by the SAT solver to compute penetration depth.
+   * End-to-end span between this interval and `interval`: `this.max -
+   * interval.min` when this interval ends first, otherwise `interval.max -
+   * this.min`. It equals the overlap length for a partial overlap and is
+   * larger when one interval contains the other; use {@link overlaps} for the
+   * containment-safe test.
    */
   public getOverlap(interval: Interval): number {
     return this.max < interval.max ? this.max - interval.min : interval.max - this.min;

@@ -55,7 +55,9 @@ export const createShaderPlugin = ({ minify = false }: ShaderPluginOptions = {})
     // resolves `?raw` and `?url` in a core plugin that runs ahead of this
     // one, so claiming them here would only change what Rollup does - and a
     // difference between the two bundlers is exactly what must not exist.
-    if (id.includes('?') || !isShaderId(id)) return null;
+    if (id.includes('?') || !isShaderId(id)) {
+      return null;
+    }
 
     const source = readFileSync(id, 'utf8');
 

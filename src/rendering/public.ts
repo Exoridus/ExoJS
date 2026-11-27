@@ -68,6 +68,8 @@ export type { BlurFilterOptions } from '#rendering/filters/BlurFilter';
 export { BlurFilter } from '#rendering/filters/BlurFilter';
 export type { ColorMatrixEntries } from '#rendering/filters/ColorMatrixFilter';
 export { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
+export type { CrtFilterOptions } from '#rendering/filters/CrtFilter';
+export { CrtFilter } from '#rendering/filters/CrtFilter';
 export type { DisplacementFilterOptions } from '#rendering/filters/DisplacementFilter';
 export { DisplacementFilter } from '#rendering/filters/DisplacementFilter';
 export type { DropShadowFilterOptions } from '#rendering/filters/DropShadowFilter';
@@ -113,6 +115,7 @@ export type { MeshOptions } from '#rendering/mesh/Mesh';
 export { Mesh } from '#rendering/mesh/Mesh';
 export { Graphics } from '#rendering/primitives/Graphics';
 export { GraphicsPath, type PathContour } from '#rendering/primitives/GraphicsPath';
+export { type GraphicsAppearancePatch, GraphicsShape, type GraphicsShapeSource } from '#rendering/primitives/GraphicsShape';
 export { INSTANCE_TRANSFORM_GLSL, INSTANCE_TRANSFORM_WGSL } from '#rendering/shader/instanceContract';
 export type { AnyShader, FragmentOutputCounts, ShaderOptions } from '#rendering/shader/Shader';
 export { Shader } from '#rendering/shader/Shader';
@@ -128,7 +131,7 @@ export { Spritesheet } from '#rendering/sprite/Spritesheet';
 export { AbstractText } from '#rendering/text/AbstractText';
 export type { BitmapTextOptions } from '#rendering/text/BitmapText';
 export { BitmapText, BmFontAdapter } from '#rendering/text/BitmapText';
-export type { BmFontChar, BmFontData } from '#rendering/text/BmFont';
+export type { BmFontChar, BmFontData, BmFontDistanceField, BmFontPadding } from '#rendering/text/BmFont';
 export { BmFont } from '#rendering/text/BmFont';
 export type { AtlasMode, AtlasPage } from '#rendering/text/GlyphAtlas';
 export { GlyphAtlas } from '#rendering/text/GlyphAtlas';
@@ -139,7 +142,17 @@ export type { LayoutOptions } from '#rendering/text/LayoutOptions';
 export type { LineShaper, ShapingMode } from '#rendering/text/shaping';
 export type { TextOptions } from '#rendering/text/Text';
 export { Text } from '#rendering/text/Text';
-export type { FontFamily, FontRegistry, FontWeight, ResolvedTextGradient, StyleChangeHint, TextGradient, TextStyleOptions } from '#rendering/text/TextStyle';
+export { TextEffectError } from '#rendering/text/TextEffectError';
+export type { TextEffect, TextEffectFailureReason, TextEffectIssue } from '#rendering/text/textEffects';
+export type {
+  FontFamily,
+  FontRegistry,
+  FontWeight,
+  ResolvedTextGradient,
+  StyleChangeHint,
+  TextGradient,
+  TextStyleOptions,
+} from '#rendering/text/TextStyle';
 export { textGradientMaxStops, TextStyle } from '#rendering/text/TextStyle';
 export type {
   FontStyle,
@@ -160,6 +173,8 @@ export type {
   TextSize,
   TextTransform,
 } from '#rendering/text/types';
+export { AnimatedTexture } from '#rendering/texture/AnimatedTexture';
+export { CanvasFrameSource } from '#rendering/texture/CanvasFrameSource';
 export type { CompressedTextureLevel, CompressedTexturePayload } from '#rendering/texture/compressedPayload';
 export type { CompressedTextureOptions } from '#rendering/texture/CompressedTexture';
 export { CompressedTexture } from '#rendering/texture/CompressedTexture';
@@ -177,6 +192,8 @@ export {
 export type { DataTextureBuffer, DataTextureDirtyRegion, DataTextureFormat, DataTextureOptions } from '#rendering/texture/DataTexture';
 export { DataTexture } from '#rendering/texture/DataTexture';
 export { DepthTexture } from '#rendering/texture/DepthTexture';
+export type { FrameSource } from '#rendering/texture/FrameSource';
+export { FrameTexture } from '#rendering/texture/FrameTexture';
 export type { Rgba8TextureLevel, Rgba8TexturePayload } from '#rendering/texture/pixelPayload';
 export type { PixelReaderOptions } from '#rendering/texture/PixelReader';
 export { PixelRead, PixelReader } from '#rendering/texture/PixelReader';
@@ -188,6 +205,7 @@ export { Texture } from '#rendering/texture/Texture';
 export type { SamplerOptions, TextureOptions, TextureUploadOptions } from '#rendering/texture/TextureOptions';
 export type { TextureRegionInsets, TextureRegionOptions } from '#rendering/texture/TextureRegion';
 export { TextureRegion } from '#rendering/texture/TextureRegion';
+export { VideoFrameSource } from '#rendering/texture/VideoFrameSource';
 export type {
   UniformAccessorFor,
   UniformArrayAccessor,
@@ -230,3 +248,4 @@ export type {
 export type { UniformBlockDataRecord, UniformBlockInitialValues, UniformSchemaOptions } from '#rendering/uniforms/uniformSchema';
 export { UniformType } from '#rendering/uniforms/UniformType';
 export { Video } from '#rendering/video/Video';
+export { VideoTexture } from '#rendering/video/VideoTexture';

@@ -1,107 +1,105 @@
-import { Application, BlurFilter, Color, DropShadowFilter, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Text } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import {
+  Application,
+  BlurFilter,
+  Color,
+  ColorMatrixFilter,
+  DropShadowFilter,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  Rectangle,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  Text,
+} from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, demoPanel, slider, startExample, toggle } from '@examples/runtime';
 
-const SHIP = assets.demo.textures.shipA;
-
+const controls = {
+  filter: choice('Filter', ['Blur', 'Drop Shadow', 'Grayscale', 'Sepia']),
+  strength: slider('Effect strength', { min: 0, max: 1, step: 0.05, value: 0.5, format: value => `${Math.round(value * 100)}%` }),
+  bypass: toggle('Bypass'),
+};
 class BlurAndShadowScene extends Scene {
-  private reference!: Sprite;
-  private filtered!: Sprite;
-  private blur = new BlurFilter({ strength: 3 });
-  private shadow = new DropShadowFilter({ offsetX: 16, offsetY: 20, blur: 8, quality: 2, color: new Color(0, 0, 0, 0.8) });
-  private mode: 'blur' | 'shadow' = 'blur';
-  private enabled = true;
-  private hud!: ReturnType<typeof mountControls>;
-  private labels!: Text[];
+  private sprites: Sprite[] = [];
+  private labels: Text[] = [];
+  private readonly blur = this.track(new BlurFilter({ strength: 4 }));
+  private readonly shadow = this.track(new DropShadowFilter({ offsetX: 15, offsetY: 18, blur: 8, color: new Color(0, 0, 0, 0.8) }));
+  private readonly color = this.track(new ColorMatrixFilter());
+  private panel!: ReturnType<typeof demoPanel<typeof controls>>;
 
-  override init(): void {
-    const { width, height } = this.app;
-    const texture = this.loader.get(SHIP);
-    this.reference = new Sprite(texture)
-      .setAnchor(0.5)
-      .setScale(8)
-      .setPosition(width * 0.3, height * 0.53);
-    this.filtered = new Sprite(texture)
-      .setAnchor(0.5)
-      .setScale(8)
-      .setPosition(width * 0.7, height * 0.53);
-    this.labels = [
-      new Text('Original', { fillColor: Color.white, fontSize: 25 }).setAnchor(0.5).setPosition(width * 0.3, height * 0.78),
-      new Text('Blur', { fillColor: Color.white, fontSize: 25 }).setAnchor(0.5).setPosition(width * 0.7, height * 0.78),
-    ];
-
-    this.hud = mountControls({ title: 'Blur and Drop Shadow', hint: 'Compare the original sprite with a blurred sprite or an offset shadow.' });
-    const panel = mountControlPanel({ title: 'Filter' });
-    panel.addButton({
-      label: 'Blur',
-      onClick: () => {
-        this.mode = 'blur';
-        this.refresh();
-      },
-    });
-    panel.addButton({
-      label: 'Drop shadow',
-      onClick: () => {
-        this.mode = 'shadow';
-        this.refresh();
-      },
-    });
-    panel.addSlider({
-      label: 'Blur strength',
-      min: 0,
-      max: 8,
-      step: 0.1,
-      value: this.blur.strength,
-      onChange: value => {
-        this.blur.strength = value;
-        this.refresh();
-      },
-    });
-    panel.addSlider({
-      label: 'Shadow offset',
-      min: -40,
-      max: 40,
-      step: 1,
-      value: this.shadow.offsetX,
-      onChange: value => {
-        this.shadow.offsetX = value;
-        this.shadow.offsetY = value;
-        this.refresh();
-      },
-    });
-    panel.addToggle({
-      label: 'Filter',
-      value: true,
-      onChange: value => {
-        this.enabled = value;
-        this.refresh();
-      },
-    });
-    this.refresh();
+  override async load(): Promise<void> {
+    await this.loader.load(assets.platformerTilesImage);
   }
 
-  private refresh(): void {
-    this.filtered.filters = this.enabled ? [this.mode === 'blur' ? this.blur : this.shadow] : [];
-    this.labels[1].text = this.enabled ? (this.mode === 'blur' ? 'Blurred' : 'Drop shadow') : 'Bypassed';
-    this.hud.setStatus(
-      this.mode === 'blur'
-        ? `Blur strength: ${this.blur.strength.toFixed(1)} px${this.enabled ? '' : ' (bypassed)'}`
-        : `Shadow offset: ${this.shadow.offsetX} px${this.enabled ? '' : ' (bypassed)'}`,
+  override init(): void {
+    this.sprites = [0, 1].map(() =>
+      new Sprite(this.loader.get(assets.platformerTilesImage)).setTextureFrame(new Rectangle(650, 325, 64, 64)).setAnchor(0.5),
     );
+    this.labels = ['Reference', 'Filtered'].map(text =>
+      new Text(text, { fillColor: Color.white, fontSize: 14, align: 'center' }).setAnchor(0.5),
+    );
+    this.root.addChild(...this.sprites, ...this.labels);
+    this.panel = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls,
+    });
+    this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('bypass'));
+  }
+
+  override update(): void {
+    const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.root.setScale(scale);
+    const { filter, strength, bypass } = this.panel.values;
+    this.blur.strength = strength * 12 * scale;
+    this.shadow.offsetX = strength * 24 * scale;
+    this.shadow.offsetY = strength * 24 * scale;
+    this.shadow.blur = 5 * scale;
+    this.color.reset();
+
+    if (filter === 'Grayscale') {
+      this.color.saturate(1 - strength);
+    }
+
+    if (filter === 'Sepia') {
+      this.color.sepia();
+      const matrix = this.color.matrix;
+      this.color.setMatrix(
+        matrix.map((value, index) => value * strength + (index === 0 || index === 6 || index === 12 || index === 18 ? 1 - strength : 0)),
+      );
+    }
+
+    this.sprites[1].filters = bypass ? [] : [filter === 'Blur' ? this.blur : filter === 'Drop Shadow' ? this.shadow : this.color];
+
+    for (let i = 0; i < 2; i++) {
+      this.sprites[i].setPosition(width * (i === 0 ? 0.25 : 0.75), contentHeight * 0.55).setScale(Math.min(3, contentHeight / 80));
+      this.labels[i].setPosition(width * (i === 0 ? 0.25 : 0.75), 18);
+    }
+
+    const label =
+      filter === 'Blur'
+        ? `Radius ${(strength * 12).toFixed(1)} CSS px`
+        : filter === 'Drop Shadow'
+          ? `Offset ${(strength * 24).toFixed(1)} CSS px; alpha 0.8`
+          : `Amount ${(strength * 100).toFixed(0)}%`;
+    this.panel.status(`${bypass ? 'Bypass' : filter} | ${label}`);
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.reference);
-    context.render(this.filtered);
-    for (const label of this.labels) {
-      context.render(label);
-    }
+    context.render(this.root);
+  }
+
+  override destroy(): void {
+    this.sprites[1].filters = [];
+    this.panel.dispose();
+    super.destroy();
   }
 }
 
 const app = new Application({
   scenes: { BlurAndShadowScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
-  clearColor: new Color(38, 44, 60),
+  clearColor: new Color(38, 44, 52),
 });
-
-await app.start(BlurAndShadowScene);
+await startExample(app, () => app.start(BlurAndShadowScene));

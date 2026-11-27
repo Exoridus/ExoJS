@@ -57,6 +57,7 @@ export class NativePhysicsBackend implements PhysicsBackend {
 
   public destroy(): void {
     this.contactGraph.clear();
+    this._solver.clear();
     this._pairs.length = 0;
     this._broadPhase.destroy();
   }

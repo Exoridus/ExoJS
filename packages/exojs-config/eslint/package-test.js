@@ -10,6 +10,8 @@
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+import { authoringStyleConfig } from './style.js';
+
 /**
  * Test policy for a package's own `test/**`. Type-aware rules are switched off
  * first: a package `tsconfig.json` excludes `test/`, so there is no program to
@@ -21,6 +23,7 @@ import tseslint from 'typescript-eslint';
  */
 export function packageTestConfig({ files }) {
   return [
+    ...authoringStyleConfig({ files }),
     {
       files,
       ...tseslint.configs.disableTypeChecked,
@@ -41,9 +44,6 @@ export function packageTestConfig({ files }) {
         },
       },
       rules: {
-        'simple-import-sort/imports': 'error',
-        'simple-import-sort/exports': 'error',
-        'unused-imports/no-unused-imports': 'error',
         '@typescript-eslint/no-floating-promises': 'off',
         '@typescript-eslint/no-misused-promises': 'off',
         '@typescript-eslint/no-unsafe-assignment': 'off',
@@ -64,14 +64,13 @@ export function packageTestConfig({ files }) {
         '@typescript-eslint/no-unnecessary-type-assertion': 'off',
         '@typescript-eslint/dot-notation': 'off',
         'dot-notation': 'off',
-        '@typescript-eslint/consistent-type-imports': [
-          'error',
-          {
-            prefer: 'type-imports',
-            fixStyle: 'inline-type-imports',
-            disallowTypeAnnotations: false,
-          },
-        ],
+        // `mockResolvedValue(undefined)` and its kin need the argument to
+        // satisfy their signature, so call arguments are left alone.
+        'unicorn/no-useless-undefined': ['error', { checkArguments: false, checkArrowFunctionBody: false }],
+        // A mock that stands in for a class is called with `new`, and Vitest only
+        // constructs a `vi.fn` implementation that is a `function` or a `class`;
+        // an arrow there throws "is not a constructor".
+        'prefer-arrow-callback': 'off',
         'no-console': 'off',
         'max-lines': 'off',
       },

@@ -52,7 +52,9 @@ export type OpenColorProbeHarness = (size: number) => Promise<ColorProbeHarness>
 
 export const expectBytes = (actual: ArrayLike<number>, expected: readonly number[], tolerance: number = RGBA8_TOLERANCE): void => {
   expected.forEach((value, channel) => {
-    expect(Math.abs(actual[channel]! - value), `channel ${channel}: got ${actual[channel]}, expected ${value}`).toBeLessThanOrEqual(tolerance);
+    expect(Math.abs(actual[channel]! - value), `channel ${channel}: got ${actual[channel]}, expected ${value}`).toBeLessThanOrEqual(
+      tolerance,
+    );
   });
 };
 
@@ -70,7 +72,8 @@ export const pixelTexture = (
   bytes: readonly number[],
 ): Texture => Texture.fromPixels({ colorSpace, alphaMode, levels: [{ data: new Uint8Array(bytes), width, height }] });
 
-export const solidPixelTexture = (colorSpace: SourceColorSpace, bytes: readonly number[]): Texture => pixelTexture(colorSpace, 'straight', 1, 1, bytes);
+export const solidPixelTexture = (colorSpace: SourceColorSpace, bytes: readonly number[]): Texture =>
+  pixelTexture(colorSpace, 'straight', 1, 1, bytes);
 
 interface SceneOptions {
   x?: number;
@@ -89,7 +92,9 @@ export const spriteScene = (texture: Texture | RenderTexture, width: number, hei
   sprite.setPosition(options.x ?? 0, options.y ?? 0);
   sprite.tint = options.tint ?? new Color(0xffffff, options.alpha ?? 1);
 
-  if (options.additive === true) sprite.setBlendMode(BlendModes.Additive);
+  if (options.additive === true) {
+    sprite.setBlendMode(BlendModes.Additive);
+  }
 
   root.addChild(sprite);
 
@@ -100,7 +105,9 @@ export const spriteScene = (texture: Texture | RenderTexture, width: number, hei
 export const drawInto = (backend: RenderBackend, target: RenderTexture, root: RenderNode, clear: Color | null = Color.black): void => {
   backend.setRenderTarget(target);
 
-  if (clear !== null) backend.clear(clear);
+  if (clear !== null) {
+    backend.clear(clear);
+  }
 
   root.render(backend);
   backend.flush();
@@ -115,7 +122,10 @@ export const defineColorContractProbes = (title: string, open: OpenColorProbeHar
     const h = await open(4);
 
     onTestFinished(() => {
-      while (resources.length > 0) resources.pop()!.destroy();
+      while (resources.length > 0) {
+        resources.pop()!.destroy();
+      }
+
       h.destroy();
     });
 
@@ -395,7 +405,9 @@ export const defineColorContractProbes = (title: string, open: OpenColorProbeHar
 
       await h.checked(async () => {
         for (const [format, bytesPerPixel] of formats) {
-          if (!h.backend.supportsColorFormat(format)) continue;
+          if (!h.backend.supportsColorFormat(format)) {
+            continue;
+          }
 
           const baseline = h.backend.stats.gpuMemoryBytes;
           const target = new RenderTexture(5, 3, { format });

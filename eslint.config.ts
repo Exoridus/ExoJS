@@ -1,18 +1,20 @@
 import { globSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { collectDeprecatedExports, exoEngineRulesConfig, exoRulesConfig } from '@codexo/eslint-plugin-exojs';
+import { collectDeprecatedExports, exoEngineRulesConfig, exoPlugin, exoRulesConfig } from '@codexo/eslint-plugin-exojs';
 import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
 import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/eslint/base';
 import { typeAwareCorrectnessRules } from '@codexo/exojs-config/eslint/correctness';
 import { extensionSourceConfig } from '@codexo/exojs-config/eslint/extension';
 import { packageTestConfig } from '@codexo/exojs-config/eslint/package-test';
+import { authoringStyleConfig, prettierCompatConfig } from '@codexo/exojs-config/eslint/style';
 import { vitestConfig } from '@codexo/exojs-config/eslint/vitest';
 import { defineConfig } from 'eslint/config';
-import prettier from 'eslint-config-prettier';
 import security from 'eslint-plugin-security';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+
+import { nativeEslintOverrides } from './scripts/lint-native.ts';
 
 // `no-deprecated-api`'s table, read from the engine's own JSDoc rather than
 // hand-maintained: every exported symbol under `src/` whose doc comment
@@ -20,15 +22,30 @@ import tseslint from 'typescript-eslint';
 // a consumer package generating the same table for its installed dependency
 // would point `collectDeprecatedExports` at that dependency's shipped
 // `.d.ts` files instead (see `deprecatedApi.ts`'s doc comment).
-const deprecatedApi = collectDeprecatedExports(globSync('src/**/*.ts', { cwd: import.meta.dirname }).map(file => resolve(import.meta.dirname, file)));
+const deprecatedApi = collectDeprecatedExports(
+  globSync('src/**/*.ts', { cwd: import.meta.dirname }).map(file => resolve(import.meta.dirname, file)),
+);
+
+// Every tree the root config governs. Site sources are absent: the site owns
+// its own config. Generated files (`examples/**/*.js`) are ignored below.
+const STYLE_FILES = [
+  'src/**/*.{ts,mts}',
+  'test/**/*.{ts,tsx}',
+  'examples/**/*.ts',
+  'scripts/**/*.{ts,mts,cts,mjs}',
+  '*.config.ts',
+  'packages/*/src/**/*.{ts,tsx}',
+  'packages/*/test/**/*.{ts,tsx}',
+  'packages/*/*.config.ts',
+  'packages/create-exo-app/templates/**/*.ts',
+  'packages/create-exo-app/bin/*.js',
+];
 
 export default defineConfig([
   {
     // `examples/**/*.js` is generated from the `.ts` beside it by
-    // `examples:sync` and committed so a release bundle can ship the catalog in
-    // both languages, runnable offline. It is build output that happens to be
-    // versioned: `examples:sync:check` guards it against its source, and that
-    // gate is the only thing that should hold an opinion about it.
+    // `examples:generate` and is Git-ignored build output; the `.ts` is the
+    // only source anything here should hold an opinion about.
     ignores: [
       'dist/**',
       'node_modules/**',
@@ -40,6 +57,9 @@ export default defineConfig([
       'coverage/**',
       '**/*.min.*',
       'examples/**/*.js',
+      // Generated forwarder packages, pinned to their generator by
+      // `legacy-shims:check`; no TypeScript program owns them.
+      'packages/legacy/**',
       // Transient fixture directories a suite writes into a scanned tree and
       // removes again. They exist only while that suite runs, so a lint pass
       // that overlaps it would otherwise report files nobody authored.
@@ -65,6 +85,13 @@ export default defineConfig([
 
   ...languageBaselineConfig({ tsconfigRootDir: import.meta.dirname }),
 
+  // The shared authoring style (`@codexo/exojs-config/eslint/style`): every
+  // authored tree looks the same, whatever correctness bar it is held to. The
+  // type-aware half runs only where a TypeScript program exists - the engine
+  // source here, the extension packages' own source through their factory.
+  ...authoringStyleConfig({ files: STYLE_FILES }),
+  ...authoringStyleConfig({ files: ['src/**/*.ts', 'src/assets/factories/basis/*.d.mts'], typeAware: true }),
+
   // Engine source
   {
     files: ['src/**/*.ts', 'src/assets/factories/basis/*.d.mts'],
@@ -82,10 +109,7 @@ export default defineConfig([
       },
     },
     rules: {
-      // Import management
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
+      // Unused bindings. Import hygiene itself is part of the shared style.
       'unused-imports/no-unused-vars': [
         'warn',
         {
@@ -105,7 +129,6 @@ export default defineConfig([
 
       // Core ESLint
       complexity: ['error', 20],
-      curly: 'error',
       'default-case-last': 'error',
       eqeqeq: ['error', 'always', { null: 'ignore' }],
       'guard-for-in': 'error',
@@ -135,7 +158,6 @@ export default defineConfig([
       'no-self-compare': 'error',
       'no-sequences': 'error',
       'no-template-curly-in-string': 'error',
-      'no-undef-init': 'error',
       'no-unmodified-loop-condition': 'error',
       'no-unreachable-loop': 'error',
       // ESLint 10 promoted `no-useless-assignment` to recommended. It catches
@@ -145,16 +167,12 @@ export default defineConfig([
       'no-useless-assignment': 'error',
       'no-useless-escape': 'error',
       'no-useless-return': 'error',
-      'object-shorthand': 'error',
-      'prefer-object-spread': 'error',
-      'prefer-template': 'error',
       radix: 'error',
       // Base rules disabled in favor of TS / plugin variants.
       'no-shadow': 'off',
       'dot-notation': 'off',
 
       // TypeScript correctness
-      '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
       '@typescript-eslint/ban-ts-comment': [
         'error',
         {
@@ -172,7 +190,6 @@ export default defineConfig([
           objectLiteralTypeAssertions: 'never',
         },
       ],
-      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', disallowTypeAnnotations: false, fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/default-param-last': 'error',
       '@typescript-eslint/explicit-function-return-type': [
         'error',
@@ -364,8 +381,6 @@ export default defineConfig([
       ],
       'unicorn/no-instanceof-builtins': 'error',
       'unicorn/no-typeof-undefined': 'error',
-      'unicorn/no-useless-undefined': 'error',
-      'unicorn/no-zero-fractions': 'error',
       'unicorn/prefer-array-find': 'error',
       'unicorn/prefer-array-some': 'error',
       'unicorn/prefer-default-parameters': 'error',
@@ -392,6 +407,18 @@ export default defineConfig([
   // must not still be imported from `src/` or from a package that ships beside
   // it. Consumers choose the tier that fits their own migration.
   ...exoRulesConfig({ files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts'], deprecatedApi, tier: 'strict' }),
+
+  // Document migrations are opt-in per file by syntax, so the rules can cover
+  // every TypeScript file that may declare a versioned document.
+  {
+    files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts', 'test/**/*.ts'],
+    plugins: { exojs: exoPlugin },
+    rules: {
+      'exojs/migration-step': 'error',
+      'exojs/migration-purity': 'error',
+      'exojs/migration-chain': 'error',
+    },
+  },
 
   // The engine-internal rules (`exojs-engine/*`), over the engine only. They
   // enforce promises this repository's own doc comments make and reach no
@@ -457,18 +484,6 @@ export default defineConfig([
       },
     },
     rules: {
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
-      '@typescript-eslint/consistent-type-imports': [
-        'error',
-        {
-          prefer: 'type-imports',
-          fixStyle: 'inline-type-imports',
-          disallowTypeAnnotations: false,
-        },
-      ],
-      '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
       // Match the relaxed `test/**` profile the harness was authored under: it
       // legitimately casts through `unknown` to instrument foreign engines,
       // drives an inherently branchy CLI, and asserts on bounds-guaranteed array
@@ -574,6 +589,27 @@ export default defineConfig([
     },
   },
 
+  // Files that crossed the 999-line ceiling only because mandatory braces turned
+  // every one-line guard into three lines. Each is pinned at its present size, so
+  // none of them gains room to grow and no other file's limit moves. Remove an
+  // entry when its file is split.
+  {
+    files: ['src/assets/AssetResidency.ts'],
+    rules: { 'max-lines': ['error', { max: 1055, skipBlankLines: true, skipComments: true }] },
+  },
+  {
+    files: ['src/input/InteractionSystem.ts'],
+    rules: { 'max-lines': ['error', { max: 1000, skipBlankLines: true, skipComments: true }] },
+  },
+  {
+    files: ['src/rendering/webgl2/WebGl2MeshRenderer.ts'],
+    rules: { 'max-lines': ['error', { max: 1016, skipBlankLines: true, skipComments: true }] },
+  },
+  {
+    files: ['packages/exojs-lighting/src/backends/FrameLightingBackend.ts'],
+    rules: { 'max-lines': ['error', { max: 1034, skipBlankLines: true, skipComments: true }] },
+  },
+
   {
     files: ['src/assets/factories/basis/basis_transcoder.d.mts'],
     rules: {
@@ -588,7 +624,7 @@ export default defineConfig([
   // declares them does it in the same file, and a list would fall behind the
   // next one that does.
   {
-    files: ['src/build-constants.d.ts', 'src/typings.d.ts', 'packages/*/src/typings.d.ts'],
+    files: ['src/typings.d.ts', 'packages/*/src/typings.d.ts'],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },
@@ -661,7 +697,11 @@ export default defineConfig([
 
   // Extension particle renderer / render-mode / GPU hot paths.
   {
-    files: ['packages/exojs-particles/src/renderers/**/*.ts', 'packages/exojs-particles/src/renderModes/**/*.ts', 'packages/exojs-particles/src/gpu/**/*.ts'],
+    files: [
+      'packages/exojs-particles/src/renderers/**/*.ts',
+      'packages/exojs-particles/src/renderModes/**/*.ts',
+      'packages/exojs-particles/src/gpu/**/*.ts',
+    ],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
@@ -745,7 +785,18 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-restricted-globals': ['error', 'window', 'document', 'navigator', 'fetch', 'localStorage', 'sessionStorage', 'alert', 'confirm', 'prompt'],
+      'no-restricted-globals': [
+        'error',
+        'window',
+        'document',
+        'navigator',
+        'fetch',
+        'localStorage',
+        'sessionStorage',
+        'alert',
+        'confirm',
+        'prompt',
+      ],
     },
   },
 
@@ -774,8 +825,6 @@ export default defineConfig([
     },
     rules: {
       'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'sessionStorage', 'alert', 'confirm', 'prompt'],
-      'no-var': 'error',
-      'prefer-const': 'error',
     },
   },
 
@@ -856,6 +905,7 @@ export default defineConfig([
     files: [
       'packages/exojs-lighting/src/LitMaterial.ts',
       'packages/exojs-lighting/src/backends/FrameLightingBackend.ts',
+      'packages/exojs-lighting/src/backends/normalBatches.ts',
       'packages/exojs-lighting/src/backends/radianceField.ts',
     ],
     rules: {
@@ -947,9 +997,6 @@ export default defineConfig([
       },
     },
     rules: {
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
       // A promise dropped in a test is the failure mode this whole tree exists
       // to prevent: the assertions after it run before the work does, so the
       // test passes without proving anything. Measured across `test/**` it
@@ -997,20 +1044,15 @@ export default defineConfig([
       // TS visibility check on protected/private fields.
       '@typescript-eslint/dot-notation': 'off',
       'dot-notation': 'off',
-      '@typescript-eslint/consistent-type-imports': [
-        'error',
-        {
-          prefer: 'type-imports',
-          fixStyle: 'inline-type-imports',
-          disallowTypeAnnotations: false,
-        },
-      ],
+      // `mockResolvedValue(undefined)` and its kin need the argument to satisfy
+      // their signature, so call arguments are left alone.
+      'unicorn/no-useless-undefined': ['error', { checkArguments: false, checkArrowFunctionBody: false }],
+      // A mock that stands in for a class is called with `new`, and Vitest only
+      // constructs a `vi.fn` implementation that is a `function` or a `class`;
+      // an arrow there throws "is not a constructor".
+      'prefer-arrow-callback': 'off',
       'no-console': 'off',
       'max-lines': 'off',
-      // Match the src/packages convention: T[] for simple types, Array<T> for
-      // complex element types (unions, inline object literals). The base config
-      // forces always-[] otherwise, which reads poorly for Array<{ ... }>.
-      '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
     },
   },
   // Vitest test-quality rules, over both the root suite and every package's.
@@ -1044,8 +1086,12 @@ export default defineConfig([
       'eslint.config.ts',
       'scripts/**/*.{ts,mts,cts}',
       'scripts/**/*.mjs',
-      'packages/exojs-bench/competitors/*.ts',
       'packages/create-exo-app/bin/*.js',
+      // The demo-assets generators and archive/copy tooling are Node scripts
+      // that belong to no package TypeScript program (the package tsconfigs
+      // cover src/** only), so typed rules have nothing to serve for them.
+      'packages/exojs-demo-assets/scripts/*.ts',
+      'packages/exojs-demo-assets/bin/*.js',
     ],
   }),
 
@@ -1083,11 +1129,6 @@ export default defineConfig([
         ...globals.es2024,
       },
     },
-    rules: {
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
-    },
   },
 
   // create-exo-app: a Node CLI scaffolder with its own tsconfig. Console output is
@@ -1107,9 +1148,6 @@ export default defineConfig([
       },
     },
     rules: {
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
       'no-console': 'off',
     },
   },
@@ -1142,9 +1180,6 @@ export default defineConfig([
       },
     },
     rules: {
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
       '@typescript-eslint/no-unused-vars': 'off',
       'unused-imports/no-unused-vars': [
         'error',
@@ -1153,13 +1188,8 @@ export default defineConfig([
           varsIgnorePattern: '^_',
         },
       ],
-      curly: 'error',
       eqeqeq: ['error', 'always', { null: 'ignore' }],
       'no-console': 'error',
-      'no-var': 'error',
-      'prefer-const': 'error',
-      'object-shorthand': 'error',
-      'prefer-template': 'error',
       'unicorn/prefer-node-protocol': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
     },
@@ -1180,16 +1210,12 @@ export default defineConfig([
     },
     rules: {
       '@typescript-eslint/no-floating-promises': 'off',
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
     },
   },
 
   // Playground examples. The `.ts` file is the authored source; the `.js`
-  // sibling beside it is generated by `examples:sync` and committed as a
-  // release artifact, so it is build output and is ignored above rather than
-  // linted here.
+  // sibling beside it is generated, Git-ignored build output and is ignored
+  // above rather than linted here.
   //
   // Type-aware rules are off: the engine's policy is the wrong bar for
   // copy-paste material - the catalog carries 387 findings against it, mostly
@@ -1217,14 +1243,9 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         ...globals.es2024,
-        // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
-        assets: 'readonly',
       },
     },
     rules: {
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
       '@typescript-eslint/no-empty-function': 'error',
       // Base no-unused-vars handled by `unused-imports/no-unused-vars` below,
       // which honours the `_` prefix; leaving both on double-reports.
@@ -1236,17 +1257,14 @@ export default defineConfig([
           varsIgnorePattern: '^_',
         },
       ],
-      curly: 'error',
       eqeqeq: ['error', 'always', { null: 'ignore' }],
-      'no-console': 'error',
+      // The playground shows a preview's console in its Output panel, so a
+      // log line is one of the ways an example explains what just happened.
+      'no-console': 'off',
       // The sync-init() rule (see the engine-source block) is deliberately NOT
       // enabled here yet: most of the catalog still uses the pre-v0.17
       // async `init(loader)` hook and is migrated in the dedicated examples
       // sweep (v0.17 core model, slice G), not opportunistically per-slice.
-      'no-var': 'error',
-      'prefer-const': 'error',
-      'object-shorthand': 'error',
-      'prefer-template': 'error',
       'unicorn/prefer-node-protocol': 'error',
       // The one type-aware rule the catalog keeps. A dropped promise in an
       // example is not a style question: the rejection is swallowed, the reader
@@ -1288,14 +1306,9 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         ...globals.es2024,
-        // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
-        assets: 'readonly',
       },
     },
     rules: {
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
       '@typescript-eslint/no-empty-function': 'error',
       '@typescript-eslint/no-unused-vars': 'off',
       // A guide listing shows the reader what to write, and stops there: the
@@ -1305,25 +1318,12 @@ export default defineConfig([
       // unused bindings are allowed here. A stale IMPORT is still an error -
       // that one is drift, not narration.
       'unused-imports/no-unused-vars': 'off',
-      curly: 'error',
       eqeqeq: ['error', 'always', { null: 'ignore' }],
       // The debugging chapters document logging, so a listing whose subject is
       // `logger.warn` or a console dump of the pass inspector has to be able to
       // show one. Nothing here executes.
       'no-console': 'off',
-      'no-var': 'error',
-      'prefer-const': 'error',
-      'object-shorthand': 'error',
-      'prefer-template': 'error',
       'unicorn/prefer-node-protocol': 'error',
-    },
-  },
-
-  // Allow console only in the dedicated debug-layer inspector example
-  {
-    files: ['examples/debug-layer/signal-bus-inspector.js'],
-    rules: {
-      'no-console': 'error',
     },
   },
 
@@ -1331,29 +1331,17 @@ export default defineConfig([
   // ship to consumers, and report progress on stdout by design - `no-console`
   // is the wrong rule here, not a violation to silence per-line.
   {
-    files: ['scripts/**/*.ts', 'packages/exojs-bench/competitors/*.ts', '*.config.ts'],
+    files: ['scripts/**/*.ts', '*.config.ts'],
     rules: {
       'no-console': 'off',
     },
   },
 
-  // Function style is a repository-wide convention, not a property of shipped
-  // code: `typeAwareCorrectnessRules` carries it for the engine and the
-  // extension packages, and these trees sit outside a typed program, so they
-  // take the rule on its own. The site has its own config and carries it there.
-  {
-    files: [
-      'test/**/*.{ts,tsx}',
-      'packages/exojs-*/test/**/*.{ts,tsx}',
-      'scripts/**/*.{ts,mts,cts,mjs}',
-      'packages/exojs-bench/competitors/*.ts',
-      '*.config.ts',
-    ],
-    rules: {
-      'func-style': ['error', 'expression'],
-    },
-  },
+  // Prettier compatibility is the final authored style layer. It also
+  // re-enables `curly`, which Prettier compatibility would otherwise leave off.
+  ...prettierCompatConfig({ files: STYLE_FILES }),
 
-  // Prettier compatibility: keep this last
-  prettier,
+  // Empty for ordinary ESLint and editor invocations. The standard lint runner
+  // supplies this only after native rules passed on the same verified inputs.
+  ...nativeEslintOverrides(import.meta.dirname),
 ]);

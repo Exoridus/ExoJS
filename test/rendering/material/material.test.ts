@@ -99,6 +99,18 @@ describe('Shader', () => {
     expect(wgsl).not.toHaveProperty('u_mesh');
   });
 
+  test('WGSL reflection leaves sampler bindings out, so a texture and its sampler do not read as drift', () => {
+    const wgsl = `
+@group(2) @binding(0) var u_noise: texture_2d<f32>;
+@group(2) @binding(1) var u_noiseSampler: sampler;
+@group(2) @binding(2) var u_shadowSampler: sampler_comparison;
+`;
+    const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: 'uniform sampler2D u_noise;\nvoid main() {}' }, wgsl });
+
+    expect(source.getDeclaredUniforms().wgsl).toEqual({ u_noise: 'texture_2d<f32>' });
+    expect(source.detectUniformDrift().onlyInWgsl).toEqual([]);
+  });
+
   test('detectUniformDrift reports names declared in only one language', () => {
     const source = new Shader({
       glsl: { vertex: GLSL_VERTEX, fragment: 'uniform float u_extra;\nvoid main() {}' },
@@ -258,7 +270,9 @@ describe('Material base', () => {
   });
 
   test('fixes binding names and kinds at construction while keeping values live', () => {
-    const material = new MeshMaterial(createMaterialOptions({ uniforms: { u_time: 0, u_pattern: new Texture() }, textures: { u_noise: new Texture() } }));
+    const material = new MeshMaterial(
+      createMaterialOptions({ uniforms: { u_time: 0, u_pattern: new Texture() }, textures: { u_noise: new Texture() } }),
+    );
 
     expect(() => material.setUniform('u_missing', 1)).toThrow(/fixed binding schema/);
     expect(() => material.setTexture('u_missing', new Texture())).toThrow(/fixed binding schema/);
@@ -273,9 +287,9 @@ describe('Material base', () => {
   });
 
   test('rejects duplicate names across uniform and texture binding maps', () => {
-    expect(() => new MeshMaterial(createMaterialOptions({ uniforms: { u_pattern: new Texture() }, textures: { u_pattern: new Texture() } }))).toThrow(
-      /declared in both/,
-    );
+    expect(
+      () => new MeshMaterial(createMaterialOptions({ uniforms: { u_pattern: new Texture() }, textures: { u_pattern: new Texture() } })),
+    ).toThrow(/declared in both/);
   });
 
   test('destroy invokes dispose callbacks once', () => {
@@ -355,6 +369,25 @@ describe('Material.pipelineKey', () => {
 });
 
 describe('Material.bindKey', () => {
+  test('is not re-derived on repeated reads, only after a binding changes', () => {
+    const material = new MeshMaterial(createMaterialOptions({ textures: { u_noise: new Texture() }, sampler: { ...linearClamp } }));
+    const initial = material.bindKey;
+    const keysSpy = vi.spyOn(Object, 'keys');
+
+    for (let i = 0; i < 100; i++) {
+      expect(material.bindKey).toBe(initial);
+    }
+
+    expect(keysSpy).not.toHaveBeenCalled();
+
+    material.setTexture('u_noise', new Texture());
+
+    expect(material.bindKey).not.toBe(initial);
+    expect(keysSpy).toHaveBeenCalled();
+
+    keysSpy.mockRestore();
+  });
+
   test('is stable across repeated reads without state changes', () => {
     const material = new MeshMaterial(createMaterialOptions());
 
@@ -369,6 +402,21 @@ describe('Material.bindKey', () => {
     material.setUniform('u_time', 8);
 
     expect(material.bindKey).toBe(initial);
+  });
+
+  test('does not re-derive after repeated scalar uniform updates', () => {
+    const material = new MeshMaterial(createMaterialOptions({ uniforms: { u_time: 0 }, textures: { u_noise: new Texture() } }));
+    const initial = material.bindKey;
+    const keysSpy = vi.spyOn(Object, 'keys');
+
+    for (let i = 1; i <= 50; i++) {
+      material.setUniform('u_time', i);
+      material.uniforms.u_time = i + 0.5;
+      expect(material.bindKey).toBe(initial);
+    }
+
+    expect(keysSpy).not.toHaveBeenCalled();
+    keysSpy.mockRestore();
   });
 
   test('changes with sampler state, including in-place mutation', () => {

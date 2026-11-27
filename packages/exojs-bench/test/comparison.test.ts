@@ -12,6 +12,7 @@ import type { ArchetypeId, Backend, CellResult } from '../src/rendering/EngineAd
 import type { ReportData } from '../src/rendering/report';
 import type { ClockReport } from '../src/shared/clock';
 import type { TimerCheck } from '../src/shared/timerCheck';
+import type { RunPlanMeta } from '../src/suite/plan';
 
 /**
  * A clock fine enough that no fixture duration trips the timer check, so a test
@@ -61,7 +62,14 @@ const physicsCell = (options: {
   contactCount?: number;
   rayHits?: number;
 }): PhysicsCellResult => ({
-  spec: { engine: options.engine, config: 'default', archetype: options.archetype, bodyCount: options.bodyCount, warmupSteps: 10, timedSteps: 60 },
+  spec: {
+    engine: options.engine,
+    config: 'default',
+    archetype: options.archetype,
+    bodyCount: options.bodyCount,
+    warmupSteps: 10,
+    timedSteps: 60,
+  },
   stepMsMedian: options.stepMsMedian,
   stepMsP95: options.stepMsMedian * 1.2,
   stepsPerSample: 1,
@@ -209,7 +217,10 @@ describe('chooseHeadlineCount', () => {
 
 describe('renderingMechanism', () => {
   test('attributes a draw-call gap when the counters differ by half again', () => {
-    const mechanism = renderingMechanism({ drawCalls: 10, textureBinds: 5, bufferUploads: 5 }, { drawCalls: 100, textureBinds: 5, bufferUploads: 5 });
+    const mechanism = renderingMechanism(
+      { drawCalls: 10, textureBinds: 5, bufferUploads: 5 },
+      { drawCalls: 100, textureBinds: 5, bufferUploads: 5 },
+    );
 
     expect(mechanism).toContain('ExoJS issues fewer draw calls (10 vs 100 per frame)');
   });
@@ -218,26 +229,39 @@ describe('renderingMechanism', () => {
     // 3 vs 2 draw calls cannot account for a millisecond of CPU time on either
     // arm; offering it as the mechanism would be a coincidence that passed a
     // ratio test.
-    expect(renderingMechanism({ drawCalls: 3, textureBinds: 1, bufferUploads: 0 }, { drawCalls: 2, textureBinds: 1, bufferUploads: 1 })).toContain(
-      'the difference is CPU-side',
-    );
+    expect(
+      renderingMechanism({ drawCalls: 3, textureBinds: 1, bufferUploads: 0 }, { drawCalls: 2, textureBinds: 1, bufferUploads: 1 }),
+    ).toContain('the difference is CPU-side');
   });
 
   test('names the competitor when it is the one issuing fewer', () => {
-    expect(renderingMechanism({ drawCalls: 100, textureBinds: 1, bufferUploads: 1 }, { drawCalls: 10, textureBinds: 1, bufferUploads: 1 })).toContain(
-      'competitor issues fewer draw calls',
-    );
+    expect(
+      renderingMechanism({ drawCalls: 100, textureBinds: 1, bufferUploads: 1 }, { drawCalls: 10, textureBinds: 1, bufferUploads: 1 }),
+    ).toContain('competitor issues fewer draw calls');
   });
 
   test('reports identical structure as a CPU-side difference rather than inventing a cause', () => {
-    expect(renderingMechanism({ drawCalls: 8, textureBinds: 3, bufferUploads: 2 }, { drawCalls: 8, textureBinds: 3, bufferUploads: 2 })).toContain(
-      'the difference is CPU-side',
-    );
+    expect(
+      renderingMechanism({ drawCalls: 8, textureBinds: 3, bufferUploads: 2 }, { drawCalls: 8, textureBinds: 3, bufferUploads: 2 }),
+    ).toContain('the difference is CPU-side');
   });
 
   test('yields no mechanism when an arm reported no counters', () => {
     expect(renderingMechanism(null, { drawCalls: 8, textureBinds: 1, bufferUploads: 1 })).toBeNull();
-    expect(renderingMechanism({ drawCalls: 0, textureBinds: 0, bufferUploads: 0 }, { drawCalls: 0, textureBinds: 0, bufferUploads: 0 })).toBeNull();
+    expect(
+      renderingMechanism({ drawCalls: 0, textureBinds: 0, bufferUploads: 0 }, { drawCalls: 0, textureBinds: 0, bufferUploads: 0 }),
+    ).toBeNull();
+  });
+
+  test('yields no mechanism when only one arm issued no draw call', () => {
+    // A zero on one arm means that arm did not render the archetype; the
+    // difference is a failed measurement, not a structural finding.
+    expect(
+      renderingMechanism({ drawCalls: 0, textureBinds: 5, bufferUploads: 5 }, { drawCalls: 10, textureBinds: 5, bufferUploads: 5 }),
+    ).toBeNull();
+    expect(
+      renderingMechanism({ drawCalls: 10, textureBinds: 5, bufferUploads: 5 }, { drawCalls: 0, textureBinds: 5, bufferUploads: 5 }),
+    ).toBeNull();
   });
 });
 
@@ -260,6 +284,18 @@ describe('physicsMechanism', () => {
     expect(mechanism).toContain('ExoJS resolves fewer solved contacts (20 vs 200)');
     expect(mechanism).toContain('not semantically identical');
   });
+
+  test('does not claim an identical scene when the arms disagree on a quoted counter', () => {
+    // Near-equal bodies/contacts but a joint count only one arm reports. The
+    // quoted numbers are evidence of equivalence only if both arms produced them.
+    const mechanism = physicsMechanism(
+      { bodyCount: 100, contactCount: 50, jointCount: 0, rayHits: 0 },
+      { bodyCount: 100, contactCount: 50, jointCount: 400, rayHits: 0 },
+    );
+
+    expect(mechanism).not.toContain('identical scene');
+    expect(mechanism).toContain('400 joints');
+  });
 });
 
 describe('buildRenderingComparison', () => {
@@ -274,6 +310,25 @@ describe('buildRenderingComparison', () => {
     cell({ engine: 'pixi', config: 'default', archetype: 'text-static', nodeCount: 1_000, cpuMsMedian: 3.1 }),
     cell({ engine: 'pixi', config: 'default', archetype: 'text-static', nodeCount: 5_000, cpuMsMedian: 12.2 }),
   ];
+
+  test('keeps configurations of the same engine distinct and checks each for the headline', () => {
+    const results = [
+      ...fixture(),
+      cell({ engine: 'pixi', config: 'culled', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 7 }),
+      cell({ engine: 'pixi', config: 'culled', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 9, status: 'exceeded' }),
+    ];
+    const [block] = buildRenderingComparison(results);
+    const row = block!.sections
+      .flatMap(section => section.rows)
+      .find(entry => entry.archetype === 'static-heavy' && entry.count === 1_000)!;
+
+    expect(block!.competitors).toEqual(['pixi', 'pixi (culled)']);
+    expect(row.cells.map(entry => [entry.competitor, entry.competitorMs])).toEqual([
+      ['pixi', 2],
+      ['pixi (culled)', 7],
+    ]);
+    expect(block!.headlineCount).toBe(1_000);
+  });
 
   test('publishes one block per backend measured', () => {
     const blocks = buildRenderingComparison(fixture());
@@ -314,7 +369,10 @@ describe('buildRenderingComparison', () => {
     const coarse: ClockReport = { resolutionMs: 0.5, crossOriginIsolated: false };
     const [block] = buildRenderingComparison([
       cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 1 }),
-      { ...cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 40, drawCalls: 50 }), clock: coarse },
+      {
+        ...cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 40, drawCalls: 50 }),
+        clock: coarse,
+      },
     ]);
     const row = block!.sections.flatMap(section => section.rows).find(entry => entry.archetype === 'static-heavy')!;
 
@@ -422,7 +480,9 @@ describe('buildPhysicsComparison', () => {
   test('drops only the rung an arm failed at, leaving every other rung of every archetype', () => {
     const ladder = ladderOf('box-stack');
     const results = [...sweep('box-stack', 1, 3), ...sweep('joints', 1, 3)].map(result =>
-      result.spec.archetype === 'box-stack' && result.spec.bodyCount === ladder.at(-1) ? { ...result, status: 'exceeded' as const } : result,
+      result.spec.archetype === 'box-stack' && result.spec.bodyCount === ladder.at(-1)
+        ? { ...result, status: 'exceeded' as const }
+        : result,
     );
     const section = buildPhysicsComparison(results);
     const counts = (archetype: string): number[] => section.rows.filter(row => row.archetype === archetype).map(row => row.count);
@@ -529,12 +589,17 @@ describe('aggregateRenderingRuns', () => {
   });
 
   test('rejects runs measured at different engine versions', () => {
-    expect(() => aggregateRenderingRuns([run(2), renderingRun(run(2).results, { engineVersion: '0.16.0' })])).toThrow(IncomparableRunsError);
+    expect(() => aggregateRenderingRuns([run(2), renderingRun(run(2).results, { engineVersion: '0.16.0' })])).toThrow(
+      IncomparableRunsError,
+    );
   });
 
   test('rejects runs measured against different library versions', () => {
     expect(() =>
-      aggregateRenderingRuns([run(2), renderingRun(run(2).results, { libraries: [{ name: 'pixi.js', version: '8.20.0', resolvedFrom: '' }] })]),
+      aggregateRenderingRuns([
+        run(2),
+        renderingRun(run(2).results, { libraries: [{ name: 'pixi.js', version: '8.20.0', resolvedFrom: '' }] }),
+      ]),
     ).toThrow(/library arms/);
   });
 
@@ -544,8 +609,21 @@ describe('aggregateRenderingRuns', () => {
     expect(() => aggregateRenderingRuns([run(2), wider])).toThrow(/does not measure the same cells/);
   });
 
+  test.each(['warmupFrames', 'timedFrames'] as const)('rejects different rendering %s for the same cell', field => {
+    const original = run(2);
+    const changed = renderingRun(
+      original.results.map((result, index) =>
+        index === 1 ? { ...result, spec: { ...result.spec, [field]: result.spec[field] + 1 } } : result,
+      ),
+    );
+
+    expect(() => aggregateRenderingRuns([original, changed])).toThrow(/sampling budgets/);
+  });
+
   test('rejects runs measured on different GPUs', () => {
-    const elsewhere = renderingRun(run(2).results, { stamp: { adapter: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)' } });
+    const elsewhere = renderingRun(run(2).results, {
+      stamp: { adapter: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)' },
+    });
 
     expect(() => aggregateRenderingRuns([run(2), run(2), elsewhere])).toThrow(/different machine or browser/);
   });
@@ -557,7 +635,9 @@ describe('aggregateRenderingRuns', () => {
   });
 
   test('rejects a pre-release run pooled with a shipping one, so half a number cannot pass as stable', () => {
-    const onBeta = renderingRun(run(2).results, { stamp: { prerelease: { value: true, source: 'declared', evidence: 'macOS 26.0 beta' } } });
+    const onBeta = renderingRun(run(2).results, {
+      stamp: { prerelease: { value: true, source: 'declared', evidence: 'macOS 26.0 beta' } },
+    });
 
     expect(() => aggregateRenderingRuns([run(2), onBeta])).toThrow(/different machine or browser/);
   });
@@ -615,6 +695,17 @@ describe('aggregatePhysicsRuns', () => {
     expect(pooled.verdict.label).toBe('unstable across runs');
   });
 
+  test.each(['warmupSteps', 'timedSteps'] as const)('rejects different physics %s for the same cell', field => {
+    const original = run(2);
+    const changed = physicsRun(
+      original.results.map((result, index) =>
+        index === 1 ? { ...result, spec: { ...result.spec, [field]: result.spec[field] + 1 } } : result,
+      ),
+    );
+
+    expect(() => aggregatePhysicsRuns([original, changed])).toThrow(/sampling budgets/);
+  });
+
   test('rejects runs measured on different CPUs, which is the physics domain of a different machine', () => {
     expect(() => aggregatePhysicsRuns([run(2), physicsRun(run(2).results, { cpu: 'Apple M3 Max' })])).toThrow(/different machine/);
   });
@@ -670,9 +761,48 @@ describe('renderComparison', () => {
 
     expect(document).toContain('Test GPU');
     expect(document).toContain('software rasterizer `false`');
-    expect(document).toContain('1000 nodes');
+    expect(document).toContain('| 1000 sprites (');
     expect(document).toContain('leads');
     expect(document).toContain('Omissions');
+  });
+
+  test('publishes per-load rows when no single headline count qualified', () => {
+    const rendering = aggregateRenderingRuns([
+      renderingRun([
+        cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+        cell({
+          engine: 'pixi',
+          config: 'default',
+          archetype: 'static-heavy',
+          nodeCount: 1_000,
+          cpuMsMedian: 2,
+          drawCalls: 40,
+          status: 'exceeded',
+        }),
+        cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 1 }),
+        cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 2, drawCalls: 40 }),
+        cell({ engine: 'exojs', archetype: 'text-static', nodeCount: 1_000, cpuMsMedian: 1 }),
+        cell({ engine: 'pixi', config: 'default', archetype: 'text-static', nodeCount: 1_000, cpuMsMedian: 2, drawCalls: 40 }),
+        cell({ engine: 'exojs', archetype: 'text-static', nodeCount: 5_000, cpuMsMedian: 1 }),
+        cell({
+          engine: 'pixi',
+          config: 'default',
+          archetype: 'text-static',
+          nodeCount: 5_000,
+          cpuMsMedian: 2,
+          drawCalls: 40,
+          status: 'exceeded',
+        }),
+      ]),
+    ]);
+    const document = renderComparison({ rendering });
+    const rows = document.split('\n').filter(line => line.startsWith('| `'));
+
+    expect(rendering.backends[0]!.headlineCount).toBeNull();
+    expect(document).not.toContain('No single node count');
+    expect(document).not.toContain('All rows measured at');
+    expect(rows.find(line => line.startsWith('| `static-heavy`'))).toMatch(/^\| `static-heavy` \| 5000 \w+ \(\w+\) \|/);
+    expect(rows.find(line => line.startsWith('| `text-static`'))).toMatch(/^\| `text-static` \| 1000 \w+ \(\w+\) \|/);
   });
 
   test('prints the observed range beside every pooled median', () => {
@@ -681,7 +811,14 @@ describe('renderComparison', () => {
         [2, 3, 10].map(competitorMs =>
           renderingRun([
             cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
-            cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: competitorMs, drawCalls: 40 }),
+            cell({
+              engine: 'pixi',
+              config: 'default',
+              archetype: 'static-heavy',
+              nodeCount: 1_000,
+              cpuMsMedian: competitorMs,
+              drawCalls: 40,
+            }),
           ]),
         ),
       ),
@@ -697,7 +834,14 @@ describe('renderComparison', () => {
         [1.05, 2, 2].map(competitorMs =>
           renderingRun([
             cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
-            cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: competitorMs, drawCalls: 40 }),
+            cell({
+              engine: 'pixi',
+              config: 'default',
+              archetype: 'static-heavy',
+              nodeCount: 1_000,
+              cpuMsMedian: competitorMs,
+              drawCalls: 40,
+            }),
           ]),
         ),
       ),
@@ -744,7 +888,7 @@ describe('renderComparison', () => {
     expect(document).toContain('own body-count ladder');
     expect(document).toContain('rows are not comparable with one another');
     expect(rows).toHaveLength(ladder.length);
-    expect(row).toContain(`| ${String(ladder.at(-1))} |`);
+    expect(row).toContain(`| ${String(ladder.at(-1))} bodies (`);
     expect(row).toContain('20.000 ms');
     expect(row).toContain('over the 16.7 ms frame');
     // The ExoJS arm is inside the frame in the same row, so the mark is per
@@ -763,5 +907,229 @@ describe('renderComparison', () => {
     });
 
     expect(document).toContain('not reportable');
+  });
+});
+
+describe('aggregation of run plan identity', () => {
+  const plan = (overrides: Partial<RunPlanMeta> = {}): RunPlanMeta => ({
+    suite: 'reference',
+    planId: 'exojs-comparison',
+    planRevision: 1,
+    planHash: 'h1',
+    domain: 'rendering',
+    extreme: false,
+    exploratory: false,
+    ...overrides,
+  });
+  const run = (runPlan: RunPlanMeta | undefined): ReportData => ({
+    ...renderingRun([
+      cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+      cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2, drawCalls: 40 }),
+    ]),
+    ...(runPlan !== undefined && { plan: runPlan }),
+  });
+
+  test('carries the shared plan into the pooled result and the document', () => {
+    const pooled = aggregateRenderingRuns([run(plan()), run(plan())]);
+
+    expect(pooled.plan).toEqual(plan());
+    expect(renderComparison({ rendering: pooled })).toContain('Plan: exojs-comparison suite=reference rev=1 hash=h1');
+  });
+
+  test('refuses to pool a published run with an exploratory one', () => {
+    expect(() => aggregateRenderingRuns([run(plan()), run(plan({ exploratory: true }))])).toThrow(IncomparableRunsError);
+  });
+
+  test('refuses to pool a run with a recorded plan with one without', () => {
+    expect(() => aggregateRenderingRuns([run(plan()), run(undefined)])).toThrow(/no recorded plan/);
+  });
+
+  test('states that unrecorded data has no plan', () => {
+    const document = renderComparison({ rendering: aggregateRenderingRuns([run(undefined)]) });
+
+    expect(document).toContain('no recorded plan (legacy data)');
+  });
+});
+
+describe('renderingMechanism drawless archetypes', () => {
+  const nothing = { drawCalls: 0, textureBinds: 0, bufferUploads: 0 };
+
+  test('keeps the both-zero row when the archetype draws nothing by design', () => {
+    const mechanism = renderingMechanism(nothing, nothing, { drawless: true });
+
+    expect(mechanism).toContain('neither arm submits anything');
+  });
+
+  test('drops the both-zero row without the drawless flag', () => {
+    expect(renderingMechanism(nothing, nothing)).toBeNull();
+  });
+});
+
+describe('recorded renderer identity', () => {
+  const measured = (engine: string, adapter: string | null, backend: 'webgl2' | 'webgpu' = 'webgl2'): CellResult => ({
+    ...cell({ engine, archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: engine === 'exojs' ? 1 : 2 }),
+    renderer: { backend, adapter },
+  });
+
+  test('rejects differing observed renderers within one backend even when the first provenance stamp looks valid', () => {
+    const run = renderingRun([measured('exojs', 'Test GPU'), measured('pixi', 'Google SwiftShader')]);
+
+    expect(() => aggregateRenderingRuns([run])).toThrow(/renderer.*disagree/i);
+  });
+
+  test('rejects a later different renderer within the same arm', () => {
+    const later = { ...measured('exojs', 'Other GPU'), spec: { ...measured('exojs', 'Other GPU').spec, nodeCount: 2_000 } };
+    const run = renderingRun([measured('exojs', 'Test GPU'), later, measured('pixi', 'Test GPU')]);
+
+    expect(() => aggregateRenderingRuns([run])).toThrow(/renderer.*disagree/i);
+  });
+
+  test.each([null, undefined, '', ' '])('rejects incomplete renderer evidence (%s) once any cell has observations', adapter => {
+    const missing = cell({ engine: 'pixi', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2 });
+    const run = renderingRun([measured('exojs', 'Test GPU'), adapter === undefined ? missing : measured('pixi', adapter)]);
+
+    expect(() => aggregateRenderingRuns([run])).toThrow(/renderer.*incomplete/i);
+  });
+
+  test('rejects an observed backend fallback even if every arm fell back together', () => {
+    const run = renderingRun([measured('exojs', 'Test GPU', 'webgpu'), measured('pixi', 'Test GPU', 'webgpu')]);
+
+    expect(() => aggregateRenderingRuns([run])).toThrow(/backend.*fallback/i);
+  });
+
+  test('uses observed devices when comparing repetitions whose summary stamps match', () => {
+    const first = renderingRun([measured('exojs', 'NVIDIA GeForce RTX 4090'), measured('pixi', 'NVIDIA GeForce RTX 4090')]);
+    const second = renderingRun([measured('exojs', 'NVIDIA GeForce RTX 5070 Ti'), measured('pixi', 'NVIDIA GeForce RTX 5070 Ti')]);
+
+    expect(() => aggregateRenderingRuns([first, second])).toThrow(/different machine or browser/);
+  });
+
+  const webgpuRun = (adapter: string): ReportData =>
+    renderingRun(
+      [measured('exojs', adapter, 'webgpu'), measured('pixi', adapter, 'webgpu')].map(result => ({
+        ...result,
+        spec: { ...result.spec, backend: 'webgpu' },
+      })),
+      { stamp: { backend: 'webgpu', adapter } },
+    );
+
+  test('does not collapse real WebGPU identities to their shared vendor across repetitions', () => {
+    const first = webgpuRun('nvidia / ada-lovelace / 0x2684 / NVIDIA GeForce RTX 4090');
+    const second = webgpuRun('nvidia / blackwell / 0x2c05 / NVIDIA GeForce RTX 5070 Ti');
+
+    expect(() => aggregateRenderingRuns([first, second])).toThrow(/different machine or browser/);
+    expect(() => aggregateRenderingRuns([first, first])).not.toThrow();
+  });
+
+  test.each([
+    ['webgl2', 'Apple GPU'],
+    ['webgpu', 'apple / apple / apple / apple'],
+    ['webgl2', 'WebKit WebGL'],
+  ] as const)('refuses a privacy-masked %s renderer as an identified device (%s)', (backend, adapter) => {
+    const run = backend === 'webgpu' ? webgpuRun(adapter) : renderingRun([measured('exojs', adapter), measured('pixi', adapter)]);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*(?:unverified|incomplete)/i);
+  });
+
+  test('keeps consistent observations comparable and accepts legacy files with no cell observations', () => {
+    const observed = renderingRun([measured('exojs', 'Test GPU'), measured('pixi', 'Test GPU')]);
+    const legacy = renderingRun(observed.results.map(({ renderer: _renderer, ...result }) => result));
+
+    expect(() => aggregateRenderingRuns([observed, observed])).not.toThrow();
+    expect(() => aggregateRenderingRuns([legacy, legacy])).not.toThrow();
+  });
+
+  test('rejects a legacy report that explicitly marks its adapter identity as unverified', () => {
+    const run = renderingRun([cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 })], {
+      stamp: { adapterUnverified: true },
+    });
+
+    expect(() => aggregateRenderingRuns([run])).toThrow(/renderer.*incomplete/i);
+  });
+});
+
+describe('legacy renderer identity', () => {
+  const legacyRun = (provenance: readonly Provenance[], backends: readonly Backend[] = ['webgl2']): ReportData => ({
+    ...renderingRun(
+      backends.flatMap(backend => [
+        cell({ engine: 'exojs', backend, archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+        cell({ engine: 'pixi', backend, archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2 }),
+      ]),
+    ),
+    provenance,
+  });
+  const webgl = stamp('0.17.0', { adapter: 'NVIDIA GeForce RTX 4090' });
+  const webgpu = stamp('0.17.0', { backend: 'webgpu', adapter: 'nvidia ada-lovelace 0x2684 NVIDIA GeForce RTX 4090' });
+
+  test.each([false, true])('rejects contradictory same-backend stamps without per-cell observations (reversed: %s)', reversed => {
+    const provenance = [webgl, stamp('0.17.0', { adapter: 'NVIDIA GeForce RTX 5070 Ti' })];
+    const run = legacyRun(reversed ? provenance.reverse() : provenance);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*disagree/i);
+  });
+
+  test.each([
+    ['webgl2', 'Apple GPU'],
+    ['webgpu', 'apple apple apple apple'],
+    ['webgl2', 'WebKit WebGL'],
+    ['webgl2', 'unknown renderer'],
+    ['webgl2', 'unidentified-gpu'],
+    ['webgl2', ''],
+    ['webgl2', ' '],
+    ['webgl2', 'no-webgl2-context'],
+    ['webgpu', 'webgpu-adapter (info masked)'],
+    ['webgpu', 'no-webgpu-adapter (requestAdapter returned null)'],
+    ['webgpu', 'no-webgpu-adapter (requestAdapter failed: GPU process exited)'],
+    ['webgpu', 'navigator.gpu is undefined'],
+    ['webgpu', 'nvidia'],
+  ] as const)('rejects a legacy %s report with no identified adapter (%s)', (backend, adapter) => {
+    const run = legacyRun([stamp('0.17.0', { backend, adapter })], [backend]);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*(?:unverified|incomplete)/i);
+  });
+
+  test.each([false, true])('does not let an identified stamp cover an unverified stamp (reversed: %s)', reversed => {
+    const provenance = [webgl, { ...webgl, adapter: 'Apple GPU' }];
+    const run = legacyRun(reversed ? provenance.reverse() : provenance);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*(?:unverified|incomplete)/i);
+  });
+
+  test('rejects missing legacy provenance instead of pooling an unidentified machine', () => {
+    const run = legacyRun([]);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*incomplete/i);
+  });
+
+  test('reports a missing adapter in parsed legacy JSON as incomplete provenance', () => {
+    const run = JSON.parse(JSON.stringify(legacyRun([{ ...webgl, adapter: undefined } as unknown as Provenance]))) as ReportData;
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*incomplete/i);
+  });
+
+  test('does not borrow another backend identity when the measured backend has no stamp', () => {
+    const run = legacyRun([webgpu]);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*incomplete/i);
+  });
+
+  test('compares every measured legacy backend instead of only the first stamp', () => {
+    const first = legacyRun([webgl, webgpu], ['webgl2', 'webgpu']);
+    const second = legacyRun([webgl, { ...webgpu, adapter: 'amd rdna3 0x744c AMD Radeon RX 7900 XTX' }], ['webgl2', 'webgpu']);
+
+    expect(() => aggregateRenderingRuns([first, second])).toThrow(/different machine or browser/);
+  });
+
+  test('preserves identified historical data independent of stamp order and identical duplicate stamps', () => {
+    const first = legacyRun([webgl, webgpu], ['webgl2', 'webgpu']);
+    const second = legacyRun([webgpu, webgl, webgl], ['webgl2', 'webgpu']);
+
+    expect(() => aggregateRenderingRuns([first, second])).not.toThrow();
+  });
+
+  test('does not require an identity for an unmeasured backend', () => {
+    const run = legacyRun([webgl, { ...webgpu, adapter: 'no-webgpu-adapter (requestAdapter returned null)' }]);
+
+    expect(() => aggregateRenderingRuns([run, run])).not.toThrow();
   });
 });

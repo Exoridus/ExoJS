@@ -18,6 +18,7 @@ import { type Seconds, Time } from '#core/units';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { type ColorTextureFormat, TextureFormat } from '#rendering/types';
 
 import { createRenderBackendDouble } from './render-backend-double';
 
@@ -210,10 +211,10 @@ const createHarness = (options: SceneTransitionConformanceOptions): ConformanceH
   const textures: BackendCounters = { acquired: 0, released: 0 };
   const backend: RenderBackend = {
     ...createRenderBackendDouble(),
-    acquireRenderTexture(textureWidth: number, textureHeight: number) {
+    acquireRenderTexture(textureWidth: number, textureHeight: number, format?: ColorTextureFormat) {
       textures.acquired++;
 
-      return new RenderTexture(textureWidth, textureHeight);
+      return new RenderTexture(textureWidth, textureHeight, format !== undefined ? { format } : undefined);
     },
     releaseRenderTexture(texture: RenderTexture) {
       textures.released++;
@@ -235,9 +236,10 @@ const createHarness = (options: SceneTransitionConformanceOptions): ConformanceH
     canvas: { width, height } as HTMLCanvasElement,
     onResize: new Signal<[number, number, Application]>(),
     clearColor: Color.black,
+    _workingColorFormat: () => TextureFormat.Rgba8Srgb,
     tweens: new TweenSystem(),
-    loader: { _releaseScope: () => undefined },
-    interaction: { attachRoot: () => undefined, detachRoot: () => undefined },
+    loader: { _releaseScope: () => {} },
+    interaction: { attachRoot: () => {}, detachRoot: () => {} },
     input: {
       onKeyDown: new Signal<[number]>(),
       onKeyUp: new Signal<[number]>(),
@@ -292,7 +294,12 @@ interface NavigationOutcome {
 }
 
 /** Drive `navigation` frame by frame until it settles or `maxFrames` is spent. */
-const drive = async (harness: ConformanceHarness, navigation: Promise<unknown>, maxFrames: number, stopAfterFrames = Infinity): Promise<NavigationOutcome> => {
+const drive = async (
+  harness: ConformanceHarness,
+  navigation: Promise<unknown>,
+  maxFrames: number,
+  stopAfterFrames = Infinity,
+): Promise<NavigationOutcome> => {
   const outcome: NavigationOutcome = { status: 'pending', frames: 0 };
 
   void navigation.then(
@@ -331,7 +338,9 @@ const expectResolved = (outcome: NavigationOutcome, maxFrames: number): void => 
     const error = outcome.error;
     const reason = error instanceof SceneTransitionLifecycleError ? ` (SceneTransitionLifecycleError: ${error.reason})` : '';
 
-    throw new Error(`the navigation rejected instead of completing${reason}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    throw new Error(`the navigation rejected instead of completing${reason}: ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
   }
 };
 
@@ -350,9 +359,10 @@ const expectCleanSession = (session: SessionRecord): void => {
 };
 
 const expectBalancedTextures = (harness: ConformanceHarness): void => {
-  expect(harness.textures.released, `every render texture the Director provisioned must be released again (acquired ${harness.textures.acquired})`).toBe(
-    harness.textures.acquired,
-  );
+  expect(
+    harness.textures.released,
+    `every render texture the Director provisioned must be released again (acquired ${harness.textures.acquired})`,
+  ).toBe(harness.textures.acquired);
 };
 
 const newRecord = (): TransitionRecord => ({ sessions: [], requirements: [] });
@@ -382,7 +392,10 @@ const newRecord = (): TransitionRecord => ({ sessions: [], requirements: [] });
  * `createTransition` must return a fresh definition on every call. Scenarios
  * that need the same instance twice call it once and navigate twice.
  */
-export const runSceneTransitionConformance = (createTransition: () => SceneTransition, options: SceneTransitionConformanceOptions = {}): void => {
+export const runSceneTransitionConformance = (
+  createTransition: () => SceneTransition,
+  options: SceneTransitionConformanceOptions = {},
+): void => {
   const maxFrames = options.maxFrames ?? 600;
   const abortAfterFrames = options.abortAfterFrames ?? 2;
 
@@ -394,10 +407,13 @@ export const runSceneTransitionConformance = (createTransition: () => SceneTrans
     const second = transition.getRequirements(context);
 
     expect(second, 'getRequirements() must be pure - the Director calls it before every session').toEqual(first);
-    expect(['none', 'snapshot'], `outgoingFrame must be 'none' or 'snapshot', got ${String(first.outgoingFrame)}`).toContain(first.outgoingFrame);
-    expect(['none', 'direct', 'texture'], `currentFrame must be 'none', 'direct' or 'texture', got ${String(first.currentFrame)}`).toContain(
-      first.currentFrame,
+    expect(['none', 'snapshot'], `outgoingFrame must be 'none' or 'snapshot', got ${String(first.outgoingFrame)}`).toContain(
+      first.outgoingFrame,
     );
+    expect(
+      ['none', 'direct', 'texture'],
+      `currentFrame must be 'none', 'direct' or 'texture', got ${String(first.currentFrame)}`,
+    ).toContain(first.currentFrame);
   });
 
   test('commits once and reports done only after the commit, completing the navigation', async () => {
@@ -512,7 +528,10 @@ export const runSceneTransitionConformance = (createTransition: () => SceneTrans
     // The Director never calls destroy() twice - this proves the release is
     // written so it cannot double-free if it ever did, which is what makes an
     // abort-path bug show up as a failed assertion instead of a driver crash.
-    expect(() => session.destroyInner(), 'destroy() must be safe to call again - release resources once and null the handles').not.toThrow();
+    expect(
+      () => session.destroyInner(),
+      'destroy() must be safe to call again - release resources once and null the handles',
+    ).not.toThrow();
     expectBalancedTextures(harness);
   });
 

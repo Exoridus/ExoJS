@@ -1,4 +1,4 @@
-import { getAudioContext, Sound } from '@codexo/exojs';
+import { getAudioContext, logger, Sound } from '@codexo/exojs';
 
 import { ConvolutionEffect } from '../../src/effects/ConvolutionEffect';
 
@@ -24,10 +24,12 @@ const makeConvolverNode = () => ({
 });
 
 describe('ConvolutionEffect', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   describe('construction', () => {
     it('uses default wet of 1.0', () => {
       const effect = new ConvolutionEffect();
-      expect(effect.wet).toBe(1.0);
+      expect(effect.wet).toBe(1);
       effect.destroy();
     });
 
@@ -76,6 +78,7 @@ describe('ConvolutionEffect', () => {
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
       const [inputGain, outputGain, dryGain, wetGain] = gains;
+
       return { convolver, gains, inputGain, outputGain, dryGain, wetGain, gainSpy, convolverSpy };
     };
 
@@ -140,7 +143,7 @@ describe('ConvolutionEffect', () => {
     it('sets complementary dry/wet gains on construction (wet=1 → dry=0, wet=1*gain=1)', () => {
       const ctx = getAudioContext();
       const { dryGain, wetGain, gainSpy, convolverSpy } = wireAll(ctx);
-      const effect = new ConvolutionEffect({ wet: 1.0, gain: 1 });
+      const effect = new ConvolutionEffect({ wet: 1, gain: 1 });
       expect(dryGain.gain.setValueAtTime).toHaveBeenCalledWith(0, expect.anything());
       expect(wetGain.gain.setValueAtTime).toHaveBeenCalledWith(1, expect.anything());
       effect.destroy();
@@ -163,7 +166,7 @@ describe('ConvolutionEffect', () => {
       const ctx = getAudioContext();
       const { wetGain, gainSpy, convolverSpy } = wireAll(ctx);
       const effect = new ConvolutionEffect({ wet: 0.5, gain: 2 });
-      expect(wetGain.gain.setValueAtTime).toHaveBeenCalledWith(1.0, expect.anything());
+      expect(wetGain.gain.setValueAtTime).toHaveBeenCalledWith(1, expect.anything());
       effect.destroy();
       gainSpy.mockRestore();
       convolverSpy.mockRestore();
@@ -199,6 +202,7 @@ describe('ConvolutionEffect', () => {
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
       const [, , dryGain, wetGain] = gains;
+
       return { dryGain, wetGain, gainSpy, convolverSpy };
     };
 
@@ -243,7 +247,7 @@ describe('ConvolutionEffect', () => {
       const effect = new ConvolutionEffect({ gain: 2 });
       effect.wet = 0.5;
       // wetGain = 0.5 * 2 = 1.0
-      expect(wetGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(1.0), expect.anything(), expect.anything());
+      expect(wetGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(1), expect.anything(), expect.anything());
       effect.destroy();
       gainSpy.mockRestore();
       convolverSpy.mockRestore();
@@ -259,6 +263,7 @@ describe('ConvolutionEffect', () => {
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
       const [, , , wetGain] = gains;
+
       return { wetGain, gainSpy, convolverSpy };
     };
 
@@ -290,7 +295,7 @@ describe('ConvolutionEffect', () => {
       const { wetGain, gainSpy, convolverSpy } = wireAll(ctx);
       const effect = new ConvolutionEffect({ wet: 0.5 });
       effect.gain = 2;
-      expect(wetGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(1.0), expect.anything(), expect.anything());
+      expect(wetGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(1), expect.anything(), expect.anything());
       effect.destroy();
       gainSpy.mockRestore();
       convolverSpy.mockRestore();
@@ -354,6 +359,129 @@ describe('ConvolutionEffect', () => {
   });
 
   describe('setImpulse', () => {
+    it('a rejected impulse does not cancel a valid conversion already in flight', async () => {
+      const ctx = getAudioContext();
+      const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
+      const current = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const converted = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const effect = new ConvolutionEffect({ impulse: current });
+      let complete!: (buffer: AudioBuffer) => void;
+      const render = vi.spyOn(OfflineAudioContext.prototype, 'startRendering').mockReturnValue(
+        new Promise<AudioBuffer>(resolve => {
+          complete = resolve;
+        }),
+      );
+
+      effect.setImpulse(ctx.createBuffer(1, 48000, 48000));
+      expect(() => effect.setImpulse(ctx.createBuffer(3, 44100, ctx.sampleRate))).toThrow(RangeError);
+      expect(convolver.buffer).toBe(current);
+
+      complete(converted);
+
+      await vi.waitFor(() => expect(convolver.buffer).toBe(converted));
+
+      effect.destroy();
+      render.mockRestore();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
+    it('a throwing conversion error reporter cannot create an unhandled rejection', async () => {
+      const ctx = getAudioContext();
+      const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
+      const current = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const effect = new ConvolutionEffect({ impulse: current });
+      const render = vi.spyOn(OfflineAudioContext.prototype, 'startRendering').mockRejectedValue(new Error('conversion failed'));
+      const report = vi.spyOn(logger, 'error').mockImplementation(() => {
+        throw new Error('error reporter failed');
+      });
+
+      effect.setImpulse(ctx.createBuffer(1, 48000, 48000));
+
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+
+      expect(report).toHaveBeenCalledTimes(1);
+      expect(convolver.buffer).toBe(current);
+
+      effect.destroy();
+      render.mockRestore();
+      report.mockRestore();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
+    it.each([44100, 48000])('rejects a three-channel impulse at %i Hz before replacing the current one', sampleRate => {
+      const ctx = getAudioContext();
+      const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
+      const current = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const effect = new ConvolutionEffect({ impulse: current });
+
+      expect(() => effect.setImpulse(ctx.createBuffer(3, 44100, sampleRate))).toThrow(RangeError);
+      expect(convolver.buffer).toBe(current);
+
+      effect.destroy();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
+    it('reports a failed resample and retains the current impulse', async () => {
+      const ctx = getAudioContext();
+      const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
+      const current = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const effect = new ConvolutionEffect({ impulse: current });
+      const failure = new Error('resampling failed');
+      const render = vi.spyOn(OfflineAudioContext.prototype, 'startRendering').mockRejectedValue(failure);
+      const report = vi.spyOn(logger, 'error').mockImplementation(() => {});
+
+      effect.setImpulse(ctx.createBuffer(1, 48000, 48000));
+
+      await vi.waitFor(() => expect(report).toHaveBeenCalledTimes(1));
+
+      expect(report.mock.calls[0]![1]).toMatchObject({ error: failure });
+      expect(convolver.buffer).toBe(current);
+
+      effect.destroy();
+      render.mockRestore();
+      report.mockRestore();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
+    it.each(['replace', 'destroy'])('handles an obsolete resample rejection after %s', async action => {
+      const ctx = getAudioContext();
+      const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
+      const current = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const effect = new ConvolutionEffect({ impulse: current });
+      let reject!: (reason: Error) => void;
+      const render = vi.spyOn(OfflineAudioContext.prototype, 'startRendering').mockReturnValue(
+        new Promise<AudioBuffer>((_resolve, fail) => {
+          reject = fail;
+        }),
+      );
+      const report = vi.spyOn(logger, 'error').mockImplementation(() => {});
+
+      effect.setImpulse(ctx.createBuffer(1, 48000, 48000));
+
+      if (action === 'destroy') {
+        effect.destroy();
+      } else {
+        effect.setImpulse(current);
+      }
+
+      reject(new Error('obsolete conversion failed'));
+
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+
+      expect(report).not.toHaveBeenCalled();
+      expect(convolver.buffer).toBe(current);
+
+      effect.destroy();
+      render.mockRestore();
+      report.mockRestore();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
     const wireConvolver = (ctx: AudioContext) => {
       const convolver = makeConvolverNode();
       convolver.context = ctx;
@@ -361,6 +489,7 @@ describe('ConvolutionEffect', () => {
       let i = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
+
       return { convolver, gainSpy, convolverSpy };
     };
 
@@ -479,10 +608,13 @@ describe('ConvolutionEffect', () => {
           if (prop === 'normalize') {
             lastNormalizeBeforeBuffer = value as boolean;
           }
+
           if (prop === 'buffer') {
             normalizeOrder.push(lastNormalizeBeforeBuffer ?? target.normalize);
           }
+
           (target as Record<string | symbol, unknown>)[prop] = value;
+
           return true;
         },
       });
@@ -510,18 +642,18 @@ describe('ConvolutionEffect', () => {
       convolver.context = ctx as unknown as AudioContext;
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let gainCallCount = 0;
-      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gains[gainCallCount++] as unknown as GainNode;
-      });
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainCallCount++] as unknown as GainNode);
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
 
       const effect = new ConvolutionEffect();
       effect.destroy();
 
       expect(convolver.disconnect).toHaveBeenCalled();
+
       for (const gain of gains) {
         expect(gain.disconnect).toHaveBeenCalled();
       }
+
       gainSpy.mockRestore();
       convolverSpy.mockRestore();
     });

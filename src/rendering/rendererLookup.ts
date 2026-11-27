@@ -34,7 +34,9 @@ export const rendererLookupOf = (backend: RenderBackend | null): RendererLookup 
 export const resolveRendererFor = (backend: RenderBackend | null, drawable: Drawable): unknown => {
   const registry = rendererLookupOf(backend);
 
-  if (registry === null) return null;
+  if (registry === null) {
+    return null;
+  }
 
   try {
     return registry.resolve(drawable);

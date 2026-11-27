@@ -188,6 +188,16 @@ The `app.start(scene)` call is asynchronous — it initializes the render backen
 
 To stop the loop, call `app.stop()`. To release the canvas and all GPU resources, call `app.destroy()`.
 
+## Shutting down
+
+`app.stop()` halts the frame loop and ends the active scene; the application stays reusable. `app.destroy()` ends it for good: `app.state` is `Destroying` while the returned promise is pending and `Destroyed` afterwards, and a destroyed application cannot be started again.
+
+`await app.destroy()` waits for every scene — active, retained, and preloaded — to finish its teardown, including an awaitable `unload`, before it releases the loader, audio, input, and render backend those scenes may still use. The promise never rejects. Failures along the way are reported through `app.onError` and the remaining steps still run, so a fulfilled promise means the shutdown is over, not that it was clean.
+
+Scene teardown is bounded. A scene whose `unload` or `load` has not settled five seconds after `destroy()` was called is abandoned, and the rest of the engine is released without it. A promise cannot be cancelled: the abandoned hook may still finish later and touch subsystems that no longer exist. Every scene's `lifecycleSignal` aborts as soon as `destroy()` is called; asynchronous scene work that honours it finishes well inside that window.
+
+Most games never need more than `app.destroy()`. When a test, a host page reusing the canvas, or a tool needs to know how it went, read `app.destroyOutcome` once the promise has fulfilled. Its `status` is `completed` when every teardown step succeeded, `completedWithErrors` when at least one failed (each failure is listed in `errors`), and `forced` when scene teardown was abandoned at the deadline. It is `null` until the promise has fulfilled, and stays the same object afterwards.
+
 ## Subsystems on the application
 
 Once an application exists, its subsystems are accessible as properties:

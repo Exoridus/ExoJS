@@ -5,6 +5,7 @@ import { Range } from '../src/distributions/Range';
 import { VectorRange } from '../src/distributions/VectorRange';
 import { ApplyForce } from '../src/modules/ApplyForce';
 import { BurstSpawn } from '../src/modules/BurstSpawn';
+import { DeathModule } from '../src/modules/DeathModule';
 import { RateSpawn } from '../src/modules/RateSpawn';
 import { SpawnOnDeath } from '../src/modules/SpawnOnDeath';
 import { ParticleSystem } from '../src/ParticleSystem';
@@ -13,6 +14,7 @@ const makeTexture = (width = 16, height = 16): Texture => {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
+
   return new Texture(canvas);
 };
 
@@ -123,6 +125,12 @@ describe('ParticleSystem texture / frame accessors', () => {
     expect(system.textureFrame.width).toBe(8);
   });
 
+  test('quad bounds are centered independently of the frame position', () => {
+    const system = new ParticleSystem(makeTexture(64, 64));
+    system.setTextureFrame(new Rectangle(12, 20, 16, 8));
+    expect(Array.from(system.vertices)).toEqual([-8, -4, 8, 4]);
+  });
+
   test('textureFrame property setter delegates to setTextureFrame', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
 
@@ -183,6 +191,77 @@ describe('ParticleSystem texture / frame accessors', () => {
 });
 
 describe('ParticleSystem module registries', () => {
+  test.each([1, 2])('clearing death modules on callback %s finishes compacting surviving particles', clearOnCallback => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, simulation: 'cpu' });
+    let callbacks = 0;
+
+    for (const lifetime of [0.1, 10, 0.1]) {
+      system.emit()!.lifetime = lifetime;
+    }
+
+    class ClearModules extends DeathModule {
+      public onDeath(owner: ParticleSystem): void {
+        if (++callbacks === clearOnCallback) {
+          owner.clearDeathModules();
+        }
+      }
+    }
+
+    system.addDeathModule(new ClearModules());
+    system.update(tick(0.2));
+
+    expect(system.liveCount).toBe(1);
+    expect(system.aliveCount).toBe(1);
+    system.update(tick(0.2));
+    expect(system.liveCount).toBe(1);
+    expect(system.aliveCount).toBe(1);
+    expect(callbacks).toBe(clearOnCallback);
+
+    system.destroy();
+  });
+
+  test.each([false, true])('clearParticles in a death callback preserves the cleared state (emit replacement: %s)', emitReplacement => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, simulation: 'cpu' });
+    const survivor = system.emit()!;
+    let callbacks = 0;
+    let laterCallbacks = 0;
+
+    survivor.lifetime = 10;
+
+    const expired = system.emit()!;
+
+    expired.lifetime = 0.1;
+
+    class ClearOnDeath extends DeathModule {
+      public onDeath(owner: ParticleSystem): void {
+        callbacks++;
+        owner.clearParticles();
+
+        if (emitReplacement) {
+          owner.emit()!.lifetime = 10;
+        }
+      }
+    }
+
+    class UnexpectedDeath extends DeathModule {
+      public onDeath(): void {
+        laterCallbacks++;
+      }
+    }
+
+    system.addDeathModule(new ClearOnDeath());
+    system.addDeathModule(new UnexpectedDeath());
+    system.update(tick(0.2));
+
+    expect(system.liveCount).toBe(emitReplacement ? 1 : 0);
+    expect(system.aliveCount).toBe(emitReplacement ? 1 : 0);
+    system.update(tick(0.1));
+    expect(callbacks).toBe(1);
+    expect(laterCallbacks).toBe(0);
+
+    system.destroy();
+  });
+
   test('spawnModules / updateModules / deathModules expose what was registered', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 8 });
     const spawn = new RateSpawn({ rate: new Constant(1) });
@@ -379,5 +458,56 @@ describe('BurstSpawn — capacity exhaustion and full field config', () => {
       expect((system._storage.color[i] >>> 8) & 0xff).toBe(255); // green channel
       expect(system._storage.frame[i]).toBe(1);
     }
+  });
+});
+
+describe('GPU death delivery failures', () => {
+  test('a throwing death module is logged once per record and does not reject or skip the batch', async () => {
+    const system = new ParticleSystem();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const seen: number[] = [];
+
+    class ThrowOnFirst extends DeathModule {
+      public onDeath(_owner: ParticleSystem, death: { x: number }): void {
+        seen.push(death.x);
+
+        if (seen.length === 1) {
+          throw new Error('module failed');
+        }
+      }
+    }
+
+    system.addDeathModule(new ThrowOnFirst());
+
+    const record = (x: number) => ({
+      slot: 0,
+      x,
+      y: 0,
+      velocityX: 0,
+      velocityY: 0,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      color: 0,
+      elapsed: 0,
+    });
+
+    Object.defineProperty(system, '_simulationState', {
+      get: () => ({
+        readDeaths: (deliver: (records: unknown[]) => void) => Promise.resolve(deliver([record(1), record(2)])),
+        discardDeaths: () => undefined,
+        destroy: () => undefined,
+      }),
+    });
+
+    await expect(
+      (system as unknown as { _drainDeaths: (pending: Map<number, number[]>) => Promise<void> })._drainDeaths(new Map()),
+    ).resolves.toBeUndefined();
+
+    expect(seen).toEqual([1, 2]);
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+
+    consoleErrorSpy.mockRestore();
+    system.destroy();
   });
 });

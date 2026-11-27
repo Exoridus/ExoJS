@@ -199,7 +199,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - either shape is a Polygon that encloses no area (empty, fewer than three distinct vertices, or collinear vertices) and the other is a filled shape (Rectangle, Circle, Ellipse or Polygon); such a polygon overlaps no filled shape, and intersectsWith returns false for the same pairs. Line and Point queries are unchanged: they test the polygon's outline and vertices as before, **or** - the specific shape-pair combination does not support response generation (for example Line against any shape, or Ellipse against a Point). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
         },
         {
           "name": "contains",
@@ -267,7 +267,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap getBounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the global transform and tested against the untransformed getLocalBounds - i.e. a true oriented-box test. This is the exact inverse of the forward map that getBounds and the renderer use to place the node's corners, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
+          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap world-bounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the world transform and tested against the untransformed getLocalBounds - i.e. a true oriented-box test. This is the exact inverse of the forward map that the renderer uses, including any retained group transform, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
         },
         {
           "name": "destroy",

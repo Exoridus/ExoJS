@@ -1,3 +1,4 @@
+import { logger } from '#core/Logger';
 import { clamp } from '#math/utils';
 
 import { isAudioContextReady, onAudioContextReady } from './audioContext';
@@ -7,17 +8,23 @@ import type { Loopable, Pausable, RatePitched, Seekable } from './Playable';
 /** Construction parameters for {@link AudioStreamVoice}. */
 export interface AudioStreamVoiceInit extends BaseVoiceInit {
   element: HTMLMediaElement;
-  /** The element's `MediaElementAudioSourceNode` (owned by the {@link AudioStream}). */
+  /** The element's `MediaElementAudioSourceNode` (owned by the {@link MediaAudio}). */
   sourceNode: MediaElementAudioSourceNode;
   loop: boolean;
   playbackRate: number;
+  /** Whether the source currently allows moving the playhead. */
+  canSeek?: () => boolean;
+  /** Decide whether an ended media element is terminal or a recoverable live EOF. */
+  endOnEnded?: () => boolean;
   /** Seek offset (seconds) to start at. */
   startTime?: number;
+  /** @internal Start silently until the scene finishes configuring and holding the voice. */
+  startHeld?: boolean;
 }
 
 /**
- * Active playback handle for one {@link AudioStream} play call, backed by the
- * stream's `HTMLMediaElement` + `MediaElementAudioSourceNode`. Because the
+ * Active playback handle for one {@link MediaAudio} play call, backed by its
+ * `HTMLMediaElement` + `MediaElementAudioSourceNode`. Because the
  * element owns a single playhead, a stream has one active voice at a time -
  * starting a new voice stops the previous one.
  *
@@ -38,6 +45,8 @@ export interface AudioStreamVoiceInit extends BaseVoiceInit {
 export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, Loopable, RatePitched {
   private readonly _element: HTMLMediaElement;
   private readonly _sourceNode: MediaElementAudioSourceNode;
+  private readonly _canSeek: () => boolean;
+  private readonly _endOnEnded: () => boolean;
   private _detune = 0;
   /**
    * User-facing base playback rate, cached independently of what's actually
@@ -47,7 +56,11 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
    * already-modulated rate (mirrors {@link SoundVoice}'s `_playbackRate` cache).
    */
   private _basePlaybackRate: number;
-  private readonly _onEnded = (): void => this._finish();
+  private readonly _onEnded = (): void => {
+    if (this._endOnEnded()) {
+      this._finish();
+    }
+  };
   private _unlockHandler: ((audioContext: AudioContext) => void) | null = null;
 
   public constructor(init: AudioStreamVoiceInit) {
@@ -55,17 +68,24 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
 
     this._element = init.element;
     this._sourceNode = init.sourceNode;
+    this._canSeek = init.canSeek ?? ((): boolean => true);
+    this._endOnEnded = init.endOnEnded ?? ((): boolean => true);
     this._sourceNode.connect(this._output);
 
     this._element.loop = init.loop;
     this._basePlaybackRate = init.playbackRate;
     this._element.playbackRate = init.playbackRate;
-    if (init.startTime !== undefined) {
+
+    if (init.startTime !== undefined && this._canSeek()) {
       this._element.currentTime = Math.max(0, init.startTime);
     }
 
     this._element.addEventListener('ended', this._onEnded);
-    this._startPlayback();
+    this._held = init.startHeld ?? false;
+
+    if (!this._held) {
+      this._startPlayback();
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -84,8 +104,12 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
     this.seek(value);
   }
 
+  /** Ignored after the voice ended, and while the source has no seekable range (a live stream). */
   public seek(t: number): void {
-    if (this._ended) return;
+    if (this._ended || !this._canSeek()) {
+      return;
+    }
+
     this._element.currentTime = Math.max(0, t);
   }
 
@@ -95,19 +119,51 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
 
   /** While playback is still waiting for the autoplay unlock, also cancels that deferred start. */
   public pause(): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
+
+    this._pauseRequested = true;
     this._clearUnlockHandler();
     this._element.pause();
   }
 
-  /** While audio is still locked, defers the start to the unlock gesture again. */
+  /**
+   * While audio is still locked, defers the start to the unlock gesture again.
+   * While the voice's owner holds it (a paused scene), playback starts once
+   * the hold is released.
+   */
   public resume(): void {
-    if (this._ended || this._unlockHandler !== null) return;
+    if (this._ended) {
+      return;
+    }
+
+    this._pauseRequested = false;
+
+    if (this._held || this._unlockHandler !== null) {
+      return;
+    }
+
     this._startPlayback();
   }
 
+  /** Whether the caller still wants this voice to play once media reconnects. @internal */
+  public get _canAutoResume(): boolean {
+    return !this._ended && !this._held && !this._pauseRequested;
+  }
+
+  /** While held, the caller's own pause; otherwise whether the element is paused, which includes a start still waiting for the autoplay unlock. */
   public get paused(): boolean {
-    return this._element.paused;
+    return this._held ? this._pauseRequested : this._element.paused;
+  }
+
+  protected override _applyHold(): void {
+    if (this._held) {
+      this._clearUnlockHandler();
+      this._element.pause();
+    } else if (!this._pauseRequested) {
+      this._startPlayback();
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -119,7 +175,10 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   }
 
   public set loop(value: boolean) {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
+
     this._element.loop = value;
   }
 
@@ -132,7 +191,10 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   }
 
   public set playbackRate(value: number) {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
+
     this._basePlaybackRate = clamp(value, 0.1, 20);
     this._element.playbackRate = this._basePlaybackRate;
   }
@@ -155,7 +217,10 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   // -------------------------------------------------------------------------
 
   protected override _applyDopplerRate(ratio: number): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
+
     this._element.playbackRate = clamp(this._basePlaybackRate * ratio, 0.1, 20);
   }
 
@@ -185,13 +250,18 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   private _startPlayback(): void {
     if (isAudioContextReady()) {
       this._play();
+
       return;
     }
 
     this._unlockHandler = (): void => {
       this._clearUnlockHandler();
-      if (!this._ended) this._play();
+
+      if (!this._ended) {
+        this._play();
+      }
     };
+
     onAudioContextReady.add(this._unlockHandler);
   }
 
@@ -203,9 +273,16 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   private _play(): void {
     // Wrapped: a test double or legacy element may return nothing from play().
     Promise.resolve(this._element.play()).catch((error: unknown) => {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
-        throw error;
+      // A pause() or seek that interrupts the request aborts it; that is not a failure.
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
       }
+
+      logger.warn('Audio stream playback was rejected; the voice was ended.', {
+        source: 'AudioStream',
+        ...(error instanceof Error && { error }),
+      });
+      this._finish();
     });
   }
 

@@ -10,13 +10,18 @@ describe('browser image decode color contract', () => {
     const calls: ImageBitmapOptions[] = [];
 
     vi.stubGlobal('createImageBitmap', (source: ImageBitmapSource, options?: ImageBitmapOptions) => {
-      if (options !== undefined) calls.push(options);
+      if (options !== undefined) {
+        calls.push(options);
+      }
 
       return decode(source, options);
     });
 
     try {
-      const texture = await new TextureFactory().create(await encodePng([128, 128, 128, 255]), factoryContext({ textureOptions: { colorSpace: 'none' } }));
+      const texture = await new TextureFactory().create(
+        await encodePng([128, 128, 128, 255]),
+        factoryContext({ textureOptions: { colorSpace: 'none' } }),
+      );
 
       expect(calls).toEqual([{ colorSpaceConversion: 'none', premultiplyAlpha: 'none' }]);
       expect(texture.colorSpace).toBe('none');

@@ -166,7 +166,12 @@ const captureGlFactors = (mode: BlendModes): GlFactors => {
   };
   let captured: GlFactors | null = null;
 
-  (gl as unknown as Record<string, unknown>)['blendFuncSeparate'] = (srcRgb: number, dstRgb: number, srcAlpha: number, dstAlpha: number): void => {
+  (gl as unknown as Record<string, unknown>)['blendFuncSeparate'] = (
+    srcRgb: number,
+    dstRgb: number,
+    srcAlpha: number,
+    dstAlpha: number,
+  ): void => {
     captured = { srcRgb: names[srcRgb]!, dstRgb: names[dstRgb]!, srcAlpha: names[srcAlpha]!, dstAlpha: names[dstAlpha]! };
   };
 
@@ -284,7 +289,9 @@ describe('fixed-function shortcut coverage contract', () => {
 
     return [0, 1, 2].map(
       channel =>
-        (1 - src.a) * dst.a * [dst.r, dst.g, dst.b][channel]! + (1 - dst.a) * src.a * [src.r, src.g, src.b][channel]! + src.a * dst.a * blended[channel]!,
+        (1 - src.a) * dst.a * [dst.r, dst.g, dst.b][channel]! +
+        (1 - dst.a) * src.a * [src.r, src.g, src.b][channel]! +
+        src.a * dst.a * blended[channel]!,
     ) as [number, number, number];
   };
 

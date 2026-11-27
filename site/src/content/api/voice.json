@@ -76,7 +76,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Insert a per-voice AudioEffect into this voice's output chain (after the volume gain, before the bus). Effects are applied in insertion order."
+          "description": "Insert a per-voice AudioEffect into this voice's output chain (after the volume gain and the occlusion stage, before the bus). Effects are applied in insertion order. Attaching does not transfer ownership: the caller keeps the effect and must destroy() it. Neither the voice ending nor Voice.removeEffect destroys it. A live voice rejects an effect whose nodes are not initialized without changing its current chain. Await AudioEffect.ready before attaching."
         },
         {
           "name": "addSend",
@@ -148,7 +148,7 @@
             }
           ],
           "returnType": "AudioSend",
-          "description": "Open a parallel send from this voice's output into bus at level (default 1). The dry path is untouched: the voice keeps playing into its own Voice.bus, and a copy of the same signal additionally reaches bus. Use it for shared ambience processing - one reverb serving many voices - which an insert effect cannot express, because an insert replaces the signal rather than duplicating it. The returned AudioSend is owned by this voice and torn down with it; remove one early with Voice.removeSend only to change the routing."
+          "description": "Open a parallel send from this voice's output into bus at level (default 1). The dry path is untouched: the voice keeps playing into its own Voice.bus, and a copy of the same signal additionally reaches bus. Use it for shared ambience processing - one reverb serving many voices - which an insert effect cannot express, because an insert replaces the signal rather than duplicating it. The returned AudioSend is owned by this voice and torn down with it; remove one early with Voice.removeSend only to change the routing. A scene-deferred voice returns a handle immediately without allocating nodes. Its identity, target and latest level survive activation; removing it or stopping the voice before activation prevents its native connection. Throws if this voice has already ended, without creating a send."
         },
         {
           "name": "fade",
@@ -271,7 +271,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Track a SceneNode: the voice reads the node's global translation each frame. Pass null to stop following and fall back to Spatializable.position."
+          "description": "Track a SceneNode: the voice reads the node's world transform each frame, so a node nested inside a transform group pans from where it is drawn. Pass null to stop following and fall back to Spatializable.position."
         },
         {
           "name": "removeEffect",
@@ -416,7 +416,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Stop playback and release this voice's resources. Pass fade to ramp the volume to zero over that duration before stopping; omit (or pass 0) to stop immediately. Idempotent - calling again is a no-op."
+          "description": "Stop playback and release this voice's resources. A positive fade ramps volume to zero before stopping and replaces any pending fade. Omitting it or passing 0 stops immediately; generator voices with an envelope use its release stage instead. Repeated release stops do not extend that stage. Calls after playback has ended have no effect."
         }
       ],
       "paragraphs": [],
@@ -467,7 +467,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Full-gain cone half-angle in degrees. Default 360 (omnidirectional - no cone)."
+          "description": "Full-gain cone angle in degrees, as a full apex angle (not a half-angle). Default 360 (omnidirectional - no cone)."
         },
         {
           "name": "coneOuterAngle",
@@ -488,7 +488,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Falloff-to-coneOuterGain cone half-angle in degrees. Default 360."
+          "description": "Falloff-to-coneOuterGain cone angle in degrees, as a full apex angle. Default 360."
         },
         {
           "name": "coneOuterGain",
@@ -551,7 +551,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Height of the source above (positive) or below (negative) the world plane, in world units. Default 0. Independent of Spatializable.position, and preserved across a position change that does not carry a z. It contributes to distance attenuation, to the panner's own directionality, and to Doppler - a source rising straight up recedes."
+          "description": "Height of the source above (positive) or below (negative) the world plane, in world units. Default 0. Independent of Spatializable.position, and preserved across a position change that does not carry a z. It contributes to distance attenuation, to the panner's own directionality, and to Doppler - a source rising straight up recedes. Without a position or followed node, its horizontal coordinates are the world origin."
         },
         {
           "name": "elevationVelocity",
@@ -698,7 +698,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The voice's output node - the last node before the AudioBus. A Web Audio interop hook for custom routing or analysis; gameplay code does not need it, and an AudioAnalyser accepts the voice itself."
+          "description": "The voice's stable output node. Engine voices expose their volume gain before occlusion and insert effects. A Web Audio interop hook for custom routing or analysis; gameplay code does not need it. A scene-deferred voice has no output until real playback is created: reading it throws, even after audio unlocks if the scene is still dormant. A cancelled voice that never materialized continues to throw. Reading this property never creates a placeholder or a context for deferred playback. Wait for activation and unlock before connecting native nodes or assigning a deferred voice to an analyser. A voice returned already ended - a play while audio is still locked, or a start offset past the end - has no graph: its output is an unconnected node, and reading it before audio is unlocked throws instead of creating the AudioContext ahead of the user gesture."
         },
         {
           "name": "panningModel",
@@ -881,7 +881,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space velocity of the source (world units/second), or null. Feeds the Doppler calculation (app.audio.spatial.dopplerFactor) - has no other effect. Explicit; when null and follow(node) is active, velocity is auto-derived each frame from the tracked node's position delta instead."
+          "description": "World-space velocity of the source (world units/second), or null. Feeds the Doppler calculation (app.audio.spatial.dopplerFactor) - has no other effect. Explicit; when null, the horizontal velocity is auto-derived each frame from the position delta of whatever this voice tracks, follow(node) or a plain position, and the vertical component comes only from Spatializable.elevationVelocity."
         }
       ],
       "paragraphs": [],

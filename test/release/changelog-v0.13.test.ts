@@ -16,9 +16,14 @@ const extractV013Section = (): string => {
   const content = readChangelog();
   const startMarker = '## [0.13.0]';
   const startIndex = content.indexOf(startMarker);
-  if (startIndex === -1) throw new Error('0.13.0 section not found in CHANGELOG.md');
+
+  if (startIndex === -1) {
+    throw new Error('0.13.0 section not found in CHANGELOG.md');
+  }
+
   const afterStart = content.indexOf('\n', startIndex);
   const nextSection = content.indexOf('\n## [', afterStart + 1);
+
   return content.slice(afterStart + 1, nextSection === -1 ? undefined : nextSection);
 };
 

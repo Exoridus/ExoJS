@@ -31,6 +31,10 @@ export const fetchAsset = async (url: string, requestOptions: RequestInit): Prom
   }
 
   if (!response.ok) {
+    // Nothing will read this body: end the transfer before reporting, or the
+    // connection stays allocated until the user agent reclaims it.
+    await response.body?.cancel().catch(() => undefined);
+
     throw new AssetNetworkError({
       url,
       message: `Failed to fetch "${url}" (${response.status} ${response.statusText}).`,

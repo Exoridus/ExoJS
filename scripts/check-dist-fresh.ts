@@ -2,24 +2,25 @@
  * Refuse to run a dist-consuming step against a stale build, or bring the
  * build up to date first.
  *
- * The site build and the full-bundle export check read `dist/` (Core) and
- * `packages/exojs-*\/dist/` (extensions) rather than the sources. After a
- * pull or a local edit those artifacts silently lag behind: the site bundles
- * an engine without the new export and the example smoke then reports a black
- * canvas with no error; the export check names a symbol the package "does not
- * export". Each of those wasted a diagnosis before this check existed. The
- * API docs generator is not gated: it converts from the sources.
+ * The site build reads `dist/` (Core) and `packages/exojs-*\/dist/`
+ * (extensions) rather than the sources. After a pull or a local edit those
+ * artifacts silently lag behind: the site bundles an engine without the new
+ * export and the example smoke then reports a black canvas with no error.
+ * Each of those wasted a diagnosis before this check existed. The API docs
+ * generator is not gated: it converts from the sources.
  *
  * Without `--rebuild`, a stale unit fails the step with the rebuild command
- * named; a package that was never built is left to the consuming step's own
- * error. With `--rebuild`, a stale or unbuilt unit runs that command here and
+ * named, and so does a Core that was never built: every dist consumer reads
+ * it, and the consumer's own error is an unresolved `@codexo/exojs` minutes
+ * later. An extension that was never built is left to the consuming step,
+ * which may not read it at all. With `--rebuild`, a stale or unbuilt unit runs that command here and
  * the check is repeated, so a caller that would otherwise fail minutes later
  * pays the build exactly when it is due and nothing else. Set
  * `EXOJS_SKIP_DIST_CHECK=1` to bypass either mode.
  */
 import { spawnSync } from 'node:child_process';
 
-import { checkFreshness, REBUILD_COMMAND, repoRoot } from './dist-freshness.ts';
+import { checkFreshness, CORE_UNIT, REBUILD_COMMAND, repoRoot } from './dist-freshness.ts';
 
 const rebuild = process.argv.includes('--rebuild');
 
@@ -48,6 +49,13 @@ if (rebuild && (report.stale.length > 0 || report.unbuilt.length > 0)) {
 }
 
 const checked = report.units.length - report.unbuilt.length;
+const unbuiltCore = report.unbuilt.find(unit => unit.name === CORE_UNIT);
+
+if (unbuiltCore !== undefined) {
+  console.error(`check-dist-fresh: ${CORE_UNIT} has never been built in this checkout; the step you are about to run reads its dist.`);
+  console.error(`\nBuild with: ${REBUILD_COMMAND}`);
+  process.exit(1);
+}
 
 if (report.stale.length === 0) {
   console.log(`check-dist-fresh: ${checked} build unit(s) up to date.`);
@@ -56,7 +64,9 @@ if (report.stale.length === 0) {
 
 console.error('check-dist-fresh: dist is older than its sources; the step you are about to run would use a stale build.\n');
 
-for (const line of report.stale) console.error(`  - ${line}`);
+for (const line of report.stale) {
+  console.error(`  - ${line}`);
+}
 
 console.error(`\nRebuild with: ${REBUILD_COMMAND}`);
 process.exit(1);

@@ -1,9 +1,9 @@
-// The value-brand contract: `Asset.type<Config>('json', ...)`
+// The value-brand contract: `{ type: 'json', source, parse }`
 // must classify as `AssetRef<Config>` inside a catalog (not `Config`), and the
 // resolved map from `load(catalog)` unwraps it back to `Config`. Compiled by
 // `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
 
-import { Asset, type AssetRef, Assets, type Loader, type LoadingQueue, type Texture } from '@codexo/exojs';
+import { type AssetRef, Assets, type Loader, type LoadingQueue, type Texture } from '@codexo/exojs';
 
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-leaf';
 
@@ -15,8 +15,8 @@ interface Config {
 }
 
 const catalog = Assets.from({
-  ship: Asset.type('texture', 'ship.png'),
-  config: Asset.type<Config>('json', 'config.json'),
+  ship: { type: 'texture', source: 'ship.png' },
+  config: { type: 'json', source: 'config.json', parse: (raw: unknown) => raw as Config },
 });
 
 // resource-kind descriptor → the resource leaf
@@ -30,9 +30,9 @@ type _ConfigValue = Expect<Equal<typeof catalog.config.value, Config>>;
 
 // resolved map from load(catalog) unwraps the ref to its value
 declare const loader: Loader;
-const loadIt = () => {
-  return loader.load(catalog);
-};
+
+const loadIt = () => loader.load(catalog);
+
 type LoadedMap = Awaited<ReturnType<typeof loadIt>>;
 type _ConfigResolved = Expect<Equal<LoadedMap['config'], Config>>;
 type _ShipResolved = Expect<Equal<LoadedMap['ship'], Texture>>;
@@ -40,14 +40,12 @@ type _ShipResolved = Expect<Equal<LoadedMap['ship'], Texture>>;
 // direct get(asset) honors the same brand - value → AssetRef<T>, resource → T
 // (regression guard: the brand-blind `T extends object` overload typed object
 // value kinds as the resource while runtime returned an AssetRef). Both come
-// back as MATERIALIZED leaves: `get(Asset.type(...))` mints them via `createLeaf`,
+// back as MATERIALIZED leaves: `get({ type, source })` mints them via `createLeaf`,
 // so the `_assetMeta` stamp - and with it single-leaf re-loadability - survives.
-const getConfig = () => {
-  return loader.get(Asset.type<Config>('json', 'config.json'));
-};
-const getShip = () => {
-  return loader.get(Asset.type('texture', 'ship.png'));
-};
+const getConfig = () => loader.get({ type: 'json', source: 'config.json', parse: (raw: unknown) => raw as Config });
+
+const getShip = () => loader.get({ type: 'texture', source: 'ship.png' });
+
 type _GetConfigIsRef = Expect<Equal<ReturnType<typeof getConfig>, CatalogValueLeaf<Config>>>;
 type _GetShipIsTexture = Expect<Equal<ReturnType<typeof getShip>, CatalogResourceLeaf<Texture>>>;
 
@@ -56,15 +54,23 @@ const configRef: AssetRef<Config> = getConfig();
 const shipTexture: Texture = getShip();
 
 // ...and the leaf goes straight back into a single-leaf `load()`.
-const loadGotConfig = () => {
-  return loader.load(getConfig());
-};
-const loadGotShip = () => {
-  return loader.load(getShip());
-};
+const loadGotConfig = () => loader.load(getConfig());
+
+const loadGotShip = () => loader.load(getShip());
+
 type _GotConfigLoads = Expect<Equal<ReturnType<typeof loadGotConfig>, LoadingQueue<Config>>>;
 type _GotShipLoads = Expect<Equal<ReturnType<typeof loadGotShip>, LoadingQueue<Texture>>>;
 
 void [configRef, shipTexture];
 
-export type { _ConfigIsRef, _ConfigResolved, _ConfigValue, _GetConfigIsRef, _GetShipIsTexture, _GotConfigLoads, _GotShipLoads, _ShipIsTexture, _ShipResolved };
+export type {
+  _ConfigIsRef,
+  _ConfigResolved,
+  _ConfigValue,
+  _GetConfigIsRef,
+  _GetShipIsTexture,
+  _GotConfigLoads,
+  _GotShipLoads,
+  _ShipIsTexture,
+  _ShipResolved,
+};

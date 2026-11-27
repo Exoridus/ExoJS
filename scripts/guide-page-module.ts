@@ -79,7 +79,9 @@ const bindingNames = (name: ts.BindingName, into: Set<string>): void => {
   }
 
   for (const element of name.elements) {
-    if (ts.isBindingElement(element)) bindingNames(element.name, into);
+    if (ts.isBindingElement(element)) {
+      bindingNames(element.name, into);
+    }
   }
 };
 
@@ -88,7 +90,9 @@ const declaredNames = (statement: ts.Statement): Set<string> => {
   const names = new Set<string>();
 
   if (ts.isVariableStatement(statement)) {
-    for (const declaration of statement.declarationList.declarations) bindingNames(declaration.name, names);
+    for (const declaration of statement.declarationList.declarations) {
+      bindingNames(declaration.name, names);
+    }
   } else if (
     (ts.isFunctionDeclaration(statement) ||
       ts.isClassDeclaration(statement) ||
@@ -104,7 +108,9 @@ const declaredNames = (statement: ts.Statement): Set<string> => {
 };
 
 const collectImport = (imports: Map<string, ModuleImport>, declaration: ts.ImportDeclaration): void => {
-  if (!ts.isStringLiteral(declaration.moduleSpecifier)) return;
+  if (!ts.isStringLiteral(declaration.moduleSpecifier)) {
+    return;
+  }
 
   const specifier = declaration.moduleSpecifier.text;
   const entry = imports.get(specifier) ?? { defaults: new Set(), namespaces: new Set(), named: new Map(), sideEffectOnly: false };
@@ -119,11 +125,15 @@ const collectImport = (imports: Map<string, ModuleImport>, declaration: ts.Impor
     return;
   }
 
-  if (clause.name !== undefined) entry.defaults.add(clause.name.text);
+  if (clause.name !== undefined) {
+    entry.defaults.add(clause.name.text);
+  }
 
   const bindings = clause.namedBindings;
 
-  if (bindings === undefined) return;
+  if (bindings === undefined) {
+    return;
+  }
 
   if (ts.isNamespaceImport(bindings)) {
     entry.namespaces.add(bindings.name.text);
@@ -137,7 +147,9 @@ const collectImport = (imports: Map<string, ModuleImport>, declaration: ts.Impor
 
     // First writing wins: a name imported as a value anywhere on the page must
     // stay a value binding, or a later `import type` would erase it.
-    if (!entry.named.has(element.name.text) || typePrefix === '') entry.named.set(element.name.text, `${typePrefix}${written}`);
+    if (!entry.named.has(element.name.text) || typePrefix === '') {
+      entry.named.set(element.name.text, `${typePrefix}${written}`);
+    }
   }
 };
 
@@ -145,7 +157,9 @@ const renderImports = (imports: Map<string, ModuleImport>): string[] => {
   const lines: string[] = [];
 
   for (const [specifier, entry] of imports) {
-    for (const namespace of entry.namespaces) lines.push(`import * as ${namespace} from '${specifier}';`);
+    for (const namespace of entry.namespaces) {
+      lines.push(`import * as ${namespace} from '${specifier}';`);
+    }
 
     const head = [...entry.defaults].join(', ');
     const named = [...entry.named.values()];
@@ -195,7 +209,10 @@ const renameEditsIn = (statement: ts.Statement, file: ts.SourceFile, renames: Re
         const isImplicitProperty =
           parent !== undefined &&
           ((ts.isShorthandPropertyAssignment(parent) && parent.name === node) ||
-            (ts.isBindingElement(parent) && parent.name === node && parent.propertyName === undefined && ts.isObjectBindingPattern(parent.parent)));
+            (ts.isBindingElement(parent) &&
+              parent.name === node &&
+              parent.propertyName === undefined &&
+              ts.isObjectBindingPattern(parent.parent)));
 
         if (isImplicitProperty) {
           edits.push({ start, end, text: `${node.text}: ${replacement}` });
@@ -280,20 +297,26 @@ export const buildPageModule = (blocks: readonly PageBlock[], contextVars: Reado
       if (ts.isExportAssignment(statement) && statement.isExportEquals !== true) {
         defaultExports += 1;
 
-        if (defaultExports > 1) rewrittenDefaults.set(statement, `const pageDefault${defaultExports} = `);
+        if (defaultExports > 1) {
+          rewrittenDefaults.set(statement, `const pageDefault${defaultExports} = `);
+        }
 
         continue;
       }
 
       const names = declaredNames(statement);
 
-      if (names.size === 0) continue;
+      if (names.size === 0) {
+        continue;
+      }
 
       const text = normalize(statement.getText(file));
       const clashing = [...names].filter(name => taken.has(name));
 
       if (clashing.length === 0) {
-        for (const name of names) declarations.set(name, text);
+        for (const name of names) {
+          declarations.set(name, text);
+        }
 
         continue;
       }
@@ -315,7 +338,9 @@ export const buildPageModule = (blocks: readonly PageBlock[], contextVars: Reado
 
         let suffix = 2;
 
-        while (declarations.has(`${name}_${suffix}`)) suffix += 1;
+        while (declarations.has(`${name}_${suffix}`)) {
+          suffix += 1;
+        }
 
         const replacement = `${name}_${suffix}`;
 
@@ -327,7 +352,9 @@ export const buildPageModule = (blocks: readonly PageBlock[], contextVars: Reado
     const parts: string[] = [];
 
     for (const statement of file.statements) {
-      if (dropped.has(statement)) continue;
+      if (dropped.has(statement)) {
+        continue;
+      }
 
       const start = statement.getFullStart();
       const text = file.text.slice(start, statement.getEnd());
@@ -345,7 +372,9 @@ export const buildPageModule = (blocks: readonly PageBlock[], contextVars: Reado
 
     const body = parts.join('\n').trim();
 
-    if (body.length > 0) bodies.push(`// block ${block.index}\n${body}`);
+    if (body.length > 0) {
+      bodies.push(`// block ${block.index}\n${body}`);
+    }
   }
 
   const importLines = renderImports(imports);

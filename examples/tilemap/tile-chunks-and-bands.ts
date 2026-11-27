@@ -1,23 +1,26 @@
 import {
+  ActionMap,
   Application,
-  Asset,
   Color,
   Container,
   FixedResolutionCanvasSizing,
+  GamepadAxis,
   Keyboard,
   PixelSnapMode,
   Rectangle,
   type RenderingContext,
   Scene,
   type Seconds,
-  Sprite,
+  type Sprite,
   Spritesheet,
   type SpritesheetData,
   TextureRegion,
+  VectorAction,
   View,
 } from '@codexo/exojs';
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, type TileMapView, TileSet } from '@codexo/exojs-tilemap';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, type TileMapView, TileSet } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, demoPanel, startExample, toggle } from '@examples/runtime';
 
 // Core @codexo/exojs-tilemap API, with no on-disk map format involved: a
 // procedural TileMap built entirely from code.
@@ -55,15 +58,24 @@ class TileChunksAndBandsScene extends Scene {
   private explorer!: Sprite;
   private worldRoot!: Container;
   private mapView!: TileMapView;
-  private moveX = 0;
-  private moveY = 0;
-  private hud!: ReturnType<typeof mountControls>;
+  private panel!: ReturnType<typeof demoPanel>;
+  private readonly actions = new ActionMap({
+    move: new VectorAction([
+      {
+        up: [Keyboard.W, Keyboard.Up],
+        down: [Keyboard.S, Keyboard.Down],
+        left: [Keyboard.A, Keyboard.Left],
+        right: [Keyboard.D, Keyboard.Right],
+      },
+      { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
+    ]),
+  });
 
   override async load(): Promise<void> {
-    // ── Tileset + two layers, built entirely in code ──────────────────
+    // Tileset + two layers, built entirely in code
     // Await the atlas load: TileSet needs a TextureRegion with real
     // dimensions, so a not-yet-hydrated `loader.get()` handle is not enough.
-    const tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
+    const tilesTexture = await this.loader.load(assets.mapPackTilesheet);
     const tileset = new TileSet({
       name: 'map',
       texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),
@@ -100,12 +112,11 @@ class TileChunksAndBandsScene extends Scene {
 
     for (let ty = 0; ty < ROWS; ty++) {
       for (let tx = 0; tx < COLUMNS; tx++) {
-        // Deterministic scatter: a sand "path" tile threaded through the
-        // grass, and sparse overhead canopy tiles above it.
-        const groundTile = (tx * 3 + ty * 5) % 11 === 0 ? SAND_TILE : GRASS_TILE;
+        const onPath = Math.abs(tx - COLUMNS / 2) <= 1 || Math.abs(ty - ROWS / 2) <= 1;
+        const groundTile = onPath ? SAND_TILE : GRASS_TILE;
         ground.setTileAt(tx, ty, { tileset, localTileId: groundTile, transform: TILE_TRANSFORM_IDENTITY });
 
-        if ((tx * 7 + ty * 3) % 17 === 0) {
+        if ((tx % 6 === 0 && ty % 5 === 0) || (tx === COLUMNS / 2 + 1 && ty === ROWS / 2)) {
           canopy.setTileAt(tx, ty, { tileset, localTileId: TREE_TILE, transform: TILE_TRANSFORM_IDENTITY });
         }
       }
@@ -121,12 +132,12 @@ class TileChunksAndBandsScene extends Scene {
       layers: [ground, canopy],
     });
 
-    // ── TileMapView: group layers into bands, place actors between ────
+    // TileMapView: group layers into bands, place actors between
     this.mapView = map.createView({ bands: { ground: ['ground'], canopy: ['canopy'] } });
 
     const characters = new Spritesheet(
-      this.loader.get(assets.demo.spritesheets.platformerCharacters.image),
-      (await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData,
+      await this.loader.load(assets.platformerCharactersImage),
+      (await this.loader.load(assets.platformerCharactersAtlas)) as SpritesheetData,
     );
 
     this.explorer = characters.getFrameSprite('character_green_front').setAnchor(0.5);
@@ -141,7 +152,7 @@ class TileChunksAndBandsScene extends Scene {
     // tiles visually cover the explorer whenever they overlap.
     this.worldRoot.addChild(this.mapView.band('ground'), actorLayer, this.mapView.band('canopy'));
 
-    // ── Camera: follows the explorer, clamped to the map bounds ───────
+    // Camera: follows the explorer, clamped to the map bounds
     const { width, height } = app;
 
     this.camera = new View(this.explorer.x, this.explorer.y, width, height);
@@ -153,79 +164,54 @@ class TileChunksAndBandsScene extends Scene {
   }
 
   private setupInput(): void {
-    this.inputs.onActive(Keyboard.A, () => (this.moveX = -1));
-    this.inputs.onStop(Keyboard.A, () => {
-      if (this.moveX < 0) {
-        this.moveX = 0;
-      }
-    });
-    this.inputs.onActive(Keyboard.D, () => (this.moveX = 1));
-    this.inputs.onStop(Keyboard.D, () => {
-      if (this.moveX > 0) {
-        this.moveX = 0;
-      }
-    });
-    this.inputs.onActive(Keyboard.W, () => (this.moveY = -1));
-    this.inputs.onStop(Keyboard.W, () => {
-      if (this.moveY < 0) {
-        this.moveY = 0;
-      }
-    });
-    this.inputs.onActive(Keyboard.S, () => (this.moveY = 1));
-    this.inputs.onStop(Keyboard.S, () => {
-      if (this.moveY > 0) {
-        this.moveY = 0;
-      }
-    });
+    this.inputs.attach(this.actions);
   }
 
   private setupHud(): void {
-    const chunkCount = (name: string): number => {
-      const layer = this.mapView.getLayerNodesByName(name)[0];
-      return layer ? layer.children.length : 0;
-    };
+    // Starts on the view's default, `geometry`. Stepping to `none` shows what
+    // it buys: every boundary then samples between two device pixels and the
+    // seams shimmer as the camera moves.
+    const snapModes = { geometry: PixelSnapMode.Geometry, position: PixelSnapMode.Position, none: PixelSnapMode.None } as const;
 
-    this.hud = mountControls({
-      title: 'Tilemap Chunks & Layer Bands',
-      controls: [
-        { keys: 'WASD', action: 'move the explorer' },
-        { keys: 'panel', action: 'toggle canopy band / pixel snapping' },
-      ],
-      status: `${chunkCount('ground')} ground chunks, ${chunkCount('canopy')} canopy chunks loaded`,
-      hint: 'The explorer renders between the ground and canopy TileMapBands — canopy tiles draw over it. Camera culling of off-screen chunks is automatic.',
-    });
-
-    const panel = mountControlPanel({ title: 'Tilemap' });
-    panel.addToggle({
-      label: 'Canopy band',
-      value: true,
-      onChange: visible => {
-        this.mapView.band('canopy').visible = visible;
+    this.panel = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls: {
+        canopy: toggle('Canopy above player', true),
+        snap: choice('Pixel snap', ['geometry', 'position', 'none']),
+        zoom: choice('Camera zoom', ['1', '1.25', '0.75']),
       },
-    });
-    // Starts on the view's default, `geometry`. Cycling down to `none` shows
-    // what it buys: every boundary then samples between two device pixels and
-    // the seams shimmer as the camera moves.
-    panel.addCycle({
-      label: 'Pixel snap',
-      options: ['geometry', 'position', 'none'],
-      index: 0,
-      onChange: index => {
-        const modes = [PixelSnapMode.Geometry, PixelSnapMode.Position, PixelSnapMode.None] as const;
-
-        this.mapView.pixelSnapMode = modes[index] ?? PixelSnapMode.Geometry;
+      onChange: (_key, _value, values) => {
+        this.mapView.band('canopy').visible = values.canopy;
+        this.mapView.pixelSnapMode = snapModes[values.snap];
+        this.camera.setZoom(Number(values.zoom));
       },
     });
   }
 
   override update(delta: Seconds): void {
-    if (this.moveX !== 0 || this.moveY !== 0) {
-      const length = Math.hypot(this.moveX, this.moveY) || 1;
+    const { x: moveX, y: moveY } = this.actions.move.value;
+    const fit = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const height = fit.contentHeight * fit.scale;
 
-      this.explorer.move((this.moveX / length) * MOVE_SPEED * delta, (this.moveY / length) * MOVE_SPEED * delta);
+    if (this.camera.viewport.height !== height / this.app.height) {
+      this.camera
+        .resize(this.app.width, height)
+        .setZoom(Number(this.panel.values.zoom))
+        .setViewport(0, 0, 1, height / this.app.height);
+    }
+
+    if (moveX !== 0 || moveY !== 0) {
+      this.explorer.move(moveX * MOVE_SPEED * delta, moveY * MOVE_SPEED * delta);
       this.explorer.x = Math.min(Math.max(this.explorer.x, 0), MAP_WIDTH);
       this.explorer.y = Math.min(Math.max(this.explorer.y, 0), MAP_HEIGHT);
     }
+  }
+
+  override destroy(): void {
+    this.panel?.dispose();
+    this.worldRoot?.destroy();
+    super.destroy();
   }
 
   override draw(context: RenderingContext): void {
@@ -245,8 +231,6 @@ const app = new Application({
   // The tilemap extension wires the per-backend chunk renderer so
   // TileLayerNode (generated by TileMapView) can draw.
   extensions: [tilemapExtension],
-  // No loader.basePath here: every asset below comes from the shared
-  // `assets` catalog, whose URLs are already fully resolved.
 });
 
-await app.start(TileChunksAndBandsScene);
+await startExample(app, () => app.start(TileChunksAndBandsScene));

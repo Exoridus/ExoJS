@@ -4,7 +4,7 @@
   "symbol": "DistanceJoint",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 10,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Holds the anchor points on two bodies at a target length along their connecting axis. With `hertz === 0` it is rigid; with `hertz > 0` it behaves as a damped spring. Solved as a soft constraint in the sub-step loop, warm- started across frames."
       ],
-      "importLine": "import { DistanceJoint } from '@codexo/exojs-physics'",
+      "importLine": "import { DistanceJoint } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {
@@ -250,7 +250,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Maximum allowed distance (rope/limit mode)."
+          "description": "Maximum allowed distance (the rope length). Limit mode is fixed at construction; see minLength. Defaults to Infinity in limit mode."
         },
         {
           "name": "minLength",
@@ -271,7 +271,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Minimum allowed distance (rope/limit mode)."
+          "description": "Minimum allowed distance. Limit mode is fixed at construction: a joint built without minLength/maxLength stays an equality joint and ignores later writes to this field."
         }
       ],
       "paragraphs": [],

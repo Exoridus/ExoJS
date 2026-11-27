@@ -11,12 +11,12 @@ class StrokeAndShadowScene extends Scene {
       fillColor: new Color(230, 240, 255),
       fontSize: 120,
       outlineColor: new Color(70, 130, 220),
-      outlineWidth: 0.3,
+      outlineWidth: 2.5,
       shadowColor: Color.black,
       shadowAlpha: 0.6,
       shadowOffsetX: 6,
       shadowOffsetY: 6,
-      shadowBlur: 0.4,
+      shadowBlur: 0.3,
     });
     this.title.setAnchor(0.5, 0.5);
     this.title.setPosition(width / 2, height / 2);
@@ -36,9 +36,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(24, 28, 42),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(StrokeAndShadowScene);

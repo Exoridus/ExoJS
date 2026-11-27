@@ -36,7 +36,8 @@ export interface PhysicsDebugDrawOptions {
 const segments = 24;
 
 /** `Color` channels are bytes, so a colour written as unit-range fractions has to be scaled to them. */
-const unitColor = (r: number, g: number, b: number, a: number): Color => new Color(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), a);
+const unitColor = (r: number, g: number, b: number, a: number): Color =>
+  new Color(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), a);
 
 const colorStatic = unitColor(0.3, 0.9, 0.4, 0.9);
 const colorKinematic = unitColor(0.4, 0.7, 1, 0.9);
@@ -54,7 +55,11 @@ const colorJoint = unitColor(0.9, 0.5, 1, 0.8);
  * `DebugLayer` that visualises a {@link PhysicsWorld} - shapes, AABBs, contacts,
  * normals, centres and broad-phase links. It reads the world's public state and
  * recomputes contacts/broad-phase locally only while visible, so it never
- * perturbs the simulation and works over any backend. Lives in the `./debug`
+ * perturbs the simulation and works over any backend. Contact points, normals
+ * and broad-phase links are geometric estimates: collision filters, body types,
+ * joints and contact modifiers are not applied. Sensors do not produce contact
+ * points or normals. The overlay can therefore differ from the pairs solved by
+ * the world. Lives in the `./debug`
  * subpath so it tree-shakes out of production bundles.
  */
 export class PhysicsDebugDraw extends DebugLayer {

@@ -1,6 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { ImageFactory } from '#assets/factories/ImageFactory';
+import { ObjectUrlPool } from '#assets/factories/ObjectUrlPool';
 
 import { factoryContext } from './factory-context';
 
@@ -25,9 +26,29 @@ class CapturingImage extends RealImage {
 
 const lastImage = (): HTMLImageElement => {
   const image = capturedImages.at(-1);
-  if (!image) throw new Error('No Image instance was created by the factory under test.');
+
+  if (!image) {
+    throw new Error('No Image instance was created by the factory under test.');
+  }
+
   return image;
 };
+
+describe('ObjectUrlPool', () => {
+  test('revokes outstanding URLs once and leaves individually revoked URLs alone', () => {
+    const revoke = vi.spyOn(URL, 'revokeObjectURL');
+    const pool = new ObjectUrlPool();
+    const first = pool.create(new Blob(['first']));
+    const second = pool.create(new Blob(['second']));
+
+    pool.revoke(first);
+    pool.revokeAll();
+    pool.revokeAll();
+    pool.revoke(second);
+    expect(revoke.mock.calls.map(([url]) => url)).toEqual([first, second]);
+    revoke.mockRestore();
+  });
+});
 
 describe('ImageFactory', () => {
   let createObjectUrlSpy: MockInstance;
@@ -104,6 +125,7 @@ describe('ImageFactory', () => {
         'createImageBitmap',
         vi.fn(async (blob: Blob) => {
           seenBlob = blob;
+
           return { width: 1, height: 1 };
         }),
       );
@@ -120,6 +142,7 @@ describe('ImageFactory', () => {
         'createImageBitmap',
         vi.fn(async (blob: Blob) => {
           seenBlob = blob;
+
           return { width: 1, height: 1 };
         }),
       );

@@ -1,6 +1,6 @@
 {
   "title": "BrowserPlatform",
-  "description": "The PlatformAdapter backed by the browser: a canvas element for the drawing surface, `window` for keyboard and blur, `document` for visibility, `navigator` for gamepads, and `navigator.onLine` plus the `online`/`offline` window events for the network hint. Used automatically by Application when no adapter was injected. Every capability degrades rather than throws when the host does not provide it - pointer capture is rejected by jsdom and by browsers asked to release a pointer they never captured, `navigator.getGamepads` is missing on locked-down hosts, and `document` is absent under SSR. None of those are worth failing an application over, so each is caught and reported as \"unavailable\".",
+  "description": "The PlatformAdapter backed by the browser: a canvas element for the drawing surface, the canvas's window for keyboard, blur and pixel ratio, its document for focus, visibility and pointer lock, `navigator` for gamepads, and `navigator.onLine` plus the `online`/`offline` window events for the network hint. Used automatically by Application when no adapter was injected. Document and window are the ones that own the canvas, not the globals of the running script: a canvas inside a same-origin iframe receives its keyboard focus and events in the iframe's document. Every capability degrades rather than throws when the host does not provide it - pointer capture is rejected by jsdom and by browsers asked to release a pointer they never captured, `navigator.getGamepads` is missing on locked-down hosts, and `document` is absent under SSR. None of those are worth failing an application over, so each is caught and reported as \"unavailable\".",
   "symbol": "BrowserPlatform",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The PlatformAdapter backed by the browser: a canvas element for the drawing surface, `window` for keyboard and blur, `document` for visibility, `navigator` for gamepads, and `navigator.onLine` plus the `online`/`offline` window events for the network hint. Used automatically by Application when no adapter was injected.",
+        "The PlatformAdapter backed by the browser: a canvas element for the drawing surface, the canvas's window for keyboard, blur and pixel ratio, its document for focus, visibility and pointer lock, `navigator` for gamepads, and `navigator.onLine` plus the `online`/`offline` window events for the network hint. Used automatically by Application when no adapter was injected.",
+        "Document and window are the ones that own the canvas, not the globals of the running script: a canvas inside a same-origin iframe receives its keyboard focus and events in the iframe's document.",
         "Every capability degrades rather than throws when the host does not provide it - pointer capture is rejected by jsdom and by browsers asked to release a pointer they never captured, `navigator.getGamepads` is missing on locked-down hosts, and `document` is absent under SSR. None of those are worth failing an application over, so each is caught and reported as \"unavailable\"."
       ],
       "importLine": "import { BrowserPlatform } from '@codexo/exojs'",

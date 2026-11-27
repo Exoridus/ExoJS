@@ -1,5 +1,5 @@
 import { DataTexture, Scene, type Seconds, Sprite, TextureFormat } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 
 class SpectrogramScene extends Scene {
   private analyser!: AudioAnalyser;

@@ -1,0 +1,95 @@
+{
+  "title": "LoadingSceneTransitionOptions",
+  "description": "Options for LoadingSceneTransition.",
+  "symbol": "LoadingSceneTransitionOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for LoadingSceneTransition."
+      ],
+      "importLine": "import { LoadingSceneTransitionOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "createOverlay",
+          "signature": "createOverlay?: (context: SceneTransitionContext) => LoadingSceneTransitionOverlay",
+          "signatureTokens": [
+            {
+              "text": "createOverlay",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionContext",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadingSceneTransitionOverlay",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Build the screen overlay once per navigation. The default displays a loading bar on a black screen."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/scene/transitions/LoadingSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/transitions/LoadingSceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/scene/transitions/LoadingSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/transitions/LoadingSceneTransition.ts"
+}

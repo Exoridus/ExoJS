@@ -4,7 +4,7 @@
   "symbol": "DelayEffectOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for DelayEffect."
       ],
-      "importLine": "import { DelayEffectOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { DelayEffectOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {
@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Delay time in seconds. Range 0..5, default 0.3."
         },
         {
           "name": "feedback",
@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Fraction of the delayed signal fed back into the delay input. Range 0..0.95, default 0.4."
         },
         {
           "name": "wet",
@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Dry/wet mix, 0..1. The dry level is automatically 1 - wet. Default 0.5."
         }
       ],
       "paragraphs": [],

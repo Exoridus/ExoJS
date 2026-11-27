@@ -11,8 +11,8 @@ import { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeMockCtx = (overrides: Partial<CanvasRenderingContext2D> = {}): CanvasRenderingContext2D => {
-  return {
+const makeMockCtx = (overrides: Partial<CanvasRenderingContext2D> = {}): CanvasRenderingContext2D =>
+  ({
     font: '',
     textBaseline: 'alphabetic',
     fillStyle: '#ffffff',
@@ -30,8 +30,7 @@ const makeMockCtx = (overrides: Partial<CanvasRenderingContext2D> = {}): CanvasR
     fillRect: vi.fn(),
     clearRect: vi.fn(),
     ...overrides,
-  } as unknown as CanvasRenderingContext2D;
-};
+  }) as unknown as CanvasRenderingContext2D;
 
 const installMockCtx = (ctx: CanvasRenderingContext2D): void => {
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
@@ -58,7 +57,7 @@ describe('GlyphAtlas', () => {
   afterEach(() => {
     Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
       configurable: true,
-      value: () => ({ fillStyle: '', fillRect: () => undefined, drawImage: () => undefined }),
+      value: () => ({ fillStyle: '', fillRect: () => {}, drawImage: () => {} }),
     });
   });
 
@@ -270,6 +269,7 @@ describe('GlyphAtlas', () => {
     const cachingCtx = makeMockCtx({
       measureText: (_text: string) => {
         callCount++;
+
         return { width: 10 } as TextMetrics;
       },
     });
@@ -289,6 +289,7 @@ describe('GlyphAtlas', () => {
     const cachingCtx = makeMockCtx({
       measureText: (_text: string) => {
         callCount++;
+
         return { width: 10 } as TextMetrics;
       },
     });

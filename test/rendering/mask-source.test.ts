@@ -339,6 +339,20 @@ describe('RenderNode.mask — MaskSource union', () => {
       b.destroy();
     });
 
+    test('an ancestor cannot be the mask of its own descendant', () => {
+      const parent = new Container();
+      const child = new TestDrawable();
+
+      parent.addChild(child);
+
+      expect(() => {
+        child.mask = parent;
+      }).toThrow(/ancestor/i);
+      expect(child.mask).toBeNull();
+
+      parent.destroy();
+    });
+
     test('a three-node mask cycle is rejected at runtime', () => {
       const a = new TestDrawable();
       const b = new TestDrawable();

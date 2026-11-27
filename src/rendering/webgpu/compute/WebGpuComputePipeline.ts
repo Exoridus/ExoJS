@@ -60,7 +60,11 @@ export type ComputeBindGroupEntry =
 
 const toLayoutEntry = (b: ComputeBinding): GPUBindGroupLayoutEntry => {
   if (b.kind === 'texture') {
-    return { binding: b.binding, visibility: GPUShaderStage.COMPUTE, texture: { viewDimension: b.viewDimension, sampleType: b.sampleType } };
+    return {
+      binding: b.binding,
+      visibility: GPUShaderStage.COMPUTE,
+      texture: { viewDimension: b.viewDimension, sampleType: b.sampleType },
+    };
   }
 
   if (b.kind === 'sampler') {
@@ -114,13 +118,28 @@ export class WebGpuComputePipeline {
   public readonly bindGroupLayouts: readonly GPUBindGroupLayout[];
   public readonly workgroupSize: number;
 
-  public constructor(device: GPUDevice, pipeline: GPUComputePipeline, bindGroupLayouts: readonly GPUBindGroupLayout[], workgroupSize: number) {
+  public constructor(
+    device: GPUDevice,
+    pipeline: GPUComputePipeline,
+    bindGroupLayouts: readonly GPUBindGroupLayout[],
+    workgroupSize: number,
+  ) {
     this.device = device;
     this.pipeline = pipeline;
     this.bindGroupLayouts = bindGroupLayouts;
     this.workgroupSize = workgroupSize;
   }
 
+  /**
+   * Compile `opts.wgsl` and build the pipeline plus one bind-group layout per
+   * entry in `opts.bindingGroups`.
+   *
+   * `workgroupSize` is used for the X axis of {@link dispatch}, which computes
+   * `ceil(itemCount / workgroupSize)` workgroups in X only. It must match a
+   * shader whose `@workgroup_size` is `(n, 1, 1)`; nothing reads or validates
+   * the declaration, so a mismatch silently dispatches the wrong count, and a
+   * multi-dimensional workgroup needs an explicit `dispatchWorkgroups` call.
+   */
   public static create(
     device: GPUDevice,
     opts: {

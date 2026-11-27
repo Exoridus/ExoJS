@@ -1,6 +1,6 @@
 {
   "title": "HTMLText",
-  "description": "Text node that renders arbitrary HTML+CSS into a canvas texture via an SVG `<foreignObject>` pass and displays the result as a textured quad. Full CSS typography and rich markup are supported. External resources (`<img src>`, `background-image: url(...)`) are **blocked** by browsers when loading SVG blob-URIs - inline those as base-64 data URIs. Custom web fonts must be registered with addFont before use; pass the raw font bytes (from BinaryAsset or a plain `fetch`): ```ts const bytes = await loader.load(Asset.type('binary', 'roboto.woff2')); htmlText.addFont('Roboto', bytes, 'woff2'); ``` The HTML must be valid XHTML (tags closed, `&amp;` for `&`, etc.) because it is embedded inside an XML document.",
+  "description": "Text node that renders arbitrary HTML+CSS into a canvas texture via an SVG `<foreignObject>` pass and displays the result as a textured quad. Full CSS typography and rich markup are supported. External resources (`<img src>`, `background-image: url(...)`) are **blocked** by browsers when loading SVG blob-URIs - inline those as base-64 data URIs. Custom web fonts must be registered with addFont before use; pass the raw font bytes (from BinaryAsset or a plain `fetch`): ```ts const bytes = await loader.load({ type: 'binary', source: 'roboto.woff2' }); htmlText.addFont('Roboto', bytes, 'woff2'); ``` The HTML must be valid XHTML (tags closed, `&amp;` for `&`, etc.) because it is embedded inside an XML document.",
   "symbol": "HTMLText",
   "kind": "class",
   "subsystem": "rendering",
@@ -22,7 +22,7 @@
         "Text node that renders arbitrary HTML+CSS into a canvas texture via an SVG `<foreignObject>` pass and displays the result as a textured quad.",
         "Full CSS typography and rich markup are supported. External resources (`<img src>`, `background-image: url(...)`) are **blocked** by browsers when loading SVG blob-URIs - inline those as base-64 data URIs.",
         "Custom web fonts must be registered with addFont before use; pass the raw font bytes (from BinaryAsset or a plain `fetch`):",
-        "```ts const bytes = await loader.load(Asset.type('binary', 'roboto.woff2')); htmlText.addFont('Roboto', bytes, 'woff2'); ```",
+        "```ts const bytes = await loader.load({ type: 'binary', source: 'roboto.woff2' }); htmlText.addFont('Roboto', bytes, 'woff2'); ```",
         "The HTML must be valid XHTML (tags closed, `&amp;` for `&`, etc.) because it is embedded inside an XML document."
       ],
       "importLine": "import { HTMLText } from '@codexo/exojs'",
@@ -554,7 +554,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Register a font by its raw bytes for use inside this node's SVG render. The family name must match the font-family value used in your CSS. Registering the same family twice replaces the previous entry. ts const bytes = await loader.load(Asset.type('binary', 'roboto.woff2')); label.addFont('Roboto', bytes, 'woff2'); "
+          "description": "Register a font by its raw bytes for use inside this node's SVG render. The family name must match the font-family value used in your CSS. Registering the same family twice replaces the previous entry. ts const bytes = await loader.load({ type: 'binary', source: 'roboto.woff2' }); label.addFont('Roboto', bytes, 'woff2'); "
         },
         {
           "name": "blur",
@@ -739,7 +739,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - either shape is a Polygon that encloses no area (empty, fewer than three distinct vertices, or collinear vertices) and the other is a filled shape (Rectangle, Circle, Ellipse or Polygon); such a polygon overlaps no filled shape, and intersectsWith returns false for the same pairs. Line and Point queries are unchanged: they test the polygon's outline and vertices as before, **or** - the specific shape-pair combination does not support response generation (for example Line against any shape, or Ellipse against a Point). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
         },
         {
           "name": "contains",
@@ -836,7 +836,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change. Idempotent: a second call is a no-op."
+          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change. Idempotent: a second call is a no-op."
         },
         {
           "name": "focus",
@@ -3028,7 +3028,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer (WebGL2). Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
+          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer on both backends. Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
         },
         {
           "name": "clipShape",
@@ -3235,7 +3235,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Filters are borrowed; destroying this node detaches them without destroying them."
         },
         {
           "name": "height",

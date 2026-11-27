@@ -4,7 +4,7 @@
   "symbol": "ParticleSpawnFields",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 8,
   "counts": {
@@ -22,7 +22,7 @@
         "Per-property spawn configuration shared by the built-in spawners.",
         "Every entry is a Distribution sampled once per emitted particle. Omitting an entry leaves that property at its spawn default: origin, no velocity, unit scale, no rotation, opaque white, frame 0, one second of life."
       ],
-      "importLine": "import { ParticleSpawnFields } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleSpawnFields } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

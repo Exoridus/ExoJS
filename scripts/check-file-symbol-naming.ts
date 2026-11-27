@@ -30,7 +30,18 @@ import { readFileSync, statSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { basename, join, relative, resolve } from 'node:path';
 
-import ts from 'typescript';
+import {
+  isClassDeclaration,
+  isEnumDeclaration,
+  isFunctionDeclaration,
+  isIdentifier,
+  isInterfaceDeclaration,
+  isModuleDeclaration,
+  isTypeAliasDeclaration,
+  isVariableStatement,
+  SyntaxKind,
+  withNativeSourceFile,
+} from '@codexo/exojs-config/typescript/ast';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 
@@ -51,7 +62,7 @@ const ROLE_FILENAMES = new Set(['index', 'types', 'utils', 'public']);
  * Files whose name cannot follow from their exports, with the reason each one
  * is exempt. An entry is a claim that the mismatch is the correct outcome.
  */
-const ALLOWED: readonly { readonly file: string; readonly reason: string }[] = [
+const ALLOWED: ReadonlyArray<{ readonly file: string; readonly reason: string }> = [
   {
     file: 'src/assets/Asset.ts',
     reason: 'the public `Asset` value and interface are declaration-merged here; the class behind them is `AssetImpl` on purpose',
@@ -83,43 +94,45 @@ interface Surface {
   readonly otherValues: readonly string[];
 }
 
-const readSurface = (absolutePath: string): Surface => {
-  const source = ts.createSourceFile(absolutePath, readFileSync(absolutePath, 'utf8'), ts.ScriptTarget.Latest, true);
+const readSurface = (absolutePath: string): Surface =>
+  withNativeSourceFile(absolutePath, readFileSync(absolutePath, 'utf8'), source => {
+    const exported = new Set<string>();
+    const classes: string[] = [];
+    const otherValues: string[] = [];
 
-  const exported = new Set<string>();
-  const classes: string[] = [];
-  const otherValues: string[] = [];
+    const isExported = (statement: (typeof source.statements)[number]): boolean => {
+      const annotated = statement as typeof statement & { modifiers?: ReadonlyArray<{ kind: number }> };
 
-  const isExported = (node: ts.Node): boolean =>
-    ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword);
+      return annotated.modifiers?.some(modifier => modifier.kind === SyntaxKind.ExportKeyword) ?? false;
+    };
 
-  for (const statement of source.statements) {
-    if (ts.isClassDeclaration(statement) && statement.name && isExported(statement)) {
-      exported.add(statement.name.text);
-      classes.push(statement.name.text);
-    } else if ((ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) && isExported(statement)) {
-      exported.add(statement.name.text);
-    } else if (ts.isEnumDeclaration(statement) && isExported(statement)) {
-      exported.add(statement.name.text);
-      otherValues.push(statement.name.text);
-    } else if (ts.isFunctionDeclaration(statement) && statement.name && isExported(statement)) {
-      exported.add(statement.name.text);
-      otherValues.push(statement.name.text);
-    } else if (ts.isModuleDeclaration(statement) && isExported(statement) && ts.isIdentifier(statement.name)) {
-      exported.add(statement.name.text);
-      otherValues.push(statement.name.text);
-    } else if (ts.isVariableStatement(statement) && isExported(statement)) {
-      for (const declaration of statement.declarationList.declarations) {
-        if (ts.isIdentifier(declaration.name)) {
-          exported.add(declaration.name.text);
-          otherValues.push(declaration.name.text);
+    for (const statement of source.statements) {
+      if (isClassDeclaration(statement) && statement.name && isExported(statement)) {
+        exported.add(statement.name.text);
+        classes.push(statement.name.text);
+      } else if ((isInterfaceDeclaration(statement) || isTypeAliasDeclaration(statement)) && isExported(statement)) {
+        exported.add(statement.name.text);
+      } else if (isEnumDeclaration(statement) && isExported(statement)) {
+        exported.add(statement.name.text);
+        otherValues.push(statement.name.text);
+      } else if (isFunctionDeclaration(statement) && statement.name && isExported(statement)) {
+        exported.add(statement.name.text);
+        otherValues.push(statement.name.text);
+      } else if (isModuleDeclaration(statement) && isExported(statement) && isIdentifier(statement.name)) {
+        exported.add(statement.name.text);
+        otherValues.push(statement.name.text);
+      } else if (isVariableStatement(statement) && isExported(statement)) {
+        for (const declaration of statement.declarationList.declarations) {
+          if (isIdentifier(declaration.name)) {
+            exported.add(declaration.name.text);
+            otherValues.push(declaration.name.text);
+          }
         }
       }
     }
-  }
 
-  return { classes, exported, otherValues };
-};
+    return { classes, exported, otherValues };
+  });
 
 interface Violation {
   readonly file: string;
@@ -127,16 +140,22 @@ interface Violation {
 }
 
 const checkFile = (file: string): Violation[] => {
-  if (isAllowed(file)) return [];
+  if (isAllowed(file)) {
+    return [];
+  }
 
   const stem = basename(file, '.ts');
 
-  if (ROLE_FILENAMES.has(stem) || stem.endsWith('.d')) return [];
+  if (ROLE_FILENAMES.has(stem) || stem.endsWith('.d')) {
+    return [];
+  }
 
   const surface = readSurface(join(REPO_ROOT, file));
 
   if (isPascalCase(stem)) {
-    if (surface.exported.has(stem)) return [];
+    if (surface.exported.has(stem)) {
+      return [];
+    }
 
     const nearest = surface.classes[0] ?? surface.otherValues[0];
 
@@ -163,13 +182,17 @@ const checkFile = (file: string): Violation[] => {
 const collectFiles = async (root: string): Promise<string[]> => {
   const absolute = join(REPO_ROOT, root);
 
-  if (statSync(absolute, { throwIfNoEntry: false })?.isFile()) return [relative(REPO_ROOT, absolute).replaceAll('\\', '/')];
+  if (statSync(absolute, { throwIfNoEntry: false })?.isFile()) {
+    return [relative(REPO_ROOT, absolute).replaceAll('\\', '/')];
+  }
 
   // The tree is live: a suite running in parallel can remove a directory
   // between this walk reaching it and reading it. Nothing to check is the
   // correct answer there, not a failed gate.
   const entries = await readdir(absolute, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => {
-    if (error.code === 'ENOENT') return [];
+    if (error.code === 'ENOENT') {
+      return [];
+    }
 
     throw error;
   });
@@ -196,7 +219,7 @@ const main = async (): Promise<void> => {
   const violations = files.flatMap(checkFile);
 
   if (violations.length > 0) {
-    console.error(`\x1b[31m${violations.length} file(s) named against their exports:\x1b[0m`);
+    console.error(`\x1B[31m${violations.length} file(s) named against their exports:\x1B[0m`);
 
     for (const violation of violations) {
       console.error(`  ${violation.file}  ${violation.message}`);
@@ -206,7 +229,7 @@ const main = async (): Promise<void> => {
     process.exit(1);
   }
 
-  console.log(`\x1b[32m${files.length} file(s) checked, every name matches its exports.\x1b[0m`);
+  console.log(`\x1B[32m${files.length} file(s) checked, every name matches its exports.\x1B[0m`);
 };
 
 await main();

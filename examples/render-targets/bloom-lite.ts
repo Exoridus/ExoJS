@@ -13,6 +13,7 @@ import {
   type Seconds,
   Sprite,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class BloomLiteScene extends Scene {
   private baseRt!: RenderTexture;
@@ -32,7 +33,7 @@ class BloomLiteScene extends Scene {
     this.baseRt = new RenderTexture(width, height);
     this.glowRt = new RenderTexture(width, height);
     this.blurredRt = new RenderTexture(width, height);
-    this.bunny = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(1.9);
+    this.bunny = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setScale(1.9);
     this.baseSprite = new Sprite(this.baseRt);
     this.glowSprite = new Sprite(this.blurredRt).setTint(new Color(255, 255, 255, 0.8)).setBlendMode(BlendModes.Additive);
     this.blur = new BlurFilter({ strength: 5 });
@@ -67,7 +68,10 @@ class BloomLiteScene extends Scene {
     const app = this.app;
     const { width, height } = app;
     this.time += delta;
-    this.bunny.setPosition(width / 2 + Math.cos(this.time * 1.7) * (width * 0.32), height / 2 + Math.sin(this.time * 1.2) * (height * 0.32));
+    this.bunny.setPosition(
+      width / 2 + Math.cos(this.time * 1.7) * (width * 0.32),
+      height / 2 + Math.sin(this.time * 1.2) * (height * 0.32),
+    );
   }
 
   override draw(context: RenderingContext): void {
@@ -94,9 +98,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(BloomLiteScene);

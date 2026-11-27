@@ -36,6 +36,11 @@ const parseVttTimestamp = (value: string): number => {
   return seconds;
 };
 
+// A cue whose timing does not parse is dropped, as a browser's own WebVTT
+// parser does, instead of failing the whole track: `VTTCue` rejects a
+// non-finite time with a TypeError.
+const hasFiniteTiming = (start: number, end: number): boolean => Number.isFinite(start) && Number.isFinite(end);
+
 const validAlignValues = new Set<string>(['start', 'center', 'end', 'left', 'right']);
 const validLineAlignValues = new Set<string>(['start', 'center', 'end']);
 const validPositionAlignValues = new Set<string>(['auto', 'line-left', 'center', 'line-right']);
@@ -73,7 +78,9 @@ const applyCueSettings = (cue: VTTCue, settings: string): void => {
         if (value === 'rl' || value === 'lr' || value === '') {
           cue.vertical = value;
         }
+
         break;
+
       case 'line': {
         if (value === 'auto') {
           cue.line = 'auto';
@@ -83,14 +90,17 @@ const applyCueSettings = (cue: VTTCue, settings: string): void => {
 
           if (!Number.isNaN(num)) {
             cue.line = num;
+            cue.snapToLines = !linePart.endsWith('%');
           }
 
           if (alignPart !== undefined && validLineAlignValues.has(alignPart)) {
             cue.lineAlign = alignPart as VTTCue['lineAlign'];
           }
         }
+
         break;
       }
+
       case 'position': {
         const [posPart = '', alignPart] = value.split(',');
         const num = parseFloat(posPart);
@@ -102,20 +112,25 @@ const applyCueSettings = (cue: VTTCue, settings: string): void => {
         if (alignPart !== undefined && validPositionAlignValues.has(alignPart)) {
           cue.positionAlign = alignPart as VTTCue['positionAlign'];
         }
+
         break;
       }
+
       case 'size': {
         const num = parseFloat(value);
 
         if (!Number.isNaN(num)) {
           cue.size = num;
         }
+
         break;
       }
+
       case 'align':
         if (validAlignValues.has(value)) {
           cue.align = value as VTTCue['align'];
         }
+
         break;
     }
   }
@@ -149,11 +164,17 @@ const parseVtt = (source: string): VTTCue[] => {
 
       while (i < lines.length) {
         const textLine = lines[i];
+
         if (textLine === undefined || textLine.trim() === '') {
           break;
         }
+
         textLines.push(textLine);
         i++;
+      }
+
+      if (!hasFiniteTiming(start, end)) {
+        continue;
       }
 
       const cue = new VTTCue(start, end, textLines.join('\n'));
@@ -193,7 +214,9 @@ const parseSrt = (source: string): VTTCue[] => {
   for (const block of blocks) {
     const lines = block.trim().split('\n');
 
-    if (lines.length < 2) continue;
+    if (lines.length < 2) {
+      continue;
+    }
 
     const timingIndex = /^\d+$/.test((lines[0] ?? '').trim()) ? 1 : 0;
 
@@ -202,14 +225,18 @@ const parseSrt = (source: string): VTTCue[] => {
     // A missing line and a line without the arrow are both 'not a timing
     // line', which is what the optional chain says.
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!timingLine?.includes('-->')) continue;
+    if (!timingLine?.includes('-->')) {
+      continue;
+    }
 
     const arrowIndex = timingLine.indexOf('-->');
     const start = parseSrtTimestamp(timingLine.slice(0, arrowIndex));
     const end = parseSrtTimestamp(timingLine.slice(arrowIndex + 3));
     const text = lines.slice(timingIndex + 1).join('\n');
 
-    cues.push(new VTTCue(start, end, text));
+    if (hasFiniteTiming(start, end)) {
+      cues.push(new VTTCue(start, end, text));
+    }
   }
 
   return cues;
@@ -220,10 +247,12 @@ const parseSrt = (source: string): VTTCue[] => {
  * reads as WebVTT, which is the format a served subtitle track defaults to.
  * @internal
  */
-export const subtitleFormatOf = (locator: string): SubtitleFormat => ((locator.split('?')[0] ?? locator).toLowerCase().endsWith('.srt') ? 'srt' : 'vtt');
+export const subtitleFormatOf = (locator: string): SubtitleFormat =>
+  (locator.split('?')[0] ?? locator).toLowerCase().endsWith('.srt') ? 'srt' : 'vtt';
 
 /**
- * Parses WebVTT or SubRip text into an ordered array of `VTTCue`s.
+ * Parses WebVTT or SubRip text into an ordered array of `VTTCue`s. A cue whose
+ * timestamps do not parse is skipped; the cues around it are kept.
  *
  * VTT cue settings (`align`, `line`, `position`, `size`, `vertical`) are
  * applied; SRT cues keep their default positional properties, which the format

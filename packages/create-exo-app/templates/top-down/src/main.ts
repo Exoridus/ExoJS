@@ -22,8 +22,9 @@ const app = new Application({
   clearColor: new Color(19, 26, 23),
 });
 
-// Two scenes, one level. `ProceduralMapScene` builds the map in code and
-// `TiledMapScene` loads it from `town-square.tmj`; both share everything else
-// through `TopDownScene`. Start whichever suits the project and delete the
-// other - or switch at runtime with `app.scenes.change(TiledMapScene)`.
-await app.start(ProceduralMapScene);
+// Two scenes, one level. `TiledMapScene` loads it from `town-square.tmj`, the
+// map a designer edits; `ProceduralMapScene` builds the same map in code. Both
+// derive collision and navigation from the map they load, through
+// `TopDownScene`. Start whichever suits the project and delete the other - or
+// switch at runtime with `app.scenes.change(ProceduralMapScene)`.
+await app.start(TiledMapScene);

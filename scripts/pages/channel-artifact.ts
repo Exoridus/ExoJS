@@ -85,7 +85,10 @@ const CHANNEL_LIMITS = { maxUnpackedBytes: SITE_SIZE_REFUSE_BYTES };
  * into `outDir` after inspecting every entry, and checks the unpacked tree.
  * Throws on any problem.
  */
-export const openChannelArchive = (zip: Buffer, options: ExpectedChannel & { digest: string; outDir: string }): { manifest: SiteBuildManifest } => {
+export const openChannelArchive = (
+  zip: Buffer,
+  options: ExpectedChannel & { digest: string; outDir: string },
+): { manifest: SiteBuildManifest } => {
   const digestProblem = verifyDigest(zip, options.digest);
 
   if (digestProblem !== null) {

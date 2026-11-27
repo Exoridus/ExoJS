@@ -1,4 +1,4 @@
-import { Asset, Texture } from '@codexo/exojs';
+import { Texture } from '@codexo/exojs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TiledMap } from '../src/TiledMap';
@@ -49,9 +49,9 @@ describe('loadTiledMap — embedded tileset with atlas image', () => {
     'with-tileset-image.tmj': loadFixture('with-tileset-image.tmj'),
   });
 
-  it('calls loader.load(Asset.type(texture, imageUrl)) for the atlas image', async () => {
+  it('calls loader.load({ type: texture, source: imageUrl }) for the atlas image', async () => {
     await loadMap('with-tileset-image.tmj');
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'tiles.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'tiles.png' });
   });
 
   it('stores the loaded texture on the tileset', async () => {
@@ -74,13 +74,13 @@ describe('loadTiledMap — external .tsj tileset', () => {
 
   it('fetches the .tsj file', async () => {
     await loadMap('external-tileset.tmj');
-    expect(load).toHaveBeenCalledWith(Asset.type('json', 'external-tileset.tsj'));
+    expect(load).toHaveBeenCalledWith({ type: 'json', source: 'external-tileset.tsj' });
   });
 
   it('loads the tileset image relative to the .tsj location', async () => {
     await loadMap('external-tileset.tmj');
     // resolveTiledUrl('external-tileset.png', 'external-tileset.tsj') → 'external-tileset.png'
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'external-tileset.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'external-tileset.png' });
   });
 
   it('stores the tsj source URL on the tileset', async () => {
@@ -106,8 +106,8 @@ describe('loadTiledMap — collection-of-images tileset', () => {
 
   it('calls loader.load for each per-tile image', async () => {
     await loadMap('collection-tileset.tmj');
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'tile0.png'));
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'tile1.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'tile0.png' });
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'tile1.png' });
   });
 
   it('does NOT call loader.load for the atlas image — exactly 2 per-tile calls', async () => {
@@ -159,13 +159,67 @@ describe('loadTiledMap — image layer nested inside a group layer', () => {
 
   it('loads the texture for an image layer nested inside a group layer', async () => {
     await loadMap('nested-image.tmj');
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'bg.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'bg.png' });
   });
 
   it('attaches the preloaded texture to the nested image layer via toTileMap()', async () => {
     const map = await loadMap('nested-image.tmj');
     const runtime = map.toTileMap();
     expect(runtime.imageLayers[0]!.texture).toBeInstanceOf(Texture);
+  });
+});
+
+describe('loadTiledMap — image requests', () => {
+  it('issues every per-tile image and image-layer request before the first one settles', async () => {
+    const { loadMap, load, loaderLoad } = makeContext({
+      'many.tmj': {
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        renderorder: 'right-down',
+        width: 1,
+        height: 1,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
+        layers: [
+          { id: 1, name: 'A', type: 'imagelayer', visible: true, x: 0, y: 0, opacity: 1, image: 'a.png' },
+          { id: 2, name: 'B', type: 'imagelayer', visible: true, x: 0, y: 0, opacity: 1, image: 'b.png' },
+        ],
+        tilesets: [
+          {
+            firstgid: 1,
+            name: 'collection',
+            tilewidth: 16,
+            tileheight: 16,
+            tilecount: 3,
+            columns: 0,
+            tiles: [
+              { id: 0, image: 't0.png', imagewidth: 16, imageheight: 16 },
+              { id: 1, image: 't1.png', imagewidth: 16, imageheight: 16 },
+              { id: 2, image: 't2.png', imagewidth: 16, imageheight: 16 },
+            ],
+          },
+        ],
+      },
+    });
+    let inFlight = 0;
+    let peak = 0;
+    const base = load.getMockImplementation()!;
+
+    load.mockImplementation(async (asset: unknown) => {
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      await new Promise(resolve => setTimeout(resolve, 5));
+      inFlight--;
+
+      return base(asset);
+    });
+
+    await loadMap('many.tmj');
+
+    expect(loaderLoad).toHaveBeenCalledTimes(5);
+    expect(peak).toBeGreaterThanOrEqual(3);
   });
 });
 

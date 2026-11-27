@@ -1,5 +1,7 @@
 import { Color } from '#core/Color';
+import { Component } from '#core/Component';
 import { logger } from '#core/Logger';
+import { detachedNodeDirtyIndex, DirtyChannel, NodeDirtyIndex } from '#core/nodeDirtyIndex';
 import type { Stage } from '#core/Stage';
 import type { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
@@ -18,7 +20,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RetainedContainer } from '#rendering/RetainedContainer';
-import type { View } from '#rendering/View';
+import { View } from '#rendering/View';
 
 class LeafDrawable extends Drawable {
   public constructor(public readonly id: string) {
@@ -27,7 +29,8 @@ class LeafDrawable extends Drawable {
   }
 }
 
-const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
+const fragmentOf = (group: RetainedContainer): RetainedGroupFragment =>
+  (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
 
 /**
  * The moves this group owns and has not accounted for yet - what the dirty
@@ -54,6 +57,107 @@ const armRecording = (group: RetainedContainer, backend: RenderBackend): void =>
 };
 
 describe('RetainedContainer: transform-row patch seam', () => {
+  test.each(['normal', 'throwing', 'reentrant'])('destroying an attached group preserves the other consumer (%s child)', teardown => {
+    const dirtyIndex = new NodeDirtyIndex();
+    const root = new Container();
+    const discarded = new RetainedContainer();
+    const surviving = new RetainedContainer();
+    const child = new LeafDrawable('surviving');
+    const detachedRelease = vi.spyOn(detachedNodeDirtyIndex, 'releaseConsumer');
+    const detachedRetain = vi.spyOn(detachedNodeDirtyIndex, 'retainConsumer');
+
+    surviving.addChild(child);
+    root.addChild(discarded, surviving);
+    root._setStage({
+      dirtyIndex,
+      interaction: {
+        _notifyNodeAdded() {},
+        _notifyNodeRemoved() {},
+        _notifyBoundsInvalidated() {},
+        _notifyInteractiveChanged() {},
+        _notifyTransformGroupMoved() {},
+      },
+      focus: { _notifyNodeRemoved() {} },
+    } as unknown as Stage);
+
+    if (teardown !== 'normal') {
+      class Teardown extends Component {
+        protected override onDestroy(): void {
+          if (teardown === 'reentrant') {
+            discarded.destroy();
+          } else {
+            throw new Error('child teardown failed');
+          }
+        }
+      }
+
+      const childWithTeardown = new LeafDrawable('teardown');
+
+      childWithTeardown.addComponent(new Teardown());
+      discarded.addChild(childWithTeardown);
+    }
+
+    detachedRelease.mockClear();
+    detachedRetain.mockClear();
+
+    try {
+      if (teardown === 'throwing') {
+        expect(() => discarded.destroy()).toThrow('child teardown failed');
+      } else {
+        discarded.destroy();
+      }
+
+      discarded.destroy();
+
+      expect(dirtyIndex.armed).toBe(true);
+      expect(detachedRelease.mock.calls.length).toBe(detachedRetain.mock.calls.length);
+
+      fragmentOf(surviving).markTransformsSeen();
+      child.setPosition(7, 7);
+
+      expect(unseenOwnedMoves(surviving)).toEqual([child]);
+    } finally {
+      root.destroy();
+      detachedRelease.mockRestore();
+      detachedRetain.mockRestore();
+      dirtyIndex.reset();
+    }
+
+    expect(dirtyIndex.armed).toBe(false);
+  });
+
+  test('an expired transform cursor drops the baked recording before replay', () => {
+    const backend = createTestBackend();
+    const group = new RetainedContainer();
+    const child = new LeafDrawable('a');
+    const other = new LeafDrawable('other');
+
+    group.addChild(child);
+    collectDraws(group, backend);
+    armRecording(group, backend);
+
+    const fragment = fragmentOf(group);
+
+    fragment.markTransformsSeen();
+
+    for (let frame = 0; frame < 10; frame++) {
+      fragment.dirtyIndex.mark(other, DirtyChannel.Transform);
+      fragment.dirtyIndex.advance();
+    }
+
+    expect(fragment.transformMarksProvable).toBe(false);
+
+    child.setPosition(40, 40);
+    collectDraws(group, backend);
+
+    expect(fragment.instructions?.hasRecording).toBe(false);
+    expect(fragment.transformMarksProvable).toBe(true);
+
+    group.destroy();
+    other.destroy();
+    backend.destroy();
+  });
+
   test('a direct child move is a move this group owns', () => {
     const backend = createTestBackend();
     const group = new RetainedContainer();
@@ -235,6 +339,7 @@ const createTestBackend = (): RenderBackend => {
     },
     setView(v: View | null) {
       renderTarget.setView(v);
+
       return this;
     },
     setRenderTarget() {
@@ -326,6 +431,7 @@ const collectDraws = (root: Container, backend: RenderBackend): DrawCommand[] =>
   RenderPlanOptimizer.optimize(plan);
 
   const draws: DrawCommand[] = [];
+
   for (const pass of plan.passes) {
     gatherScopeDraws(pass.root, draws);
   }
@@ -1813,4 +1919,94 @@ describe('RetainedContainer: destroyed-child eviction', () => {
     root.destroy();
     backend.destroy();
   });
+});
+
+test.each([false, true])('view-dependent descendants refresh through retained groups (nested=%s)', nested => {
+  class ViewReader extends LeafDrawable {
+    public centers: number[] = [];
+
+    protected override _collectContent(builder: RenderPlanBuilder): void {
+      this.centers.push(builder.view.center.x);
+      super._collectContent(builder);
+    }
+  }
+
+  const backend = createTestBackend();
+  const group = new RetainedContainer();
+  const leaf = new ViewReader('view');
+  const root = new Container();
+
+  leaf.cullable = false;
+
+  if (nested) {
+    const inner = new RetainedContainer();
+
+    inner.addChild(leaf);
+    group.addChild(inner);
+  } else {
+    group.addChild(leaf);
+  }
+
+  root.addChild(group);
+  collectDraws(root, backend);
+  collectDraws(root, backend);
+  expect(leaf.centers).toHaveLength(1);
+  backend.view.center.x += 5;
+  collectDraws(root, backend);
+  expect(leaf.centers).toHaveLength(2);
+  expect(leaf.centers[1]).toBe(backend.view.center.x);
+  root.destroy();
+  backend.destroy();
+});
+
+test.each(['pan', 'replacement'])('cached drawables keep view dependencies across sibling invalidation (%s)', change => {
+  class ViewReader extends LeafDrawable {
+    public readonly centers: number[] = [];
+
+    protected override _collectContent(builder: RenderPlanBuilder): void {
+      this.centers.push(builder.view.center.x);
+      super._collectContent(builder);
+    }
+  }
+
+  const backend = createTestBackend();
+  const view = new View(400, 300, 800, 600);
+  const root = new Container();
+  const group = new RetainedContainer();
+  const intermediate = new Container();
+  const reader = new ViewReader('reader');
+  const sibling = new LeafDrawable('sibling');
+
+  backend.setView(view);
+  reader.cullable = false;
+  intermediate.addChild(reader);
+  group.addChild(intermediate, sibling);
+  root.addChild(group);
+
+  try {
+    collectDraws(root, backend);
+    collectDraws(root, backend);
+    expect(reader.centers).toEqual([400]);
+
+    sibling.invalidateCache();
+    collectDraws(root, backend);
+    expect(reader.centers).toEqual([400]);
+
+    if (change === 'pan') {
+      view.center.x = 405;
+    } else {
+      const replacement = new View(405, 300, 800, 600);
+
+      expect(replacement.updateId).toBe(view.updateId);
+      backend.setView(replacement);
+    }
+
+    collectDraws(root, backend);
+    expect(reader.centers).toEqual([400, 405]);
+    collectDraws(root, backend);
+    expect(reader.centers).toEqual([400, 405]);
+  } finally {
+    root.destroy();
+    backend.destroy();
+  }
 });

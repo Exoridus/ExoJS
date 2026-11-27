@@ -16,7 +16,7 @@
  * which is what the product path does too.
  */
 
-import { AlphaOccluder, type Lighting, PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
+import { AlphaOccluder, type Lighting, PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs/lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';

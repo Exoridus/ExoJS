@@ -182,9 +182,7 @@ describe('FlangerEffect', () => {
 
       let gainCallCount = 0;
       const gains = [inputGain, outputGain, dryGain, wetGain, feedbackGain, lfoGain];
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gains[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainCallCount++] as unknown as GainNode);
       vi.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
       vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
     });
@@ -360,9 +358,7 @@ describe('FlangerEffect', () => {
       const ctx = getAudioContext();
       let gainCallCount = 0;
       const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gainNodes[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gainNodes[gainCallCount++] as unknown as GainNode);
       // lfoGain is index 5
       const lfoGain = gainNodes[5]!;
 
@@ -443,9 +439,7 @@ describe('FlangerEffect', () => {
       const ctx = getAudioContext();
       let gainCallCount = 0;
       const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gainNodes[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gainNodes[gainCallCount++] as unknown as GainNode);
       // feedbackGain is index 4
       const feedbackGain = gainNodes[4]!;
 
@@ -485,9 +479,7 @@ describe('FlangerEffect', () => {
       const ctx = getAudioContext();
       let gainCallCount = 0;
       const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gainNodes[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gainNodes[gainCallCount++] as unknown as GainNode);
       // dryGain[2], wetGain[3]
       const dryGain = gainNodes[2]!;
       const wetGain = gainNodes[3]!;
@@ -598,9 +590,7 @@ describe('FlangerEffect', () => {
       const lfoOscillator = makeOscillatorNode(ctx);
 
       let gainCallCount = 0;
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gainNodes[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gainNodes[gainCallCount++] as unknown as GainNode);
       vi.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
       vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
 
@@ -610,6 +600,7 @@ describe('FlangerEffect', () => {
       for (const node of gainNodes) {
         expect(node.disconnect).toHaveBeenCalled();
       }
+
       expect(delayNode.disconnect).toHaveBeenCalled();
       expect(lfoOscillator.disconnect).toHaveBeenCalled();
     });

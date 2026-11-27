@@ -26,6 +26,7 @@ export interface DockContainerOptions {
 export class DockContainer extends Widget {
   private readonly _regions = new WeakMap<RenderNode, DockRegion>();
   private _flowing = false;
+  private _childResized = false;
 
   public constructor(options: DockContainerOptions = {}) {
     super();
@@ -59,7 +60,10 @@ export class DockContainer extends Widget {
     this._flowing = true;
 
     try {
-      this._flow();
+      do {
+        this._childResized = false;
+        this._flow();
+      } while (this._childResized as boolean);
     } finally {
       this._flowing = false;
     }
@@ -72,7 +76,13 @@ export class DockContainer extends Widget {
   }
 
   protected override _onChildResized(): void {
-    this.layout();
+    if (this._flowing) {
+      // A child that settles at a size other than the one assigned invalidates
+      // the bands measured after it, so the pass has to run again.
+      this._childResized = true;
+    } else {
+      this.layout();
+    }
   }
 
   protected override _relayout(): void {

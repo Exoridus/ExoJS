@@ -4,7 +4,7 @@
   "symbol": "ObjectQuery",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Filter for ObjectLayer.query. Unspecified fields match everything."
       ],
-      "importLine": "import { ObjectQuery } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ObjectQuery } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

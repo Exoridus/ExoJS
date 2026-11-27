@@ -6,11 +6,11 @@
   "subsystem": "tiled",
   "importPath": "@codexo/exojs-tiled",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 12,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 8,
+    "properties": 12,
     "events": 0
   },
   "sections": [
@@ -64,6 +64,31 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height?: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to the image height."
         },
         {
           "name": "id",
@@ -247,6 +272,81 @@
           "params": [],
           "returnType": null,
           "description": "Tile class (class/type field depending on Tiled version)."
+        },
+        {
+          "name": "width",
+          "signature": "width?: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to the image width."
+        },
+        {
+          "name": "x",
+          "signature": "x?: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Left edge of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to 0."
+        },
+        {
+          "name": "y",
+          "signature": "y?: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Top edge of the tile's sub-rectangle within its collection image (Tiled 1.9+). Defaults to 0."
         }
       ],
       "paragraphs": [],

@@ -112,6 +112,10 @@ export class ObservableVector extends AbstractVector {
     return this.set(this._x - x, this._y - y);
   }
 
+  public override multiply(x: number, y: number = x): this {
+    return this.set(this._x * x, this._y * y);
+  }
+
   public scale(x: number, y: number = x): this {
     return this.set(this._x * x, this._y * y);
   }

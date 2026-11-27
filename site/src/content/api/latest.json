@@ -1,0 +1,203 @@
+{
+  "title": "Latest",
+  "description": "The document type of the newest version in a version register.",
+  "symbol": "Latest",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The document type of the newest version in a version register."
+      ],
+      "importLine": "import { Latest } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "Latest",
+          "signature": "[RegisterProblem<Versions>] extends [never] ? Versions extends readonly [rest, Last] ? Last : never : VersionRegisterError<RegisterProblem<Versions>>",
+          "signatureTokens": [
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RegisterProblem",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Versions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Versions",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "rest",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Last",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Last",
+              "kind": "type"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VersionRegisterError",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RegisterProblem",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Versions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/document/documentVersions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/documentVersions.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/document/documentVersions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/documentVersions.ts"
+}

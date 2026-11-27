@@ -1,5 +1,16 @@
 import { ApplicationState, type Scene as ExoScene, type SceneTransitionSelection } from '@codexo/exojs';
-import { Children, createContext, isValidElement, type ReactElement, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Children,
+  createContext,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { useExoApp } from './useExoApp';
 
@@ -27,6 +38,7 @@ ActiveSceneContext.displayName = 'ExoActiveScene';
  */
 export function useActiveScene(): ExoScene | null;
 export function useActiveScene<T extends ExoScene>(SceneClass: abstract new (...args: never[]) => T): T | null;
+
 export function useActiveScene<T extends ExoScene>(SceneClass?: abstract new (...args: never[]) => T): ExoScene | null {
   const scene = useContext(ActiveSceneContext);
 
@@ -52,9 +64,7 @@ export interface SceneProps {
  * {@link Scenes} reads its props and renders its {@link SceneProps.children} only
  * while the scene is active.
  */
-export function Scene(_props: SceneProps): ReactElement | null {
-  return null;
-}
+export const Scene = (_props: SceneProps): ReactElement | null => null;
 
 /** Props for the {@link Scenes} switch. */
 export interface ScenesProps {
@@ -68,7 +78,9 @@ export interface ScenesProps {
 
 /**
  * Declarative scene switch over the one-active-scene model. Renders a set of
- * {@link Scene} declarations and activates the one whose `name` equals `active`
+ * {@link Scene} declarations - collected from this component's direct children
+ * only, so a fragment or wrapper element hides them - and activates the one
+ * whose `name` equals `active`
  * via `app.start()` (first activation) or `app.scenes.change()` (subsequent
  * switches, with the optional `transition`) - the declaration's `component`
  * constructor must be registered in `ApplicationOptions.scenes`. The active
@@ -101,12 +113,13 @@ export interface ScenesProps {
  * </ExoCanvas>
  * ```
  */
-export function Scenes({ active, transition, children }: ScenesProps): ReactElement {
+export const Scenes = ({ active, transition, children }: ScenesProps): ReactElement => {
   const app = useExoApp();
   const [instance, setInstance] = useState<ExoScene | null>(null);
   // Bumped on every effect run so an async activation can tell whether a newer
   // run has taken over since it started.
   const generationRef = useRef(0);
+  const navigationRef = useRef(new WeakMap<typeof app, Promise<void>>());
 
   // Collect the <Scene> declarations from children (keyed by name).
   const registry = useMemo(() => {
@@ -117,6 +130,7 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
         map.set(props.name, props);
       }
     });
+
     return map;
   }, [children]);
 
@@ -134,6 +148,7 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
       // with no matching <Scene>), not a supported "show nothing" path.
       console.warn(`<Scenes>: no <Scene name="${active}"> declaration found; the previously active scene (if any) keeps running.`);
       setInstance(null);
+
       return;
     }
 
@@ -144,8 +159,19 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
     const isStale = (): boolean => cancelled || generationRef.current !== generation;
     const changeOptions = transition !== undefined ? { transition } : {};
 
+    const previous = navigationRef.current.get(app);
+    const joiningStartup = app.state === ApplicationState.Loading;
+
     const apply = async (): Promise<void> => {
       try {
+        if (previous !== undefined && !joiningStartup) {
+          await previous;
+
+          if (isStale()) {
+            return;
+          }
+        }
+
         if (app.state === ApplicationState.Stopped || app.state === ApplicationState.Loading) {
           // Loading means an earlier run's start() is still in flight,
           // including its initial navigation, which scenes.change() would
@@ -181,16 +207,20 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
       }
     };
 
-    void apply();
+    const navigation = apply();
+    navigationRef.current.set(app, navigation);
+    void navigation.then(() => {
+      if (navigationRef.current.get(app) === navigation) {
+        navigationRef.current.delete(app);
+      }
+    });
 
     return () => {
       cancelled = true;
       setInstance(null);
     };
-    // Re-activate when the active name changes. SceneClass/transition derive
-    // from `active`; keying on app + active avoids re-instantiating each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [app, active]);
+  }, [app, active, SceneClass]);
 
   return <ActiveSceneContext.Provider value={instance}>{instance !== null && entry?.children}</ActiveSceneContext.Provider>;
-}
+};

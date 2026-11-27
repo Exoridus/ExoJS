@@ -2,6 +2,22 @@ import { ObservableSize } from '#math/ObservableSize';
 import { Size } from '#math/Size';
 
 describe('ObservableSize', () => {
+  test('destroy releases the callback while retained dimensions remain mutable', () => {
+    const callback = vi.fn();
+    const size = new ObservableSize(callback, 1, 2);
+
+    size.destroy();
+    size.destroy();
+    size.width = 3;
+    size.height = 4;
+    size.set(5, 6);
+    size.add(1);
+
+    expect(size.width).toBe(6);
+    expect(size.height).toBe(7);
+    expect(callback).not.toHaveBeenCalled();
+  });
+
   test('defaults width and height to 0', () => {
     const callback = vi.fn();
     const size = new ObservableSize(callback);
@@ -130,6 +146,19 @@ describe('ObservableSize', () => {
       expect(size.width).toBe(5);
       expect(size.height).toBe(6);
       expect(callback).not.toHaveBeenCalled();
+
+      size.destroy();
+    });
+
+    test('a single argument applies uniformly, like Size.set()', () => {
+      const callback = vi.fn();
+      const size = new ObservableSize(callback, 5, 6);
+
+      size.set(10);
+
+      expect(size.width).toBe(10);
+      expect(size.height).toBe(10);
+      expect(callback).toHaveBeenCalledTimes(1);
 
       size.destroy();
     });

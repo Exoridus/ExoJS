@@ -4,7 +4,7 @@
   "symbol": "PingPongDelayEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 10,
   "counts": {
@@ -22,7 +22,7 @@
         "Stereo ping-pong delay effect using two cross-fed DelayNodes that bounce the signal alternately between left and right channels. The input feeds only the left delay; cross-feedback (L→R and R→L) then causes the signal to alternate channels on every tap, producing the characteristic L↔R slapback cascade. Each tap is routed through a StereoPannerNode panned hard left or right, maintaining hard-left / hard-right stereo separation throughout the feedback tail.",
         "Node graph: ``` input(GainNode) → dryGain ────────────────────────────────── output(GainNode) input → delayL → feedbackGainA → delayR ↑ delayR → feedbackGainB → delayL │ delayL → pannerL (pan = -1, hard left) → wetGain ─────────┘ delayR → pannerR (pan = +1, hard right) → wetGain ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`."
       ],
-      "importLine": "import { PingPongDelayEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { PingPongDelayEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

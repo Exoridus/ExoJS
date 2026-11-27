@@ -54,16 +54,26 @@ describe('compressed texture formats', () => {
   });
 
   test('orderCompressedFormats puts a device set on the engine preference order', () => {
-    const ordered = orderCompressedFormats([CompressedTextureFormat.Bc1RgbaUnorm, CompressedTextureFormat.Bc7RgbaUnorm, CompressedTextureFormat.Bc3RgbaUnorm]);
+    const ordered = orderCompressedFormats([
+      CompressedTextureFormat.Bc1RgbaUnorm,
+      CompressedTextureFormat.Bc7RgbaUnorm,
+      CompressedTextureFormat.Bc3RgbaUnorm,
+    ]);
 
-    expect(ordered).toEqual([CompressedTextureFormat.Bc7RgbaUnorm, CompressedTextureFormat.Bc3RgbaUnorm, CompressedTextureFormat.Bc1RgbaUnorm]);
+    expect(ordered).toEqual([
+      CompressedTextureFormat.Bc7RgbaUnorm,
+      CompressedTextureFormat.Bc3RgbaUnorm,
+      CompressedTextureFormat.Bc1RgbaUnorm,
+    ]);
   });
 
   test('every ASTC entry carries the block geometry its name states', () => {
     for (const format of Object.values(CompressedTextureFormat)) {
       const match = /^astc-(\d+)x(\d+)-unorm$/.exec(format);
 
-      if (match === null) continue;
+      if (match === null) {
+        continue;
+      }
 
       expect(compressedBlockLayout(format)).toEqual({ blockWidth: Number(match[1]), blockHeight: Number(match[2]), bytesPerBlock: 16 });
     }
@@ -84,7 +94,9 @@ describe('compressed texture formats', () => {
   test('a SNORM format has the block geometry of its UNORM sibling', () => {
     expect(compressedBlockLayout(CompressedTextureFormat.Bc4RSnorm)).toEqual(compressedBlockLayout(CompressedTextureFormat.Bc4RUnorm));
     expect(compressedBlockLayout(CompressedTextureFormat.Bc5RgSnorm)).toEqual(compressedBlockLayout(CompressedTextureFormat.Bc5RgUnorm));
-    expect(compressedBlockLayout(CompressedTextureFormat.Bc6hRgbFloat)).toEqual(compressedBlockLayout(CompressedTextureFormat.Bc6hRgbUfloat));
+    expect(compressedBlockLayout(CompressedTextureFormat.Bc6hRgbFloat)).toEqual(
+      compressedBlockLayout(CompressedTextureFormat.Bc6hRgbUfloat),
+    );
   });
 
   test('the preference order covers every format exactly once', () => {

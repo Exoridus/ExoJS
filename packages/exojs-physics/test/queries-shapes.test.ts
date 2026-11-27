@@ -128,6 +128,16 @@ describe('rayCast across the shape set', () => {
     expect(cap!.normal.x).toBeCloseTo(-1, 4);
   });
 
+  it('hits a capsule cap along a near-tangent ray', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new CapsuleShape(-20, 0, 20, 0, 5), { x: 0, y: 0 });
+
+    const hit = world.rayCast({ x: -24.9995, y: -50 }, { x: 0, y: 1 }, undefined, 54.8);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.distance).toBeCloseTo(50 - Math.sqrt(25 - 4.9995 * 4.9995), 6);
+  });
+
   it('hits a segment from either side and misses one it runs parallel to', () => {
     const world = new PhysicsWorld();
     colliderAt(world, new SegmentShape(-20, 0, 20, 0), { x: 0, y: 0 });

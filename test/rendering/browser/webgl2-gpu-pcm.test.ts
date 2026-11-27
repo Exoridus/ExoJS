@@ -10,11 +10,14 @@ describe('WebGL2 GPU stereo PCM', () => {
     async (format, ctx) => {
       const backend = await createWebGl2TestBackend(32);
       const context = new RenderingContext(backend);
+
       try {
         if (!context.supportsReadbackFormat(format)) {
           ctx.skip(`${format} readback is unsupported`);
+
           return;
         }
+
         await verifyGpuPcm(context, format);
       } finally {
         backend.destroy();

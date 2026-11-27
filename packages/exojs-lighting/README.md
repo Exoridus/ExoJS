@@ -1,20 +1,22 @@
-# @codexo/exojs-lighting
+# @codexo/exojs/lighting
 
 Three 2D lighting models for ExoJS: per-sprite forward lighting, shadowed frame lightmaps, and radiance-cascade light propagation. Lights are scene nodes; occluders describe the geometry that blocks them.
+
+The former `@codexo/exojs-lighting` package name remains a 0.20 compatibility shim that forwards to this subpath. Prefer the subpath for new code.
 
 ## Install
 
 ```sh
-npm install --save-exact @codexo/exojs @codexo/exojs-lighting
+npm install --save-exact @codexo/exojs
 ```
 
-Core is the peer dependency. This package exposes directly constructed systems, not a `lightingExtension` descriptor.
+This module ships inside Core and exposes directly constructed systems, not a `lightingExtension` descriptor.
 
 ## Start with a scene-owned lightmap
 
 ```ts
 import { Color, Graphics, Scene } from '@codexo/exojs';
-import { LightmapLighting, PointLight } from '@codexo/exojs-lighting';
+import { LightmapLighting, PointLight } from '@codexo/exojs/lighting';
 
 export class LitScene extends Scene {
   override init(): void {

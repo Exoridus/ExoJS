@@ -93,10 +93,12 @@ export class BindingProfile {
     const { version, overrides } = data as Partial<BindingProfileData>;
 
     if (version !== currentVersion) {
-      throw new InputBindingError(`BindingProfile: unsupported profile version ${String(version)} (this build reads version ${currentVersion}).`);
+      throw new InputBindingError(
+        `BindingProfile: unsupported profile version ${String(version)} (this build reads version ${currentVersion}).`,
+      );
     }
 
-    if (overrides === undefined || typeof overrides !== 'object') {
+    if (overrides === null || typeof overrides !== 'object') {
       throw new InputBindingError('BindingProfile: a serialized profile needs an "overrides" object.');
     }
 

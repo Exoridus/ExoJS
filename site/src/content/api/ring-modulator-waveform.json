@@ -1,0 +1,83 @@
+{
+  "title": "RingModulatorWaveform",
+  "description": "Carrier shapes a ring modulator can use; `'custom'` needs a `PeriodicWave` it never sets.",
+  "symbol": "RingModulatorWaveform",
+  "kind": "type",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs/audio-fx",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Carrier shapes a ring modulator can use; `'custom'` needs a `PeriodicWave` it never sets."
+      ],
+      "importLine": "import { RingModulatorWaveform } from '@codexo/exojs/audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "RingModulatorWaveform",
+          "signature": "Exclude<OscillatorType, \"custom\">",
+          "signatureTokens": [
+            {
+              "text": "Exclude",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OscillatorType",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"custom\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts"
+}

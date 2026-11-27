@@ -1,0 +1,377 @@
+{
+  "title": "DocumentHistory",
+  "description": "The schema history of one persisted document type: its version range, its migrations and the upgrade path through them. The version graph is checked on construction and every problem is reported at once (see DocumentSchemaError). Reading never interprets a newer or a discontinued version; see DocumentVersionError.",
+  "symbol": "DocumentHistory",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The schema history of one persisted document type: its version range, its migrations and the upgrade path through them.",
+        "The version graph is checked on construction and every problem is reported at once (see DocumentSchemaError). Reading never interprets a newer or a discontinued version; see DocumentVersionError."
+      ],
+      "importLine": "import { DocumentHistory } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: DocumentHistoryOptions<Document>): DocumentHistory<Document>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DocumentHistoryOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DocumentHistory",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "DocumentHistoryOptions<Document>",
+              "optional": false
+            }
+          ],
+          "returnType": "DocumentHistory<Document>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "frame",
+          "signature": "frame(document: Document): VersionedDocument<Document>",
+          "signatureTokens": [
+            {
+              "text": "frame",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "document",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VersionedDocument",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "document",
+              "type": "Document",
+              "optional": false
+            }
+          ],
+          "returnType": "VersionedDocument<Document>",
+          "description": "Frames a current body for persistence: $type and $version first, then the body's own fields. Writing always produces the current version."
+        },
+        {
+          "name": "read",
+          "signature": "read(input: unknown): Document",
+          "signatureTokens": [
+            {
+              "text": "read",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "input",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "Document",
+          "description": "Reads a persisted document: checks $type and $version, runs the migrations from that version, then validates the result with the parser."
+        },
+        {
+          "name": "upgrade",
+          "signature": "upgrade(version: unknown, body: unknown): Document",
+          "signatureTokens": [
+            {
+              "text": "upgrade",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "version",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "body",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "version",
+              "type": "unknown",
+              "optional": false
+            },
+            {
+              "name": "body",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "Document",
+          "description": "Upgrades a body written at version to the current version and validates it. The checks of read apply, without the $type check."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "id",
+          "signature": "id: string",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "minVersion",
+          "signature": "minVersion: number",
+          "signatureTokens": [
+            {
+              "text": "minVersion",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "version",
+          "signature": "version: number",
+          "signatureTokens": [
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/document/DocumentHistory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/DocumentHistory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/document/DocumentHistory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/DocumentHistory.ts"
+}

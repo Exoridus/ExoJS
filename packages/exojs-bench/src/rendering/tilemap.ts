@@ -73,7 +73,7 @@ export const tilemapExtent = (tileCount: number): TilemapExtent => {
  *
  * Derived from the coordinate rather than from a stream, so an arm can fill its
  * map in whatever order its storage wants and still paint the identical world.
- * The hash is the one the shared RNG uses, seeded per tile.
+ * The value comes from the shared RNG, seeded per tile from this coordinate mix.
  */
 export const tileIdAt = (x: number, y: number): number => {
   const seed = (TILEMAP_SEED ^ (x * 0x9e_37_79_b1) ^ (y * 0x85_eb_ca_6b)) >>> 0;
@@ -136,9 +136,10 @@ export const tilemapEditsAt = (frame: number, extent: TilemapExtent): readonly T
   const edits: TilemapEdit[] = [];
   const visited = new Set<number>();
 
-  // A stride coprime with the window's tile count walks distinct cells without
-  // rejection sampling, so the set is exactly the requested size on every frame
-  // rather than "usually" it.
+  // 61 is prime and larger than either window axis, so the stride is coprime with
+  // the cell count: the first TILEMAP_EDITS_PER_FRAME indices walk distinct cells
+  // whenever the window holds that many, and a smaller window is edited whole
+  // rather than stopping at a fraction of it.
   const cells = columns * rows;
   const stride = 61;
 

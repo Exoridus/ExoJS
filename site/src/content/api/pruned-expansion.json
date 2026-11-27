@@ -4,7 +4,7 @@
   "symbol": "PrunedExpansion",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -22,7 +22,7 @@
         "A parent-dependent successor generator that prunes symmetric alternatives without losing optimality - the shape jump-point search takes.",
         "Obtained from NavigationSpace.pruning for the duration of one search."
       ],
-      "importLine": "import { PrunedExpansion } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { PrunedExpansion } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

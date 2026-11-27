@@ -11,27 +11,32 @@ import { MockApplication } from './support/mock-application';
 // above this file's imports (top-level bindings are not initialised yet).
 vi.mock('@codexo/exojs', async importActual => {
   const actual = await importActual<typeof import('@codexo/exojs')>();
-  const { MockApplication: MockApp, configureApplicationState, configureConcurrentNavigationError } = await import('./support/mock-application');
+  const {
+    MockApplication: MockApp,
+    configureApplicationState,
+    configureConcurrentNavigationError,
+  } = await import('./support/mock-application');
   configureApplicationState(actual.ApplicationState);
   configureConcurrentNavigationError(actual.ConcurrentSceneNavigationError);
+
   return { ...actual, Application: MockApp };
 });
 
 class LevelScene extends ExoScene {}
 class MenuScene extends ExoScene {}
 
-function SceneProbe({ sceneClass, deps }: { sceneClass: new () => ExoScene; deps?: DependencyList }): ReactElement {
+const SceneProbe = ({ sceneClass, deps }: { sceneClass: new () => ExoScene; deps?: DependencyList }): ReactElement => {
   const scene = useScene(sceneClass, deps);
 
   return <span data-testid="scene">{scene?.constructor.name ?? 'loading'}</span>;
-}
+};
 
 // `app` is a MockApplication: the `@codexo/exojs` module is vi.mock'ed above, so
 // `new Application()` constructs the mock. The context still types its value as
 // the engine class, hence the cast on the way in.
-function provide(app: MockApplication, children: ReactNode): ReactElement {
-  return <ExoContext.Provider value={app as unknown as Application}>{children}</ExoContext.Provider>;
-}
+const provide = (app: MockApplication, children: ReactNode): ReactElement => (
+  <ExoContext.Provider value={app as unknown as Application}>{children}</ExoContext.Provider>
+);
 
 const makeApp = (): MockApplication => new Application() as unknown as MockApplication;
 
@@ -40,6 +45,32 @@ beforeEach(() => {
 });
 
 describe('useScene', () => {
+  it('keeps navigation independent between applications and serializes when returning', async () => {
+    const a = makeApp();
+    const b = makeApp();
+    const view = render(provide(a, <SceneProbe sceneClass={LevelScene} deps={[0]} />));
+    await view.findByText('LevelScene');
+    const change = a.scenes.change.getMockImplementation()! as (...args: unknown[]) => unknown;
+    let finish!: () => void;
+    a.scenes.change.mockImplementationOnce(async (...args: unknown[]) => {
+      await new Promise<void>(resolve => {
+        finish = resolve;
+      });
+
+      return change(...args);
+    });
+    view.rerender(provide(a, <SceneProbe sceneClass={MenuScene} deps={[1]} />));
+    expect(a.scenes.change).toHaveBeenCalledTimes(1);
+    view.rerender(provide(b, <SceneProbe sceneClass={LevelScene} deps={[0]} />));
+    expect(b.start).toHaveBeenCalledTimes(1);
+    await view.findByText('LevelScene');
+    view.rerender(provide(a, <SceneProbe sceneClass={LevelScene} deps={[2]} />));
+    expect(a.scenes.change).toHaveBeenCalledTimes(1);
+    finish();
+    await waitFor(() => expect(a.scenes.change).toHaveBeenCalledTimes(2));
+    await view.findByText('LevelScene');
+  });
+
   it('starts the engine on first activation and returns the live scene', async () => {
     const app = makeApp();
     const { findByText } = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
@@ -61,6 +92,30 @@ describe('useScene', () => {
     // The new scene is installed through change(); the engine is NOT started again.
     await waitFor(() => expect(app.scenes.change.mock.calls.some(call => call[0] === LevelScene)).toBe(true));
     expect(app.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies the latest requested scene after an in-flight switch', async () => {
+    const app = makeApp();
+    const view = render(provide(app, <SceneProbe sceneClass={LevelScene} deps={[0]} />));
+    await view.findByText('LevelScene');
+    const change = app.scenes.change.getMockImplementation()! as (...args: unknown[]) => unknown;
+    let finish!: () => void;
+    app.scenes.change.mockImplementationOnce(async (...args: unknown[]) => {
+      await new Promise<void>(resolve => {
+        finish = resolve;
+      });
+
+      return change(...args);
+    });
+    const errors = vi.fn();
+    app.onError.add(errors);
+    view.rerender(provide(app, <SceneProbe sceneClass={MenuScene} deps={[1]} />));
+    view.rerender(provide(app, <SceneProbe sceneClass={LevelScene} deps={[2]} />));
+    expect(app.scenes.change).toHaveBeenCalledTimes(1);
+    finish();
+    await waitFor(() => expect(app.scenes.currentScene).toBeInstanceOf(LevelScene));
+    await waitFor(() => expect(app.scenes.change).toHaveBeenCalledTimes(2));
+    expect(errors).not.toHaveBeenCalled();
   });
 
   it('does not call change() when the component unmounts (no public API clears the director mid-lifetime)', async () => {

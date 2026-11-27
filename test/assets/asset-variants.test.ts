@@ -10,7 +10,6 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { AssetVariantSet } from '#assets/AssetVariantSet';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
@@ -35,6 +34,57 @@ const terrainVariants = [
 describe('AssetVariantSet', () => {
   test('a source with no rule resolves to itself', () => {
     expect(new AssetVariantSet().resolve('hero.png')).toBe('hero.png');
+  });
+
+  test('expands literal density and format candidates without changing the URL query or fragment', () => {
+    const set = new AssetVariantSet();
+    const source = 'art/hero@{1,2}x.{webp,png}?v={build}#frame';
+
+    expect(set.candidates(source)?.map(candidate => candidate.source)).toEqual([
+      'art/hero@1x.webp?v={build}#frame',
+      'art/hero@1x.png?v={build}#frame',
+      'art/hero@2x.webp?v={build}#frame',
+      'art/hero@2x.png?v={build}#frame',
+    ]);
+    expect(set.resolve(source)).toBe('art/hero@1x.png?v={build}#frame');
+
+    set.profile = { textureFormats: [], imageFormats: ['webp', 'png'], resolution: 2.5 };
+
+    expect(set.resolve(source)).toBe('art/hero@2x.webp?v={build}#frame');
+    expect(set._resolveCandidate(source)?.resolution).toBe(2);
+  });
+
+  test('accepts either template axis and leaves other brace-bearing paths alone', () => {
+    const set = new AssetVariantSet();
+    set.profile = { textureFormats: [], imageFormats: ['png'], resolution: 1.5 };
+
+    expect(set.resolve('hero@{1,1.5,2}x.png')).toBe('hero@1.5x.png');
+    expect(set.resolve('hero.{webp,png}')).toBe('hero.png');
+    expect(set.resolve('hero.png?q=@{1,2}x.{webp,png}')).toBe('hero.png?q=@{1,2}x.{webp,png}');
+    expect(set.resolve('data:image/png;name=hero.{webp,png}')).toBe('data:image/png;name=hero.{webp,png}');
+  });
+
+  test('a template with no eligible candidate fails before a literal template URL can be fetched', () => {
+    const set = new AssetVariantSet();
+    expect(() => set.resolve('hero@{2,3}x.{png,webp}')).toThrow(/no eligible asset variant/i);
+    expect(() => set.resolve('hero@{0,2}x.{png,webp}')).toThrow(/positive density/i);
+    expect(() => set.resolve('hero@{1,2}x.{png,../other}')).toThrow(/format extension/i);
+  });
+
+  test('rejects an oversized expansion before allocating its candidates', () => {
+    const set = new AssetVariantSet();
+    const values = Array.from({ length: 17 }, (_, index) => index + 1);
+    const formats = values.map(value => `f${value}`);
+
+    expect(() => set.candidates(`hero@{${values.join(',')}}x.{${formats.join(',')}}`)).toThrow(/more than 256 candidates/);
+  });
+
+  test('an explicit rule takes precedence over an inline template', () => {
+    const source = 'hero@{1,2}x.{webp,png}';
+    const set = new AssetVariantSet().define(source, [{ source: 'custom.png' }]);
+
+    expect(set.resolve(source)).toBe('custom.png');
+    expect(set.undefine(source).resolve(source)).toBe('hero@1x.png');
   });
 
   test('falls back to the unconditional candidate on the conservative default profile', () => {
@@ -83,7 +133,11 @@ describe('AssetVariantSet', () => {
   });
 
   test('the highest eligible density wins within one format rank', () => {
-    const set = new AssetVariantSet().define('ui.png', [{ source: 'ui.png' }, { source: 'ui@2x.png', resolution: 2 }, { source: 'ui@3x.png', resolution: 3 }]);
+    const set = new AssetVariantSet().define('ui.png', [
+      { source: 'ui.png' },
+      { source: 'ui@2x.png', resolution: 2 },
+      { source: 'ui@3x.png', resolution: 3 },
+    ]);
 
     set.profile = { textureFormats: [], resolution: 3 };
 
@@ -130,16 +184,28 @@ describe('AssetVariantSet', () => {
 });
 
 describe('Loader variant wiring', () => {
+  test('an inline variant and its chosen physical file share cache identity', () => {
+    const loader = createCoreLoader();
+    loader.variants.profile = { textureFormats: [], imageFormats: ['webp', 'png'], resolution: 2 };
+
+    const inline = loader.identify({ type: 'texture', source: 'hero@{1,2}x.{webp,png}' });
+    const physical = loader.identify({ type: 'texture', source: 'hero@2x.webp' });
+
+    expect(inline.locator).toBe(physical.locator);
+    expect(inline.sourceKey).toBe(physical.sourceKey);
+    expect(inline.resourceKey).toBe(physical.resourceKey);
+  });
+
   test('identity is keyed on the chosen variant, not the logical source', () => {
     const loader = createCoreLoader();
 
     loader.variants.define('terrain.png', terrainVariants);
 
-    const logical = loader.identify(Asset.type('texture', 'terrain.png'));
+    const logical = loader.identify({ type: 'texture', source: 'terrain.png' });
 
     loader.variants.profile = { textureFormats: [CompressedTextureFormat.Bc7RgbaUnorm], resolution: 1 };
 
-    const chosen = loader.identify(Asset.type('texture', 'terrain.png'));
+    const chosen = loader.identify({ type: 'texture', source: 'terrain.png' });
 
     expect(chosen.locator).not.toBe(logical.locator);
     expect(chosen.locator).toContain('terrain.bc7.ktx2');
@@ -153,11 +219,11 @@ describe('Loader variant wiring', () => {
     loader.variants.define('terrain.png', terrainVariants);
     loader.variants.profile = { textureFormats: [CompressedTextureFormat.Bc7RgbaUnorm], resolution: 1 };
 
-    const bc7 = loader.identify(Asset.type('texture', 'terrain.png'));
+    const bc7 = loader.identify({ type: 'texture', source: 'terrain.png' });
 
     loader.variants.profile = { textureFormats: [CompressedTextureFormat.Astc4x4Unorm], resolution: 1 };
 
-    expect(loader.identify(Asset.type('texture', 'terrain.png')).sourceKey).not.toBe(bc7.sourceKey);
+    expect(loader.identify({ type: 'texture', source: 'terrain.png' }).sourceKey).not.toBe(bc7.sourceKey);
   });
 
   test('a bare path infers its type from the chosen variant', () => {

@@ -31,7 +31,7 @@ import type {
 import meshShaderSourceModule from './shaders/mesh.wgsl';
 import instancedMeshShaderSourceModule from './shaders/mesh-instanced.wgsl';
 import { packSnapViewport } from './snapViewport';
-import { contentDepthStencilState } from './stencilState';
+import { contentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import {
   addUserUniformBuffersInPass,
   applyUserUniformUpload,
@@ -98,7 +98,6 @@ interface MeshDrawCall {
   indexByteOffset: number;
   indexCount: number;
   indexFormat: MeshIndexFormat;
-  customDrawIndex: number; // index within the per-shader custom queue, -1 for default
 }
 
 /**
@@ -134,24 +133,17 @@ interface MeshPipelineKey {
   readonly format: GPUTextureFormat;
   // Stencil-enabled variant: carries the depth/stencil state matching the
   // attachment the coordinator adds while a geometric clip is active.
-  readonly stencil: boolean;
+  readonly stencil: WebGpuStencilMode;
   readonly depth: MeshDepthMode;
 }
 
 interface InstancedPipelineKey {
   readonly blendMode: BlendModes;
   readonly format: GPUTextureFormat;
-  readonly stencil: boolean;
+  readonly stencil: WebGpuStencilMode;
   readonly depth: MeshDepthMode;
 }
 
-/**
- * Cache key for the default + instanced (static-batch) pipeline maps. The
- * stencil dimension keeps the clip and no-clip variants distinct, mirroring the
- * sprite renderer: a stencil pipeline carries depth/stencil state and is only
- * valid in a pass with the matching attachment, so the two are never
- * interchangeable.
- */
 // Indexed by component count minus one.
 const instanceVertexFormats: readonly GPUVertexFormat[] = ['float32', 'float32x2', 'float32x3', 'float32x4'];
 
@@ -170,8 +162,19 @@ const instanceAttributeBufferLayout = (instances: InstanceDataView): GPUVertexBu
   })),
 });
 
-const meshPipelineCacheKey = (blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean, depth: MeshDepthMode = MeshDepthMode.None): string =>
-  `${blendMode}:${format}:${stencil ? 's' : 'n'}:${depth}`;
+/**
+ * Cache key for the default and instanced pipeline maps. The stencil dimension
+ * keeps the clip and no-clip variants distinct, mirroring the sprite renderer: a
+ * stencil pipeline carries depth/stencil state and is only valid in a pass with
+ * the matching attachment, so the two are never interchangeable. The depth
+ * dimension is a cache dimension for the same reason.
+ */
+const meshPipelineCacheKey = (
+  blendMode: BlendModes,
+  format: GPUTextureFormat,
+  stencil: WebGpuStencilMode,
+  depth: MeshDepthMode = MeshDepthMode.None,
+): string => `${blendMode}:${format}:${stencil}:${depth}`;
 
 interface GeometryCacheEntry {
   readonly geometry: Geometry;
@@ -243,7 +246,7 @@ const maxCustomTextureSlots = 7; // user texture uniforms; group 2 binding 1..N
 
 /**
  * Per-bundle mesh replay state (mesh opt-in). Parked
- * on the group bundle's {@link WebGpuRetainedGroupBundle.rendererReplayState} so
+ * on the group bundle's {@link WebGpuRetainedGroupBundle.rendererReplayStates} so
  * it shares the bundle's grow-only / explicitly-freed lifecycle. Holds the mesh
  * group(0) `TransformUniforms` UBO (one dynamic-offset slot per recorded batch,
  * because the per-batch premultiply flag differs) + its bind group, plus the
@@ -326,6 +329,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private readonly _geometryCache = new Map<Geometry, GeometryCacheEntry>();
   private _textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
   private readonly _customShaders = new Map<AnyMaterial, CustomShaderResources>();
+  private readonly _disposeHooked = new WeakSet<AnyMaterial>();
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -356,7 +360,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   // switch, a stencil clip, another renderer) is distinguished automatically.
   private _instancedBatchPass: WebGpuActiveRenderPass | null = null;
   // The open pass this renderer has actually RECORDED draws into - set only
-  // after a draw is encoded, by both the immediate-batch path and `flush()`.
+  // after a draw is encoded by the immediate-batch, flush or retained path.
   // `_instancedBatchPass` alone cannot answer that: it is set when the cursors
   // are bound to a pass, which happens before anything is recorded.
   private _ownDrawsPass: WebGpuActiveRenderPass | null = null;
@@ -423,7 +427,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       return;
     }
 
-    const blendMode = resolveBlendMode(mesh.blendMode, customShader);
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? resolveBlendMode(mesh.blendMode, customShader);
     backend.setBlendMode(blendMode);
 
     // A mesh WITHOUT a texture samples white, which is neutral against the
@@ -447,11 +451,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const indexCount = mesh.indexCount;
     const indexFormat = mesh.indexFormat;
 
-    let customDrawIndex = -1;
-
     if (customShader !== null) {
       const resources = this._getOrCreateCustomShaderResources(customShader);
-      customDrawIndex = resources.drawCount;
       resources.drawCount++;
       resources.totalVertices += vertexCount;
       resources.totalIndexBytes += alignIndexBytes(indexCount, indexFormat);
@@ -472,7 +473,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       indexByteOffset: 0,
       indexCount,
       indexFormat,
-      customDrawIndex,
     };
 
     // Use mutable record (interface readonly is for type safety against
@@ -546,6 +546,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const texture = mesh.texture ?? TextureClass.white;
     const premultiplySample = backend.shouldPremultiplyTextureSample(texture);
     const resources = material === null ? null : this._getOrCreateCustomShaderResources(material);
+
     // Packed, not uploaded: the write is a hazard against draws already in the
     // pass, so it has to be decided before anything below is recorded.
     if (resources !== null) {
@@ -620,9 +621,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const attributeByteOffset = attributeBytes > 0 ? this._uploadInstanceAttributes(instances!, attributeBytes) : 0;
     const renderTargetFormat = backend.renderTargetFormat;
-    const stencil = coordinator.stencilActive;
+    const stencil = coordinator.stencilMode;
     const depth = meshDepthMode(coordinator.depthWritesActive, writesDepth);
-    const blendMode = resolveBlendMode(mesh.blendMode, material);
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? resolveBlendMode(mesh.blendMode, material);
     // This path builds a single-target pipeline, and `drawInstanced` refuses a
     // multi-attachment target for exactly that reason, so the material's list
     // speaks for slot 0 and nothing else.
@@ -638,12 +639,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       applyUserUniformUpload(material!, resources, device);
       addUserUniformBuffersInPass(resources.userUniform, this._instancedBatchUniformBuffersInPass);
 
-      pass.setPipeline(this._getOrCreateCustomInstancedPipeline(resources, attachmentBlendMode, renderTargetFormat, stencil, instances, depth));
+      pass.setPipeline(
+        this._getOrCreateCustomInstancedPipeline(resources, attachmentBlendMode, renderTargetFormat, stencil, instances, depth),
+      );
       pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, texture, material!.sampler));
       pass.setBindGroup(2, this._getUserBindGroup(backend, material!, resources));
     }
 
-    pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [uniformSlot * this._uniformAlignment]);
+    pass.setBindGroup(0, this._getOrCreateInstancedTransformBindGroup(storage.buffer, storage.tintBuffer), [
+      uniformSlot * this._uniformAlignment,
+    ]);
     pass.setVertexBuffer(0, staticGeometry.vertexBuffer);
     pass.setVertexBuffer(1, instanceNodeIndexBuffer, nodeIndexByteOffset);
 
@@ -731,7 +736,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       if (backend.clearRequested) {
         backend.passCoordinator.acquirePass();
       }
+
       this._resetFrame();
+
       return;
     }
 
@@ -743,6 +750,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // the CPU staging arrays stay flush-local and only the GPU buffers carry the
     // whole pass.
     let defaultVertices = 0;
+    let defaultDrawCalls = 0;
     // Byte cursor, not an element count: two draws in one flush may carry
     // different index widths, so element arithmetic cannot express the layout.
     let defaultIndexBytes = 0;
@@ -759,12 +767,21 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     for (let i = 0; i < this._drawCallCount; i++) {
       const dc = this._drawCalls[i] as { -readonly [K in keyof MeshDrawCall]: MeshDrawCall[K] };
+      const batchLength = this._getStaticBatchLength(i);
+
+      // Instanced draws bind cached geometry and their own uniforms, so they
+      // must not reserve space in the CPU-baked streams.
+      if (batchLength >= 2) {
+        i += batchLength - 1;
+        continue;
+      }
 
       if (dc.customShader === null) {
         dc.vertexByteOffset = defaultVertices * vertexStrideBytes;
         dc.indexByteOffset = defaultIndexBytes;
         defaultVertices += dc.vertexCount;
         defaultIndexBytes += alignIndexBytes(dc.indexCount, dc.indexFormat);
+        defaultDrawCalls++;
       } else {
         const vCursor = customVertexCursors.get(dc.customShader) ?? 0;
         const iCursor = customIndexCursors.get(dc.customShader) ?? 0;
@@ -778,7 +795,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // Default-path uniform buffer holds (tint vec4 + flags vec4) per draw call;
     // each custom-shader resource manages its own.
     const customDraws = this._totalCustomDraws();
-    const defaultDrawCalls = this._drawCallCount - customDraws;
     const defaultVertexBytes = defaultVertices * vertexStrideBytes;
     // Upper bounds: not every draw call becomes an instanced batch, and each
     // instanced batch takes one uniform slot plus one node index per instance.
@@ -789,10 +805,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // open pass - from `drawInstancedBatch` or from an earlier flush - still
     // read those exact buffers, and `queue.writeBuffer` lands ahead of the whole
     // submit, so this flush must APPEND at the pass cursors rather than rewrite
-    // from offset 0. Ending the pass is the fallback for the two cases appending
+    // from offset 0. Ending the pass is the fallback for the cases appending
     // cannot cover: a reallocation (which frees the buffer those draws read),
-    // and a custom-material draw (whose per-material buffers are still rewritten
-    // from 0, see phase 3b). Another renderer's draws in the pass are not at
+    // a custom-material draw (whose per-material buffers are still rewritten
+    // from 0, see phase 3b), and an instanced batch whose cached geometry is
+    // re-packed in place. Another renderer's draws in the pass are not at
     // risk here: none of these buffers is shared, and the pass now survives a
     // renderer switch precisely so they can stay.
     const ownDrawsInPass = this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass;
@@ -812,7 +829,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     if (
       ownDrawsInPass &&
       (customDraws > 0 ||
-        this._flushAppendWouldGrow(targetVertexBytes, targetIndexBytes, targetUniformSlots, targetNodeIndexBytes, targetInstancedUniformSlots))
+        this._flushWouldRewriteGeometry() ||
+        this._flushAppendWouldGrow(
+          targetVertexBytes,
+          targetIndexBytes,
+          targetUniformSlots,
+          targetNodeIndexBytes,
+          targetInstancedUniformSlots,
+        ))
     ) {
       coordinator.endPass();
       this._resetInstancedBatchPass();
@@ -855,10 +879,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     for (let i = 0; i < this._drawCallCount; i++) {
       // i < _drawCallCount, and slots 0.._drawCallCount-1 are always populated.
       const dc = this._drawCalls[i]!;
+      const batchLength = this._getStaticBatchLength(i);
+
+      if (batchLength >= 2) {
+        i += batchLength - 1;
+        continue;
+      }
 
       if (dc.customShader === null) {
         // Default path: CPU-bake transform into vertex positions.
-        this._writeMeshVertices(backend, dc.mesh, dc.vertexByteOffset / vertexStrideBytes, /* bake */ true);
+        this._writeMeshVertices(backend, dc.mesh, dc.vertexByteOffset / vertexStrideBytes);
 
         this._packIndices(dc, dc.indexFormat === 'uint32' ? this._indexStagingU32 : this._indexStagingU16);
 
@@ -900,7 +930,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       for (let i = 0; i < this._drawCallCount; i++) {
         // i < _drawCallCount, and slots 0.._drawCallCount-1 are always populated.
         const dc = this._drawCalls[i]!;
-        if (dc.customShader !== material) continue;
+
+        if (dc.customShader !== material) {
+          continue;
+        }
 
         this._writeMeshVerticesIntoBuffer(dc.mesh, vWritten, resources.vertexFloatView, resources.vertexUintView);
 
@@ -927,6 +960,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       device.queue.writeBuffer(this._vertexBuffer!, vertexBase, this._vertexData, 0, defaultVertexBytes);
       device.queue.writeBuffer(this._indexBuffer!, indexBase, this._indexStaging, 0, defaultIndexBytes);
     }
+
     if (defaultUniformData !== null) {
       device.queue.writeBuffer(this._uniformBuffer!, uniformSlotBase * this._uniformAlignment, defaultUniformData, 0, defaultUniformBytes);
     }
@@ -942,7 +976,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // already written at base offsets, and its draws (recorded below into the
     // freshly opened pass) still read them there. Rewinding would let a later
     // append overwrite bytes those draws read.
-    if (coordinator.passHasDraws && (this._flushWouldMutateTexture(backend) || backend.transformStorageWouldGrow(this._maxInstancedNodeIndex() + 1))) {
+    if (
+      coordinator.passHasDraws &&
+      (this._flushWouldMutateTexture(backend) || backend.transformStorageWouldGrow(this._maxInstancedNodeIndex() + 1))
+    ) {
       coordinator.endPass();
     }
 
@@ -971,7 +1008,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       // coordinator's pass carries a depth/stencil attachment, so the default,
       // static-batch, and custom-material pipelines must all select their
       // stencil-enabled variants to match it.
-      const stencil = backend.passCoordinator.stencilActive;
+      const stencil = backend.passCoordinator.stencilMode;
       const passDepth = depthPass ? MeshDepthMode.Present : MeshDepthMode.None;
 
       let lastShader: AnyMaterial | 'default' | 'instanced' | null = null;
@@ -993,7 +1030,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
             const needsPipeline = lastShader !== 'instanced' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
 
             if (needsPipeline) {
-              pass.setPipeline(this._getInstancedPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil, depth: passDepth }));
+              pass.setPipeline(
+                this._getInstancedPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil, depth: passDepth }),
+              );
               lastShader = 'instanced';
               lastBlendMode = dc.blendMode;
               lastFormat = renderTargetFormat;
@@ -1052,7 +1091,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
               );
             }
 
-            defaultDrawCursor += batchLength;
             instancedDrawCursor++;
             i += batchLength - 1;
             continue;
@@ -1189,8 +1227,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
     const device = this._device;
+    const pipelineLayout = this._pipelineLayout;
+    const instancedPipelineLayout = this._instancedPipelineLayout;
 
-    if (!device || !this._shaderModule || !this._pipelineLayout) {
+    if (!device || !this._shaderModule || !pipelineLayout) {
       return;
     }
 
@@ -1215,20 +1255,26 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         // Prewarm only the no-clip variants; the stencil pipelines are created
         // lazily on the first clipped draw (a rare path not worth the upfront
         // compile cost for every blend-mode × format combination).
-        const key = meshPipelineCacheKey(blendMode, format, false);
+        const key = meshPipelineCacheKey(blendMode, format, WebGpuStencilMode.None);
 
-        if (this._pipelines.has(key)) continue;
+        if (this._pipelines.has(key)) {
+          continue;
+        }
 
         promises.push(
           device.createRenderPipelineAsync(this._buildPipelineDescriptor(blendMode, format)).then(pipeline => {
-            this._pipelines.set(key, pipeline);
+            if (this._device === device && this._pipelineLayout === pipelineLayout) {
+              this._pipelines.set(key, pipeline);
+            }
           }),
         );
 
         if (!this._instancedPipelines.has(key)) {
           promises.push(
             device.createRenderPipelineAsync(this._buildInstancedPipelineDescriptor(blendMode, format)).then(pipeline => {
-              this._instancedPipelines.set(key, pipeline);
+              if (this._device === device && this._instancedPipelineLayout === instancedPipelineLayout) {
+                this._instancedPipelines.set(key, pipeline);
+              }
             }),
           );
         }
@@ -1303,8 +1349,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   protected onDisconnect(): void {
-    this.flush();
-
     // The teardown below destroys the very buffers a draw of ours left in the
     // open pass still binds, and the pass no longer ends at the tail of a
     // flush. Submit it first so those draws reach the queue against live
@@ -1312,135 +1356,129 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // renderers, so this only fires when a renderer is disconnected on its own.
     const coordinator = this._backend?.passCoordinator ?? null;
 
-    if (coordinator !== null && this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass) {
-      coordinator.endPass();
-    }
+    try {
+      if (coordinator !== null && this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass) {
+        coordinator.endPass();
+      }
+    } finally {
+      this._vertexBuffer?.destroy();
+      this._indexBuffer?.destroy();
+      this._uniformBuffer?.destroy();
+      this._instancedUniformBuffer?.destroy();
+      this._instancedNodeIndexBuffer?.destroy();
+      this._instancedAttributeArena.destroy();
+      this._resetInstancedBatchPass();
+      this._pipelines.clear();
+      this._instancedPipelines.clear();
+      this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
 
-    this._vertexBuffer?.destroy();
-    this._indexBuffer?.destroy();
-    this._uniformBuffer?.destroy();
-    this._instancedUniformBuffer?.destroy();
-    this._instancedNodeIndexBuffer?.destroy();
-    this._instancedAttributeArena.destroy();
-    this._resetInstancedBatchPass();
-    this._pipelines.clear();
-    this._instancedPipelines.clear();
-    this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
+      for (const [geometry, entry] of this._geometryCache) {
+        geometry._offDispose(entry.disposeListener);
+        entry.vertexBuffer.destroy();
+        entry.indexBuffer.destroy();
+      }
 
-    for (const entry of this._geometryCache.values()) {
-      entry.vertexBuffer.destroy();
-      entry.indexBuffer.destroy();
-    }
+      this._geometryCache.clear();
+      this._vertexBuffer = null;
+      this._indexBuffer = null;
+      this._uniformBuffer = null;
+      this._uniformBindGroup = null;
+      this._instancedUniformBuffer = null;
+      this._instancedNodeIndexBuffer = null;
+      this._instancedTransformBindGroup = null;
+      this._instancedTransformStorageBuffer = null;
+      this._instancedTintStorageBuffer = null;
+      this._pipelineLayout = null;
+      this._instancedPipelineLayout = null;
+      this._textureBindGroupLayout = null;
+      this._uniformBindGroupLayout = null;
+      this._instancedTransformBindGroupLayout = null;
+      this._shaderModule = null;
+      this._instancedShaderModule = null;
 
-    this._geometryCache.clear();
-    this._vertexBuffer = null;
-    this._indexBuffer = null;
-    this._uniformBuffer = null;
-    this._uniformBindGroup = null;
-    this._instancedUniformBuffer = null;
-    this._instancedNodeIndexBuffer = null;
-    this._instancedTransformBindGroup = null;
-    this._instancedTransformStorageBuffer = null;
-    this._instancedTintStorageBuffer = null;
-    this._pipelineLayout = null;
-    this._instancedPipelineLayout = null;
-    this._textureBindGroupLayout = null;
-    this._uniformBindGroupLayout = null;
-    this._instancedTransformBindGroupLayout = null;
-    this._shaderModule = null;
-    this._instancedShaderModule = null;
-    // Custom materials are owned by user code (one MeshMaterial can be shared
-    // across multiple Mesh instances). Their resources are released when the
-    // user calls material.destroy(), which fires our onDispose callback. On
-    // backend disconnect we eagerly release everything to avoid GPU leaks
-    // even if the user keeps the material reference around.
-    for (const resources of this._customShaders.values()) {
-      this._releaseCustomShaderResources(resources);
+      // Custom materials are owned by user code (one MeshMaterial can be shared
+      // across multiple Mesh instances). Their resources are released when the
+      // user calls material.destroy(), which fires our onDispose callback. On
+      // backend disconnect we eagerly release everything to avoid GPU leaks
+      // even if the user keeps the material reference around.
+      for (const resources of this._customShaders.values()) {
+        this._releaseCustomShaderResources(resources);
+      }
+
+      this._customShaders.clear();
+      this._device = null;
+      this._backend = null;
+      this._drawCallCount = 0;
+      this._drawCalls.length = 0;
+      this._customVertexCursors.clear();
+      this._customIndexCursors.clear();
+      this._vertexBufferCapacity = 0;
+      this._indexBufferCapacity = 0;
+      this._uniformBufferCapacity = 0;
+      this._instancedUniformBufferCapacity = 0;
+      this._instancedNodeIndexBufferCapacity = 0;
+      this._instancedNodeIndexData = new Uint32Array(0);
     }
-    this._customShaders.clear();
-    this._device = null;
-    this._backend = null;
-    this._drawCallCount = 0;
-    this._vertexBufferCapacity = 0;
-    this._indexBufferCapacity = 0;
-    this._uniformBufferCapacity = 0;
-    this._instancedUniformBufferCapacity = 0;
-    this._instancedNodeIndexBufferCapacity = 0;
-    this._instancedNodeIndexData = new Uint32Array(0);
   }
 
   // ---------------------------------------------------------------------------
   // Default-path helpers
   // ---------------------------------------------------------------------------
 
-  private _writeMeshVertices(backend: WebGpuBackend, mesh: Mesh, vertexStart: number, bake: boolean): void {
+  private _writeMeshVertices(backend: WebGpuBackend, mesh: Mesh, vertexStart: number): void {
     const vertices = mesh.vertices;
     const uvs = mesh.uvs;
     const colors = mesh.colors;
     const vertexCount = mesh.vertexCount;
 
-    if (bake) {
-      // Bake (view * group * globalTransform) into vertex positions on the CPU,
-      // matching the primitive renderer's no-uniforms approach.
-      const groupTransform = backend.renderGroupTransform;
-      const matrix = this._combinedTransform.copy(mesh.getGlobalTransform());
+    // Bake (view * group * globalTransform) into vertex positions on the CPU,
+    // matching the primitive renderer's no-uniforms approach.
+    const groupTransform = backend.renderGroupTransform;
+    const matrix = this._combinedTransform.copy(mesh.getGlobalTransform());
 
-      if (groupTransform !== null) {
-        matrix.combine(groupTransform);
-      }
+    if (groupTransform !== null) {
+      matrix.combine(groupTransform);
+    }
 
-      // The view is post-multiplied straight into the six affine components the
-      // bake needs, instead of through `matrix.combine(view)`. Writing the
-      // product back into the scratch matrix costs ~47 bytes per call in a
-      // browser V8 - nine double field stores - and this runs once per mesh, so
-      // it was 47 KB/frame at a thousand meshes, a third of that frame's total
-      // allocation. The projective row (`e`/`f`/`z`) is not read by the loop
-      // below, so nothing else needs the product. Same formula as
-      // {@link Matrix.combine}; keep the two in step.
-      const view = backend.view.getTransform();
-      const ma = matrix.a;
-      const mb = matrix.b;
-      const mx = matrix.x;
-      const mc = matrix.c;
-      const md = matrix.d;
-      const my = matrix.y;
-      const me = matrix.e;
-      const mf = matrix.f;
-      const mz = matrix.z;
+    // The view is post-multiplied straight into the six affine components the
+    // bake needs, instead of through `matrix.combine(view)`. Writing the
+    // product back into the scratch matrix costs ~47 bytes per call in a
+    // browser V8 - nine double field stores - and this runs once per mesh, so
+    // it was 47 KB/frame at a thousand meshes, a third of that frame's total
+    // allocation. The projective row (`e`/`f`/`z`) is not read by the loop
+    // below, so nothing else needs the product. Same formula as
+    // {@link Matrix.combine}; keep the two in step.
+    const view = backend.view.getTransform();
+    const ma = matrix.a;
+    const mb = matrix.b;
+    const mx = matrix.x;
+    const mc = matrix.c;
+    const md = matrix.d;
+    const my = matrix.y;
+    const me = matrix.e;
+    const mf = matrix.f;
+    const mz = matrix.z;
 
-      const a = ma * view.a + mc * view.b + me * view.x;
-      const b = mb * view.a + md * view.b + mf * view.x;
-      const tx = mx * view.a + my * view.b + mz * view.x;
-      const c = ma * view.c + mc * view.d + me * view.y;
-      const d = mb * view.c + md * view.d + mf * view.y;
-      const ty = mx * view.c + my * view.d + mz * view.y;
+    const a = ma * view.a + mc * view.b + me * view.x;
+    const b = mb * view.a + md * view.b + mf * view.x;
+    const tx = mx * view.a + my * view.b + mz * view.x;
+    const c = ma * view.c + mc * view.d + me * view.y;
+    const d = mb * view.c + md * view.d + mf * view.y;
+    const ty = mx * view.c + my * view.d + mz * view.y;
 
-      // vertices/uvs/colors are sized to vertexCount (×2 for the vec2 attrs);
-      // sourceIndex/i stay within bounds for the whole loop.
-      for (let i = 0; i < vertexCount; i++) {
-        const sourceIndex = i * 2;
-        const targetIndex = (vertexStart + i) * wordsPerVertex;
-        const px = vertices[sourceIndex]!;
-        const py = vertices[sourceIndex + 1]!;
+    // vertices/uvs/colors are sized to vertexCount (×2 for the vec2 attrs);
+    // sourceIndex/i stay within bounds for the whole loop.
+    for (let i = 0; i < vertexCount; i++) {
+      const sourceIndex = i * 2;
+      const targetIndex = (vertexStart + i) * wordsPerVertex;
+      const px = vertices[sourceIndex]!;
+      const py = vertices[sourceIndex + 1]!;
 
-        this._float32View[targetIndex + 0] = a * px + b * py + tx;
-        this._float32View[targetIndex + 1] = c * px + d * py + ty;
-        this._float32View[targetIndex + 2] = uvs !== null ? uvs[sourceIndex]! : 0;
-        this._float32View[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1]! : 0;
-        this._uint32View[targetIndex + 4] = colors !== null ? colors[i]! : 0xffffffff;
-      }
-    } else {
-      // Should not happen - default path always bakes. Defensive no-op.
-      // Same bounds reasoning as the bake branch above.
-      for (let i = 0; i < vertexCount; i++) {
-        const sourceIndex = i * 2;
-        const targetIndex = (vertexStart + i) * wordsPerVertex;
-        this._float32View[targetIndex + 0] = vertices[sourceIndex]!;
-        this._float32View[targetIndex + 1] = vertices[sourceIndex + 1]!;
-        this._float32View[targetIndex + 2] = uvs !== null ? uvs[sourceIndex]! : 0;
-        this._float32View[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1]! : 0;
-        this._uint32View[targetIndex + 4] = colors !== null ? colors[i]! : 0xffffffff;
-      }
+      this._float32View[targetIndex + 0] = a * px + b * py + tx;
+      this._float32View[targetIndex + 1] = c * px + d * py + ty;
+      this._float32View[targetIndex + 2] = uvs !== null ? uvs[sourceIndex]! : 0;
+      this._float32View[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1]! : 0;
+      this._uint32View[targetIndex + 4] = colors !== null ? colors[i]! : 0xffffffff;
     }
   }
 
@@ -1459,7 +1497,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _buildPipelineDescriptor(
     blendMode: BlendModes,
     format: GPUTextureFormat,
-    stencil = false,
+    stencil = WebGpuStencilMode.None,
     depth: MeshDepthMode = MeshDepthMode.None,
   ): GPURenderPipelineDescriptor {
     const descriptor: GPURenderPipelineDescriptor = {
@@ -1497,8 +1535,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       },
     };
 
-    if (stencil || depth !== MeshDepthMode.None) {
-      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
+    if (stencil !== WebGpuStencilMode.None || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil === WebGpuStencilMode.Clip, depth === MeshDepthMode.Write);
     }
 
     return descriptor;
@@ -1588,7 +1626,34 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return max;
   }
 
-  /** Whether any texture this flush binds would be re-uploaded or resized when synced. */
+  /**
+   * Whether an instanced batch of this flush will re-pack a cached geometry,
+   * which rewrites (and on growth replaces) the buffers an earlier draw in the
+   * open pass may still bind. Walks the same batching decision the draw loop
+   * makes.
+   */
+  private _flushWouldRewriteGeometry(): boolean {
+    for (let i = 0; i < this._drawCallCount; i++) {
+      const batchLength = this._getStaticBatchLength(i);
+
+      if (batchLength < 2) {
+        continue;
+      }
+
+      // A static batch candidate always carries its geometry.
+      const geometry = this._drawCalls[i]!.mesh.geometry!;
+      const cached = this._geometryCache.get(geometry);
+
+      if (cached !== undefined && cached.version !== geometry.version) {
+        return true;
+      }
+
+      i += batchLength - 1;
+    }
+
+    return false;
+  }
+
   /** Whether any pending draw of this flush writes depth into the bound target. */
   private _pendingWritesDepth(backend: WebGpuBackend): boolean {
     for (let i = 0; i < this._drawCallCount; i++) {
@@ -1600,6 +1665,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return false;
   }
 
+  /** Whether any texture this flush binds would be re-uploaded or resized when synced. */
   private _flushWouldMutateTexture(backend: WebGpuBackend): boolean {
     for (let i = 0; i < this._drawCallCount; i++) {
       if (backend.textureUploadWouldMutate(this._drawCalls[i]!.texture)) {
@@ -1704,7 +1770,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _uploadInstanceAttributes(instances: InstanceDataView, byteLength: number): number {
     const offset = this._instancedAttributeArena.take(byteLength);
 
-    this._device!.queue.writeBuffer(this._instancedAttributeArena.buffer!, offset, instances.data.buffer, instances.data.byteOffset, byteLength);
+    this._device!.queue.writeBuffer(
+      this._instancedAttributeArena.buffer!,
+      offset,
+      instances.data.buffer,
+      instances.data.byteOffset,
+      byteLength,
+    );
 
     return offset;
   }
@@ -1719,7 +1791,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     resources: CustomShaderResources,
     blendMode: BlendModes,
     format: GPUTextureFormat,
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     instances: InstanceDataView | null,
     depth: MeshDepthMode = MeshDepthMode.None,
   ): GPURenderPipeline {
@@ -1763,8 +1835,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       primitive: { topology: 'triangle-list', cullMode: 'none' },
     };
 
-    if (stencil || depth !== MeshDepthMode.None) {
-      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
+    if (stencil !== WebGpuStencilMode.None || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil === WebGpuStencilMode.Clip, depth === MeshDepthMode.Write);
     }
 
     pipeline = this._device!.createRenderPipeline(descriptor);
@@ -1786,7 +1858,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     if (requiredBytes > this._instancedNodeIndexBufferCapacity) {
       this._instancedNodeIndexBuffer?.destroy();
-      this._instancedNodeIndexBufferCapacity = Math.max(requiredBytes, this._instancedNodeIndexBufferCapacity * 2 || Uint32Array.BYTES_PER_ELEMENT);
+      this._instancedNodeIndexBufferCapacity = Math.max(
+        requiredBytes,
+        this._instancedNodeIndexBufferCapacity * 2 || Uint32Array.BYTES_PER_ELEMENT,
+      );
       this._instancedNodeIndexBuffer = this._device!.createBuffer({
         label: 'mesh:instanced-node-index-buffer',
         size: this._instancedNodeIndexBufferCapacity,
@@ -1807,7 +1882,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
    * (which zeroes the cursors) instead of appending. All arguments are pass
    * totals, not this flush's deltas.
    */
-  private _flushAppendWouldGrow(vertexBytes: number, indexBytes: number, uniformSlots: number, nodeIndexBytes: number, instancedUniformSlots: number): boolean {
+  private _flushAppendWouldGrow(
+    vertexBytes: number,
+    indexBytes: number,
+    uniformSlots: number,
+    nodeIndexBytes: number,
+    instancedUniformSlots: number,
+  ): boolean {
     return (
       vertexBytes > this._vertexBufferCapacity ||
       indexBytes > this._indexBufferCapacity ||
@@ -1856,7 +1937,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     data[24] = premultiplySample ? 1 : 0;
     packSnapViewport(backend, data, 28);
 
-    this._device!.queue.writeBuffer(this._instancedUniformBuffer!, slot * this._uniformAlignment, data.buffer, data.byteOffset, transformUniformByteLength);
+    this._device!.queue.writeBuffer(
+      this._instancedUniformBuffer!,
+      slot * this._uniformAlignment,
+      data.buffer,
+      data.byteOffset,
+      transformUniformByteLength,
+    );
   }
 
   // ── Retained-batch record/replay (mesh opt-in) ────────────────────────────
@@ -1989,11 +2076,17 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
+    // Replay shares cached geometry with live batches. Associate its draw with
+    // this pass so a later re-pack or disconnect submits those reads first.
+    // Replay does not consume the live stream cursors, but a new pass still
+    // has to retire their previous pass's offsets before live work appends.
+    this._syncInstancedBatchPass(active);
+
     pass.setPipeline(
       this._getInstancedPipeline({
         blendMode: payload.blendMode,
         format: backend.renderTargetFormat,
-        stencil: coordinator.stencilActive,
+        stencil: coordinator.stencilMode,
         depth: MeshDepthMode.None,
       }),
     );
@@ -2004,6 +2097,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     pass.setIndexBuffer(geometry.indexBuffer, geometry.indexFormat);
     pass.drawIndexed(geometry.indexCount, payload.instanceCount);
 
+    this._ownDrawsPass = active;
     state.drawsInPass = active;
     coordinator.markPassDraws();
     backend.stats.batches++;
@@ -2011,7 +2105,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   private _getMeshReplayState(bundle: WebGpuRetainedGroupBundle): MeshRetainedReplayState {
-    const existing = bundle.rendererReplayState;
+    const existing = bundle.rendererReplayStates.get(this);
 
     if (existing instanceof MeshRetainedReplayState) {
       return existing;
@@ -2019,7 +2113,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const state = new MeshRetainedReplayState();
 
-    bundle.rendererReplayState = state;
+    bundle.rendererReplayStates.set(this, state);
 
     return state;
   }
@@ -2055,7 +2149,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     state.bindGroupUniform = null;
   }
 
-  private _getMeshReplayBindGroup(state: MeshRetainedReplayState, device: GPUDevice, transformBuffer: GPUBuffer, tintBuffer: GPUBuffer): GPUBindGroup {
+  private _getMeshReplayBindGroup(
+    state: MeshRetainedReplayState,
+    device: GPUDevice,
+    transformBuffer: GPUBuffer,
+    tintBuffer: GPUBuffer,
+  ): GPUBindGroup {
     if (
       state.bindGroup !== null &&
       state.bindGroupUniform === state.uniformBuffer &&
@@ -2126,7 +2225,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     let pipeline = this._instancedPipelines.get(cacheKey);
 
     if (!pipeline) {
-      pipeline = this._device!.createRenderPipeline(this._buildInstancedPipelineDescriptor(key.blendMode, key.format, key.stencil, key.depth));
+      pipeline = this._device!.createRenderPipeline(
+        this._buildInstancedPipelineDescriptor(key.blendMode, key.format, key.stencil, key.depth),
+      );
       this._instancedPipelines.set(cacheKey, pipeline);
     }
 
@@ -2136,7 +2237,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _buildInstancedPipelineDescriptor(
     blendMode: BlendModes,
     format: GPUTextureFormat,
-    stencil = false,
+    stencil = WebGpuStencilMode.None,
     depth: MeshDepthMode = MeshDepthMode.None,
   ): GPURenderPipelineDescriptor {
     const descriptor: GPURenderPipelineDescriptor = {
@@ -2179,8 +2280,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       },
     };
 
-    if (stencil || depth !== MeshDepthMode.None) {
-      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
+    if (stencil !== WebGpuStencilMode.None || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil === WebGpuStencilMode.Clip, depth === MeshDepthMode.Write);
     }
 
     return descriptor;
@@ -2273,7 +2374,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   // Pack a mesh into fresh CPU-side vertex/index arrays in the shared layout.
   // One extra index element is allocated when indexCount is odd so the GPU
   // buffer and writeBuffer byte count round up to 4 without a buffer overread.
-  private _packGeometry(mesh: Mesh): { vertexData: ArrayBuffer; indexData: MeshIndexArray; indexFormat: MeshIndexFormat; alignedIndexByteLen: number } {
+  private _packGeometry(mesh: Mesh): {
+    vertexData: ArrayBuffer;
+    indexData: MeshIndexArray;
+    indexFormat: MeshIndexFormat;
+    alignedIndexByteLen: number;
+  } {
     const vertexData = new ArrayBuffer(mesh.vertexCount * vertexStrideBytes);
     const vertexFloatView = new Float32Array(vertexData);
     const vertexUintView = new Uint32Array(vertexData);
@@ -2351,7 +2457,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     if (requiredBytes > this._vertexBufferCapacity) {
       this._vertexBuffer?.destroy();
-      this._vertexBufferCapacity = Math.max(requiredBytes, this._vertexBufferCapacity === 0 ? vertexStrideBytes : this._vertexBufferCapacity * 2);
+      this._vertexBufferCapacity = Math.max(
+        requiredBytes,
+        this._vertexBufferCapacity === 0 ? vertexStrideBytes : this._vertexBufferCapacity * 2,
+      );
       this._vertexBuffer = this._device!.createBuffer({
         label: 'mesh:vertex-buffer',
         size: this._vertexBufferCapacity,
@@ -2366,7 +2475,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
    */
   private _ensureIndexCapacity(stagingBytes: number, requiredBytes = stagingBytes): void {
     if (this._indexStaging.byteLength < stagingBytes) {
-      this._indexStaging = new ArrayBuffer(Math.max(stagingBytes, this._indexStaging.byteLength === 0 ? 4 : this._indexStaging.byteLength * 2));
+      this._indexStaging = new ArrayBuffer(
+        Math.max(stagingBytes, this._indexStaging.byteLength === 0 ? 4 : this._indexStaging.byteLength * 2),
+      );
       this._indexStagingU16 = new Uint16Array(this._indexStaging);
       this._indexStagingU32 = new Uint32Array(this._indexStaging);
     }
@@ -2391,7 +2502,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     if (requiredBytes > this._uniformBufferCapacity) {
       this._uniformBuffer?.destroy();
-      this._uniformBufferCapacity = Math.max(requiredBytes, this._uniformBufferCapacity === 0 ? this._uniformAlignment : this._uniformBufferCapacity * 2);
+      this._uniformBufferCapacity = Math.max(
+        requiredBytes,
+        this._uniformBufferCapacity === 0 ? this._uniformAlignment : this._uniformBufferCapacity * 2,
+      );
       this._uniformBuffer = this._device!.createBuffer({
         label: 'mesh:uniform-buffer',
         size: this._uniformBufferCapacity,
@@ -2426,14 +2540,19 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
   private _totalCustomDraws(): number {
     let total = 0;
+
     for (const resources of this._customShaders.values()) {
       total += resources.drawCount;
     }
+
     return total;
   }
 
   private _resetFrame(): void {
     this._drawCallCount = 0;
+    // Stale slots would keep last frame's meshes, materials and textures alive.
+    this._drawCalls.length = 0;
+
     for (const resources of this._customShaders.values()) {
       resources.drawCount = 0;
       resources.totalVertices = 0;
@@ -2443,6 +2562,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
   private _getOrCreateCustomShaderResources(material: AnyMaterial): CustomShaderResources {
     let resources = this._customShaders.get(material);
+
     if (resources !== undefined) {
       return resources;
     }
@@ -2529,12 +2649,24 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     this._customShaders.set(material, resources);
 
+    // Material cannot unregister callbacks: hook once per dispose cycle, not per (re)connect.
+    if (this._disposeHooked.has(material)) {
+      return resources;
+    }
+
+    this._disposeHooked.add(material);
+
     // When the user calls material.destroy(), evict and release.
     material.onDispose(() => {
+      this._disposeHooked.delete(material);
+
       const r = this._customShaders.get(material);
+
+      // Evict before releasing so a throwing release cannot leave a destroyed entry cached.
+      this._customShaders.delete(material);
+
       if (r !== undefined) {
         this._releaseCustomShaderResources(r);
-        this._customShaders.delete(material);
       }
     });
 
@@ -2546,12 +2678,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     // Vertex buffer
     const vertexBytes = resources.totalVertices * vertexStrideBytes;
+
     if (vertexBytes > resources.vertexData.byteLength) {
       const newSize = Math.max(vertexBytes, resources.vertexData.byteLength * 2);
       resources.vertexData = new ArrayBuffer(newSize);
       resources.vertexFloatView = new Float32Array(resources.vertexData);
       resources.vertexUintView = new Uint32Array(resources.vertexData);
     }
+
     if (vertexBytes > resources.vertexBufferCapacity) {
       resources.vertexBuffer?.destroy();
       resources.vertexBufferCapacity = Math.max(vertexBytes, resources.vertexBufferCapacity * 2 || vertexStrideBytes);
@@ -2564,11 +2698,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     // Index buffer - every per-draw block is already 4-byte aligned, so the total is too.
     const indexBytes = resources.totalIndexBytes;
+
     if (resources.indexData.byteLength < indexBytes) {
       resources.indexData = new ArrayBuffer(Math.max(indexBytes, resources.indexData.byteLength * 2 || 4));
       resources.indexU16 = new Uint16Array(resources.indexData);
       resources.indexU32 = new Uint32Array(resources.indexData);
     }
+
     if (indexBytes > resources.indexBufferCapacity) {
       resources.indexBuffer?.destroy();
       resources.indexBufferCapacity = Math.max(indexBytes, resources.indexBufferCapacity * 2 || 4);
@@ -2581,6 +2717,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     // Mesh-uniform UBO (proj/trans/tint per draw, 256-byte aligned).
     const meshUniformBytes = resources.drawCount * meshUniformAlignment;
+
     if (meshUniformBytes > resources.meshUniformBufferCapacity) {
       resources.meshUniformBuffer?.destroy();
       resources.meshUniformBufferCapacity = Math.max(meshUniformBytes, resources.meshUniformBufferCapacity * 2 || meshUniformAlignment);
@@ -2621,7 +2758,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
   }
 
-  private _writeCustomMeshUniform(_material: AnyMaterial, resources: CustomShaderResources, drawCursor: number, mesh: Mesh, backend: WebGpuBackend): void {
+  private _writeCustomMeshUniform(
+    _material: AnyMaterial,
+    resources: CustomShaderResources,
+    drawCursor: number,
+    mesh: Mesh,
+    backend: WebGpuBackend,
+  ): void {
     // Layout: mat3x3 projection (48B) + mat3x3 translation (48B) + vec4 tint (16B) = 112B.
     // WGSL mat3x3 stores 3 vec3 columns padded to vec4 alignment.
     const slotBytes = meshUniformAlignment;
@@ -2630,7 +2773,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const proj = backend.view.getTransform();
     const groupTransform = backend.renderGroupTransform;
-    const trans = groupTransform !== null ? this._combinedTransform.copy(mesh.getGlobalTransform()).combine(groupTransform) : mesh.getGlobalTransform();
+    const trans =
+      groupTransform !== null ? this._combinedTransform.copy(mesh.getGlobalTransform()).combine(groupTransform) : mesh.getGlobalTransform();
 
     // WGSL mat3x3 columns packed in the shared canonical order (matching the
     // GLSL u_projection/u_translation uploads via Matrix.toArray(false)), so
@@ -2655,7 +2799,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     resources: CustomShaderResources,
     blendMode: BlendModes,
     formats: readonly GPUTextureFormat[],
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     depth: MeshDepthMode = MeshDepthMode.None,
     attachmentModes: readonly BlendModes[] | null = null,
   ): GPURenderPipeline {
@@ -2672,7 +2816,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // `attachmentModes` is deliberately absent from the key: these
     // resources are cached per material, and a material's list is fixed for its
     // lifetime, so it cannot vary within one cache.
-    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil ? 's' : 'n'}:${depth}`;
+    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil}:${depth}`;
     let pipeline = resources.pipelines.get(cacheKey);
 
     if (pipeline === undefined) {
@@ -2712,8 +2856,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       // While a geometric clip is active - or while the target's own depth
       // attachment is bound - the coordinator's pass carries a depth/stencil
       // attachment, and the content pipeline has to declare matching state.
-      if (stencil || depth !== MeshDepthMode.None) {
-        descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
+      if (stencil !== WebGpuStencilMode.None || depth !== MeshDepthMode.None) {
+        descriptor.depthStencil = contentDepthStencilState(stencil === WebGpuStencilMode.Clip, depth === MeshDepthMode.Write);
       }
 
       pipeline = this._device!.createRenderPipeline(descriptor);
@@ -2774,7 +2918,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   private _getUserBindGroup(backend: WebGpuBackend, material: AnyMaterial, resources: CustomShaderResources): GPUBindGroup {
-    return resolveUserUniformBindGroup(this._device!, backend, material, resources.userLayout, 'mesh:material-user-bind-group', resources.userUniform);
+    return resolveUserUniformBindGroup(
+      this._device!,
+      backend,
+      material,
+      resources.userLayout,
+      'mesh:material-user-bind-group',
+      resources.userUniform,
+    );
   }
 
   private _releaseCustomShaderResources(resources: CustomShaderResources): void {
@@ -2784,7 +2935,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     destroyUserUniformBuffers(resources.userUniform);
     resources.pipelines.clear();
     resources.instancedPipelines.clear();
-    resources.meshTextureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }>();
+    resources.meshTextureBindGroups = new WeakMap<
+      Texture | RenderTexture,
+      { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }
+    >();
     resources.vertexBuffer = null;
     resources.indexBuffer = null;
     resources.meshUniformBuffer = null;

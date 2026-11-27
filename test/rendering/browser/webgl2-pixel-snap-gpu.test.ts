@@ -112,7 +112,10 @@ const readRect = (backend: WebGl2Backend, x: number, y: number, w: number, h: nu
     const glY = backend.renderTarget.height - (y + row) - 1;
 
     gl.readPixels(x, glY, w, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-    for (const channel of buf) out.push(channel);
+
+    for (const channel of buf) {
+      out.push(channel);
+    }
   }
 
   return out;
@@ -403,7 +406,9 @@ describe('WebGL2 GPU pixel snapping — NineSlice geometry seams', () => {
         } else if (green < 16) {
           sawBackground = true;
         } else {
-          throw new Error(`blended boundary column at x=${x}, row=${bestRow}: green=${green} (a quad edge is not snapped to a device pixel)`);
+          throw new Error(
+            `blended boundary column at x=${x}, row=${bestRow}: green=${green} (a quad edge is not snapped to a device pixel)`,
+          );
         }
       }
 
@@ -495,7 +500,9 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
         } else if (blue < 16) {
           sawBackground = true;
         } else {
-          throw new Error(`blended boundary column at x=${x}, row=${bestRow}: blue=${blue} (a destination edge is not snapped to a device pixel)`);
+          throw new Error(
+            `blended boundary column at x=${x}, row=${bestRow}: blue=${blue} (a destination edge is not snapped to a device pixel)`,
+          );
         }
       }
 
@@ -565,7 +572,9 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
         } else if (blue < 16) {
           sawBackground = true;
         } else {
-          throw new Error(`blended boundary column at x=${x}, row=${bestRow}: blue=${blue} (a segment edge is not snapped to a device pixel)`);
+          throw new Error(
+            `blended boundary column at x=${x}, row=${bestRow}: blue=${blue} (a segment edge is not snapped to a device pixel)`,
+          );
         }
       }
 
@@ -633,7 +642,10 @@ describe('WebGL2 GPU pixel snapping — retained/immediate parity', () => {
 
       // Drive the retained ladder to steady state (capture → record → splice →
       // steady); the immediate scene only needs to be drawn.
-      for (let i = 0; i < 4; i++) render(retainedBackend, retainedRoot);
+      for (let i = 0; i < 4; i++) {
+        render(retainedBackend, retainedRoot);
+      }
+
       render(immediateBackend, immediateRoot);
 
       const retainedPixels = readRect(retainedBackend, 10, 10, 40, 40);

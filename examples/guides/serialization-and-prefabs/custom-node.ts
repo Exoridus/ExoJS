@@ -10,6 +10,7 @@ registerSerializer('Marker', Marker, {
   read: data => {
     const marker = new Marker();
     marker.kind = String(data.kind);
+
     return marker;
   },
 });

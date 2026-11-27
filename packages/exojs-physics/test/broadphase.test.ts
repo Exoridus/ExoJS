@@ -195,3 +195,157 @@ describe('AabbTreeBroadPhase', () => {
     expect(out.every(pair => pair.a === other || pair.b === other)).toBe(true);
   });
 });
+
+describe('sync early-out', () => {
+  const boxesAt = (world: PhysicsWorld, count: number): Collider[] => {
+    const colliders: Collider[] = [];
+
+    for (let i = 0; i < count; i++) {
+      colliders.push(colliderAt(world, new BoxShape(10, 10), { x: i * 40, y: 0 }));
+    }
+
+    return colliders;
+  };
+
+  const spyOnAabbReads = (collider: Collider) => vi.spyOn(Object.getPrototypeOf(collider) as { readonly aabb: unknown }, 'aabb', 'get');
+
+  it('does not re-read any AABB when nothing has moved since the last sync', () => {
+    const world = new PhysicsWorld();
+    const colliders = boxesAt(world, 8);
+    const broadPhase = new AabbTreeBroadPhase();
+
+    broadPhase.sync(colliders);
+
+    const reads = spyOnAabbReads(colliders[0]!);
+
+    try {
+      for (let i = 0; i < 10; i++) {
+        broadPhase.sync(colliders);
+      }
+
+      expect(reads).not.toHaveBeenCalled();
+    } finally {
+      reads.mockRestore();
+    }
+  });
+
+  it('visits a different same-length collider list without any new AABB writes', () => {
+    const world = new PhysicsWorld();
+    const [first, second] = boxesAt(world, 2);
+    const broadPhase = new AabbTreeBroadPhase();
+
+    broadPhase.sync([first!]);
+    const reads = spyOnAabbReads(second!);
+
+    try {
+      broadPhase.sync([second!]);
+
+      expect(reads).toHaveBeenCalled();
+      expect(second!._treeProxy).not.toBe(-1);
+    } finally {
+      reads.mockRestore();
+      broadPhase.destroy();
+    }
+  });
+
+  it('re-walks after a collider is moved', () => {
+    const world = new PhysicsWorld();
+    const colliders = boxesAt(world, 4);
+    const broadPhase = new AabbTreeBroadPhase();
+
+    broadPhase.sync(colliders);
+    colliders[0]!.body!.setTransform({ x: 500, y: 500 });
+
+    const reads = spyOnAabbReads(colliders[0]!);
+
+    try {
+      broadPhase.sync(colliders);
+
+      expect(reads).toHaveBeenCalled();
+    } finally {
+      reads.mockRestore();
+    }
+  });
+
+  it('re-walks after the collider set grows', () => {
+    const world = new PhysicsWorld();
+    const colliders = boxesAt(world, 2);
+    const broadPhase = new AabbTreeBroadPhase();
+
+    broadPhase.sync(colliders);
+    colliders.push(colliderAt(world, new BoxShape(10, 10), { x: 80, y: 0 }));
+
+    const reads = spyOnAabbReads(colliders[0]!);
+
+    try {
+      broadPhase.sync(colliders);
+
+      expect(reads).toHaveBeenCalled();
+    } finally {
+      reads.mockRestore();
+    }
+  });
+  it('retries an interrupted sync instead of treating it as complete', () => {
+    const world = new PhysicsWorld();
+    const colliders = boxesAt(world, 3);
+    const broadPhase = new AabbTreeBroadPhase();
+    const reads = spyOnAabbReads(colliders[0]!);
+
+    reads.mockImplementationOnce(() => {
+      throw new Error('aabb read failed');
+    });
+
+    try {
+      expect(() => broadPhase.sync(colliders)).toThrow('aabb read failed');
+      reads.mockRestore();
+
+      broadPhase.sync(colliders);
+
+      expect(colliders.map(collider => collider._treeProxy)).not.toContain(-1);
+    } finally {
+      reads.mockRestore();
+      broadPhase.destroy();
+    }
+  });
+  it('reaches the complete, duplicate-free state when a sync is interrupted midway and retried', () => {
+    const world = new PhysicsWorld();
+    const colliders: Collider[] = [];
+
+    for (let i = 0; i < 5; i++) {
+      colliders.push(colliderAt(world, new BoxShape(10, 10), { x: i * 8, y: 0 }));
+    }
+
+    const broadPhase = new AabbTreeBroadPhase();
+    const out: CandidatePair[] = [];
+
+    // The third collider fails after two were inserted and before two were seen.
+    Object.defineProperty(colliders[2]!, 'aabb', {
+      configurable: true,
+      get: () => {
+        throw new Error('aabb read failed');
+      },
+    });
+
+    try {
+      expect(() => broadPhase.computePairs(colliders, out)).toThrow('aabb read failed');
+    } finally {
+      delete (colliders[2] as { aabb?: unknown }).aabb;
+    }
+
+    broadPhase.computePairs(colliders, out);
+
+    const proxies = colliders.map(collider => collider._treeProxy);
+    const visited: Collider[] = [];
+
+    broadPhase.queryAabb({ minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 }, visited);
+
+    expect(new Set(proxies).size).toBe(colliders.length);
+    expect(proxies).not.toContain(-1);
+    expect(visited).toHaveLength(colliders.length);
+    expect(new Set(visited).size).toBe(colliders.length);
+    expect(out.map(key)).toEqual([...new Set(out.map(key))]);
+    expect(new Set(out.map(key))).toEqual(bruteForcePairs(colliders));
+
+    broadPhase.destroy();
+  });
+});

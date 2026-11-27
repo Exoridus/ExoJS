@@ -1,7 +1,12 @@
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 import type { OwnTransformRowPatcher } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderNode } from '#rendering/RenderNode';
-import { composeTextAtlasFragmentGlsl, packTextNodeAtlasSlot, textAtlasTextureSlots, textNodeIndexMask } from '#rendering/text/atlasTextureSlots';
+import {
+  composeTextAtlasFragmentGlsl,
+  packTextNodeAtlasSlot,
+  textAtlasTextureSlots,
+  textNodeIndexMask,
+} from '#rendering/text/atlasTextureSlots';
 import { type BitmapText } from '#rendering/text/BitmapText';
 import { packTextNodeData, packTextNodeTransform, textNodeDataFloats, textNodeDataTexels } from '#rendering/text/nodeDataPacker';
 import type { TextPageQuads } from '#rendering/text/Text';
@@ -38,24 +43,25 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 // backends pack through - see it for what each texel carries.
 //
 // The shaders divide shadowOffset by u_pageSize (a per-batch uniform shared by
-// compatible atlas textures) to convert px → UV space.
+// compatible atlas textures) to convert px -> UV space.
 
 const nodeTexels = textNodeDataTexels;
 const nodeFloats = textNodeDataFloats;
 
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
-// Per-vertex layout (20 bytes), mirrors WebGpuTextRenderer's vertex buffer exactly:
+// Per-vertex layout (28 bytes), mirrors WebGpuTextRenderer's vertex buffer exactly:
 //   a_position : vec2  f32  (offset  0,  8 bytes)  ← LOCAL space
 //   a_texcoord : vec2  f32  (offset  8,  8 bytes)
 //   a_packedNodeSlot: uint u32 (offset 16, 4 bytes) ← 23-bit node row + decoration flag + 8-bit atlas slot
+//   a_oppositeTexcoord: vec2 f32 (offset 20, 8 bytes)
 //
 // The vertex shader reads the world transform live from the per-node data texture via
 // texelFetch (same texture the fragment stage already reads style from), keyed by
 // a_nodeIndex - no CPU-side transform baking. Gradient UV is likewise computed in the
 // vertex shader from the local a_position and the bounds texel, not uploaded per vertex.
-const vertexStrideBytes = 20;
-const vertexStrideWords = vertexStrideBytes / 4; // 5 floats per vertex
+const vertexStrideBytes = 28;
+const vertexStrideWords = vertexStrideBytes / 4;
 const initialVertexCapacity = 256;
 const initialIndexCapacity = 384;
 const initialNodeCapacity = 32;
@@ -97,10 +103,10 @@ interface TextRetainedRendererData {
 
 /**
  * Group-owned WebGL2 replay state for one recorded Text batch: the persistent
- * per-node RGBA32F data texture (10 texels/row - transform AND style, read
- * live by both shader stages) and the drawable→row-index map the
- * own-transform-move O(1) patch uses. Grow-only across recaptures; released by
- * the bundle on destroy.
+ * per-node RGBA32F data texture (20 texels/row - transform, style, gradient
+ * ramp and ink bounds, read live by both shader stages) and the
+ * drawable->row-index map the own-transform-move O(1) patch uses. Grow-only
+ * across recaptures; released by the bundle on destroy.
  */
 class TextRetainedReplayState implements WebGl2RetainedRendererReplayState {
   public nodeDataTexture: DataTexture<TextureFormat.Rgba32F> | null = null;
@@ -142,7 +148,10 @@ interface TextRendererConnection {
  * textures rotate through an eight-slot table, so one `drawElements` call can
  * cover several fonts/pages.
  */
-export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText> implements WebGl2RetainedBatchReplayer, OwnTransformRowPatcher {
+export class WebGl2TextRenderer
+  extends AbstractWebGl2Renderer<Text | BitmapText>
+  implements WebGl2RetainedBatchReplayer, OwnTransformRowPatcher
+{
   /**
    * Text packs its world transform into its own per-node data texture and never
    * reads the shared {@link TransformBuffer}, so the render-group upload boundary
@@ -167,12 +176,12 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    */
   public readonly supportsRetainedBatches = true;
 
-  private readonly _sdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textSdfFragSource));
-  private readonly _msdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textMsdfFragSource));
+  private readonly _sdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textSdfFragSource, true));
+  private readonly _msdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textMsdfFragSource, true));
   private readonly _colorShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textColorFragSource));
 
   private readonly _nodeDataUnitScratch = new Int32Array([textAtlasTextureSlots]);
-  private readonly _floatScratch = new Float32Array(1);
+  private readonly _pageSizeScratch = new Float32Array(2);
   // Own-transform-move patch scratch: 2 texels (transform cols 0-1), mirrors
   // WebGpuTextRenderer's `_patchRowScratch`.
   private readonly _patchRowScratch = new Float32Array(8);
@@ -207,7 +216,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   // ── Public API ──────────────────────────────────────────────────────────────
 
   public render(node: Text | BitmapText): void {
-    if (!this._connection) throw new Error('WebGl2TextRenderer is not connected to a backend.');
+    if (!this._connection) {
+      throw new Error('WebGl2TextRenderer is not connected to a backend.');
+    }
 
     if (node instanceof Text) {
       this._collectText(node);
@@ -218,14 +229,21 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
   public flush(): void {
     const c = this._connection;
+
     if (!c || this._pendingQuads.length === 0) {
       this._resetFrameState();
+
       return;
     }
 
-    this._uploadNodeData(c);
-    this._drawBatches(c);
-    this._resetFrameState();
+    // A throwing draw must not leave this frame's quads queued: the next flush
+    // would draw them again on top of its own.
+    try {
+      this._uploadNodeData(c);
+      this._drawBatches(c);
+    } finally {
+      this._resetFrameState();
+    }
   }
 
   public destroy(): void {
@@ -241,42 +259,57 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const gl = backend.context;
     const buffers: TextRendererConnection['buffers'] = new Map();
 
-    this._sdfShader.connect(createWebGl2ShaderProgram(gl));
-    this._msdfShader.connect(createWebGl2ShaderProgram(gl));
-    this._colorShader.connect(createWebGl2ShaderProgram(gl));
-    this._sdfShader.sync();
-    this._msdfShader.sync();
-    this._colorShader.sync();
-    this._pinAtlasSamplerUnits();
+    const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw);
+    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw);
+    let vaoHandle: WebGLVertexArrayObject | null = null;
 
-    const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(gl, buffers),
-      backend.accountant,
-    );
-    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(gl, buffers),
-      backend.accountant,
-    );
+    try {
+      this._sdfShader.connect(createWebGl2ShaderProgram(gl));
+      this._msdfShader.connect(createWebGl2ShaderProgram(gl));
+      this._colorShader.connect(createWebGl2ShaderProgram(gl));
+      this._sdfShader.sync();
+      this._msdfShader.sync();
+      this._colorShader.sync();
+      this._pinAtlasSamplerUnits();
 
-    const vaoHandle = gl.createVertexArray();
-    if (vaoHandle === null) throw new Error('WebGl2TextRenderer: could not create VAO.');
+      indexBuffer.connect(this._createBufferRuntime(gl, buffers), backend.accountant);
+      vertexBuffer.connect(this._createBufferRuntime(gl, buffers), backend.accountant);
+      vaoHandle = gl.createVertexArray();
 
-    const vao = new WebGl2VertexArrayObject()
-      .addIndex(indexBuffer, IndexElementTypes.UnsignedInt)
-      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
-      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
-      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_packedNodeSlot'), gl.UNSIGNED_INT, false, vertexStrideBytes, 16, true);
+      if (vaoHandle === null) {
+        throw new Error('WebGl2TextRenderer: could not create VAO.');
+      }
 
-    vao.connect(this._createVaoRuntime(gl, vaoHandle));
+      const vao = new WebGl2VertexArrayObject()
+        .addIndex(indexBuffer, IndexElementTypes.UnsignedInt)
+        .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
+        .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
+        .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_oppositeTexcoord'), gl.FLOAT, false, vertexStrideBytes, 20)
+        .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_packedNodeSlot'), gl.UNSIGNED_INT, false, vertexStrideBytes, 16, true);
 
-    const nodeDataTexture = this._createNodeDataTexture(backend, initialNodeCapacity);
+      vao.connect(this._createVaoRuntime(gl, vaoHandle));
 
-    this._connection = { gl, buffers, vertexBuffer, indexBuffer, vao, nodeDataTexture, nodeDataCapacity: initialNodeCapacity };
+      const nodeDataTexture = this._createNodeDataTexture(backend, initialNodeCapacity);
+
+      this._connection = { gl, buffers, vertexBuffer, indexBuffer, vao, nodeDataTexture, nodeDataCapacity: initialNodeCapacity };
+    } catch (error) {
+      this._sdfShader.destroy();
+      this._msdfShader.destroy();
+      this._colorShader.destroy();
+      indexBuffer.destroy();
+      vertexBuffer.destroy();
+      gl.deleteVertexArray(vaoHandle);
+
+      throw error;
+    }
   }
 
   protected onDisconnect(): void {
     const c = this._connection;
-    if (!c) return;
+
+    if (!c) {
+      return;
+    }
 
     this._sdfShader.destroy();
     this._msdfShader.destroy();
@@ -298,56 +331,76 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     // Before the layout pass, not after: this is what a node with no explicit
     // `pixelRatio` inherits, and the pass it drives is the one that resolves
     // which atlas the node rasterizes into.
-    node._setSurfacePixelRatio(this.getBackend().surfacePixelRatio);
+    const backend = this.getBackend();
+    node._setSurfacePixelRatio(backend.surfacePixelRatio, backend.maxTextureSize);
     node.syncDirty();
     const { pageQuads, textPages: pages } = node;
-    if (pageQuads.length === 0 || pages.length === 0) return;
+
+    if (pageQuads.length === 0 || pages.length === 0) {
+      return;
+    }
 
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = node.colorGlyphs ? 'color' : 'sdf';
-    const blendMode = node.blendMode;
+    const blendMode = this.getBackend().activeDrawCommand?.material.blendMode ?? node.blendMode;
 
     for (const batch of pageQuads) {
       const page = pages[batch.pageIndex];
-      if (page === undefined) continue;
+
+      if (page === undefined) {
+        continue;
+      }
+
       this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: page.texture, blendMode, node });
     }
   }
 
   private _collectBitmapText(node: BitmapText): void {
     const { pageQuads, textures, msdf } = node;
-    if (pageQuads.length === 0) return;
+
+    if (pageQuads.length === 0) {
+      return;
+    }
 
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = msdf ? 'msdf' : 'color';
-    const blendMode = node.blendMode;
+    const blendMode = this.getBackend().activeDrawCommand?.material.blendMode ?? node.blendMode;
 
     for (const batch of pageQuads) {
       const tex = textures[batch.pageIndex];
-      if (tex === undefined) continue;
+
+      if (tex === undefined) {
+        continue;
+      }
+
       this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: tex, blendMode, node });
     }
   }
 
   private _assignNodeIndex(node: Text | BitmapText): number {
     const existing = this._nodeIndexMap.get(node);
-    if (existing !== undefined) return existing;
+
+    if (existing !== undefined) {
+      return existing;
+    }
 
     const idx = this._nodeCount++;
 
     if (idx > textNodeIndexMask) {
       throw new Error(`WebGl2TextRenderer: node index ${idx} exceeds the 24-bit packed vertex limit.`);
     }
+
     this._nodeIndexMap.set(node, idx);
     this._ensureNodeCapacity(idx + 1);
     this._packNodeData(idx, node);
+
     return idx;
   }
 
   // ── Node data packing ────────────────────────────────────────────────────
-  // The 10-texel/40-float layout is packed by the shared, backend-free
+  // The 20-texel/80-float layout is packed by the shared, backend-free
   // `packTextNodeData` (mirrors `WebGpuTextRenderer`, byte for byte) - see
-  // `textNodeDataPacker.ts` for the texel-by-texel layout comment.
+  // `nodeDataPacker.ts` for the texel-by-texel layout comment.
 
   private _packNodeData(ni: number, node: Text | BitmapText): void {
     packTextNodeData(this._nodeDataArray, ni * nodeFloats, node);
@@ -362,7 +415,11 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     if (nodeCount > c.nodeDataCapacity) {
       // Reallocate to next power of two at least as large as nodeCount
       let cap = c.nodeDataCapacity;
-      while (cap < nodeCount) cap *= 2;
+
+      while (cap < nodeCount) {
+        cap *= 2;
+      }
+
       gl.deleteTexture(c.nodeDataTexture);
       c.nodeDataTexture = this._createNodeDataTexture(this.getBackend(), cap);
       c.nodeDataCapacity = cap;
@@ -411,13 +468,29 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     // carries one blend state.
     this._pendingQuads.sort((a, b) => {
       const bc = a.blendMode - b.blendMode;
-      if (bc !== 0) return bc;
+
+      if (bc !== 0) {
+        return bc;
+      }
+
       const sc = a.shaderType.localeCompare(b.shaderType);
-      if (sc !== 0) return sc;
+
+      if (sc !== 0) {
+        return sc;
+      }
+
       const wc = a.atlasTexture.width - b.atlasTexture.width;
-      if (wc !== 0) return wc;
+
+      if (wc !== 0) {
+        return wc;
+      }
+
       const hc = a.atlasTexture.height - b.atlasTexture.height;
-      if (hc !== 0) return hc;
+
+      if (hc !== 0) {
+        return hc;
+      }
+
       return (this._textureKeyMap.get(a.atlasTexture) ?? 0) - (this._textureKeyMap.get(b.atlasTexture) ?? 0);
     });
 
@@ -446,10 +519,16 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       while (j < quads.length) {
         // In-bounds: `j` < `quads.length` per the loop guard.
         const pq = quads[j]!;
-        if (!sharesAtlasBatchClass(first, pq)) break;
+
+        if (!sharesAtlasBatchClass(first, pq)) {
+          break;
+        }
 
         if (!atlasSlots.has(pq.atlasTexture)) {
-          if (atlasTextures.length === textAtlasTextureSlots) break;
+          if (atlasTextures.length === textAtlasTextureSlots) {
+            break;
+          }
+
           atlasSlots.set(pq.atlasTexture, atlasTextures.length);
           atlasTextures.push(pq.atlasTexture);
         }
@@ -462,6 +541,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       // Build vertex + index data for quads[i..j)
       let totalVerts = 0;
       let totalIndices = 0;
+
       for (let k = i; k < j; k++) {
         // In-bounds: `k` ranges over `[i, j)` ⊆ `[0, quads.length)`.
         totalVerts += quads[k]!.quads.quadCount * 4;
@@ -492,6 +572,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
           this._float32View[w + 1] = vertices[vp + 1]!;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
+          const opposite = (v ^ 2) * 2;
+          this._float32View[w + 5] = uvs[opposite]!;
+          this._float32View[w + 6] = uvs[opposite + 1]!;
           // Four vertices per quad, so the flag is read once per quad.
           this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot, decorations[v >> 2] === 1);
         }
@@ -520,6 +603,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       c.indexBuffer.upload(this._indexData, 0, totalIndices);
 
       backend.bindVertexArrayObject(c.vao);
+
       for (let slot = 0; slot < atlasTextures.length; slot++) {
         backend.bindTexture(atlasTextures[slot]!, slot);
       }
@@ -527,18 +611,23 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       if (shader.uniforms.has('u_projection')) {
         shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
       }
+
       if (shader.uniforms.has('u_group')) {
         const groupTransform = backend.renderGroupTransform;
 
         shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
       }
+
       backend.stageViewportUniform(shader);
+
       if (shader.uniforms.has('u_nodeData')) {
         shader.getUniform('u_nodeData').setValue(this._nodeDataUnitScratch);
       }
+
       if (shader.uniforms.has('u_pageSize')) {
-        this._floatScratch[0] = first.atlasTexture.width;
-        shader.getUniform('u_pageSize').setValue(this._floatScratch);
+        this._pageSizeScratch[0] = first.atlasTexture.width;
+        this._pageSizeScratch[1] = first.atlasTexture.height;
+        shader.getUniform('u_pageSize').setValue(this._pageSizeScratch);
       }
 
       // Stage uniforms before sync(): setValue() only marks a uniform dirty for the
@@ -620,8 +709,14 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   }
 
   private _shaderFor(type: ShaderType): WebGl2Shader {
-    if (type === 'sdf') return this._sdfShader;
-    if (type === 'msdf') return this._msdfShader;
+    if (type === 'sdf') {
+      return this._sdfShader;
+    }
+
+    if (type === 'msdf') {
+      return this._msdfShader;
+    }
+
     return this._colorShader;
   }
 
@@ -668,7 +763,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    * instance buffer (based at the batch byte offset) and its element buffer at
    * the renderer-owned quad-index pattern, then (re)build the group-owned
    * per-node data texture (transform + style, read live by both shader stages)
-   * and the drawable→row-index map the own-transform-move patch uses.
+   * and the drawable->row-index map the own-transform-move patch uses.
    * @internal
    */
   public configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
@@ -692,6 +787,10 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       .addAttribute(buffer, shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, base + 8)
       .addAttribute(buffer, shader.getAttribute('a_packedNodeSlot'), gl.UNSIGNED_INT, false, vertexStrideBytes, base + 16, true);
 
+    if (data.shaderType !== 'color') {
+      vao.addAttribute(buffer, shader.getAttribute('a_oppositeTexcoord'), gl.FLOAT, false, vertexStrideBytes, base + 20);
+    }
+
     const state = this._getTextReplayState(payload.bundle);
 
     state.shaderType = data.shaderType;
@@ -700,11 +799,18 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     if (state.nodeDataFloats === null || state.nodeDataCapacity < data.nodeCount) {
       let capacity = Math.max(state.nodeDataCapacity, initialNodeCapacity);
 
-      while (capacity < data.nodeCount) capacity *= 2;
+      while (capacity < data.nodeCount) {
+        capacity *= 2;
+      }
 
       state.nodeDataTexture?.destroy();
       state.nodeDataFloats = new Float32Array(capacity * nodeFloats);
-      state.nodeDataTexture = new DataTexture({ width: nodeTexels, height: capacity, format: TextureFormat.Rgba32F, data: state.nodeDataFloats });
+      state.nodeDataTexture = new DataTexture({
+        width: nodeTexels,
+        height: capacity,
+        format: TextureFormat.Rgba32F,
+        data: state.nodeDataFloats,
+      });
       state.nodeDataCapacity = capacity;
     }
 
@@ -748,26 +854,33 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const view = backend.view;
 
     backend.setBlendMode(payload.blendMode);
+
     for (let slot = 0; slot < payload.textures.length; slot++) {
       backend.bindTexture(payload.textures[slot]!, slot);
     }
+
     backend.bindTexture(state.nodeDataTexture, textAtlasTextureSlots);
 
     if (shader.uniforms.has('u_projection')) {
       shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
     }
+
     if (shader.uniforms.has('u_group')) {
       const groupTransform = backend.renderGroupTransform;
 
       shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
+
     backend.stageViewportUniform(shader);
+
     if (shader.uniforms.has('u_nodeData')) {
       shader.getUniform('u_nodeData').setValue(this._retainedNodeDataUnitScratch);
     }
+
     if (shader.uniforms.has('u_pageSize')) {
-      this._floatScratch[0] = atlas.width;
-      shader.getUniform('u_pageSize').setValue(this._floatScratch);
+      this._pageSizeScratch[0] = atlas.width;
+      this._pageSizeScratch[1] = atlas.height;
+      shader.getUniform('u_pageSize').setValue(this._pageSizeScratch);
     }
 
     shader.sync();
@@ -779,7 +892,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
   /**
    * Own-transform-move O(1) patch ({@link OwnTransformRowPatcher}): recompute
-   * only the moved node's transform-texel pair (2 of its 10 texels) via
+   * only the moved node's transform-texel pair (2 of its 20 texels) via
    * `getGlobalTransform()` (group-local - {@link RetainedContainer} composes up
    * to the enclosing boundary only) and upload just that row's 2-texel range in
    * the persisted node-data texture - mirrors `WebGpuTextRenderer`'s buffer
@@ -843,7 +956,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
     let capacity = Math.max(this._retainedQuadCapacity, initialRetainedQuadCapacity);
 
-    while (capacity < quadCount) capacity *= 2;
+    while (capacity < quadCount) {
+      capacity *= 2;
+    }
 
     const indices = new Uint32Array(capacity * 6);
 
@@ -884,22 +999,40 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   // ── Capacity helpers ─────────────────────────────────────────────────────
 
   private _ensureVertexCapacity(vertexCount: number): void {
-    if (vertexCount <= this._vertexCapacity) return;
-    while (this._vertexCapacity < vertexCount) this._vertexCapacity *= 2;
+    if (vertexCount <= this._vertexCapacity) {
+      return;
+    }
+
+    while (this._vertexCapacity < vertexCount) {
+      this._vertexCapacity *= 2;
+    }
+
     this._vertexData = new ArrayBuffer(this._vertexCapacity * vertexStrideBytes);
     this._float32View = new Float32Array(this._vertexData);
     this._uint32View = new Uint32Array(this._vertexData);
   }
 
   private _ensureIndexCapacity(indexCount: number): void {
-    if (indexCount <= this._indexCapacity) return;
-    while (this._indexCapacity < indexCount) this._indexCapacity *= 2;
+    if (indexCount <= this._indexCapacity) {
+      return;
+    }
+
+    while (this._indexCapacity < indexCount) {
+      this._indexCapacity *= 2;
+    }
+
     this._indexData = new Uint32Array(this._indexCapacity);
   }
 
   private _ensureNodeCapacity(nodeCount: number): void {
-    if (nodeCount <= this._nodeCapacity) return;
-    while (this._nodeCapacity < nodeCount) this._nodeCapacity *= 2;
+    if (nodeCount <= this._nodeCapacity) {
+      return;
+    }
+
+    while (this._nodeCapacity < nodeCount) {
+      this._nodeCapacity *= 2;
+    }
+
     const next = new Float32Array(this._nodeCapacity * nodeFloats);
     next.set(this._nodeDataArray);
     this._nodeDataArray = next;
@@ -916,20 +1049,35 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   private _createNodeDataTexture(backend: WebGl2Backend, capacity: number): WebGLTexture {
     const gl = backend.context;
     const tex = gl.createTexture();
-    if (tex === null) throw new Error('WebGl2TextRenderer: could not create node data texture.');
-    backend.bindRawTexture(tex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, nodeTexels, capacity, 0, gl.RGBA, gl.FLOAT, null);
-    backend.bindRawTexture(null);
+
+    if (tex === null) {
+      throw new Error('WebGl2TextRenderer: could not create node data texture.');
+    }
+
+    try {
+      backend.bindRawTexture(tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, nodeTexels, capacity, 0, gl.RGBA, gl.FLOAT, null);
+    } catch (error) {
+      gl.deleteTexture(tex);
+
+      throw error;
+    } finally {
+      backend.bindRawTexture(null);
+    }
+
     return tex;
   }
 
   private _createBufferRuntime(gl: WebGL2RenderingContext, buffers: TextRendererConnection['buffers']): WebGl2RenderBufferRuntime {
     const handle = gl.createBuffer();
-    if (handle === null) throw new Error('WebGl2TextRenderer: could not create buffer.');
+
+    if (handle === null) {
+      throw new Error('WebGl2TextRenderer: could not create buffer.');
+    }
 
     return {
       bind: (buf): void => {
@@ -938,6 +1086,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       upload: (buf, offset): void => {
         const state = buffers.get(buf);
         gl.bindBuffer(buf.type, handle);
+
         if (state && state.dataByteLength >= buf.uploadByteLength) {
           uploadBufferRange(gl, buf, offset);
         } else {
@@ -959,22 +1108,37 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     return {
       bind: (vao): void => {
         gl.bindVertexArray(vaoHandle);
+
         if (appliedVersion !== vao.version) {
           let lastBuffer: WebGl2RenderBuffer | null = null;
+
           for (const attribute of vao.attributes) {
             if (lastBuffer !== attribute.buffer) {
               attribute.buffer.bind();
               lastBuffer = attribute.buffer;
             }
+
             if (attribute.integer) {
               gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
             } else {
-              gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+              gl.vertexAttribPointer(
+                attribute.location,
+                attribute.size,
+                attribute.type,
+                attribute.normalized,
+                attribute.stride,
+                attribute.start,
+              );
             }
+
             gl.enableVertexAttribArray(attribute.location);
             gl.vertexAttribDivisor(attribute.location, attribute.divisor);
           }
-          if (vao.indexBuffer) vao.indexBuffer.bind();
+
+          if (vao.indexBuffer) {
+            vao.indexBuffer.bind();
+          }
+
           appliedVersion = vao.version;
         }
       },

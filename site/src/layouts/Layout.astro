@@ -2,13 +2,13 @@
 import AppShell from './AppShell.astro';
 
 interface Props {
-    title?: string;
-    description?: string;
+  title?: string;
+  description?: string;
 }
 
 const { title = 'ExoJS', description = 'ExoJS docs' } = Astro.props;
 ---
 
 <AppShell title={title} description={description}>
-    <slot />
+  <slot />
 </AppShell>

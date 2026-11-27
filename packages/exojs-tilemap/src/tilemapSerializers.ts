@@ -25,7 +25,7 @@ const pixelSnapModeFromName: Record<string, PixelSnapMode> = {
  * Captures the **map reference** (its Loader source key) plus the render-only
  * `pixelSnapMode`; the per-layer / per-chunk nodes are derived from the map and
  * rebuilt on construction, so they are never written. The referenced `TileMap`
- * must be pre-loaded into the target Loader (e.g. `loader.load(Asset.type('tileMap', 'world.tmj'))`)
+ * must be pre-loaded into the target Loader (e.g. `loader.load({ type: 'tileMap', source: 'world.tmj' })`)
  * before deserialize - procedurally-built maps have no source key and cannot be
  * referenced.
  *
@@ -53,7 +53,9 @@ export const tileMapNodeSerializer: NodeSerializer<TileMapNode> = {
     const map = ctx.resolveAsset(data.map, TileMap);
 
     if (map === null) {
-      throw new Error('TileMapNode deserialize requires its TileMap to be pre-loaded into the Loader (procedural maps have no source key).');
+      throw new Error(
+        'TileMapNode deserialize requires its TileMap to be pre-loaded into the Loader (procedural maps have no source key).',
+      );
     }
 
     const node = new TileMapNode(map);

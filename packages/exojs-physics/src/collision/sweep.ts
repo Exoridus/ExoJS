@@ -85,7 +85,8 @@ const coreCount = (proxy: CollisionProxy): number => {
   }
 };
 
-const radiusOf = (proxy: CollisionProxy): number => (proxy.shape.type === 'circle' || proxy.shape.type === 'capsule' ? proxy.shape.radius : 0);
+const radiusOf = (proxy: CollisionProxy): number =>
+  proxy.shape.type === 'circle' || proxy.shape.type === 'capsule' ? proxy.shape.radius : 0;
 
 /** Moving circle vs static circle: a ray against the Minkowski-summed circle. */
 const sweepCircleCircle = (moving: CollisionProxy, dx: number, dy: number, target: CollisionProxy, out: SweepHit): boolean => {
@@ -282,7 +283,16 @@ const castAtOffsetFaces = (
 };
 
 /** Vertex-arc pass of {@link castPointAtRing}: a ray against the circle of radius `r` around each vertex. */
-const castAtVertexArcs = (ox: number, oy: number, dx: number, dy: number, r: number, verts: readonly number[], count: number, out: SweepHit): void => {
+const castAtVertexArcs = (
+  ox: number,
+  oy: number,
+  dx: number,
+  dy: number,
+  r: number,
+  verts: readonly number[],
+  count: number,
+  out: SweepHit,
+): void => {
   if (r <= 0) {
     return; // A radius-free ring has no arcs; its faces meet at the vertices.
   }
@@ -571,7 +581,14 @@ const sweepRings = (moving: CollisionProxy, dx: number, dy: number, target: Coll
  * end pose) against the static `target`. Returns `false` as soon as an axis
  * proves the shapes never meet within the motion.
  */
-const sweptSatAxes = (axisOwner: CollisionProxy, moving: CollisionProxy, dx: number, dy: number, target: CollisionProxy, state: SweptSatState): boolean => {
+const sweptSatAxes = (
+  axisOwner: CollisionProxy,
+  moving: CollisionProxy,
+  dx: number,
+  dy: number,
+  target: CollisionProxy,
+  state: SweptSatState,
+): boolean => {
   const axes = axisOwner.worldNormals;
   const axisCount = coreCount(axisOwner);
   const mv = moving.worldVertices;

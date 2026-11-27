@@ -17,7 +17,9 @@ export const runGenerator = async (n: number): Promise<number> => {
       worker.postMessage(n);
     });
 
-    if (reply.tag !== GENERATOR_TAG) throw new Error(`unexpected reply tag: ${reply.tag}`);
+    if (reply.tag !== GENERATOR_TAG) {
+      throw new Error(`unexpected reply tag: ${reply.tag}`);
+    }
 
     return reply.value;
   } finally {

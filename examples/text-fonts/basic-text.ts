@@ -1,4 +1,5 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class BasicTextScene extends Scene {
   private elapsed = 0;
@@ -6,7 +7,7 @@ class BasicTextScene extends Scene {
 
   override async load(): Promise<void> {
     const app = this.app;
-    await this.loader.load(Asset.type('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
+    await this.loader.load({ type: 'font', source: assets.fontKenneyFuture.source, family: 'Kenney Future' });
 
     const { width, height } = app;
 
@@ -14,7 +15,7 @@ class BasicTextScene extends Scene {
       align: 'left',
       fillColor: Color.white,
       outlineColor: Color.black,
-      outlineWidth: 0.2,
+      outlineWidth: 1.5,
       fontSize: 25,
       fontFamily: 'Kenney Future',
     });
@@ -43,9 +44,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(BasicTextScene);

@@ -68,12 +68,16 @@ export class WangSet {
     this.type = options.type ?? 'blob';
 
     if (options.blobMap instanceof Map) {
-      this._map = options.blobMap;
+      // Snapshot the input: a caller that keeps and mutates its Map must not
+      // desync the lookup from the membership set built from it below.
+      this._map = new Map(options.blobMap);
     } else {
       const map = new Map<number, number>();
+
       for (const [k, v] of Object.entries(options.blobMap as Record<string, number>)) {
         map.set(Number(k), v);
       }
+
       this._map = map;
     }
 
@@ -81,9 +85,13 @@ export class WangSet {
     // autotiled variant is recognised as part of the group (variant-stable
     // membership). Explicit `members` (e.g. the base paint ID) are added on top.
     const members = new Set<number>(this._map.values());
+
     if (options.members) {
-      for (const id of options.members) members.add(id);
+      for (const id of options.members) {
+        members.add(id);
+      }
     }
+
     this._members = members;
   }
 

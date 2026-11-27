@@ -75,7 +75,10 @@ const widestRun = (frame: Uint8Array, y: number): number => {
     const lit = frame[i]! + frame[i + 1]! + frame[i + 2]! > 240;
 
     run = lit ? run + 1 : 0;
-    if (run > best) best = run;
+
+    if (run > best) {
+      best = run;
+    }
   }
 
   return best;
@@ -88,7 +91,9 @@ const widestRunBelow = (frame: Uint8Array, from: number): { y: number; width: nu
   for (let y = from; y < canvasSize; y++) {
     const width = widestRun(frame, y);
 
-    if (width > best.width) best = { y, width };
+    if (width > best.width) {
+      best = { y, width };
+    }
   }
 
   return best;
@@ -147,7 +152,9 @@ describe('WebGL2: text decorations', () => {
       let struck = -1;
 
       for (let y = textY; y < baselineRow; y++) {
-        if (widestRun(frame, y) > text.textBounds.width * 0.8) struck = y;
+        if (widestRun(frame, y) > text.textBounds.width * 0.8) {
+          struck = y;
+        }
       }
 
       expect(struck).toBeGreaterThan(textY);
@@ -191,7 +198,9 @@ describe('WebGL2: text decorations', () => {
         for (let x = 0; x < canvasSize; x++) {
           const i = (y * canvasSize + x) * 4;
 
-          if (frame[i]! > 200 && frame[i + 1]! > 200 && frame[i + 2]! > 200) whiteGlyphPixels++;
+          if (frame[i]! > 200 && frame[i + 1]! > 200 && frame[i + 2]! > 200) {
+            whiteGlyphPixels++;
+          }
         }
       }
 

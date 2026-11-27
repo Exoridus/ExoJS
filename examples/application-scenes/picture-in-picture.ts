@@ -1,4 +1,15 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, Sprite, View } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  Sprite,
+  View,
+} from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class PictureInPictureScene extends Scene {
   private mainView!: View;
@@ -11,18 +22,18 @@ class PictureInPictureScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
+    this.sprite = this.track(new Sprite(this.loader.get(assets.ship)));
 
-    this.mainView = new View(0, 0, width, height);
-    this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);
-    // Zoom < 1 zooms OUT (a larger visible world area maps into the same
-    // small viewport) - a minimap needs to show more of the scene than the
-    // main view, not less, so the tracked sprite reads as a small icon.
+    this.mainView = this.track(new View(0, 0, width, height));
+    this.pipView = this.track(new View(0, 0, width * 0.3, height * 0.3)).setViewport(0.68, 0.04, 0.28, 0.28);
+    // Zoom 0.4 expands this view's 0.3-size world extent to 0.75 of the
+    // main view's extent. It still draws into the small inset viewport;
+    // both views render the same sprite.
     this.pipView.setZoom(0.4);
 
     this.sprite.setAnchor(0.5).setPosition(-280, 0);
 
-    this.frame = new Graphics();
+    this.frame = this.track(new Graphics());
     this.frame.lineWidth = 3;
     this.frame.lineColor = Color.white;
     this.frame.drawRectangle(width * 0.68, height * 0.04, width * 0.28, height * 0.28);
@@ -54,9 +65,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(PictureInPictureScene);

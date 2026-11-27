@@ -68,9 +68,7 @@ class NoteAssetType extends AssetType<string, string[]> {
   }
 }
 
-const extensionFor = (...assets: AnyAssetType[]): Extension => {
-  return { id: 'com.example.test', assets };
-};
+const extensionFor = (...assets: AnyAssetType[]): Extension => ({ id: 'com.example.test', assets });
 
 /** A loader with `types` installed, exactly as an Application would install them. */
 const createLoader = (types: readonly AnyAssetType[]): Loader => {
@@ -100,8 +98,8 @@ describe('AssetType identity', () => {
     const worldType = new WorldAssetType();
     const loader = createLoader([worldType]);
 
-    const a = loader.identify(worldType.asset('level.world', { palette: 'dusk' }));
-    const b = loader.identify(worldType.asset('level.world', { palette: 'dusk' }));
+    const a = loader.identify({ type: worldType, source: 'level.world', palette: 'dusk' });
+    const b = loader.identify({ type: worldType, source: 'level.world', palette: 'dusk' });
 
     expect(a.resourceKey).toBe(b.resourceKey);
     expect(a.sourceKey).toBe(b.sourceKey);
@@ -111,8 +109,8 @@ describe('AssetType identity', () => {
     const worldType = new WorldAssetType();
     const loader = createLoader([worldType]);
 
-    const dusk = loader.identify(worldType.asset('level.world', { palette: 'dusk' }));
-    const dawn = loader.identify(worldType.asset('level.world', { palette: 'dawn' }));
+    const dusk = loader.identify({ type: worldType, source: 'level.world', palette: 'dusk' });
+    const dawn = loader.identify({ type: worldType, source: 'level.world', palette: 'dawn' });
 
     expect(dusk.resourceKey).not.toBe(dawn.resourceKey);
     expect(dusk.sourceKey).toBe(dawn.sourceKey);
@@ -122,8 +120,8 @@ describe('AssetType identity', () => {
     const worldType = new WorldAssetType();
     const loader = createLoader([worldType]);
 
-    const de = loader.identify(worldType.asset('level.world', { locale: 'de' }));
-    const en = loader.identify(worldType.asset('level.world', { locale: 'en' }));
+    const de = loader.identify({ type: worldType, source: 'level.world', locale: 'de' });
+    const en = loader.identify({ type: worldType, source: 'level.world', locale: 'en' });
 
     expect(de.resourceKey).not.toBe(en.resourceKey);
     expect(de.sourceKey).not.toBe(en.sourceKey);
@@ -134,8 +132,8 @@ describe('AssetType identity', () => {
     const noteType = new NoteAssetType();
     const loader = createLoader([worldType, noteType]);
 
-    const asWorld = loader.identify(worldType.asset('shared.dat'));
-    const asNote = loader.identify(noteType.asset('shared.dat'));
+    const asWorld = loader.identify({ type: worldType, source: 'shared.dat' });
+    const asNote = loader.identify({ type: noteType, source: 'shared.dat' });
 
     expect(asWorld.resourceKey).not.toBe(asNote.resourceKey);
     expect(asWorld.sourceKey).toBe(asNote.sourceKey);
@@ -144,8 +142,8 @@ describe('AssetType identity', () => {
   test('a resource key names its type by the stable id, not by an install ordinal', () => {
     const worldType = new WorldAssetType();
 
-    const first = createLoader([worldType]).identify(worldType.asset('level.world'));
-    const second = createLoader([new NoteAssetType(), worldType]).identify(worldType.asset('level.world'));
+    const first = createLoader([worldType]).identify({ type: worldType, source: 'level.world' });
+    const second = createLoader([new NoteAssetType(), worldType]).identify({ type: worldType, source: 'level.world' });
 
     expect(first.resourceKey).toBe(second.resourceKey);
     expect(first.resourceKey.startsWith('com.example.world|')).toBe(true);
@@ -155,9 +153,9 @@ describe('AssetType identity', () => {
     const worldType = new WorldAssetType();
     const loader = createLoader([worldType]);
 
-    const plain = loader.identify(worldType.asset('levels/level.world'));
-    const detoured = loader.identify(worldType.asset('levels/../levels/./level.world'));
-    const fragment = loader.identify(worldType.asset('levels/level.world#chunk-3'));
+    const plain = loader.identify({ type: worldType, source: 'levels/level.world' });
+    const detoured = loader.identify({ type: worldType, source: 'levels/../levels/./level.world' });
+    const fragment = loader.identify({ type: worldType, source: 'levels/level.world#chunk-3' });
 
     expect(detoured.resourceKey).toBe(plain.resourceKey);
     expect(detoured.sourceKey).toBe(plain.sourceKey);
@@ -168,7 +166,7 @@ describe('AssetType identity', () => {
     const noteType = new NoteAssetType();
     const loader = createLoader([noteType]);
 
-    const { resourceKey, sourceKey, locator } = loader.identify(noteType.asset('a.note'));
+    const { resourceKey, sourceKey, locator } = loader.identify({ type: noteType, source: 'a.note' });
 
     expect(locator).toBe('url:https://assets.test/a.note');
     expect(sourceKey).toBe(locator);
@@ -187,7 +185,7 @@ describe('AssetType installation locality', () => {
 
     expect(bare.hasAssetType('com.example.world')).toBe(false);
     expect(bare.resolveExtensionType('world')).toBeUndefined();
-    expect(() => bare.identify(worldType.asset('level.world'))).toThrow(/no asset type "com\.example\.world" is installed/);
+    expect(() => bare.identify({ type: worldType, source: 'level.world' })).toThrow(/no asset type "com\.example\.world" is installed/);
   });
 
   test('two loaders may claim one suffix for different types', () => {
@@ -236,8 +234,8 @@ describe('AssetType factory lifecycle', () => {
     const worldType = new WorldAssetType();
     const loader = createLoader([worldType]);
 
-    await loader.load(worldType.asset('a.world'));
-    await loader.load(worldType.asset('b.world'));
+    await loader.load({ type: worldType, source: 'a.world' });
+    await loader.load({ type: worldType, source: 'b.world' });
 
     expect(createdFactories).toHaveLength(1);
   });
@@ -277,6 +275,7 @@ describe('AssetType factory boundary', () => {
         return {
           create: (data, context) => {
             captured = context;
+
             return Promise.resolve(new World(data, 'probe'));
           },
         };
@@ -287,7 +286,7 @@ describe('AssetType factory boundary', () => {
 
     const probeType = new ProbeType();
 
-    await createLoader([probeType]).load(probeType.asset('level.world', { palette: 'dusk' }));
+    await createLoader([probeType]).load({ type: probeType, source: 'level.world', palette: 'dusk' });
 
     if (captured === undefined) {
       throw new Error('the factory was never invoked');
@@ -299,7 +298,16 @@ describe('AssetType factory boundary', () => {
   test('the factory context exposes no fetch, cache store or cache policy', async () => {
     const context = await captureContext();
 
-    expect(Object.keys(context).sort()).toEqual(['dependencies', 'locator', 'options', 'resourceKey', 'signal', 'source', 'sourceKey', 'textureFormats']);
+    expect(Object.keys(context).sort()).toEqual([
+      'dependencies',
+      'locator',
+      'options',
+      'resourceKey',
+      'signal',
+      'source',
+      'sourceKey',
+      'textureFormats',
+    ]);
 
     for (const reachable of ['fetch', 'fetchText', 'fetchJson', 'fetchArrayBuffer', 'cache', 'stores', 'cacheStrategy', 'loader']) {
       expect(reachable in context).toBe(false);
@@ -337,7 +345,8 @@ describe('AssetType factory boundary', () => {
       public override createFactory(): AssetFactory<WorldData, World, WorldOptions> {
         return {
           create: async (data, context) => {
-            dependency = await context.dependencies.load(new NoteAssetType().asset('page.note'));
+            dependency = await context.dependencies.load({ type: new NoteAssetType(), source: 'page.note' });
+
             return new World(data, 'parent');
           },
         };
@@ -346,7 +355,7 @@ describe('AssetType factory boundary', () => {
 
     const parentType = new ParentType();
 
-    await createLoader([parentType, new NoteAssetType()]).load(parentType.asset('a.parent'));
+    await createLoader([parentType, new NoteAssetType()]).load({ type: parentType, source: 'a.parent' });
 
     expect(dependency).toEqual([JSON.stringify({ name: 'overworld' })]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -358,7 +367,7 @@ describe('AssetSourceCodec', () => {
     mockJsonFetch({ name: 'overworld' });
 
     const worldType = new WorldAssetType();
-    const world = await createLoader([worldType]).load(worldType.asset('level.world', { palette: 'dusk' }));
+    const world = await createLoader([worldType]).load({ type: worldType, source: 'level.world', palette: 'dusk' });
 
     expect(world).toBeInstanceOf(World);
     expect(world.data).toEqual({ name: 'overworld' });
@@ -383,9 +392,9 @@ describe('AssetSourceCodec', () => {
     const worldType = new WorldAssetType();
     const loader = createLoader([worldType]);
 
-    loader.onError.add(() => undefined);
+    loader.onError.add(() => {});
 
-    await expect(loader.load(worldType.asset('broken.world'))).rejects.toThrow(/Failed to load "broken\.world"/);
+    await expect(loader.load({ type: worldType, source: 'broken.world' })).rejects.toThrow(/Failed to load "broken\.world"/);
   });
 
   test('a type whose codec cannot read bytes is not container-loadable', () => {
@@ -406,18 +415,20 @@ describe('AssetSourceCodec', () => {
   });
 
   test('an aborted load rejects as a cancellation, not as a decode failure', async () => {
-    vi.stubGlobal('fetch', (_url: string, init?: RequestInit) => {
-      return new Promise((_resolve, reject) => {
-        init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
-      });
-    });
+    vi.stubGlobal(
+      'fetch',
+      (_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+        }),
+    );
 
     const worldType = new WorldAssetType();
     const loader = createLoader([worldType]);
 
-    loader.onError.add(() => undefined);
+    loader.onError.add(() => {});
 
-    const queue = loader.load(worldType.asset('slow.world'));
+    const queue = loader.load({ type: worldType, source: 'slow.world' });
     const settled = queue.then(
       () => 'resolved',
       // A DOMException is not an `Error` under every test environment, so read
@@ -442,8 +453,8 @@ describe('AssetType source-variant storage', () => {
 
     materializeAssetTypes(loader, [worldType]);
 
-    await loader.load(worldType.asset('level.world', { locale: 'de' }));
-    await loader.load(worldType.asset('level.world', { locale: 'en' }));
+    await loader.load({ type: worldType, source: 'level.world', locale: 'de' });
+    await loader.load({ type: worldType, source: 'level.world', locale: 'en' });
 
     const version = worldType.layout.version;
 
@@ -462,10 +473,12 @@ describe('AssetType source-variant storage', () => {
       public override readonly codec: AssetSourceCodec<string> = {
         fromResponse: (response, context) => {
           seen.push(context.locator);
+
           return response.text();
         },
         fromBytes: (bytes, context) => {
           seen.push(context.locator);
+
           return Promise.resolve(new TextDecoder().decode(bytes));
         },
         decode: stored => Promise.resolve(stored),
@@ -476,7 +489,7 @@ describe('AssetType source-variant storage', () => {
 
     const probeType = new ProbeCodecType();
 
-    await createLoader([probeType]).load(probeType.asset('notes/../notes/a.note'));
+    await createLoader([probeType]).load({ type: probeType, source: 'notes/../notes/a.note' });
 
     expect(seen).toEqual(['url:https://assets.test/notes/a.note']);
   });

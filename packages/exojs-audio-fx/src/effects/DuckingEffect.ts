@@ -4,12 +4,25 @@ import duckingWorkletSource from '../worklets/ducking.worklet.ts?worklet';
 
 /** Construction options for {@link DuckingEffect}. `sidechain` is required. */
 export interface DuckingEffectOptions {
+  /** Bus whose level drives the attenuation. Required. */
   sidechain: AudioBus;
+  /** Sidechain level above which the main signal is attenuated, in dBFS. Range -100..0, default -20. */
   threshold?: number;
+  /** Compression ratio applied above the threshold. Range 1..20, default 4. */
   ratio?: number;
+  /** Attack time in milliseconds - how quickly the ducker engages. Default 30. */
   attackMs?: number;
+  /** Release time in milliseconds - how quickly the ducker disengages. Default 300. */
   releaseMs?: number;
 }
+
+const requireFinite = (name: string, value: number): number => {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`DuckingEffect ${name} must be a finite number, got ${value}.`);
+  }
+
+  return value;
+};
 
 /**
  * Sidechain compressor (ducker) implemented as an {@link WorkletEffect}.
@@ -30,14 +43,16 @@ export class DuckingEffect extends WorkletEffect {
 
   public constructor(options: DuckingEffectOptions) {
     super();
+
     if (!options.sidechain) {
       throw new Error('DuckingEffect requires a sidechain AudioBus.');
     }
+
     this._sidechain = options.sidechain;
-    this._threshold = options.threshold ?? -20;
-    this._ratio = options.ratio ?? 4;
-    this._attackMs = options.attackMs ?? 30;
-    this._releaseMs = options.releaseMs ?? 300;
+    this._threshold = Math.max(-100, Math.min(0, requireFinite('threshold', options.threshold ?? -20)));
+    this._ratio = Math.max(1, Math.min(20, requireFinite('ratio', options.ratio ?? 4)));
+    this._attackMs = Math.max(0.001, requireFinite('attackMs', options.attackMs ?? 30));
+    this._releaseMs = Math.max(0.001, requireFinite('releaseMs', options.releaseMs ?? 300));
   }
 
   protected get _workletName(): string {
@@ -54,7 +69,9 @@ export class DuckingEffect extends WorkletEffect {
 
   protected override _onWorkletReady(audioContext: AudioContext): void {
     // Guard against partially-constructed instances (constructor threw after super()).
-    if (!this._sidechain) return;
+    if (!this._sidechain) {
+      return;
+    }
 
     // Apply current parameter values
     this._setAudioParam('threshold', this._threshold);
@@ -68,6 +85,7 @@ export class DuckingEffect extends WorkletEffect {
   /** Convert ms time-constant to one-pole filter coefficient at given sample rate. */
   private _msToCoeff(ms: number, sampleRate: number): number {
     const tau = ms * 0.001 * sampleRate;
+
     return 1 - Math.exp(-1 / Math.max(1, tau));
   }
 
@@ -75,6 +93,7 @@ export class DuckingEffect extends WorkletEffect {
   public get threshold(): number {
     return this._threshold;
   }
+
   public set threshold(value: number) {
     this._threshold = Math.max(-100, Math.min(0, value));
     this._setAudioParam('threshold', this._threshold);
@@ -84,6 +103,7 @@ export class DuckingEffect extends WorkletEffect {
   public get ratio(): number {
     return this._ratio;
   }
+
   public set ratio(value: number) {
     this._ratio = Math.max(1, Math.min(20, value));
     this._setAudioParam('ratio', this._ratio);
@@ -93,8 +113,10 @@ export class DuckingEffect extends WorkletEffect {
   public get attackMs(): number {
     return this._attackMs;
   }
+
   public set attackMs(value: number) {
     this._attackMs = Math.max(0.001, value);
+
     if (this._workletNode) {
       this._setAudioParam('attack', this._msToCoeff(this._attackMs, this._workletNode.context.sampleRate));
     }
@@ -104,8 +126,10 @@ export class DuckingEffect extends WorkletEffect {
   public get releaseMs(): number {
     return this._releaseMs;
   }
+
   public set releaseMs(value: number) {
     this._releaseMs = Math.max(0.001, value);
+
     if (this._workletNode) {
       this._setAudioParam('release', this._msToCoeff(this._releaseMs, this._workletNode.context.sampleRate));
     }

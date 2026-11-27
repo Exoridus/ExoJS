@@ -94,8 +94,12 @@ const JOINTS_COUNTS = [4_500, 9_000, 15_000] as const;
 const SETTLING_PILE_COUNTS = [1_500, 3_000, 5_800] as const;
 
 /**
- * The physics archetypes. Kept to three representative scenes (review-note
- * "don't overdo it"):
+ * The physics archetypes. Four scene forms - box stack, many dynamic bodies,
+ * mixed static/dynamic, and joint chains - plus variants that layer a query
+ * load, extra churn or a different material on one of them. Each variant is a
+ * delta against its base scene, though it may adjust more than one setting
+ * (churn also perturbs a fraction of the bodies per frame, and the settling
+ * pile uses its own warmup budget):
  * - `box-stack` - settling columns of boxes on a static floor: resting-contact
  *   solving + warm-start + sleeping, the tall-stack stability path.
  * - `many-dynamic` - a field of small dynamic bodies bouncing in a bounded box,
@@ -118,7 +122,14 @@ export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
   // smallest body count they are a minority of the step, at the largest a
   // measurable fraction. The rays sweep the world rather than repeating one path,
   // so no arm can answer them out of a single cached traversal.
-  { id: 'raycast', scene: 'mixed-static-dynamic', bodyCounts: MIXED_COUNTS, gravity: { x: 0, y: 1_000 }, perturbFraction: 0, raysPerStep: 64 },
+  {
+    id: 'raycast',
+    scene: 'mixed-static-dynamic',
+    bodyCounts: MIXED_COUNTS,
+    gravity: { x: 0, y: 1_000 },
+    perturbFraction: 0,
+    raysPerStep: 64,
+  },
   // STRUCTURAL CHURN, the physics counterpart of the rendering `lifecycle-churn`.
   // Simulates the `many-dynamic` scene and destroys plus rebuilds 5 % of its
   // dynamic bodies every step, which forces the broad-phase structure to be
@@ -215,8 +226,13 @@ export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
  * presented as equal in confidence to one over 480.
  */
 export const timedStepsFor = (bodyCount: number): number => {
-  if (bodyCount >= 4_000) return 120;
-  if (bodyCount >= 1_000) return 240;
+  if (bodyCount >= 4_000) {
+    return 120;
+  }
+
+  if (bodyCount >= 1_000) {
+    return 240;
+  }
 
   return 480;
 };
@@ -233,7 +249,9 @@ export const timedStepsFor = (bodyCount: number): number => {
  * question; see {@link warmupStepsForArchetype}.
  */
 export const warmupStepsFor = (bodyCount: number): number => {
-  if (bodyCount >= 4_000) return 180;
+  if (bodyCount >= 4_000) {
+    return 180;
+  }
 
   return 240;
 };

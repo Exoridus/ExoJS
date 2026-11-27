@@ -4,6 +4,7 @@ import { drawDrawableDirect } from '#rendering/plan/drawDrawableDirect';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { BlendModes } from '#rendering/types';
+import { View } from '#rendering/View';
 
 import { BackendTargetPass } from './BackendTargetPass';
 import type { RenderBackend } from './RenderBackend';
@@ -71,6 +72,7 @@ export class FilterPass extends RenderPass {
   private _blitHeight = 0;
   private _blitSprite: Sprite | null = null;
   private _blitPass: BackendTargetPass | null = null;
+  private _blitView: View | null = null;
 
   public constructor(source: RenderTexture, filters: Filter | readonly Filter[] = [], options?: FilterPassOptions) {
     super(options);
@@ -113,7 +115,7 @@ export class FilterPass extends RenderPass {
           output = destination;
         } else {
           // Never the texture being read this stage, so the two alternate.
-          // Sized and formatted after the source: intermediates carry the
+          // Sized to the destination, formatted after the source: intermediates carry the
           // chain's own working colour format rather than always Rgba8, so a
           // chain running in a wider format does not lose it mid-chain.
           if (scratchA === null) {
@@ -154,6 +156,8 @@ export class FilterPass extends RenderPass {
     this._blitSprite?.destroy();
     this._blitSprite = null;
     this._blitPass = null;
+    this._blitView?.destroy();
+    this._blitView = null;
     this._blitInput = null;
   }
 
@@ -169,7 +173,17 @@ export class FilterPass extends RenderPass {
     this._blitHeight = height;
 
     if (destination === null) {
-      this._drawBlit(backend);
+      const previousView = backend.view;
+      const view = (this._blitView ??= View.from()).reset(width / 2, height / 2, width, height);
+
+      try {
+        backend.setView(view);
+        this._drawBlit(backend);
+        // A rejected sprite flush clears its batch, so finally can restore the camera.
+        backend.setView(previousView);
+      } finally {
+        backend.setView(previousView);
+      }
 
       return;
     }

@@ -55,21 +55,29 @@ export const noDeprecatedApi: Rule.RuleModule = {
   create(context) {
     const options = context.options[0] as NoDeprecatedApiOptions | undefined;
 
-    if (options === undefined) return {};
+    if (options === undefined) {
+      return {};
+    }
 
     const { source, deprecated } = options;
 
     return {
       ImportDeclaration(node) {
-        if (typeof node.source.value !== 'string' || !matchesSource(source, node.source.value)) return;
+        if (typeof node.source.value !== 'string' || !matchesSource(source, node.source.value)) {
+          return;
+        }
 
         for (const specifier of node.specifiers) {
-          if (specifier.type !== 'ImportSpecifier') continue;
+          if (specifier.type !== 'ImportSpecifier') {
+            continue;
+          }
 
           const importedName = specifier.imported.type === 'Identifier' ? specifier.imported.name : String(specifier.imported.value);
           const reason = Object.hasOwn(deprecated, importedName) ? deprecated[importedName] : undefined;
 
-          if (reason === undefined) continue;
+          if (reason === undefined) {
+            continue;
+          }
 
           context.report({ node: specifier.imported, messageId: 'deprecated', data: { name: importedName, reason } });
         }

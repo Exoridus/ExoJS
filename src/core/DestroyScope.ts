@@ -84,8 +84,21 @@ export class DestroyScope implements Destroyable {
    * collected errors are rethrown as an `AggregateError` after teardown.
    */
   public destroy(): void {
+    const failure = this._destroyCollectingFailures();
+
+    if (__DEV__ && failure !== null) {
+      throw failure;
+    }
+  }
+
+  /**
+   * @internal {@link DestroyScope.destroy}, returning the collected failures
+   * in every build instead of throwing them in development only - for an
+   * owner that reports teardown failures through its own error pipeline.
+   */
+  public _destroyCollectingFailures(): AggregateError | null {
     if (this._destroyed) {
-      return;
+      return null;
     }
 
     this._destroyed = true;
@@ -103,8 +116,8 @@ export class DestroyScope implements Destroyable {
     this._items.clear();
     this._order.length = 0;
 
-    if (__DEV__ && errors.length > 0) {
-      throw new AggregateError(errors, `[ExoJS] DestroyScope.destroy(): ${errors.length} tracked item(s) threw during destroy.`);
-    }
+    return errors.length > 0
+      ? new AggregateError(errors, `[ExoJS] DestroyScope.destroy(): ${errors.length} tracked item(s) threw during destroy.`)
+      : null;
   }
 }

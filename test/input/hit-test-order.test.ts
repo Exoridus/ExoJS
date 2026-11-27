@@ -96,6 +96,7 @@ const createApp = (): { app: Application; scene: Scene; signals: { onPointerDown
 /** Dispatch a pointerdown at (x, y) and report which node the event targeted. */
 const pick = (im: InteractionSystem, signals: { onPointerDown: Signal<[Pointer]> }, scene: Scene, x: number, y: number): unknown => {
   let target: unknown = null;
+
   const probe = (): void => {
     target = im.getHoveredNode(1);
   };
@@ -428,6 +429,7 @@ describe('renderer / hit-test agreement', () => {
     for (const sibling of siblings) {
       scene.root.addChild(sibling);
     }
+
     siblings[7]!.zIndex = 3;
 
     const top = siblings[7]!;

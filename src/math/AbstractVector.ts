@@ -152,12 +152,19 @@ export abstract class AbstractVector {
    * Apply the inverse of `matrix` to this vector. Useful for converting
    * a world-space point into the local space defined by `matrix`. Mutates
    * in place and returns `this` for chaining.
+   *
+   * @throws {RangeError} If the matrix is singular; the vector is unchanged.
    */
   public transformInverse(matrix: Matrix): this {
     // Exact inverse of `transform()`: recover the local point from the
     // row-major forward map `world = [[a,b],[c,d]]·local + (x,y)`. Same formula
     // SceneNode.contains uses for oriented-box picking.
     const determinant = matrix.a * matrix.d - matrix.b * matrix.c;
+
+    if (determinant === 0) {
+      throw new RangeError('Cannot transform by a singular matrix inverse.');
+    }
+
     const deltaX = this.x - matrix.x;
     const deltaY = this.y - matrix.y;
 

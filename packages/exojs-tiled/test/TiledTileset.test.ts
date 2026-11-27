@@ -131,7 +131,10 @@ describe('TiledTileset.getTile', () => {
 });
 
 describe('TiledTileset.getProperty', () => {
-  const ts = new TiledTileset({ ...BASE_DATA, properties: [{ name: 'kind', type: 'string', value: 'terrain', propertytype: undefined }] }, 1);
+  const ts = new TiledTileset(
+    { ...BASE_DATA, properties: [{ name: 'kind', type: 'string', value: 'terrain', propertytype: undefined }] },
+    1,
+  );
 
   it('returns the property with matching name', () => {
     expect(ts.getProperty('kind')).toMatchObject({ name: 'kind', value: 'terrain' });

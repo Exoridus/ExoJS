@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 8,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "channel",
+          "signature": "channel?: number",
+          "signatureTokens": [
+            {
+              "text": "channel",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "BMFont channel mask when supplied: 1 blue, 2 green, 4 red, 8 alpha, 15 all. Retained as metadata."
+        },
         {
           "name": "height",
           "signature": "height: number",
@@ -110,7 +135,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Left edge of the sampled glyph rectangle in atlas texels, not an inferred packing cell."
         },
         {
           "name": "xAdvance",
@@ -173,7 +198,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Top edge of the sampled glyph rectangle in atlas texels."
         },
         {
           "name": "yOffset",

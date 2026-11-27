@@ -21,18 +21,18 @@ ExoJS provides the **mechanism** for both, and leaves the **policy** to your gam
 
 Nothing here watches a camera or guesses a streaming distance. That belongs to your game, and it is a handful of lines once the mechanism is in place.
 
-Everything below lives in `@codexo/exojs-tilemap` and is format-neutral. The LDtk and Tiled extensions re-export it, so importing from either package gives you the same classes.
+Everything below lives in `@codexo/exojs/tilemap` and is format-neutral. The LDtk and Tiled extensions re-export it, so importing from either package gives you the same classes.
 
 ## The world model
 
 A [`MapWorld`](/ExoJS/en/api/map-world/) is metadata about *where* levels are — never their contents. Each `MapLevel` in it carries a stable id, world-space bounds, whether its payload is stored externally, and the levels the editor recorded as adjacent.
 
 ```ts
-import { Asset, type LoaderScope } from '@codexo/exojs';
-import type { MapBounds, MapWorld } from '@codexo/exojs-tilemap';
+import { type LoaderScope } from '@codexo/exojs';
+import type { MapBounds, MapWorld } from '@codexo/exojs/tilemap';
 
 export async function readWorld(scope: LoaderScope, cameraBounds: MapBounds): Promise<MapWorld> {
-    const project = await scope.load(Asset.type('ldtkProject', 'https://example.com/world.ldtk'));
+    const project = await scope.load({ type: 'ldtkProject', source: 'https://example.com/world.ldtk' });
     const world = project.world;
 
     world.levels.length;                     // every level in the world, in document order
@@ -56,10 +56,10 @@ LDtk worlds have independent coordinate spaces, so a multi-world project yields 
 `ldtkProject` is the streaming entry point. It loads the document and every tileset atlas, and **no** level payload — external `.ldtkl` files are fetched only when the level they belong to is loaded.
 
 ```ts
-import { Asset, type Container, type LoaderScope } from '@codexo/exojs';
+import { type Container, type LoaderScope } from '@codexo/exojs';
 
 export async function enterForest(root: Container, scope: LoaderScope): Promise<void> {
-    const project = await scope.load(Asset.type('ldtkProject', 'https://example.com/world.ldtk'));
+    const project = await scope.load({ type: 'ldtkProject', source: 'https://example.com/world.ldtk' });
     const runtime = project.createRuntime({ scope });
 
     const forest = await runtime.loadLevel('level-forest');
@@ -148,7 +148,7 @@ Pass it to a level load, or spawn from a `TileMap` directly:
 
 ```ts
 import type { Container } from '@codexo/exojs';
-import type { MapObjectSpawner, MapWorldRuntime } from '@codexo/exojs-tilemap';
+import type { MapObjectSpawner, MapWorldRuntime } from '@codexo/exojs/tilemap';
 
 interface GameContext {
     difficulty: number;
@@ -172,7 +172,7 @@ export async function loadForest(
 A factory receives a `MapObjectDescriptor` — the same shape for Tiled and for LDtk:
 
 ```ts
-import type { MapObjectDescriptor } from '@codexo/exojs-tilemap';
+import type { MapObjectDescriptor } from '@codexo/exojs/tilemap';
 
 export function describe(object: MapObjectDescriptor): void {
     object.id;          // stable id: LDtk entity iid, or the Tiled object id as a string

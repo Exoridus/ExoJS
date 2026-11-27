@@ -31,9 +31,7 @@ export class RendererRegistry<Runtime extends RenderBackend> {
     dispose: renderer => {
       renderer.disconnect();
 
-      if ('destroy' in renderer && typeof renderer.destroy === 'function') {
-        (renderer as Renderer<Runtime> & { destroy(): void }).destroy();
-      }
+      renderer.destroy?.();
     },
   });
   private readonly _resolved = new Map<DrawableConstructor, Renderer<Runtime>>();
@@ -135,8 +133,8 @@ export class RendererRegistry<Runtime extends RenderBackend> {
     if (!renderer) {
       throw new Error(
         `No renderer registered for ${drawable.constructor.name}. ` +
-          'If it comes from an ExoJS extension, import that package before creating the Application, ' +
-          'or pass the extension via ApplicationOptions.extensions.',
+          'If it comes from an ExoJS extension, pass that extension in ApplicationOptions.extensions; ' +
+          'importing the package does not install it.',
       );
     }
 

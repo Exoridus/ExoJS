@@ -1,6 +1,8 @@
+import { Color } from '#core/Color';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { Mesh } from '#rendering/mesh/Mesh';
 import { RenderEntryKind } from '#rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
@@ -8,6 +10,7 @@ import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { LiveEntryReason, type SourceOther, type SourceScope } from '#rendering/plan/renderSourceItem';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
+import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -87,7 +90,7 @@ const createDrawRecordingBackend = (): { backend: RenderBackend; draws: string[]
     renderTarget,
     rendererRegistry: {
       resolve(drawable: Drawable) {
-        if (drawable instanceof Leaf) {
+        if (drawable instanceof Leaf || drawable instanceof Mesh) {
           return flaggedRenderer;
         }
 
@@ -133,7 +136,7 @@ const createDrawRecordingBackend = (): { backend: RenderBackend; draws: string[]
       return backend;
     },
     draw(drawable: Drawable) {
-      draws.push((drawable as Leaf).id);
+      draws.push(drawable instanceof Leaf ? drawable.id : (drawable.name ?? 'mesh'));
 
       return backend;
     },
@@ -171,7 +174,8 @@ const playFrame = (root: RenderNode, backend: RenderBackend): number => {
 
 const sourceOf = (root: RenderNode): RenderRootSource | null => root._retainedRootRepresentation().source;
 
-const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
+const fragmentOf = (group: RetainedContainer): RetainedGroupFragment =>
+  (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
 
 /**
  * One entry of the root scope in RECORDED order - the shape the source used to
@@ -372,7 +376,9 @@ describe('render-root source: discovery', () => {
     backend.setView(viewAt(1000));
     playFrame(root, backend);
 
-    expect(sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp, root._transformRevision)).toBe(false);
+    expect(
+      sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp, root._transformRevision),
+    ).toBe(false);
 
     root.destroy();
     backend.destroy();
@@ -414,7 +420,9 @@ describe('render-root source: stored bounds', () => {
     // over a moved subtree replays each container's unchanged drawables from its
     // own retained slot cache, which a live-bounds selection cannot do - it was
     // measured as the faster of the two, by a wide margin.
-    expect(sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp, root._transformRevision)).toBe(false);
+    expect(
+      sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp, root._transformRevision),
+    ).toBe(false);
 
     root.destroy();
     backend.destroy();
@@ -916,6 +924,62 @@ describe('render-root source: structure delta', () => {
     backend.destroy();
   });
 
+  test('replaces deep graphics meshes when a live sibling also changes without walking untouched branches', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new CountingContainer());
+    const panel = new CountingContainer();
+    const middle = new CountingContainer().setPosition(110, 300);
+    const graphics = new Graphics();
+    const live = new Container().setPosition(60, 300);
+    live.clip = true;
+    live.addChild(new Leaf('live'));
+    const innerUntouched = new CountingContainer();
+    innerUntouched.addChild(new Leaf('inner-kept').setPosition(30, 0));
+    const outerUntouched = new CountingContainer();
+    outerUntouched.addChild(new Leaf('outer-kept').setPosition(250, 300));
+
+    const paint = (name: string): void => {
+      graphics.clear();
+      graphics.fillColor = Color.red;
+      graphics.lineColor = Color.white;
+      graphics.lineWidth = 1;
+      graphics.drawRectangle(0, 0, 20, 12);
+      graphics.children.forEach((mesh, index) => {
+        mesh.name = `${name}-${index}`;
+      });
+    };
+
+    paint('old');
+    middle.addChild(graphics, innerUntouched);
+    panel.addChild(new Leaf('before').setPosition(10, 300), live, middle, new Leaf('after').setPosition(200, 300));
+    root.addChild(panel, outerUntouched);
+    driveToSourceTier(root, backend);
+    const removed = [...graphics.children];
+    const collects = { root: root.collects, inner: innerUntouched.collects, outer: outerUntouched.collects };
+
+    try {
+      paint('new');
+      live.addChild(new Leaf('live-new').setPosition(20, 0));
+      // clear() destroys the meshes Graphics drew itself; the retained plan must
+      // replace them without touching the destroyed ones.
+      expect(removed.every(mesh => mesh.parent === null && mesh.destroyed)).toBe(true);
+      draws.length = 0;
+      playFrame(root, backend);
+
+      expect(draws).toEqual(['before', 'live', 'live-new', 'new-0', 'new-1', 'inner-kept', 'after', 'outer-kept']);
+      expect(root.collects).toBe(collects.root);
+      expect(innerUntouched.collects).toBe(collects.inner);
+      expect(outerUntouched.collects).toBe(collects.outer);
+      expect(entriesFor(root, graphics).every(entry => entry.kind !== RenderEntryKind.Draw || entry.drawable.parent === graphics)).toBe(
+        true,
+      );
+    } finally {
+      root.destroy();
+      removed.forEach(mesh => mesh.destroy());
+      backend.destroy();
+    }
+  });
+
   test('an item that moved inside a re-discovered container is stored where it is now', () => {
     const { backend, draws } = createDrawRecordingBackend();
     const root = makeRoot(new Container());
@@ -1137,6 +1201,167 @@ describe('render-root source: item-granular re-derivation', () => {
     backend.destroy();
   });
 
+  test('an item moved inside an untouched nested container is re-read and the delta still applies', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new Container();
+    const nested = new CountingContainer();
+    const sibling = new CountingContainer();
+    const moved = new Leaf('n1').setPosition(10, 300);
+
+    nested.addChild(moved, new Leaf('n2').setPosition(40, 300));
+    sibling.addChild(new Leaf('s1').setPosition(200, 300));
+    group.addChild(new Leaf('a').setPosition(70, 300), nested, sibling);
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    const walkedNested = nested.collects;
+    const walkedSibling = sibling.collects;
+    const source = sourceOf(root);
+
+    moved.setPosition(9000, 300);
+    group.addChild(new Leaf('b').setPosition(100, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a', 'n2', 's1', 'b']);
+    expect(sourceOf(root)).toBe(source);
+    expect(nested.collects).toBe(walkedNested + 1);
+    expect(sibling.collects).toBe(walkedSibling);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a mark two containers deep is re-read through the whole chain', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new Container();
+    const middle = new CountingContainer();
+    const inner = new CountingContainer();
+    const other = new CountingContainer();
+    const moved = new Leaf('i1').setPosition(10, 300);
+
+    inner.addChild(moved, new Leaf('i2').setPosition(40, 300));
+    middle.addChild(inner);
+    other.addChild(new Leaf('o1').setPosition(200, 300));
+    group.addChild(middle, other);
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    const walkedOther = other.collects;
+    const source = sourceOf(root);
+
+    moved.setPosition(9000, 300);
+    group.addChild(new Leaf('b').setPosition(100, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['i2', 'o1', 'b']);
+    expect(sourceOf(root)).toBe(source);
+    expect(other.collects).toBe(walkedOther);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a moved container below a moved container is rediscovered under a re-derived ancestor', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new Container();
+    const middle = new CountingContainer();
+    const inner = new CountingContainer();
+
+    inner.addChild(new Leaf('i1').setPosition(10, 300));
+    middle.addChild(inner, new Leaf('m1').setPosition(40, 300));
+    group.addChild(middle);
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    const walkedMiddle = middle.collects;
+    const walkedInner = inner.collects;
+    const source = sourceOf(root);
+
+    middle.setPosition(0, 5);
+    inner.setPosition(9000, 0);
+    group.addChild(new Leaf('b').setPosition(100, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['m1', 'b']);
+    expect(sourceOf(root)).toBe(source);
+    expect(middle.collects).toBe(walkedMiddle + 1);
+    expect(inner.collects).toBe(walkedInner + 1);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a tint change on an item in an untouched nested container is re-read and the delta still applies', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new Container();
+    const nested = new CountingContainer();
+    const sibling = new CountingContainer();
+    const tinted = new Leaf('n1').setPosition(10, 300);
+
+    nested.addChild(tinted);
+    sibling.addChild(new Leaf('s1').setPosition(200, 300));
+    group.addChild(nested, sibling);
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    const walkedNested = nested.collects;
+    const walkedSibling = sibling.collects;
+    const source = sourceOf(root);
+
+    tinted.setTint(Color.red);
+    group.addChild(new Leaf('b').setPosition(100, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['n1', 's1', 'b']);
+    expect(sourceOf(root)).toBe(source);
+    expect(nested.collects).toBe(walkedNested + 1);
+    expect(sibling.collects).toBe(walkedSibling);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a mark on an item in the re-derived container itself leaves untouched nested containers carried', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new Container();
+    const nested = new CountingContainer();
+    const moved = new Leaf('a').setPosition(70, 300);
+
+    nested.addChild(new Leaf('n1').setPosition(10, 300));
+    group.addChild(moved, nested);
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    const walkedNested = nested.collects;
+    const source = sourceOf(root);
+
+    moved.setPosition(9000, 300);
+    group.addChild(new Leaf('b').setPosition(100, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['n1', 'b']);
+    expect(sourceOf(root)).toBe(source);
+    expect(nested.collects).toBe(walkedNested);
+
+    root.destroy();
+    backend.destroy();
+  });
+
   test('an item moved between containers is stored in the container that holds it now', () => {
     const { backend, draws } = createDrawRecordingBackend();
     const root = makeRoot(new Container());
@@ -1156,7 +1381,10 @@ describe('render-root source: item-granular re-derivation', () => {
 
     expect(draws).toEqual(['a', 'b', 'x']);
     expect(entriesFor(root, left).map(entry => (entry.kind === RenderEntryKind.Draw ? (entry.drawable as Leaf).id : null))).toEqual(['a']);
-    expect(entriesFor(root, right).map(entry => (entry.kind === RenderEntryKind.Draw ? (entry.drawable as Leaf).id : null))).toEqual(['b', 'x']);
+    expect(entriesFor(root, right).map(entry => (entry.kind === RenderEntryKind.Draw ? (entry.drawable as Leaf).id : null))).toEqual([
+      'b',
+      'x',
+    ]);
 
     root.destroy();
     backend.destroy();

@@ -1,5 +1,5 @@
 import { Sprite } from '@codexo/exojs';
-import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:sprite-binding
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });

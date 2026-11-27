@@ -46,7 +46,11 @@ export class SpawnOnDeath extends DeathModule {
 
     try {
       for (let n = 0; n < this.count; n++) {
-        this.spawner.apply(target, 0);
+        if (this.spawner._trigger !== undefined) {
+          this.spawner._trigger(target);
+        } else {
+          this.spawner.apply(target, 0);
+        }
       }
     } finally {
       spawned = target._endSpawnRecording(previous);

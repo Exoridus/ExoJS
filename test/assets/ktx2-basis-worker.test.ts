@@ -9,15 +9,19 @@ class FakeWorker {
   public onmessageerror: (() => void) | null = null;
   public messages: Array<{ kind: string; id?: number; buffer?: ArrayBuffer }> = [];
   public terminated = false;
+
   public constructor() {
     FakeWorker.instances.push(this);
   }
+
   public postMessage(message: { kind: string; id?: number; buffer?: ArrayBuffer }): void {
     this.messages.push(message);
   }
+
   public terminate(): void {
     this.terminated = true;
   }
+
   public reply(data: unknown): void {
     this.onmessage?.({ data } as MessageEvent);
   }
@@ -30,12 +34,15 @@ const descriptor = {
   universal: 'uastc',
 } as const;
 const run = (runtime: BasisKtx2Runtime, signal?: AbortSignal) => runtime.transcode(new ArrayBuffer(16), descriptor, { id: 13 }, signal);
+
 const ready = async (): Promise<FakeWorker> => {
   const worker = FakeWorker.instances[0]!;
   worker.reply({ kind: 'ready' });
   await Promise.resolve();
+
   return worker;
 };
+
 afterEach(() => {
   vi.unstubAllGlobals();
   FakeWorker.instances = [];
@@ -73,10 +80,18 @@ describe('Basis worker lifecycle', () => {
     const job = run(runtime, controller.signal);
     const outcome = Promise.allSettled([job]);
     const worker = FakeWorker.instances[0]!;
-    if (initialized) await ready();
+
+    if (initialized) {
+      await ready();
+    }
+
     controller.abort();
     expect(await outcome).toMatchObject([{ status: 'rejected', reason: { name: 'AbortError' } }]);
-    if (!initialized) await ready();
+
+    if (!initialized) {
+      await ready();
+    }
+
     expect(worker.messages.filter(message => message.kind === 'transcode')).toHaveLength(initialized ? 1 : 0);
     const next = run(runtime);
     await Promise.resolve();
@@ -85,20 +100,43 @@ describe('Basis worker lifecycle', () => {
     runtime.destroy();
   });
 
-  test.each(['worker', 'init', 'message'])('propagates %s failure to every request and terminates', async mode => {
+  test.each(['worker', 'message'])('propagates %s failure to every request and terminates', async mode => {
     vi.stubGlobal('Worker', FakeWorker);
     const runtime = new BasisKtx2Runtime();
     const outcomes = Promise.allSettled([run(runtime), run(runtime)]);
     const worker = FakeWorker.instances[0]!;
-    if (mode === 'worker') worker.onerror?.({ message: 'worker failed', preventDefault() {} } as ErrorEvent);
-    else if (mode === 'init') worker.reply({ kind: 'fatal', message: 'WASM init failed' });
-    else worker.onmessageerror?.();
+
+    if (mode === 'worker') {
+      worker.onerror?.({ message: 'worker failed', preventDefault() {} } as ErrorEvent);
+    } else {
+      worker.onmessageerror?.();
+    }
+
     expect(await outcomes).toMatchObject([
       { status: 'rejected', reason: { message: expect.stringMatching(/failed/) } },
       { status: 'rejected', reason: { message: expect.stringMatching(/failed/) } },
     ]);
     expect(worker.terminated).toBe(true);
     await expect(run(runtime)).rejects.toThrow(/failed/);
+    runtime.destroy();
+  });
+
+  test('retries worker initialization after a transient failure', async () => {
+    vi.stubGlobal('Worker', FakeWorker);
+    const runtime = new BasisKtx2Runtime();
+    const first = Promise.allSettled([run(runtime), run(runtime)]);
+    FakeWorker.instances[0]!.reply({ kind: 'fatal', message: 'WASM init failed' });
+    expect(await first).toMatchObject([
+      { status: 'rejected', reason: { message: 'WASM init failed' } },
+      { status: 'rejected', reason: { message: 'WASM init failed' } },
+    ]);
+    const second = run(runtime);
+    const worker = FakeWorker.instances[1]!;
+    expect(worker).toBeDefined();
+    worker.reply({ kind: 'ready' });
+    await Promise.resolve();
+    worker.reply({ kind: 'result', id: worker.messages.at(-1)!.id, levels: [] });
+    expect(await second).toEqual([]);
     runtime.destroy();
   });
 

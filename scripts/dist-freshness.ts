@@ -13,13 +13,14 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { hashSourceTree, readSourceStamp } from './source-hash.ts';
+import { coreSourceRoots, hashSourceTree, readSourceStamp } from './source-hash.ts';
 
 export const repoRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 export interface BuildUnit {
   readonly name: string;
-  readonly sourceDir: string;
+  /** The source trees the unit's dist is built from. */
+  readonly sourceDirs: readonly string[];
   readonly distDir: string;
   /** Whether the dist directory holds an emitted entry point. */
   readonly built: boolean;
@@ -33,28 +34,35 @@ export interface BuildUnit {
  */
 const TOOLING_PACKAGES = new Set(['exojs-build', 'exojs-config', 'exojs-bench', 'exojs-examples', 'exojs-cli']);
 
+/** Name of the Core build unit, which every dist consumer reads. */
+export const CORE_UNIT = '@codexo/exojs';
+
 /** Core plus every runtime extension package, whether or not it has been built. */
 export const collectBuildUnits = (): BuildUnit[] => {
   const units: BuildUnit[] = [
     {
-      name: '@codexo/exojs',
-      sourceDir: join(repoRoot, 'src'),
+      name: CORE_UNIT,
+      sourceDirs: coreSourceRoots(repoRoot),
       distDir: join(repoRoot, 'dist'),
       built: existsSync(join(repoRoot, 'dist', 'esm', 'index.js')),
     },
   ];
 
   for (const entry of readdirSync(join(repoRoot, 'packages'), { withFileTypes: true })) {
-    if (!entry.isDirectory() || !entry.name.startsWith('exojs-') || TOOLING_PACKAGES.has(entry.name)) continue;
+    if (!entry.isDirectory() || !entry.name.startsWith('exojs-') || TOOLING_PACKAGES.has(entry.name)) {
+      continue;
+    }
 
     const dir = join(repoRoot, 'packages', entry.name);
     const sourceDir = join(dir, 'src');
     const distDir = join(dir, 'dist');
 
     // Only packages built through the shared library pipeline carry a stamp.
-    if (!existsSync(sourceDir) || !existsSync(join(dir, 'tsconfig.build.json'))) continue;
+    if (!existsSync(sourceDir) || !existsSync(join(dir, 'tsconfig.build.json'))) {
+      continue;
+    }
 
-    units.push({ name: `@codexo/${entry.name}`, sourceDir, distDir, built: existsSync(join(distDir, 'esm', 'index.js')) });
+    units.push({ name: `@codexo/${entry.name}`, sourceDirs: [sourceDir], distDir, built: existsSync(join(distDir, 'esm', 'index.js')) });
   }
 
   return units;
@@ -82,8 +90,9 @@ export const checkFreshness = (units: readonly BuildUnit[] = collectBuildUnits()
 
     if (recorded === null) {
       stale.push(`${unit.name}: ${relative(repoRoot, unit.distDir)} carries no source stamp (built before stamps existed, or not at all)`);
-    } else if (recorded !== hashSourceTree(unit.sourceDir)) {
-      stale.push(`${unit.name}: ${relative(repoRoot, unit.sourceDir)} changed since ${relative(repoRoot, unit.distDir)} was built`);
+    } else if (recorded !== hashSourceTree(unit.sourceDirs)) {
+      const sources = unit.sourceDirs.map(dir => relative(repoRoot, dir).replaceAll('\\', '/')).join(', ');
+      stale.push(`${unit.name}: ${sources} changed since ${relative(repoRoot, unit.distDir)} was built`);
     }
   }
 

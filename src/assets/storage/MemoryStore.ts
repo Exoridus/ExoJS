@@ -11,7 +11,9 @@ export class MemoryStore implements KeyValueStore {
   private readonly _map = new Map<string, unknown>();
 
   public get<T>(key: string): Promise<T | null> {
-    return Promise.resolve(this._map.has(key) ? (this._map.get(key) as T) : null);
+    // A present entry still owns the documented `T | null` surface: an
+    // explicitly stored `undefined` must not read back as "absent".
+    return Promise.resolve((this._map.get(key) as T | undefined) ?? null);
   }
 
   public set(key: string, value: unknown): Promise<void> {

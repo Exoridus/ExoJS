@@ -4,7 +4,7 @@
   "symbol": "ColliderOptions",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 8,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for a collider."
       ],
-      "importLine": "import { ColliderOptions } from '@codexo/exojs-physics'",
+      "importLine": "import { ColliderOptions } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

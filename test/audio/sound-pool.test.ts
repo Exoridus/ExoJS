@@ -12,7 +12,7 @@ import type { MockInstance } from 'vitest';
  */
 import { getAudioContext } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
-import type { Pausable, Voice } from '#audio/Playable';
+import type { Loopable, Pausable, RatePitched, Voice } from '#audio/Playable';
 import { Sound, SoundPoolStrategy } from '#audio/Sound';
 
 import { mutable } from '../support/mutable';
@@ -28,8 +28,8 @@ interface MockBufferSourceNode {
   stop: MockInstance;
   connect: MockInstance;
   disconnect: MockInstance;
-  playbackRate: { value: number };
-  detune: { value: number };
+  playbackRate: { value: number; setTargetAtTime: MockInstance };
+  detune: { value: number; setTargetAtTime: MockInstance };
   loop: boolean;
   loopStart: number;
   loopEnd: number;
@@ -42,8 +42,8 @@ const createSourceMock = (): MockBufferSourceNode => ({
   disconnect: vi.fn(),
   start: vi.fn(),
   stop: vi.fn(),
-  playbackRate: { value: 1 },
-  detune: { value: 0 },
+  playbackRate: { value: 1, setTargetAtTime: vi.fn() },
+  detune: { value: 0, setTargetAtTime: vi.fn() },
   loop: false,
   loopStart: 0,
   loopEnd: 0,
@@ -64,8 +64,10 @@ const setupSourceFactory = (): SourceFactory => {
   const spy = vi.spyOn(ctx, 'createBufferSource').mockImplementation(() => {
     const mock = createSourceMock();
     sources.push(mock);
+
     return mock as unknown as AudioBufferSourceNode;
   });
+
   return { sources, restore: () => spy.mockRestore() };
 };
 
@@ -76,11 +78,13 @@ const setupSourceFactory = (): SourceFactory => {
 const mockCurrentTime = (initial = 0): { setTime: (t: number) => void; restore: () => void } => {
   const ctx = getAudioContext() as AudioContext;
   let _currentTime = initial;
-  const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(ctx), 'currentTime') ?? Object.getOwnPropertyDescriptor(ctx, 'currentTime');
+  const descriptor =
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(ctx), 'currentTime') ?? Object.getOwnPropertyDescriptor(ctx, 'currentTime');
   Object.defineProperty(ctx, 'currentTime', {
     get: () => _currentTime,
     configurable: true,
   });
+
   return {
     setTime: (t: number) => {
       _currentTime = t;
@@ -168,6 +172,58 @@ describe('Sound — pool defaults', () => {
     sound.destroy();
   });
 
+  test('setPoolSize() terminates when an onEnd listener replays the sound', () => {
+    const factory = setupSourceFactory();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
+    let replays = 0;
+    let replaying = true;
+
+    const replay = (): void => {
+      if (!replaying) {
+        return;
+      }
+
+      // Bounds a regression to a test failure instead of a hung worker.
+      if (++replays > 10) {
+        throw new Error('replay limit reached');
+      }
+
+      system.play(sound).onEnd.add(replay);
+    };
+
+    for (let i = 0; i < 3; i++) {
+      system.play(sound).onEnd.add(replay);
+    }
+
+    expect(() => sound.setPoolSize(1)).not.toThrow();
+    expect(replays).toBeGreaterThan(0);
+
+    replaying = false;
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('setPoolSize() stops every evicted voice even when an onEnd listener throws', () => {
+    const factory = setupSourceFactory();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
+    const first = system.play(sound);
+    const second = system.play(sound);
+
+    system.play(sound);
+    first.onEnd.add(() => {
+      throw new Error('listener failure');
+    });
+
+    expect(() => sound.setPoolSize(1)).toThrow('listener failure');
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(true);
+
+    factory.restore();
+    sound.destroy();
+  });
+
   // priority getter/setter round-trip
   test('priority setter updates priority', () => {
     const sound = new Sound(createAudioBufferStub());
@@ -197,6 +253,7 @@ describe('Sound — multi-instance play() (pooled default)', () => {
     system.play(sound);
 
     expect(factory.sources.length).toBe(3);
+
     for (const src of factory.sources) {
       expect(src.stop).not.toHaveBeenCalled();
     }
@@ -266,14 +323,126 @@ describe('Sound — LeastRecentlyUsed eviction', () => {
   });
 });
 
+describe('Sound — LeastRecentlyUsed remaining-time estimate', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  type FullVoice = Voice & Pausable & Loopable & RatePitched;
+
+  const setup = (): { time: ReturnType<typeof mockCurrentTime>; factory: SourceFactory; system: AudioSystem; sound: Sound } => {
+    const time = mockCurrentTime(0);
+    const factory = setupSourceFactory();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(10), {
+      poolSize: 2,
+      poolStrategy: SoundPoolStrategy.LeastRecentlyUsed,
+    });
+
+    return { time, factory, system, sound };
+  };
+
+  const teardown = ({ time, factory, sound }: ReturnType<typeof setup>): void => {
+    time.restore();
+    factory.restore();
+    sound.destroy();
+  };
+
+  test('a slow voice outlasts a newer normal-speed voice', () => {
+    const ctx = setup();
+    const slow = ctx.system.play(ctx.sound, { playbackRate: 0.5 }) as FullVoice;
+    ctx.time.setTime(1);
+    const normal = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(2);
+    ctx.system.play(ctx.sound);
+
+    expect(normal.ended).toBe(true);
+    expect(slow.ended).toBe(false);
+    teardown(ctx);
+  });
+
+  test('a rate change mid-play shortens the remaining time', () => {
+    const ctx = setup();
+    const first = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(1);
+    const second = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(2);
+    first.playbackRate = 0.5;
+    second.playbackRate = 4;
+    ctx.time.setTime(3);
+    ctx.system.play(ctx.sound);
+
+    expect(second.ended).toBe(true);
+    expect(first.ended).toBe(false);
+    teardown(ctx);
+  });
+
+  test('detune scales the remaining time like playback rate', () => {
+    const ctx = setup();
+    const low = ctx.system.play(ctx.sound, { detune: -1200 }) as FullVoice;
+    ctx.time.setTime(1);
+    const normal = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(2);
+    ctx.system.play(ctx.sound);
+
+    expect(normal.ended).toBe(true);
+    expect(low.ended).toBe(false);
+    teardown(ctx);
+  });
+
+  test('a paused voice does not age while paused', () => {
+    const ctx = setup();
+    const older = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(1);
+    older.pause();
+    ctx.time.setTime(8);
+    const newer = ctx.system.play(ctx.sound, { playbackRate: 4 }) as FullVoice;
+    ctx.time.setTime(9);
+    newer.pause();
+    ctx.time.setTime(20);
+    ctx.system.play(ctx.sound);
+
+    // Frozen remaining: older has 9 buffer seconds at 1x, newer 6 at 4x.
+    expect(newer.ended).toBe(true);
+    expect(older.ended).toBe(false);
+    teardown(ctx);
+  });
+
+  test('a voice looped after starting is never the closest to its end', () => {
+    const ctx = setup();
+    const looped = ctx.system.play(ctx.sound) as FullVoice;
+    looped.loop = true;
+    ctx.time.setTime(1);
+    const normal = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(2);
+    ctx.system.play(ctx.sound);
+
+    expect(normal.ended).toBe(true);
+    expect(looped.ended).toBe(false);
+    teardown(ctx);
+  });
+
+  test('a voice whose loop was cleared becomes evictable by its playhead', () => {
+    const ctx = setup();
+    const unlooped = ctx.system.play(ctx.sound, { loop: true }) as FullVoice;
+    unlooped.loop = false;
+    ctx.time.setTime(1);
+    const normal = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(2);
+    ctx.system.play(ctx.sound);
+
+    expect(unlooped.ended).toBe(true);
+    expect(normal.ended).toBe(false);
+    teardown(ctx);
+  });
+});
+
 describe('Sound — LeastRecentlyUsed eviction while the audio context is not ready', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  // LRU falls back to `now = 0` when the audio context is not running yet.
   // Playing is skipped outright while locked, so the surviving way in is
   // `setPoolSize()` - a pool shrunk while audio is suspended still has to pick
-  // a victim, and must do so without spawning a context to read the clock from.
-  test('LRU eviction still picks a victim when isAudioContextReady() is false', () => {
+  // the voice closest to its end from the live playheads.
+  test('LRU eviction picks the voice closest to its end while the context is not ready', () => {
+    const time = mockCurrentTime(0);
     const factory = setupSourceFactory();
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(4), {
@@ -281,8 +450,10 @@ describe('Sound — LeastRecentlyUsed eviction while the audio context is not re
       poolStrategy: SoundPoolStrategy.LeastRecentlyUsed,
     });
 
-    system.play(sound); // src[0]
-    system.play(sound); // src[1]
+    const older = system.play(sound);
+    time.setTime(1);
+    const newer = system.play(sound);
+    time.setTime(3);
 
     const ctx = getAudioContext();
     const originalState = ctx.state;
@@ -292,9 +463,10 @@ describe('Sound — LeastRecentlyUsed eviction while the audio context is not re
 
     mutable(ctx).state = originalState;
 
-    expect(factory.sources.length).toBe(2);
-    expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
+    expect(older.ended).toBe(true);
+    expect(newer.ended).toBe(false);
 
+    time.restore();
     factory.restore();
     sound.destroy();
   });

@@ -20,8 +20,8 @@ export interface StackOptions {
 
 /** The extents a child had before the stack grew or stretched it. */
 interface NaturalSize {
-  readonly main?: number;
-  readonly cross?: number;
+  readonly width?: number;
+  readonly height?: number;
 }
 
 /**
@@ -46,6 +46,7 @@ export class Stack extends Widget {
   private readonly _natural = new WeakMap<RenderNode, NaturalSize>();
   private _explicitSize = false;
   private _flowing = false;
+  private _childResized = false;
 
   public constructor(options: StackOptions = {}) {
     super();
@@ -167,7 +168,10 @@ export class Stack extends Widget {
     this._flowing = true;
 
     try {
-      this._flow();
+      do {
+        this._childResized = false;
+        this._flow();
+      } while (this._childResized as boolean);
     } finally {
       this._flowing = false;
     }
@@ -180,7 +184,12 @@ export class Stack extends Widget {
   }
 
   protected override _onChildResized(): void {
-    this.layout();
+    if (this._flowing) {
+      // Releasing a constraint can resize a nested stack after this pass measured it.
+      this._childResized = true;
+    } else {
+      this.layout();
+    }
   }
 
   protected override _relayout(): void {
@@ -190,6 +199,7 @@ export class Stack extends Widget {
 
   private _flow(): void {
     const isRow = this._direction === 'row';
+    const sized = this._explicitSize || (this.parent instanceof Stack && this.parent._natural.has(this));
     const children = this.children;
     const stretching = this._align === 'stretch';
     const natural = new Map<RenderNode, { main: number; cross: number }>();
@@ -209,8 +219,8 @@ export class Stack extends Widget {
       first = false;
     }
 
-    const innerMain = this._explicitSize ? Math.max(0, (isRow ? this._uiWidth : this._uiHeight) - this._padding * 2) : contentMain;
-    const innerCross = this._explicitSize ? Math.max(0, (isRow ? this._uiHeight : this._uiWidth) - this._padding * 2) : contentCross;
+    const innerMain = sized ? Math.max(0, (isRow ? this._uiWidth : this._uiHeight) - this._padding * 2) : contentMain;
+    const innerCross = sized ? Math.max(0, (isRow ? this._uiHeight : this._uiWidth) - this._padding * 2) : contentCross;
     const leftover = growTotal > 0 ? Math.max(0, innerMain - contentMain) : 0;
 
     let main = this._padding;
@@ -236,7 +246,7 @@ export class Stack extends Widget {
       main += mainSize;
     }
 
-    if (!this._explicitSize) {
+    if (!sized) {
       const along = contentMain + this._padding * 2;
       const across = contentCross + this._padding * 2;
 
@@ -267,10 +277,12 @@ export class Stack extends Widget {
     const isRow = this._direction === 'row';
     const size = this._measure(child);
     const imposed = this._natural.get(child);
+    const naturalWidth = imposed?.width ?? size.width;
+    const naturalHeight = imposed?.height ?? size.height;
 
     return {
-      main: imposed?.main ?? (isRow ? size.width : size.height),
-      cross: imposed?.cross ?? (isRow ? size.height : size.width),
+      main: isRow ? naturalWidth : naturalHeight,
+      cross: isRow ? naturalHeight : naturalWidth,
     };
   }
 
@@ -283,9 +295,13 @@ export class Stack extends Widget {
     const isRow = this._direction === 'row';
     const grew = mainSize !== natural.main;
     const stretched = crossSize !== natural.cross;
+    const naturalWidth = isRow ? natural.main : natural.cross;
+    const naturalHeight = isRow ? natural.cross : natural.main;
 
     if (grew || stretched) {
-      this._natural.set(child, { ...(grew && { main: natural.main }), ...(stretched && { cross: natural.cross }) });
+      // Absolute extents, not direction-relative ones: a later direction change
+      // must not read the old width as the new height.
+      this._natural.set(child, { width: naturalWidth, height: naturalHeight });
     } else {
       this._natural.delete(child);
     }
@@ -293,13 +309,19 @@ export class Stack extends Widget {
     const width = isRow ? mainSize : crossSize;
     const height = isRow ? crossSize : mainSize;
 
-    // Only write a size the child does not already have. Re-setting the same
-    // extents looks harmless and is not: a nested Stack reads any setSize as its
-    // caller pinning an explicit box, so a stack of stacks would stop sizing
-    // itself to its content the first time its parent laid it out.
     if (child.uiWidth !== width || child.uiHeight !== height) {
-      child.setSize(width, height);
+      if (child instanceof Stack) {
+        child._setParentSize(width, height);
+      } else {
+        child.setSize(width, height);
+      }
     }
+  }
+
+  private _setParentSize(width: number, height: number): void {
+    // A parent constraint must not become the caller's permanent explicit box.
+    super.setSize(width, height);
+    this.layout();
   }
 
   /** A child's layout extent: a widget's explicit size, or a drawn node's bounds. */

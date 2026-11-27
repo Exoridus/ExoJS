@@ -139,6 +139,7 @@ describe('StyleChangeHint merging', () => {
   const freshStyle = (): TextStyle => {
     const style = new TextStyle();
     style.consumeDirty();
+
     return style;
   };
 
@@ -207,6 +208,7 @@ describe('setters', () => {
   const freshStyle = (): TextStyle => {
     const style = new TextStyle();
     style.consumeDirty();
+
     return style;
   };
 
@@ -219,6 +221,7 @@ describe('setters', () => {
   test('fontFamily: accepts a FontFace instance and extracts its family', () => {
     class MockFontFace {
       family: string;
+
       constructor(family: string) {
         this.family = family;
       }
@@ -482,7 +485,13 @@ describe('font (derived CSS string)', () => {
   });
 
   test('small caps sit between the style and the weight, as the CSS shorthand requires', () => {
-    const style = new TextStyle({ fontFamily: 'Georgia', fontSize: 24, fontStyle: 'italic', fontVariant: 'small-caps', fontWeight: 'bold' });
+    const style = new TextStyle({
+      fontFamily: 'Georgia',
+      fontSize: 24,
+      fontStyle: 'italic',
+      fontVariant: 'small-caps',
+      fontWeight: 'bold',
+    });
     expect(style.font).toBe('italic small-caps bold 24px Georgia');
   });
 });
@@ -608,5 +617,39 @@ describe('clone', () => {
     const cloned = source.clone();
 
     expect(cloned.consumeDirty()).toBe('font');
+  });
+});
+
+describe('TextStyle validation', () => {
+  const invalid = [
+    ['fontSize', [0, -1, NaN, Infinity]],
+    ['lineHeight', [0, -1, NaN, Infinity]],
+    ['outlineWidth', [-1, NaN, Infinity]],
+  ] as const;
+
+  for (const [key, values] of invalid) {
+    for (const value of values) {
+      it(`rejects ${key} ${value} in the constructor`, () => {
+        expect(() => new TextStyle({ [key]: value })).toThrow('[ExoJS]');
+        expect(() => new TextStyle({ [key]: value })).toThrow(RangeError);
+      });
+
+      it(`rejects ${key} ${value} in the setter without mutating state`, () => {
+        const style = new TextStyle({ fontSize: 30, lineHeight: 1.5, outlineWidth: 0.2 });
+
+        style.consumeDirty();
+        expect(() => {
+          style[key] = value;
+        }).toThrow(RangeError);
+        expect(style.fontSize).toBe(30);
+        expect(style.lineHeight).toBe(1.5);
+        expect(style.outlineWidth).toBe(0.2);
+        expect(style.consumeDirty()).toBeNull();
+      });
+    }
+  }
+
+  it('accepts a zero outlineWidth', () => {
+    expect(new TextStyle({ outlineWidth: 0 }).outlineWidth).toBe(0);
   });
 });

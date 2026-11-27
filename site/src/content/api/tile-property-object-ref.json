@@ -4,7 +4,7 @@
   "symbol": "TilePropertyObjectRef",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A reference to another object/entity. `id` is the referenced object's identity - Tiled's numeric object id, or LDtk's `entityIid`. The extra fields are LDtk-only navigation context (`undefined` for Tiled-sourced refs) that lets a consumer resolve the reference without searching the whole level tree."
       ],
-      "importLine": "import { TilePropertyObjectRef } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TilePropertyObjectRef } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

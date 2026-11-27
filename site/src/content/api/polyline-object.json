@@ -4,7 +4,7 @@
   "symbol": "PolylineObject",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 14,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "An open polyline; `points` are relative to the object origin."
       ],
-      "importLine": "import { PolylineObject } from '@codexo/exojs-tilemap'",
+      "importLine": "import { PolylineObject } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

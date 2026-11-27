@@ -1,0 +1,71 @@
+{
+  "title": "ValueAssetKind",
+  "description": "Types whose catalog leaf is a deferred AssetRef: the built-in CoreValueAssetKinds plus every declaration-merged type that opts in with `isValue: true`.",
+  "symbol": "ValueAssetKind",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Types whose catalog leaf is a deferred AssetRef: the built-in CoreValueAssetKinds plus every declaration-merged type that opts in with `isValue: true`."
+      ],
+      "importLine": "import { ValueAssetKind } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ValueAssetKind",
+          "signature": "CoreValueAssetKind | DeclaredValueAssetKind",
+          "signatureTokens": [
+            {
+              "text": "CoreValueAssetKind",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DeclaredValueAssetKind",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDefinitions.ts"
+}

@@ -43,9 +43,10 @@ runs:
       uses: actions/cache@v5
       with:
         path: ~/.cache/ms-playwright
-        key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+        # Cache entries are immutable. Each browser must save its own installation.
+        key: ${{ runner.os }}-playwright-${{ inputs.browser }}-${{ hashFiles('pnpm-lock.yaml') }}
         restore-keys: |
-          ${{ runner.os }}-playwright-
+          ${{ runner.os }}-playwright-${{ inputs.browser }}-
 
     - if: inputs.browser != ''
       shell: bash

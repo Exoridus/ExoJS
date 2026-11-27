@@ -77,22 +77,27 @@ describe('externally encoded native KTX2 corpus', () => {
     },
   );
 
-  test.each(manifest.fixtures.map(entry => [entry.file, entry] as const))('%s parses to its own format, transfer and extent', (_file, entry) => {
-    const payload = parseKtx2(readFixture(entry.file), entry.file);
+  test.each(manifest.fixtures.map(entry => [entry.file, entry] as const))(
+    '%s parses to its own format, transfer and extent',
+    (_file, entry) => {
+      const payload = parseKtx2(readFixture(entry.file), entry.file);
 
-    expect(payload.kind).toBe('compressed');
+      expect(payload.kind).toBe('compressed');
 
-    if (payload.kind !== 'compressed') return;
+      if (payload.kind !== 'compressed') {
+        return;
+      }
 
-    expect(payload.format).toBe(externalCorpusFormats[entry.vkFormat]);
-    expect(payload.colorSpace).toBe(entry.transfer === 'srgb' ? 'srgb' : 'linear-srgb');
-    expect(payload.alphaMode).toBe('straight');
-    expect(payload.levels).toHaveLength(1);
-    expect(payload.levels[0]?.width).toBe(entry.width);
-    expect(payload.levels[0]?.height).toBe(entry.height);
-    // Whole 4x4 blocks: 16 of them, 8 bytes each for ETC2 RGB, 16 for everything else.
-    expect(payload.levels[0]?.data.byteLength).toBe(16 * (entry.vkFormat === 147 || entry.vkFormat === 148 ? 8 : 16));
-  });
+      expect(payload.format).toBe(externalCorpusFormats[entry.vkFormat]);
+      expect(payload.colorSpace).toBe(entry.transfer === 'srgb' ? 'srgb' : 'linear-srgb');
+      expect(payload.alphaMode).toBe('straight');
+      expect(payload.levels).toHaveLength(1);
+      expect(payload.levels[0]?.width).toBe(entry.width);
+      expect(payload.levels[0]?.height).toBe(entry.height);
+      // Whole 4x4 blocks: 16 of them, 8 bytes each for ETC2 RGB, 16 for everything else.
+      expect(payload.levels[0]?.data.byteLength).toBe(16 * (entry.vkFormat === 147 || entry.vkFormat === 148 ? 8 : 16));
+    },
+  );
 
   test('a transfer pair carries different descriptors over the same block bytes for the transcoded formats', () => {
     for (const [linear, srgb] of [
@@ -103,7 +108,9 @@ describe('externally encoded native KTX2 corpus', () => {
       const a = parseKtx2(readFixture(linear), linear);
       const b = parseKtx2(readFixture(srgb), srgb);
 
-      if (a.kind !== 'compressed' || b.kind !== 'compressed') throw new Error('expected compressed payloads');
+      if (a.kind !== 'compressed' || b.kind !== 'compressed') {
+        throw new Error('expected compressed payloads');
+      }
 
       expect(a.levels[0]?.data, `${linear} vs ${srgb}`).toEqual(b.levels[0]?.data);
       expect(a.colorSpace).not.toBe(b.colorSpace);

@@ -15,7 +15,14 @@ import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { Sprite } from '#rendering/sprite/Sprite';
 
-import { createWebGl2TestBackend, createWebGpuTestBackend, readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce } from './_backendSetup';
+import {
+  createWebGl2TestBackend,
+  createWebGpuTestBackend,
+  readWebGl2Frame,
+  readWebGpuFrame,
+  renderWebGl2Once,
+  renderWebGpuOnce,
+} from './_backendSetup';
 import { buildCoordinateTexture } from './_selfDescribingFixture';
 
 const SIZE = 32;
@@ -64,7 +71,9 @@ describe('self-describing fixture survives both pipelines byte-exactly', () => {
     const backend = await createWebGpuTestBackend(SIZE);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, buildScene(), Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, buildScene(), Color.black))) {
+        return;
+      }
 
       expectExactEncoding(readWebGpuFrame(backend, SIZE), 'webgpu');
     } finally {
@@ -79,7 +88,9 @@ describe('self-describing fixture survives both pipelines byte-exactly', () => {
     try {
       renderWebGl2Once(gl, buildScene(), Color.black);
 
-      if (!(await renderWebGpuOnce(ctx, gpu, buildScene(), Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, gpu, buildScene(), Color.black))) {
+        return;
+      }
 
       expect(Array.from(readWebGpuFrame(gpu, SIZE))).toEqual(Array.from(readWebGl2Frame(gl, SIZE)));
     } finally {

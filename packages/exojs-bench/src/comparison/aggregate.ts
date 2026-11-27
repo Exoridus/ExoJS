@@ -7,6 +7,7 @@ import { exceedsFrameBudget } from '../shared/frameBudget';
 import type { LibraryProvenance, PlatformVersionStamp, PrereleaseStamp } from '../shared/provenance';
 import { mergeTimerChecks } from '../shared/timerCheck';
 import { median } from '../shared/timing';
+import { describePlan, isSamePlan, type RunPlanMeta } from '../suite/plan';
 import type { BackendComparison, ComparisonCell, ComparisonRow, ComparisonSection, ExcludedRow } from './build';
 import { buildPhysicsComparison, buildRenderingComparison } from './build';
 import type { AggregatedBackendComparison, AggregatedCell, AggregatedRow, AggregatedSection, RunSpread } from './pooled';
@@ -70,6 +71,8 @@ export interface AggregatedRendering {
   readonly libraries: readonly LibraryProvenance[];
   /** The pooled comparison, one block per backend. */
   readonly backends: readonly AggregatedBackendComparison[];
+  /** Plan every pooled run was measured under; absent when the runs carry none. */
+  readonly plan?: RunPlanMeta;
 }
 
 /** The physics domain of a reference measurement. */
@@ -80,13 +83,17 @@ export interface AggregatedPhysics {
   readonly libraries: readonly LibraryProvenance[];
   /** The pooled comparison section. */
   readonly section: AggregatedSection;
+  /** Plan every pooled run was measured under; absent when the runs carry none. */
+  readonly plan?: RunPlanMeta;
 }
 
 /** How many examples of a difference an error message names before it stops listing. */
 const EXAMPLE_LIMIT = 3;
 
 const examples = (values: readonly string[]): string =>
-  values.length <= EXAMPLE_LIMIT ? values.join(', ') : `${values.slice(0, EXAMPLE_LIMIT).join(', ')}, and ${String(values.length - EXAMPLE_LIMIT)} more`;
+  values.length <= EXAMPLE_LIMIT
+    ? values.join(', ')
+    : `${values.slice(0, EXAMPLE_LIMIT).join(', ')}, and ${String(values.length - EXAMPLE_LIMIT)} more`;
 
 /**
  * Reject the first pair of runs that describe different measurements.
@@ -119,6 +126,24 @@ const requireSameSet = (perRun: ReadonlyArray<readonly string[]>, what: string, 
       domain,
       `${domain} run ${String(index + 1)} does not measure the same ${what} as run 1: ${differences.join('; ')}. Runs pooled into one profile must repeat one measurement, not compare two.`,
     );
+  }
+};
+
+/**
+ * Reject runs measured under different plan identities.
+ *
+ * Mixing a published run with an exploratory one, runs of different suites or
+ * revisions, or recorded and unrecorded data would pool cells that answer
+ * different questions under one claimed plan.
+ */
+const requireSamePlan = (plans: ReadonlyArray<RunPlanMeta | undefined>, domain: string): void => {
+  for (const [index, plan] of plans.entries()) {
+    if (index > 0 && !isSamePlan(plans[0], plan)) {
+      throw new IncomparableRunsError(
+        domain,
+        `${domain} run ${String(index + 1)} was measured under a different plan than run 1 (run 1: ${describePlan(plans[0])}; run ${String(index + 1)}: ${describePlan(plan)}). Runs pooled into one profile must repeat one measurement, not compare two.`,
+      );
+    }
   }
 };
 
@@ -165,18 +190,41 @@ const platformIdentity = (os: string, version: PlatformVersionStamp | undefined,
     prerelease?.value === true ? PRERELEASE_SEGMENT : 'shipping',
   ].join('-');
 
+/** Validate a recorded renderer before using it to identify a measured backend. */
+const rendererIdentity = (backend: string, observed: unknown): string => {
+  if (typeof observed !== 'string' || observed.trim().length === 0) {
+    throw new IncomparableRunsError('rendering', `Renderer identity is incomplete for ${backend}; no adapter was recorded.`);
+  }
+
+  const normalized = normalizeGpuAdapter(backend === 'webgpu' ? observed.replaceAll('/', ' ') : observed);
+  const unavailable = /^(?:no-webgl2-context|no-webgpu-adapter|webgpu-adapter|navigator\.gpu is undefined)\b/i.test(observed.trim());
+
+  if (
+    unavailable ||
+    !isIdentifyingPart(normalized) ||
+    ['webkit-webgl', 'mozilla', 'webgl', 'webgl2', 'unknown-renderer', 'unidentified-gpu'].includes(normalized)
+  ) {
+    throw new IncomparableRunsError(
+      'rendering',
+      `Renderer identity is unverified for ${backend}: '${observed}' does not identify a device.`,
+    );
+  }
+
+  // WebGPU joins vendor, architecture, device and description with slashes;
+  // the profile slug's WebGL model parser treats a slash as a driver tail.
+  return backend === 'webgpu' ? observed.trim().toLowerCase() : normalized;
+};
+
 /**
  * The machine and browser a rendering run belongs to.
  *
- * Built from exactly the parts that decide which published profile a run lands
- * in - the GPU the adapter string names, the operating system with its major
- * version, the browser engine - plus whether the platform was pre-release,
- * using the slug's own normalizations. Two runs may therefore pool precisely
- * when they would be written to one file, and a run that would land elsewhere
- * is rejected instead of quietly averaged into this one.
+ * Built from the GPU recorded for every measured backend, the operating system
+ * with its major version, the browser engine, and whether the platform was
+ * pre-release. A filename may use the most specific GPU stamp, but pooling must
+ * verify all backends rather than letting one stamp hide contradictory evidence.
  *
  * Deliberately tolerated, because these move between runs on one machine: the
- * timestamp; the driver, API and device-id tail of an adapter string
+ * timestamp; the driver, API and device-id tail of a WebGL adapter string
  * (`Direct3D11 vs_5_0 ps_5_0`, `(0x00002C05)`), which a driver update rewrites
  * without the GPU changing; and the operating system's patch level. The browser
  * patch version is tolerated too - the checkout pins the browser build, so it
@@ -187,18 +235,81 @@ const platformIdentity = (os: string, version: PlatformVersionStamp | undefined,
  * a beta platform and a run on the shipping one describe different platforms,
  * and pooling them would publish a stable-looking number half of which was not.
  *
- * One limit is inherent and cannot be closed here. Where the browser reports a
- * constant instead of the GPU, the slug names the machine after the CPU model,
- * which only the physics provenance carries; a rendering run therefore
- * identifies its machine no more precisely than that constant does, and two
- * such machines running the same operating system and browser are
- * indistinguishable to this check.
+ * Historical files without per-cell observations use their backend stamps.
+ * Every measured backend needs consistent identifying evidence; a privacy
+ * constant or absent stamp cannot establish that two runs used one machine.
  */
-const renderingMachine = (stamps: readonly Provenance[]): string => {
-  const gpu = stamps.map(stamp => normalizeGpuAdapter(stamp.adapter)).find(isIdentifyingPart) ?? 'unidentified-gpu';
+const renderingMachine = (run: ReportData): string => {
+  const stamps = run.provenance;
+
+  if (stamps.some(stamp => stamp.adapterUnverified === true)) {
+    throw new IncomparableRunsError('rendering', 'Renderer identity is incomplete: a backend is marked adapter-unverified.');
+  }
+
+  if (stamps.some(stamp => stamp.adapterMismatch === true)) {
+    throw new IncomparableRunsError('rendering', 'Renderer identities disagree or a backend fallback was observed.');
+  }
+
+  const measured = run.results.filter(result => result.status === 'ok');
+  const hasObservations = measured.some(result => result.renderer !== undefined);
+  const adapters: string[] = [];
+
+  if (hasObservations) {
+    for (const [backend, cells] of groupBy(measured, result => result.spec.backend)) {
+      if (cells.some(result => !result.renderer?.adapter?.trim() || result.renderer.backend === null)) {
+        throw new IncomparableRunsError(
+          'rendering',
+          `Renderer identity is incomplete for ${backend}; repeat the acquisition with every cell identified.`,
+        );
+      }
+
+      if (cells.some(result => result.renderer!.backend !== backend)) {
+        throw new IncomparableRunsError(
+          'rendering',
+          `Backend fallback was observed for ${backend}; requested and measured backends must agree.`,
+        );
+      }
+
+      const identities = [...new Set(cells.map(result => result.renderer!.adapter!))];
+
+      if (identities.length > 1) {
+        throw new IncomparableRunsError('rendering', `Renderer identities disagree for ${backend}: ${identities.join(' | ')}.`);
+      }
+
+      adapters.push(`${backend}: ${rendererIdentity(backend, identities[0]!)}`);
+    }
+  } else {
+    const byBackend = groupBy(stamps, stamp => stamp.backend);
+    const backends = new Set(measured.length > 0 ? measured.map(result => result.spec.backend) : stamps.map(stamp => stamp.backend));
+
+    if (backends.size === 0) {
+      throw new IncomparableRunsError('rendering', 'Renderer identity is incomplete: no backend provenance was recorded.');
+    }
+
+    for (const backend of backends) {
+      const backendStamps = byBackend.get(backend) ?? [];
+
+      if (backendStamps.length === 0) {
+        throw new IncomparableRunsError('rendering', `Renderer identity is incomplete for ${backend}; no backend stamp was recorded.`);
+      }
+
+      const identities = backendStamps.map(stamp => rendererIdentity(backend, stamp.adapter));
+      const observations = [...new Set(backendStamps.map(stamp => stamp.adapter.trim()))];
+
+      if (observations.length > 1) {
+        throw new IncomparableRunsError('rendering', `Renderer identities disagree for ${backend}: ${observations.join(' | ')}.`);
+      }
+
+      adapters.push(`${backend}: ${identities[0]!}`);
+    }
+  }
+
+  const gpu = adapters.sort().join('; ');
   const first = stamps[0];
 
-  return [gpu, platformIdentity(first?.os ?? '', first?.platformVersion, first?.prerelease), first?.browser ?? 'unknown-browser'].join(' / ');
+  return [gpu, platformIdentity(first?.os ?? '', first?.platformVersion, first?.prerelease), first?.browser ?? 'unknown-browser'].join(
+    ' / ',
+  );
 };
 
 /**
@@ -208,9 +319,12 @@ const renderingMachine = (stamps: readonly Provenance[]): string => {
  * pooled into one.
  */
 const physicsMachine = (stamp: PhysicsProvenance): string =>
-  [normalizeCpuModel(stamp.host.cpu), platformIdentity(stamp.host.os, stamp.host.platformVersion, stamp.prerelease), stamp.host.arch, stamp.browser].join(
-    ' / ',
-  );
+  [
+    normalizeCpuModel(stamp.host.cpu),
+    platformIdentity(stamp.host.os, stamp.host.platformVersion, stamp.prerelease),
+    stamp.host.arch,
+    stamp.browser,
+  ].join(' / ');
 
 /** Reject runs measured against different trees: their timings describe different code. */
 const requireSameEngineVersion = (perRun: ReadonlyArray<readonly string[]>, domain: string): void => {
@@ -422,22 +536,23 @@ const renderingCellKey = (spec: ReportData['results'][number]['spec']): string =
 const physicsCellKey = (spec: PhysicsReportData['results'][number]['spec']): string =>
   `${spec.engine}|${spec.config}|${spec.archetype}|${String(spec.bodyCount)}`;
 
-const armKeys = (libraries: readonly LibraryProvenance[]): readonly string[] => libraries.map(library => `${library.name}@${library.version}`);
+const armKeys = (libraries: readonly LibraryProvenance[]): readonly string[] =>
+  libraries.map(library => `${library.name}@${library.version}`);
 
 /**
  * Pool several rendering runs into the comparison a profile publishes.
  *
  * Throws {@link IncomparableRunsError} when the runs were measured on different
  * machines or browsers, at different engine versions, against different library
- * arms, or over different matrices.
+ * arms, over different matrices, or with different per-cell sampling budgets.
  */
 export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedRendering => {
   requireRuns(runs, 'rendering');
-  requireSameMachine(
-    runs.map(run => renderingMachine(run.provenance)),
-    'machine or browser',
+  requireSamePlan(
+    runs.map(run => run.plan),
     'rendering',
   );
+  requireSameMachine(runs.map(renderingMachine), 'machine or browser', 'rendering');
   requireSameEngineVersion(
     runs.map(run => run.provenance.map(stamp => stamp.engineVersion)),
     'rendering',
@@ -453,10 +568,23 @@ export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedR
     'rendering',
   );
 
-  const perRun = runs.map(run => buildRenderingComparison(run.results));
-  const backends = [...groupBy(perRun.flat(), block => block.backend).values()].map(group => aggregateBackend(group, runs.length, 'rendering'));
+  requireSameSet(
+    runs.map(run => run.results.map(({ spec }) => `${renderingCellKey(spec)}|${String(spec.warmupFrames)}|${String(spec.timedFrames)}`)),
+    'sampling budgets',
+    'rendering',
+  );
 
-  return { runs: runs.map(run => run.provenance), libraries: runs[0]!.libraries, backends };
+  const perRun = runs.map(run => buildRenderingComparison(run.results));
+  const backends = [...groupBy(perRun.flat(), block => block.backend).values()].map(group =>
+    aggregateBackend(group, runs.length, 'rendering'),
+  );
+
+  return {
+    runs: runs.map(run => run.provenance),
+    libraries: runs[0]!.libraries,
+    backends,
+    ...(runs[0]!.plan !== undefined && { plan: runs[0]!.plan }),
+  };
 };
 
 /**
@@ -467,6 +595,10 @@ export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedR
  */
 export const aggregatePhysicsRuns = (runs: readonly PhysicsReportData[]): AggregatedPhysics => {
   requireRuns(runs, 'physics');
+  requireSamePlan(
+    runs.map(run => run.plan),
+    'physics',
+  );
   requireSameMachine(
     runs.map(run => physicsMachine(run.provenance)),
     'machine',
@@ -487,9 +619,16 @@ export const aggregatePhysicsRuns = (runs: readonly PhysicsReportData[]): Aggreg
     'physics',
   );
 
+  requireSameSet(
+    runs.map(run => run.results.map(({ spec }) => `${physicsCellKey(spec)}|${String(spec.warmupSteps)}|${String(spec.timedSteps)}`)),
+    'sampling budgets',
+    'physics',
+  );
+
   return {
     runs: runs.map(run => run.provenance),
     libraries: runs[0]!.libraries,
+    ...(runs[0]!.plan !== undefined && { plan: runs[0]!.plan }),
     section: aggregateSection(
       runs.map(run => buildPhysicsComparison(run.results, run.provenance.clock)),
       runs.length,

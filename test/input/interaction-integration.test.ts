@@ -85,8 +85,8 @@ const createHarness = (dragThreshold?: number): Harness => {
     toJSON: () => ({}),
   } as DOMRect);
 
-  Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
-  Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
+  Object.defineProperty(canvas, 'setPointerCapture', { value: () => {}, writable: true, configurable: true });
+  Object.defineProperty(canvas, 'releasePointerCapture', { value: () => {}, writable: true, configurable: true });
 
   const scene = new Scene();
   const identity = { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }) };
@@ -458,6 +458,67 @@ describe('context menu: engine-wide fallback', () => {
     // No pointer to attribute a per-node event to - the scene-graph route
     // stays silent; only the engine-wide fallback fires.
     expect(nodeLevel).not.toHaveBeenCalled();
+
+    h.im.destroy();
+  });
+});
+
+describe('pointer button snapshots and secondary taps', () => {
+  it('preserves the pressed and released mouse button even after a same-frame release', () => {
+    const h = createHarness();
+    const target = sprite(0, 0);
+    const seen: Array<[string, number, number, number]> = [];
+
+    h.scene.addChild(target);
+
+    target.onPointerDown.add(event => seen.push(['down', event.button, event.buttons, event.pointer.buttons]));
+    target.onPointerUp.add(event => seen.push(['up', event.button, event.buttons, event.pointer.buttons]));
+    target.onPointerTap.add(event => seen.push(['tap', event.button, event.buttons, event.pointer.buttons]));
+
+    h.fire('pointerover', { clientX: 10, clientY: 10 });
+    flush(h);
+
+    // Right-click without movement is still a raw tap, but must not look like a primary tap.
+    h.fire('pointerdown', { clientX: 10, clientY: 10, button: 2, buttons: 2 });
+    h.fire('pointerup', { clientX: 10, clientY: 10, button: 2, buttons: 0 });
+    flush(h);
+
+    expect(seen).toEqual([
+      ['down', 2, 2, 0],
+      ['up', 2, 0, 0],
+      ['tap', 2, 0, 0],
+    ]);
+
+    h.im.destroy();
+  });
+
+  it('keeps different mouse buttons distinct through multiple transitions in one flush', () => {
+    const h = createHarness();
+    const target = sprite(0, 0);
+    const downs: Array<[number, number]> = [];
+    const taps: Array<[number, number]> = [];
+
+    h.scene.addChild(target);
+    target.onPointerDown.add(event => downs.push([event.button, event.buttons]));
+    target.onPointerTap.add(event => taps.push([event.button, event.buttons]));
+
+    h.fire('pointerover', { clientX: 10, clientY: 10 });
+    flush(h);
+
+    h.fire('pointerdown', { clientX: 10, clientY: 10, button: 0, buttons: 1 });
+    h.fire('pointerup', { clientX: 10, clientY: 10, button: 0, buttons: 0 });
+    h.fire('pointerdown', { clientX: 10, clientY: 10, button: 2, buttons: 2 });
+    h.fire('pointerup', { clientX: 10, clientY: 10, button: 2, buttons: 0 });
+    flush(h);
+
+    expect(downs).toEqual([
+      [0, 1],
+      [2, 2],
+    ]);
+    expect(taps).toEqual([
+      [0, 0],
+      [2, 0],
+    ]);
 
     h.im.destroy();
   });

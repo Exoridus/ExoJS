@@ -1,4 +1,5 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 // A scene-less Application: no Scene is ever registered or started. All
 // frame work happens through a single app-level system - useful for utility
@@ -16,7 +17,7 @@ const app = new Application({
   clearColor: new Color(18, 22, 33),
 });
 
-const square = new Sprite(app.loader.get(assets.demo.textures.pixelWhite)).setAnchor(0.5);
+const square = new Sprite(app.loader.get(assets.pixelWhite)).setAnchor(0.5);
 square.width = 80;
 square.height = 80;
 square.tint = new Color(90, 160, 255);

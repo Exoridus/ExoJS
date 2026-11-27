@@ -1,4 +1,4 @@
-import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:circle-body
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });

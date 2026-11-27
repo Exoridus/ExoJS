@@ -26,6 +26,7 @@ type Data = Record<string, unknown>;
 /** Read a string field; `fallback` (or `undefined`) when absent or not a string. */
 export function readString(data: Data, key: string): string | undefined;
 export function readString(data: Data, key: string, fallback: string): string;
+
 export function readString(data: Data, key: string, fallback?: string): string | undefined {
   const value = data[key];
 
@@ -39,6 +40,7 @@ export function readString(data: Data, key: string, fallback?: string): string |
  */
 export function readNumber(data: Data, key: string): number | undefined;
 export function readNumber(data: Data, key: string, fallback: number): number;
+
 export function readNumber(data: Data, key: string, fallback?: number): number | undefined {
   const value = data[key];
 
@@ -48,6 +50,7 @@ export function readNumber(data: Data, key: string, fallback?: number): number |
 /** Read a boolean field; `fallback` (or `undefined`) when absent or not a boolean. */
 export function readBoolean(data: Data, key: string): boolean | undefined;
 export function readBoolean(data: Data, key: string, fallback: boolean): boolean;
+
 export function readBoolean(data: Data, key: string, fallback?: boolean): boolean | undefined {
   const value = data[key];
 
@@ -62,6 +65,7 @@ export function readBoolean(data: Data, key: string, fallback?: boolean): boolea
  */
 export function readEnum<T extends string>(data: Data, key: string, allowed: readonly T[]): T | undefined;
 export function readEnum<T extends string>(data: Data, key: string, allowed: readonly T[], fallback: T): T;
+
 export function readEnum<T extends string>(data: Data, key: string, allowed: readonly T[], fallback?: T): T | undefined {
   const value = data[key];
 
@@ -72,7 +76,8 @@ export function readEnum<T extends string>(data: Data, key: string, allowed: rea
 export const readObject = (data: Data, key: string): Data | undefined => asObject(data[key]) ?? undefined;
 
 /** Narrow an already-extracted value to a plain object record, or `null`. */
-export const asObject = (value: unknown): Data | null => (typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Data) : null);
+export const asObject = (value: unknown): Data | null =>
+  typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Data) : null;
 
 /**
  * Narrow an already-extracted value to a {@link SerializedNode} (an object
@@ -97,7 +102,19 @@ export const asNumberArray = (value: unknown): number[] | null =>
 // back to its default - never unsafe - so keep these in sync deliberately.
 
 /** Allowed {@link FontWeight} values for {@link readEnum}. */
-export const FONT_WEIGHTS = ['normal', 'bold', '100', '200', '300', '400', '500', '600', '700', '800', '900'] as const satisfies readonly FontWeight[];
+export const FONT_WEIGHTS = [
+  'normal',
+  'bold',
+  '100',
+  '200',
+  '300',
+  '400',
+  '500',
+  '600',
+  '700',
+  '800',
+  '900',
+] as const satisfies readonly FontWeight[];
 
 /** Allowed {@link FontStyle} values for {@link readEnum}. */
 export const FONT_STYLES = ['normal', 'italic', 'oblique'] as const satisfies readonly FontStyle[];

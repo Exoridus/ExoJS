@@ -89,16 +89,31 @@ export class Registry<Key, Value> {
 
   /**
    * Disposes every unique value (if a disposer was configured) and clears the
-   * store.
+   * store. A throwing disposer does not stop the rest: the store is still
+   * emptied, then the failure is rethrown (an `AggregateError` for several).
    */
   public destroy(): void {
+    const failures: unknown[] = [];
+
     if (this._dispose !== null) {
       for (const value of this.uniqueValues()) {
-        this._dispose(value);
+        try {
+          this._dispose(value);
+        } catch (error) {
+          failures.push(error);
+        }
       }
     }
 
     this._entries.clear();
+
+    if (failures.length === 1) {
+      throw failures[0];
+    }
+
+    if (failures.length > 1) {
+      throw new AggregateError(failures, '[ExoJS] Registry.destroy(): several disposers threw.');
+    }
   }
 
   private _find(key: Key): Value | undefined {

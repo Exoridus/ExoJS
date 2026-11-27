@@ -7,6 +7,7 @@ import { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import { reconcileRetainedTransformRows } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { blendModeNeedsBackdrop } from '#rendering/types';
+import type { View } from '#rendering/View';
 
 import { Container } from './Container';
 import type { RenderNode } from './RenderNode';
@@ -22,16 +23,20 @@ const retainedDiagnosticThreshold = 108;
  * previously-collected command range is spliced into the render plan - no
  * walk, no per-child culling, no material keys - and moving the container
  * (or the camera) changes only one per-group GPU matrix instead of touching
- * every descendant.
+ * every descendant. Descendants that derive content from the view are
+ * recollected when that view changes.
  *
  * Opt-in at construction; there is no runtime toggle. The existing
  * revision contract ({@link RenderNode.invalidateContent} and the automatic
  * bumps on built-in mutation paths) is the entire authoring surface: any
- * mutation inside the subtree drops the retained fragment for one frame.
+ * content or structure mutation recaptures the subtree, while an eligible
+ * transform-only move patches the affected baked transform rows in place when
+ * the recording can be reconciled, and recaptures otherwise.
  *
  * Trade-offs of the group-local space convention: descendants
- * resolve group-relative transforms, so hit-testing/`getBounds()` inside the
- * group are group-local; per-child view culling is disabled inside the group
+ * resolve group-relative transforms and `getBounds()` inside the group stays
+ * group-local; public containment and collision queries use world coordinates.
+ * Per-child view culling is disabled inside the group
  * (the group is culled as a whole); particle-extension drawables bake their own
  * transforms and are not group-transform-aware. `PixelSnapMode.Position` IS
  * group-aware - the shader applies the group matrix before rounding the composed
@@ -64,6 +69,9 @@ const retainedDiagnosticThreshold = 108;
  */
 export class RetainedContainer extends Container {
   private readonly _fragment = new RetainedGroupFragment(this);
+  private _fragmentView: View | null = null;
+  private _fragmentViewUpdateId = -1;
+  private _destroying = false;
   private _groupVersion = 0;
   private _devFragmentBuilds = 0;
   private _devFragmentInvalidations = 0;
@@ -274,6 +282,9 @@ export class RetainedContainer extends Container {
       return;
     }
 
+    const view = builder._retentionView;
+    const viewMatches = this._fragmentView === null || (this._fragmentView === view && this._fragmentViewUpdateId === view.updateId);
+
     // A recorded draw can no longer outlive its drawable: `SceneNode.destroy`
     // unlinks the node, and that removal stamps every ancestor up to this
     // boundary structure-dirty, so a destroyed descendant always fails the key
@@ -281,15 +292,27 @@ export class RetainedContainer extends Container {
     // Clean, or dirty only on or below a live re-dispatch record - a child
     // mask's rect moved - which the capture holds nothing about.
     if (
-      this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend) ||
-      this._fragment.reconcileLiveEntryChanges(this._contentRevision, this._structureRevision, builder.backend, this, builder._destinationOpaque())
+      viewMatches &&
+      (this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend) ||
+        this._fragment.reconcileLiveEntryChanges(
+          this._contentRevision,
+          this._structureRevision,
+          builder.backend,
+          this,
+          builder._destinationOpaque(),
+        ))
     ) {
+      if (this._fragmentView !== null) {
+        // Enclosing captures inherit the dependency even when this group replays.
+        builder._noteViewRead();
+      }
+
       // A content/structure-clean frame may still carry transform-only
       // descendant moves, since an own-transform move no longer content-
       // dirties. The recorded instruction set's baked transform rows are stale
       // for those nodes - patch the changed rows in place (O(k)), or drop the
       // recording so entry replay re-reads live transforms this frame.
-      if (this._fragment.hasUnseenTransformMarks()) {
+      if (!this._fragment.transformMarksProvable || this._fragment.hasUnseenTransformMarks()) {
         this._reconcileTransformRows(builder.backend);
       }
 
@@ -338,6 +361,8 @@ export class RetainedContainer extends Container {
     // only the plain collect.
     const suppressCapture = this._fragment.shouldSuppressCapture(this._contentRevision, this._structureRevision);
 
+    const viewReadVersion = builder._viewReadVersion;
+
     for (let index = 0; index < this._children.length; index++) {
       // In-bounds: index < length.
       this._children[index]!.collect(builder, index);
@@ -348,6 +373,8 @@ export class RetainedContainer extends Container {
     }
 
     if (!suppressCapture) {
+      this._fragmentView = builder._viewReadVersion === viewReadVersion ? null : view;
+      this._fragmentViewUpdateId = view.updateId;
       this._fragment.capture(
         this._contentRevision,
         this._structureRevision,
@@ -407,20 +434,29 @@ export class RetainedContainer extends Container {
    * fragment instead of replaying freed resources.
    */
   public override destroy(): void {
-    // Balance the constructor's boundary registration exactly once (destroy may
-    // be called more than once; `destroyed` flips only on the first super call).
-    if (!this.destroyed) {
-      this._dirtyIndex().releaseConsumer();
+    if (this.destroyed || this._destroying) {
+      return;
     }
 
-    // dispose(): invalidates AND releases the retained GPU bundle.
-    this._fragment.dispose();
-    this._groupAggregate.destroy();
-    this._liveBoundsChildren.length = 0;
-    this._escapedBranches.clear();
-    this._backdropEscapedChildren.clear();
+    this._destroying = true;
 
-    super.destroy();
+    try {
+      // dispose(): invalidates AND releases the retained GPU bundle.
+      this._fragment.dispose();
+      this._groupAggregate.destroy();
+      this._liveBoundsChildren.length = 0;
+      this._escapedBranches.clear();
+      this._backdropEscapedChildren.clear();
+
+      super.destroy();
+    } finally {
+      this._destroying = false;
+
+      // Unlinking transfers the registration; release it on the final index even if a child teardown throws.
+      if (this.destroyed) {
+        this._dirtyIndex().releaseConsumer();
+      }
+    }
   }
 
   /**

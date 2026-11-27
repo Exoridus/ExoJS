@@ -4,7 +4,7 @@
   "symbol": "JointOptions",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 1,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options every joint accepts, whatever it constrains."
       ],
-      "importLine": "import { JointOptions } from '@codexo/exojs-physics'",
+      "importLine": "import { JointOptions } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

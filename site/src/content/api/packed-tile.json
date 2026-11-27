@@ -4,7 +4,7 @@
   "symbol": "PackedTile",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 0,
   "counts": {
@@ -23,7 +23,7 @@
         "A `PackedTile` is **not** a source-format GID - it is a fully resolved internal compact representation. Use packTile / unpackTile to convert between packed form and a ResolvedTile if writing adapters.",
         "In public APIs, prefer ResolvedTile or null for queries. `PackedTile` is exposed as `@advanced` so `ReadonlyTileChunk.getRawAt()` has a self-documenting return type."
       ],
-      "importLine": "import { PackedTile } from '@codexo/exojs-tilemap'",
+      "importLine": "import { PackedTile } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

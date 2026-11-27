@@ -279,7 +279,9 @@ export class TileMapView {
     }
 
     if (matches.length > 1) {
-      throw new Error(`TileMapView image layer name "${name}" is ambiguous ` + `(${matches.length} image layers share it); reference it by id instead.`);
+      throw new Error(
+        `TileMapView image layer name "${name}" is ambiguous ` + `(${matches.length} image layers share it); reference it by id instead.`,
+      );
     }
 
     return this._imageLayerNodeById.get(matches[0]!.id);
@@ -332,15 +334,13 @@ export class TileMapView {
     }
 
     const currentLayers = this._map.layers;
-    const currentIds = new Set<number>();
-
-    for (const layer of currentLayers) {
-      currentIds.add(layer.id);
-    }
+    // By instance: a layer removed and replaced under the same id is a new layer
+    // and needs a new node, not the destroyed one's.
+    const currentLayerSet = new Set(currentLayers);
 
     // 1. Remove nodes whose layer no longer exists.
     for (const node of [...this._layerNodes]) {
-      if (!currentIds.has(node.layer.id)) {
+      if (!currentLayerSet.has(node.layer)) {
         this._removeTileNode(node);
       }
     }
@@ -480,7 +480,9 @@ export class TileMapView {
       const existing = this._nodeFor(layer);
 
       if (existing && this._nodeBand.has(existing)) {
-        throw new Error(`TileMapView layer ${layer.id} is assigned to multiple bands ` + `("${this._nodeBand.get(existing)!.name}" and "${name}").`);
+        throw new Error(
+          `TileMapView layer ${layer.id} is assigned to multiple bands ` + `("${this._nodeBand.get(existing)!.name}" and "${name}").`,
+        );
       }
 
       members.add(layer);
@@ -544,7 +546,8 @@ export class TileMapView {
 
     if (matches.length > 1) {
       throw new Error(
-        `TileMapView band "${bandName}": layer name "${selector}" is ambiguous ` + `(${matches.length} layers share it); reference it by id instead.`,
+        `TileMapView band "${bandName}": layer name "${selector}" is ambiguous ` +
+          `(${matches.length} layers share it); reference it by id instead.`,
       );
     }
 
@@ -568,6 +571,11 @@ export class TileMapView {
       if (this._definitionSelects(def, layer)) {
         const band = this._bandByName.get(def.name)!;
 
+        // A band the application destroyed can no longer own anything: the node stays view-owned.
+        if (band._hasBeenDestroyed()) {
+          return;
+        }
+
         band._adopt(node);
         this._nodeBand.set(node, band);
 
@@ -589,7 +597,8 @@ export class TileMapView {
         }
       } else if (selector === layer.name) {
         const sameName =
-          this._map.layers.filter(other => other.name === selector).length + this._map.imageLayers.filter(other => other.name === selector).length;
+          this._map.layers.filter(other => other.name === selector).length +
+          this._map.imageLayers.filter(other => other.name === selector).length;
 
         if (sameName === 1) {
           return true;

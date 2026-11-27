@@ -11,7 +11,7 @@
  * the mask at all, and that an outline reaches the tables instead of the mask.
  */
 
-import { AlphaOccluder, type Lighting, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
+import { AlphaOccluder, type Lighting, PolygonOccluder, RadianceLighting } from '@codexo/exojs/lighting';
 import { expect } from 'vitest';
 
 import type { Application } from '#core/Application';
@@ -99,9 +99,11 @@ export const createMaskScene = (app: Application, size: number): MaskScene => {
 
   const middle = OCCLUDER.y + OCCLUDER.height / 2;
   const region = new Rectangle();
-  const built = (): { readonly transport: RadianceBackend['transport']; readonly blocks: RadianceBackend['maskBlocks'] } => {
-    return { transport: backend.transport, blocks: backend.maskBlocks };
-  };
+
+  const built = (): { readonly transport: RadianceBackend['transport']; readonly blocks: RadianceBackend['maskBlocks'] } => ({
+    transport: backend.transport,
+    blocks: backend.maskBlocks,
+  });
 
   return {
     lighting,

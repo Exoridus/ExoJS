@@ -32,7 +32,9 @@ const decoderOf = (loader: Loader): AssetDecoder => (loader as unknown as { _dec
 
 /** Drive one acquisition through the real cache path of `loader`. */
 const fetchThrough = (loader: Loader, source: string): Promise<string> =>
-  decoderOf(loader)._acquire(source, 'text', SingleEntryLayout.version<string>(1), canonicalizeSource('', source), async response => response.text());
+  decoderOf(loader)._acquire(source, 'text', SingleEntryLayout.version<string>(1), canonicalizeSource('', source), async response =>
+    response.text(),
+  );
 
 describe('Loader.onCacheError routing', () => {
   const originalFetch = global.fetch;
@@ -60,6 +62,20 @@ describe('Loader.onCacheError routing', () => {
     expect(reported[0]!.operation).toBe('write');
     expect(reported[0]!.store).toBe('text');
 
+    loader.destroy();
+  });
+
+  test('a throwing onCacheError listener does not fail the acquisition', async () => {
+    const loader = new Loader({ cache: createFullStore() });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    loader.onCacheError.add(() => {
+      throw new Error('listener failed');
+    });
+
+    await expect(fetchThrough(loader, 'a.txt')).resolves.toBe('payload');
+
+    consoleErrorSpy.mockRestore();
     loader.destroy();
   });
 

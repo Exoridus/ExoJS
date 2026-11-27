@@ -1,7 +1,7 @@
 import { CONTAINER_DEFAULT_BLOCK_SIZE, type ContainerInput, encodeContainer } from '@codexo/exojs-build/asset-container';
 
-import { Asset } from '#assets/Asset';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
+import { Assets } from '#assets/Assets';
 import {
   CONTAINER_ALIGNMENT,
   CONTAINER_HEADER_SIZE,
@@ -12,8 +12,9 @@ import {
   readContainerEntry,
 } from '#assets/container/assetContainer';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
-import { Loader } from '#assets/Loader';
+import { Loader, LoadPriority } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
+import { ScaleModes } from '#rendering/types';
 
 import { testAssetType } from './test-asset-type';
 
@@ -28,7 +29,9 @@ const createCoreLoader = (): Loader => {
 
 /** A fetch stub whose single `arrayBuffer()` body is `container`. */
 const mockContainerFetch = (container: ArrayBuffer): ReturnType<typeof vi.fn> => {
-  const spy = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response);
+  const spy = vi.fn(
+    async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
+  );
   global.fetch = spy;
 
   return spy;
@@ -147,7 +150,9 @@ describe('asset container format', () => {
     // so the writer keeps the plain bytes rather than wrap them twice.
     const random = new Uint8Array(4096);
 
-    for (let i = 0; i < random.length; i++) random[i] = Math.floor(Math.random() * 256);
+    for (let i = 0; i < random.length; i++) {
+      random[i] = Math.floor(Math.random() * 256);
+    }
 
     const container = encodeContainer([{ source: 'noise.bin', type: 'binary', bytes: random }]);
     const { blocks } = parseContainer(container);
@@ -288,6 +293,7 @@ describe('asset container format', () => {
     for (let i = 0; i < CONTAINER_MAGIC.length; i++) {
       bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
     }
+
     view.setUint32(4, CONTAINER_VERSION, true);
     view.setUint32(12, headBytes.byteLength, true);
     view.setUint32(16, dataOffset, true);
@@ -303,7 +309,10 @@ describe('asset container format', () => {
 
   /** A head whose single block describes `storedBytes` of block area, which is zeroed rather than valid. */
   const headWithBlock = (entries: unknown[], block: Record<string, unknown>, storedBytes = 0): ArrayBuffer =>
-    encodeRawHead({ entries, blocks: [{ offset: 0, length: 0, storedOffset: 0, storedLength: 0, codec: 'none', hash: HASH_A, ...block }] }, storedBytes);
+    encodeRawHead(
+      { entries, blocks: [{ offset: 0, length: 0, storedOffset: 0, storedLength: 0, codec: 'none', hash: HASH_A, ...block }] },
+      storedBytes,
+    );
 
   test('rejects a head region that is not valid JSON', () => {
     expect(() => parseContainer(encodeRawHeadBuffer(utf8('{not valid json')))).toThrow(/head is not valid JSON/);
@@ -372,7 +381,9 @@ describe('asset container format', () => {
 
     expect(() => parseContainer(encodeRawHead(head))).toThrow(/invalid "length"/);
     expect(() => parseContainer(headWithBlock([], { length: 8.5, storedLength: 8.5 }))).toThrow(/invalid "length"/);
-    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: 0.5, length: 0 }], blocks: [] }))).toThrow(/invalid "offset"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: 0.5, length: 0 }], blocks: [] }))).toThrow(
+      /invalid "offset"/,
+    );
   });
 
   test('rejects an entry that is not an object', () => {
@@ -380,19 +391,27 @@ describe('asset container format', () => {
   });
 
   test('rejects an entry with a non-string source', () => {
-    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 42, type: 'text', offset: 0, length: 0 }], blocks: [] }))).toThrow(/non-string "source"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 42, type: 'text', offset: 0, length: 0 }], blocks: [] }))).toThrow(
+      /non-string "source"/,
+    );
   });
 
   test('rejects an entry with a non-string type', () => {
-    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 42, offset: 0, length: 0 }], blocks: [] }))).toThrow(/non-string "type"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 42, offset: 0, length: 0 }], blocks: [] }))).toThrow(
+      /non-string "type"/,
+    );
   });
 
   test('rejects an entry with an invalid (negative) offset', () => {
-    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: -8, length: 0 }], blocks: [] }))).toThrow(/invalid "offset"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: -8, length: 0 }], blocks: [] }))).toThrow(
+      /invalid "offset"/,
+    );
   });
 
   test('rejects an entry with an invalid (non-numeric) length', () => {
-    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: 0, length: 'x' }], blocks: [] }))).toThrow(/invalid "length"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: 0, length: 'x' }], blocks: [] }))).toThrow(
+      /invalid "length"/,
+    );
   });
 
   test('rejects an entry that does not start on an alignment boundary', () => {
@@ -495,9 +514,9 @@ describe('Loader.loadContainer', () => {
     await loader.loadContainer('assets/pack.exoa');
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(loader.get(Asset.type('json', 'data/level.json')).value).toEqual({ score: 42 });
-    expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'data/blob.bin')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(loader.get({ type: 'json', source: 'data/level.json' }).value).toEqual({ score: 42 });
+    expect(loader.get({ type: 'text', source: 'docs/readme.txt' }).value).toBe('hello world');
+    expect(new Uint8Array(loader.get({ type: 'binary', source: 'data/blob.bin' }).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 
   test('loads assets spread across several blocks', async () => {
@@ -516,8 +535,8 @@ describe('Loader.loadContainer', () => {
     const loader = createCoreLoader();
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Asset.type('json', 'data/level.json')).value).toMatchObject({ score: 42 });
-    expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
+    expect(loader.get({ type: 'json', source: 'data/level.json' }).value).toMatchObject({ score: 42 });
+    expect(loader.get({ type: 'text', source: 'docs/readme.txt' }).value).toBe('hello world');
   });
 
   test('container entries are ordinary claimed assets, visible and releasable', async () => {
@@ -538,7 +557,7 @@ describe('Loader.loadContainer', () => {
     pack.destroy();
 
     expect(loader.inspect()).toHaveLength(0);
-    expect(loader.peek(Asset.type('json', 'data/level.json'))).toBeUndefined();
+    expect(loader.peek({ type: 'json', source: 'data/level.json' })).toBeUndefined();
   });
 
   test('a container entry and a network load of the same source are one asset', async () => {
@@ -558,7 +577,7 @@ describe('Loader.loadContainer', () => {
     // The container going away must not strip an asset a live consumer holds.
     pack.destroy();
 
-    expect(loader.peek(Asset.type('json', 'data/level.json'))).toEqual({ score: 42 });
+    expect(loader.peek({ type: 'json', source: 'data/level.json' })).toEqual({ score: 42 });
     expect(loader.inspect()[0]?.claims).toBe(1);
   });
 
@@ -619,7 +638,7 @@ describe('Loader.loadContainer', () => {
 
     // The container is parsed and the entry is being built, but nothing is
     // stored yet - the window in which the key used to look completely unknown.
-    const joined = loader.load(Asset.type('gated' as never, 'level.gated'));
+    const joined = loader.load({ type: 'gated', source: 'level.gated' });
 
     release();
     await unpacking;
@@ -628,7 +647,178 @@ describe('Loader.loadContainer', () => {
     // than starting a competing acquisition whose payload would overwrite it.
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     await expect(joined).resolves.toEqual({ body: 'from-container' });
-    expect(loader.peek(Asset.type('gated' as never, 'level.gated'))).toEqual({ body: 'from-container' });
+    expect(loader.peek({ type: 'gated', source: 'level.gated' })).toEqual({ body: 'from-container' });
+  });
+
+  test.each([false, true])('a queued texture joins a container without fetching again (unpacked: %s)', async unpacked => {
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredDecode = new Promise<void>(resolve => (entered = resolve));
+    const gate = new Promise<void>(resolve => (release = resolve));
+    const container = encodeContainer([{ source: 'ship.png', type: 'texture', bytes: new Uint8Array([1]) }]);
+    const fetchSpy = vi.fn(async () => new Response(container));
+    const loader = createCoreLoader();
+
+    loader.setConcurrency(0);
+    vi.stubGlobal('fetch', fetchSpy);
+    vi.stubGlobal('createImageBitmap', async () => {
+      entered();
+      await gate;
+
+      return { width: 16, height: 16 };
+    });
+
+    try {
+      const catalog = Assets.from({ ship: 'ship.png' });
+      const background = loader.load(catalog, { priority: LoadPriority.Background });
+      const unpacking = loader.loadContainer('pack.exoa');
+
+      await enteredDecode;
+
+      if (unpacked) {
+        release();
+        await unpacking;
+      }
+
+      const handle = loader.get('ship.png');
+
+      release();
+      loader.setConcurrency(1);
+      await Promise.all([unpacking, background, handle.loaded, loader.awaitBackground()]);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(handle).toBe(catalog.ship);
+      expect(handle.width).toBe(16);
+    } finally {
+      release();
+      loader.destroy();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test('awaitBackground stays pending while a promoted texture is still decoding inside a container', async () => {
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredDecode = new Promise<void>(resolve => (entered = resolve));
+    const gate = new Promise<void>(resolve => (release = resolve));
+    const container = encodeContainer([{ source: 'ship.png', type: 'texture', bytes: new Uint8Array([1]) }]);
+    const loader = createCoreLoader();
+
+    loader.setConcurrency(0);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(container)),
+    );
+    vi.stubGlobal('createImageBitmap', async () => {
+      entered();
+      await gate;
+
+      return { width: 16, height: 16 };
+    });
+
+    try {
+      void loader.load(Assets.from({ ship: 'ship.png' }), { priority: LoadPriority.Background });
+      const unpacking = loader.loadContainer('pack.exoa');
+
+      await enteredDecode;
+      loader.setConcurrency(1);
+
+      let drained = false;
+      const background = loader.awaitBackground().then(() => {
+        drained = true;
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(drained).toBe(false);
+
+      release();
+      await Promise.all([unpacking, background]);
+      expect(drained).toBe(true);
+    } finally {
+      release();
+      loader.destroy();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test('awaitBackground drains when the joined texture decode rejects', async () => {
+    let entered!: () => void;
+    let fail!: () => void;
+    const enteredDecode = new Promise<void>(resolve => (entered = resolve));
+    const gate = new Promise<void>((_, reject) => (fail = () => reject(new Error('decode failed'))));
+    const container = encodeContainer([{ source: 'ship.png', type: 'texture', bytes: new Uint8Array([1]) }]);
+    const loader = createCoreLoader();
+
+    loader.setConcurrency(0);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(container)),
+    );
+    vi.stubGlobal('createImageBitmap', async () => {
+      entered();
+      await gate;
+
+      return { width: 16, height: 16 };
+    });
+
+    try {
+      const loading = loader.load(Assets.from({ ship: 'ship.png' }), { priority: LoadPriority.Background }).catch(() => undefined);
+      const unpacking = loader.loadContainer('pack.exoa').catch(() => undefined);
+
+      await enteredDecode;
+      loader.setConcurrency(1);
+
+      const drained = loader.awaitBackground();
+
+      fail();
+      await Promise.all([unpacking, loading, drained]);
+    } finally {
+      loader.destroy();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test('a get during container texture decoding preserves the container sampler', async () => {
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredDecode = new Promise<void>(resolve => (entered = resolve));
+    const gate = new Promise<void>(resolve => (release = resolve));
+    const container = encodeContainer([
+      {
+        source: 'ship.png',
+        type: 'texture',
+        bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        options: { textureOptions: { scaleMode: ScaleModes.Nearest } },
+      },
+    ]);
+    const fetchSpy = mockContainerFetch(container);
+    const loader = createCoreLoader();
+    vi.stubGlobal('createImageBitmap', async () => {
+      entered();
+      await gate;
+
+      return { width: 16, height: 16 };
+    });
+
+    try {
+      const unpacking = loader.loadContainer('pack.exoa');
+
+      await enteredDecode;
+      const handle = loader.get('ship.png');
+
+      release();
+      await unpacking;
+      await handle.loaded;
+
+      expect(handle.scaleMode).toBe(ScaleModes.Nearest);
+      expect(handle.width).toBe(16);
+      expect(loader.peek('ship.png')).toBe(handle);
+      expect(await loader.load({ type: 'texture', source: 'ship.png' })).toBe(handle);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      release();
+      loader.destroy();
+      vi.unstubAllGlobals();
+    }
   });
 
   test('a container that fails while unpacking leaves nothing claimed', async () => {
@@ -640,7 +830,7 @@ describe('Loader.loadContainer', () => {
 
     const loader = createCoreLoader();
 
-    loader.onError.add(() => undefined);
+    loader.onError.add(() => {});
 
     await expect(loader.loadContainer('pack.exoa')).rejects.toThrow();
 

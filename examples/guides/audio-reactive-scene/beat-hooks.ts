@@ -1,6 +1,6 @@
 import { Color, Ease, Scene, type Seconds, Sprite, View } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector, type BeatInfo } from '@codexo/exojs-audio-fx';
-import { BurstSpawn, Constant } from '@codexo/exojs-particles';
+import { AudioAnalyser, BeatDetector, type BeatInfo } from '@codexo/exojs/audio-fx';
+import { BurstSpawn, Constant } from '@codexo/exojs/particles';
 
 class BeatHookScene extends Scene {
   private analyser = new AudioAnalyser({ fftSize: 512 });

@@ -6,6 +6,29 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$cleanupPhaseClock = [Diagnostics.Stopwatch]::StartNew()
+$cleanupDetailCount = 0
+$cleanupDetailsTruncated = $false
+function Write-CleanupPhase {
+    param([string]$PhaseName, [string]$Detail = '', [switch]$TargetDetail)
+    # Reserve lifecycle records so large trees cannot hide the final cleanup state.
+    if ($TargetDetail) {
+        if ($script:cleanupDetailCount -ge 20) {
+            if (-not $script:cleanupDetailsTruncated) {
+                $script:cleanupDetailsTruncated = $true
+                Write-CleanupPhase 'details-truncated' 'limit=20'
+            }
+            return
+        }
+        $script:cleanupDetailCount++
+    }
+    try {
+        [Console]::Error.WriteLine("cleanup-phase t+$($script:cleanupPhaseClock.ElapsedMilliseconds)ms $PhaseName $Detail")
+    } catch {
+        # A closed diagnostic pipe must not prevent the owned cleanup.
+    }
+}
+Write-CleanupPhase 'entry' "helper=$PID root=$RootProcessId ps=$($PSVersionTable.PSVersion)"
 
 # A process that exits between the CIM snapshot and this probe has no identity left to compare,
 # and Windows PowerShell surfaces its StartTime as $null. Reading it unguarded aborts the whole
@@ -32,7 +55,10 @@ function Test-ProcessAlive {
 $clockToleranceMilliseconds = 50
 $earliest = [DateTimeOffset]::FromUnixTimeMilliseconds($EarliestMilliseconds - $clockToleranceMilliseconds).UtcDateTime
 $latest = [DateTimeOffset]::FromUnixTimeMilliseconds($LatestMilliseconds + $clockToleranceMilliseconds).UtcDateTime
+Write-CleanupPhase 'cim-begin'
 $rows = @(Get-CimInstance Win32_Process | Where-Object { $null -ne $_.CreationDate -and $_.CreationDate.ToUniversalTime() -ge $earliest })
+Write-CleanupPhase 'cim-end' "rows=$($rows.Count)"
+Write-CleanupPhase 'root-identity-begin'
 $root = @($rows | Where-Object { $_.ProcessId -eq $RootProcessId })
 # Windows keeps a PID reserved for as long as any handle to the process is open, and Node holds one
 # until it has reported the exit. A root that has not exited yet (ExitedAtMilliseconds = 0) therefore
@@ -46,6 +72,7 @@ if ($root.Count -eq 0 -and $ExitedAtMilliseconds -eq 0) {
     throw "Root identity no longer observable; refusing an unqualified process-tree sweep."
 }
 $exitedAt = [DateTimeOffset]::FromUnixTimeMilliseconds($ExitedAtMilliseconds).UtcDateTime
+Write-CleanupPhase 'root-identity-end' "matches=$($root.Count)"
 $owned = New-Object 'System.Collections.Generic.HashSet[int]'
 [void]$owned.Add($RootProcessId)
 do {
@@ -57,16 +84,24 @@ do {
     }
 } while ($changed)
 $targets = @($rows | Where-Object { $owned.Contains([int]$_.ProcessId) })
+Write-CleanupPhase 'targets' "count=$($targets.Count)"
 $taskkill = Join-Path $env:SystemRoot 'System32\taskkill.exe'
 foreach ($row in $targets) {
+    Write-CleanupPhase 'identity-begin' "target=$($row.ProcessId)" -TargetDetail
     $start = Get-ConfirmedStartTime $row.ProcessId
+    Write-CleanupPhase 'identity-end' "target=$($row.ProcessId) observable=$($null -ne $start)" -TargetDetail
     if ($null -ne $start -and [Math]::Abs(($start - $row.CreationDate.ToUniversalTime()).TotalMilliseconds) -lt 10) {
         $previousPreference = $ErrorActionPreference
         $ErrorActionPreference = 'Continue'
+        Write-CleanupPhase 'taskkill-begin' "target=$($row.ProcessId)" -TargetDetail
         & $taskkill /PID $row.ProcessId /T /F 2>&1 | Out-Null
+        Write-CleanupPhase 'taskkill-end' "target=$($row.ProcessId) exit=$LASTEXITCODE" -TargetDetail
         $ErrorActionPreference = $previousPreference
     }
 }
+Write-CleanupPhase 'remaining-begin'
 $remaining = @($targets | Where-Object { Test-ProcessAlive $_.ProcessId })
+Write-CleanupPhase 'remaining-end' "count=$($remaining.Count)"
 if ($remaining.Count -gt 0) { throw "Owned processes survived: $($remaining.ProcessId -join ',')" }
+Write-CleanupPhase 'exit'
 exit 0

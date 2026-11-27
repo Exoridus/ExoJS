@@ -27,12 +27,35 @@ declare const gamepadButtonChannelBrand: unique symbol;
  * from the {@link GamepadButton} namespace (`GamepadButton.South`, ...).
  */
 export type GamepadButtonChannel = (
-  512 | 513 | 514 | 515 | 516 | 517 | 518 | 519 | 520 | 521 | 522 | 523 | 524 | 525 | 526 | 527 | 528 | 529 | 530 | 531 | 532 | 533 | 534 | 535
+  | 512
+  | 513
+  | 514
+  | 515
+  | 516
+  | 517
+  | 518
+  | 519
+  | 520
+  | 521
+  | 522
+  | 523
+  | 524
+  | 525
+  | 526
+  | 527
+  | 528
+  | 529
+  | 530
+  | 531
+  | 532
+  | 533
+  | 534
+  | 535
 ) & { readonly [gamepadButtonChannelBrand]: void };
 
 /** Construction options for a {@link GamepadButton}. */
 export interface GamepadButtonOptions {
-  /** Negate the raw value before threshold comparison. Default `false`. */
+  /** Invert the raw value within 0..1 (`1 - value`) before the deadzone. Default `false`. */
   invert?: boolean;
   /** Activation threshold in 0..1 - values at or below this read as 0 (deadzone). Default 0.2. */
   threshold?: number;

@@ -50,8 +50,8 @@ export class WebGpuStencilClipper {
   private _bindGroup: GPUBindGroup | null = null;
   private _vertexBuffer: GPUBuffer | null = null;
   private _vertexBufferCapacity = 0;
-  private readonly _incrementPipelines = new Map<GPUTextureFormat, GPURenderPipeline>();
-  private readonly _decrementPipelines = new Map<GPUTextureFormat, GPURenderPipeline>();
+  private readonly _incrementPipelines = new Map<string, GPURenderPipeline>();
+  private readonly _decrementPipelines = new Map<string, GPURenderPipeline>();
   private readonly _stencilTextures = new Map<object, ManagedStencilTexture>();
 
   public connect(device: GPUDevice): void {
@@ -154,7 +154,14 @@ export class WebGpuStencilClipper {
    * decrement-clamp (pop); the caller sets the reference via
    * `pass.setStencilReference`. `transform` is the clip node's global transform.
    */
-  public draw(pass: GPURenderPassEncoder, format: GPUTextureFormat, increment: boolean, shape: Geometry, transform: Matrix, view: View): void {
+  public draw(
+    pass: GPURenderPassEncoder,
+    formats: readonly GPUTextureFormat[],
+    increment: boolean,
+    shape: Geometry,
+    transform: Matrix,
+    view: View,
+  ): void {
     const device = this._device;
 
     if (device === null || this._bindGroup === null) {
@@ -172,17 +179,24 @@ export class WebGpuStencilClipper {
     device.queue.writeBuffer(this._uniformBuffer!, 0, this._matrixData.buffer, this._matrixData.byteOffset, this._matrixData.byteLength);
 
     this._ensureVertexCapacity(vertexCount);
-    device.queue.writeBuffer(this._vertexBuffer!, 0, this._positions.buffer, this._positions.byteOffset, vertexCount * 2 * Float32Array.BYTES_PER_ELEMENT);
+    device.queue.writeBuffer(
+      this._vertexBuffer!,
+      0,
+      this._positions.buffer,
+      this._positions.byteOffset,
+      vertexCount * 2 * Float32Array.BYTES_PER_ELEMENT,
+    );
 
-    pass.setPipeline(this._getPipeline(format, increment, shape.topology));
+    pass.setPipeline(this._getPipeline(formats, increment, shape.topology));
     pass.setBindGroup(0, this._bindGroup);
     pass.setVertexBuffer(0, this._vertexBuffer);
     pass.draw(vertexCount);
   }
 
-  private _getPipeline(format: GPUTextureFormat, increment: boolean, topology: Geometry['topology']): GPURenderPipeline {
+  private _getPipeline(formats: readonly GPUTextureFormat[], increment: boolean, topology: Geometry['topology']): GPURenderPipeline {
     const cache = increment ? this._incrementPipelines : this._decrementPipelines;
-    const existing = cache.get(format);
+    const key = `${formats.join(',')}:${topology}`;
+    const existing = cache.get(key);
 
     if (existing !== undefined) {
       return existing;
@@ -204,7 +218,7 @@ export class WebGpuStencilClipper {
         module: this._shaderModule!,
         entryPoint: 'fragmentMain',
         // writeMask 0: no colour output, only the stencil aspect is modified.
-        targets: [{ format, writeMask: 0 }],
+        targets: formats.map(format => ({ format, writeMask: 0 })),
       },
       primitive: { topology: topology === 'triangle-strip' ? 'triangle-strip' : 'triangle-list' },
       depthStencil: {
@@ -218,7 +232,7 @@ export class WebGpuStencilClipper {
       },
     });
 
-    cache.set(format, pipeline);
+    cache.set(key, pipeline);
 
     return pipeline;
   }
@@ -252,7 +266,10 @@ export class WebGpuStencilClipper {
     }
 
     const { stride, vertexData, indices } = shape;
-    const view = vertexData instanceof Float32Array ? new DataView(vertexData.buffer, vertexData.byteOffset, vertexData.byteLength) : new DataView(vertexData);
+    const view =
+      vertexData instanceof Float32Array
+        ? new DataView(vertexData.buffer, vertexData.byteOffset, vertexData.byteLength)
+        : new DataView(vertexData);
     const drawCount = indices !== null ? indices.length : shape.vertexCount;
 
     this._ensurePositionCapacity(drawCount);

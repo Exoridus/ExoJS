@@ -3,13 +3,14 @@ import {
   Color,
   FixedResolutionCanvasSizing,
   Keyboard,
-  type RenderingContext,
   Scene,
   type Seconds,
   ShaderFilter,
   Sprite,
+  Texture,
   View,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 const glsl = `#version 300 es
 precision mediump float;
@@ -59,52 +60,72 @@ class InfiniteGridScene extends Scene {
   private move = { x: 0, y: 0, zoom: 0 };
   private sprite!: Sprite;
   private filter!: ShaderFilter;
+  private readonly grid = new Texture(assets.uvGrid256.source);
+
+  override async load(): Promise<void> {
+    await this.assets.load(this.grid);
+  }
 
   override init(): void {
     const app = this.app;
     const { width, height } = app;
 
     this.view = new View(0, 0, width, height);
-    this.sprite = new Sprite(this.loader.get('image/uv-grid-256.png'));
+    this.sprite = new Sprite(this.grid);
     this.sprite.width = width;
     this.sprite.height = height;
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } });
+    this.filter = this.track(
+      new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } }),
+    );
     this.sprite.filters = [this.filter];
+    this.root.addChild(this.sprite);
     this.inputs.onActive(Keyboard.A, () => {
       this.move.x = -1;
     });
     this.inputs.onStop(Keyboard.A, () => {
-      if (this.move.x < 0) this.move.x = 0;
+      if (this.move.x < 0) {
+        this.move.x = 0;
+      }
     });
     this.inputs.onActive(Keyboard.D, () => {
       this.move.x = 1;
     });
     this.inputs.onStop(Keyboard.D, () => {
-      if (this.move.x > 0) this.move.x = 0;
+      if (this.move.x > 0) {
+        this.move.x = 0;
+      }
     });
     this.inputs.onActive(Keyboard.W, () => {
       this.move.y = -1;
     });
     this.inputs.onStop(Keyboard.W, () => {
-      if (this.move.y < 0) this.move.y = 0;
+      if (this.move.y < 0) {
+        this.move.y = 0;
+      }
     });
     this.inputs.onActive(Keyboard.S, () => {
       this.move.y = 1;
     });
     this.inputs.onStop(Keyboard.S, () => {
-      if (this.move.y > 0) this.move.y = 0;
+      if (this.move.y > 0) {
+        this.move.y = 0;
+      }
     });
     this.inputs.onActive(Keyboard.Q, () => {
       this.move.zoom = -1;
     });
     this.inputs.onStop(Keyboard.Q, () => {
-      if (this.move.zoom < 0) this.move.zoom = 0;
+      if (this.move.zoom < 0) {
+        this.move.zoom = 0;
+      }
     });
     this.inputs.onActive(Keyboard.E, () => {
       this.move.zoom = 1;
     });
     this.inputs.onStop(Keyboard.E, () => {
-      if (this.move.zoom > 0) this.move.zoom = 0;
+      if (this.move.zoom > 0) {
+        this.move.zoom = 0;
+      }
     });
   }
 
@@ -113,10 +134,6 @@ class InfiniteGridScene extends Scene {
     this.view.setZoom(Math.max(0.2, this.view.zoomLevel + this.move.zoom * delta));
     this.filter.setUniform('uCenter', [this.view.center.x, this.view.center.y]);
     this.filter.setUniform('uViewSize', [this.view.width, this.view.height]);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.sprite);
   }
 }
 
@@ -129,9 +146,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(InfiniteGridScene);

@@ -13,8 +13,13 @@ const repoRoot = '/repo';
 const respondNewPackage =
   (packed = 'create-exo-app-0.1.0.tgz') =>
   (invocation: CommandInvocation): CommandResult => {
-    if (invocation.command === 'npm' && invocation.args[0] === 'view') return fail('E404 Not found');
-    if (invocation.command === 'npm' && invocation.args[0] === 'pack') return ok(`npm notice\n${packed}\n`);
+    if (invocation.command === 'npm' && invocation.args[0] === 'view') {
+      return fail('E404 Not found');
+    }
+
+    if (invocation.command === 'npm' && invocation.args[0] === 'pack') {
+      return ok(`npm notice\n${packed}\n`);
+    }
 
     return ok();
   };
@@ -26,9 +31,12 @@ describe('bootstrapTargets', () => {
   it('offers every extension and every independent package, and never Core', () => {
     const names = bootstrapTargets().map(target => target.name);
 
-    expect(names).toContain('@codexo/exojs-tilemap-physics');
+    expect(names).toContain('@codexo/exojs-tiled');
     expect(names).toContain('@codexo/exojs-build');
     expect(names).not.toContain('@codexo/exojs');
+    // Runtime modules ship inside the Core tarball, so no name of theirs,
+    // private or retired, is ever published on its own.
+    expect(names.filter(name => name.startsWith('@codexo/exojs-module-') || name === '@codexo/exojs-tilemap-physics')).toEqual([]);
     // The scaffolder is on the engine's lockstep line, so the coordinated
     // release owns it - bootstrap publish must not offer it.
     expect(names).not.toContain('create-exo-app');
@@ -37,7 +45,7 @@ describe('bootstrapTargets', () => {
   it('marks the lockstep line so a caller can tell the two version lines apart', () => {
     const targets = bootstrapTargets();
 
-    expect(targets.find(t => t.name === '@codexo/exojs-tilemap-physics')?.lockstep).toBe(true);
+    expect(targets.find(t => t.name === '@codexo/exojs-tiled')?.lockstep).toBe(true);
     expect(targets.find(t => t.name === '@codexo/exojs-build')?.lockstep).toBe(false);
   });
 });
@@ -82,8 +90,8 @@ describe('bootstrapPublish', () => {
   });
 
   it('refuses a name that is already on the registry and names the path to use instead', () => {
-    const runner = createRecordingRunner(invocation => (invocation.args[0] === 'view' ? ok('@codexo/exojs-tilemap-physics\n') : ok()));
-    const report = bootstrapPublish('@codexo/exojs-tilemap-physics', { dryRun: true, skipBuild: false }, runner, repoRoot);
+    const runner = createRecordingRunner(invocation => (invocation.args[0] === 'view' ? ok('@codexo/exojs-tiled\n') : ok()));
+    const report = bootstrapPublish('@codexo/exojs-tiled', { dryRun: true, skipBuild: false }, runner, repoRoot);
 
     expect(report.ok).toBe(false);
     expect(report.failedStep).toBe('registry-check');
@@ -102,8 +110,13 @@ describe('bootstrapPublish', () => {
 
   it('stops at the failing step and publishes nothing', () => {
     const buildFails = createRecordingRunner(invocation => {
-      if (invocation.command === 'npm' && invocation.args[0] === 'view') return fail('E404');
-      if (invocation.command === 'pnpm') return fail('tsc exited 2');
+      if (invocation.command === 'npm' && invocation.args[0] === 'view') {
+        return fail('E404');
+      }
+
+      if (invocation.command === 'pnpm') {
+        return fail('tsc exited 2');
+      }
 
       return ok();
     });
@@ -117,8 +130,13 @@ describe('bootstrapPublish', () => {
 
   it('reports a pack that produced no tarball rather than publishing something unnamed', () => {
     const runner = createRecordingRunner(invocation => {
-      if (invocation.command === 'npm' && invocation.args[0] === 'view') return fail('E404');
-      if (invocation.command === 'npm' && invocation.args[0] === 'pack') return ok('npm notice nothing here\n');
+      if (invocation.command === 'npm' && invocation.args[0] === 'view') {
+        return fail('E404');
+      }
+
+      if (invocation.command === 'npm' && invocation.args[0] === 'pack') {
+        return ok('npm notice nothing here\n');
+      }
 
       return ok();
     });
@@ -166,14 +184,18 @@ describe('bootstrapPublish - release mode, for the packages off the lockstep lin
 
         // `npm view <name> name` echoes the full name; the registry check
         // compares it exactly.
-        if (!query.includes('@', 1)) return ok('@codexo/eslint-plugin-exojs\n');
+        if (!query.includes('@', 1)) {
+          return ok('@codexo/eslint-plugin-exojs\n');
+        }
 
         const version = query.split('@').at(-1) ?? '';
 
         return published.includes(version) ? ok(`${version}\n`) : fail('E404');
       }
 
-      if (invocation.command === 'npm' && invocation.args[0] === 'pack') return ok('codexo-eslint-plugin-exojs-0.1.0.tgz\n');
+      if (invocation.command === 'npm' && invocation.args[0] === 'pack') {
+        return ok('codexo-eslint-plugin-exojs-0.1.0.tgz\n');
+      }
 
       return ok();
     };
@@ -196,8 +218,8 @@ describe('bootstrapPublish - release mode, for the packages off the lockstep lin
   });
 
   it('refuses a lockstep package, which the coordinated release owns', () => {
-    const runner = createRecordingRunner(invocation => (invocation.args[0] === 'view' ? ok('@codexo/exojs-tilemap-physics\n') : ok()));
-    const report = bootstrapPublish('@codexo/exojs-tilemap-physics', { dryRun: true, skipBuild: false, mode: 'release' }, runner, repoRoot);
+    const runner = createRecordingRunner(invocation => (invocation.args[0] === 'view' ? ok('@codexo/exojs-tiled\n') : ok()));
+    const report = bootstrapPublish('@codexo/exojs-tiled', { dryRun: true, skipBuild: false, mode: 'release' }, runner, repoRoot);
 
     expect(report.ok).toBe(false);
     expect(report.reason).toMatch(/coordinated release publishes it/);

@@ -4,7 +4,7 @@
   "symbol": "CollisionEvent",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 6,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Immutable per-dispatch snapshot describing a solid (non-sensor) contact. Frozen: it is safe to read during the callback and to copy fields out, but it is never reused or mutated, so the classic \"stored a pooled event\" bug cannot occur. `normal` points from collider/body **A toward B**."
       ],
-      "importLine": "import { CollisionEvent } from '@codexo/exojs-physics'",
+      "importLine": "import { CollisionEvent } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

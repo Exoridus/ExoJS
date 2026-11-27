@@ -1,205 +1,244 @@
 import {
   Application,
-  Asset,
-  AudioStream,
+  AudioBus,
   Color,
   FixedResolutionCanvasSizing,
+  getAudioContext,
   type Pausable,
   type RenderingContext,
   Scene,
   type Seekable,
+  Sound,
   Sprite,
-  Text,
   Texture,
   type Voice,
 } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
-import { mountControls } from '@examples/runtime';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
+import { choice, demoPanel, startExample, toggle } from '@examples/runtime';
 
-const BAND_LABELS = ['Sub', 'Bass', 'Low mid', 'Mid', 'High mid', 'Presence', 'Treble', 'Air'];
+const createTestSignal = (noise: boolean): AudioBuffer => {
+  const sampleRate = 48000;
+  const buffer = new AudioBuffer({ length: sampleRate * 8, sampleRate, numberOfChannels: 1 });
+  const samples = buffer.getChannelData(0);
+  let seed = 1;
+
+  for (let i = 0; i < samples.length; i++) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const time = i / sampleRate;
+    const descendingTime = time - 4;
+    // Integrating the frequency keeps the sine phase continuous at the turn and the loop boundary.
+    const cycles = time < 4 ? 120 * time + 235 * time * time : 4240 + 2000 * descendingTime - 235 * descendingTime * descendingTime;
+    samples[i] = noise ? (seed / 2 ** 31 - 1) * 0.2 : Math.sin(2 * Math.PI * cycles) * 0.4;
+  }
+
+  return buffer;
+};
 
 class AudioVisualisationScene extends Scene {
-  private music!: AudioStream;
-  private musicVoice!: Voice & Pausable & Seekable;
+  private sounds: Sound[] = [];
+  private voice: (Voice & Pausable & Seekable) | null = null;
   private analyser!: AudioAnalyser;
-  private detector!: BeatDetector;
+  private bus!: AudioBus;
   private canvas!: HTMLCanvasElement;
-  private context!: CanvasRenderingContext2D;
-  private gradientStyle!: CanvasGradient;
-  private progressStyle = 'rgba(255, 255, 255, 0.1)';
+  private paint!: CanvasRenderingContext2D;
   private texture!: Texture;
   private screen!: Sprite;
-  private hud!: ReturnType<typeof mountControls>;
-  private tapPrompt!: Text;
-  private bandEdges: number[] = [];
+  private playing = false;
+  private alive = true;
+  private playbackEpoch = 0;
+  private failure = '';
+  private peak = 0;
+  private rms = 0;
+  private panel!: ReturnType<
+    typeof demoPanel<{ source: ReturnType<typeof choice<'Sine sweep' | 'Noise'>>; mute: ReturnType<typeof toggle> }>
+  >;
 
-  override async load(): Promise<void> {
-    const app = this.app;
-    const { width, height } = app;
-
-    // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-    // is loaded directly through `Asset.type('music', ...)` and awaited rather
-    // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
-
-    // One analyser tap for spectrum/waveform, one beat detector for the
-    // beat-pulse ring. Both read the music bus the stream plays through,
-    // without altering playback.
-    this.analyser = new AudioAnalyser({ source: app.audio.music });
-    for (let i = 0; i <= BAND_LABELS.length; i++) {
-      this.bandEdges.push(Math.round(Math.pow(this.analyser.frequencyBinCount, i / BAND_LABELS.length)));
-    }
-    this.detector = new BeatDetector();
-    this.detector.source = app.audio.music;
-
+  override init(): void {
+    this.sounds = [new Sound(createTestSignal(false)), new Sound(createTestSignal(true))];
+    this.bus = new AudioBus('analysis-source', { parent: this.app.audio.sound });
+    this.app.audio.registerBus(this.bus);
+    this.analyser = new AudioAnalyser({ source: this.bus, smoothingTimeConstant: 0 });
     this.canvas = document.createElement('canvas');
-    this.canvas.style.position = 'absolute';
-    this.canvas.style.top = '12.5%';
-    this.canvas.style.left = '0';
-    this.canvas.width = width;
-    this.canvas.height = height;
-
-    this.context = this.canvas.getContext('2d')!;
-    this.context.strokeStyle = '#fff';
-    this.context.lineWidth = 4;
-    this.context.lineCap = 'round';
-    this.context.lineJoin = 'round';
-
-    this.gradientStyle = this.context.createLinearGradient(0, 0, 0, this.canvas.height);
-    this.gradientStyle.addColorStop(0, '#f70');
-    this.gradientStyle.addColorStop(0.5, '#f30');
-    this.gradientStyle.addColorStop(1, '#f70');
-
+    this.canvas.width = 1280;
+    this.canvas.height = 720;
+    this.paint = this.canvas.getContext('2d')!;
     this.texture = new Texture(this.canvas);
     this.screen = new Sprite(this.texture);
+    this.panel = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls: { source: choice('Source', ['Sine sweep', 'Noise']), mute: toggle('Mute', false) },
+      actions: {
+        'Play / Pause': () => void this.playPause(),
+      },
+      onChange: (key, _value, values) => {
+        if (key === 'source') {
+          const resume = this.playing;
+          this.stop();
 
-    this.hud = mountControls({
-      title: 'Spectrum and Waveform',
-      controls: [{ keys: 'Click', action: 'play / pause' }],
-      status: 'Playing…',
-      hint: 'Live spectrum, waveform, eight frequency bands, and a beat pulse from the music bus.',
+          if (resume) {
+            void this.playPause();
+          }
+        }
+
+        this.bus.muted = values.mute;
+      },
     });
+  }
 
-    // Shown while the browser still blocks audio (`app.audio.locked`); the
-    // first click or keypress unlocks it and the queued music starts.
-    this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
-      .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, height - 64);
+  private async playPause(): Promise<void> {
+    const epoch = this.playbackEpoch;
 
-    app.input.onPointerDown.add(() => {
-      // The first gesture only unlocks audio (core auto-starts the queued
-      // track); subsequent clicks toggle play / pause.
-      if (app.audio.locked) {
+    try {
+      // Sounds played while locked are skipped, and the unlock this gesture starts settles asynchronously.
+      await new Promise<void>(resolve => this.app.audio.onUnlock.add(() => resolve()));
+
+      if (!this.alive || epoch !== this.playbackEpoch) {
         return;
       }
 
-      if (this.musicVoice.paused) {
-        this.musicVoice.resume();
+      if (!this.voice || this.voice.ended) {
+        const { source } = this.panel.values;
+        this.voice = this.app.audio.play(this.sounds[source === 'Sine sweep' ? 0 : 1]!, {
+          bus: this.bus,
+          loop: true,
+          volume: 0.25,
+        }) as Voice & Pausable & Seekable;
+        this.playing = true;
       } else {
-        this.musicVoice.pause();
-      }
-      this.hud.setStatus(this.musicVoice.paused ? 'Paused' : 'Playing…');
-    });
+        this.playing = !this.playing;
 
-    // Core defers playback until the AudioContext unlocks on the first
-    // gesture, then starts automatically - play() returns the Voice now.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 }) as Voice & Pausable & Seekable;
+        if (this.playing) {
+          this.voice.resume();
+        } else {
+          this.voice.pause();
+        }
+      }
+
+      this.failure = '';
+    } catch {
+      this.failure = 'Playback could not start. Try Play again.';
+    }
+  }
+
+  private stop(): void {
+    this.playbackEpoch++;
+    this.voice?.stop();
+    this.voice = null;
+    this.playing = false;
   }
 
   override draw(context: RenderingContext): void {
-    const app = this.app;
-    const canvas = this.canvas;
-    const freqData = this.analyser.getSpectrum();
-    const timeDomain = this.analyser.getWaveform();
-    const width = canvas.width;
-    const height = canvas.height;
-    const length = freqData.length;
-    const barWidth = Math.ceil(width / length);
+    const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const p = this.paint,
+      w = width * scale,
+      h = contentHeight * scale;
+    const spectrum = this.analyser.getSpectrum(),
+      samples = this.analyser.getWaveformFloat();
+    let sum = 0;
+    this.peak = 0;
 
-    this.context.clearRect(0, 0, width, height);
-
-    // Progress bar of the looping track.
-    const progress = this.musicVoice.duration > 0 ? this.musicVoice.time / this.musicVoice.duration : 0;
-    this.context.fillStyle = this.progressStyle;
-    this.context.fillRect(0, 0, width * progress, height);
-
-    // Frequency bars + waveform polyline.
-    this.context.fillStyle = this.gradientStyle;
-    this.context.beginPath();
-
-    for (let i = 0; i < length; i++) {
-      const barHeight = (height * freqData[i]) / 255;
-      const lineHeight = (height * timeDomain[i]) / 255;
-      const offsetX = (i * barWidth) | 0;
-
-      this.context.fillRect(offsetX, (height / 2 - barHeight / 2) | 0, barWidth, barHeight | 0);
-      this.context.lineTo(offsetX, (height * 0.75 - lineHeight / 2) | 0);
+    for (const sample of samples) {
+      sum += sample * sample;
+      this.peak = Math.max(this.peak, Math.abs(sample));
     }
 
-    this.context.stroke();
+    this.rms = Math.sqrt(sum / samples.length);
+    p.clearRect(0, 0, 1280, 720);
+    p.font = `${14 * scale}px sans-serif`;
+    p.lineWidth = 2 * scale;
+    const left = 58 * scale,
+      right = w - 24 * scale,
+      top = 46 * scale,
+      spectrumBottom = h * 0.32,
+      waveMiddle = h * 0.73,
+      waveHeight = h * 0.13;
+    p.strokeStyle = '#a8afb5';
+    p.beginPath();
+    p.moveTo(left, top);
+    p.lineTo(left, spectrumBottom);
+    p.lineTo(right, spectrumBottom);
+    p.moveTo(left, waveMiddle);
+    p.lineTo(right, waveMiddle);
+    p.stroke();
+    p.fillStyle = '#eceff2';
+    p.fillText('Spectrum: a sine has one peak; noise spreads across frequencies', left, top - 26 * scale);
+    p.fillText('Relative FFT level', left, top - 8 * scale);
+    p.fillText('0', 32 * scale, spectrumBottom);
+    p.fillText('1', 32 * scale, top);
+    p.fillText('0 Hz', left, spectrumBottom + 18 * scale);
+    p.textAlign = 'right';
+    p.fillText('2.4 kHz', right, spectrumBottom + 18 * scale);
+    p.textAlign = 'left';
+    p.fillText('Waveform: higher pitch packs more cycles into the same 12 ms', left, waveMiddle - waveHeight - 12 * scale);
+    p.fillText('+0.15', 26 * scale, waveMiddle - waveHeight);
+    p.fillText('-0.15', 26 * scale, waveMiddle + waveHeight);
+    p.fillStyle = '#88e97e';
 
-    // Beat-pulse ring: radius and opacity follow the detector's beat
-    // envelope, so it expands on every beat and sits perfectly still in
-    // silence (pulse is 0 until a tempo locks).
-    const pulse = this.detector.pulse;
-    const cx = width / 2;
-    const cy = height / 2;
-    const baseRadius = Math.min(width, height) * 0.18;
-    const radius = baseRadius * (1 + pulse * 0.6);
+    for (let i = 0; i < 128; i++) {
+      const first = Math.floor(((i / 128) * 2400 * this.analyser.fftSize) / getAudioContext().sampleRate);
+      const last = Math.max(first + 1, Math.floor((((i + 1) / 128) * 2400 * this.analyser.fftSize) / getAudioContext().sampleRate));
+      let level = 0;
 
-    this.context.beginPath();
-    this.context.arc(cx, cy, radius, 0, Math.PI * 2);
-    this.context.lineWidth = 6 + pulse * 10;
-    this.context.strokeStyle = `rgba(120, 220, 255, ${0.15 + pulse * 0.7})`;
-    this.context.stroke();
-
-    // restore the default stroke style for the next frame's waveform.
-    this.context.strokeStyle = '#fff';
-    this.context.lineWidth = 4;
-
-    const bandWidth = width / BAND_LABELS.length;
-    const bandBase = height - 28;
-    const bandHeight = 92;
-    this.context.fillStyle = 'rgba(8, 13, 24, 0.82)';
-    this.context.fillRect(0, height - 142, width, 142);
-    this.context.textAlign = 'center';
-    this.context.font = '17px sans-serif';
-    for (let band = 0; band < BAND_LABELS.length; band++) {
-      const start = this.bandEdges[band];
-      const end = Math.max(start + 1, this.bandEdges[band + 1]);
-      let sum = 0;
-      for (let bin = start; bin < end; bin++) {
-        sum += freqData[bin];
+      for (let bin = first; bin < last; bin++) {
+        level = Math.max(level, spectrum[bin]! / 255);
       }
-      const level = sum / ((end - start) * 255);
-      const x = band * bandWidth + bandWidth / 2;
-      this.context.fillStyle = '#283342';
-      this.context.fillRect(x - 24, bandBase - bandHeight, 48, bandHeight);
-      this.context.fillStyle = '#70d6ff';
-      this.context.fillRect(x - 24, bandBase - bandHeight * level, 48, bandHeight * level);
-      this.context.fillStyle = '#dbe9f5';
-      this.context.fillText(BAND_LABELS[band], x, height - 7);
+
+      p.fillRect(
+        left + (i * (right - left)) / 128,
+        spectrumBottom - level * (spectrumBottom - top),
+        Math.max(2 * scale, (right - left) / 128 - scale),
+        level * (spectrumBottom - top),
+      );
     }
 
+    p.strokeStyle = '#65d2d2';
+    p.beginPath();
+
+    const shownSamples = Math.min(samples.length, Math.round(getAudioContext().sampleRate * 0.012));
+
+    for (let i = 0; i < shownSamples; i++) {
+      const x = left + (i / (shownSamples - 1)) * (right - left),
+        y = waveMiddle - (samples[i]! / 0.15) * waveHeight;
+
+      if (i === 0) {
+        p.moveTo(x, y);
+      } else {
+        p.lineTo(x, y);
+      }
+    }
+
+    p.stroke();
+    p.fillStyle = '#eceff2';
+    p.fillText(`Time window: 12 ms | peak ${this.peak.toFixed(3)} / RMS ${this.rms.toFixed(3)}`, left, h - 10 * scale);
     this.screen.updateTexture();
-
     context.render(this.screen);
+    const seconds = (this.voice?.time ?? 0) % 8;
+    const frequency = seconds < 4 ? 120 + 470 * seconds : 2000 - 470 * (seconds - 4);
+    this.panel.actions['Play / Pause']!.label = this.playing ? 'Pause' : 'Play';
+    this.panel.status(
+      this.failure ||
+        `${this.app.audio.locked ? 'Click to enable audio' : 'AudioContext running'} | ${this.panel.values.source === 'Sine sweep' ? `Sine ${frequency.toFixed(0)} Hz | 120-2000-120 Hz every 8 s` : 'Noise: many frequencies at once'} | ${this.playing ? 'Playing' : 'Paused / stopped'} | ${this.bus.muted ? 'Muted' : 'Output enabled'}`,
+      this.failure ? 'error' : 'neutral',
+    );
+  }
 
-    if (app.audio.locked) {
-      context.render(this.tapPrompt);
-    }
+  override destroy(): void {
+    this.alive = false;
+    this.stop();
+    this.analyser?.destroy();
+    this.app.audio.unregisterBus(this.bus);
+    this.sounds.forEach(sound => sound.destroy());
+    this.screen?.destroy();
+    this.texture?.destroy();
+    this.canvas?.remove();
+    this.panel?.dispose();
+    super.destroy();
   }
 }
-
 const app = new Application({
   scenes: { AudioVisualisationScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: Color.black,
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(11, 16, 20),
 });
-
-await app.start(AudioVisualisationScene);
+await startExample(app, () => app.start(AudioVisualisationScene));

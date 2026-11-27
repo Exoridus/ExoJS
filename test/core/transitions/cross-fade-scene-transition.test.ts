@@ -4,6 +4,7 @@ import { CrossFadeSceneTransition } from '#core/scene/transitions/CrossFadeScene
 import { Time } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { Sprite } from '#rendering/sprite/Sprite';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 import { mutable } from '../../support/mutable';
 
@@ -27,19 +28,33 @@ const makeEnvironment = (): SceneTransitionEnvironment & { _committed: boolean }
   return env;
 };
 
-// CrossFadeSceneTransition draws Sprites via context.render(sprite, { view })
-// - a full-frame crossfade needs no offset math, so unlike SlideSceneTransition
-// the stub's screenView is never actually read; an empty object satisfies the
-// type. Assertions inspect the captured Sprite node's own properties
-// (texture/x/y/tint.a), since render() takes a RenderNode, not a plain
-// `{alpha}` options bag.
 const stubRendering = (render = vi.fn()): RenderingContext =>
   ({
     render,
-    screenView: {},
+    screenView: { getBounds: () => ({ left: 0, top: 0, right: 800, bottom: 600 }) },
   }) as unknown as RenderingContext;
 
 describe('CrossFadeSceneTransition', () => {
+  test('fits physical snapshot pixels into the logical screen without zooming', () => {
+    const texture = new RenderTexture(1600, 1200);
+    const render = vi.fn();
+    const rendering = {
+      render,
+      screenView: { getBounds: () => ({ left: 0, top: 0, right: 800, bottom: 600 }) },
+    } as unknown as RenderingContext;
+    const session = new CrossFadeSceneTransition().beginSession(makeEnvironment());
+
+    session.render(rendering, { outgoing: texture, current: texture, committed: true });
+
+    for (const [node] of render.mock.calls as Array<[Sprite]>) {
+      expect(node.width).toBe(800);
+      expect(node.height).toBe(600);
+    }
+
+    session.destroy();
+    texture.destroy();
+  });
+
   test('getRequirements(): snapshot + texture, regardless of context', () => {
     const crossFade = new CrossFadeSceneTransition();
 

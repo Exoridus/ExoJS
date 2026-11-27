@@ -62,6 +62,10 @@ const deprecatedApi = collectDeprecatedExports(globSync('**/*.d.ts', { cwd: engi
 
 ## Rules
 
+### Document migrations
+
+Use `exojs/migration-step`, `exojs/migration-purity`, and `exojs/migration-chain` on files that declare versioned documents. The first rule checks named steps such as `AtlasV1ToV2` for literal bounds and synchronous migration bodies. The second looks for external runtime state and direct input or instance mutation. The third checks literal migration chains passed to `new DocumentHistory(...)`. Dynamic chains still receive runtime validation. Set `pattern` to change the class-name pattern, preserving the two version capture groups. `migration-purity` also accepts a `runtimeImports` list of prohibited import prefixes.
+
 ### `exojs/no-async-update`
 
 Flags `async preFrame` / `fixedUpdate` / `update` / `draw` / `postFrame` / `render` on a class, a class field or an object literal.
@@ -129,6 +133,31 @@ Import specifiers only, matched against the imported name rather than the local 
 ### `exojs-engine/no-allocation-in-hot-hook`
 
 Flags object and array literals, `new`, per-call closures, and array-returning standard-library calls inside a method named in its `methods` option. It cannot see an allocation behind a helper call and does not try.
+
+Creating a nested function, including a local function declaration, is reported as a per-call closure. Its parameter defaults and body are separate execution: a callback passed to `queueMicrotask`, a timer or a promise reaction therefore produces only the closure diagnostic. The rule inspects a nested function's contents only when it is a non-`async`, non-generator inline function used in one of these synchronous forms:
+
+- A direct immediately invoked function expression, or the exact receiver of an immediately invoked noncomputed `.call` or `.apply`.
+- The first argument to a noncomputed `every`, `filter`, `find`, `findIndex`, `findLast`, `findLastIndex`, `flatMap`, `forEach`, `map`, `reduce`, `reduceRight`, `some`, `sort` or `toSorted` method.
+- The second argument to `Array.from`, or the first argument to `new Promise`.
+
+These callback models match names and argument positions, assuming the synchronous Array/TypedArray contracts for the listed methods; they do not resolve receiver types or shadowed builtins. A custom or lazy iterator method with the same name can therefore be classified as synchronous. Unknown callback APIs, named helper calls, aliases, computed invocation forms and `.bind` remain opaque. Nested `async` and generator functions also remain opaque, including their synchronous portions: the rule does not perform `await`/`yield` control-flow analysis. Their creation still produces a closure diagnostic. An immediate call inside a deferred function stays behind that outer execution boundary.
+
+## Experimental Oxlint integration
+
+Oxlint's JavaScript plugin API can load the same ExoJS rule modules without rewriting their AST checks. Two **opt-in** subpaths provide default exports with the plugin metadata Oxlint expects:
+
+```json
+{
+  "jsPlugins": ["@codexo/eslint-plugin-exojs/oxlint", "@codexo/eslint-plugin-exojs/oxlint-engine"],
+  "rules": {
+    "exojs/no-async-update": "error",
+    "exojs/require-super-destroy": "error",
+    "exojs-engine/no-allocation-in-hot-hook": ["error", { "methods": ["getOutputBounds"] }]
+  }
+}
+```
+
+The `oxlint-engine` entry is engine-only and must not be enabled by general ExoJS consumer presets. The `recommended` / `strict` ESLint presets remain unchanged. The module/namespace contract is unit-tested; a separate real-Oxlint CLI smoke test compares one known red and one clean fixture per rule against ESLint. Full RuleTester matrices, TypeScript parser/option contexts, suppression behavior, Windows parity and timing still require verification before transferring ownership. Oxlint JS plugins are currently experimental. No default lint or CI coverage is removed by these entries.
 
 ## License
 

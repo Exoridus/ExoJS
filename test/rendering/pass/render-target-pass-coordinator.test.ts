@@ -16,8 +16,8 @@ const createBackend = (coordinator?: RenderPassCoordinator) => {
   const setRenderTarget = vi.fn((target: RenderTarget | null) => {
     currentTarget = target ?? root;
   });
-  const setView = vi.fn(() => undefined);
-  const clear = vi.fn(() => undefined);
+  const setView = vi.fn(() => {});
+  const clear = vi.fn(() => {});
 
   const backend = {
     get renderTarget() {
@@ -75,7 +75,7 @@ describe('BackendTargetPass coordinator routing', () => {
     const { backend, root } = createBackend(coordinator);
     const target = new RenderTexture(32, 32);
 
-    const pass = new BackendTargetPass(() => undefined, { target });
+    const pass = new BackendTargetPass(() => {}, { target });
 
     try {
       pass.execute(backend);

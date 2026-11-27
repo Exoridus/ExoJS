@@ -4,7 +4,8 @@ import { ChainEdgeShape } from './ChainEdgeShape';
 import { Shape } from './Shape';
 
 /** Vertices closer than this (px) are welded into one. */
-const weldEpsilon = 1e-4;
+// Matches SegmentShape.minimumLength: a closer pair would build an edge that cannot exist.
+const weldEpsilon = 1e-3;
 
 /** Construction options for a {@link ChainShape}. */
 export interface ChainShapeOptions {
@@ -98,7 +99,9 @@ export class ChainShape extends Shape {
     const minimum = closed ? 3 : 2;
 
     if (count < minimum) {
-      throw new RangeError(`ChainShape: ${closed ? 'a closed chain' : 'a chain'} needs at least ${minimum} distinct vertices, received ${count}.`);
+      throw new RangeError(
+        `ChainShape: ${closed ? 'a closed chain' : 'a chain'} needs at least ${minimum} distinct vertices, received ${count}.`,
+      );
     }
 
     let boundingRadius = 0;

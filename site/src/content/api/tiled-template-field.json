@@ -1,0 +1,167 @@
+{
+  "title": "TiledTemplateField",
+  "description": "An object field a template supplies and an instance may override.",
+  "symbol": "TiledTemplateField",
+  "kind": "type",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An object field a template supplies and an instance may override."
+      ],
+      "importLine": "import { TiledTemplateField } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TiledTemplateField",
+          "signature": "\"class\" | \"ellipse\" | \"gid\" | \"height\" | \"name\" | \"point\" | \"polygon\" | \"polyline\" | \"properties\" | \"rotation\" | \"text\" | \"type\" | \"visible\" | \"width\"",
+          "signatureTokens": [
+            {
+              "text": "\"class\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ellipse\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"gid\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"height\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"name\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"point\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"polygon\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"polyline\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"properties\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rotation\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"text\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"type\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"visible\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"width\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/data.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/data.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/data.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/data.ts"
+}

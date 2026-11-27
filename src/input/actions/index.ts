@@ -17,6 +17,7 @@ export type { InputAlternation, InputChord, InputSequence, ValidatedChordBinding
 export type { SequenceActionOptions, SequenceBinding } from './SequenceAction';
 export { SequenceAction } from './SequenceAction';
 export type { ActionKind, SerializedActionBinding, SerializedAxisEntry, SerializedVectorEntry } from './serialization';
+export type { ButtonTickState, SequenceTickState } from './TickLedger';
 export type { ActionOptions, AtLeastOne, OneOrMany } from './types';
 export type { VectorBinding, VectorBindingShape } from './VectorAction';
 export { VectorAction } from './VectorAction';

@@ -5,9 +5,37 @@ import type { Collider } from '../src/Collider';
 import type { RayHit } from '../src/index';
 import { BoxShape, CircleShape, PhysicsWorld, PolygonShape } from '../src/index';
 import { QueryEngine } from '../src/query/QueryEngine';
+import { type CollisionFilter, resolveFilterInto } from '../src/types';
 import { colliderAt } from './support';
 
 describe('queries', () => {
+  it.each([
+    [{ x: NaN, y: 0 }, { x: 1, y: 0 }, Infinity],
+    [{ x: 0, y: Infinity }, { x: 1, y: 0 }, Infinity],
+    [{ x: 0, y: 0 }, { x: NaN, y: 0 }, Infinity],
+    [{ x: 0, y: 0 }, { x: 1, y: Infinity }, Infinity],
+    [{ x: 0, y: 0 }, { x: 1, y: 0 }, NaN],
+    [{ x: 0, y: 0 }, { x: 1, y: 0 }, -1],
+    [{ x: 0, y: 0 }, { x: 1, y: 0 }, -Infinity],
+  ])('rejects nonfinite rays or invalid distance before querying either backend', (origin, direction, maxDistance) => {
+    const spatialIndex = {
+      sync(): never {
+        throw new Error('invalid ray reached the spatial index');
+      },
+      queryAabb(): Collider[] {
+        return [];
+      },
+      rayCast(): void {},
+    };
+
+    for (const index of [undefined, spatialIndex]) {
+      const query = new QueryEngine([], index);
+
+      expect(() => query.rayCast(origin, direction, undefined, maxDistance)).toThrow(RangeError);
+      expect(() => query.rayCastAll(origin, direction, undefined, undefined, maxDistance)).toThrow(RangeError);
+    }
+  });
+
   it('queryPoint returns colliders containing the point', () => {
     const world = new PhysicsWorld();
     const box = colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 });
@@ -15,6 +43,18 @@ describe('queries', () => {
 
     expect(world.queryPoint({ x: 5, y: 5 })).toEqual([box]);
     expect(world.queryPoint({ x: 50, y: 50 })).toEqual([]);
+  });
+
+  it('sees a collider moved after the spatial index was last synced', () => {
+    const world = new PhysicsWorld();
+    const box = colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 });
+
+    expect(world.queryPoint({ x: 0, y: 0 })).toEqual([box]);
+
+    box.body!.setTransform({ x: 100, y: 100 });
+
+    expect(world.queryPoint({ x: 0, y: 0 })).toEqual([]);
+    expect(world.queryPoint({ x: 100, y: 100 })).toEqual([box]);
   });
 
   it('queryAabb supports the fresh-array and caller-owned out forms', () => {
@@ -40,6 +80,16 @@ describe('queries', () => {
     expect(visited).toEqual([a]);
   });
 
+  it('forEachAabbHit normalises a filter into one reused record', () => {
+    const target: CollisionFilter = { category: 0, mask: 0, group: 0 };
+
+    expect(resolveFilterInto({ category: 4 }, target)).toBe(target);
+    expect(target).toEqual({ category: 4, mask: 0xffff, group: 0 });
+
+    expect(resolveFilterInto({ mask: 2 }, target)).toBe(target);
+    expect(target).toEqual({ category: 0x0001, mask: 2, group: 0 });
+  });
+
   it('rayCast returns the nearest hit against a box with the entry normal', () => {
     const world = new PhysicsWorld();
     const box = colliderAt(world, new BoxShape(20, 20), { x: 100, y: 0 });
@@ -49,6 +99,19 @@ describe('queries', () => {
     expect((hit as RayHit).collider).toBe(box);
     expect((hit as RayHit).distance).toBeCloseTo(90, 6);
     expect((hit as RayHit).normal.x).toBeCloseTo(-1, 6);
+  });
+
+  it.each([new CircleShape(10), new BoxShape(20, 20)])('ray casts ignore a solid containing the origin (%s)', shape => {
+    const world = new PhysicsWorld();
+    colliderAt(world, shape, { x: 0, y: 0 });
+
+    for (const origin of [
+      { x: 0, y: 0 },
+      { x: 5, y: 0 },
+    ]) {
+      expect(world.rayCast(origin, { x: 1, y: 0 })).toBeNull();
+      expect(world.rayCastAll(origin, { x: -1, y: 0 })).toEqual([]);
+    }
   });
 
   it('rayCast hits a circle and reports a radial normal', () => {

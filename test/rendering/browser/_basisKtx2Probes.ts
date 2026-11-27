@@ -1,6 +1,5 @@
 import { describe, expect, onTestFinished, test } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { selectBasisTarget } from '#assets/factories/basisTargets';
 import { TextureFactory } from '#assets/factories/TextureFactory';
 import { Loader } from '#assets/Loader';
@@ -40,7 +39,7 @@ export const defineBasisKtx2Probes = (backend: string, open: OpenColorProbeHarne
         h.destroy();
       });
       const start = performance.now();
-      const texture = await loader.load(Asset.type('texture', sourceUrl(name)));
+      const texture = await loader.load({ type: 'texture', source: sourceUrl(name) });
       const loadMs = performance.now() - start;
       const hasAlpha = name.includes('alpha'),
         srgb = name.includes('srgb');
@@ -64,8 +63,10 @@ export const defineBasisKtx2Probes = (backend: string, open: OpenColorProbeHarne
         const rgb = [128, 64, 32].map(channel => (srgb ? srgbDecode(channel / 255) : channel / 255) * alpha * 255);
         expectBytes(await h.backend.readPixels(raw, 0, 0, 1, 1), [...rgb, hasAlpha ? 128 : 255], name.startsWith('etc1s') ? 7 : 3);
       });
-      if (name === 'etc1s-opaque-linear' || name === 'uastc-opaque-linear')
+
+      if (name === 'etc1s-opaque-linear' || name === 'uastc-opaque-linear') {
         console.info(`Basis ${backend} ${name}: first load ${loadMs.toFixed(2)} ms, target ${target.format ?? 'RGBA8'}`);
+      }
     });
 
     test.each(['etc1s-alpha-srgb-odd', 'uastc-alpha-srgb-odd'])('%s falls back to RGBA8 with authored odd mips', async name => {
@@ -76,7 +77,10 @@ export const defineBasisKtx2Probes = (backend: string, open: OpenColorProbeHarne
         h.destroy();
       });
       const response = await fetch(sourceUrl(name));
-      const texture = await factory.create(await response.arrayBuffer(), factoryContext({}, { textureFormats: h.backend.supportedTextureFormats }));
+      const texture = await factory.create(
+        await response.arrayBuffer(),
+        factoryContext({}, { textureFormats: h.backend.supportedTextureFormats }),
+      );
       onTestFinished(() => texture.destroy());
       expect(texture.compressed).toBeNull();
       expect(texture.pixels?.levels.map(({ width, height }) => [width, height])).toEqual([
@@ -114,7 +118,11 @@ export const defineBasisKtx2Probes = (backend: string, open: OpenColorProbeHarne
       texture.setScaleMode(ScaleModes.LinearMipmapLinear);
       await h.checked(async () => {
         drawInto(h.backend, raw, spriteScene(texture, 1, 1), Color.transparentBlack);
-        expectBytes(await h.backend.readPixels(raw, 0, 0, 1, 1), [...[128, 64, 32].map(channel => srgbDecode(channel / 255) * 255), 128], 7);
+        expectBytes(
+          await h.backend.readPixels(raw, 0, 0, 1, 1),
+          [...[128, 64, 32].map(channel => srgbDecode(channel / 255) * 255), 128],
+          7,
+        );
       });
     });
 

@@ -39,6 +39,7 @@ const createStubBackend = (destroyFn = vi.fn()): RenderBackend & { destroy: Retu
     flush: vi.fn(),
     destroy: destroyFn,
   } as unknown as RenderBackend & { destroy: ReturnType<typeof vi.fn> };
+
   return backend;
 };
 

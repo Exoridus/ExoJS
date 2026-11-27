@@ -11,6 +11,7 @@ const makeBufferStub = (): AudioBuffer => ({ duration: 2 }) as AudioBuffer;
 const makeStubEffect = (): AudioEffect => {
   const inputNode = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
   const outputNode = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
+
   return { inputNode, outputNode, destroy: vi.fn(), ready: Promise.resolve(), _isWired: true } as unknown as AudioEffect;
 };
 
@@ -49,12 +50,21 @@ const captureVoiceOutput = (): { get node(): CapturedGain | null; restore: () =>
       captured = {
         connect: vi.fn(),
         disconnect: vi.fn(),
-        gain: { setTargetAtTime: vi.fn(), setValueAtTime: vi.fn(), cancelScheduledValues: vi.fn(), linearRampToValueAtTime: vi.fn(), value: 1 },
+        gain: {
+          setTargetAtTime: vi.fn(),
+          setValueAtTime: vi.fn(),
+          cancelScheduledValues: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          value: 1,
+        },
       };
+
       return captured as unknown as GainNode;
     }
+
     return original();
   });
+
   return {
     get node() {
       return captured;
@@ -66,6 +76,26 @@ const captureVoiceOutput = (): { get node(): CapturedGain | null; restore: () =>
 describe('Voice — per-voice effects', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  test('an unready effect leaves the existing chain intact and does not poison later additions', () => {
+    const system = new AudioSystem();
+    const out = captureVoiceOutput();
+    const sound = new Sound(makeBufferStub());
+    const voice = system.play(sound);
+
+    out.node!.disconnect.mockClear();
+
+    expect(() => voice.addEffect(makeUnreadyEffect())).toThrow(/not yet initialized/);
+    expect(out.node!.disconnect).not.toHaveBeenCalled();
+
+    const ready = makeStubEffect();
+
+    expect(() => voice.addEffect(ready)).not.toThrow();
+    expect(out.node!.connect).toHaveBeenCalledWith(ready.inputNode);
+
+    sound.destroy();
+    out.restore();
   });
 
   test('addEffect inserts the effect between the voice output and the bus', () => {

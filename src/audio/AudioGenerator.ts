@@ -29,7 +29,11 @@ export interface AudioGeneratorOptions {
   poolSize?: number;
   /** Eviction strategy when the pool is full. Default `FirstInFirstOut`. */
   poolStrategy?: SoundPoolStrategy;
-  /** Priority for the `LowestPriority` strategy. Default 0. */
+  /**
+   * Priority shared by every voice this generator starts. The `LowestPriority`
+   * strategy cannot tell such voices apart, so it evicts the oldest; this field
+   * does not change eviction. Default 0.
+   */
   priority?: number;
 }
 
@@ -76,7 +80,7 @@ export class AudioGenerator implements Playable {
 
   private _poolSize: number;
   private _poolStrategy: SoundPoolStrategy;
-  /** Priority for the `LowestPriority` eviction strategy. */
+  /** Priority shared by every voice this generator starts; it does not change eviction. */
   public priority: number;
 
   private readonly _activeVoices: PooledGeneratorVoice[] = [];
@@ -87,6 +91,7 @@ export class AudioGenerator implements Playable {
 
   public set poolSize(value: number) {
     this._poolSize = Math.max(1, Math.floor(value));
+    this._evictDownTo(this._poolSize);
   }
 
   public get poolStrategy(): SoundPoolStrategy {
@@ -113,6 +118,7 @@ export class AudioGenerator implements Playable {
   /** Set {@link AudioGenerator.frequency} from a MIDI note number (69 = A4 = 440 Hz). */
   public setNote(midiNote: number): this {
     this.frequency = AudioGenerator.midiToFrequency(midiNote);
+
     return this;
   }
 
@@ -127,25 +133,26 @@ export class AudioGenerator implements Playable {
    * Snapshots the current synth settings into a new {@link AudioGeneratorVoice}.
    * Returns an already-ended {@link NoopVoice} when the `AudioContext` is still
    * locked by the autoplay policy - oscillators are ephemeral and cannot be
-   * deferred.
+   * deferred. An eviction callback can also fill the available pool slot;
+   * this call then returns an already-ended voice without starting an oscillator.
    */
   public createVoice(system: AudioSystem, options: PlayOptions): Voice {
     const bus = options.bus ?? system.sound;
 
     if (!isAudioContextReady()) {
       system._warnPlaybackWhileLocked('generator');
+
       return new NoopVoice(bus);
     }
 
     this._pruneEndedVoices();
 
+    this._evictDownTo(this._poolSize - 1);
+
+    // onEnd may have reused the free slot or changed the capacity. Its voices
+    // belong to the pool; chasing them with another eviction can never finish.
     if (this._activeVoices.length >= this._poolSize) {
-      const victimIndex = this._pickEvictionVictim();
-      const victim = this._activeVoices[victimIndex];
-      if (victim) {
-        this._activeVoices.splice(victimIndex, 1);
-        victim.voice.stop();
-      }
+      return new NoopVoice(bus);
     }
 
     const audioContext = getAudioContext();
@@ -171,6 +178,7 @@ export class AudioGenerator implements Playable {
     const pooled: PooledGeneratorVoice = { voice, startedAt: audioContext.currentTime };
     voice.onEnd.add((): void => {
       const index = this._activeVoices.indexOf(pooled);
+
       if (index !== -1) {
         this._activeVoices.splice(index, 1);
       }
@@ -196,9 +204,11 @@ export class AudioGenerator implements Playable {
   public stopAll(): this {
     const voices = [...this._activeVoices];
     this._activeVoices.length = 0;
+
     for (const pooled of voices) {
       pooled.voice.stop();
     }
+
     return this;
   }
 
@@ -215,16 +225,60 @@ export class AudioGenerator implements Playable {
     }
   }
 
+  /** Select and detach excess voices before stopping any of them. */
+  private _evictDownTo(limit: number): void {
+    let victims: AudioGeneratorVoice[] | null = null;
+
+    while (this._activeVoices.length > limit) {
+      const victimIndex = this._pickEvictionVictim();
+      const victim = this._activeVoices[victimIndex];
+
+      if (!victim) {
+        break;
+      }
+
+      this._activeVoices.splice(victimIndex, 1);
+
+      // Ordinary play evicts at most one voice and needs no snapshot allocation.
+      if (victims === null && this._activeVoices.length <= limit) {
+        victim.voice.stop();
+
+        return;
+      }
+
+      (victims ??= []).push(victim.voice);
+    }
+
+    if (victims === null) {
+      return;
+    }
+
+    // Stopping dispatches user callbacks that can replenish the pool. Only
+    // stop the detached victims, including those after a throwing callback.
+    let failure: { error: unknown } | null = null;
+
+    for (const voice of victims) {
+      try {
+        voice.stop();
+      } catch (error) {
+        failure ??= { error };
+      }
+    }
+
+    if (failure !== null) {
+      throw failure.error;
+    }
+  }
+
   /**
    * Index of the voice to stop when the pool is at capacity.
    *
-   * Paused voices are considered only as a last resort - same rule, and same
-   * reason, as {@link Sound}: a paused voice is not a stale one, it is frozen
-   * exactly where a scene pause or retention suspension left it, but its
-   * `startedAt` keeps aging against the still-running context clock, so both
-   * strategies would otherwise single it out. Evicting it stops it for good, and
-   * {@link SceneAudio.restore} then passes over it (it is `ended`, not
-   * `paused`), so the held note never comes back.
+   * Silent voices - paused by their caller or held by a paused or retained
+   * scene - are considered only as a last resort - same rule, and same reason,
+   * as {@link Sound}: such a voice is not a stale one, it is frozen exactly
+   * where it stopped, but its `startedAt` keeps aging against the still-running
+   * context clock, so both strategies would otherwise single it out. Evicting
+   * it stops it for good, so the held note never comes back.
    */
   private _pickEvictionVictim(): number {
     const unpaused = this._pickVictim(false);
@@ -238,23 +292,28 @@ export class AudioGenerator implements Playable {
       // Oscillators are open-ended, so "closest to end" degenerates to oldest.
       let oldest = -1;
       let oldestTime = Infinity;
+
       for (let i = 0; i < this._activeVoices.length; i++) {
         const pooled = this._activeVoices[i];
-        if (pooled === undefined || (!includePaused && pooled.voice.paused)) {
+
+        if (pooled === undefined || (!includePaused && pooled.voice._isHalted)) {
           continue;
         }
+
         if (pooled.startedAt < oldestTime) {
           oldestTime = pooled.startedAt;
           oldest = i;
         }
       }
+
       return oldest;
     }
 
     // FirstInFirstOut and LowestPriority (shared priority) → oldest.
     for (let i = 0; i < this._activeVoices.length; i++) {
       const pooled = this._activeVoices[i];
-      if (pooled !== undefined && (includePaused || !pooled.voice.paused)) {
+
+      if (pooled !== undefined && (includePaused || !pooled.voice._isHalted)) {
         return i;
       }
     }

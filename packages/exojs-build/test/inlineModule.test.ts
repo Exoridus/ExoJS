@@ -76,7 +76,11 @@ beforeAll(() => {
     ["import { scale } from './nested';", '', 'export const double = (value: number): number => scale(value) / 1.5;', ''].join('\n'),
     'utf8',
   );
-  writeFileSync(join(fixtureDirectory, 'solo.ts'), ['const answer: number = 42;', 'globalThis.__inlineSolo = answer;', ''].join('\n'), 'utf8');
+  writeFileSync(
+    join(fixtureDirectory, 'solo.ts'),
+    ['const answer: number = 42;', 'globalThis.__inlineSolo = answer;', ''].join('\n'),
+    'utf8',
+  );
   writeFileSync(
     join(fixtureDirectory, 'entry.ts'),
     ["import { double } from './shared/helper';", '', 'globalThis.__inlineEntry = double(21);', ''].join('\n'),
@@ -205,7 +209,9 @@ describe('createWorkletPlugin', () => {
   });
 
   it('minifies only when asked', () => {
-    const plain = sourceFromModule(loadThroughPlugin(createWorkletPlugin(), join(fixtureDirectory, 'importer.ts'), './sample.worklet.ts?worklet'));
+    const plain = sourceFromModule(
+      loadThroughPlugin(createWorkletPlugin(), join(fixtureDirectory, 'importer.ts'), './sample.worklet.ts?worklet'),
+    );
     const minified = sourceFromModule(
       loadThroughPlugin(createWorkletPlugin({ minify: true }), join(fixtureDirectory, 'importer.ts'), './sample.worklet.ts?worklet'),
     );
@@ -224,7 +230,9 @@ describe('createWorkerPlugin', () => {
   });
 
   it('emits classic-script-compatible source', () => {
-    const source = sourceFromModule(loadThroughPlugin(createWorkerPlugin(), join(fixtureDirectory, 'importer.ts'), './sample.worker.ts?worker'));
+    const source = sourceFromModule(
+      loadThroughPlugin(createWorkerPlugin(), join(fixtureDirectory, 'importer.ts'), './sample.worker.ts?worker'),
+    );
 
     // `new Worker(blobUrl)` without `{ type: 'module' }` parses a classic
     // script, where module syntax throws before the first statement runs.
@@ -232,7 +240,9 @@ describe('createWorkerPlugin', () => {
   });
 
   it('minifies only when asked', () => {
-    const plain = sourceFromModule(loadThroughPlugin(createWorkerPlugin(), join(fixtureDirectory, 'importer.ts'), './sample.worker.ts?worker'));
+    const plain = sourceFromModule(
+      loadThroughPlugin(createWorkerPlugin(), join(fixtureDirectory, 'importer.ts'), './sample.worker.ts?worker'),
+    );
     const minified = sourceFromModule(
       loadThroughPlugin(createWorkerPlugin({ minify: true }), join(fixtureDirectory, 'importer.ts'), './sample.worker.ts?worker'),
     );

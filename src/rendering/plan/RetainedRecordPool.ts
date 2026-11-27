@@ -16,6 +16,7 @@ export interface RetainedDrawData {
   readonly seq: number;
   readonly zIndex: number;
   readonly material: MaterialKey;
+  readonly boundsStale?: boolean;
   readonly minX: number;
   readonly minY: number;
   readonly maxX: number;
@@ -34,6 +35,8 @@ export interface MutableRetainedDrawData {
   seq: number;
   zIndex: number;
   readonly material: MaterialKey;
+  /** The AABB below predates a move of {@link drawable}; see `DrawCommand.boundsStale`. */
+  boundsStale?: boolean;
   minX: number;
   minY: number;
   maxX: number;
@@ -72,7 +75,12 @@ export class RetainedRecordPool<T> {
     return this._cursor;
   }
 
-  /** Record `index` of the capture in progress; callers hold `index < used`. */
+  /** Number of allocated records, including the reusable tail above {@link used}. */
+  public get capacity(): number {
+    return this._records.length;
+  }
+
+  /** Allocated record `index`; callers hold `index < capacity`. */
   public at(index: number): T {
     return this._records[index]!;
   }
@@ -107,19 +115,17 @@ export class RetainedRecordPool<T> {
  * survive and their `drawable` is rewritten in place on the next capture, so
  * pool reuse is unaffected.
  *
- * Only the records the last capture actually took are cleared: beyond `used`
- * the pool holds records whose `drawable` was already cleared by an earlier
- * pass or never written at all.
+ * Every allocated record is cleared, including records above a shrunk live prefix.
  * @internal
  */
 export const releasePooledDrawables = <T extends { drawable: Drawable }>(pool: RetainedRecordPool<T>): void => {
-  for (let index = 0; index < pool.used; index++) {
+  for (let index = 0; index < pool.capacity; index++) {
     pool.at(index).drawable = undefined as unknown as Drawable;
   }
 };
 
 /**
- * Copy the eight fields every captured draw shares - the drawable, its
+ * Copy the nine fields every captured draw shares - the drawable, its
  * `(zIndex, seq)` placement, its material key and its snapshotted screen AABB -
  * out of a live command into a pooled record.
  *
@@ -133,6 +139,7 @@ export const copyRetainedDrawData = (target: MutableRetainedDrawData, command: D
   target.seq = command.seq;
   target.zIndex = command.zIndex;
   copyMaterialKeyInto(target.material, command.material);
+  target.boundsStale = command.boundsStale === true;
   target.minX = command.minX;
   target.minY = command.minY;
   target.maxX = command.maxX;

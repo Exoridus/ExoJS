@@ -48,6 +48,11 @@ describe('exo argument parsing', () => {
     expect(() => parseArgs(['--port'], portOnly)).toThrow('option "--port" expects a value');
   });
 
+  test('a following option is not consumed as a value', () => {
+    expect(() => parseArgs(['--host', '--no-spa'], serveOptions)).toThrow('option "--host" expects a value');
+    expect(() => parseArgs(['--port', '--no-spa'], serveOptions)).toThrow('option "--port" expects a value');
+  });
+
   test('a boolean option given a value names the option', () => {
     expect(() => parseArgs(['--no-spa=yes'], spaOnly)).toThrow('option "--no-spa" takes no value');
   });
@@ -56,6 +61,23 @@ describe('exo argument parsing', () => {
     const args = parseArgs(['--port', 'eighty'], portOnly);
 
     expect(() => integer(args, 'port', 4173)).toThrow('option "--port" expects a non-negative integer, got "eighty"');
+  });
+
+  test.each(['', ' ', '\t\n'])('rejects a blank integer value %j', value => {
+    for (const argv of [['--port', value], [`--port=${value}`]]) {
+      const args = parseArgs(argv, portOnly);
+
+      expect(() => integer(args, 'port', 4173)).toThrow(CliError);
+      expect(() => integer(args, 'port', 4173)).toThrow(`option "--port" expects a non-negative integer, got "${value}"`);
+    }
+  });
+
+  test.each([
+    ['0', 0],
+    ['8080', 8080],
+    [' 8080 ', 8080],
+  ])('accepts the explicit integer value %j', (value, expected) => {
+    expect(integer(parseArgs([`--port=${value}`], portOnly), 'port', 4173)).toBe(expected);
   });
 
   test('falls back when an option is absent', () => {
@@ -78,7 +100,7 @@ describe('exo command dispatch', () => {
     const { out } = captureOutput();
 
     await expect(runCli(['--help'])).resolves.toBe(0);
-    expect(out.join('\n')).toContain('assets pack <file>');
+    expect(out.join('\n')).toContain('assets pack <pack-description>');
   });
 
   test('--version prints this package version', async () => {

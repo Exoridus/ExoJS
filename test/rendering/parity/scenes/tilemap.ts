@@ -10,7 +10,7 @@
  * a half-texel offset shows up as visible seams between tiles.
  */
 
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codexo/exojs/tilemap';
 
 import { Container } from '#rendering/Container';
 

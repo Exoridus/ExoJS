@@ -33,7 +33,9 @@ export interface Verdict {
   readonly side: VerdictSide;
   /** `exojs / competitor` - below 1 means ExoJS took less time. */
   readonly ratio: number;
-  /** How many times faster the leading arm is; `1` when neither leads. */
+  /** How many times faster the leading arm is; `1` inside the noise band and
+   * `NaN` when no quantitative factor is published (not comparable, or unstable
+   * across runs). */
   readonly factor: number;
   /** The ladder's word for this outcome, ready to print. */
   readonly label: string;
@@ -76,7 +78,13 @@ export const compareMedians = (exojsMs: number, competitorMs: number): Verdict =
  * Two runs of one cell never produce the same ratio, so agreement between runs
  * can only be asked of the rung. This is the unit an aggregation compares.
  */
-export type VerdictRung = 'not-comparable' | 'level' | 'exojs-leads' | 'exojs-leads-clearly' | 'competitor-leads' | 'competitor-leads-clearly';
+export type VerdictRung =
+  | 'not-comparable'
+  | 'level'
+  | 'exojs-leads'
+  | 'exojs-leads-clearly'
+  | 'competitor-leads'
+  | 'competitor-leads-clearly';
 
 /** The rung `verdict` sits on. */
 export const verdictRung = (verdict: Verdict): VerdictRung => {
@@ -101,4 +109,10 @@ export const verdictRung = (verdict: Verdict): VerdictRung => {
  * range - the disagreement is a finding about the measurement, not a row to
  * hide.
  */
-export const UNSTABLE_VERDICT: Verdict = { side: 'neither', ratio: Number.NaN, factor: Number.NaN, label: 'unstable across runs', structural: false };
+export const UNSTABLE_VERDICT: Verdict = {
+  side: 'neither',
+  ratio: Number.NaN,
+  factor: Number.NaN,
+  label: 'unstable across runs',
+  structural: false,
+};

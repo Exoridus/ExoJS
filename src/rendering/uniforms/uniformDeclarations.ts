@@ -9,8 +9,8 @@
  * `default` a fresh instance starts from.
  */
 
-import type { Color } from '#core/Color';
-import type { Matrix } from '#math/Matrix';
+import { Color } from '#core/Color';
+import { Matrix } from '#math/Matrix';
 import type { PointLike } from '#math/PointLike';
 import type { Vector } from '#math/Vector';
 
@@ -45,8 +45,8 @@ export interface UniformFieldOptions<T extends UniformFieldType = UniformFieldTy
   readonly type: T;
   /**
    * Value a fresh instance starts from. Omitted fields start at zero, matrices
-   * included. The declaration keeps a copy: mutating the value afterwards does
-   * not reach an instance built from it.
+   * included. The value is snapshotted when the layout is built; later mutations
+   * of the original do not affect an instance constructed afterwards.
    */
   readonly default?: UniformInput<T>;
 }
@@ -100,17 +100,41 @@ const identifierPattern = /^[A-Za-z_][A-Za-z0-9_]*$/;
  * Field names that would shadow a member of the accessor a struct or block
  * hands out, making `uniforms.thing.set(...)` mean two different things.
  */
-const reservedFieldNames = new Set<string>(['set', 'setPacked', 'commit', 'at', 'length', 'uniforms', 'revision']);
+const reservedFieldNames = new Set<string>([
+  'set',
+  'setPacked',
+  'commit',
+  'at',
+  'length',
+  'uniforms',
+  'revision',
+  'constructor',
+  '_sink',
+  '_path',
+  '_members',
+  '_write',
+]);
+
+/** @internal */
+export const validateUniformBlockKey = (key: string): void => {
+  if (!identifierPattern.test(key) || key.startsWith('gl_') || key.includes('__')) {
+    throw new Error(`Shader \`uniformBlocks.${key}\` is not a valid shader identifier (no leading digit, no \`gl_\` prefix, no \`__\`).`);
+  }
+};
 
 /** @internal */
 export const validateUniformFields = (fields: UniformFields, path: string): void => {
   for (const name of Object.keys(fields)) {
     if (!identifierPattern.test(name) || name.startsWith('gl_') || name.includes('__')) {
-      throw new Error(`Uniform field \`${path}${name}\` is not a valid shader identifier (no leading digit, no \`gl_\` prefix, no \`__\`).`);
+      throw new Error(
+        `Uniform field \`${path}${name}\` is not a valid shader identifier (no leading digit, no \`gl_\` prefix, no \`__\`).`,
+      );
     }
 
     if (reservedFieldNames.has(name)) {
-      throw new Error(`Uniform field \`${path}${name}\` uses a name reserved by the uniform accessor API (${[...reservedFieldNames].join(', ')}).`);
+      throw new Error(
+        `Uniform field \`${path}${name}\` uses a name reserved by the uniform accessor API (${[...reservedFieldNames].join(', ')}).`,
+      );
     }
   }
 
@@ -190,11 +214,52 @@ export class UniformBlock<F extends UniformFields = UniformFields> {
 
 /** The declaration entry's field type, at runtime. @internal */
 export const uniformFieldTypeOf = (declaration: UniformFieldDeclaration): UniformFieldType =>
-  typeof declaration === 'string' || declaration instanceof UniformStruct || declaration instanceof UniformArray ? declaration : declaration.type;
+  typeof declaration === 'string' || declaration instanceof UniformStruct || declaration instanceof UniformArray
+    ? declaration
+    : declaration.type;
 
 /** The declaration entry's default value, or `undefined`. @internal */
 export const uniformFieldDefaultOf = (declaration: UniformFieldDeclaration): unknown =>
-  typeof declaration === 'string' || declaration instanceof UniformStruct || declaration instanceof UniformArray ? undefined : declaration.default;
+  typeof declaration === 'string' || declaration instanceof UniformStruct || declaration instanceof UniformArray
+    ? undefined
+    : declaration.default;
+
+const snapshotUniformDefault = (value: unknown, type?: UniformFieldType): unknown => {
+  if (value instanceof Color) {
+    return [...value.toArray(true)];
+  }
+
+  if (value instanceof Matrix) {
+    return [...value.toArray()];
+  }
+
+  if (type === UniformType.Vec2 && value !== null && typeof value === 'object' && 'x' in value && 'y' in value) {
+    return [value.x, value.y];
+  }
+
+  if (value instanceof Float32Array) {
+    return [...value];
+  }
+
+  if (Array.isArray(value)) {
+    const element = type instanceof UniformArray ? type.element : undefined;
+
+    return value.map(nested => snapshotUniformDefault(nested, element));
+  }
+
+  if (value !== null && typeof value === 'object') {
+    const fields = type instanceof UniformStruct ? type.fields : null;
+
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => [
+        key,
+        snapshotUniformDefault(nested, fields?.[key] === undefined ? undefined : uniformFieldTypeOf(fields[key])),
+      ]),
+    );
+  }
+
+  return value;
+};
 
 /**
  * The declared defaults of `fields` as one nested value record, or `null` when
@@ -215,7 +280,7 @@ export const collectUniformDefaults = (fields: UniformFields): Record<string, un
     const declared = uniformFieldDefaultOf(declaration);
 
     if (declared !== undefined) {
-      defaults[name] = declared;
+      defaults[name] = snapshotUniformDefault(declared, uniformFieldTypeOf(declaration));
       any = true;
       continue;
     }
@@ -237,7 +302,7 @@ export const collectUniformDefaults = (fields: UniformFields): Record<string, un
       const nested = collectUniformDefaults(fieldType.element.fields);
 
       if (nested !== null) {
-        defaults[name] = Array.from({ length: fieldType.length }, () => nested);
+        defaults[name] = Array.from({ length: fieldType.length }, () => snapshotUniformDefault(nested));
         any = true;
       }
     }

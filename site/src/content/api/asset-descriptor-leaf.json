@@ -1,0 +1,299 @@
+{
+  "title": "AssetDescriptorLeaf",
+  "description": "The branded catalog leaf a descriptor materializes as, or `never` for a type without one.",
+  "symbol": "AssetDescriptorLeaf",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The branded catalog leaf a descriptor materializes as, or `never` for a type without one."
+      ],
+      "importLine": "import { AssetDescriptorLeaf } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AssetDescriptorLeaf",
+          "signature": "AssetDescriptorLeafPolicy<D> extends \"ref\" ? CatalogValueLeaf<AssetDescriptorResource<D>> : AssetDescriptorLeafPolicy<D> extends \"resource\" ? CatalogResourceLeaf<AssetDescriptorResource<D>> : AssetDescriptorLeafPolicy<D> extends \"none\" ? never : CatalogResourceLeaf<AssetDescriptorResource<D>> | CatalogValueLeaf<AssetDescriptorResource<D>>",
+          "signatureTokens": [
+            {
+              "text": "AssetDescriptorLeafPolicy",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ref\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CatalogValueLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptorResource",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptorLeafPolicy",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"resource\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CatalogResourceLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptorResource",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptorLeafPolicy",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"none\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CatalogResourceLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptorResource",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CatalogValueLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDescriptorResource",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "D",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetDescriptor.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetDescriptor.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetDescriptor.ts"
+}

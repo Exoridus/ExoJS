@@ -50,7 +50,9 @@ describe('WebGPU renders sprites backed by a DataTexture', () => {
     root.addChild(sprite);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       expect(pixelAt(readWebGpuFrame(backend, SIZE), 16, 16)).toEqual([255, 0, 0, 255]);
     } finally {
@@ -68,7 +70,9 @@ describe('WebGPU renders sprites backed by a DataTexture', () => {
     root.addChild(sprite);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       expect(pixelAt(readWebGpuFrame(backend, SIZE), 24, 24)).toEqual([255, 0, 0, 255]);
     } finally {
@@ -86,7 +90,9 @@ describe('WebGPU renders sprites backed by a DataTexture', () => {
     root.addChild(sprite);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       expect(pixelAt(readWebGpuFrame(backend, SIZE), 24, 24)).toEqual([255, 0, 0, 255]);
     } finally {

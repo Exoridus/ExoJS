@@ -1,6 +1,6 @@
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -45,7 +45,8 @@ const REJECTED: Readonly<Record<string, string>> = {
   'recounted-request': '// In this session the user requested the retained path.',
   'recounted-decision': '// This session decided to keep the flag.',
   'back-reference': '// As discussed in this session, use the retained path.',
-  'conversation-one-sentence-later': '/**\n * This session owns the transition state.\n *\n * The behaviour was requested rather than measured.\n */',
+  'conversation-one-sentence-later':
+    '/**\n * This session owns the transition state.\n *\n * The behaviour was requested rather than measured.\n */',
 };
 
 /** A string literal is not a comment, however much it reads like one. */
@@ -69,7 +70,7 @@ beforeAll(() => {
   files.push(`${FIXTURE_DIRECTORY}/string-literal.ts`);
 
   try {
-    report = execFileSync('node', [join('node_modules', 'tsx', 'dist', 'cli.mjs'), SCANNER, ...files], {
+    report = execFileSync(process.execPath, ['--import', 'tsx', SCANNER, ...files], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -87,9 +88,7 @@ afterAll(() => {
 });
 
 /** Every reported line for one fixture, so an assertion names the case it failed on. */
-const findingsFor = (name: string): string[] => {
-  return report.split('\n').filter(line => line.includes(`${FIXTURE_DIRECTORY}/${name}.ts:`));
-};
+const findingsFor = (name: string): string[] => report.split('\n').filter(line => line.includes(`${FIXTURE_DIRECTORY}/${name}.ts:`));
 
 describe('source hygiene: session vocabulary', () => {
   it('scans the fixtures at all', () => {
@@ -111,5 +110,69 @@ describe('source hygiene: session vocabulary', () => {
 
   it('fails the gate when any fixture is provenance', () => {
     expect(status).not.toBe(0);
+  });
+});
+
+describe('source hygiene: validation base', () => {
+  it.each(['next', 'stack/parent'])('scopes changed lines to the PR target %s', target => {
+    const scratch = resolve(REPO_ROOT, '.workspace');
+    mkdirSync(scratch, { recursive: true });
+
+    const cwd = mkdtempSync(resolve(scratch, 'source-hygiene-'));
+    const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_')));
+    const git = (...args: string[]): string =>
+      execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', ...args], {
+        cwd,
+        env,
+        encoding: 'utf8',
+      }).trim();
+
+    const commit = (file: string, content: string): void => {
+      writeFileSync(resolve(cwd, 'src', file), content);
+      git('add', 'src');
+      git('commit', '-qm', file);
+    };
+
+    const scan = (base: string) =>
+      spawnSync(process.execPath, ['--import', 'tsx', SCANNER], {
+        cwd,
+        env: { ...env, EXOJS_SOURCE_HYGIENE_BASE: base },
+        encoding: 'utf8',
+      });
+
+    try {
+      mkdirSync(resolve(cwd, 'scripts'));
+      mkdirSync(resolve(cwd, 'src'));
+      copyFileSync(resolve(REPO_ROOT, SCANNER), resolve(cwd, SCANNER));
+      git('init', '-q');
+      commit('main.ts', 'export const main = 1;\n');
+      git('update-ref', 'refs/remotes/origin/main', 'HEAD');
+      git('symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/main');
+      commit('next.ts', '// PR #832\nexport const next = 1;\n');
+      git('update-ref', 'refs/remotes/origin/next', 'HEAD');
+
+      if (target === 'stack/parent') {
+        commit('parent.ts', '// PR #846\nexport const parent = 1;\n');
+        git('update-ref', 'refs/remotes/origin/stack/parent', 'HEAD');
+      }
+
+      const base = git('rev-parse', `refs/remotes/origin/${target}`);
+
+      commit('child.ts', 'export const child = 1;\n');
+      const clean = scan(base);
+      expect(clean.stdout + clean.stderr).toContain('scanned 1 source file(s)');
+      expect(clean.status).toBe(0);
+
+      writeFileSync(resolve(cwd, 'src/child.ts'), '// PR #999\nexport const child = 1;\n');
+      const dirty = scan(base);
+      expect(dirty.stdout + dirty.stderr).toContain('src/child.ts:1: issue-reference: PR #999');
+      expect(dirty.status).toBe(1);
+
+      const invalid = scan('--not-a-base');
+      expect(invalid.stdout + invalid.stderr).toContain('cannot resolve base');
+      expect(invalid.status).toBe(1);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
   });
 });

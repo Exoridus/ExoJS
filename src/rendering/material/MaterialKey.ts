@@ -89,6 +89,10 @@ export const derivePipelineKey = (shaderId: number, blendMode: BlendModes, write
   return intern(pipelineKeyRegistry, descriptor, () => nextPipelineKey++);
 };
 
+/** @internal */
+export const deriveCapturePipelineKey = (sourcePipelineKey: number): number =>
+  intern(pipelineKeyRegistry, `capture|${sourcePipelineKey}`, () => nextPipelineKey++);
+
 /**
  * Bind key from material identity and the identities of every bound
  * texture, whether declared in the `textures` map or carried as a
@@ -130,9 +134,11 @@ export const deriveBindKey = (
  * Stable material identity used for safe draw-command grouping and
  * eventual instanced batching.
  *
- * - {@link pipelineKey} drives pipeline/program reuse: identical key ⇒
- *   identical GPU pipeline state (shader + blend). Two draws
- *   with the same pipeline key can be issued with a single pipeline bind.
+ * - {@link pipelineKey} drives pipeline/program reuse for the material's own
+ *   shader and blend state. A drawable-level `blendMode` override is not part
+ *   of the key: it is a renderer-owned flush boundary recorded in
+ *   {@link MaterialKey.blendMode}, so two keys sharing a pipelineKey can still
+ *   need separate pipeline binds.
  * - {@link bindKey} drives texture/sampler-bind reuse: identical key ⇒
  *   identical bindings. Two draws with the same bind key can share a bind
  *   group / texture-slot state.
@@ -190,7 +196,12 @@ export const forcesBatchFlush = (prev: MaterialKey, next: MaterialKey): boolean 
  *
  * @internal
  */
-export const materialKeyForcesFlush = (prevPipelineKey: number, prevBindKey: number, prevOwnMaterial: boolean, next: MaterialKey): boolean =>
+export const materialKeyForcesFlush = (
+  prevPipelineKey: number,
+  prevBindKey: number,
+  prevOwnMaterial: boolean,
+  next: MaterialKey,
+): boolean =>
   prevPipelineKey !== next.pipelineKey || prevOwnMaterial !== next.ownMaterial || (next.ownMaterial && prevBindKey !== next.bindKey);
 
 interface TextureCarrier {
@@ -323,16 +334,17 @@ export const createEmptyMaterialKey = (): MaterialKey => ({
  */
 export const writeMaterialKeyInto = (target: MaterialKey, drawable: Drawable, backend: RenderBackend | null): MaterialKey => {
   const rendererId = getRendererId(drawable, backend);
-  const blendMode = drawable.blendMode;
   const textureId = getDrawableTextureId(drawable);
   const shaderId = getShaderId(drawable);
   const material = getMaterial(drawable);
+  const blendMode = material !== null && drawable.blendMode === BlendModes.Normal ? material.blendMode : drawable.blendMode;
 
   target.rendererId = rendererId;
   target.blendMode = blendMode;
   target.textureId = textureId;
   target.shaderId = shaderId;
   target.pipelineKey = material !== null ? material.pipelineKey : rendererId * 31 + blendMode;
+
   target.bindKey = material !== null ? material.bindKey : rendererId * 31 + Math.max(textureId, 0);
   target.ownMaterial = material !== null;
 

@@ -4,7 +4,7 @@
   "symbol": "ObjectLayerOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 15,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for an ObjectLayer."
       ],
-      "importLine": "import { ObjectLayerOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ObjectLayerOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

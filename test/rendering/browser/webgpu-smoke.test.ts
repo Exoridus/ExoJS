@@ -14,21 +14,27 @@ vi.mock('#rendering/RendererRegistry', () => ({
     registerRenderer() {
       return this;
     }
+
     connect() {
       return this;
     }
+
     disconnect() {
       return this;
     }
+
     destroy() {
       return this;
     }
+
     render() {
       return this;
     }
+
     resolve() {
       return { connect: () => {}, render: () => {}, flush: () => {}, disconnect: () => {} };
     }
+
     renderers() {
       return [][Symbol.iterator]();
     }

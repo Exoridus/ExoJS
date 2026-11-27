@@ -13,15 +13,16 @@ vi.mock('@codexo/exojs', async importActual => {
   const actual = await importActual<typeof import('@codexo/exojs')>();
   const { MockApplication: MockApp, configureApplicationState } = await import('./support/mock-application');
   configureApplicationState(actual.ApplicationState);
+
   return { ...actual, Application: MockApp };
 });
 
 /** Overlay child that proves the surrounding ExoCanvas context carries the app. */
-function Hud(): ReactElement {
+const Hud = (): ReactElement => {
   const app = useExoApp();
 
   return <div data-testid="hud">{app === (MockApplication.instances[0] as unknown as Application) ? 'has-app' : 'wrong-app'}</div>;
-}
+};
 
 beforeEach(() => {
   MockApplication.reset();
@@ -58,7 +59,11 @@ describe('<ExoCanvas>', () => {
       // index signature for `data-*` keys, so the literal needs a cast to prove
       // the runtime forwarding this test asserts.
       <ExoCanvas
-        canvasProps={{ className: 'pixelated', 'data-role': 'surface', style: { imageRendering: 'pixelated' } } as NonNullable<ExoCanvasProps['canvasProps']>}
+        canvasProps={
+          { className: 'pixelated', 'data-role': 'surface', style: { imageRendering: 'pixelated' } } as NonNullable<
+            ExoCanvasProps['canvasProps']
+          >
+        }
       />,
     );
 

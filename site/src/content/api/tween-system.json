@@ -113,7 +113,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Take ownership of a stand-alone Tween (created via new Tween(target), or previously bound to a different system) so it participates in this update loop: from here on, Tween.start enters it and completion or Tween.stop evicts it again. Binding and entering are two separate steps. A tween that is already running or paused is live - nothing will call start() on it again to enter it - so it goes into the update list right away. An idle, completed or stopped tween is bound only: retaining it would pin it, and through it its target, in this system for the lifetime of the application while the update loop has nothing to do with it."
+          "description": "Take ownership of a stand-alone Tween (created via new Tween(target), or previously bound to a different system) so it participates in this update loop: from here on, Tween.start enters it and completion or Tween.stop evicts it again. The previous system immediately stops retaining and advancing the transferred tween. Binding and entering are two separate steps. A tween that is already running or paused is live - nothing will call start() on it again to enter it - so it goes into the update list right away. An idle, completed or stopped tween is bound only: retaining it would pin it, and through it its target, in this system for the lifetime of the application while the update loop has nothing to do with it."
         },
         {
           "name": "addTicker",

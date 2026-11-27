@@ -5,9 +5,10 @@ class WaveFilterScene extends Scene {
   private sprite = new Sprite(Texture.empty);
 
   // #region guide:wave-filter
-  private waveFilter = new ShaderFilter({
-    glsl: {
-      fragment: `
+  private waveFilter = this.track(
+    new ShaderFilter({
+      glsl: {
+        fragment: `
         #version 300 es
         precision mediump float;
         uniform sampler2D uTexture;
@@ -21,8 +22,8 @@ class WaveFilterScene extends Scene {
             fragColor = texture(uTexture, uv);
         }
       `,
-    },
-    wgsl: `
+      },
+      wgsl: `
       struct Uniforms { uTime: f32 };
 
       @group(0) @binding(1) var uTexture: texture_2d<f32>;
@@ -36,8 +37,9 @@ class WaveFilterScene extends Scene {
           return textureSample(uTexture, uSampler, uv);
       }
     `,
-    uniforms: { uTime: 0 },
-  });
+      uniforms: { uTime: 0 },
+    }),
+  );
 
   override init(): void {
     this.sprite.filters = [this.waveFilter];

@@ -29,7 +29,9 @@ export const devGatedPureFuncs = (): string[] => {
     const [, declared, assigned, body] = match;
     const name = declared ?? assigned;
 
-    if (name !== undefined && DEV_GATED_BODY.test(body!)) names.push(name);
+    if (name !== undefined && DEV_GATED_BODY.test(body!)) {
+      names.push(name);
+    }
   }
 
   return names;

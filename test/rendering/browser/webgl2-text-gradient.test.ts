@@ -99,7 +99,9 @@ const rowRedShares = (frame: Uint8Array): ReadonlyArray<{ y: number; share: numb
       }
     }
 
-    if (bestTotal >= 160) rows.push({ y, share: bestShare });
+    if (bestTotal >= 160) {
+      rows.push({ y, share: bestShare });
+    }
   }
 
   return rows;

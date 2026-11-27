@@ -104,7 +104,8 @@ const createSolidTexture = (color: string, size = 8): Texture => {
   return new Texture(source);
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a frame through the real plan path inside a validation error scope.
 // Returns false when the device dropped mid-test (the caller should bail).
@@ -154,8 +155,13 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
     root.addChild(group);
 
     try {
-      if (!(await renderScene(ctx, backend, root))) return; // F1 dirty collect + capture
-      if (!(await renderScene(ctx, backend, root))) return; // F2 entry replay + record
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      } // F1 dirty collect + capture
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      } // F2 entry replay + record
 
       let readPixel = readWebGpuPixels(backend, canvasSize);
 
@@ -164,7 +170,9 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
 
       const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
-      if (!(await renderScene(ctx, backend, root))) return; // F3 instruction splice
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      } // F3 instruction splice
 
       expect(replaySpy).toHaveBeenCalled();
       readPixel = readWebGpuPixels(backend, canvasSize);
@@ -195,13 +203,23 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
     root.addChild(group);
 
     try {
-      if (!(await renderScene(ctx, backend, root))) return; // F1 capture
-      if (!(await renderScene(ctx, backend, root))) return; // F2 record
-      if (!(await renderScene(ctx, backend, root))) return; // F3 splice — fast tier
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      } // F1 capture
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      } // F2 record
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      } // F3 splice — fast tier
 
       let replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
-      if (!(await renderScene(ctx, backend, root))) return; // steady replay before mutation
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      } // steady replay before mutation
 
       expect(replaySpy).toHaveBeenCalled();
       let readPixel = readWebGpuPixels(backend, canvasSize);
@@ -217,13 +235,23 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
       // replay the OLD (pre-swap) cached bytes.
       repeating.setOffset(8, 0);
 
-      if (!(await renderScene(ctx, backend, root))) return; // dirty collect (content revision changed)
-      if (!(await renderScene(ctx, backend, root))) return; // recapture with the new bytes
-      if (!(await renderScene(ctx, backend, root))) return; // splice of the fresh recording
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      } // dirty collect (content revision changed)
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      } // recapture with the new bytes
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      } // splice of the fresh recording
 
       replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
-      if (!(await renderScene(ctx, backend, root))) return; // steady replay AFTER the mutation
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      } // steady replay AFTER the mutation
 
       expect(replaySpy).toHaveBeenCalled(); // still on the fast tier — recaptured, not abandoned
       readPixel = readWebGpuPixels(backend, canvasSize);
@@ -263,7 +291,9 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
       // geometry path here), so the group must stay correct via
       // the (poisoned, permanently-entry-replay) live path the whole time.
       for (let i = 0; i < 4; i++) {
-        if (!(await renderScene(ctx, backend, root))) return;
+        if (!(await renderScene(ctx, backend, root))) {
+          return;
+        }
       }
 
       let readPixel = readWebGpuPixels(backend, canvasSize);
@@ -274,7 +304,9 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
       repeating.setOffset(8, 0);
 
       for (let i = 0; i < 4; i++) {
-        if (!(await renderScene(ctx, backend, root))) return;
+        if (!(await renderScene(ctx, backend, root))) {
+          return;
+        }
       }
 
       readPixel = readWebGpuPixels(backend, canvasSize);

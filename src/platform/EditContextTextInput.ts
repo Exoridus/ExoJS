@@ -32,12 +32,12 @@ interface EditContextLike {
   addEventListener(type: 'textupdate', listener: (event: TextUpdateEvent) => void): void;
   addEventListener(type: 'characterboundsupdate', listener: (event: CharacterBoundsEvent) => void): void;
   addEventListener(type: 'compositionstart', listener: (event: never) => void): void;
-  addEventListener(type: 'compositionend', listener: (event: { text?: string }) => void): void;
+  addEventListener(type: 'compositionend', listener: (event: CompositionEvent) => void): void;
   addEventListener(type: string, listener: (event: unknown) => void): void;
   removeEventListener(type: 'textupdate', listener: (event: TextUpdateEvent) => void): void;
   removeEventListener(type: 'characterboundsupdate', listener: (event: CharacterBoundsEvent) => void): void;
   removeEventListener(type: 'compositionstart', listener: (event: never) => void): void;
-  removeEventListener(type: 'compositionend', listener: (event: { text?: string }) => void): void;
+  removeEventListener(type: 'compositionend', listener: (event: CompositionEvent) => void): void;
   removeEventListener(type: string, listener: (event: unknown) => void): void;
 }
 
@@ -54,8 +54,9 @@ interface EditContextGlobal {
   EditContext?: EditContextConstructor;
 }
 
-/** True when `EditContext` is available on this platform. */
-export const editContextSupported = (): boolean => (globalThis as EditContextGlobal).EditContext !== undefined;
+/** True when `EditContext` is available in the requested host realm. */
+export const editContextSupported = (realm: Window | typeof globalThis | null = globalThis): boolean =>
+  (realm as EditContextGlobal | null)?.EditContext !== undefined;
 
 /**
  * The `EditContext` implementation of {@link PlatformTextInput}: the canvas-native
@@ -64,17 +65,19 @@ export const editContextSupported = (): boolean => (globalThis as EditContextGlo
  *
  * `EditContext` lacks `beforeinput`'s semantic `inputType`: a `textupdate`
  * carries only the old range, the new text and the new selection. So the
- * backend diffs the mirrored buffer against the update and forwards the
- * smallest intent the model can apply. Word and line deletion are therefore
- * driven from the widget's key handler (which knows the granularity), leaving
- * this backend with character-level `textupdate`s for plain deletes. Inserts,
- * paste, cut and IME composition all arrive here as `textupdate`/`composition*`
- * and are forwarded unchanged.
+ * backend forwards the authoritative UTF-16 replacement range. Caret and
+ * selection navigation are owned by the widget: it synchronizes them before
+ * the browser computes an edit, clipboard selection or composition start.
+ * Clipboard and composition events retain their native paths.
  */
 export class EditContextTextInput implements PlatformTextInput {
+  /** @internal */
+  public readonly _synchronousKeyboard = true;
+
   private readonly _context: EditContextLike;
   private readonly _element: HTMLDivElement;
   private readonly _canvas: HTMLCanvasElement;
+  private readonly _window: Window & typeof globalThis;
   private readonly _onEdit = new Signal<[TextEditIntent]>();
   private readonly _onComposition = new Signal<[CompositionState]>();
 
@@ -115,9 +118,11 @@ export class EditContextTextInput implements PlatformTextInput {
     const inserted = event.text.length;
 
     if (inserted > 0) {
-      // Insert or replace: the widget applies it over its own selection, which
-      // mirrors the range the platform replaced, so a plain `insert` is exact.
-      this._onEdit.dispatch({ kind: 'insert', text: event.text });
+      this._onEdit.dispatch({
+        kind: 'insert',
+        text: event.text,
+        range: { start: event.updateRangeStart, end: event.updateRangeEnd },
+      });
 
       return;
     }
@@ -126,11 +131,16 @@ export class EditContextTextInput implements PlatformTextInput {
       // Pure deletion. A platform collapses the selection to the START of the
       // range it removed, so the post-update selection cannot say which side
       // of the caret that range sat on - only the caret before the update can.
-      // Granularity is always character: word and line deletes are intercepted
-      // by the widget key handler before they reach here.
+      // The explicit range also covers word and selection deletes requested
+      // by native editing services without a physical keyboard command.
       const direction = event.updateRangeEnd === this._selectionEnd ? 'backward' : 'forward';
 
-      this._onEdit.dispatch({ kind: 'deleteContent', direction, granularity: 'character' });
+      this._onEdit.dispatch({
+        kind: 'deleteContent',
+        direction,
+        granularity: 'character',
+        range: { start: event.updateRangeStart, end: event.updateRangeEnd },
+      });
 
       return;
     }
@@ -146,9 +156,9 @@ export class EditContextTextInput implements PlatformTextInput {
     this._onComposition.dispatch({ phase: 'start' });
   };
 
-  private readonly _compositionEnd = (event: { text?: string }): void => {
+  private readonly _compositionEnd = (event: CompositionEvent): void => {
     this._composing = false;
-    this._onComposition.dispatch({ phase: 'end', text: event.text ?? '' });
+    this._onComposition.dispatch({ phase: 'end', text: event.data });
   };
 
   private readonly _characterBoundsUpdate = (event: { rangeStart: number; rangeEnd: number }): void => {
@@ -163,7 +173,8 @@ export class EditContextTextInput implements PlatformTextInput {
       return;
     }
 
-    const dom = new DOMRect(rect.x, rect.y, rect.width, rect.height);
+    const canvasRect = this._canvas.getBoundingClientRect();
+    const dom = new this._window.DOMRect(canvasRect.left + rect.x, canvasRect.top + rect.y, rect.width, rect.height);
     const bounds: DOMRect[] = [];
 
     for (let offset = event.rangeStart; offset < event.rangeEnd; offset++) {
@@ -195,7 +206,12 @@ export class EditContextTextInput implements PlatformTextInput {
     event.clipboardData?.setData('text/plain', selected);
 
     if (event.type === 'cut') {
-      this._onEdit.dispatch({ kind: 'deleteContent', direction: 'backward', granularity: 'character' });
+      this._onEdit.dispatch({
+        kind: 'deleteContent',
+        direction: 'backward',
+        granularity: 'character',
+        range: { start: this._context.selectionStart, end: this._context.selectionEnd },
+      });
     }
   };
 
@@ -211,25 +227,33 @@ export class EditContextTextInput implements PlatformTextInput {
     const text = event.clipboardData?.getData('text/plain') ?? '';
 
     if (text !== '') {
-      this._onEdit.dispatch({ kind: 'insert', text });
+      this._onEdit.dispatch({
+        kind: 'insert',
+        text,
+        source: 'paste',
+        range: { start: this._context.selectionStart, end: this._context.selectionEnd },
+      });
     }
   };
 
   public constructor(canvas: HTMLCanvasElement) {
     this._canvas = canvas;
 
-    const Ctor = (globalThis as EditContextGlobal).EditContext;
+    const view = canvas.ownerDocument.defaultView;
+    const Ctor = (view as EditContextGlobal | null)?.EditContext;
 
-    if (Ctor === undefined) {
+    if (view === null || Ctor === undefined) {
       throw new Error('EditContextTextInput requires the EditContext API');
     }
+
+    this._window = view;
 
     // A plain element, never a `<textarea>` or `<input>`: a host refuses to
     // attach an `EditContext` to a natively editable element, which is the
     // whole point of the API - the context replaces the element's editing
     // behaviour rather than riding on top of it. `tabindex` is what makes it
     // focusable at all.
-    const element = document.createElement('div');
+    const element = canvas.ownerDocument.createElement('div');
 
     element.spellcheck = false;
     element.tabIndex = -1;
@@ -252,7 +276,7 @@ export class EditContextTextInput implements PlatformTextInput {
     style.zIndex = '-1';
 
     this._element = element;
-    document.body.append(element);
+    canvas.ownerDocument.body.append(element);
 
     const context = new Ctor({});
 
@@ -278,7 +302,7 @@ export class EditContextTextInput implements PlatformTextInput {
 
   /** Whether host keyboard focus currently sits on this transport. */
   public get hostFocused(): boolean {
-    return this._claimingFocus || (typeof document !== 'undefined' && document.activeElement === this._element);
+    return this._claimingFocus || this._element.ownerDocument.activeElement === this._element;
   }
 
   /** Whether {@link EditContextTextInput.destroy} has already run. */
@@ -305,7 +329,7 @@ export class EditContextTextInput implements PlatformTextInput {
   }
 
   public blur(): void {
-    if (typeof document !== 'undefined' && document.activeElement === this._element) {
+    if (this._element.ownerDocument.activeElement === this._element) {
       // Hand host focus back to the surface it was borrowed from instead of
       // dropping it on the document: keyboard input would otherwise stop
       // reaching the application until the next press on the surface.
@@ -332,19 +356,20 @@ export class EditContextTextInput implements PlatformTextInput {
 
   public setCaretRect(rect: Rectangle): void {
     this._caretRect = rect.clone();
-    this._context.updateSelectionBounds(new DOMRect(rect.x, rect.y, rect.width, rect.height));
+    const canvasRect = this._canvas.getBoundingClientRect();
+    this._context.updateSelectionBounds(
+      new this._window.DOMRect(canvasRect.left + rect.x, canvasRect.top + rect.y, rect.width, rect.height),
+    );
   }
 
   public setHints(hints: PlatformTextInputHints): void {
     this._hints = hints;
 
-    if (hints.inputMode !== undefined) {
-      this._context.inputMode = hints.inputMode;
-    }
-
-    if (hints.enterKeyHint !== undefined) {
-      this._context.enterKeyHint = hints.enterKeyHint;
-    }
+    // The widget rebuilds this snapshot each time and omits unset members, so
+    // a missing hint has to clear the host property; leaving the previous value
+    // in place would keep the old keyboard and confirm key.
+    this._context.inputMode = hints.inputMode ?? '';
+    this._context.enterKeyHint = hints.enterKeyHint ?? '';
   }
 
   public destroy(): void {
@@ -367,18 +392,20 @@ export class EditContextTextInput implements PlatformTextInput {
   }
 
   private _applyBounds(): void {
-    if (this._bounds === null || typeof document === 'undefined') {
+    if (this._bounds === null) {
       return;
     }
 
     const canvasRect = this._canvas.getBoundingClientRect();
 
-    this._element.style.left = `${canvasRect.left + this._bounds.x}px`;
-    this._element.style.top = `${canvasRect.top + this._bounds.y}px`;
+    const view = this._element.ownerDocument.defaultView;
+
+    this._element.style.left = `${canvasRect.left + this._bounds.x + (view?.scrollX ?? 0)}px`;
+    this._element.style.top = `${canvasRect.top + this._bounds.y + (view?.scrollY ?? 0)}px`;
     this._element.style.width = `${Math.max(1, this._bounds.width)}px`;
     this._element.style.height = `${Math.max(1, this._bounds.height)}px`;
 
-    const dom = new DOMRect(
+    const dom = new this._window.DOMRect(
       canvasRect.left + this._bounds.x,
       canvasRect.top + this._bounds.y,
       Math.max(1, this._bounds.width),

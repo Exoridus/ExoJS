@@ -8,20 +8,17 @@ import { TileLayer } from '../src/TileLayer';
 import { TileSet } from '../src/TileSet';
 import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
-const fakeTexture = (): Texture => {
-  return {
+const fakeTexture = (): Texture =>
+  ({
     width: 256,
     height: 256,
     uid: 0,
     label: 'test',
     destroy: () => {},
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const fakeRegion = (): TextureRegion => {
-  return new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 256, height: 256 });
-};
+const fakeRegion = (): TextureRegion => new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 256, height: 256 });
 
 const createTestLayer = (): {
   layer: TileLayer;
@@ -44,6 +41,7 @@ const createTestLayer = (): {
     tileHeight: 16,
     tilesets: [ts],
   });
+
   return { layer, ref: { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY } };
 };
 
@@ -103,6 +101,7 @@ describe('public chunk boundary', () => {
   it('loadedChunks returns ReadonlyTileChunk elements', () => {
     const { layer, ref } = createTestLayer();
     layer.setTileAt(16, 16, ref);
+
     for (const chunk of layer.loadedChunks()) {
       expect(typeof chunk.getRawAt).toBe('function');
       expect(typeof chunk.cloneTiles).toBe('function');

@@ -36,3 +36,5 @@
 *.pdf binary
 *.ktx2 binary
 *.wasm binary
+
+examples/assets/licenses/*.txt text eol=lf

@@ -12,12 +12,15 @@ import type { PlatformAdapter } from '#platform/PlatformAdapter';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
+import { AnchoredGroupIndex } from './AnchoredGroupIndex';
 import type { ContextMenuRequest } from './ContextMenuRequest';
 import type { FocusDirection, FocusNavigationPolicy } from './FocusController';
 import { FocusController } from './FocusController';
 import { isHittable, isWithinAncestorClips, isWithinClip } from './hitTestPredicates';
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';
+import { InteractionRootBindings } from './InteractionRootBindings';
+import { bubbleInteractionEvent, isDescendantOrSelf, iterateInteractionSubtree, removeScopesInSubtree } from './interactionTree';
 import type { Pointer } from './Pointer';
 import { createScopeToken, type ScopeToken } from './ScopeToken';
 
@@ -71,6 +74,9 @@ interface InteractionJournalEntry {
   readonly pointer: Pointer;
   readonly x: number;
   readonly y: number;
+  /** Frozen button and held-button mask for this phase. */
+  readonly button: number;
+  readonly buttons: number;
   /**
    * `Up` only. `InputSystem` dispatches `onPointerUp` then, synchronously
    * and immediately after, conditionally `onPointerTap` - nothing else runs
@@ -124,26 +130,6 @@ interface IndexedNode {
   node: RenderNode;
 }
 
-/**
- * Whether `node` is `root` itself or sits anywhere beneath it. Walks up from
- * `node` rather than down from `root`: the caller already holds the deep node
- * and the chain up is bounded by the scene's depth, while a downward walk
- * would visit the whole subtree.
- */
-const isSelfOrDescendant = (node: RenderNode, root: RenderNode): boolean => {
-  let current: RenderNode | null = node;
-
-  while (current !== null) {
-    if (current === root) {
-      return true;
-    }
-
-    current = current.parent;
-  }
-
-  return false;
-};
-
 // ---------------------------------------------------------------------------
 
 /**
@@ -192,14 +178,9 @@ export class InteractionSystem {
   // would buy is negligible here - unlike the physics broad phase.
   private static readonly _treeMargin = 0;
 
-  // Interactive nodes ANCHORED to an engaged transform-group boundary
-  // (RetainedContainer): their getBounds()/contains() operate in GROUP-LOCAL
-  // space, so their world extent moves with the group without any bounds
-  // invalidation reaching them. They are deliberately kept OUT of the
-  // world-space tree (whose bounds would go stale on every group move -
-  // the camera-pan flagship case) and hit-tested by a linear scan through
-  // `_containsWorldPoint`, which reads the live group matrix.
-  private readonly _anchoredNodes = new Set<RenderNode>();
+  // Dense retained groups use an incremental anchor-local tree; sparse groups
+  // remain on the original linear path without tree allocation.
+  private readonly _anchoredIndex = new AnchoredGroupIndex();
 
   // Scratch for inverting a group's world matrix during hit-testing.
   private readonly _anchorInverse = new Matrix();
@@ -236,6 +217,7 @@ export class InteractionSystem {
 
   /** This system's service bundle, installed on a scene root via {@link attachRoot}. */
   private readonly _stage: Stage;
+  private readonly _rootBindings = new InteractionRootBindings();
 
   /**
    * UI-layer interaction hooks: mostly no-ops, so screen-fixed UI nodes are
@@ -249,7 +231,11 @@ export class InteractionSystem {
    * registration is the only part that doesn't apply here.
    */
   private readonly _uiInteraction: InteractionHooks = {
-    _notifyNodeAdded: () => this._focus._enforceActiveScopeTrap(),
+    _notifyNodeAdded: () => {
+      if (!this._rootBindings.destroyed) {
+        this._focus._enforceActiveScopeTrap();
+      }
+    },
     _notifyNodeRemoved: () => {},
     _notifyInteractiveChanged: () => {},
     _notifyBoundsInvalidated: () => {},
@@ -415,10 +401,6 @@ export class InteractionSystem {
   }
 
   /**
-   * Returns all currently captured RenderNodes (nodes that have an active
-   * drag / pointer-capture in progress). Used by debug layers.
-   */
-  /**
    * Snapshot of nodes that currently have pointer-capture (a pointer
    * pressed inside them and is being dragged). Used internally for drag
    * routing; exposed read-only for diagnostic / debug consumers.
@@ -536,7 +518,15 @@ export class InteractionSystem {
     return this._tree;
   }
 
+  /**
+   * Release listeners, pointer and focus state, the spatial index and the Stage
+   * bundles installed on scene roots. Later scene mutations cannot reactivate this system.
+   */
   public destroy(): void {
+    if (!this._rootBindings.destroy()) {
+      return;
+    }
+
     this._app.input.onPointerDown.remove(this._onPointerDownHandler);
     this._app.input.onPointerMove.remove(this._onPointerMoveHandler);
     this._app.input.onPointerUp.remove(this._onPointerUpHandler);
@@ -554,7 +544,7 @@ export class InteractionSystem {
     this._interactiveNodes.clear();
     this._staleNodes.clear();
     this._proxies.clear();
-    this._anchoredNodes.clear();
+    this._anchoredIndex.destroy();
     this._groupWorldDescendants.clear();
     this._nodeBoundaryGroup.clear();
     this._livePointers.clear();
@@ -583,38 +573,30 @@ export class InteractionSystem {
    *
    * Gated by the active scope's {@link SceneState} (only `Active` dispatches
    * - pause does not gate interaction; `Preparing`/`Suspended`/`Destroying`/
-   * `Destroyed`/no-scene do not dispatch) and by the director's transition
-   * gate - gated frames discard the pending queue rather than deferring it,
-   * so a pointer-down queued before a transition never replays once it
-   * clears. A gated frame still fails closed the same way a throwing handler
+   * `Destroyed`/no-scene do not dispatch), by the director's transition
+   * gate, and by a stop earlier in the same frame, whose scene is still
+   * registered until its teardown runs - gated frames discard the pending
+   * queue rather than deferring it, so a pointer-down queued before a
+   * transition never replays once it clears. A gated frame still fails closed the same way a throwing handler
    * does (see {@link _drainJournal}): every pointer that queued an entry this
    * flush has its drag ended, capture released, and press/hover state
    * forgotten, so a press that started right before the gate opened cannot
    * keep dragging a node with no button held once the gate lifts.
    */
   private _dispatchFrame(): void {
-    if (!this._dirty && !this._hoverDirty) return;
+    if (!this._dirty && !this._hoverDirty) {
+      return;
+    }
 
-    const state = this._app.scenes.state;
-    const gated = (state !== null && state !== SceneState.Active) || this._app.scenes._transitionGateOpen;
+    const { state, _transitionGateOpen: transitioning, _frameSceneEnded: sceneEnded } = this._app.scenes;
+    const gated = (state !== null && state !== SceneState.Active) || transitioning || sceneEnded;
     const hoverDirty = this._hoverDirty;
 
     this._dirty = false;
     this._hoverDirty = false;
 
     if (gated) {
-      const touchedIds = new Set<number>();
-
-      for (const entry of this._journal) {
-        touchedIds.add(entry.pointer.id);
-      }
-
-      this._journal.length = 0;
-
-      for (const id of touchedIds) {
-        this._teardownPointerState(id);
-      }
-
+      this._discardJournal(new Set<number>());
       this._updateCursor();
 
       return;
@@ -652,13 +634,22 @@ export class InteractionSystem {
    * drained is destroying them safe - and it must still happen if a node
    * handler threw. Keeping both halves inside this one phase is what lets the
    * pair be a single system: `order` alone could not express "B runs after A
-   * even when A throws".
+   * even when A throws". The same step closes the input frame, which is why
+   * an input listener's exception surfaces only after this frame's node-level
+   * events were dispatched instead of skipping them.
    */
   public preFrame(_delta: Seconds): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
+    let completed = false;
+
     try {
       this._dispatchFrame();
+      completed = true;
     } finally {
-      this._app.input._finishInteractionFrame();
+      this._app.input._finishInteractionFrame(completed);
     }
   }
 
@@ -674,7 +665,10 @@ export class InteractionSystem {
    * @internal
    */
   public attachRoot(root: RenderNode): void {
-    root._setStage(this._stage);
+    if (!this._rootBindings.attach(root, this._stage)) {
+      return;
+    }
+
     this._notifyNodeAdded(root);
   }
 
@@ -691,43 +685,14 @@ export class InteractionSystem {
    * @internal
    */
   public detachRoot(root: RenderNode): void {
-    this._removeScopesInSubtree(root);
+    if (!this._rootBindings.detach(root, this._stage)) {
+      return;
+    }
+
+    removeScopesInSubtree(this._scopeStack, root, this._focus);
     this._focus._notifyNodeRemoved(root);
     this._notifyNodeRemoved(root);
     root._setStage(null);
-  }
-
-  /** Whether `node` is `root` itself or lives somewhere in its subtree. */
-  private _isDescendantOrSelf(node: RenderNode, root: RenderNode): boolean {
-    let current: RenderNode | null = node;
-
-    while (current !== null) {
-      if (current === root) {
-        return true;
-      }
-
-      current = current.parent;
-    }
-
-    return false;
-  }
-
-  /**
-   * Remove only the scope entries rooted inside `root`'s own subtree from
-   * {@link _scopeStack}, popping each through {@link FocusController.popScope}
-   * so focus reacts the same way it would for an explicit `popScope` call.
-   * Shared by {@link detachRoot} (world layer) and {@link detachUIRoot} (UI
-   * layer) so both tear down scopes identically.
-   */
-  private _removeScopesInSubtree(root: RenderNode): void {
-    for (let i = this._scopeStack.length - 1; i >= 0; i--) {
-      const entry = this._scopeStack[i];
-
-      if (entry !== undefined && this._isDescendantOrSelf(entry.root, root)) {
-        this._scopeStack.splice(i, 1);
-        this._focus.popScope(entry.token);
-      }
-    }
   }
 
   /**
@@ -743,7 +708,10 @@ export class InteractionSystem {
    * @internal
    */
   public attachUIRoot(root: Container): void {
-    root._setStage(this._uiStage);
+    if (!this._rootBindings.attach(root, this._uiStage)) {
+      return;
+    }
+
     this._focus._enforceActiveScopeTrap();
   }
 
@@ -755,7 +723,11 @@ export class InteractionSystem {
    * @internal
    */
   public detachUIRoot(root: Container): void {
-    this._removeScopesInSubtree(root);
+    if (!this._rootBindings.detach(root, this._uiStage)) {
+      return;
+    }
+
+    removeScopesInSubtree(this._scopeStack, root, this._focus);
     this._focus._notifyNodeRemoved(root);
     root._setStage(null);
   }
@@ -777,7 +749,11 @@ export class InteractionSystem {
    * @internal
    */
   public _notifyNodeAdded(node: RenderNode): void {
-    for (const n of this._iterateSubtree(node)) {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
+    for (const n of iterateInteractionSubtree(node)) {
       if (n.interactive) {
         this._registerNode(n);
         this._hoverDirty = true;
@@ -796,9 +772,13 @@ export class InteractionSystem {
    * @internal
    */
   public _notifyNodeRemoved(node: RenderNode): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
     this._retireHoverInSubtree(node);
 
-    for (const n of this._iterateSubtree(node)) {
+    for (const n of iterateInteractionSubtree(node)) {
       if (this._interactiveNodes.has(n)) {
         this._unregisterNode(n);
       }
@@ -813,6 +793,10 @@ export class InteractionSystem {
    * @internal
    */
   public _notifyInteractiveChanged(node: RenderNode, becameInteractive: boolean): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
     if (becameInteractive) {
       this._registerNode(node);
       this._hoverDirty = true;
@@ -832,6 +816,10 @@ export class InteractionSystem {
    * @internal
    */
   public _notifyBoundsInvalidated(node: RenderNode): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
     if (this._interactiveNodes.has(node)) {
       this._staleNodes.add(node);
       this._hoverDirty = true;
@@ -849,6 +837,17 @@ export class InteractionSystem {
    * @internal
    */
   public _notifyTransformGroupMoved(group: RenderNode): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
+    // An outer group may move a NESTED anchor. Neither local tree needs
+    // reindexing, but a resting pointer must be re-hit-tested at the new
+    // position. Mark hover once, without scanning anchored descendants.
+    if (this._anchoredIndex.hasNodes) {
+      this._hoverDirty = true;
+    }
+
     const descendants = this._groupWorldDescendants.get(group);
 
     if (descendants === undefined) {
@@ -865,16 +864,16 @@ export class InteractionSystem {
   // Signal handlers - only enqueue flags, never hit-test
   // ---------------------------------------------------------------------------
 
-  private _handlePointerDown(pointer: Pointer, x: number, y: number): void {
-    this._enqueuePhase(pointer, InteractionPhaseKind.Down, x, y);
+  private _handlePointerDown(pointer: Pointer, x: number, y: number, button = 0, buttons = pointer.buttons): void {
+    this._enqueuePhase(pointer, InteractionPhaseKind.Down, x, y, button, buttons);
   }
 
-  private _handlePointerMove(pointer: Pointer, x: number, y: number): void {
-    this._enqueuePhase(pointer, InteractionPhaseKind.Move, x, y);
+  private _handlePointerMove(pointer: Pointer, x: number, y: number, button = -1, buttons = pointer.buttons): void {
+    this._enqueuePhase(pointer, InteractionPhaseKind.Move, x, y, button, buttons);
   }
 
-  private _handlePointerUp(pointer: Pointer, x: number, y: number): void {
-    this._enqueuePhase(pointer, InteractionPhaseKind.Up, x, y);
+  private _handlePointerUp(pointer: Pointer, x: number, y: number, button = 0, buttons = pointer.buttons): void {
+    this._enqueuePhase(pointer, InteractionPhaseKind.Up, x, y, button, buttons);
   }
 
   /**
@@ -946,7 +945,11 @@ export class InteractionSystem {
    * own entry. Matched by `pointer.id` rather than object identity - the same
    * correlation key every other per-pointer map in this class already uses.
    */
-  private _enqueuePhase(pointer: Pointer, kind: InteractionPhaseKind, x: number, y: number): void {
+  private _enqueuePhase(pointer: Pointer, kind: InteractionPhaseKind, x: number, y: number, button = -1, buttons = pointer.buttons): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
     const journal = this._journal;
 
     // Every phase, Cancel/Leave included - those are dropped again only once
@@ -957,14 +960,19 @@ export class InteractionSystem {
     const lastIndex = journal.length - 1;
     const last = journal[lastIndex];
 
-    if (kind === InteractionPhaseKind.Move && last !== undefined && last.kind === InteractionPhaseKind.Move && last.pointer.id === pointer.id) {
-      journal[lastIndex] = { kind, pointer, x, y, tap: false };
+    if (
+      kind === InteractionPhaseKind.Move &&
+      last !== undefined &&
+      last.kind === InteractionPhaseKind.Move &&
+      last.pointer.id === pointer.id
+    ) {
+      journal[lastIndex] = { kind, pointer, x, y, button, buttons, tap: false };
       this._dirty = true;
 
       return;
     }
 
-    journal.push({ kind, pointer, x, y, tap: false });
+    journal.push({ kind, pointer, x, y, button, buttons, tap: false });
     this._dirty = true;
   }
 
@@ -1030,15 +1038,7 @@ export class InteractionSystem {
       // A handler may have enqueued additional interaction entries
       // re-entrantly before throwing. Include those ids in the same failed
       // batch cleanup before discarding the journal.
-      for (const entry of this._journal) {
-        touchedIds.add(entry.pointer.id);
-      }
-
-      this._journal.length = 0;
-
-      for (const id of touchedIds) {
-        this._teardownPointerState(id);
-      }
+      this._discardJournal(touchedIds);
 
       // Keep the host cursor consistent with the now-cleared capture/hover
       // state, while preserving the original user-handler exception.
@@ -1049,6 +1049,26 @@ export class InteractionSystem {
       }
 
       throw error;
+    }
+  }
+
+  /**
+   * Fail closed: drop every queued entry and forget the drag, capture, press
+   * and hover state of each pointer in `touchedIds` or in the journal.
+   *
+   * No fallback `pointerout` is dispatched on this path. It runs after a
+   * handler failure or a gated frame, when node handlers must not run again,
+   * so the pointer's hover bookkeeping is discarded instead.
+   */
+  private _discardJournal(touchedIds: Set<number>): void {
+    for (const entry of this._journal) {
+      touchedIds.add(entry.pointer.id);
+    }
+
+    this._journal.length = 0;
+
+    for (const id of touchedIds) {
+      this._teardownPointerState(id);
     }
   }
 
@@ -1077,9 +1097,9 @@ export class InteractionSystem {
           const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
           if (hit !== null) {
-            const event = new InteractionEvent('pointerdown', hit, pointer, x, y);
+            const event = new InteractionEvent('pointerdown', hit, pointer, x, y, entry.button, entry.buttons);
 
-            this._dispatchBubble(event);
+            bubbleInteractionEvent(event);
 
             // The handler just run may have destroyed or detached `hit`
             // itself - see `_isLive`'s doc comment - so neither the press
@@ -1126,7 +1146,7 @@ export class InteractionSystem {
           // destroyed the dragged node - which IS `hit` while a drag is
           // active, since _resolvePhase short-circuits to the captured node.
           if (hit !== null && this._isLive(hit)) {
-            this._dispatchBubble(new InteractionEvent('pointermove', hit, pointer, x, y));
+            bubbleInteractionEvent(new InteractionEvent('pointermove', hit, pointer, x, y, entry.button, entry.buttons));
           }
 
           this._dispatchDragTick(id, pointer, x, y);
@@ -1146,7 +1166,7 @@ export class InteractionSystem {
           const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
           if (hit !== null && this._isLive(hit)) {
-            this._dispatchBubble(new InteractionEvent('pointerup', hit, pointer, x, y));
+            bubbleInteractionEvent(new InteractionEvent('pointerup', hit, pointer, x, y, entry.button, entry.buttons));
           }
 
           this._completeDrag(id, pointer, x, y);
@@ -1174,7 +1194,9 @@ export class InteractionSystem {
             const tapHit = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
             if (tapHit.node === pressTarget) {
-              this._dispatchBubble(new InteractionEvent('pointertap', pressTarget, pointer, tapHit.x, tapHit.y));
+              bubbleInteractionEvent(
+                new InteractionEvent('pointertap', pressTarget, pointer, tapHit.x, tapHit.y, entry.button, entry.buttons),
+              );
             }
           }
 
@@ -1185,7 +1207,7 @@ export class InteractionSystem {
           const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
           if (hit !== null && this._isLive(hit)) {
-            this._dispatchBubble(new InteractionEvent('contextmenu', hit, pointer, x, y));
+            bubbleInteractionEvent(new InteractionEvent('contextmenu', hit, pointer, x, y, entry.button, entry.buttons));
           }
 
           break;
@@ -1197,12 +1219,12 @@ export class InteractionSystem {
 
           const { x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
-          if (!this._completeDrag(id, pointer, x, y)) {
-            const last = this._lastHit.get(id) ?? null;
+          this._completeDrag(id, pointer, x, y);
 
-            if (last !== null && this._isLive(last)) {
-              this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
-            }
+          const last = this._lastHit.get(id) ?? null;
+
+          if (last !== null && this._isLive(last)) {
+            bubbleInteractionEvent(new InteractionEvent('pointerout', last, pointer, x, y));
           }
 
           this._lastHit.delete(id);
@@ -1262,13 +1284,13 @@ export class InteractionSystem {
     }
 
     if (last !== null && this._isLive(last)) {
-      this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
+      bubbleInteractionEvent(new InteractionEvent('pointerout', last, pointer, x, y));
     }
 
     // The pointerout handler just run on `last` may have destroyed or
     // detached `hit` (a different node) before it gets its own dispatch.
     if (hit !== null && this._isLive(hit)) {
-      this._dispatchBubble(new InteractionEvent('pointerover', hit, pointer, x, y));
+      bubbleInteractionEvent(new InteractionEvent('pointerover', hit, pointer, x, y));
     }
 
     // Either dispatch just above - pointerout on `last`, or `hit`'s own
@@ -1438,9 +1460,7 @@ export class InteractionSystem {
    * real (promoted) drag fires `dragend` before its capture is released; a
    * candidate that never got promoted is simply dropped - it was never a
    * drag, so nothing needs undoing beyond forgetting it. Returns whether an
-   * ACTIVE drag actually ended (dragend fired) - that is what suppresses a
-   * following pointertap, and (for an exit event) what skips the fallback
-   * pointerout.
+   * ACTIVE drag actually ended (dragend fired).
    */
   private _completeDrag(id: number, pointer: Pointer, x: number, y: number): boolean {
     const drag = this._drags.get(id) ?? null;
@@ -1467,9 +1487,9 @@ export class InteractionSystem {
    * Map a pointer position into the space `node.position` is expressed in.
    * The dragged node's coordinates are parent-local, while the pointer arrives
    * in world (or screen, for UI) space; without this a node under a scaled,
-   * rotated or offset parent drifts away from the cursor. Under an engaged
-   * transform group the chain is group-local, so the point is rebased through
-   * the anchor first, exactly as {@link _containsWorldPoint} does.
+   * rotated or offset parent drifts away from the cursor. The parent's world
+   * transform already includes every retained boundary, so its inverse maps
+   * the pointer directly into the node's parent-local position space.
    */
   private _toParentLocal(node: RenderNode, x: number, y: number): { x: number; y: number } {
     const parent = node.parent;
@@ -1478,22 +1498,11 @@ export class InteractionSystem {
       return { x, y };
     }
 
-    let localX = x;
-    let localY = y;
-    const anchor = node._resolveTransformGroupAnchor();
-
-    if (anchor !== null) {
-      const toGroup = anchor.getWorldTransform().getInverse(this._anchorInverse);
-
-      localX = toGroup.a * x + toGroup.b * y + toGroup.x;
-      localY = toGroup.c * x + toGroup.d * y + toGroup.y;
-    }
-
     const inverse = parent.getWorldTransform().getInverse(this._dragInverse);
 
     return {
-      x: inverse.a * localX + inverse.b * localY + inverse.x,
-      y: inverse.c * localX + inverse.d * localY + inverse.y,
+      x: inverse.a * x + inverse.b * y + inverse.x,
+      y: inverse.c * x + inverse.d * y + inverse.y,
     };
   }
 
@@ -1613,7 +1622,7 @@ export class InteractionSystem {
     if (scope !== null) {
       const coords = this._designToLayerSpace(x, y, this._isUINode(scope));
 
-      if (!isHittable(scope)) {
+      if (!isHittable(scope) || !isWithinAncestorClips(scope, coords.x, coords.y)) {
         return { node: null, x: coords.x, y: coords.y };
       }
 
@@ -1623,7 +1632,7 @@ export class InteractionSystem {
     const uiRoot = this._app.scenes.currentScene?._peekUI() ?? null;
 
     if (uiRoot !== null) {
-      const ui = this._app.rendering.screenView.screenToWorld(x, y);
+      const ui = this._designToLayerSpace(x, y, true);
       const uiHit = this._hitTestNode(uiRoot, ui.x, ui.y);
 
       if (uiHit !== null) {
@@ -1631,7 +1640,7 @@ export class InteractionSystem {
       }
     }
 
-    const world = this._app.rendering.view.screenToWorld(x, y);
+    const world = this._designToLayerSpace(x, y, false);
 
     return { node: this._hitTest(world.x, world.y), x: world.x, y: world.y };
   }
@@ -1655,28 +1664,16 @@ export class InteractionSystem {
   private _designToLayerSpace(x: number, y: number, ui: boolean): PointLike {
     const view = ui ? this._app.rendering.screenView : this._app.rendering.view;
 
-    return view.screenToWorld(x, y);
+    // Map over the logical surface rather than the view's own design space:
+    // the active camera may cover only part of the canvas (split screen).
+    return view.screenToWorld(x, y, this._app.width, this._app.height);
   }
 
   /** Whether `node` lives inside the active scene's UI layer. */
   private _isUINode(node: RenderNode): boolean {
     const uiRoot = this._app.scenes.currentScene?._peekUI() ?? null;
 
-    if (uiRoot === null) {
-      return false;
-    }
-
-    let current: RenderNode | null = node;
-
-    while (current !== null) {
-      if (current === uiRoot) {
-        return true;
-      }
-
-      current = current.parent;
-    }
-
-    return false;
+    return uiRoot !== null && isDescendantOrSelf(node, uiRoot);
   }
 
   private _hitTest(x: number, y: number): RenderNode | null {
@@ -1708,11 +1705,37 @@ export class InteractionSystem {
       }
     });
 
-    // Group-anchored nodes live outside the tree (see `_anchoredNodes`):
-    // exact hit-test through the live group matrix, same ordering rule.
-    for (const node of this._anchoredNodes) {
+    // For small groups a single linear scan beats building a tree.
+    for (const node of this._anchoredIndex.unindexed) {
       if (this._beatsBest(node, bestNode, x, y)) {
         bestNode = node;
+      }
+    }
+
+    // A tree's tight AABBs never change on an ANCHOR move: transform the
+    // pointer into the group's local space once instead of updating N leaves.
+    // Exact contains, clips and paint-order checks still use WORLD coordinates.
+    for (const group of this._anchoredIndex.indexed) {
+      const inverse = group.anchor.getWorldTransform().getInverse(this._anchorInverse);
+      const groupX = inverse.a * x + inverse.b * y + inverse.x;
+      const groupY = inverse.c * x + inverse.d * y + inverse.y;
+
+      group.tree!.queryPoint(groupX, groupY, indexed => {
+        const node = indexed.node;
+
+        if (this._beatsBest(node, bestNode, x, y)) {
+          bestNode = node;
+        }
+      });
+
+      // A hitArea is mutable, including its shape's coordinates in place.
+      // It may extend OUTSIDE the node's visual getBounds() and thus outside
+      // its local tree proxy. Keep that existing hit-test contract: probe
+      // such nodes live even when the hitArea was assigned after indexing.
+      for (const node of group.nodes) {
+        if (node.hitArea !== null && this._beatsBest(node, bestNode, x, y)) {
+          bestNode = node;
+        }
       }
     }
 
@@ -1796,29 +1819,9 @@ export class InteractionSystem {
     return out;
   }
 
-  /**
-   * World-correct point containment: `node.contains` expects coordinates in
-   * the node's OWN global space, which under an engaged transform-group
-   * boundary ({@link RetainedContainer}) is group-local, not world. Resolve
-   * the node's live anchor and map the world-space pointer into group space
-   * through the inverse of the anchor's world matrix first; without an
-   * anchor this is a plain `contains`. Resolving live (instead of trusting
-   * index-time state) keeps boundary engage/disengage flips correct.
-   */
+  /** Narrow-phase containment always receives world coordinates, including retained children. */
   private _containsWorldPoint(node: RenderNode, x: number, y: number): boolean {
-    const anchor = node._resolveTransformGroupAnchor();
-
-    if (anchor === null) {
-      return node.contains(x, y);
-    }
-
-    const inverse = anchor.getWorldTransform().getInverse(this._anchorInverse);
-    // Same forward-map convention as AbstractVector.transform / SceneNode.contains:
-    // p' = [[a, b], [c, d]] · p + (x, y).
-    const groupX = inverse.a * x + inverse.b * y + inverse.x;
-    const groupY = inverse.c * x + inverse.d * y + inverse.y;
-
-    return node.contains(groupX, groupY);
+    return node.contains(x, y);
   }
 
   /**
@@ -1842,6 +1845,7 @@ export class InteractionSystem {
 
       for (let i = children.length - 1; i >= 0; i--) {
         const child = children[i];
+
         if (child === undefined) {
           continue;
         }
@@ -1900,7 +1904,7 @@ export class InteractionSystem {
 
     this._interactiveNodes.delete(node);
     this._staleNodes.delete(node);
-    this._anchoredNodes.delete(node);
+    this._anchoredIndex.remove(node);
     this._clearGroupMembership(node);
     // Whatever this node was covering is exposed now, so the next flush has
     // to re-resolve hover even if no pointer moves - the `pointerover` half
@@ -1969,7 +1973,7 @@ export class InteractionSystem {
     }
 
     for (const [pointerId, hit] of [...this._lastHit]) {
-      if (!isSelfOrDescendant(hit, root)) {
+      if (!isDescendantOrSelf(hit, root)) {
         continue;
       }
 
@@ -1983,7 +1987,7 @@ export class InteractionSystem {
 
       const { x, y } = this._designToLayerSpace(pointer.x, pointer.y, this._isUINode(hit));
 
-      this._dispatchBubble(new InteractionEvent('pointerout', hit, pointer, x, y));
+      bubbleInteractionEvent(new InteractionEvent('pointerout', hit, pointer, x, y));
     }
   }
 
@@ -2001,8 +2005,10 @@ export class InteractionSystem {
     // tree and the anchored side list, or under a different boundary).
     this._clearGroupMembership(node);
 
-    if (node._resolveTransformGroupAnchor() !== null) {
-      this._anchoredNodes.add(node);
+    const anchor = node._resolveTransformGroupAnchor();
+
+    if (anchor !== null) {
+      this._anchoredIndex.insert(node, anchor);
 
       if (__DEV__) {
         this._warnAnchoredInteractive(node);
@@ -2075,7 +2081,8 @@ export class InteractionSystem {
    * Flush stale entries: drop each stale node's old index entry and re-index
    * it with fresh bounds AND a freshly resolved group anchor (a boundary
    * engage/disengage flip re-buckets the node between the tree and the
-   * anchored side list here). Called at the start of update().
+   * anchored side list here). Called at the start of every non-gated flush
+   * (`_dispatchFrame`), before the journal drains.
    *
    * Remove+reinsert rather than the tree's `update()`: `update()` only touches
    * the tree, so it cannot re-bucket a node between the tree and the anchored
@@ -2099,7 +2106,7 @@ export class InteractionSystem {
       }
 
       this._proxies.delete(node);
-      this._anchoredNodes.delete(node);
+      this._anchoredIndex.remove(node);
 
       this._insertNode(node);
     }
@@ -2129,66 +2136,14 @@ export class InteractionSystem {
     );
   }
 
-  /**
-   * Iterative pre-order subtree traversal (root first). Generator form keeps
-   * callers simple and avoids recursive stack growth on deep hierarchies.
-   */
-  private *_iterateSubtree(root: RenderNode): Generator<RenderNode> {
-    const stack: RenderNode[] = [root];
-
-    while (stack.length > 0) {
-      const node = stack.pop()!;
-
-      yield node;
-
-      if (node instanceof Container) {
-        // Push in reverse so iteration preserves child insertion order.
-        for (let index = node.children.length - 1; index >= 0; index--) {
-          const child = node.children[index];
-          if (child !== undefined) {
-            stack.push(child);
-          }
-        }
-      }
-    }
-  }
-
   // ---------------------------------------------------------------------------
   // Dispatch helpers
   // ---------------------------------------------------------------------------
-
-  /**
-   * Walk the event from its target up through every ancestor. `interactive`
-   * decides whether a node can be *hit*, not whether an event may pass through
-   * it - a plain layout container in the middle of the path must not silently
-   * cut a listener on the node above it off from the event. Propagation ends
-   * only at the root or at an explicit {@link InteractionEvent.stopPropagation}.
-   */
-  private _dispatchBubble(event: InteractionEvent): void {
-    let current: RenderNode | null = event.target;
-
-    while (current !== null) {
-      event.currentTarget = current;
-      this._signalFor(event.type, current)?.dispatch(event);
-
-      if (event.propagationStopped) {
-        break;
-      }
-
-      current = current.parent;
-    }
-  }
 
   /** Dispatch an event directly on a single node without bubbling. */
   private _dispatchDirect(event: InteractionEvent, signal: Signal<[InteractionEvent]> | null): void {
     event.currentTarget = event.target;
     signal?.dispatch(event);
-  }
-
-  private _signalFor(type: InteractionEventType, node: RenderNode): Signal<[InteractionEvent]> | null {
-    // Peek (never materialize): a node with no listener for `type` has no
-    // signal, so dispatch simply skips it.
-    return node._peekInteractionSignal(type);
   }
 
   // ---------------------------------------------------------------------------

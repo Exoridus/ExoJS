@@ -26,13 +26,15 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { TileMapNode } from '@codexo/exojs-tilemap';
+import { TileMapNode } from '@codexo/exojs/tilemap';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
+import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -69,7 +71,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 /** Render `body` inside a validation error scope; returns false on a device-loss skip. */
 const renderGuarded = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, body: () => void): Promise<boolean> => {
@@ -118,7 +121,12 @@ const countSubmits = (backend: WebGpuBackend, body: () => void): number => {
   return count;
 };
 
-const hexToRgba = (hex: string): RgbaTuple => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16), 255];
+const hexToRgba = (hex: string): RgbaTuple => [
+  parseInt(hex.slice(1, 3), 16),
+  parseInt(hex.slice(3, 5), 16),
+  parseInt(hex.slice(5, 7), 16),
+  255,
+];
 
 // One 16x16 tile per node, each on its OWN tileset texture: a texture change is
 // what breaks the tile-chunk batch, so rendering these back to back produces one
@@ -134,6 +142,44 @@ const tilePositions = [
 ] as const;
 
 describe('WebGPU tile-chunk single pass', () => {
+  test.for([false, true])('an attachment-only child supports tile chunks (retained=%s)', async (retained, ctx) => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#ff0000', tileSize);
+    const root = new Container();
+    const group = retained ? new RetainedContainer() : new Container();
+    const replay = vi.spyOn(backend, 'replayRetainedBatch');
+
+    group.addChild(new TileMapNode(singleTileMap(texture)));
+    root.addChild(group);
+
+    try {
+      for (let frame = 0; frame < 3; frame++) {
+        if (
+          !(await renderGuarded(ctx, backend, () => {
+            backend.resetStats();
+            backend.passCoordinator.withChildPass(
+              { target: null, view: null, load: 'clear', clearColor: Color.black, stencil: StencilAttachmentMode.Enabled },
+              () => root.render(backend),
+            );
+            backend.flush();
+          }))
+        ) {
+          return;
+        }
+
+        expectPixelNear(readWebGpuPixels(backend, canvasSize)(8, 8), [255, 0, 0, 255]);
+      }
+
+      if (retained) {
+        expect(replay).toHaveBeenCalled();
+      }
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
   test('many tile-chunk flushes cost ONE pass and ONE submit, with per-flush pixels correct', async ctx => {
     const backend = await setupBackend();
     const tileTextures: Texture[] = tileColors.map(color => createSolidTexture(color, tileSize));

@@ -2,7 +2,7 @@
 precision highp float;
 precision highp sampler2D;
 
-uniform sampler2D u_nodeData;  // RGBA32F per-node data
+uniform highp sampler2D u_nodeData;  // RGBA32F per-node data
 
 flat in int  v_nodeIndex;
 flat in uint v_decoration;

@@ -22,6 +22,8 @@ export class LoadState<Owner> {
   private _promise: Promise<Owner> | null = null;
   private _resolve: ((owner: Owner) => void) | null = null;
   private _reject: ((error: Error) => void) | null = null;
+  private _readyPromise: Promise<Owner> | null = null;
+  private _resolveReady: ((owner: Owner) => void) | null = null;
 
   public get value(): LoadStateValue {
     return this._value;
@@ -50,6 +52,17 @@ export class LoadState<Owner> {
     return this._promise;
   }
 
+  /** Wait for the next successful load, keeping internal consumers armed across failed attempts. */
+  public whenReady(owner: Owner): Promise<Owner> {
+    if (this._value === 'ready') {
+      return Promise.resolve(owner);
+    }
+
+    return (this._readyPromise ??= new Promise<Owner>(resolve => {
+      this._resolveReady = resolve;
+    }));
+  }
+
   /**
    * Enter `'loading'`. From a settled state (`'ready'` fresh placeholder,
    * `'failed'` retry) the cached promise is dropped so a fresh cycle
@@ -63,6 +76,7 @@ export class LoadState<Owner> {
       this._resolve = null;
       this._reject = null;
     }
+
     this._value = 'loading';
     this._error = null;
   }
@@ -95,6 +109,9 @@ export class LoadState<Owner> {
     this._value = 'ready';
     this._error = null;
     this._resolve?.(owner);
+    this._resolveReady?.(owner);
+    this._readyPromise = null;
+    this._resolveReady = null;
     this._resolve = null;
     this._reject = null;
   }

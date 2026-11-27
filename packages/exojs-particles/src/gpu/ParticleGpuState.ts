@@ -3,9 +3,15 @@
 import type { Rectangle } from '@codexo/exojs';
 import type { Texture } from '@codexo/exojs';
 import type { ComputeBindGroupEntry } from '@codexo/exojs/renderer-sdk';
-import { fillShaderSource, reflectComputeBindings, WebGpuComputePipeline, WebGpuStorageBuffer, WebGpuUniformBuffer } from '@codexo/exojs/renderer-sdk';
+import {
+  fillShaderSource,
+  reflectComputeBindings,
+  WebGpuComputePipeline,
+  WebGpuStorageBuffer,
+  WebGpuUniformBuffer,
+} from '@codexo/exojs/renderer-sdk';
 
-import { uploadParticleLookup } from '#modules/particleLookup';
+import { lookupSize, uploadParticleLookup } from '#modules/particleLookup';
 import type { UpdateModule } from '#modules/UpdateModule';
 import type { WgslContribution, WgslUniformField } from '#modules/WgslContribution';
 import { getWgslUniformByteSize } from '#modules/WgslContribution';
@@ -17,9 +23,11 @@ import particleSimulateWgsl from './shaders/particle-simulate.wgsl';
 /**
  * GPU-side mirror of one {@link ParticleSystem}. Owns:
  *
- * - **8 packed storage buffers** for the per-particle SoA data:
- *   positions/velocities/scales/rotInfo/timing as `vec2<f32>`, color and
- *   textureIndex as `u32`, plus the instance output buffer. Sits at the
+ * - **Seven packed storage buffers** for the per-particle SoA data -
+ *   positions/velocities/scales/timing as `vec2<f32>`, `rotInfo` as
+ *   `vec4<f32>` (rotation, rotation speed, frame index, terminal marker),
+ *   color as `u32`, plus the instance output buffer - and, while the system
+ *   reports deaths, an eighth buffer for the death backlog. Sits at the
  *   default WebGPU `maxStorageBuffersPerShaderStage = 8` limit. Built on
  *   the shared {@link WebGpuStorageBuffer} SDK primitive.
  * - **Three uniform buffers** (sim state `dt`/`liveCount`, module configs -
@@ -199,7 +207,12 @@ export class ParticleGpuState {
     this._timing = new WebGpuStorageBuffer(device, vec2Bytes, 'particle-timing');
     this._color = new WebGpuStorageBuffer(device, u32Bytes, 'particle-color');
 
-    this._instanceStorageBuffer = new WebGpuStorageBuffer(device, capacity * instanceBytes, 'particle-instance-output', GPUBufferUsage.VERTEX);
+    this._instanceStorageBuffer = new WebGpuStorageBuffer(
+      device,
+      capacity * instanceBytes,
+      'particle-instance-output',
+      GPUBufferUsage.VERTEX,
+    );
     this.instanceBuffer = this._instanceStorageBuffer.buffer;
 
     this._simUniformView = new DataView(this._simUniformData);
@@ -247,7 +260,9 @@ export class ParticleGpuState {
 
     for (const m of modules) {
       if (!m.wgsl) {
-        throw new Error(`ParticleGpuState: module ${m.constructor.name} has no wgsl() - all registered UpdateModules must be GPU-eligible.`);
+        throw new Error(
+          `ParticleGpuState: module ${m.constructor.name} has no wgsl() - all registered UpdateModules must be GPU-eligible.`,
+        );
       }
 
       contributions.push(m.wgsl());
@@ -309,19 +324,26 @@ export class ParticleGpuState {
     if (reportsDeaths && this._deathBuffer === null) {
       // Four bytes of atomic append counter, then one record per slot: a frame
       // can at most report every particle the system holds.
-      this._deathBuffer = new WebGpuStorageBuffer(this.device, 4 + this.capacity * deathRecordBytes, 'particle-deaths', GPUBufferUsage.COPY_SRC);
+      this._deathBuffer = new WebGpuStorageBuffer(
+        this.device,
+        4 + this.capacity * deathRecordBytes,
+        'particle-deaths',
+        GPUBufferUsage.COPY_SRC,
+      );
     }
 
     // Allocate textures for modules that need them.
     for (const slot of slots) {
       const c = slot.contribution;
 
-      if (!c.textures) continue;
+      if (!c.textures) {
+        continue;
+      }
 
       for (const t of c.textures) {
         const tex = this.device.createTexture({
           label: `particle-tex-${c.key}-${t.name}`,
-          size: { width: 256, height: 1, depthOrArrayLayers: 1 },
+          size: { width: lookupSize, height: 1, depthOrArrayLayers: 1 },
           format: t.format,
           usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
           dimension: '1d',
@@ -358,10 +380,13 @@ export class ParticleGpuState {
             uploadParticleLookup(this.device, this._moduleTextures.get(`${slot.contribution.key}_${binding.name}`), bytes);
           }
         }
+
         continue;
       }
 
-      if (!slot.module.uploadTextures) continue;
+      if (!slot.module.uploadTextures) {
+        continue;
+      }
 
       const moduleTextures = new Map<string, GPUTexture>();
 
@@ -509,7 +534,11 @@ export class ParticleGpuState {
     return this._deliverDeaths(batch, previous, receive).finally(() => settled());
   }
 
-  private async _deliverDeaths(batch: StagedDeathBatch, previous: Promise<void>, receive: (records: readonly ParticleDeathRecord[]) => void): Promise<void> {
+  private async _deliverDeaths(
+    batch: StagedDeathBatch,
+    previous: Promise<void>,
+    receive: (records: readonly ParticleDeathRecord[]) => void,
+  ): Promise<void> {
     const { slot, count } = batch;
     const bytes = count * deathRecordBytes;
 
@@ -576,7 +605,9 @@ export class ParticleGpuState {
     let reusable: DeathStagingSlot | null = null;
 
     for (const slot of this._deathStaging) {
-      if (slot.busy) continue;
+      if (slot.busy) {
+        continue;
+      }
 
       if (slot.records >= records) {
         return slot;
@@ -958,8 +989,13 @@ struct DeathBuffer {
     for (const slot of slots) {
       const prelude = slot.contribution.prelude;
 
-      if (prelude === undefined || prelude.trim() === '') continue;
-      if (seenPreludeKeys.has(slot.contribution.key)) continue;
+      if (prelude === undefined || prelude.trim() === '') {
+        continue;
+      }
+
+      if (seenPreludeKeys.has(slot.contribution.key)) {
+        continue;
+      }
 
       seenPreludeKeys.add(slot.contribution.key);
       sections.push(prelude);

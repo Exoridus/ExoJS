@@ -45,6 +45,12 @@ Optional, but useful in a repo with many short-lived branches — prune remote-t
 git config fetch.prune true
 ```
 
+## Reviewed CI-first batch pushes
+
+The regular pre-push hook runs affected static gates, dependency-selected units and applicable allocation/physics checks. For a resolved source scope, its explicit `--pre-push` mode reports browser, benchmark and smoke lanes deferred to mandatory CI for the pushed commit. Unknown, global, deleted or unresolved inputs retain the broad local contract. A fresh dist remains required when retained gates or units consume it. Manual `pnpm lanes --run` keeps its existing browser and smoke behavior; inspect the hook's selection with `pnpm lanes --pre-push --tests-only --base origin/next`. See [Dependency-aware test selection](scripts/ci/AFFECTED_TESTS.md) for the scope and fallback rules.
+
+For a batch that has been explicitly authorized by the orchestrator and already passed targeted prevalidation, a single CI-first push may omit the local pre-push re-run. This is not permission to skip tests: verify the remote branch and PR head SHA, wait for the complete required GitHub CI and successful `verdict` for that exact head, and require independent review and merge authorization. See [Reviewed CI-first batch pushes](scripts/ci/VALIDATION.md#reviewed-ci-first-batch-pushes) for the complete contract. Never disable Husky globally.
+
 ## Shader tooling
 
 The WGSL validation gate (`test/rendering/wgsl-naga-validation.test.ts`) shells out to Naga, the WGSL front end of wgpu and therefore of Firefox's WebGPU. It is the only gate that sees WGSL through anything but Tint — the Chromium WebGPU lane is Dawn, and the Firefox WebGPU lane gets no adapter in CI. Naga is not an npm dependency; install the pinned version once:
@@ -70,7 +76,9 @@ import type { Extension } from '@codexo/exojs/extensions';
 
 Forbidden: `../x`, `@/x`, bare `core/x`, `@codexo/exojs/src/x`. ESLint enforces this.
 
-How it resolves: each package maps `#*` in its `package.json#imports` to a package-specific source condition (`./src/*.ts`) and to `./dist/esm/*` for consumers. tsc uses `customConditions`, Vitest uses `resolve`/`ssr.resolve.conditions`, and Rollup uses node-resolve `exportConditions` — all pointing `#` at source in-repo. The shipped `.d.ts` keep `#` verbatim and resolve through the package's own imports map, so there is no declaration alias-rewrite step.
+How it resolves: each package maps `#*` in its `package.json#imports` to a package-specific source condition (`./src/*.ts`) and, where the package ships its own tree, to `./dist/esm/*` for consumers. tsc uses `customConditions`, Vitest uses `resolve`/`ssr.resolve.conditions`, and Rolldown uses `resolve.conditionNames` — all pointing `#` at source in-repo. The public `@codexo/exojs` specifiers, including the runtime-module subpaths, map to their sources through `@codexo/exojs-config/typescript/workspace-paths.json` for tsc and through the Vitest aliases.
+
+Core's shipped `.d.ts` keep their own `#` imports verbatim and resolve through the Core imports map. The runtime modules are different: their sources live in `packages/exojs-<module>/` but ship inside the Core tarball under `dist/esm/<subpath>/`, so the build rewrites every specifier that leaves a module (`@codexo/exojs`, a Core subpath, a sibling module, the module's own `#` imports) to a relative path, in the emitted JavaScript and in the declarations alike. The declaration rewrite is AST-based (`scripts/lib/module-specifiers.ts`) and resolves each specifier the way an installed consumer would, through the Core `exports` map.
 
 ## File layout: one file, one primary symbol
 
@@ -106,8 +114,8 @@ An error class never hides inside the file of the class that throws it. A caller
 After one root `pnpm install`, every package builds, tests and packs on its own:
 
 ```bash
-pnpm --filter @codexo/exojs build        # or -particles / -tiled
-pnpm --filter @codexo/exojs-particles test
+pnpm --filter @codexo/exojs build        # Core, including its runtime modules
+pnpm --filter @codexo/exojs-module-particles test
 pnpm --filter @codexo/exojs-tiled pack
 # …or from the package directory:
 pnpm build && pnpm test && pnpm pack
@@ -124,33 +132,49 @@ pnpm site:build   pnpm test:examples:smoke
 
 Scripts forward their arguments, so a variant is an argument rather than a script of its own: `pnpm lint --fix`, `pnpm test --coverage`, `pnpm test:browser:webgl --reporter=verbose`. The measurement harnesses run through one runner, `pnpm perf <name>` (`pnpm perf` lists them); the cross-library benchmarks through `pnpm bench` (see `packages/exojs-bench`).
 
+The standard `pnpm lint` invocation runs validated Oxlint rules first, then the remaining ESLint rules in the existing engine and package passes. ESLint configuration remains authoritative. Named TypeScript projects, ESLint or Oxlint directives, nested or custom parser contexts, replacement plugin rules, changed rule options and unvalidated dependency versions retain full ESLint coverage. Arguments such as `--fix` and `--cache`, editor linting, staged-file linting and the site use the original ESLint behavior. The [Oxc evaluation](scripts/ci/OXC_EVALUATION.md) records the complete rule inventory, compatibility boundaries and local timing evidence.
+
 The root gate and lane runners share an output policy. `auto` is the default: it uses `normal` for an interactive terminal and `compact` for CI or redirected output. Override it with `--output normal|compact|silent|verbose`, or set `EXOJS_OUTPUT` for a process tree. Compact and silent runs stream complete output to `.workspace/logs/` without buffering it in memory; failures print the last diagnostic lines and the log path. Benchmark and release lanes keep at least normal output.
+
+## Code style
+
+One authoring style covers Core, the extension packages, the example catalog, the guide sources, tests, scripts and the site, so a file does not reveal which tree it came from. How strictly a tree is typed is a separate question: the examples keep a lighter correctness profile and still look exactly like engine source.
+
+Oxfmt owns the mechanical layout: indentation, quotes, semicolons, commas, wrapping at 140 columns, and the formatting of JSON, Markdown, CSS, YAML, HTML and Astro. ESLint owns what needs the syntax tree, and its authoring rules live in one place, `@codexo/exojs-config/eslint/style`: control-flow bodies are always blocks and a block is never squeezed onto one line (`if (ready) return;` and `if (ready) { return; }` are both rejected), functions are expressions rather than declarations, class members are separated by blank lines (runs of plain fields may stay grouped), `return` and `throw` and multi-line blocks get a blank line around them, imports are sorted with inline `type` specifiers, and comments start with a space. Correctness rules stay in `eslint/correctness` and the per-tree factories; the style layer never changes what code means.
+
+`pnpm lint:fix` applies every autofixable ESLint rule across the repository, `pnpm format` runs Oxfmt, and the pre-commit hook runs ESLint and then Oxfmt on each staged file in that order. The whole-repository and selective pre-push checks use the same formatter and configuration. `oxfmt.config.ts` imports the shared `formatOptions` and preserves package manifest field order; `.prettierignore` remains the shared list of generated, vendored and deliberately unformatted files. Use the [Oxfmt editor integration](https://oxc.rs/docs/guide/usage/formatter/editors) when formatting on save.
+
+Guide pages (`*.mdx`) are formatted by hand to preserve their JSX and the aligned comments in their listings; their long listings come from `examples/guides/**` through `SourceSnippet` and follow the style above. Prettier remains pinned for the example and fixture generators, whose exact output is checked independently. Their configuration shares the authoring options with Oxfmt; generator output remains owned by those scripts.
 
 ## Shared configuration
 
-`@codexo/exojs-config` (private, unpublished, never a runtime dependency) centralizes reusable tooling — TypeScript profiles (`extends`-able JSON), Prettier, ESLint import-boundary presets, Vitest project factories, the Rollup extension factory, and the package-policy verifier. It is consumed with no build step. Repository-specific concerns (browser WebGL2/WebGPU test projects, ESLint globs, release assembly) stay in the Root, not in the config package.
+`@codexo/exojs-config` (private, unpublished, never a runtime dependency) centralizes reusable tooling — TypeScript profiles (`extends`-able JSON), formatting options, ESLint import-boundary presets, Vitest project factories, the Rollup extension factory, and the package-policy verifier. It is consumed with no build step. Repository-specific concerns (browser WebGL2/WebGPU test projects, ESLint globs, release assembly) stay in the Root, not in the config package.
 
 ## Examples and assets
 
-Example authors use the injected, typed `assets` global directly — no import:
+Examples load their media through the optional content package `@codexo/exojs-demo-assets`, imported like any other dependency:
 
 ```ts
-assets.demo.textures.bunny;
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+
+const ship = this.loader.get(assets.ship);
 ```
 
-The global is installed only inside the controlled example runtimes (Playground, Example/Guide preview, Asset Browser, smoke harness, Full Release harness). It is not part of the engine public API. The canonical catalog is `examples/assets/assets.ts`; `pnpm --filter @codexo/exojs-examples examples:sync` regenerates the `.js` sources and the runtime catalog.
+Each property is a passive descriptor; reading it fetches nothing, and the scene's loader claims and loads it. There is no injected global, so an example copied out of the Playground runs anywhere the package is installed. The media under `examples/assets/` are the authoring source of that package: `packages/exojs-demo-assets/catalog.json` lists what ships, and its generator derives the typed catalog, the manifest, the notices and the packed `media/` tree. The site serves the package beside the engine (`vendor/exojs-demo-assets/`), not the `examples/assets/` tree. `pnpm examples:generate` regenerates the `.js` sources.
 
-JSON asset data under `examples/assets/` is committed compact, including Tiled maps/tilesets/templates (`.tmj`, `.tsj`, `.tj`, `.world`) and LDtk documents (`.ldtk`, `.ldtkl`). Run `pnpm assets:compact` after exporting or editing these files. `pnpm assets:compact:check` enforces this in the sync gates. Prettier ignores the asset directory; do not pretty-print large tile arrays. The example catalog `examples/examples.json` remains ordinary repository metadata.
+JSON asset data under `examples/assets/` is committed compact, including Tiled maps/tilesets/templates (`.tmj`, `.tsj`, `.tj`, `.world`) and LDtk documents (`.ldtk`, `.ldtkl`). Run `pnpm assets:compact` after exporting or editing these files. `pnpm assets:compact:check` enforces this in the sync gates. Oxfmt ignores the asset directory; do not pretty-print large tile arrays. The example catalog `examples/examples.json` remains ordinary repository metadata.
 
-### The `.ts` source and its committed `.js`
+Physics examples must fit collision geometry to the visible artwork, not to an untrimmed atlas cell. Account for transparent padding, rounded corners, anchor and scale, and preserve the asset's aspect ratio. Keep any deliberate collision approximation explicit. Verify resting contacts, rotated contacts and fast dragging against walls; debug contours must use the same presentation transform as the visible sprite. Recheck the fit when an asset or frame changes.
 
-The `.ts` file is the authored source. The `.js` beside it is generated from it by `examples:sync` and **committed**, which is unusual enough to say why: a release bundle ships the whole catalog in both languages, alongside the guides, the API reference and a working playground, so a reader can copy either form and run it locally without being online. `scripts/release/full-zip.ts` splits them into `examples/src/**` and `examples/js/**` from whatever is on disk, and the release requires a site build — which runs `examples:sync` — beforehand.
+### The `.ts` source and its generated `.js`
 
-Treat the `.js` as build output that happens to be versioned. It is not linted and not type-checked; `pnpm examples:sync:check` compares it against its `.ts` source, and that gate is the only thing that should hold an opinion about it. Never edit one by hand — a committed `.js` also shadows its `.ts` for anyone searching the tree.
+The `.ts` file is the only authored and versioned source. The `.js` beside it is Git-ignored build output that the playground iframe, the smoke harness and static serving of `examples/` execute. `pnpm examples:generate` writes it; the site `dev` and `build` scripts and `typecheck:examples` run that step themselves, so a clean checkout needs no manual preparation. Generation is incremental: an up-to-date file is not rewritten.
 
-One file is not quite that: `examples/tilemap/worker-streamed-terrain.js` is the only example whose generation is not a plain transpile. Its `?worker` import is inlined at generation time, so the emitted file carries code its source does not, and it stays in `tsconfig.examples.json` for that reason.
+`pnpm examples:sync:check` proves that every source generates, that two runs give identical bytes, that every `examples.json` entry has a source, that nothing is tracked under `examples/**/*.js`, and that no generated file outlives its source. Never edit a generated `.js`. The release bundle splits the catalog into `examples/src/**` and `examples/js/**` from whatever is on disk and requires a site build (which generates) beforehand.
 
-`examples/shared/` holds one more generated artifact of a different kind. `runtime.d.ts` is emitted from `runtime.ts` during the same sync, because the Playground editor resolves `@examples/runtime` through a declaration file it fetches from the served snapshot rather than through the implementation. Like `assets-global.d.ts` it is Prettier-ignored and pinned by a drift test rather than by `examples:sync:check`.
+One file is not a plain transpile: `examples/tilemap/worker-streamed-terrain.js` carries its `?worker` import inlined at generation time, so it stays in `tsconfig.examples.json` to keep that emitted code checked.
+
+`examples/shared/` holds one more generated artifact of a different kind. `runtime.d.ts` is emitted from `runtime.ts` during the same sync, because the Playground editor resolves `@examples/runtime` through a declaration file it fetches from the served snapshot rather than through the implementation. It is formatter-ignored and pinned by a drift test rather than by `examples:sync:check`.
 
 ### Guide sources
 
@@ -163,12 +187,24 @@ const orb = new Graphics();
 ```
 
 ```mdx
-<SourceSnippet source="examples/guides/build-orb-dodge/game.ts" region="spawn-orbs" title="Spawning an orb" />
+<SourceSnippet source="examples/showcase/collect-survive.ts" region="spawn-orb" title="Spawning an orb" />
 ```
 
 `<page>` is the guide page's file name, `<variant>` a stage of the chapter when one file cannot hold it (`game.ts`, `game-with-score.ts`). Splitting a chapter across variants costs the reader nothing, but every listing inside one file is checked against the same program state, so prefer one file per chapter.
 
-These sources are part of the example catalog for tooling — `typecheck:examples`, ESLint and Prettier cover them — but not for the playground: they get no generated `.js` sibling, no `examples.json` entry, and are left out of the served example snapshot. The one exception is the React chapter: its listings live in `packages/exojs-react/examples/guides/*.tsx`, because React resolves through that package's own `node_modules` and the root package deliberately carries no `react` dependency. The package's `typecheck` script and its ESLint config cover them; `<SourceSnippet source>` is repo-root relative either way. A listing that is a fragment (a method body shown without its class, a value only the reader owns) stays a fenced block in the MDX; `pnpm typecheck:guides` checks those.
+These sources are part of the example catalog for tooling — `typecheck:examples`, ESLint and Oxfmt cover them — but not for the playground: they get no generated `.js` sibling, no `examples.json` entry, and are left out of the served example snapshot. The one exception is the React chapter: its listings live in `packages/exojs-react/examples/guides/*.tsx`, because React resolves through that package's own `node_modules` and the root package deliberately carries no `react` dependency. The package's `typecheck` script and its ESLint config cover them; `<SourceSnippet source>` is repo-root relative either way. A listing that is a fragment (a method body shown without its class, a value only the reader owns) stays a fenced block in the MDX; `pnpm typecheck:guides` checks those.
+
+## Visual evidence for visible changes
+
+A pull request that changes what the Playground or a renderer draws shows it. Tests and the blank-canvas smoke prove that nothing crashed; they do not prove that the result looks right.
+
+Pick the medium by what changed. A static change gets one or two representative PNG screenshots. An animation, VFX, scene transition or moving UI gets a short clip - a GIF, or an MP4/WebM - of the one interaction that matters, with a still or two for the states a reviewer will want to inspect. A bug that only shows on individual frames (rendering order, frame timing, collision) gets targeted single frames with their exact frame index or simulation time, when the example or test can step the simulation to that point deterministically; where it cannot, say so rather than substituting a screenshot. Several selectable variants are each captured on their own: one capture of the default state does not cover a change with three effects. Nothing is recorded automatically for every test or commit, and the whole gallery is never swept; the CI smoke already covers crashes and blank output.
+
+Stills come from the existing smoke harness, narrowed to the affected examples: `pnpm test:examples:smoke --only <path substring> --shots <dir> --shot-times <seconds,...>`. Choose the times so that each state that matters appears at least once; for a transition that is closing, fully covered and opening. `<name>.captures.json` records when each capture was taken. When the smoke runner cannot reach the state - it opens the default example and drives no input - use a small one-off Playwright script against the built site, with one browser context and `recordVideo` for that context only; the video file exists only after the context is closed, so close it before converting or attaching anything. FFmpeg is an optional converter (crop to the preview, trim to the interaction, `fps=12`, a two-pass palette for GIF); keep clips short, a few seconds and under about two megabytes, and keep the source resolution of pixel art by scaling with nearest-neighbour.
+
+Screenshots and clips are wall-clock observations. A screenshot taken at a time offset, and a real-time video recorded on a loaded or software-rendered machine, show what a viewer would see, but they do not identify a simulation frame, drop or repeat frames, and the capture itself changes the timing. They are evidence of how something looks, never proof of frame-exact behaviour.
+
+Keep the captures untracked under `.workspace/visual-review/current/` and replace them when the change is revised, rather than archiving one set per commit. Do not commit screenshots or clips. The finished evidence goes into the pull request description or a comment, not only onto the branch, so a reviewer sees it without checking anything out. GitHub renders PNG and GIF inline when they are attached through the editor, and an attached MP4 or WebM plays in place; animated WebP and APNG are not relied on here because their inline rendering has not been verified for this repository, so check a candidate format in a draft comment before recommending it. If the evidence cannot be attached or has not been reviewed by a person, keep the pull request in Draft and say that visual acceptance is pending.
 
 ## Compile-time build constants
 
@@ -182,7 +218,7 @@ Three synthetic identifiers (denoted by the `__*__` convention) are statically r
 
 These are **not** application configuration. Normal application environments should use `import.meta.env` or their own configuration mechanism.
 
-The canonical ambient declaration lives in `src/build-constants.d.ts` and is included by every tsconfig in the repository. The build-defines helper (`@codexo/exojs-config/build-defines`) centralises resolution and serialisation.
+The canonical ambient declaration lives in `src/typings.d.ts`; a tsconfig whose program reads the constants must include that file. The build-defines helper (`@codexo/exojs-config/build-defines`) centralises resolution and serialisation.
 
 Release metadata (full revision SHA, creation date, tarball hashes) belongs in `release-manifest.json`. Do not use `.env` as the canonical source of the package version or official revision.
 
@@ -297,7 +333,8 @@ This policy governs new code and the sites a change already touches. The engine 
 
 ## Distribution
 
-- npm packages are **modular and self-contained**: `@codexo/exojs` ships Core only; `@codexo/exojs-particles` and `@codexo/exojs-tiled` ship only their own product. There is no Core `/full` export and no aggregator package.
+- npm packages are **modular and self-contained**: `@codexo/exojs` ships Core and, as opt-in subpaths, the runtime modules (`@codexo/exojs/tilemap`, `/particles`, `/audio-fx`, `/physics`, `/tilemap-physics`, `/lighting`, `/pathfinding`); the root entry never imports them. Adapters such as `@codexo/exojs-tiled` ship only their own product. There is no Core `/full` export and no aggregator package.
+- A runtime module's sources live in `packages/exojs-<module>/` as a private workspace package (`@codexo/exojs-module-<module>`) and are built only by the Core build, which emits them under `dist/esm/<subpath>/`. Every import a module makes of Core or of a sibling module lands on the same file the Core `exports` map names, so a consumer always has exactly one Core instance. The release roles live in `scripts/release/lockstep-packages.ts`.
 - Packages ship `.js` + `.d.ts` + source maps — **never raw `.ts` runtime entries**. The `exports` map is the public interface; the bundler profile is the supported type-resolution target (browser/bundler-first).
 - Extensions are side-effect-free at the root; pass their descriptor to `ApplicationOptions.extensions` to equip an app. There is no global registry.
 - The synchronized offline snapshot (npm tarballs + versioned ESM vendor trees + examples + built site) is the GitHub Full Release archive.

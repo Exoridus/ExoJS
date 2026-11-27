@@ -1,8 +1,9 @@
 import { Application, Color, FixedResolutionCanvasSizing, Scene, type Seconds, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class BoundingBoxesScene extends Scene {
-  private sprites!: { sprite: Sprite; speed: number }[];
+  private sprites!: Array<{ sprite: Sprite; speed: number }>;
   private time = 0;
 
   override init(): void {
@@ -13,12 +14,13 @@ class BoundingBoxesScene extends Scene {
     const step = (width - 2 * margin) / (count - 1);
 
     this.sprites = Array.from({ length: count }, (_, i) => {
-      const sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(0.8);
+      const sprite = new Sprite(assets.ship.source).setAnchor(0.5).setScale(0.8);
       sprite.setPosition(margin + i * step, height / 2 + Math.sin(i) * 80);
       // The boundingBoxes layer walks the SCENE GRAPH (scene.root), so
       // the sprites must be attached to it - nodes that are only passed
       // to context.render() directly are invisible to the overlay.
       this.root.addChild(sprite);
+
       return { sprite, speed: 0.8 + i * 0.14 };
     });
   }
@@ -28,6 +30,7 @@ class BoundingBoxesScene extends Scene {
     const { height } = app;
 
     this.time += delta;
+
     for (const { sprite, speed } of this.sprites) {
       sprite.setRotation(this.time * 35 * speed);
       sprite.setPosition(sprite.position.x, height / 2 + Math.sin(this.time * speed) * 100);
@@ -44,9 +47,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 const debug = new DebugOverlay(app);

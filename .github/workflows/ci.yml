@@ -5,8 +5,9 @@ name: CI
 # runs locally. A lane is added there, never here.
 #
 #   plan ─┬─► gates (matrix)
-#         ├─► test (matrix) ─► skip-budget
-#         └─► build ─┬─► verify (matrix)
+#         ├─► test (matrix) ──┬─► skip-budget
+#         └─► build ─┬────────┘
+#                    ├─► verify (matrix)
 #                    └─► site ─► smoke
 #                                       all ─► verdict   (the required check)
 #
@@ -19,10 +20,13 @@ name: CI
 on:
   push:
     branches: [main, next]
-  pull_request:
-    branches: [main, next]
+  pull_request: # A stacked pull request can target a feature branch.
   workflow_dispatch:
     inputs:
+      full_qualification:
+        description: Qualify the complete candidate with coverage and every example
+        type: boolean
+        default: true
       runner:
         description: Image for the browser and unit lanes (a manual run on a candidate image qualifies it before any migration)
         type: choice
@@ -58,10 +62,16 @@ jobs:
       site: ${{ steps.plan.outputs.site }}
       smoke: ${{ steps.plan.outputs.smoke }}
       smokeSample: ${{ steps.plan.outputs.smokeSample }}
+      smokeMatrix: ${{ steps.plan.outputs.smokeMatrix }}
       skipBudget: ${{ steps.plan.outputs.skipBudget }}
       coverage: ${{ steps.plan.outputs.coverage }}
+      fullQualification: ${{ steps.plan.outputs.fullQualification }}
+      guideMotion: ${{ steps.changed.outputs.guide_motion }}
     steps:
       - uses: actions/checkout@v6
+
+      # Large file lists exceed Linux's per-environment-entry limit before the shell starts.
+      - run: ': > "$RUNNER_TEMP/changed-files"'
 
       - if: github.event_name == 'pull_request'
         id: changed
@@ -71,6 +81,23 @@ jobs:
           filters: |
             all:
               - '**'
+            guide_motion:
+              - 'examples/guides/animation/sprite-animation.ts'
+              - 'examples/guides/character-movement/animated-character.ts'
+              - 'examples/guides/camera-follow-and-parallax/parallax.ts'
+              - 'examples/guides/model-b-plus/scene-navigation.ts'
+              - 'test/rendering/browser/webgl2-guide-workflows.test.ts'
+              - 'test/rendering/browser/guideMotionCommands.ts'
+              - 'test/ci/guide-motion-commands.test.ts'
+              - 'vitest.config.ts'
+              - 'scripts/ci/lanes.ts'
+              - '.github/workflows/ci.yml'
+
+      - if: github.event_name == 'pull_request'
+        run: |
+          cat > "$RUNNER_TEMP/changed-files" <<'CHANGED_FILES_JSON'
+          ${{ steps.changed.outputs.all_files }}
+          CHANGED_FILES_JSON
 
       # `before` is unresolvable for a new branch or a force-push with no
       # shared history, and the fetch below can fail for the same reason -
@@ -86,11 +113,7 @@ jobs:
               files="$(git diff --name-only "$before" "${{ github.sha }}" 2>/dev/null || true)"
             fi
           fi
-          {
-            echo "files<<PUSH_DIFF_EOF"
-            echo "$files"
-            echo "PUSH_DIFF_EOF"
-          } >> "$GITHUB_OUTPUT"
+          printf '%s' "$files" > "$RUNNER_TEMP/changed-files"
 
       # No install: the planner is dependency-free TypeScript that node strips.
       - uses: actions/setup-node@v6
@@ -100,8 +123,10 @@ jobs:
       - id: plan
         env:
           EVENT_NAME: ${{ github.event_name }}
-          CHANGED_FILES: ${{ github.event_name == 'pull_request' && steps.changed.outputs.all_files || steps.push-diff.outputs.files }}
+          CHANGED_FILES_FILE: ${{ runner.temp }}/changed-files
           REF_NAME: ${{ github.ref_name }}
+          FULL_QUALIFICATION: ${{ inputs.full_qualification || contains(github.event.pull_request.labels.*.name, 'ci:full') }}
+          AFFECTED_SHADOW: ${{ contains(github.event.pull_request.labels.*.name, 'ci:affected-shadow') || contains(github.event.pull_request.labels.*.name, 'ci:affected-probe') }}
         run: node scripts/ci/lanes.ts >> "$GITHUB_OUTPUT"
 
   gates:
@@ -116,6 +141,35 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
+      - name: Fetch source hygiene base
+        if: matrix.id == 'lint' && github.event_name != 'workflow_dispatch'
+        env:
+          SOURCE_HYGIENE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        shell: bash
+        run: |
+          if [ "$SOURCE_HYGIENE_BASE" = "0000000000000000000000000000000000000000" ]; then
+            exit 0
+          fi
+          if [[ ! "$SOURCE_HYGIENE_BASE" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Invalid source hygiene base commit."
+            exit 1
+          fi
+          if ! git cat-file -e "$SOURCE_HYGIENE_BASE^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "$SOURCE_HYGIENE_BASE"
+          fi
+          printf 'EXOJS_SOURCE_HYGIENE_BASE=%s\n' "$SOURCE_HYGIENE_BASE" >> "$GITHUB_ENV"
+      - name: Fetch document history base
+        if: matrix.id == 'sync'
+        env:
+          HISTORY_BASE: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+        run: |
+          if [ -z "$HISTORY_BASE" ] || [ "$HISTORY_BASE" = "0000000000000000000000000000000000000000" ]; then
+            git fetch --no-tags --depth=1 origin refs/heads/next
+            HISTORY_BASE="$(git rev-parse FETCH_HEAD)"
+          elif ! git cat-file -e "$HISTORY_BASE^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "$HISTORY_BASE"
+          fi
+          printf 'EXOJS_DOCUMENT_HISTORY_BASE=%s\n' "$HISTORY_BASE" >> "$GITHUB_ENV"
       - run: ${{ matrix.run }}
       - name: Upload tooling logs on failure
         if: ${{ failure() }}
@@ -150,10 +204,93 @@ jobs:
           apt: ${{ matrix.apt }}
           naga: ${{ matrix.naga }}
 
+      - name: Provide a native audio output for Firefox
+        if: ${{ matrix.id == 'firefox' }}
+        run: |
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=exojs_ci
+          pactl set-default-sink exojs_ci
+          pactl info
+
+      # Ordinary PRs select only their actual changed range. Shadow/probe labels
+      # retain native full execution and audit additional scenarios. A failed
+      # discovery leaves native execution active and still fails this job.
+      - name: Calculate affected tests
+        if: ${{ matrix.affectedMode != '' }}
+        env:
+          AFFECTED_MODE: ${{ matrix.affectedMode }}
+          AFFECTED_BASE: ${{ github.event.pull_request.base.sha }}
+          AFFECTED_PROJECTS: ${{ join(matrix.affectedProjects, ',') }}
+          AFFECTED_OUTPUT: .workspace/affected-tests/${{ matrix.id }}.json
+        shell: bash
+        run: |
+          printf '%s\n' 'EXOJS_AFFECTED_PLAN=' 'EXOJS_AFFECTED_MODE=' >> "$GITHUB_ENV"
+          mkdir -p "$(dirname "$AFFECTED_OUTPUT")"
+          selection=()
+          case "$AFFECTED_MODE" in
+            enforce) ;;
+            shadow) selection+=(--scenarios) ;;
+            *) printf '%s\n' '::error::Unknown affected-test mode.' >&2; exit 1 ;;
+          esac
+          if ! git fetch --no-tags --depth=1 origin "$AFFECTED_BASE"; then
+            printf '%s\n' '::warning::Dependency selection could not fetch its base; the selector will retain full validation.'
+          fi
+          args=()
+          IFS=',' read -ra projects <<< "$AFFECTED_PROJECTS"
+          for project in "${projects[@]}"; do
+            args+=("--project=$project")
+          done
+          node scripts/ci/affected-plan.ts --base "$AFFECTED_BASE" --committed "${selection[@]}" --output "$AFFECTED_OUTPUT" -- "${args[@]}" 2>&1 | tee "${AFFECTED_OUTPUT%.json}.log"
+          printf 'EXOJS_AFFECTED_PLAN=%s\n' "$AFFECTED_OUTPUT" >> "$GITHUB_ENV"
+          printf 'EXOJS_AFFECTED_MODE=%s\n' "$AFFECTED_MODE" >> "$GITHUB_ENV"
+
       # A browser lane runs several qualification rows (`pnpm qualify`), each
       # with its own JUnit report, deadline and log; the summary of which rows
       # passed, were unsupported on this host or failed is on the job page.
       - run: ${{ matrix.run }}
+        if: ${{ !cancelled() }}
+        env:
+          # Record only the four explicitly bracketed guide interactions when
+          # their sources or capture setup changed; never the entire suite.
+          EXOJS_GUIDE_MOTION: ${{ matrix.id == 'webgl' && needs.plan.outputs.guideMotion == 'true' && '1' || '0' }}
+          # Explicitly opt in to finite-line reference captures on review PRs only.
+          EXOJS_CAPTURE_LIGHTMAP_REFERENCES: ${{ (matrix.id == 'webgl' || matrix.id == 'webgpu' || matrix.id == 'firefox') && contains(github.event.pull_request.labels.*.name, 'ci:lightmap-references') && '1' || '0' }}
+          EXOJS_VISUAL_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      # Optional probes require complete successful shadow evidence for the
+      # exact scenario. Unit measures the subset; Media checks receipt delivery
+      # through a real browser instance without repeating the Core GPU suite.
+      # Probe JUnit stays outside test-results so it cannot duplicate the budget.
+      - name: Measure an audited affected subset
+        if: >-
+          success() && github.event_name == 'pull_request' &&
+          contains(github.event.pull_request.labels.*.name, 'ci:affected-probe') &&
+          matrix.affectedMode == 'shadow' &&
+          (matrix.id == 'unit' || matrix.id == 'webgpu')
+        env:
+          AFFECTED_LANE: ${{ matrix.id }}
+        shell: bash
+        run: |
+          probe=".workspace/affected-tests/probe-${AFFECTED_LANE}.json"
+          node scripts/ci/affected-probe.ts --plan "$EXOJS_AFFECTED_PLAN" --results .workspace/affected-tests/results --scenario AnimatedSprite --output "$probe"
+          export EXOJS_AFFECTED_PLAN="$probe"
+          export EXOJS_AFFECTED_MODE=enforce
+          export EXOJS_AFFECTED_EXECUTION_DIR=.workspace/affected-tests/probe-execution
+          if [ "$AFFECTED_LANE" = unit ]; then
+            time EXOJS_REQUIRE_NAGA=1 node scripts/run-tests.ts --project='exojs*' --project=rendering-perf --reporter=minimal --reporter=junit --outputFile.junit=.workspace/affected-tests/probe-unit.junit.xml
+          else
+            time EXOJS_WEBGPU_CI_HEADED=1 xvfb-run -a pnpm qualify --row 'Diagnostic / AnimatedSprite WebGPU Media' --preflight chromium-webgpu --requires webgpu-device,media-frame --timeout 6 -- node scripts/ci/affected-run.ts --project=browser-webgpu-media --reporter=minimal --reporter=junit --outputFile.junit=.workspace/affected-tests/probe-webgpu-media.junit.xml
+          fi
+
+      - name: Keep dependency-selection evidence
+        if: ${{ !cancelled() && matrix.affectedMode != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: affected-tests-${{ matrix.id }}
+          path: .workspace/affected-tests/
+          retention-days: 7
+          include-hidden-files: true
+          if-no-files-found: error
 
       - name: Keep the JUnit reports for the skip budget
         if: ${{ matrix.junit && !cancelled() }}
@@ -181,6 +318,16 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
 
+      - name: Keep focused visual review evidence
+        if: ${{ !cancelled() && (matrix.id == 'webgl' || matrix.id == 'webgpu' || matrix.id == 'firefox') }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-review-${{ matrix.id }}
+          path: .workspace/visual-review/current/
+          retention-days: 7
+          include-hidden-files: true
+          if-no-files-found: ignore
+
       - if: ${{ matrix.junit && !cancelled() }}
         uses: codecov/codecov-action@v7
         with:
@@ -202,8 +349,8 @@ jobs:
   # One budget over every lane's report: a test that moves from one lane to
   # another must not change the count.
   skip-budget:
-    needs: [plan, test]
-    if: ${{ !cancelled() && needs.plan.outputs.skipBudget == 'true' && needs.test.result == 'success' }}
+    needs: [plan, test, build]
+    if: ${{ !cancelled() && needs.plan.outputs.skipBudget == 'true' && needs.test.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -225,6 +372,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
+        with:
+          browser: chromium
 
       - name: Build core
         env:
@@ -241,12 +390,32 @@ jobs:
           EXOJS_REQUIRE_PRODUCTION_BUILD: '1'
         run: pnpm test:production-stripping
 
+      - name: Verify the packed Core, its runtime subpaths and the legacy shims against the built dist
+        env:
+          EXOJS_REQUIRE_PRODUCTION_BUILD: '1'
+        run: pnpm test:release-dist --reporter=minimal --reporter=junit --outputFile.junit=./test-results/build.junit.xml
+
+      - name: Keep the JUnit report for the skip budget
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-build
+          path: test-results/*.junit.xml
+          retention-days: 1
+          if-no-files-found: ignore
+
+      - name: Verify the built ESM tree through a browser import map
+        run: pnpm test:esm-importmap
+
       - uses: actions/upload-artifact@v7
         with:
           name: dist
+          # The demo-assets build copies its standard media into media/, which
+          # the package exports and packs; the verify jobs pack from this tree.
           path: |
             dist/
             packages/*/dist/
+            packages/exojs-demo-assets/media/
           retention-days: 1
           if-no-files-found: error
 
@@ -275,12 +444,20 @@ jobs:
     outputs:
       # A re-run of failed jobs keeps this job's earlier attempt, so the smoke
       # and the publisher find the candidate by this name, not by recomputing it.
-      candidate: site-stable-${{ github.sha }}-${{ github.run_attempt }}
+      candidate: site-${{ steps.channel.outputs.channel }}-${{ github.sha }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
         with:
           dist: 'true'
+
+      # main builds Stable at /ExoJS/, next builds Next at /ExoJS/next/ (a pull
+      # request builds the channel of the branch it targets); any other ref
+      # builds Stable. The table lives in scripts/pages/site-channel.ts.
+      - id: channel
+        env:
+          SITE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+        run: node scripts/pages/site-channel.ts >> "$GITHUB_OUTPUT"
 
       # Typechecks the site against the published entry points, so it needs
       # the dist the build job produced.
@@ -288,18 +465,17 @@ jobs:
 
       - env:
           EXOJS_PACKAGE_PATH: ..
+          EXOJS_SITE_CHANNEL: ${{ steps.channel.outputs.channel }}
+          EXOJS_SITE_BASE: ${{ steps.channel.outputs.base }}
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm site:build
-
-      # This branch publishes the Stable channel at /ExoJS/. Its site build
-      # writes no site-build.json, so the finished tree is recorded here.
-      - name: Record the Stable site identity
-        run: node scripts/pages/stamp-stable-site.ts --dir site/dist --sha "$GITHUB_SHA"
 
       # The tree must match its own site-build.json, carry this commit, channel
       # and base, contain no links or special files and fit the site budget.
       - name: Verify the site candidate
-        run: node scripts/pages/channel-artifact.ts verify --dir site/dist --channel stable --sha "$GITHUB_SHA"
+        env:
+          SITE_CHANNEL: ${{ steps.channel.outputs.channel }}
+        run: node scripts/pages/channel-artifact.ts verify --dir site/dist --channel "$SITE_CHANNEL" --sha "$GITHUB_SHA"
 
       - name: Upload tooling logs on failure
         if: ${{ failure() }}
@@ -312,11 +488,11 @@ jobs:
           if-no-files-found: warn
 
       # Deploy Pages ships exactly this artifact; it builds nothing itself. A
-      # push to main is a publishable Stable candidate and is kept for 90 days,
-      # so the publisher never depends on a short-lived download.
+      # push to main or next is a publishable channel candidate and is kept for
+      # 90 days, so the publisher never depends on a short-lived download.
       - uses: actions/upload-artifact@v7
         with:
-          name: site-stable-${{ github.sha }}-${{ github.run_attempt }}
+          name: site-${{ steps.channel.outputs.channel }}-${{ github.sha }}-${{ github.run_attempt }}
           path: site/dist/
           retention-days: ${{ github.event_name == 'push' && 90 || 1 }}
           if-no-files-found: error
@@ -328,30 +504,49 @@ jobs:
   # colour alone, which reads as blank for every entry. WebGPU itself is
   # covered by the webgpu test lane.
   smoke:
+    name: smoke (${{ matrix.id }})
     needs: [plan, site]
     if: ${{ !cancelled() && needs.plan.outputs.smoke == 'true' && needs.site.result == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Each suite remains serial on software graphics in its own runner.
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.smokeMatrix) }}
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
         with:
           browser: chromium
+      # The exact candidate tree, served at the base its site-build.json names.
       - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.site.outputs.candidate }}
           path: site/dist
 
-      - run: pnpm test:examples:smoke --renderer webgl2 ${{ needs.plan.outputs.smokeSample == 'true' && '--sample' || '' }}
+      # Each row executes its complete assigned inventory. GPU/page concurrency
+      # within a runner stays unchanged; independent rows share only the candidate.
+      - run: ${{ matrix.run }}
 
-      - name: Keep the smoke report
-        if: ${{ !cancelled() }}
+      - name: Keep the example smoke report
+        if: ${{ matrix.suite == 'examples' && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: example-smoke-report
+          name: smoke-${{ matrix.id }}
           path: |
             .workspace/reports/example-smoke.md
             .workspace/reports/example-smoke-artifacts
+          retention-days: 7
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+      - name: Keep the Playground E2E report
+        if: ${{ matrix.suite == 'playground' && !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-${{ matrix.id }}
+          path: .workspace/reports/playground-e2e
           retention-days: 7
           include-hidden-files: true
           if-no-files-found: ignore

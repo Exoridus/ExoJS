@@ -3,7 +3,7 @@
 import '../src/index';
 
 import type { AssetFactoryContext } from '@codexo/exojs';
-import { tilemapExtension } from '@codexo/exojs-tilemap';
+import { tilemapExtension } from '@codexo/exojs/tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildSnapshot } from '../../../src/extensions/snapshot';
@@ -69,7 +69,7 @@ describe('@codexo/exojs-ldtk asset type - ldtkMapType', () => {
     };
     const source = 'https://example.com/world.ldtk';
     const load = vi.fn(async (asset: unknown) => {
-      const config = (asset as { _config: { type: string; source: string } })._config;
+      const config = asset as { type: string; source: string };
 
       expect(config).toEqual({ type: 'json', source });
 

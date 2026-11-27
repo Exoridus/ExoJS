@@ -35,6 +35,7 @@ import { describe, expect, test } from 'vitest';
 
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { crtShader } from '#rendering/filters/CrtFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { spriteMaterialPrologueWgsl } from '#rendering/sprite/materialSources';
 import { filterUniformGroup } from '#rendering/uniforms/uniformLayout';
@@ -43,19 +44,30 @@ import { mipmapWgsl } from '#rendering/webgpu/WebGpuBackend';
 import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/WebGpuMaskCompositor';
 import { instancedMeshShaderSource, meshShaderSource } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { scalableSpriteShaderSource } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
-import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import {
+  buildPersistentSpriteShaderSource,
+  buildSpriteShaderSource,
+  spriteBatchTextureSlotTiers,
+} from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
+import { textureNormalizeWgsl } from '#rendering/webgpu/WebGpuTextureNormalizer';
+
+import { galleryDissolveShader } from '../../examples/shared/gallery-transitions';
 
 /** Kept in step with the entries in `test/rendering/browser/webgpu-shader-compile.test.ts`. */
 const shaders: ReadonlyArray<readonly [name: string, source: string]> = [
   ['WebGpuBackend mipmap pipeline', mipmapWgsl],
+  ['WebGpuTextureNormalizer', textureNormalizeWgsl],
   ['WebGpuBackdropBlendCompositor', backdropBlendCompositorWgsl],
   ['WebGpuMaskCompositor', maskCompositorWgsl],
   ['WebGpuMeshRenderer (default)', meshShaderSource],
   ['WebGpuMeshRenderer (instanced)', instancedMeshShaderSource],
   ['WebGpuScalableSpriteRenderer (combined)', scalableSpriteShaderSource],
-  ...spriteBatchTextureSlotTiers.map((tier): readonly [string, string] => [`WebGpuSpriteRenderer (${tier} texture slots)`, buildSpriteShaderSource(tier)]),
+  ...spriteBatchTextureSlotTiers.map((tier): readonly [string, string] => [
+    `WebGpuSpriteRenderer (${tier} texture slots)`,
+    buildSpriteShaderSource(tier),
+  ]),
   ...spriteBatchTextureSlotTiers.map((tier): readonly [string, string] => [
     `WebGpuSpriteRenderer persistent-indexed (${tier} texture slots)`,
     buildPersistentSpriteShaderSource(tier),
@@ -68,7 +80,9 @@ const shaders: ReadonlyArray<readonly [name: string, source: string]> = [
   // to validate.
   ['BloomFilter (generated uniform block)', bloomThresholdShader._resolveWgsl(filterUniformGroup)!],
   ['ColorMatrixFilter (generated uniform block)', colorMatrixShader._resolveWgsl(filterUniformGroup)!],
+  ['CrtFilter (generated uniform block)', crtShader._resolveWgsl(filterUniformGroup)!],
   ['DropShadowFilter (generated uniform block)', dropShadowShader._resolveWgsl(filterUniformGroup)!],
+  ['transition gallery dissolve (generated uniform block)', galleryDissolveShader._resolveWgsl(filterUniformGroup)!],
 ];
 
 const nagaBinary = process.env['EXOJS_NAGA'] ?? 'naga';
@@ -92,7 +106,9 @@ const validate = (name: string, source: string): NagaResult | null => {
   if (result.error) {
     const missing = (result.error as NodeJS.ErrnoException).code === 'ENOENT';
 
-    if (missing && !nagaRequired) return null;
+    if (missing && !nagaRequired) {
+      return null;
+    }
 
     throw new Error(
       `Could not run the Naga validator (\`${nagaBinary}\`): ${result.error.message}\n` +

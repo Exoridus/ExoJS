@@ -64,8 +64,8 @@ const fixedGlyphInfo: GlyphInfo = {
   advance: 10,
   ascent: 13,
   page: 0,
-  uvLeft: 0.0,
-  uvTop: 0.0,
+  uvLeft: 0,
+  uvTop: 0,
   uvRight: 0.01,
   uvBottom: 0.02,
   xBearing: PADDING_BEARING,
@@ -85,7 +85,7 @@ const mockPage = {
     flipY: false,
     addDestroyListener: () => mockPage.texture,
     removeDestroyListener: () => mockPage.texture,
-    destroy: () => undefined,
+    destroy: () => {},
   },
   index: 0,
   mode: 'sdf' as const,
@@ -262,6 +262,43 @@ describe('Text', () => {
     text.style = style;
 
     expect(text.style).toBe(style);
+  });
+
+  test('all shared-style readers acquire a changed font even after another reader consumes it', () => {
+    const style = new TextStyle({ fontSize: 16 });
+    const first = new Text('Hi');
+    const late = new Text('Hi');
+    const changedAtlas: Partial<GlyphAtlas> = {
+      ...mockAtlas,
+      getGlyph: () => ({ ...fixedGlyphInfo, advance: 20 }),
+      onCleared: new Signal(),
+    };
+
+    first.style = style;
+    late.style = style;
+    expect(first.textBounds.width).toBe(20);
+    expect(late.textBounds.width).toBe(20);
+
+    mockPool.getAtlas.mockReturnValue(changedAtlas);
+
+    try {
+      style.fontFamily = 'Georgia';
+      expect(first.textBounds.width).toBe(40);
+
+      // The late reader still owes a font lookup, even though the latest
+      // globally pending change now only requires layout.
+      style.lineHeight = 2;
+
+      expect(late.textBounds.width).toBe(40);
+      expect(late.textBounds.height).toBe(32);
+      expect(late.atlas).toBe(changedAtlas);
+      expect(first.style).toBe(style);
+      expect(late.style).toBe(style);
+    } finally {
+      mockPool.getAtlas.mockReturnValue(mockAtlas);
+      first.destroy();
+      late.destroy();
+    }
   });
 
   test('constructor with TextStyleOptions creates a TextStyle', () => {
@@ -576,6 +613,7 @@ describe('Text — FontFace-first', () => {
   class MockFontFace {
     family: string;
     load = vi.fn().mockResolvedValue(undefined);
+
     constructor(family: string) {
       this.family = family;
     }
@@ -605,9 +643,7 @@ describe('Text — FontFace-first', () => {
     (globalThis as Record<string, unknown>).FontFace = origFontFace;
   });
 
-  const makeFace = (family = 'TestFont'): FontFace => {
-    return new MockFontFace(family) as unknown as FontFace;
-  };
+  const makeFace = (family = 'TestFont'): FontFace => new MockFontFace(family) as unknown as FontFace;
 
   test('font option registers face with document.fonts', async () => {
     const face = makeFace();
@@ -679,5 +715,57 @@ describe('Text — FontFace-first', () => {
     text.style = { font: face, fontSize: 16 };
     await flushMicrotasks();
     expect(mockFontsAdd).toHaveBeenCalledWith(face);
+  });
+
+  test('a rejected face load leaves the current geometry and caches alone', async () => {
+    const face = makeFace();
+    (face as unknown as MockFontFace).load.mockRejectedValueOnce(new Error('font unavailable'));
+    const text = new Text('Hello', { font: face });
+    const before = text.pageQuads[0];
+    const cleared = mockPool.clearVariant.mock.calls.length;
+    await flushMicrotasks();
+    expect(text.pageQuads[0]).toBe(before);
+    expect(mockPool.clearVariant).toHaveBeenCalledTimes(cleared);
+    text.destroy();
+  });
+
+  test('a stale face load does not invalidate the replacement typeface', async () => {
+    let resolve!: () => void;
+    const face = makeFace();
+    (face as unknown as MockFontFace).load.mockImplementationOnce(
+      () =>
+        new Promise<void>(r => {
+          resolve = r;
+        }),
+    );
+    const text = new Text('Hello', { font: face });
+    text.style = { fontFamily: 'ReplacementFont' };
+    const before = text.pageQuads[0];
+    const cleared = mockPool.clearVariant.mock.calls.length;
+    resolve();
+    await flushMicrotasks();
+    expect(text.pageQuads[0]).toBe(before);
+    expect(mockPool.clearVariant).toHaveBeenCalledTimes(cleared);
+    text.destroy();
+  });
+
+  test('an invalid replacement style leaves the pending face load active', async () => {
+    let resolve!: () => void;
+    const face = makeFace();
+    (face as unknown as MockFontFace).load.mockImplementationOnce(
+      () =>
+        new Promise<void>(r => {
+          resolve = r;
+        }),
+    );
+    const text = new Text('Hello', { font: face });
+    const cleared = mockPool.clearVariant.mock.calls.length;
+    expect(() => {
+      text.style = { gradient: { stops: Array.from({ length: 9 }, () => ({ offset: 0, color: Color.white })) } };
+    }).toThrow(/at most 8/);
+    resolve();
+    await flushMicrotasks();
+    expect(mockPool.clearVariant).toHaveBeenCalledTimes(cleared + 1);
+    text.destroy();
   });
 });

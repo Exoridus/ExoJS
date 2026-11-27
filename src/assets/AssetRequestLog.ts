@@ -1,9 +1,13 @@
+import type { AssetConstructor } from './AssetConstructor';
+import type { AssetMeta } from './assetMeta';
+import type { AssetReference } from './AssetReference';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { CanonicalAsset, ResourceKey } from './canonicalKey';
 import { stableJson, toPortableData } from './portableData';
 
 /** One logical request that resolved to a key, as a saved document can repeat it. */
 interface LogicalRequest {
+  readonly type: AssetConstructor;
   /** The source the caller wrote, before variant selection. */
   readonly source: string;
   /** The identity-relevant options, as data; absent when the source alone identifies the resource. */
@@ -12,33 +16,72 @@ interface LogicalRequest {
   readonly unportable?: string;
 }
 
+type LoadedAssetOrigin = Pick<CanonicalAsset, 'type' | 'source' | 'key'> & { readonly direct: boolean };
+
 /**
  * What a saved document can reference a resource by: the one logical request
  * it came from, or why there is no single honest answer.
  * @internal
  */
-export type AssetReferenceLookup =
-  | { readonly kind: 'request'; readonly source: string; readonly options?: Readonly<Record<string, unknown>> }
-  | { readonly kind: 'error'; readonly message: string };
+export type AssetReferenceLookup = ({ readonly kind: 'request' } & AssetReference) | { readonly kind: 'error'; readonly message: string };
 
 /**
  * The requests that resolved to each canonical key: every source string, for
  * diagnostics, and every distinct logical request (pre-variant source plus
  * identity-relevant options), which backs portable references in saved
- * documents. Neither participates in identity or ownership.
+ * documents. Also tracks issued resources weakly so handle releases can find
+ * their owner's current keys without keeping the payloads alive.
  * @internal
  */
 export class AssetRequestLog {
   private readonly _typeRegistry: AssetTypeRegistry;
   private readonly _aliases = new Map<ResourceKey, Set<string>>();
   private readonly _requests = new Map<ResourceKey, Map<string, LogicalRequest>>();
+  private readonly _origins = new WeakMap<object, LoadedAssetOrigin>();
+  private readonly _directResources = new WeakSet();
 
   public constructor(typeRegistry: AssetTypeRegistry) {
     this._typeRegistry = typeRegistry;
   }
 
-  /** Record that `asset`'s source - and, when known, its logical request - resolved to its key. */
+  public recordResource(asset: CanonicalAsset, resource: object, direct: boolean): void {
+    if (!this._origins.has(resource)) {
+      this._origins.set(resource, { type: asset.type, source: asset.source, key: asset.key, direct });
+    }
+
+    if (direct) {
+      this._directResources.add(resource);
+    }
+  }
+
+  /** The first recorded origin remains the one used by portable references. */
+  public origin(resource: object): LoadedAssetOrigin | undefined {
+    return this._origins.get(resource);
+  }
+
+  /** Find this owner's current claims, including when a factory returns the same object for different keys. */
+  public directKeys(
+    resource: object,
+    owned: ReadonlySet<ResourceKey> | undefined,
+    resident: ReadonlyMap<ResourceKey, { readonly asset: CanonicalAsset; readonly value: unknown }>,
+  ): ResourceKey[] | undefined {
+    if (!this._directResources.has(resource)) {
+      return undefined;
+    }
+
+    return [...(owned ?? [])].filter(key => {
+      const entry = resident.get(key);
+
+      return entry?.value === resource && Object.hasOwn(entry.asset, 'directSource');
+    });
+  }
+
+  /** Record the source spellings - and, when known, the logical request - that resolved to `asset`'s key. */
   public record(asset: CanonicalAsset): void {
+    if (Object.hasOwn(asset, 'directSource')) {
+      return;
+    }
+
     let aliases = this._aliases.get(asset.key);
 
     if (aliases === undefined) {
@@ -47,6 +90,10 @@ export class AssetRequestLog {
     }
 
     aliases.add(asset.source);
+
+    if (asset.requested !== undefined) {
+      aliases.add(asset.requested);
+    }
 
     if (asset.requested === undefined) {
       return;
@@ -76,11 +123,25 @@ export class AssetRequestLog {
    * several distinct ones resolved to it or the one cannot be written as data,
    * or `fallback` as a bare source when no request was recorded.
    */
-  public lookup(key: ResourceKey, fallback: string | undefined): AssetReferenceLookup | null {
-    const requests = [...(this._requests.get(key)?.values() ?? [])];
+  public lookup(
+    key: ResourceKey,
+    fallback: (Pick<CanonicalAsset, 'type' | 'source'> & { readonly direct?: boolean }) | undefined,
+    resource: object,
+    donor: unknown,
+    authoredSource?: string,
+  ): AssetReferenceLookup | null {
+    if (fallback?.direct === true) {
+      return { kind: 'error', message: 'A resource built from a non-locator source cannot be referenced by a saved document.' };
+    }
+
+    const candidates = [...(this._requests.get(key)?.values() ?? [])];
+    const matching = authoredSource === undefined ? candidates : candidates.filter(candidate => candidate.source === authoredSource);
+    const requests = matching.length === 0 ? candidates : matching;
 
     if (requests.length === 0) {
-      return fallback === undefined ? null : { kind: 'request', source: fallback };
+      return fallback === undefined
+        ? null
+        : { kind: 'request', $type: this._typeRegistry._typeIdentity(fallback.type), source: fallback.source };
     }
 
     if (requests.length > 1) {
@@ -100,7 +161,26 @@ export class AssetRequestLog {
       return { kind: 'error', message: request.unportable };
     }
 
-    return request.options === undefined ? { kind: 'request', source: request.source } : { kind: 'request', source: request.source, options: request.options };
+    const options = this._typeRegistry._persistedOptions(request.type, resource, request.options, donor);
+    const $type = this._typeRegistry._typeIdentity(request.type);
+
+    return options === undefined
+      ? { kind: 'request', $type, source: request.source }
+      : { kind: 'request', $type, source: request.source, options };
+  }
+
+  /** The reference a path-backed resource declares before any scope has claimed it, or null when its type is not installed. */
+  public declared(meta: AssetMeta, resource: object): AssetReferenceLookup | null {
+    const token = this._typeRegistry.resolveTypeName(meta.kind);
+
+    if (token === undefined) {
+      return null;
+    }
+
+    const options = this._typeRegistry._persistedOptions(token, resource, meta.opts as Readonly<Record<string, unknown>> | undefined);
+    const $type = this._typeRegistry._typeIdentity(token);
+
+    return options === undefined ? { kind: 'request', $type, source: meta.src } : { kind: 'request', $type, source: meta.src, options };
   }
 
   public delete(key: ResourceKey): void {
@@ -124,22 +204,28 @@ export class AssetRequestLog {
       `${this._typeRegistry._identityDiscriminator(type, source, candidate) ?? ''}\u{0}${this._typeRegistry._sourceDiscriminator(type, source, candidate) ?? ''}`;
 
     if (options === undefined || options === null) {
-      return { source: requested };
+      return { type, source: requested };
     }
 
     const full = identity(options);
 
     if (full === identity(undefined)) {
-      return { source: requested };
+      return { type, source: requested };
     }
 
     const portable = toPortableData(options);
 
     if (portable !== null && typeof portable === 'object' && !Array.isArray(portable) && identity(portable) === full) {
-      return { source: requested, options: portable as Record<string, unknown> };
+      const original = portable as Record<string, unknown>;
+      const projected = this._typeRegistry._persistedOptions(type, undefined, original);
+
+      const referenceOptions = projected !== undefined && projected !== original && identity(projected) === full ? projected : original;
+
+      return { type, source: requested, options: referenceOptions };
     }
 
     return {
+      type,
       source: requested,
       unportable: `"${requested}" was loaded with options its type's identity depends on that cannot be written as data (functions, class instances or other non-JSON values).`,
     };

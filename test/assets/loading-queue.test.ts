@@ -1,6 +1,20 @@
 import { LoadingQueue } from '#assets/LoadingQueue';
 
 describe('LoadingQueue', () => {
+  test('a throwing progress observer does not abort completion or later observers', async () => {
+    const queue = new LoadingQueue(Promise.resolve('loaded'), 1);
+    const updates: unknown[] = [];
+
+    queue.onProgress.add(() => {
+      throw new Error('observer failed');
+    });
+    queue.onProgress.add(progress => updates.push(progress));
+
+    expect(() => queue._notifyItem(true)).not.toThrow();
+    await expect(queue).resolves.toBe('loaded');
+    expect(updates).toEqual([{ total: 1, loaded: 1, pending: 0, failed: 0 }]);
+  });
+
   test('is awaitable via "then" and resolves with the wrapped promise value', async () => {
     const queue = new LoadingQueue(Promise.resolve('done'), 1);
 

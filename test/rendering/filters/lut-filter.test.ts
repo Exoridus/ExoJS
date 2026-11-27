@@ -1,6 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { Color } from '#core/Color';
+import { Signal } from '#core/Signal';
 /**
  * LutFilter unit tests.
  *
@@ -47,8 +48,8 @@ interface FakeImageData {
   readonly data: Uint8ClampedArray;
 }
 
-const makeFullContext2d = (): CanvasRenderingContext2D => {
-  return {
+const makeFullContext2d = (): CanvasRenderingContext2D =>
+  ({
     fillStyle: '',
     fillRect: vi.fn(),
     drawImage: vi.fn(),
@@ -59,8 +60,7 @@ const makeFullContext2d = (): CanvasRenderingContext2D => {
       data: new Uint8ClampedArray(width * height * 4),
     })),
     putImageData: vi.fn(),
-  } as unknown as CanvasRenderingContext2D;
-};
+  }) as unknown as CanvasRenderingContext2D;
 
 let getContextSpy: MockInstance;
 
@@ -78,11 +78,15 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
+  const CURRENT_PROGRAM = 0x8b8d;
+  let currentProgram: WebGLProgram | null = null;
   const root = new RenderTarget(64, 64, true);
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
+  const onContextLost = new Signal();
 
   const gl = {
+    CURRENT_PROGRAM,
     createProgram: vi.fn(() => ({})),
     createShader: vi.fn(() => ({})),
     createBuffer: vi.fn(() => ({})),
@@ -91,7 +95,16 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     compileShader: vi.fn(),
     attachShader: vi.fn(),
     linkProgram: vi.fn(),
-    useProgram: vi.fn(),
+    useProgram: vi.fn((program: WebGLProgram | null) => {
+      currentProgram = program;
+    }),
+    getParameter: vi.fn((parameter: number) => {
+      if (parameter !== CURRENT_PROGRAM) {
+        throw new Error(`Unsupported getParameter query: ${parameter}`);
+      }
+
+      return currentProgram;
+    }),
     deleteShader: vi.fn(),
     deleteProgram: vi.fn(),
     deleteBuffer: vi.fn(),
@@ -115,10 +128,22 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     getExtension: vi.fn(() => null),
     getShaderParameter: vi.fn(() => true),
     getProgramParameter: vi.fn((_prog: unknown, pname: number) => {
-      if (pname === 35714) return true; // LINK_STATUS
-      if (pname === 35721) return 2; // ACTIVE_ATTRIBUTES
-      if (pname === 35718) return 0; // ACTIVE_UNIFORMS
-      if (pname === 35382) return 0; // ACTIVE_UNIFORM_BLOCKS
+      if (pname === 35714) {
+        return true;
+      } // LINK_STATUS
+
+      if (pname === 35721) {
+        return 2;
+      } // ACTIVE_ATTRIBUTES
+
+      if (pname === 35718) {
+        return 0;
+      } // ACTIVE_UNIFORMS
+
+      if (pname === 35382) {
+        return 0;
+      } // ACTIVE_UNIFORM_BLOCKS
+
       return true;
     }),
     getActiveAttrib: vi.fn(
@@ -157,6 +182,7 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
 
   return {
     backendType: RenderBackendType.WebGl2,
+    onContextLost,
     stats,
     context: gl,
     get renderTarget() {
@@ -170,6 +196,7 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     clear() {
@@ -180,10 +207,12 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     },
     setView(view: View | null) {
       currentTarget.setView(view);
+
       return this;
     },
     setRenderTarget(target: RenderTarget | null) {
       currentTarget = target ?? root;
+
       return this;
     },
     pushScissorRect() {
@@ -216,13 +245,16 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
       return this;
     },
     destroy() {
+      onContextLost.destroy();
       root.destroy();
     },
+    setBlendMode: vi.fn(),
     bindShader: vi.fn(),
     bindTexture: vi.fn(),
     bindVertexArrayObject: vi.fn(),
     execute: vi.fn(function (this: unknown, pass: { execute(b: unknown): void }) {
       pass.execute(this);
+
       return this;
     }),
   } as unknown as RenderBackend & WebGl2Backend;
@@ -254,8 +286,13 @@ const makeWebGpuEnv = (): { device: GPUDevice; restore(): void } => {
   return {
     device,
     restore(): void {
-      if (previousBufferUsage) Object.defineProperty(globalThis, 'GPUBufferUsage', previousBufferUsage);
-      if (previousShaderStage) Object.defineProperty(globalThis, 'GPUShaderStage', previousShaderStage);
+      if (previousBufferUsage) {
+        Object.defineProperty(globalThis, 'GPUBufferUsage', previousBufferUsage);
+      }
+
+      if (previousShaderStage) {
+        Object.defineProperty(globalThis, 'GPUShaderStage', previousShaderStage);
+      }
     },
   };
 };
@@ -281,6 +318,7 @@ const makeWebGpuBackend = (device: GPUDevice): RenderBackend & WebGpuBackend => 
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     clear() {
@@ -291,10 +329,12 @@ const makeWebGpuBackend = (device: GPUDevice): RenderBackend & WebGpuBackend => 
     },
     setView(view: View | null) {
       currentTarget.setView(view);
+
       return this;
     },
     setRenderTarget(target: RenderTarget | null) {
       currentTarget = target ?? root;
+
       return this;
     },
     pushScissorRect() {
@@ -337,6 +377,7 @@ const makeWebGpuBackend = (device: GPUDevice): RenderBackend & WebGpuBackend => 
     },
     execute(pass: { execute(b: unknown): void }) {
       pass.execute(this);
+
       return this;
     },
     flush() {
@@ -361,7 +402,9 @@ const makeWebGpuBackend = (device: GPUDevice): RenderBackend & WebGpuBackend => 
     submit: vi.fn(),
   } as unknown as RenderBackend & WebGpuBackend;
 
-  (backend as unknown as { passCoordinator: WebGpuPassCoordinator }).passCoordinator = new WebGpuPassCoordinator(backend as unknown as WebGpuPassBackend);
+  (backend as unknown as { passCoordinator: WebGpuPassCoordinator }).passCoordinator = new WebGpuPassCoordinator(
+    backend as unknown as WebGpuPassBackend,
+  );
 
   return backend;
 };
@@ -502,19 +545,15 @@ describe('LutFilter construction and options', () => {
 });
 
 /** The backend-neutral shader filter LutFilter delegates to. */
-const shaderFilterOf = (filter: LutFilter): ShaderFilter => {
-  return (filter as unknown as { _shaderFilter: ShaderFilter })._shaderFilter;
-};
+const shaderFilterOf = (filter: LutFilter): ShaderFilter => (filter as unknown as { _shaderFilter: ShaderFilter })._shaderFilter;
 
 /** The declared uniform accessors, which differ per mode. */
-const uniformsOf = (filter: LutFilter): Record<string, { readonly value: number } | undefined> => {
-  return shaderFilterOf(filter).uniforms as unknown as Record<string, { readonly value: number } | undefined>;
-};
+const uniformsOf = (filter: LutFilter): Record<string, { readonly value: number } | undefined> =>
+  shaderFilterOf(filter).uniforms as unknown as Record<string, { readonly value: number } | undefined>;
 
 /** The textures the filter's passes bind, read live on every draw. */
-const boundTexturesOf = (filter: LutFilter): Readonly<Record<string, Texture>> => {
-  return (shaderFilterOf(filter) as unknown as { _bindings: { textures: Record<string, Texture> } })._bindings.textures;
-};
+const boundTexturesOf = (filter: LutFilter): Readonly<Record<string, Texture>> =>
+  (shaderFilterOf(filter) as unknown as { _bindings: { textures: Record<string, Texture> } })._bindings.textures;
 
 describe('LutFilter.setLut', () => {
   test('replaces the LUT texture', () => {
@@ -566,6 +605,17 @@ describe('LutFilter.setLut', () => {
     const numeric = new Texture(document.createElement('canvas'), { colorSpace: 'none' });
 
     expect(filter.setLut(numeric).lut).toBe(numeric);
+  });
+
+  test('a 3D LUT of another cube size updates size and the uLutSize uniform', () => {
+    const filter = new LutFilter({ mode: '3d', size: 17 });
+
+    filter.setLut(LutFilter.identityLut3D(9));
+
+    expect(filter.size).toBe(9);
+    expect(uniformsOf(filter)['uLutSize']?.value).toBe(9);
+
+    filter.destroy();
   });
 
   test('also updates the shader filter uniform', () => {
@@ -683,4 +733,20 @@ describe('LutFilter.destroy', () => {
     input.destroy();
     output.destroy();
   });
+});
+
+test('setLut invalidates attached owners and preserves caller-owned textures', () => {
+  const filter = new LutFilter();
+  const lut = LutFilter.identityLut3D(2);
+  const owner = { invalidateCache: vi.fn() };
+  const destroy = vi.spyOn(lut, 'destroy');
+  filter._attachOwner(owner);
+  filter.setLut(lut);
+  expect(owner.invalidateCache).toHaveBeenCalledTimes(1);
+  filter._detachOwner(owner);
+  filter.setLut(lut);
+  expect(owner.invalidateCache).toHaveBeenCalledTimes(1);
+  filter.destroy();
+  expect(destroy).not.toHaveBeenCalled();
+  lut.destroy();
 });

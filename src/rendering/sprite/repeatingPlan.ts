@@ -45,9 +45,11 @@ export const validateSizeInput = (width: number, height: number): void => {
   if (!Number.isFinite(width) || !Number.isFinite(height)) {
     throw new Error(`RepeatingSprite: width and height must be finite numbers (got ${width}, ${height}).`);
   }
+
   if (width < 0) {
     throw new Error(`RepeatingSprite: width must be non-negative (got ${width}).`);
   }
+
   if (height < 0) {
     throw new Error(`RepeatingSprite: height must be non-negative (got ${height}).`);
   }
@@ -88,11 +90,22 @@ export const computeShaderTiling = (srcLen: number, destLen: number, mode: Repea
   if (mode === 'stretch' || srcLen <= 0 || destLen <= 0) {
     return 1;
   }
+
   if (fit === 'round') {
     return Math.max(1, Math.round(destLen / srcLen));
   }
+
   return destLen / srcLen;
 };
+
+/**
+ * Compute the normalized UV scroll offset for the standalone shader path.
+ *
+ * `stretch` axes ignore the offset, matching the geometry path.
+ * @internal
+ */
+export const computeShaderOffset = (srcLen: number, offset: number, mode: RepeatMode): number =>
+  mode === 'stretch' ? 0 : offset / (srcLen > 0 ? srcLen : 1);
 
 // ---------------------------------------------------------------------------
 // Geometry-path quad builder
@@ -128,13 +141,14 @@ export const buildRepeatingSpriteQuads = (
   const th = region.texture.height;
   const ext = region.extrusion;
 
-  const outerInsetU = ext.left > 0 || ext.right > 0 ? 0 : halfTexelInset / tw;
-  const outerInsetV = ext.top > 0 || ext.bottom > 0 ? 0 : halfTexelInset / th;
+  const insetU = halfTexelInset / tw;
+  const insetV = halfTexelInset / th;
 
-  const uMin = region.u0 + outerInsetU;
-  const uMax = region.u1 - outerInsetU;
-  const vMin = region.v0 + outerInsetV;
-  const vMax = region.v1 - outerInsetV;
+  // Per edge: an extruded edge needs no inset, any other gets a half-texel.
+  const uMin = region.u0 + (ext.left > 0 ? 0 : insetU);
+  const uMax = region.u1 - (ext.right > 0 ? 0 : insetU);
+  const vMin = region.v0 + (ext.top > 0 ? 0 : insetV);
+  const vMax = region.v1 - (ext.bottom > 0 ? 0 : insetV);
 
   const srcW = region.width;
   const srcH = region.height;
@@ -178,7 +192,13 @@ export const buildRepeatingSpriteQuads = (
  * discouraged by design.
  * @internal
  */
-const buildAxisSegmentsWithOffset = (srcLen: number, destLen: number, mode: RepeatMode, fit: RepeatFit, offset: number): RepeatSegment[] => {
+const buildAxisSegmentsWithOffset = (
+  srcLen: number,
+  destLen: number,
+  mode: RepeatMode,
+  fit: RepeatFit,
+  offset: number,
+): RepeatSegment[] => {
   if (destLen === 0 || srcLen <= 0) {
     return [];
   }

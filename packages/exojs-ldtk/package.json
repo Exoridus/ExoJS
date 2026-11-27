@@ -26,20 +26,18 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsx ../../scripts/build-extension.ts",
+    "build": "node --import tsx ../../scripts/build-extension.ts",
     "build:dev": "tsx ../../scripts/build-extension.ts --dev",
     "typecheck": "exo-tsc --noEmit && exo-tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "vitest run --root ../.. --project=exojs-ldtk"
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.19.x",
-    "@codexo/exojs-tilemap": "0.19.x"
+    "@codexo/exojs": "0.19.x"
   },
   "devDependencies": {
     "@codexo/exojs": "workspace:*",
-    "@codexo/exojs-config": "workspace:*",
-    "@codexo/exojs-tilemap": "workspace:*"
+    "@codexo/exojs-config": "workspace:*"
   },
   "license": "MIT",
   "publishConfig": {

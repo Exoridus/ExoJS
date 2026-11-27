@@ -4,7 +4,7 @@
   "symbol": "TextObject",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 14,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A text object carrying styled text content within `[x, y, width, height]`."
       ],
-      "importLine": "import { TextObject } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TextObject } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

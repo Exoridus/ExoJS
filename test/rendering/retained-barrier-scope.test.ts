@@ -5,7 +5,11 @@ import { Drawable } from '#rendering/Drawable';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
-import { type RetainedBatchInstruction, RetainedInstructionKind, type RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
+import {
+  type RetainedBatchInstruction,
+  RetainedInstructionKind,
+  type RetainedInstructionSet,
+} from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';

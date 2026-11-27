@@ -17,7 +17,7 @@ const makeDeferredTexture = () => {
     ready: own(false),
     loaded: own(loaded),
     destroyed: own(false),
-    updateSource: own(() => undefined),
+    updateSource: own(() => {}),
     version: { get: () => version, configurable: true },
   }) as Texture;
 

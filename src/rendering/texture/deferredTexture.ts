@@ -15,7 +15,7 @@ import type { Texture } from './Texture';
  * node it skipped, so a subtree recorded around the empty geometry would go on
  * replaying it. The invalidation is what makes the rebuild reachable.
  *
- * A texture that is already loaded, or one that fails, does nothing here.
+ * A texture that is already loaded does nothing here; a failed attempt waits for a successful retry.
  */
 export const invalidateOnTextureLoad = (node: RenderNode, texture: Texture): void => {
   if (texture.ready) {
@@ -25,19 +25,23 @@ export const invalidateOnTextureLoad = (node: RenderNode, texture: Texture): voi
   // A texture that carries no readiness promise has no load to wait for - a
   // caller-supplied stand-in with fixed dimensions, say. Reading `.then` off it
   // unconditionally would turn that into a construction-time crash.
-  const loaded = texture.loaded as Promise<unknown> | undefined;
+  const loaded = texture._loadState?.whenReady(texture) ?? texture.loaded;
 
   if (typeof loaded?.then !== 'function') {
     return;
   }
+
+  const nodeRef = new WeakRef(node);
 
   void loaded.then(
     () => {
       // The node may have been destroyed while the payload was in flight, and a
       // destroyed node must not be marked - the mark would outlive the subtree
       // it describes.
-      if (!node.destroyed) {
-        node.invalidateCache();
+      const target = nodeRef.deref();
+
+      if (target !== undefined && !target.destroyed && !texture.destroyed) {
+        target.invalidateCache();
       }
     },
     () => {

@@ -5,9 +5,13 @@
  *
  *   npm/      every lockstep tarball (Core + extensions)
  *   vendor/   every lockstep package's ESM tree, plus Core's single-file
- *             bundles (exo.esm.js, the IIFE pair, the full IIFE pair)
- *   examples/ src/** (TS), js/** (transpiled), assets/**, examples.json
- *   site/     the built static site (itself servable; references ./vendor + ./examples)
+ *             ESM bundles (exo.esm.js, exo.debug.esm.js)
+ *   examples/ src/** (TS), js/** (transpiled), examples.json
+ *   site/     the built static site (itself servable; references ./vendor + ./examples).
+ *             The examples load their media through @codexo/exojs-demo-assets,
+ *             which the site serves with its standard media under
+ *             vendor/exojs-demo-assets/; the authoring media under
+ *             examples/assets/ are not shipped.
  *   README.md CHANGELOG.md LICENSE release-manifest.json checksums.sha256
  *
  * `assembleFullReleaseTree` is the testable core (pure fs assembly + a
@@ -16,10 +20,10 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 
-import { ModuleKind, ScriptTarget, transpileModule } from 'typescript';
+import { transpileNative } from '@codexo/exojs-config/typescript/transpile';
 
 import type { CommandRunner } from './command-runner.ts';
-import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+import { isEngineExtension, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import { type ReleaseManifest, renderChecksums, serializeManifest, sha256File } from './manifest.ts';
 
 export interface AssembleOptions {
@@ -40,25 +44,12 @@ export interface AssembleOptions {
  * mirrors the bundle entries of the root `package.json#files`; the test suite
  * pins the two together.
  */
-export const CORE_BUNDLE_FILES = [
-  'exo.esm.js',
-  'exo.esm.js.map',
-  'exo.debug.esm.js',
-  'exo.debug.esm.js.map',
-  'exo.iife.js',
-  'exo.iife.js.map',
-  'exo.iife.min.js',
-  'exo.iife.min.js.map',
-  'exo.full.iife.js',
-  'exo.full.iife.js.map',
-  'exo.full.iife.min.js',
-  'exo.full.iife.min.js.map',
-] as const;
+export const CORE_BUNDLE_FILES = ['exo.esm.js', 'exo.esm.js.map', 'exo.debug.esm.js', 'exo.debug.esm.js.map'] as const;
 
 /** `vendor/<dir>` for a lockstep package: the npm name without its scope. */
 export const vendorDirFor = (packageName: string): string => packageName.replace(/^@codexo\//, '');
 
-const FORBIDDEN_PATTERNS: { label: string; test: (text: string) => boolean }[] = [
+const FORBIDDEN_PATTERNS: Array<{ label: string; test: (text: string) => boolean }> = [
   { label: 'workspace: specifier', test: t => t.includes('workspace:') },
   { label: '@assets alias', test: t => /['"`]@assets['"`/]/.test(t) },
   { label: '@/ alias import', test: t => /(from|import)\s*\(?\s*['"`]@\//.test(t) },
@@ -67,12 +58,21 @@ const FORBIDDEN_PATTERNS: { label: string; test: (text: string) => boolean }[] =
 
 const walk = (dir: string): string[] => {
   const out: string[] = [];
-  if (!existsSync(dir)) return out;
+
+  if (!existsSync(dir)) {
+    return out;
+  }
+
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...walk(full));
-    else if (entry.isFile()) out.push(full);
+
+    if (entry.isDirectory()) {
+      out.push(...walk(full));
+    } else if (entry.isFile()) {
+      out.push(full);
+    }
   }
+
   return out;
 };
 
@@ -108,10 +108,16 @@ export const scanForbiddenContent = (treeDir: string): ForbiddenHit[] => {
         continue;
       }
 
-      if (!/\.(js|mjs|cjs|ts|json|map)$/.test(file)) continue;
+      if (!/\.(js|mjs|cjs|ts|json|map)$/.test(file)) {
+        continue;
+      }
+
       const text = readFileSync(file, 'utf8');
+
       for (const { label, test } of FORBIDDEN_PATTERNS) {
-        if (test(text)) hits.push({ file: rel, pattern: label });
+        if (test(text)) {
+          hits.push({ file: rel, pattern: label });
+        }
       }
     }
   }
@@ -146,9 +152,7 @@ export const writeSiteServer = (siteDir: string): void => {
   // and type-checked with the rest of the tooling, while the file that ships
   // has to run on whatever Node the person unpacking the archive has, without a
   // type-stripping flag.
-  const server = transpileModule(template.replace('__SITE_BASE__', base), {
-    compilerOptions: { target: ScriptTarget.ES2023, module: ModuleKind.ESNext },
-  }).outputText;
+  const server = transpileNative(template.replace('__SITE_BASE__', base), { target: 'es2023' });
 
   writeFileSync(join(siteDir, 'serve.mjs'), server, 'utf8');
   writeFileSync(
@@ -183,8 +187,12 @@ const assembleExamples = (rootDir: string, examplesOut: string): void => {
 
   for (const file of walk(examplesSrc)) {
     const rel = relative(examplesSrc, file).split('\\').join('/');
-    // assets/ and shared/ are copied wholesale below; skip here.
-    if (rel.startsWith('assets/') || rel.startsWith('shared/')) continue;
+
+    // assets/ is the authoring source of the demo-assets package, not shipped
+    // media; shared/ ships with the site's examples snapshot.
+    if (rel.startsWith('assets/') || rel.startsWith('shared/')) {
+      continue;
+    }
 
     if (file.endsWith('.ts') && !file.endsWith('.d.ts')) {
       const dest = join(srcOut, rel);
@@ -197,8 +205,6 @@ const assembleExamples = (rootDir: string, examplesOut: string): void => {
     }
   }
 
-  // assets/** verbatim (catalog + binaries), and examples.json.
-  cpSync(resolve(examplesSrc, 'assets'), join(examplesOut, 'assets'), { recursive: true });
   cpSync(resolve(examplesSrc, 'examples.json'), join(examplesOut, 'examples.json'));
 };
 
@@ -217,6 +223,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
 
   // npm/ - the official tarballs (manifest-driven).
   const npmOut = join(treeDir, 'npm');
+
   for (const record of options.manifest.packages) {
     copyFile(resolve(options.stagingDir, record.file), npmOut);
   }
@@ -230,27 +237,38 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
   // something they run once to write a project. It has no `dist/esm` to vendor,
   // and requiring one would fail the release on a shape it never had.
   for (const pkg of LOCKSTEP_PACKAGES) {
-    if (!pkg.isExtension && pkg.dir !== '.') continue;
+    if (!isEngineExtension(pkg) && pkg.dir !== '.') {
+      continue;
+    }
 
     const distDir = resolve(options.rootDir, pkg.dir, 'dist');
     const from = join(distDir, 'esm');
+
     if (!existsSync(from)) {
       throw new Error(`[full-zip] Missing built ESM for ${pkg.name} at ${from}. Build every lockstep package first.`);
     }
+
     const vendorDir = join(treeDir, 'vendor', vendorDirFor(pkg.name));
     cpSync(from, join(vendorDir, 'esm'), { recursive: true });
-    if (pkg.isExtension) continue;
+
+    if (isEngineExtension(pkg)) {
+      continue;
+    }
+
     cpSync(join(distDir, 'basis'), join(vendorDir, 'basis'), { recursive: true });
+
     for (const file of CORE_BUNDLE_FILES) {
       const bundle = join(distDir, file);
+
       if (!existsSync(bundle)) {
         throw new Error(`[full-zip] Missing Core bundle ${file} at ${bundle}. Run a production "pnpm build" first.`);
       }
+
       copyFile(bundle, vendorDir);
     }
   }
 
-  // examples/ - src/** (TS), js/** (transpiled), assets/**, examples.json.
+  // examples/ - src/** (TS), js/** (transpiled), examples.json.
   assembleExamples(options.rootDir, join(treeDir, 'examples'));
 
   // site/ - the full built static site, plus the server that makes it usable.
@@ -270,6 +288,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
   writeFileSync(join(treeDir, 'checksums.sha256'), renderChecksums(options.manifest, 'npm/'), 'utf8');
 
   const forbidden = scanForbiddenContent(treeDir);
+
   return { treeDir, treeName, forbidden };
 };
 
@@ -301,12 +320,14 @@ export const compressTree = (
   if (result.code !== 0) {
     throw new Error(`[full-zip] Compression failed:\n${result.stderr || result.stdout}`);
   }
+
   if (!existsSync(zipPath)) {
     throw new Error(`[full-zip] Expected ${zipPath} after compression, but it is missing.`);
   }
 
   const { sha256, bytes } = sha256File(zipPath);
   writeFileSync(`${zipPath}.sha256`, `${sha256}  ${basename(zipPath)}\n`, 'utf8');
+
   return { zipPath, sha256, bytes };
 };
 

@@ -1,34 +1,46 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, Sprite, Time } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  Scene,
+  type Seconds,
+  Sprite,
+  Texture,
+  Time,
+} from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 // The HUD counts every frame longer than this budget, paints those rows red,
 // and plots the budget as the guide line halfway up the sparkline.
 const budgets = [Time.seconds(1 / 60), Time.seconds(1 / 30), Time.seconds(1 / 144)];
 
 class PerformanceOverlayScene extends Scene {
-  private sprites!: { sprite: Sprite; vx: number; vy: number }[];
-  private layer!: Container;
+  private sprites!: Array<{ sprite: Sprite; vx: number; vy: number }>;
+  private readonly ship = new Texture(assets.ship.source);
   private budgetIndex = 0;
 
   override init(): void {
     const app = this.app;
     const { width, height } = app;
 
-    // All sprites share one texture, so adding them to a single container and
-    // rendering it once lets the renderer batch them into a single draw call.
-    // Rendering each sprite with its own `context.render(sprite)` call would
-    // instead emit one draw call per sprite and tank the frame rate.
-    this.layer = new Container();
+    // All sprites share one texture, so adding them to a single container
+    // lets the renderer batch them into a single draw call.
+    const layer = new Container();
     this.sprites = Array.from({ length: 1600 }, () => {
-      const sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(0.25);
+      const sprite = new Sprite(this.ship).setAnchor(0.5).setScale(0.25);
       sprite.setPosition(Math.random() * width, Math.random() * height);
-      this.layer.addChild(sprite);
+      layer.addChild(sprite);
+
       return {
         sprite,
         vx: (Math.random() - 0.5) * 120,
         vy: (Math.random() - 0.5) * 120,
       };
     });
+    this.root.addChild(layer);
     this.inputs.onTrigger(Keyboard.P, () => {
       debug.layers.performance.visible = !debug.layers.performance.visible;
     });
@@ -47,13 +59,15 @@ class PerformanceOverlayScene extends Scene {
 
     for (const item of this.sprites) {
       item.sprite.move(item.vx * delta, item.vy * delta);
-      if (item.sprite.position.x < 0 || item.sprite.position.x > width) item.vx *= -1;
-      if (item.sprite.position.y < 0 || item.sprite.position.y > height) item.vy *= -1;
-    }
-  }
 
-  override draw(context: RenderingContext): void {
-    context.render(this.layer);
+      if (item.sprite.position.x < 0 || item.sprite.position.x > width) {
+        item.vx *= -1;
+      }
+
+      if (item.sprite.position.y < 0 || item.sprite.position.y > height) {
+        item.vy *= -1;
+      }
+    }
   }
 }
 
@@ -66,9 +80,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 const debug = new DebugOverlay(app);

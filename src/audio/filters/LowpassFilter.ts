@@ -1,4 +1,3 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audioContext';
 import { AudioEffect } from '#audio/AudioEffect';
 
 /** Construction options for {@link LowpassFilter}. */
@@ -18,29 +17,28 @@ export class LowpassFilter extends AudioEffect {
   private _node: BiquadFilterNode | null = null;
   private _frequency: number;
   private _resonance: number;
-  private readonly _onAudioContextReady = (ctx: AudioContext): void => {
-    onAudioContextReady.remove(this._onAudioContextReady);
-    this._setup(ctx);
-  };
 
   public constructor(options: LowpassFilterOptions = {}) {
     super();
-    this._frequency = options.frequency ?? 1000;
-    this._resonance = options.resonance ?? 1;
-    if (isAudioContextReady()) {
-      this._setup(getAudioContext());
-    } else {
-      onAudioContextReady.add(this._onAudioContextReady);
-    }
+    this._frequency = Math.max(20, Math.min(20000, options.frequency ?? 1000));
+    this._resonance = Math.max(0.0001, options.resonance ?? 1);
+
+    this._deferSetup(context => this._setup(context));
   }
 
   public get inputNode(): AudioNode {
-    if (!this._node) throw new Error('LowpassFilter not yet initialized.');
+    if (!this._node) {
+      throw new Error('LowpassFilter not yet initialized.');
+    }
+
     return this._node;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._node) throw new Error('LowpassFilter not yet initialized.');
+    if (!this._node) {
+      throw new Error('LowpassFilter not yet initialized.');
+    }
+
     return this._node;
   }
 
@@ -51,6 +49,7 @@ export class LowpassFilter extends AudioEffect {
 
   public set frequency(value: number) {
     this._frequency = Math.max(20, Math.min(20000, value));
+
     if (this._node) {
       this._node.frequency.setTargetAtTime(this._frequency, this._node.context.currentTime, 0.01);
     }
@@ -63,13 +62,14 @@ export class LowpassFilter extends AudioEffect {
 
   public set resonance(value: number) {
     this._resonance = Math.max(0.0001, value);
+
     if (this._node) {
       this._node.Q.setTargetAtTime(this._resonance, this._node.context.currentTime, 0.01);
     }
   }
 
   public override destroy(): void {
-    onAudioContextReady.remove(this._onAudioContextReady);
+    this._teardown();
     this._node?.disconnect();
     this._node = null;
   }

@@ -93,6 +93,25 @@ describe('sleeping', () => {
     expect(box.linearVelocityX).toBeGreaterThan(0);
   });
 
+  it('a velocity written to a sleeping body takes effect only after wake()', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const body = world.add(
+      new PhysicsBody({ position: { x: 0, y: 0 }, fixedRotation: true, colliders: [{ shape: new BoxShape(24, 24) }] }),
+    );
+
+    advance(world, 1);
+    expect(body.isSleeping).toBe(true);
+
+    body.linearVelocityX = 145;
+    advance(world, 0.25);
+    expect(body.isSleeping).toBe(true);
+    expect(body.x).toBe(0);
+
+    body.wake();
+    advance(world, 0.25);
+    expect(body.x).toBeGreaterThan(30);
+  });
+
   it('a settling stack falls asleep', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     addFloor(world, 300);

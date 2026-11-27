@@ -1,6 +1,6 @@
 {
   "title": "AudioSend",
-  "description": "A parallel tap from one voice's output into an AudioBus, at its own level. A send is what an insert effect cannot express: the voice keeps playing into its own bus unchanged (the dry path) while a copy of the same signal also reaches another bus (the wet path). That is the shape reverb, echo and any shared ambience processing needs - one effect instance serving many voices, with each voice deciding how much of itself to contribute. Created by `voice.addSend(bus)` and owned by that voice: it is torn down when the voice ends, so a caller only has to remove one early if the routing itself should change. The target bus is not owned - it keeps serving whoever else sends into it.",
+  "description": "A parallel tap from one voice's output into an AudioBus, at its own level. A send is what an insert effect cannot express: the voice keeps playing into its own bus unchanged (the dry path) while a copy of the same signal also reaches another bus (the wet path). That is the shape reverb, echo and any shared ambience processing needs - one effect instance serving many voices, with each voice deciding how much of itself to contribute. Created by `voice.addSend(bus)` and owned by that voice: it is torn down when the voice ends, so a caller only has to remove one early if the routing itself should change. The target bus is not owned - it keeps serving whoever else sends into it. A scene-deferred voice returns the same handle before its graph exists. Reading or changing its level allocates nothing while it is unbound. The current level is applied when playback starts; removal or cancellation beforehand prevents a native connection entirely.",
   "symbol": "AudioSend",
   "kind": "class",
   "subsystem": "audio",
@@ -21,7 +21,8 @@
       "paragraphs": [
         "A parallel tap from one voice's output into an AudioBus, at its own level.",
         "A send is what an insert effect cannot express: the voice keeps playing into its own bus unchanged (the dry path) while a copy of the same signal also reaches another bus (the wet path). That is the shape reverb, echo and any shared ambience processing needs - one effect instance serving many voices, with each voice deciding how much of itself to contribute.",
-        "Created by `voice.addSend(bus)` and owned by that voice: it is torn down when the voice ends, so a caller only has to remove one early if the routing itself should change. The target bus is not owned - it keeps serving whoever else sends into it."
+        "Created by `voice.addSend(bus)` and owned by that voice: it is torn down when the voice ends, so a caller only has to remove one early if the routing itself should change. The target bus is not owned - it keeps serving whoever else sends into it.",
+        "A scene-deferred voice returns the same handle before its graph exists. Reading or changing its level allocates nothing while it is unbound. The current level is applied when playback starts; removal or cancellation beforehand prevents a native connection entirely."
       ],
       "importLine": "import { AudioSend } from '@codexo/exojs'",
       "sourceLink": null

@@ -253,10 +253,21 @@ export class SourceVisibilityIndex {
       indexable++;
       extentSum += right - left + (bottom - top);
 
-      if (left < worldMinX) worldMinX = left;
-      if (top < worldMinY) worldMinY = top;
-      if (right > worldMaxX) worldMaxX = right;
-      if (bottom > worldMaxY) worldMaxY = bottom;
+      if (left < worldMinX) {
+        worldMinX = left;
+      }
+
+      if (top < worldMinY) {
+        worldMinY = top;
+      }
+
+      if (right > worldMaxX) {
+        worldMaxX = right;
+      }
+
+      if (bottom > worldMaxY) {
+        worldMaxY = bottom;
+      }
     }
 
     this._alwaysVisible = new Int32Array(alwaysVisible);
@@ -319,13 +330,17 @@ export class SourceVisibilityIndex {
       if (overhangX > 0) {
         const overhangCells = Math.ceil(overhangX / cellSize);
 
-        if (overhangCells > this._overhangCellsX) this._overhangCellsX = overhangCells;
+        if (overhangCells > this._overhangCellsX) {
+          this._overhangCellsX = overhangCells;
+        }
       }
 
       if (overhangY > 0) {
         const overhangCells = Math.ceil(overhangY / cellSize);
 
-        if (overhangCells > this._overhangCellsY) this._overhangCellsY = overhangCells;
+        if (overhangCells > this._overhangCellsY) {
+          this._overhangCellsY = overhangCells;
+        }
       }
     }
 

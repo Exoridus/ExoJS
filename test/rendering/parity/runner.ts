@@ -26,10 +26,21 @@ const sink = commands as unknown as ParityCommands;
 export const currentBrowser = (): string => {
   const ua = navigator.userAgent;
 
-  if (ua.includes('Firefox/')) return 'firefox';
-  if (ua.includes('Edg/')) return 'edge';
-  if (ua.includes('Chrome/') || ua.includes('Chromium/')) return 'chromium';
-  if (ua.includes('Safari/')) return 'webkit';
+  if (ua.includes('Firefox/')) {
+    return 'firefox';
+  }
+
+  if (ua.includes('Edg/')) {
+    return 'edge';
+  }
+
+  if (ua.includes('Chrome/') || ua.includes('Chromium/')) {
+    return 'chromium';
+  }
+
+  if (ua.includes('Safari/')) {
+    return 'webkit';
+  }
 
   return 'unknown';
 };
@@ -116,14 +127,20 @@ export const runParityMatrix = (scenes: readonly Scene[], properties: readonly P
             // eslint-disable-next-line vitest/no-disabled-tests
             const result = await property.run({ scene, skip: reason => ctx.skip(reason), webgl2, webgpu });
 
-            for (const backend of BACKENDS) record(scene, property, backend, result);
+            for (const backend of BACKENDS) {
+              record(scene, property, backend, result);
+            }
 
-            if (result.support === 'divergent') expect.fail(result.note ?? `${scene.name} diverges between backends`);
+            if (result.support === 'divergent') {
+              expect.fail(result.note ?? `${scene.name} diverges between backends`);
+            }
 
             // Recorded first, then skipped: the row carries the finding, and a
             // green test would claim a check that never ran.
-            // eslint-disable-next-line vitest/no-disabled-tests
-            if (result.support === 'unavailable') ctx.skip(result.note ?? 'backend unavailable in this browser');
+            if (result.support === 'unavailable') {
+              // eslint-disable-next-line vitest/no-disabled-tests
+              ctx.skip(result.note ?? 'backend unavailable in this browser');
+            }
           });
 
           continue;
@@ -137,12 +154,16 @@ export const runParityMatrix = (scenes: readonly Scene[], properties: readonly P
 
             record(scene, property, backend, result);
 
-            if (result.support === 'divergent') expect.fail(result.note ?? `${property.name} fails for ${scene.name} on ${backend}`);
+            if (result.support === 'divergent') {
+              expect.fail(result.note ?? `${property.name} fails for ${scene.name} on ${backend}`);
+            }
 
             // Recorded first, then skipped: the row carries the finding, and a
             // green test would claim a check that never ran.
-            // eslint-disable-next-line vitest/no-disabled-tests
-            if (result.support === 'unavailable') ctx.skip(result.note ?? `${backend} unavailable in this browser`);
+            if (result.support === 'unavailable') {
+              // eslint-disable-next-line vitest/no-disabled-tests
+              ctx.skip(result.note ?? `${backend} unavailable in this browser`);
+            }
           });
         }
       }
@@ -150,6 +171,8 @@ export const runParityMatrix = (scenes: readonly Scene[], properties: readonly P
   }
 
   afterAll(async () => {
-    if (rows.length > 0) await sink.writeParityEvidence(rows);
+    if (rows.length > 0) {
+      await sink.writeParityEvidence(rows);
+    }
   });
 };

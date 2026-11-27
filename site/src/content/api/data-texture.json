@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 49,
+  "memberCount": 51,
   "counts": {
     "constructors": 1,
     "methods": 18,
-    "properties": 30,
+    "properties": 32,
     "events": 0
   },
   "sections": [
@@ -324,7 +324,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Mark a sub-region of the buffer dirty for partial upload. More efficient than commit for ring-buffer patterns where only one row or column changes per frame. If a region was already pending, the union is uploaded. Coordinates are pixel-space with origin at the top-left. Bounds are clamped to the texture dimensions; out-of-range rectangles throw."
+          "description": "Mark a sub-region of the buffer dirty for partial upload. More efficient than commit for ring-buffer patterns where only one row or column changes per frame. If a region was already pending, the union is uploaded. Coordinates are pixel-space with origin at the top-left. They are not clamped: a rectangle that leaves the texture throws."
         },
         {
           "name": "destroy",
@@ -1500,7 +1500,49 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Load lifecycle of this texture. Directly constructed textures are 'ready'; deferred handles returned by loader.get('hero.png') / loader.get(Asset.type('texture', src)) start 'loading' and become 'ready' once the payload fills in, or 'failed' (showing the Texture.missing checker) when the load errors."
+          "description": "Load lifecycle of this texture. Directly constructed textures are 'ready'; deferred handles returned by loader.get('hero.png') / loader.get({ type: 'texture', source: src }) start 'loading' and become 'ready' once the payload fills in, or 'failed' (showing the Texture.missing checker) when the load errors."
+        },
+        {
+          "name": "logicalHeight",
+          "signature": "logicalHeight: number",
+          "signatureTokens": [
+            {
+              "text": "logicalHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height in logical units, after accounting for the density of a selected asset variant."
+        },
+        {
+          "name": "logicalWidth",
+          "signature": "logicalWidth: number",
+          "signatureTokens": [
+            {
+              "text": "logicalWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width in logical units, after accounting for the density of a selected asset variant."
         },
         {
           "name": "mipLevelCount",

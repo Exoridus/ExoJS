@@ -95,7 +95,7 @@ export class Size implements Cloneable<Size> {
     // no-op - pure value class, kept for Destroyable interface conformance
   }
 
-  public static readonly zero = new Size(0, 0);
+  public static readonly zero: Size = Object.freeze(new Size(0, 0)) as Size;
 
   public static get temp(): Size {
     if (temp === null) {

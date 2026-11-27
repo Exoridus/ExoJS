@@ -25,7 +25,7 @@ class LifecycleScene extends Scene {
   override async load(): Promise<void> {
     // This scene is procedural - nothing to fetch - but a real scene would
     // resolve its assets here before touching the scene graph, e.g.:
-    //   const data = (await this.loader.load(Asset.type('json', 'level.json'))) as LevelData;
+    //   const data = (await this.loader.load({ type: 'json', source: 'level.json' })) as LevelData;
     this.events = ['load'];
   }
 
@@ -80,9 +80,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(LifecycleScene);

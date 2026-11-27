@@ -11,10 +11,15 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, statSync } from 'node:fs';
 
-import { LOCKSTEP_PACKAGES, type OfficialPackageName } from './lockstep-packages.ts';
+import { LEGACY_SHIMS, LOCKSTEP_PACKAGES, type OfficialPackageName } from './lockstep-packages.ts';
 
-/** Lockstep publish order - Core first (peer of the extensions), then the extensions. */
-export const PUBLISH_ORDER: readonly OfficialPackageName[] = LOCKSTEP_PACKAGES.map(p => p.name);
+/**
+ * Publish order - Core first (peer of everything else), then the lockstep
+ * packages, then the legacy shims. A release publishes a shim only when it set
+ * the shim's version (see `officialPackages`), so most releases publish a
+ * prefix of this list.
+ */
+export const PUBLISH_ORDER: readonly OfficialPackageName[] = [...LOCKSTEP_PACKAGES.map(p => p.name), ...LEGACY_SHIMS.map(p => p.name)];
 
 export type { OfficialPackageName };
 
@@ -49,6 +54,7 @@ export interface ReleaseManifest {
 export const sha256File = (absolutePath: string): { sha256: string; bytes: number } => {
   const buffer = readFileSync(absolutePath);
   const sha256 = createHash('sha256').update(buffer).digest('hex');
+
   return { sha256, bytes: statSync(absolutePath).size };
 };
 
@@ -75,12 +81,14 @@ export const verifyManifestArtifacts = (manifest: ReleaseManifest, resolve: (rel
   for (const record of manifest.packages) {
     const absolutePath = resolve(record.file);
     let actual: { sha256: string; bytes: number };
+
     try {
       actual = sha256File(absolutePath);
     } catch {
       issues.push({ file: record.file, reason: 'missing' });
       continue;
     }
+
     if (actual.bytes !== record.bytes) {
       issues.push({
         file: record.file,
@@ -90,6 +98,7 @@ export const verifyManifestArtifacts = (manifest: ReleaseManifest, resolve: (rel
       });
       continue;
     }
+
     if (actual.sha256 !== record.sha256) {
       issues.push({ file: record.file, reason: 'hash-mismatch', expected: record.sha256, actual: actual.sha256 });
     }

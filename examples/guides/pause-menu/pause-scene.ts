@@ -15,7 +15,7 @@ class GameScene extends Scene {
     this.addChild(this.player);
     // ... game setup ...
 
-    this.blur = new BlurFilter({ strength: 0 });
+    this.blur = this.track(new BlurFilter({ strength: 0 }));
 
     // Pause overlay on the UI layer, hidden until paused.
     this.pausePanel = new Panel({ width: 420, height: 140, cornerRadius: 18, color: new Color(0, 0, 0, 0.6) });

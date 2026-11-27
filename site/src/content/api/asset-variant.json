@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 3,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -29,6 +29,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "imageFormat",
+          "signature": "imageFormat?: string",
+          "signatureTokens": [
+            {
+              "text": "imageFormat",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Eligible only when the profile supports this lowercase raster file extension."
+        },
         {
           "name": "resolution",
           "signature": "resolution?: number",

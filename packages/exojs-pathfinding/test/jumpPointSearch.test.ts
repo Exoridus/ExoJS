@@ -32,7 +32,9 @@ describe('jump-point search', () => {
 
       expect(jumped.status).toBe(plain.status);
 
-      if (plain.status !== 'found') continue;
+      if (plain.status !== 'found') {
+        continue;
+      }
 
       expect(jumped.cost).toBeCloseTo(plain.cost, 9);
       // Both are contiguous cell paths, so the pruned one must be walkable step

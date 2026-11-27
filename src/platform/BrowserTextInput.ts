@@ -25,15 +25,17 @@ const deleteTypes = new Map<string, { direction: 'backward' | 'forward'; granula
  * real-sized element positioned over the drawing surface, focused so the
  * host's keyboard and IME attach to it.
  *
- * `beforeinput` is the source of truth, never `keydown`: the browser has
- * already turned key combinations into semantic edits (`deleteWordBackward`,
- * `insertFromPaste`, `historyUndo`), which would be layout-dependent to
- * reconstruct from key codes. Every mapped event is cancelled - the element
+ * The widget synchronizes its editing commands before a native key default.
+ * Other edits arrive through `beforeinput`, already expressed as semantic
+ * edits (`deleteWordBackward`, `insertFromPaste`, `historyUndo`). Every mapped event is cancelled - the element
  * is a transport and its own value is never authoritative - except
  * `deleteByCut`, whose clipboard write must survive; the value divergence it
  * causes heals on the next {@link BrowserTextInput.setValue}.
  */
 export class BrowserTextInput implements PlatformTextInput {
+  /** @internal */
+  public readonly _synchronousKeyboard = true;
+
   private readonly _element: HTMLTextAreaElement;
   private readonly _canvas: HTMLCanvasElement;
   private readonly _onEdit = new Signal<[TextEditIntent]>();
@@ -70,6 +72,7 @@ export class BrowserTextInput implements PlatformTextInput {
 
     const insert = insertTypes.has(type) || type === 'insertCompositionText';
     const del = deleteTypes.get(type) ?? null;
+    const range = { start: this._element.selectionStart, end: this._element.selectionEnd };
 
     if (insert) {
       event.preventDefault();
@@ -84,14 +87,14 @@ export class BrowserTextInput implements PlatformTextInput {
         text = event.data ?? '';
       }
 
-      this._onEdit.dispatch({ kind: 'insert', text });
+      this._onEdit.dispatch({ kind: 'insert', text, range, ...(type === 'insertFromPaste' && { source: 'paste' as const }) });
 
       return;
     }
 
     if (del !== null) {
       event.preventDefault();
-      this._onEdit.dispatch({ kind: 'deleteContent', direction: del.direction, granularity: del.granularity });
+      this._onEdit.dispatch({ kind: 'deleteContent', direction: del.direction, granularity: del.granularity, range });
 
       return;
     }
@@ -108,7 +111,7 @@ export class BrowserTextInput implements PlatformTextInput {
       // Left uncanceled so the browser writes the selection to the
       // clipboard. The native value edit is corrected by the next
       // `setValue`, which mirrors the model over it.
-      this._onEdit.dispatch({ kind: 'deleteContent', direction: 'backward', granularity: 'character' });
+      this._onEdit.dispatch({ kind: 'deleteContent', direction: 'backward', granularity: 'character', range });
     }
   };
 
@@ -135,7 +138,7 @@ export class BrowserTextInput implements PlatformTextInput {
   public constructor(canvas: HTMLCanvasElement) {
     this._canvas = canvas;
 
-    const element = document.createElement('textarea');
+    const element = canvas.ownerDocument.createElement('textarea');
 
     element.autocomplete = 'off';
     element.setAttribute('autocorrect', 'off');
@@ -168,7 +171,7 @@ export class BrowserTextInput implements PlatformTextInput {
     style.zIndex = '-1';
 
     this._element = element;
-    document.body.append(element);
+    canvas.ownerDocument.body.append(element);
 
     element.addEventListener('beforeinput', this._beforeInput);
     element.addEventListener('compositionstart', this._compositionStart);
@@ -188,7 +191,7 @@ export class BrowserTextInput implements PlatformTextInput {
 
   /** Whether host keyboard focus currently sits on this transport. */
   public get hostFocused(): boolean {
-    return this._claimingFocus || (typeof document !== 'undefined' && document.activeElement === this._element);
+    return this._claimingFocus || this._element.ownerDocument.activeElement === this._element;
   }
 
   /** Whether {@link BrowserTextInput.destroy} has already run. */
@@ -215,7 +218,7 @@ export class BrowserTextInput implements PlatformTextInput {
   }
 
   public blur(): void {
-    if (typeof document !== 'undefined' && document.activeElement === this._element) {
+    if (this._element.ownerDocument.activeElement === this._element) {
       // Hand host focus back to the surface it was borrowed from instead of
       // dropping it on the document: keyboard input would otherwise stop
       // reaching the application until the next press on the surface.
@@ -259,13 +262,11 @@ export class BrowserTextInput implements PlatformTextInput {
   public setHints(hints: PlatformTextInputHints): void {
     this._hints = hints;
 
-    if (hints.inputMode !== undefined) {
-      this._element.inputMode = hints.inputMode;
-    }
-
-    if (hints.enterKeyHint !== undefined) {
-      this._element.enterKeyHint = hints.enterKeyHint;
-    }
+    // The widget rebuilds this snapshot each time and omits unset members, so
+    // a missing hint has to clear the host property; leaving the previous value
+    // in place would keep the old keyboard and confirm key.
+    this._element.inputMode = hints.inputMode ?? '';
+    this._element.enterKeyHint = hints.enterKeyHint ?? '';
   }
 
   public destroy(): void {
@@ -292,14 +293,16 @@ export class BrowserTextInput implements PlatformTextInput {
    * placement.
    */
   private _applyBounds(): void {
-    if (this._bounds === null || typeof document === 'undefined') {
+    if (this._bounds === null) {
       return;
     }
 
     const canvasRect = this._canvas.getBoundingClientRect();
 
-    this._element.style.left = `${canvasRect.left + this._bounds.x}px`;
-    this._element.style.top = `${canvasRect.top + this._bounds.y}px`;
+    const view = this._element.ownerDocument.defaultView;
+
+    this._element.style.left = `${canvasRect.left + this._bounds.x + (view?.scrollX ?? 0)}px`;
+    this._element.style.top = `${canvasRect.top + this._bounds.y + (view?.scrollY ?? 0)}px`;
     this._element.style.width = `${Math.max(1, this._bounds.width)}px`;
     this._element.style.height = `${Math.max(1, this._bounds.height)}px`;
   }

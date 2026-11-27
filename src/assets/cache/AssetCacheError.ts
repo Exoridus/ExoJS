@@ -23,8 +23,9 @@ export interface AssetCacheErrorOptions {
    */
   readonly store?: string | undefined;
   /**
-   * Record key, when the operation targets a single record. Explicitly
-   * `undefined` is accepted - a store-wide operation has none.
+   * Record key as {@link serializeCacheRecordKey} spells it, when the operation
+   * targets a single record. Explicitly `undefined` is accepted - a store-wide
+   * operation has none.
    */
   readonly key?: string | undefined;
   /**
@@ -60,7 +61,11 @@ export class AssetCacheError extends Error {
   public readonly operation: AssetCacheOperation;
   /** Storage namespace, or `null` when the operation is store-wide. */
   public readonly store: string | null;
-  /** Record key, or `null` when the operation does not target a single record. */
+  /**
+   * Record key as {@link serializeCacheRecordKey} spells it - the same string
+   * whichever layer reported the failure - or `null` when the operation does not
+   * target a single record.
+   */
   public readonly key: string | null;
 
   public constructor(options: AssetCacheErrorOptions) {

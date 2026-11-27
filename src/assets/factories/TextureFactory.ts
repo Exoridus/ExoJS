@@ -1,7 +1,9 @@
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import { determineMimeType } from '#assets/utils';
+import { animatedImageMime } from '#rendering/texture/animatedImageMime';
 import { CompressedTexture } from '#rendering/texture/CompressedTexture';
+import { ImageSequenceSource } from '#rendering/texture/ImageSequenceSource';
 import { Texture } from '#rendering/texture/Texture';
 import type { SamplerOptions, TextureAlphaMode, TextureColorSpace, TextureOptions } from '#rendering/texture/TextureOptions';
 
@@ -38,6 +40,9 @@ export interface TextureAssetOptions {
  */
 export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, TextureAssetOptions> {
   private readonly _objectUrls = new ObjectUrlPool();
+  // Only a bitmap this factory decoded may be closed: a texture's source can be
+  // replaced by one its owner still draws from elsewhere.
+  private readonly _decoded = new WeakSet<ImageBitmap>();
   private _basis: BasisKtx2Runtime | undefined;
 
   public async create(source: ArrayBuffer, context: AssetFactoryContext<TextureAssetOptions>): Promise<Texture> {
@@ -47,15 +52,71 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
       return this._createFromKtx2(source, context, textureOptions);
     }
 
+    // Detect animation from bytes: .webp and .png can be either static or
+    // animated, and a file extension or MIME alone never settles that.
+    const animated = animatedImageMime(source);
+
+    if (animated !== null) {
+      if (textureOptions?.colorSpace === 'none') {
+        throw new TypeError('Animated images are colour images; numeric decoding cannot preserve animation.');
+      }
+
+      let sequence: ImageSequenceSource;
+
+      try {
+        sequence = await ImageSequenceSource.open(source, context.signal);
+      } catch (error) {
+        if (context.signal?.aborted === true) {
+          throw error;
+        }
+
+        throw new AssetDecodeError({
+          message: `Animated ${animated} image could not be decoded: ${error instanceof Error ? error.message : String(error)}`,
+          assetType: 'texture',
+          cause: error,
+        });
+      }
+
+      const texture = new Texture(null, textureOptions);
+
+      texture._attachFrameSource(sequence, true);
+
+      return texture;
+    }
+
     const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
 
     const mode = textureOptions?.colorSpace === 'none' ? 'data' : 'color';
     const image = await decodeImageBlob(blob, this._objectUrls, mode);
     const texture = new Texture(null, textureOptions);
 
+    if (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap) {
+      this._decoded.add(image);
+    }
+
     texture._setDecodedImageSource(image, mode === 'data' ? 'none' : 'srgb');
 
     return texture;
+  }
+
+  /**
+   * Closes the bitmap behind a released texture. Every handle sharing the decode
+   * is evicted together with it, so none is left drawing from a closed source.
+   */
+  public dispose(texture: Texture): void {
+    const source = texture.source;
+    const frames = texture._getFrameSource();
+
+    // Residency may have filled several existing handles from one decoder and
+    // kept a handle (not the factory donor) as its canonical stored resource.
+    // The factory's eviction is the one authoritative lifetime boundary:
+    // borrowed handles must not individually destroy this shared decoder.
+    texture._attachFrameSource(null);
+    frames?.destroy();
+
+    if (this._decoded.delete(source as ImageBitmap)) {
+      (source as ImageBitmap).close();
+    }
   }
 
   public destroy(): void {
@@ -75,6 +136,7 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
       context.textureFormats,
       (buffer, descriptor, target, signal) => {
         this._basis ??= new BasisKtx2Runtime();
+
         return this._basis.transcode(buffer, descriptor, target, signal);
       },
       context.signal,

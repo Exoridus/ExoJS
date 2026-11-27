@@ -143,7 +143,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Bounding-box height as the filter pipeline sees it (ceil)."
+          "description": "Bounding-box height in the node's SceneNode.getBounds space (ceil, at least 1); an expanding filter captures a larger domain."
         },
         {
           "name": "width",
@@ -164,7 +164,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Bounding-box width as the filter pipeline sees it (ceil)."
+          "description": "Bounding-box width in the node's SceneNode.getBounds space (ceil, at least 1); an expanding filter captures a larger domain."
         }
       ],
       "paragraphs": [],

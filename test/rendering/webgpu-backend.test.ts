@@ -8,19 +8,26 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { Drawable } from '#rendering/Drawable';
+import { FilterPass } from '#rendering/FilterPass';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
+import { MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import { Graphics } from '#rendering/primitives/Graphics';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
 import type { RenderError } from '#rendering/RenderError';
+import { RenderingContext } from '#rendering/RenderingContext';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Text } from '#rendering/text/Text';
 import { TextStyle } from '#rendering/text/TextStyle';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes, ScaleModes } from '#rendering/types';
+import { BlendModes, ScaleModes, TextureFormat } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
+import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
+import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
+import { WebGpuSpriteRenderer } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import { WebGpuTextRenderer } from '#rendering/webgpu/WebGpuTextRenderer';
 
 import { particlesExtension, ParticleSystem } from '../../packages/exojs-particles/src/index';
 
@@ -33,9 +40,13 @@ import { particlesExtension, ParticleSystem } from '../../packages/exojs-particl
  */
 const defaultContext2dStub = (): unknown => ({
   fillStyle: '',
-  fillRect: () => undefined,
-  drawImage: () => undefined,
-  getImageData: (_x: number, _y: number, width: number, height: number) => ({ data: new Uint8ClampedArray(width * height * 4), width, height }),
+  fillRect: () => {},
+  drawImage: () => {},
+  getImageData: (_x: number, _y: number, width: number, height: number) => ({
+    data: new Uint8ClampedArray(width * height * 4),
+    width,
+    height,
+  }),
 });
 
 interface MockWebGpuEnvironment {
@@ -157,6 +168,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const lostPromise = new Promise<GPUDeviceLostInfo>(resolve => {
     _resolveLost = resolve;
   });
+
   const simulateDeviceLost = (info: Partial<GPUDeviceLostInfo> = {}): void => {
     _resolveLost?.({
       reason: 'unknown' as GPUDeviceLostReason,
@@ -164,6 +176,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
       ...info,
     } as GPUDeviceLostInfo);
   };
+
   // Mirrors the platform contract: destroying a device resolves its `lost`
   // promise with reason `'destroyed'`, which is what distinguishes an
   // intentional teardown from a driver-side loss.
@@ -440,6 +453,189 @@ const installCoreAndParticleRenderers = (backend: WebGpuBackend, renderingOption
 };
 
 describe('WebGpuBackend', () => {
+  test.each([
+    [0.5, 0, 0, 1, 100, 0, 0, 100],
+    [0, 0.5, 1, 0, 0, 50, 200, 0],
+    [1, 0, 0, 1, 200, 0, 0, 100],
+    [0, 0, 0.002, 0.004, 0, 0, 0, 0],
+    [-0.25, 0, 1, 1, -50, 0, 200, 100],
+  ])(
+    'snap viewport preserves (%s, %s, %s, %s) in device pixels',
+    async (x, y, width, height, expectedX, expectedY, expectedWidth, expectedHeight) => {
+      const environment = createMockWebGpuEnvironment();
+
+      environment.canvas.width = 200;
+      environment.canvas.height = 100;
+
+      const manager = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+      const view = new View(100, 50, 200, 100).setViewport(x, y, width, height);
+
+      try {
+        await manager.initialize();
+        manager.setView(view);
+
+        expect(manager._snapViewport).toEqual({ x: expectedX, y: expectedY, width: expectedWidth, height: expectedHeight });
+      } finally {
+        manager.destroy();
+        view.destroy();
+        environment.restore();
+      }
+    },
+  );
+
+  test('destroy during pipeline prewarm rejects initialization without repopulating renderer caches', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const adapter = (await navigator.gpu.requestAdapter())!;
+    const device = await adapter.requestDevice();
+    const pending: Array<() => void> = [];
+
+    Object.defineProperty(device, 'createRenderPipelineAsync', {
+      value: vi.fn(() => new Promise<GPURenderPipeline>(resolve => pending.push(() => resolve({} as GPURenderPipeline)))),
+    });
+
+    const manager = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+
+    installCoreRenderers(manager);
+
+    const renderers = [...manager.rendererRegistry.renderers()];
+    const sprite = renderers.find(renderer => renderer instanceof WebGpuSpriteRenderer) as unknown as {
+      _pipelines: { has(format: GPUTextureFormat, variant: number): boolean };
+    };
+    const mesh = renderers.find(renderer => renderer instanceof WebGpuMeshRenderer) as unknown as {
+      _pipelines: Map<string, GPURenderPipeline>;
+      _instancedPipelines: Map<string, GPURenderPipeline>;
+    };
+    const text = renderers.find(renderer => renderer instanceof WebGpuTextRenderer) as unknown as {
+      _pipelines: Map<string, GPURenderPipeline>;
+    };
+    const initialization = manager.initialize().then(
+      () => 'resolved',
+      () => 'rejected',
+    );
+
+    try {
+      await vi.waitFor(() => expect(pending.length).toBeGreaterThan(0));
+      manager.destroy();
+
+      for (const finish of pending) {
+        finish();
+      }
+
+      expect.soft(await initialization).toBe('rejected');
+      expect.soft(sprite._pipelines.has('bgra8unorm', BlendModes.Normal << 1)).toBe(false);
+      expect.soft(mesh._pipelines.size).toBe(0);
+      expect.soft(mesh._instancedPipelines.size).toBe(0);
+      expect.soft(text._pipelines.size).toBe(0);
+      expect(environment.destroyDevice).toHaveBeenCalledTimes(1);
+    } finally {
+      manager.destroy();
+      environment.restore();
+    }
+  });
+
+  test('destroy during adapter acquisition prevents device creation and reinitialization', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const adapter = await navigator.gpu.requestAdapter();
+    let resolveAdapter!: (adapter: GPUAdapter | null) => void;
+
+    vi.mocked(navigator.gpu.requestAdapter).mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveAdapter = resolve;
+      }),
+    );
+
+    const manager = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+    const initialization = manager.initialize().catch((error: unknown) => error);
+
+    try {
+      manager.destroy();
+      resolveAdapter(adapter);
+
+      expect(await initialization).toBeInstanceOf(Error);
+      expect(adapter!.requestDevice).not.toHaveBeenCalled();
+      expect(environment.context.configure).not.toHaveBeenCalled();
+      await expect(manager.initialize()).rejects.toThrow(/destroy/i);
+    } finally {
+      manager.destroy();
+      environment.restore();
+    }
+  });
+
+  test.each(['resolve', 'reject'])('destroy during device acquisition settles a late %s without publishing or retrying', async outcome => {
+    const environment = createMockWebGpuEnvironment();
+    const adapter = (await navigator.gpu.requestAdapter())!;
+    const device = await adapter.requestDevice();
+    let resolveDevice!: (device: GPUDevice) => void;
+    let rejectDevice!: (error: Error) => void;
+
+    vi.mocked(adapter.requestDevice).mockReturnValueOnce(
+      new Promise((resolve, reject) => {
+        resolveDevice = resolve;
+        rejectDevice = reject;
+      }),
+    );
+    vi.mocked(navigator.gpu.requestAdapter).mockResolvedValue(adapter);
+
+    const manager = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+    const initialization = manager.initialize().catch((error: unknown) => error);
+
+    try {
+      await Promise.resolve();
+      manager.destroy();
+
+      const requests = vi.mocked(navigator.gpu.requestAdapter).mock.calls.length;
+
+      if (outcome === 'resolve') {
+        resolveDevice(device);
+      } else {
+        rejectDevice(new Error('late device rejection'));
+      }
+
+      expect(await initialization).toBeInstanceOf(Error);
+      expect(environment.context.configure).not.toHaveBeenCalled();
+      expect(navigator.gpu.requestAdapter).toHaveBeenCalledTimes(requests);
+      expect(environment.destroyDevice).toHaveBeenCalledTimes(outcome === 'resolve' ? 1 : 0);
+      expect(() => manager.device).toThrow(/not initialized/);
+    } finally {
+      manager.destroy();
+      environment.restore();
+    }
+  });
+
+  test('device teardown discards the normalizer before the next device is installed', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const manager = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+    const internal = manager as unknown as {
+      _getTextureNormalizer(): object;
+      _initialize(): Promise<WebGpuBackend>;
+      _teardownDeviceState(): void;
+      _textureNormalizer: object | null;
+    };
+
+    try {
+      await manager.initialize();
+
+      const first = internal._getTextureNormalizer();
+      const restoredDevice = { ...manager.device } as GPUDevice;
+
+      vi.mocked(navigator.gpu.requestAdapter).mockResolvedValue({
+        requestDevice: vi.fn(async () => restoredDevice),
+      } as unknown as GPUAdapter);
+
+      internal._teardownDeviceState();
+
+      expect(internal._textureNormalizer).toBeNull();
+
+      await internal._initialize();
+
+      expect(manager.device).toBe(restoredDevice);
+      expect(internal._getTextureNormalizer()).not.toBe(first);
+    } finally {
+      manager.destroy();
+      environment.restore();
+    }
+  });
+
   test('flushes the active renderer when switching renderer types', async () => {
     const environment = createMockWebGpuEnvironment();
 
@@ -825,6 +1021,53 @@ describe('WebGpuBackend', () => {
       expect(environment.textures.length).toBeGreaterThan(0);
       expect(environment.textures.every(gpuTexture => gpuTexture.destroy.mock.calls.length > 0)).toBe(true);
     } finally {
+      environment.restore();
+    }
+  });
+
+  test('restores the caller camera and discards a blit batch rejected during the final flush', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const backend = new WebGpuBackend({
+      canvas: environment.canvas,
+      options: { canvas: { width: 128, height: 128 } },
+    } as unknown as Application);
+    const camera = View.from({ center: { x: 300, y: 200 }, size: { width: 20, height: 10 }, rotation: 35 });
+    const source = new RenderTexture(128, 128, { format: TextureFormat.Rgba32F, scaleMode: ScaleModes.Linear });
+    const pass = new FilterPass(source);
+    const healthySource = new RenderTexture(16, 16);
+    const sprite = new Sprite(healthySource).setPosition(300, 200);
+
+    try {
+      installCoreRenderers(backend);
+      await backend.initialize();
+      backend.setView(camera);
+
+      expect(() => pass.execute(new RenderingContext(backend))).toThrow('float32-filterable');
+      expect.soft(backend.view).toBe(camera);
+      expect
+        .soft([backend.view.center.x, backend.view.center.y, backend.view.size.width, backend.view.size.height, backend.view.rotation])
+        .toEqual([300, 200, 20, 10, 35]);
+      expect.soft(backend.passCoordinator.hasActivePass).toBe(false);
+      pass.destroy();
+      expect.soft(backend.view).toBe(camera);
+      expect.soft(() => backend.flush()).not.toThrow();
+      expect.soft(backend.stats.drawCalls).toBe(0);
+      expect
+        .soft(() => {
+          sprite.render(backend);
+          backend.flush();
+        })
+        .not.toThrow();
+      expect.soft(backend.stats.drawCalls).toBe(1);
+    } finally {
+      source.scaleMode = ScaleModes.Nearest;
+      backend.setView(camera);
+      pass.destroy();
+      sprite.destroy();
+      backend.destroy();
+      source.destroy();
+      healthySource.destroy();
+      camera.destroy();
       environment.restore();
     }
   });
@@ -1244,7 +1487,8 @@ describe('WebGpuBackend', () => {
 
       expect(
         environment.createTexture.mock.calls.some(
-          ([descriptor]) => descriptor.mipLevelCount === 5 && (descriptor.usage & GPUTextureUsage.RENDER_ATTACHMENT) === GPUTextureUsage.RENDER_ATTACHMENT,
+          ([descriptor]) =>
+            descriptor.mipLevelCount === 5 && (descriptor.usage & GPUTextureUsage.RENDER_ATTACHMENT) === GPUTextureUsage.RENDER_ATTACHMENT,
         ),
       ).toBe(true);
       expect(
@@ -2745,4 +2989,59 @@ describe('WebGpuBackend', () => {
       environment.restore();
     }
   });
+});
+
+test('rejecting an oversized render target preserves the current target and its destroy subscription', async () => {
+  const environment = createMockWebGpuEnvironment();
+  const backend = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+  const current = new RenderTexture(32, 32);
+  let oversized: MultiRenderTarget | null = null;
+
+  try {
+    await backend.initialize();
+    const root = backend.renderTarget;
+
+    backend.setRenderTarget(current);
+    const changes = backend.stats.renderTargetChanges;
+
+    oversized = new MultiRenderTarget(32, 32, {
+      formats: Array.from({ length: backend.maxColorAttachments + 1 }, () => TextureFormat.Rgba8),
+    });
+    expect(() => backend.setRenderTarget(oversized)).toThrow('colour attachment');
+    expect(backend.renderTarget).toBe(current);
+    expect(backend.stats.renderTargetChanges).toBe(changes);
+    current.destroy();
+    expect(backend.renderTarget).toBe(root);
+  } finally {
+    backend.destroy();
+    current.destroy();
+    oversized?.destroy();
+    environment.restore();
+  }
+});
+
+test.each(['uninitialized', 'lost'])('scissor state silently no-ops while the device is %s', async state => {
+  const environment = createMockWebGpuEnvironment();
+  const backend = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+  const internals = backend as unknown as { _deviceLost: boolean; _flushActiveRendererAndEndPass(): void; _clipDepth: number };
+
+  try {
+    if (state === 'lost') {
+      await backend.initialize();
+      internals._deviceLost = true;
+    }
+
+    const flush = vi.spyOn(internals, '_flushActiveRendererAndEndPass').mockImplementation(() => {
+      throw new Error('unavailable device touched');
+    });
+
+    expect(() => backend.pushScissorRect(new Rectangle(0, 0, 10, 10))).not.toThrow();
+    expect(() => backend.popScissorRect()).not.toThrow();
+    expect(internals._clipDepth).toBe(0);
+    expect(flush).not.toHaveBeenCalled();
+    flush.mockRestore();
+  } finally {
+    backend.destroy();
+    environment.restore();
+  }
 });

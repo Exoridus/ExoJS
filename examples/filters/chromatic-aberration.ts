@@ -1,8 +1,9 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, mountControls, slider } from '@examples/runtime';
 
 // A dense checkerboard makes the per-channel RGB split read clearly along edges.
-const CHECKER = assets.technical.filtering.checker256;
+const CHECKER = assets.checker256;
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uOffset; in vec2 vUv; out vec4 fragColor;
@@ -30,13 +31,13 @@ class ChromaticAberrationScene extends Scene {
   private sprite!: Sprite;
   private intensity = 0.4;
   private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
     const app = this.app;
     const { width, height } = app;
 
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uOffset: 0 } });
+    this.filter = this.track(new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uOffset: 0 } }));
     this.sprite = new Sprite(this.loader.get(CHECKER))
       .setAnchor(0.5)
       .setScale(2.6)
@@ -51,20 +52,15 @@ class ChromaticAberrationScene extends Scene {
       hint: 'A fragment-shader filter samples red and blue at opposite UV offsets.',
     });
 
-    this.panel = mountControlPanel({ title: 'Lens' });
-    this.panel.addSlider({
-      label: 'Intensity',
-      min: 0,
-      max: 1,
-      step: 0.01,
-      value: this.intensity,
-      onChange: value => {
+    this.panel = demoPanel({
+      scene: this,
+      title: 'Lens',
+      controls: { intensity: slider('Intensity', { min: 0, max: 1, step: 0.01, value: this.intensity }) },
+      onChange: (_key, value) => {
         this.intensity = value;
         this.applyIntensity();
       },
     });
-
-    this.applyIntensity();
   }
 
   private applyIntensity(): void {

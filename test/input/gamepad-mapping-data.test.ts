@@ -27,7 +27,8 @@ import type { GamepadPromptControl } from '#input/GamepadPromptLayouts';
 import { GamepadPromptLayouts } from '#input/GamepadPromptLayouts';
 import { ChannelSize } from '#input/types';
 
-const buttonTable = (mapping: GamepadMapping): Map<number, number> => new Map(mapping.buttons.map(button => [button.index, button.channel as number]));
+const buttonTable = (mapping: GamepadMapping): Map<number, number> =>
+  new Map(mapping.buttons.map(button => [button.index, button.channel as number]));
 
 /** The W3C standard button layout every standard-mapped family shares. */
 const standardButtonTable: ReadonlyArray<readonly [number, number]> = [
@@ -186,12 +187,15 @@ describe('prompt presentation', () => {
     [createXboxGamepadMapping(), 'A', 'LB'],
     [createPlayStationGamepadMapping(), 'Cross', 'L1'],
     [createSwitchProGamepadMapping(), 'B', 'L'],
-  ] as ReadonlyArray<readonly [GamepadMapping, string, string]>)('labels the face and shoulder cluster per family', (mapping, south, leftShoulder) => {
-    const labels = GamepadPromptLayouts.getControlLabels(mapping);
+  ] as ReadonlyArray<readonly [GamepadMapping, string, string]>)(
+    'labels the face and shoulder cluster per family',
+    (mapping, south, leftShoulder) => {
+      const labels = GamepadPromptLayouts.getControlLabels(mapping);
 
-    expect(labels.get('ButtonSouth')).toBe(south);
-    expect(labels.get('LeftShoulder')).toBe(leftShoulder);
-  });
+      expect(labels.get('ButtonSouth')).toBe(south);
+      expect(labels.get('LeftShoulder')).toBe(leftShoulder);
+    },
+  );
 
   test('a device-specific override survives the move to data', () => {
     const select = (mapping: GamepadMapping): string | undefined => GamepadPromptLayouts.getControlLabels(mapping).get('Select');
@@ -203,7 +207,9 @@ describe('prompt presentation', () => {
 
   test('a family with no override falls back to its family set unchanged', () => {
     expect(createXboxGamepadMapping().promptLabels).toBeUndefined();
-    expect(GamepadPromptLayouts.getControlLabels(createXboxGamepadMapping())).toBe(GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.Xbox));
+    expect(GamepadPromptLayouts.getControlLabels(createXboxGamepadMapping())).toBe(
+      GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.Xbox),
+    );
   });
 
   test('the Steam Controller reports the Steam family and generic labels', () => {
@@ -219,7 +225,10 @@ describe('Gamepad presentation surface', () => {
     const pad = new Gamepad(0, new Float32Array(ChannelSize.Container));
     const descriptor = { label: 'Test Pad', vendorId: null, productId: null, productKey: null } as unknown as GamepadDescriptor;
 
-    pad._bind({ index: 0, buttons: [], axes: [] } as unknown as never, { descriptor, name: 'Test Pad', mapping } as ResolvedGamepadDefinition);
+    pad._bind(
+      { index: 0, buttons: [], axes: [] } as unknown as never,
+      { descriptor, name: 'Test Pad', mapping } as ResolvedGamepadDefinition,
+    );
 
     return pad;
   };

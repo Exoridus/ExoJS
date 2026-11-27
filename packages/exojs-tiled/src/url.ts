@@ -39,6 +39,10 @@ export const resolveTiledUrl = (ref: string, base: string): string => {
     return new URL(ref, base).href;
   }
 
+  if (base.startsWith('//')) {
+    return new URL(ref, `https:${base}`).href.slice('https:'.length);
+  }
+
   const resolved = new URL(ref, SYNTHETIC_ORIGIN + base.replace(/^\/+/, ''));
   const relative = resolved.href.slice(SYNTHETIC_ORIGIN.length);
 

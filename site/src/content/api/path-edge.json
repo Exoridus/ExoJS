@@ -4,7 +4,7 @@
   "symbol": "PathEdge",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -22,7 +22,7 @@
         "One traversal step of a path, as described by the space it came from.",
         "Spaces that model traversal kinds - WaypointGraph is the one in this package - report them here, so a movement controller can react to a `'jump'` step differently than to a `'walk'` step. Grid spaces describe no edges."
       ],
-      "importLine": "import { PathEdge } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { PathEdge } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

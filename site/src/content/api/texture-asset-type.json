@@ -1,6 +1,6 @@
 {
   "title": "TextureAssetType",
-  "description": "GPU-ready Textures decoded from PNG, APNG, JPG, WebP, AVIF, GIF, BMP and ICO bytes, or from a KTX2 container holding a hardware-compressed payload. One type covers both because the payload kind is a property of the bytes, not of the asset: an AssetVariantSet rule may resolve one logical source to a compressed container where the device supports the format and to an image elsewhere, and a caller holding the handle sees a `Texture` either way. An animated source (APNG, animated WebP or GIF, an AVIF sequence) decodes to its first frame - a texture is a still image. Use the animation asset types for playback. An `.ico` file may hold several resolutions of one image. Which of them the decode yields is the browser's choice and is not specified anywhere, so an icon whose exact size matters should be shipped as the single image it is meant to be rather than as a multi-resolution container.",
+  "description": "GPU-ready Textures decoded from PNG, APNG, JPG, WebP, AVIF, GIF, BMP and ICO bytes, or from a KTX2 container holding a hardware-compressed payload. One type covers both because the payload kind is a property of the bytes, not of the asset: an AssetVariantSet rule may resolve one logical source to a compressed container where the device supports the format and to an image elsewhere, and a caller holding the handle sees a `Texture` either way. An animated source (APNG, animated WebP or GIF, an AVIF sequence) decodes to its first frame - a texture is a still image. Use the animation asset types for playback. An `.ico` file may hold several resolutions of one image. Which of them the decode yields is the browser's choice and is not specified anywhere, so an icon whose exact size matters should be shipped as the single image it is meant to be rather than as a multi-resolution container. Releasing the last claim closes the `ImageBitmap` the texture decoded, so a `source` read from a loaded texture is valid only while that texture is held.",
   "symbol": "TextureAssetType",
   "kind": "class",
   "subsystem": "assets",
@@ -22,7 +22,8 @@
         "GPU-ready Textures decoded from PNG, APNG, JPG, WebP, AVIF, GIF, BMP and ICO bytes, or from a KTX2 container holding a hardware-compressed payload.",
         "One type covers both because the payload kind is a property of the bytes, not of the asset: an AssetVariantSet rule may resolve one logical source to a compressed container where the device supports the format and to an image elsewhere, and a caller holding the handle sees a `Texture` either way.",
         "An animated source (APNG, animated WebP or GIF, an AVIF sequence) decodes to its first frame - a texture is a still image. Use the animation asset types for playback.",
-        "An `.ico` file may hold several resolutions of one image. Which of them the decode yields is the browser's choice and is not specified anywhere, so an icon whose exact size matters should be shipped as the single image it is meant to be rather than as a multi-resolution container."
+        "An `.ico` file may hold several resolutions of one image. Which of them the decode yields is the browser's choice and is not specified anywhere, so an icon whose exact size matters should be shipped as the single image it is meant to be rather than as a multi-resolution container.",
+        "Releasing the last claim closes the `ImageBitmap` the texture decoded, so a `source` read from a loaded texture is valid only while that texture is held."
       ],
       "importLine": "import { TextureAssetType } from '@codexo/exojs'",
       "sourceLink": null
@@ -69,94 +70,6 @@
       "id": "methods",
       "title": "Methods",
       "members": [
-        {
-          "name": "asset",
-          "signature": "asset(source: string, options: [options]): ResourceAsset<Texture>",
-          "signatureTokens": [
-            {
-              "text": "asset",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "source",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ResourceAsset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Texture",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "source",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "options",
-              "type": "[options]",
-              "optional": false
-            }
-          ],
-          "returnType": "ResourceAsset<Texture>",
-          "description": "A typed, loadable descriptor for one asset of this type. The resource and option types come from the type instance, so a custom type is fully typed at every call site without declaring anything to the module system: ts const world = await loader.load(worldType.asset('level.world'));  The descriptor is branded with this type's leaf policy, so a catalog types its entry as the leaf the runtime hands out. options is required when the option bag has a required field. type and source are reserved for the request: an option bag carrying either throws."
-        },
         {
           "name": "createFactory",
           "signature": "createFactory(): AssetFactory<ArrayBuffer, Texture, TextureAssetOptions>",
@@ -213,6 +126,187 @@
           "params": [],
           "returnType": "AssetFactory<ArrayBuffer, Texture, TextureAssetOptions>",
           "description": "Creates the factory for one application, at install time. Called once per Loader, never per request and never at module import, so loader-local state a factory needs - a worker, a compiled module, a lookup shared across every resource of this type - can be built here and torn down with the loader."
+        },
+        {
+          "name": "persistedOptions",
+          "signature": "persistedOptions(resource: Texture | undefined, options: Readonly<Record<string, unknown>> | undefined, donor?: Texture): Readonly<Record<string, unknown>> | undefined",
+          "signatureTokens": [
+            {
+              "text": "persistedOptions",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resource",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "donor",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "resource",
+              "type": "Texture | undefined",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Readonly<Record<string, unknown>> | undefined",
+              "optional": false
+            },
+            {
+              "name": "donor",
+              "type": "Texture",
+              "optional": true
+            }
+          ],
+          "returnType": "Readonly<Record<string, unknown>> | undefined",
+          "description": "Projects a loaded handle's presentation options into a saved reference. Keep options that affect source or resource identity unchanged. With no handle, return the options used to distinguish logical requests, omitting the fields that depend on the handle. Only return JSON-compatible data. A resident donor can supply the presentation a bare reference would inherit."
         },
         {
           "name": "resourceIdentity",

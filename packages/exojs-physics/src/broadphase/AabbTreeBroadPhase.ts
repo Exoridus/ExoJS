@@ -3,6 +3,7 @@ import { DynamicAabbTree } from '@codexo/exojs';
 
 import { aabbOverlap } from '../Aabb';
 import type { Collider } from '../Collider';
+import { currentAabbRevision } from '../Collider';
 import { pairKey } from '../ContactGraph';
 import type { SpatialIndex } from '../query/SpatialIndex';
 import { sortInPlace } from '../sort';
@@ -14,8 +15,8 @@ import type { BroadPhase, CandidatePair } from './BroadPhase';
  * shapes commonly span 10-30px): large enough that a few steps of ordinary
  * motion stay inside the margin (skipping the sync phase's remove+reinsert),
  * small enough it doesn't inflate fat AABBs into spurious candidates for
- * densely packed scenes. Fixed per the design's v1 scope (no velocity-based
- * predictive expansion) - revisit if benchmarks want a different value.
+ * densely packed scenes. No velocity-based predictive expansion; revisit if
+ * benchmarks want a different value.
  */
 const AABB_MARGIN = 4;
 
@@ -33,9 +34,9 @@ const byPairId = (p: CandidatePair, q: CandidatePair): number => p.a.id - q.a.id
  * sleeping world pays one flag read per collider); (2) one full pass over the
  * persistent pair set dropping any pair whose fat AABBs no longer overlap -
  * cheap (O(1) per pair) and run every step regardless of movement, exactly
- * mirroring Box2D's own `b2ContactManager::Collide` (see the design's
- * correctness argument for why a single global pass, not a per-moved-leaf
- * rescan, is both correct and the right complexity); (3) emit, keeping only
+ * mirroring Box2D's own `b2ContactManager::Collide` (a pair separates only when
+ * one of its leaves moved, and every moved leaf is re-queried in phase 1, so one
+ * global pass is both correct and the right complexity); (3) emit, keeping only
  * pairs whose *tight* AABBs overlap.
  *
  * Phases 2 and 3 are skipped whole when nothing they read has changed since the
@@ -77,6 +78,16 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
   /** The buffer the current candidate list was emitted into, so a caller that swaps or clears its own buffer still gets a rebuild. */
   private _emitTarget: CandidatePair[] | null = null;
   private _emitLength = -1;
+
+  /**
+   * The collider AABB revision and collider count this index was last synced at.
+   * Equal revision, count and source list mean no collider has entered, left or
+   * moved since the last sync. Different lists with the same count must still
+   * be visited, even when no AABB has been rewritten.
+   */
+  private _syncRevision = -1;
+  private _syncedCount = -1;
+  private _syncedSource: readonly Collider[] | null = null;
 
   private readonly _onNeighborFound = (payload: Collider, proxy: number): void => {
     if (proxy === this._syncingProxy) {
@@ -140,11 +151,26 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
    * Insert every not-yet-tracked collider and reinsert every moved one (the
    * `computePairs` phase-1 loop, extracted so {@link queryAabb} callers can
    * force it independently of a full detection pass - see {@link SpatialIndex.sync}).
+   *
+   * Returns immediately when no collider AABB has been rewritten and the same
+   * list object has the same length as on the last call. Passing a different
+   * list forces a visit, even if the global revision and length match.
    */
   public sync(colliders: readonly Collider[]): void {
+    const revision = currentAabbRevision();
+
+    if (revision === this._syncRevision && colliders.length === this._syncedCount && colliders === this._syncedSource) {
+      return;
+    }
+
     for (const collider of colliders) {
       this._sync(collider);
     }
+
+    // Recorded only after the walk: a throwing collider must leave the next call to retry, not skip.
+    this._syncRevision = revision;
+    this._syncedCount = colliders.length;
+    this._syncedSource = colliders;
   }
 
   /** Colliders whose AABB overlaps `aabb`. Writes into `out` (cleared first) and returns it. */
@@ -157,12 +183,23 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
   }
 
   /** Colliders whose AABB the ray could cross within `maxDistance`, via the tree's own ray-cast prune. */
-  public rayCast(originX: number, originY: number, dirX: number, dirY: number, maxDistance: number, callback: (collider: Collider) => void): void {
+  public rayCast(
+    originX: number,
+    originY: number,
+    dirX: number,
+    dirY: number,
+    maxDistance: number,
+    callback: (collider: Collider) => void,
+  ): void {
     this._tree.rayCast(originX, originY, dirX, dirY, maxDistance, callback);
   }
 
   /** Drop `collider`'s leaf and every pair referencing it. Called when a collider is destroyed. */
   public removeCollider(collider: Collider): void {
+    // A removal the next `sync` may not see as a count change (one collider
+    // destroyed and another added in the same frame) still has to re-walk.
+    this._syncRevision = -1;
+
     if (collider._treeProxy === -1) {
       return;
     }
@@ -185,11 +222,20 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
     // reuse, not concurrent dual-ownership) must not carry a stale non-`-1`
     // proxy from this instance forward. `query` with infinite bounds visits
     // every leaf currently in the tree, allocation-free.
-    this._tree.query(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, this._resetTreeProxy);
+    this._tree.query(
+      Number.NEGATIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+      this._resetTreeProxy,
+    );
     this._tree.destroy();
     this._pairs.clear();
     this._emitStale = true;
     this._emitTarget = null;
+    this._syncRevision = -1;
+    this._syncedCount = -1;
+    this._syncedSource = null;
   }
 
   private _sync(collider: Collider): void {

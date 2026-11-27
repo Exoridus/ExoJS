@@ -15,6 +15,7 @@
 
 import { afterEach, describe, expect, test } from 'vitest';
 
+import { Color } from '#core/Color';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
@@ -144,6 +145,7 @@ const createGlHarness = (): GlHarness => {
   mutable['framebufferTexture2D'] = (_target: number, attachment: number, _texTarget: number, handle: unknown): void => {
     attachments.push({ slot: attachment - colorAttachment0, handle });
   };
+
   mutable['drawBuffers'] = (buffers: number[]): void => {
     drawBufferLists.push([...buffers]);
   };
@@ -183,6 +185,39 @@ describe('MultiRenderTarget', () => {
       expect(attachment.width).toBe(128);
       expect(attachment.height).toBe(96);
     }
+
+    target.destroy();
+  });
+
+  test('resizing recentres the default views of the target and its attachments', () => {
+    const target = new MultiRenderTarget(64, 64, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
+
+    const versions = target.attachments.map(attachment => attachment.textureVersion);
+
+    target.resize(128, 96);
+
+    target.attachments.forEach((attachment, index) => {
+      expect(attachment.textureVersion).toBeGreaterThan(versions[index]!);
+    });
+
+    for (const view of [target.view, ...target.attachments.map(attachment => attachment.view)]) {
+      expect(view.width).toBe(128);
+      expect(view.height).toBe(96);
+      expect(view.center.x).toBe(64);
+      expect(view.center.y).toBe(48);
+    }
+
+    target.destroy();
+  });
+
+  test('a same-size resize keeps a moved default view', () => {
+    const target = new MultiRenderTarget(64, 64, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
+
+    target.view.setCenter(10, 10);
+    target.resize(64, 64);
+
+    expect(target.view.center.x).toBe(10);
+    expect(target.view.center.y).toBe(10);
 
     target.destroy();
   });
@@ -387,6 +422,31 @@ describe('WebGPU multiple colour attachments', () => {
       backend.flush();
 
       expect(environment.renderPassAttachmentCounts().every(count => count === 1)).toBe(true);
+
+      target.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('decodes the clear color per attachment of a mixed sRGB/UNORM target', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const target = new MultiRenderTarget(16, 16, { formats: [TextureFormat.Rgba8Srgb, TextureFormat.Rgba8, TextureFormat.Rgba8Srgb] });
+      const gray = new Color(128, 128, 128);
+      const linear = new Float32Array(4);
+
+      gray.writeLinear(linear);
+      backend.setRenderTarget(target).clear(gray);
+
+      const clearRed = target.attachments.map((_, index) => (backend.createColorAttachment(index).clearValue as GPUColorDict).r);
+
+      expect(clearRed[0]).toBeCloseTo(linear[0]!, 5);
+      expect(clearRed[1]).toBeCloseTo(128 / 255, 5);
+      expect(clearRed[2]).toBeCloseTo(linear[0]!, 5);
 
       target.destroy();
       backend.destroy();

@@ -4,7 +4,7 @@
   "symbol": "TremoloEffectOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for TremoloEffect."
       ],
-      "importLine": "import { TremoloEffectOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { TremoloEffectOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

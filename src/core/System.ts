@@ -66,8 +66,8 @@ type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyo
 /**
  * A per-frame unit of simulation or rendering, owned by a {@link SystemRegistry}
  * (`app.systems` or `scene.systems`). A system is a class instance or plain
- * object that implements at least one of {@link SystemMethods.fixedUpdate},
- * {@link SystemMethods.update}, or {@link SystemMethods.draw} - it participates
+ * object that implements at least one {@link SystemMethods} phase - any of
+ * `preFrame`, `fixedUpdate`, `update`, `draw` or `postFrame` - and participates
  * only in the phases it defines.
  *
  * ```ts
@@ -82,7 +82,11 @@ type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyo
  * ```
  *
  * `destroy()` is optional: the registry calls it, if present, exactly once
- * when the system is still registered at registry destruction.
+ * when the system is still registered at registry destruction. During
+ * `Application.destroy()` that happens after scene teardown, the extension
+ * disposers and the application's Loader, so a system's `destroy()` must not
+ * reach for loaded assets; release them from the scene or extension that
+ * loaded them.
  */
 export type System = RequireAtLeastOne<SystemMethods> &
   Partial<Destroyable> & {

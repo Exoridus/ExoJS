@@ -34,10 +34,12 @@ export const enum LiveEntryReason {
  * whole renderer. One view-dependent parallax layer must therefore cost one
  * live entry, not the persistence of the other 999,999 sprites around it.
  *
- * No `zIndex`: the re-dispatch goes through `RenderNode.collect`, which reads
- * the node's live `zIndex` exactly as a full collect would. Only the placement
- * the source cannot re-derive - the child index the producer was collected at -
- * has to be stored.
+ * The re-dispatch goes through `RenderNode.collect`, which reads the node's
+ * live `zIndex` exactly as a full collect would, so it is not reserved in the
+ * scope's placement state. It is recorded anyway because the persistent-slot
+ * tier reads it to refuse a scope whose live entry would be sorted away from
+ * its recorded position. The placement the source cannot re-derive - the child
+ * index the producer was collected at - is stored as `seq` and `itemMark`.
  */
 export interface LiveEntry {
   /**
@@ -154,8 +156,8 @@ export const createSourceScope = (): SourceScope => ({
  * Walk `scope` and every scope below it in depth-first order, assigning
  * ordinals and global handle bases and building each scope's spatial index.
  *
- * Runs once per source build. Returns the total item count, which is the size of
- * the root's handle space.
+ * Runs once per source build and again after every applied structure delta.
+ * Returns the total item count, which is the size of the root's handle space.
  * @internal
  */
 export const finalizeSourceScopes = (scope: SourceScope, out: SourceScope[], nextHandle: number): number => {

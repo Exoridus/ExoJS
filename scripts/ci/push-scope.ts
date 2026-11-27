@@ -35,13 +35,15 @@ export const DATA_SCOPE_GATES: readonly string[] = ['verify:bench-results'];
 export const pushScope = (changedFiles: readonly string[]): PushScope => {
   const files = changedFiles.map(file => String(file).replace(/\\/g, '/').trim()).filter(file => file !== '');
 
-  if (files.length === 0) return 'none';
+  if (files.length === 0) {
+    return 'none';
+  }
 
   return files.every(isBenchResultsPath) ? 'data' : 'full';
 };
 
 const changedFilesBetween = (base: string, head: string): string[] =>
-  execFileSync('git', ['diff', '--name-only', `${base}..${head}`], { encoding: 'utf8' }).split('\n');
+  execFileSync('git', ['diff', '--name-only', '--no-renames', `${base}..${head}`], { encoding: 'utf8' }).split('\n');
 
 const main = (): void => {
   const [base, head] = process.argv.slice(2);
@@ -50,6 +52,7 @@ const main = (): void => {
   // stdout and branches on it, so failing open would silently skip the gates.
   if (base === undefined || head === undefined || base === '' || head === '') {
     process.stdout.write('full\n');
+
     return;
   }
 
@@ -61,6 +64,7 @@ const main = (): void => {
 };
 
 const invokedPath = process.argv[1];
+
 if (invokedPath && import.meta.url === pathToFileURL(invokedPath).href) {
   main();
 }

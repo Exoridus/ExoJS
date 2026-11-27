@@ -1,4 +1,4 @@
-import { BoxShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
+import { BoxShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs/physics';
 
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
 const bodyA = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));

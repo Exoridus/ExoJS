@@ -11,6 +11,7 @@ import type { MockInstance } from 'vitest';
 
 import { AudioBus } from '#audio/AudioBus';
 import { getAudioContext } from '#audio/audioContext';
+import { AudioSend } from '#audio/AudioSend';
 import { AudioSystem } from '#audio/AudioSystem';
 import { AudioZone } from '#audio/AudioZone';
 import { Sound } from '#audio/Sound';
@@ -135,7 +136,10 @@ const lastTarget = (param: MockParam): number | undefined => param.setTargetAtTi
  */
 const lastWritten = (param: MockParam): number | undefined => {
   const calls = [...param.setValueAtTime.mock.calls.keys()]
-    .map(index => ({ value: param.setValueAtTime.mock.calls[index]![0] as number, order: param.setValueAtTime.mock.invocationCallOrder[index]! }))
+    .map(index => ({
+      value: param.setValueAtTime.mock.calls[index]![0] as number,
+      order: param.setValueAtTime.mock.invocationCallOrder[index]!,
+    }))
     .concat(
       [...param.setTargetAtTime.mock.calls.keys()].map(index => ({
         value: param.setTargetAtTime.mock.calls[index]![0] as number,
@@ -206,6 +210,11 @@ describe('elevation - the third axis', () => {
     voice.elevation = 8;
 
     expect(panners.panners).toHaveLength(1);
+    expect(lastWritten(panners.panners[0]!.positionY)).toBe(8);
+
+    voice.elevation = 12;
+    tickSpatial(voice);
+    expect(lastWritten(panners.panners[0]!.positionY)).toBe(12);
 
     panners.restore();
     sound.destroy();
@@ -222,6 +231,29 @@ describe('elevation - the third axis', () => {
 
     expect(lastWritten(panners.panners[0]!.positionY)).toBe(20);
 
+    panners.restore();
+    sound.destroy();
+  });
+
+  test('clearing horizontal velocity retains vertical Doppler motion', () => {
+    const panners = spyPanners();
+    const system = new AudioSystem();
+    system.spatial.dopplerFactor = 1;
+    system.spatial.speedOfSound = 1000;
+    const sound = new Sound(createAudioBufferStub());
+    const voice = system.play(sound, { position: { x: 0, y: 0 }, elevation: 100 });
+    const ratios: number[] = [];
+
+    (voice as unknown as { _applyDopplerRate(ratio: number): void })._applyDopplerRate = (ratio: number): void => {
+      ratios.push(ratio);
+    };
+
+    voice.velocity = { x: 0, y: 0, z: 200 };
+    voice.velocity = null;
+    tickSpatial(voice);
+
+    expect(voice.elevationVelocity).toBe(200);
+    expect(ratios.at(-1)).toBeCloseTo(0.8, 5);
     panners.restore();
     sound.destroy();
   });
@@ -480,6 +512,24 @@ describe('AudioSend', () => {
     sound.destroy();
   });
 
+  test('destroy() detaches the source from the send gain as well as the gain from the bus', () => {
+    const gain = { gain: { value: 0 }, connect: vi.fn(), disconnect: vi.fn() };
+    const source = { connect: vi.fn(), disconnect: vi.fn() };
+    const bus = { getInputNode: () => null, onceSetup: () => () => {} };
+    const send = new AudioSend(
+      { createGain: () => gain } as unknown as AudioContext,
+      source as unknown as AudioNode,
+      bus as unknown as AudioBus,
+      1,
+    );
+
+    send.destroy();
+    send.destroy();
+
+    expect(source.disconnect).toHaveBeenCalledTimes(1);
+    expect(source.disconnect).toHaveBeenCalledWith(gain);
+  });
+
   test('the voice tears its sends down when it ends', () => {
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
@@ -579,6 +629,24 @@ describe('SpatialZones', () => {
     expect(voice.sends).toHaveLength(0);
 
     sound.destroy();
+  });
+
+  test('samples each zone once per frame regardless of voice count', () => {
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+    const bus = new AudioBus('zone');
+    const zone = new AudioZone({ shape: new Rectangle(0, 0, 100, 100), bus });
+    const weight = vi.spyOn(zone, 'weightAt');
+    system.zones.add(zone);
+    system.play(sound, { position: { x: 1, y: 1 } });
+    system.play(sound, { position: { x: 2, y: 2 } });
+    system.play(sound, { position: { x: 3, y: 3 } });
+
+    system.preFrame(0.016 as never);
+
+    expect(weight).toHaveBeenCalledOnce();
+    sound.destroy();
+    bus.destroy();
   });
 
   test('a listener inside a zone opens a send on every spatial voice, and leaving closes it', () => {

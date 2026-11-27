@@ -55,14 +55,17 @@ const setupSourceSpy = (): { sources: MockBufferSource[]; restore: () => void } 
       buffer: null,
     };
     sources.push(node);
+
     return node as unknown as AudioBufferSourceNode;
   });
+
   return { sources, restore: () => spy.mockRestore() };
 };
 
 const makeStubEffect = (): AudioEffect => {
   const inputNode = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
   const outputNode = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
+
   return { inputNode, outputNode, destroy: vi.fn(), ready: Promise.resolve(), _isWired: true } as unknown as AudioEffect;
 };
 
@@ -72,6 +75,7 @@ interface MockGainNode {
   gain: {
     setTargetAtTime: MockInstance;
     cancelScheduledValues: MockInstance;
+    cancelAndHoldAtTime?: MockInstance;
     setValueAtTime: MockInstance;
     linearRampToValueAtTime: MockInstance;
     value: number;
@@ -88,12 +92,21 @@ const captureVoiceOutput = (): { get node(): MockGainNode | null; restore: () =>
       captured = {
         connect: vi.fn(),
         disconnect: vi.fn(),
-        gain: { setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn(), setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), value: 1 },
+        gain: {
+          setTargetAtTime: vi.fn(),
+          cancelScheduledValues: vi.fn(),
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          value: 1,
+        },
       };
+
       return captured as unknown as GainNode;
     }
+
     return original();
   });
+
   return {
     get node() {
       return captured;
@@ -132,13 +145,30 @@ const setupPannerSpy = (): { panners: MockPanner[]; restore: () => void } => {
       positionZ: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
     };
     panners.push(panner);
+
     return panner as unknown as PannerNode;
   });
+
   return { panners, restore: () => spy.mockRestore() };
 };
 
 describe('BaseVoice — post-ended no-ops', () => {
   afterEach(() => vi.restoreAllMocks());
+
+  test('ended voices reject sends before creating audio nodes', () => {
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+    const context = getAudioContext();
+    const voice = system.play(sound);
+    expect(voice.ended).toBe(false);
+    voice.stop();
+    const createGain = vi.spyOn(context, 'createGain');
+
+    expect(() => voice.addSend(system.master)).toThrow('Cannot open an audio send on a voice that has already ended.');
+    expect(createGain).not.toHaveBeenCalled();
+    expect(voice.sends).toHaveLength(0);
+    sound.destroy();
+  });
 
   test('volume setter is a no-op once the voice has ended', () => {
     const system = new AudioSystem(); // before capture, so bus gains are not captured
@@ -268,6 +298,38 @@ describe('BaseVoice — post-ended no-ops', () => {
   });
 });
 
+describe('BaseVoice - initial volume', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  test.each([0, 0.05, 0.25, 1])('a voice played at volume %s starts there instead of ramping down from unity', volume => {
+    const system = new AudioSystem(); // before capture, so bus gains are not captured
+    const out = captureVoiceOutput();
+    const sound = new Sound(createAudioBufferStub());
+
+    system.play(sound, { volume });
+
+    expect(out.node!.gain.setValueAtTime).toHaveBeenCalledWith(volume, expect.any(Number));
+    expect(out.node!.gain.setTargetAtTime).not.toHaveBeenCalled();
+
+    out.restore();
+  });
+
+  test('a later volume change still ramps rather than jumping', () => {
+    const system = new AudioSystem();
+    const out = captureVoiceOutput();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = system.play(sound, { volume: 0.5 });
+
+    out.node!.gain.setValueAtTime.mockClear();
+    voice.volume = 0.1;
+
+    expect(out.node!.gain.setTargetAtTime).toHaveBeenCalledWith(0.1, expect.any(Number), 0.01);
+    expect(out.node!.gain.setValueAtTime).not.toHaveBeenCalled();
+
+    out.restore();
+  });
+});
+
 describe('BaseVoice — fade()', () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -300,6 +362,46 @@ describe('BaseVoice — fade()', () => {
     expect(out.node!.gain.setValueAtTime).toHaveBeenCalled();
     expect(out.node!.gain.linearRampToValueAtTime).toHaveBeenCalledWith(1, expect.any(Number));
 
+    out.restore();
+    sound.destroy();
+  });
+});
+
+describe('BaseVoice - interrupted gain ramps', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  test.each([
+    ['fade', false],
+    ['fade', true],
+    ['stop', false],
+    ['stop', true],
+  ] as const)('%s holds gain before cancelling automation (native hold: %s)', (operation, nativeHold) => {
+    const system = new AudioSystem();
+    const out = captureVoiceOutput();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = system.play(sound);
+    const gain = out.node!.gain;
+    gain.value = 0.35;
+    const cancel = vi.fn(() => {
+      gain.value = 1;
+    });
+
+    if (nativeHold) {
+      gain.cancelAndHoldAtTime = cancel;
+    } else {
+      gain.cancelScheduledValues = cancel;
+    }
+
+    if (operation === 'fade') {
+      voice.fade(0.2, Time.seconds(0.05));
+    } else {
+      voice.stop(Time.seconds(0.05));
+    }
+
+    expect(cancel).toHaveBeenCalledWith(getAudioContext().currentTime);
+    expect(gain.setValueAtTime).toHaveBeenLastCalledWith(0.35, getAudioContext().currentTime);
+    expect(gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(operation === 'fade' ? 0.2 : 0, getAudioContext().currentTime + 0.05);
+    voice.stop();
     out.restore();
     sound.destroy();
   });
@@ -596,7 +698,10 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     expect(onAudioContextReady.count).toBe(signalCountBefore);
 
     // Ending the voices before the bus comes online unsubscribes their queued reconnects.
-    for (const voice of voices) voice.stop();
+    for (const voice of voices) {
+      voice.stop();
+    }
+
     expect(pendingCount()).toBe(0);
 
     factory.restore();

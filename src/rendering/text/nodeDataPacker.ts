@@ -11,16 +11,20 @@ import { textGradientMaxStops } from './TextStyle';
 //
 // Texel 0     : (a,  c,  snapMode,  tx) - mat3 column-major: col0 + translate.x
 // Texel 1     : (b,  d,  0,  ty) - mat3 column-major: col1 + translate.y
-// Texel 2     : (r,  g,  b,  a ) - fillColor (linear 0-1)
+// Texel 2     : (r,  g,  b,  a ) - fillColor (authored sRGB 0-1; the shader decodes it)
 // Texel 3     : (r,  g,  b,  a ) - outlineColor
-// Texel 4     : (outlineMin, shadowAlpha, shadowBlur, gradientStopCount)
-//                 outlineMin = 0.5 → disabled; < 0.5 → enabled with that threshold
-//                 gradientStopCount = 0 → the fill takes `fillColor`
+// Texel 4     : (outlineField, shadowAlpha, shadowBlurField, gradientStopCount)
+//                 outlineField / shadowBlurField = the style length times the
+//                 field scale (texel 6.w); outlineField = 0 -> no outline
+//                 gradientStopCount = 0 -> the fill takes `fillColor`
 // Texel 5     : (r,  g,  b,  a ) - shadowColor
-// Texel 6     : (shadowOffX_px, shadowOffY_px, decorationOverride, sdfRadius_logical)
-//                 decorationOverride = 1 → a decoration quad takes texel 8
-// Texel 7     : (gradAxisX, gradAxisY, gradBias, 0)
+// Texel 6     : (shadowOffX_texels, shadowOffY_texels, decorationOverride, fieldScale)
+//                 decorationOverride = 1 -> a decoration quad takes texel 8
+//                 fieldScale = field value change per local logical pixel;
+//                 0 -> unknown, the edge falls back to the hardware derivative
+// Texel 7     : (gradAxisX, gradAxisY, gradBias, fieldZero)
 //                 ramp position t = dot(gradUV, gradAxis) + gradBias
+//                 fieldZero = sampled field value on the glyph edge
 // Texel 8     : (r, g, b, a) - decorationColor
 // Texel 9     : (minX, minY, w, h) - text block bounds (local space, for gradient UV)
 // Texel 10-17 : (r, g, b, a) - gradient stop colours 0..7
@@ -28,9 +32,10 @@ import { textGradientMaxStops } from './TextStyle';
 // Texel 19    : gradient stop offsets 4..7
 //
 // texel 0's spare `.z` carries the snap-mode flag the vertex shader reads to
-// decide whether to snap the glyph origin to the device-pixel grid. Both
-// shaders divide the shadow offset by the atlas page size (a per-batch
-// uniform) to convert px → UV space.
+// decide whether to snap the glyph origin to the device-pixel grid. Each shader
+// divides the shadow offset by its own page-size source - a per-batch uniform
+// in WebGL2 (u_pageSize), the per-slot texture dimensions in WebGPU - to
+// convert the stored texels to UV space.
 
 /** Texels per packed node row. @internal */
 export const textNodeDataTexels = 20;
@@ -78,6 +83,12 @@ export const packTextNodeTransform = (target: Float32Array, base: number, node: 
  */
 export const packTextNodeData = (target: Float32Array, base: number, node: Text | BitmapText): void => {
   const style = node.style;
+  // Effect lengths arrive in local logical pixels and leave in field units, so
+  // the shaders compare them against the sampled field without knowing which
+  // atlas produced it. The node rejected anything its field cannot reach
+  // before it was committed, so nothing here clamps.
+  const capability = node._textEffectCapability();
+  const fieldScale = capability.fieldScale;
 
   // Transform (texels 0-1)
   packTextNodeTransform(target, base, node);
@@ -96,19 +107,12 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
   target[base + 14] = oc.b / 255;
   target[base + 15] = oc.a;
 
-  // Params (texel 4): outlineMin, shadowAlpha, shadowBlur, gradientStopCount
-  // outlineMin = 0.5 → disabled; 0.5 - outlineWidth when enabled
+  // Params (texel 4): outlineField, shadowAlpha, shadowBlurField, gradientStopCount
   const gradient = style.gradient;
-  const outlineMin = style.outlineWidth > 0 ? Math.max(0, 0.5 - style.outlineWidth) : 0.5;
-  target[base + 16] = outlineMin;
+  target[base + 16] = style.outlineWidth * fieldScale;
   target[base + 17] = style.shadowAlpha;
-  // Shadow blur only. This used to carry a 0.03 floor because the same
-  // number was the shader's antialiasing width, and a node without a shadow
-  // still needed an edge to fade over; the shaders now derive that width per
-  // fragment from the field's screen-space gradient, so a floor here would
-  // only smear the shadow of a node that asked for none.
-  target[base + 18] = style.shadowBlur * 0.1;
-  target[base + 19] = gradient === null ? 0 : gradient.stops.length;
+  target[base + 18] = style.shadowBlur * fieldScale;
+  target[base + 19] = gradient === null ? 0 : Math.min(gradient.stops.length, textGradientMaxStops);
 
   // Shadow color (texel 5)
   const sc = style.shadowColor;
@@ -119,21 +123,19 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
 
   // Shadow offset (texel 6)
   // Stored in ATLAS TEXELS; the shaders divide by the atlas page size to get
-  // the UV offset. The style states the offset in LOGICAL pixels, and one
-  // logical pixel is `rasterPixelRatio` texels - without the scale a shadow
-  // would shorten by exactly that factor as the glyph raster got denser.
-  const texelsPerLogicalPixel = node.rasterPixelRatio;
+  // the UV offset. The style states the offset in local logical pixels: a
+  // runtime atlas packs `rasterPixelRatio` texels into one, a BMFont atlas is
+  // drawn at `fontScale` local pixels per texel.
+  const texelsPerLogicalPixel = node instanceof Text ? node.rasterPixelRatio : 1 / node.fontScale;
   target[base + 24] = style.shadowOffsetX * texelsPerLogicalPixel;
   target[base + 25] = style.shadowOffsetY * texelsPerLogicalPixel;
   // Zero means "a rule takes the fill", which is what makes an underline pick
   // up the gradient for free rather than needing its own copy of the ramp.
   target[base + 26] = style.decorationColor === null ? 0 : 1;
-  // The node's SDF buffer radius in LOGICAL pixels, which is the field's scale:
-  // the distance value moves by 1/radius per logical unit whatever the atlas
-  // density. The fragment stage sizes its antialiased edge from it. Zero means
-  // "unknown", which is the honest answer for a BitmapText - an offline MSDF
-  // atlas carries no distance range - and selects the derivative fallback.
-  target[base + 27] = node instanceof Text ? node.sdfRadius : 0;
+  // The fragment stage sizes its antialiased edge from the field scale too.
+  // Zero means "unknown" - an external atlas without a declared range - and
+  // selects the derivative fallback for a fill-only node.
+  target[base + 27] = fieldScale;
 
   // Text ink bounds (texel 9): (minX, minY, width, height)
   // The vertex shader uses these to compute normalized gradient UV, so it
@@ -155,6 +157,7 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
 
   // Gradient ramp (texel 7) and stops (texels 10-19)
   packTextGradient(target, base, gradient, ink.width, ink.height);
+  target[base + 31] = capability.zero;
 };
 
 /**
@@ -194,7 +197,9 @@ const packTextGradient = (
     target[offsetBase + i] = 0;
   }
 
-  if (gradient === null) return;
+  if (gradient === null) {
+    return;
+  }
 
   const radians = (gradient.angle * Math.PI) / 180;
   // CSS reads 0 degrees as "towards the top" and grows clockwise; the ink box
@@ -209,8 +214,8 @@ const packTextGradient = (
     target[axisBase + 2] = 0.5 - (width * dirX + height * dirY) / (2 * lineLength);
   }
 
-  for (let i = 0; i < gradient.stops.length; i++) {
-    // In-bounds: i < stops.length, and TextStyle caps it at textGradientMaxStops.
+  for (let i = 0; i < Math.min(gradient.stops.length, textGradientMaxStops); i++) {
+    // Bound writes even if JavaScript callers mutate the readonly stop list.
     const stop = gradient.stops[i]!;
     const at = colorBase + i * 4;
 

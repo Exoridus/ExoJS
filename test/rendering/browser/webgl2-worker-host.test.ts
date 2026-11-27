@@ -1,19 +1,12 @@
-/**
- * A whole application hosted in a dedicated worker, drawing into a canvas whose
- * control the document handed over.
- *
- * This is the sequence a worker-hosted runtime actually has to survive:
- * `transferControlToOffscreen()` on the host, construction on the far side of a
- * `postMessage`, a real WebGL2 context acquired in a realm with no document,
- * input normalised into clonable data and fed in from the host, and a teardown
- * that leaves nothing running.
- *
- * Run via:  pnpm test:browser:webgl
- */
-
 import { expectPixelNear, pixelAt } from './_pixels';
+import type { WorkerProgress } from './fixtures/application-host.progress';
+import type { SceneMode } from './fixtures/application-host.worker';
 
 const SIZE = 64;
+const INIT_TIMEOUT_MS = 45_000;
+const EXCHANGE_TIMEOUT_MS = 10_000;
+const SHUTDOWN_TIMEOUT_MS = 10_000;
+const TEST_TIMEOUT_MS = 65_000;
 
 interface ReadyMessage {
   readonly kind: 'ready';
@@ -44,70 +37,26 @@ interface FramesResultMessage {
 
 interface ClosedMessage {
   readonly kind: 'closed';
+  readonly loadAborted: boolean;
+  readonly unloads: number;
+  readonly contextLost: boolean;
+}
+
+interface LoadingMessage {
+  readonly kind: 'loading';
 }
 
 interface ErrorMessage {
   readonly kind: 'error';
+  readonly request: string;
   readonly message: string;
 }
 
-type WorkerMessage = ReadyMessage | PointerResultMessage | FramesResultMessage | ClosedMessage | ErrorMessage;
+type WorkerReply = ReadyMessage | PointerResultMessage | FramesResultMessage | ClosedMessage | LoadingMessage;
+type WorkerMessage = WorkerReply | ErrorMessage | WorkerProgress;
 
-/** One request, one reply - a worker that reports an error fails the test rather than hanging. */
-/**
- * Sends one message to the worker and waits for its reply.
- *
- * The wait carries its own deadline, shorter than Vitest's per-test timeout, so
- * a worker that never answers fails with a message naming the exchange instead of
- * surfacing as the generic `Test timed out in 15000ms`. That distinction is the
- * whole point: the worker-side failure and the runner being out of budget look
- * identical from the outside, and the second one is not this test's fault.
- *
- * The timer is cleared on every exit path, so a resolved exchange does not leave
- * a pending callback behind.
- */
-const WORKER_EXCHANGE_TIMEOUT_MS = 10_000;
+const now = (): number => performance.timeOrigin + performance.now();
 
-const exchange = <T extends WorkerMessage>(worker: Worker, message: unknown, transfer: Transferable[] = []): Promise<T> =>
-  new Promise<T>((resolve, reject) => {
-    const label = (message as { kind?: string }).kind ?? 'message';
-
-    const onMessage = (event: MessageEvent<WorkerMessage>): void => {
-      worker.removeEventListener('message', onMessage);
-      worker.removeEventListener('error', onError);
-      clearTimeout(timer);
-
-      if (event.data.kind === 'error') {
-        reject(new Error(event.data.message));
-
-        return;
-      }
-
-      resolve(event.data as T);
-    };
-
-    const onError = (event: ErrorEvent): void => {
-      worker.removeEventListener('message', onMessage);
-      worker.removeEventListener('error', onError);
-      clearTimeout(timer);
-      reject(new Error(`worker error: ${event.message}`));
-    };
-
-    const timer = setTimeout(() => {
-      worker.removeEventListener('message', onMessage);
-      worker.removeEventListener('error', onError);
-      reject(new Error(`worker did not answer "${label}" within ${WORKER_EXCHANGE_TIMEOUT_MS}ms`));
-    }, WORKER_EXCHANGE_TIMEOUT_MS);
-
-    worker.addEventListener('message', onMessage);
-    worker.addEventListener('error', onError);
-    worker.postMessage(message, transfer);
-  });
-
-/**
- * Whether this browser can hand a canvas over to a worker at all. A browser
- * that cannot is a measurement result, not a broken test.
- */
 const canTransferSurface = (ctx: { skip: (reason: string) => void }): boolean => {
   if (typeof HTMLCanvasElement.prototype.transferControlToOffscreen === 'function') {
     return true;
@@ -118,108 +67,262 @@ const canTransferSurface = (ctx: { skip: (reason: string) => void }): boolean =>
   return false;
 };
 
-const createHostCanvas = (): HTMLCanvasElement => {
-  const canvas = document.createElement('canvas');
-
-  canvas.width = SIZE;
-  canvas.height = SIZE;
-  document.body.append(canvas);
-
-  return canvas;
-};
-
 describe('an application hosted in a worker', () => {
   let worker: Worker | null = null;
   let canvas: HTMLCanvasElement | null = null;
+  let workerCreatedAt = 0;
+  let initSentAt = 0;
+  let initReplyMs: number | null = null;
+  let shutdownRequested = false;
+  const progress: WorkerProgress[] = [];
 
-  afterEach(() => {
-    worker?.terminate();
-    worker = null;
-    canvas?.remove();
-    canvas = null;
-  });
+  const timings = (): string => {
+    const active = new Map<WorkerProgress['phase'], number>();
+    const phases: Array<{ phase: WorkerProgress['phase']; ms: number }> = [];
 
-  test('starts, renders and reports a realm of its own', async ctx => {
-    if (!canTransferSurface(ctx)) return;
+    for (const { phase, edge, at } of progress) {
+      if (edge === 'start') {
+        active.set(phase, at);
+      } else {
+        const started = active.get(phase);
 
-    canvas = createHostCanvas();
+        if (started !== undefined) {
+          phases.push({ phase, ms: Math.round(at - started) });
+          active.delete(phase);
+        }
+      }
+    }
+
+    const first = progress[0];
+    const received = progress.find(event => event.phase === 'init' && event.edge === 'start');
+
+    return JSON.stringify({
+      workerStartMs: first ? Math.round(first.at - workerCreatedAt) : null,
+      initDeliveryMs: received ? Math.round(received.at - initSentAt) : null,
+      initReplyMs,
+      contexts: progress.at(-1)?.contexts ?? 0,
+      phases,
+      pending: [...active.keys()],
+    });
+  };
+
+  const exchange = <T extends WorkerReply>(
+    target: Worker,
+    message: { kind: string; [key: string]: unknown },
+    reply: T['kind'],
+    timeout: number,
+    transfer: Transferable[] = [],
+  ): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
+      const cleanup = (): void => {
+        clearTimeout(timer);
+        target.removeEventListener('message', onMessage);
+        target.removeEventListener('error', onError);
+        target.removeEventListener('messageerror', onMessageError);
+      };
+
+      const fail = (reason: string): void => {
+        cleanup();
+        reject(new Error(`worker "${message.kind}": ${reason}; ${timings()}`));
+      };
+
+      const onMessage = ({ data }: MessageEvent<WorkerMessage>): void => {
+        if (data.kind === 'progress') {
+          return;
+        }
+
+        if (data.kind === 'error') {
+          if (data.request === message.kind) {
+            fail(data.message);
+          }
+        } else if (data.kind === reply) {
+          cleanup();
+          resolve(data as T);
+        } else if (message.kind !== 'shutdown') {
+          // An exchange that already timed out may still deliver a reply during cleanup.
+          fail(`expected "${reply}", received "${data.kind}"`);
+        }
+      };
+
+      const onError = (event: ErrorEvent): void => fail(`worker error: ${event.message}`);
+      const onMessageError = (): void => fail('reply could not be deserialized');
+      const timer = setTimeout(() => {
+        const last = progress.at(-1);
+        const gpuPhase = last?.edge === 'start' && ['webgl2-context', 'render', 'pixel-readback'].includes(last.phase);
+        const phase = message.kind === 'shutdown' ? 'teardown' : 'init';
+        const boundary = progress.filter(event => event.phase === phase).at(-1);
+        let reason = `no "${reply}" reply`;
+
+        if (gpuPhase) {
+          reason = `GPU phase "${last.phase}" did not finish`;
+        } else if (boundary?.edge === 'start') {
+          reason = `${phase === 'init' ? 'initialization' : 'resource teardown'} did not finish`;
+        }
+
+        fail(`${reason} within ${timeout}ms`);
+      }, timeout);
+
+      target.addEventListener('message', onMessage);
+      target.addEventListener('error', onError);
+      target.addEventListener('messageerror', onMessageError);
+
+      try {
+        target.postMessage(message, transfer);
+      } catch (error) {
+        fail(String(error));
+      }
+    });
+
+  const startWorker = async <T extends ReadyMessage | LoadingMessage>(reply: T['kind'], sceneMode?: SceneMode): Promise<T> => {
+    canvas = document.createElement('canvas');
+    canvas.width = SIZE;
+    canvas.height = SIZE;
+    document.body.append(canvas);
+
+    workerCreatedAt = now();
     worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });
+    worker.addEventListener('message', ({ data }: MessageEvent<WorkerMessage>) => {
+      if (data.kind === 'progress') {
+        progress.push(data);
+      }
+    });
 
     const surface = canvas.transferControlToOffscreen();
-    const ready = await exchange<ReadyMessage>(worker, { kind: 'init', surface, size: SIZE }, [surface]);
+    initSentAt = now();
+    const result = await exchange<T>(worker, { kind: 'init', surface, size: SIZE, sceneMode }, reply, INIT_TIMEOUT_MS, [surface]);
 
-    // The surface really is the transferred one, and the application knows it
-    // has no element to reach for.
+    if (result.kind === 'ready') {
+      initReplyMs = Math.round(now() - initSentAt);
+    }
+
+    return result;
+  };
+
+  const closeWorker = (): Promise<ClosedMessage> => {
+    shutdownRequested = true;
+
+    return exchange<ClosedMessage>(worker!, { kind: 'shutdown' }, 'closed', SHUTDOWN_TIMEOUT_MS);
+  };
+
+  afterEach(async () => {
+    try {
+      if (worker !== null && !shutdownRequested) {
+        await closeWorker();
+      }
+    } finally {
+      if (worker !== null) {
+        worker.terminate();
+        console.info(`[worker-host] ${timings()}`);
+      }
+
+      canvas?.remove();
+      worker = null;
+      canvas = null;
+      shutdownRequested = false;
+      initReplyMs = null;
+      progress.length = 0;
+    }
+  }, SHUTDOWN_TIMEOUT_MS + 2_000);
+
+  test('starts, renders and reports a realm of its own', { timeout: TEST_TIMEOUT_MS }, async ctx => {
+    if (!canTransferSurface(ctx)) {
+      return;
+    }
+
+    const ready = await startWorker<ReadyMessage>('ready');
+
     expect(ready.surfaceIsOffscreen).toBe(true);
     expect(ready.hasElement).toBe(false);
-
-    // Capabilities are answered for the worker's realm, not the document's.
     expect(ready.realm).toBe('worker');
     expect(ready.offscreenCanvas).toBe(true);
     expect(ready.offscreenWebgl2).toBe(true);
     expect(ready.webgl2).toBe(true);
+
+    // The real backend has already acquired a WebGL2 context. Its observed
+    // success must satisfy Capabilities.ready without two new scratch contexts.
+    const createdContexts = progress.filter(event => event.phase === 'webgl2-context' && event.edge === 'start');
+    expect(createdContexts).toHaveLength(1);
     expect(ready.pointer).toBe(false);
     expect(ready.audio).toBe(false);
     expect(ready.devicePixelRatio).toBe(1);
-
-    // Pixels, read out of the worker's own context.
     expectPixelNear(pixelAt(ready.frame, SIZE, 16, 16), [255, 0, 0, 255], 0);
     expectPixelNear(pixelAt(ready.frame, SIZE, 56, 56), [0, 0, 0, 255], 0);
   });
 
-  test('routes host-normalised pointer input into the worker input pipeline', async ctx => {
-    if (!canTransferSurface(ctx)) return;
+  test('routes host-normalised pointer input into the worker input pipeline', { timeout: TEST_TIMEOUT_MS }, async ctx => {
+    if (!canTransferSurface(ctx)) {
+      return;
+    }
 
-    canvas = createHostCanvas();
-    worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });
-
-    const surface = canvas.transferControlToOffscreen();
-
-    await exchange<ReadyMessage>(worker, { kind: 'init', surface, size: SIZE }, [surface]);
-
-    const result = await exchange<PointerResultMessage>(worker, { kind: 'pointer', clientX: 20, clientY: 30 });
+    await startWorker<ReadyMessage>('ready');
+    const result = await exchange<PointerResultMessage>(
+      worker!,
+      { kind: 'pointer', clientX: 20, clientY: 30 },
+      'pointer-result',
+      EXCHANGE_TIMEOUT_MS,
+    );
 
     expect(result.positions).toHaveLength(1);
     expect(result.positions[0]).toEqual({ x: 20, y: 30 });
 
-    // The engine consumes a pointer press. Across a worker boundary the host
-    // learns that after its own event has dispatched, which is why this is
-    // reported rather than acted on.
+    // The host receives suppression after its own event has already dispatched.
     expect(result.suppressed).toBe(true);
   });
 
-  test('runs its own frame loop, on a timer where the realm schedules no frames', async ctx => {
-    if (!canTransferSurface(ctx)) return;
+  test('runs its own frame loop, on a timer where the realm schedules no frames', { timeout: TEST_TIMEOUT_MS }, async ctx => {
+    if (!canTransferSurface(ctx)) {
+      return;
+    }
 
-    canvas = createHostCanvas();
-    worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });
-
-    const surface = canvas.transferControlToOffscreen();
-    const ready = await exchange<ReadyMessage>(worker, { kind: 'init', surface, size: SIZE }, [surface]);
-    const frames = await exchange<FramesResultMessage>(worker, { kind: 'frames', count: 3 });
+    const ready = await startWorker<ReadyMessage>('ready');
+    const frames = await exchange<FramesResultMessage>(worker!, { kind: 'frames', count: 3 }, 'frames-result', EXCHANGE_TIMEOUT_MS);
 
     expect(frames.frames).toBe(3);
-
-    // Recorded rather than pinned: whether a dedicated worker schedules display
-    // frames is the browser's decision - Chromium does, others may not - and
-    // the adapter carries a timer fallback for the ones that do not. The frame
-    // count above is what actually has to hold either way.
     expect(typeof frames.realmSchedulesFrames).toBe('boolean');
     expect(frames.realmSchedulesFrames).toBe(ready.realmSchedulesFrames);
   });
 
-  test('shuts down cleanly on request', async ctx => {
-    if (!canTransferSurface(ctx)) return;
+  test('shuts down cleanly on request', { timeout: TEST_TIMEOUT_MS }, async ctx => {
+    if (!canTransferSurface(ctx)) {
+      return;
+    }
 
-    canvas = createHostCanvas();
-    worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });
+    await startWorker<ReadyMessage>('ready');
+    const closed = await closeWorker();
 
-    const surface = canvas.transferControlToOffscreen();
+    expect(closed.unloads).toBe(1);
+    expect(closed.contextLost).toBe(true);
+  });
 
-    await exchange<ReadyMessage>(worker, { kind: 'init', surface, size: SIZE }, [surface]);
+  test('shuts down after a scene load fails', { timeout: TEST_TIMEOUT_MS }, async ctx => {
+    if (!canTransferSurface(ctx)) {
+      return;
+    }
 
-    const closed = await exchange<ClosedMessage>(worker, { kind: 'shutdown' });
+    await expect(startWorker<ReadyMessage>('ready', 'fail-load')).rejects.toThrow('Worker scene load failed');
+    const closed = await closeWorker();
 
-    expect(closed.kind).toBe('closed');
+    expect(closed.contextLost).toBe(true);
+  });
+
+  test('aborts an in-flight scene load before termination', { timeout: TEST_TIMEOUT_MS }, async ctx => {
+    if (!canTransferSurface(ctx)) {
+      return;
+    }
+
+    await startWorker<LoadingMessage>('loading', 'abort-load');
+    const closed = await closeWorker();
+
+    expect(closed.loadAborted).toBe(true);
+    expect(closed.contextLost).toBe(true);
+  });
+
+  test('reports a failed teardown even when destroy resolves', { timeout: TEST_TIMEOUT_MS }, async ctx => {
+    if (!canTransferSurface(ctx)) {
+      return;
+    }
+
+    await startWorker<ReadyMessage>('ready', 'fail-unload');
+    await expect(closeWorker()).rejects.toThrow(/completedWithErrors:.*Worker scene unload failed/);
   });
 });

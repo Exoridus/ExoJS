@@ -101,7 +101,9 @@ const aggregate = (parts: readonly PointLike[][]): MassProperties => {
     cx += properties.area * properties.centroidX;
     cy += properties.area * properties.centroidY;
     // Parallel axis back to the origin, so parts with different centroids add up.
-    inertiaOrigin += properties.unitInertia + properties.area * (properties.centroidX * properties.centroidX + properties.centroidY * properties.centroidY);
+    inertiaOrigin +=
+      properties.unitInertia +
+      properties.area * (properties.centroidX * properties.centroidX + properties.centroidY * properties.centroidY);
   }
 
   cx /= area;
@@ -186,7 +188,7 @@ const boundsOf = (polygon: readonly PointLike[]): { minX: number; minY: number; 
   return { minX, minY, maxX, maxY };
 };
 
-const outlines: [string, PointLike[]][] = [
+const outlines: Array<[string, PointLike[]]> = [
   ['L', lShape],
   ['star', star],
   ['comb', comb],
@@ -357,7 +359,9 @@ describe('convex parts as physics shapes', () => {
       area += properties.area;
       cx += properties.area * properties.centroidX;
       cy += properties.area * properties.centroidY;
-      inertiaOrigin += properties.unitInertia + properties.area * (properties.centroidX * properties.centroidX + properties.centroidY * properties.centroidY);
+      inertiaOrigin +=
+        properties.unitInertia +
+        properties.area * (properties.centroidX * properties.centroidX + properties.centroidY * properties.centroidY);
     }
 
     cx /= area;
@@ -396,7 +400,9 @@ describe('convex parts as physics shapes', () => {
         colliders: toConvexPolygonShapes(comb).map(shape => ({ shape })),
       }),
     );
-    const probe = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 45, y: 5 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    const probe = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 45, y: 5 }, colliders: [{ shape: new BoxShape(10, 10) }] }),
+    );
 
     expect(compound.colliders.length).toBeGreaterThan(1);
 

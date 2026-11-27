@@ -160,6 +160,26 @@ describe('Gamepad', () => {
     expect(trigger).toHaveBeenCalledTimes(1);
   });
 
+  test('binding a held button does not report a tap on release', () => {
+    const channels = new Float32Array(ChannelSize.Container);
+    const pad = new Gamepad(0, channels);
+    const buttons = [{ value: 1, pressed: true, touched: true }];
+    const native = createNativeGamepad('generic', 0, [1]);
+    (native as unknown as { buttons: unknown }).buttons = buttons;
+    pad._bind(native, buildDefinition());
+    pad.update();
+    const trigger = vi.fn();
+    const binding = pad.onTrigger(GamepadButton.South, trigger);
+    const start = vi.fn();
+    binding.onStart.add(start);
+    pad.update();
+    buttons[0] = { value: 0, pressed: false, touched: false };
+    pad.update();
+
+    expect(start).toHaveBeenCalledOnce();
+    expect(trigger).not.toHaveBeenCalled();
+  });
+
   test('a button value changing between two nonzero values fires neither onButtonDown nor onButtonUp', () => {
     const channels = new Float32Array(ChannelSize.Container);
     const pad = new Gamepad(0, channels);
@@ -231,7 +251,10 @@ describe('Gamepad', () => {
 
   test('stopVibration resets the actuator when supported', () => {
     const reset = vi.fn();
-    const native = { ...createNativeGamepad('rumble-reset'), vibrationActuator: { playEffect: vi.fn(), reset } } as unknown as BrowserGamepad;
+    const native = {
+      ...createNativeGamepad('rumble-reset'),
+      vibrationActuator: { playEffect: vi.fn(), reset },
+    } as unknown as BrowserGamepad;
     const pad = new Gamepad(0, new Float32Array(ChannelSize.Container));
 
     pad._bind(native, buildDefinition());
@@ -402,5 +425,53 @@ describe('Gamepad', () => {
     expect(() => pad.destroy()).not.toThrow();
     expect(pad.connected).toBe(false);
     expect(() => binding.unbind()).not.toThrow();
+  });
+
+  test('_unbind releases a held button: one onButtonUp with 0 on the next publish', () => {
+    const pad = new Gamepad(0, new Float32Array(ChannelSize.Container));
+    const onButtonUp = vi.fn();
+
+    pad.onButtonUp.add(onButtonUp);
+    pad._bind(createNativeGamepad('generic', 0, [1]), buildDefinition());
+    pad.update();
+
+    pad._unbind();
+    pad._publish();
+    pad._publish();
+
+    expect(onButtonUp).toHaveBeenCalledTimes(1);
+    expect(onButtonUp).toHaveBeenCalledWith(expect.objectContaining({ index: 0 }), 0);
+  });
+
+  test('a release queued by a disconnect survives the following sample and is not doubled', () => {
+    const pad = new Gamepad(0, new Float32Array(ChannelSize.Container));
+    const onButtonUp = vi.fn();
+    const onButtonDown = vi.fn();
+
+    pad.onButtonUp.add(onButtonUp);
+    pad.onButtonDown.add(onButtonDown);
+    pad._bind(createNativeGamepad('generic', 0, [1]), buildDefinition());
+    pad.update();
+    onButtonDown.mockClear();
+
+    pad._silentUnbind();
+    pad._sample();
+    pad._publish();
+
+    expect(onButtonUp).toHaveBeenCalledTimes(1);
+    expect(onButtonDown).not.toHaveBeenCalled();
+  });
+
+  test('releases that nothing was holding are not announced', () => {
+    const pad = new Gamepad(0, new Float32Array(ChannelSize.Container));
+    const onButtonUp = vi.fn();
+
+    pad.onButtonUp.add(onButtonUp);
+    pad._bind(createNativeGamepad('generic', 0, [0]), buildDefinition());
+    pad.update();
+    pad._unbind();
+    pad._publish();
+
+    expect(onButtonUp).not.toHaveBeenCalled();
   });
 });

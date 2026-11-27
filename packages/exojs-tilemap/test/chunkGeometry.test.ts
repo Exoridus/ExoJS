@@ -10,8 +10,8 @@ import { packTile, TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-const fakeTexture = (width = 512, height = 512): Texture => {
-  return {
+const fakeTexture = (width = 512, height = 512): Texture =>
+  ({
     width,
     height,
     flipY: false,
@@ -19,21 +19,19 @@ const fakeTexture = (width = 512, height = 512): Texture => {
     label: 'test',
     destroy: () => {},
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const makeTileset = (name = 'tiles', tileCount = 16, tw = 32, th = 32, texW = 512, texH = 512): TileSet => {
-  return new TileSet({
+const makeTileset = (name = 'tiles', tileCount = 16, tw = 32, th = 32, texW = 512, texH = 512): TileSet =>
+  new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(texW, texH), { x: 0, y: 0, width: texW, height: texH }),
     tileWidth: tw,
     tileHeight: th,
     tileCount,
   });
-};
 
-const makeLayer = (tilesets: TileSet[], width = 4, height = 4): TileLayer => {
-  return new TileLayer({
+const makeLayer = (tilesets: TileSet[], width = 4, height = 4): TileLayer =>
+  new TileLayer({
     id: 1,
     name: 'ground',
     width,
@@ -42,21 +40,18 @@ const makeLayer = (tilesets: TileSet[], width = 4, height = 4): TileLayer => {
     tileHeight: 32,
     tilesets,
   });
-};
 
 /** Minimal fixed-content chunk stub for the defensive out-of-range paths. */
-const stubChunk = (raw: number): ReadonlyTileChunk => {
-  return {
-    cx: 0,
-    cy: 0,
-    width: 1,
-    height: 1,
-    empty: false,
-    revision: 1,
-    getRawAt: () => raw,
-    cloneTiles: () => new Uint32Array([raw]),
-  };
-};
+const stubChunk = (raw: number): ReadonlyTileChunk => ({
+  cx: 0,
+  cy: 0,
+  width: 1,
+  height: 1,
+  empty: false,
+  revision: 1,
+  getRawAt: () => raw,
+  cloneTiles: () => new Uint32Array([raw]),
+});
 
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -131,6 +126,17 @@ describe('buildChunkPages', () => {
     expect(pages[0].quads[0].orient).toBe(orientCode({ flipX: true, flipY: false, diagonal: true }));
   });
 
+  it('keeps a rectangular tile destination unchanged for a diagonal orientation', () => {
+    const tileset = makeTileset('tall', 8, 32, 48, 256, 256);
+    const layer = makeLayer([tileset]);
+    layer.setTileAt(0, 1, { tileset, localTileId: 0, transform: { flipX: true, flipY: false, diagonal: true } });
+
+    const quad = buildChunkPages(layer.getChunk(0, 0)!, [tileset], 32, 32)[0]!.quads[0]!;
+
+    expect([quad.x0, quad.y0, quad.x1, quad.y1]).toEqual([0, 16, 32, 64]);
+    expect(quad.orient).toBe(orientCode({ flipX: true, flipY: false, diagonal: true }));
+  });
+
   it('bottom-left aligns tiles taller than the map cell', () => {
     // 32×48 tiles drawn on a 32px grid extend 16px upward.
     const tileset = makeTileset('tall', 8, 32, 48, 256, 256);
@@ -202,9 +208,23 @@ describe('buildChunkPages', () => {
     // mutable object (e.g. a not-yet-decoded image, or a lost GPU context) that
     // can legitimately report 0 afterwards. buildChunkPages must guard against it.
     const tileset = makeTileset('degenerate', 16, 32, 32, 512, 512);
-    (tileset.texture.texture as unknown as { width: number }).width = 0;
+    (tileset.texture!.texture as unknown as { width: number }).width = 0;
 
     const pages = buildChunkPages(stubChunk(packTile(0, 0, TILE_TRANSFORM_IDENTITY)), [tileset], 32, 32);
     expect(pages).toHaveLength(0);
+  });
+});
+
+describe('packTile index validation', () => {
+  it('rejects fractional and NaN indices instead of folding them onto another tile', () => {
+    for (const localTileId of [Number.NaN, 1.5, Number.POSITIVE_INFINITY]) {
+      expect(() => packTile(0, localTileId, TILE_TRANSFORM_IDENTITY)).toThrow(/must be an integer/);
+    }
+
+    for (const tilesetIndex of [Number.NaN, 0.5, Number.POSITIVE_INFINITY]) {
+      expect(() => packTile(tilesetIndex, 0, TILE_TRANSFORM_IDENTITY)).toThrow(/must be an integer/);
+    }
+
+    expect(packTile(0, 0, TILE_TRANSFORM_IDENTITY)).toBe(1);
   });
 });

@@ -24,7 +24,9 @@ const rampPixelsOnRow = (frame: Uint8ClampedArray, row: number): number => {
   for (let x = 0; x < size; x++) {
     const value = frame[(row * size + x) * 4]!;
 
-    if (value > 12 && value < 243) count++;
+    if (value > 12 && value < 243) {
+      count++;
+    }
   }
 
   return count;
@@ -34,7 +36,9 @@ const litPixelsOnRow = (frame: Uint8ClampedArray, row: number): number => {
   let count = 0;
 
   for (let x = 0; x < size; x++) {
-    if (frame[(row * size + x) * 4]! > 12) count++;
+    if (frame[(row * size + x) * 4]! > 12) {
+      count++;
+    }
   }
 
   return count;
@@ -54,7 +58,10 @@ afterEach(() => {
 });
 
 describe('SDF edge width follows the projected pixel footprint', () => {
-  const measure = async (ctx: { skip: (reason: string) => void }, options: { textRatio?: number; scale: number; fontSize: number }): Promise<Sample | null> => {
+  const measure = async (
+    ctx: { skip: (reason: string) => void },
+    options: { textRatio?: number; scale: number; fontSize: number },
+  ): Promise<Sample | null> => {
     const backend = await createWebGpuTestBackend(size, 1);
     const node = new Text('H', {
       fontSize: options.fontSize,
@@ -65,7 +72,9 @@ describe('SDF edge width follows the projected pixel footprint', () => {
     node.setPosition(40, 20);
     node.setScale(options.scale);
 
-    if (!(await renderWebGpuOnce(ctx, backend, node))) return null;
+    if (!(await renderWebGpuOnce(ctx, backend, node))) {
+      return null;
+    }
 
     const frame = readWebGpuFrame(backend, size);
     const row = Math.round(20 + options.fontSize * options.scale * 0.3);
@@ -81,7 +90,9 @@ describe('SDF edge width follows the projected pixel footprint', () => {
   // fixed in field units produces wherever the field is dense - and a grown one
   // is that same constant smeared across a magnified field.
   const expectOnePixelEdges = (samples: ReadonlyArray<Sample | null>): void => {
-    if (samples.includes(null)) return;
+    if (samples.includes(null)) {
+      return;
+    }
 
     const ramps = (samples as readonly Sample[]).map(sample => sample.ramp);
 

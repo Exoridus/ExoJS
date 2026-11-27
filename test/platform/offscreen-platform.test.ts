@@ -3,6 +3,7 @@
  * own, what the host has to feed it, and that nothing survives its teardown.
  */
 
+import { logger } from '#core/Logger';
 import type { PlatformEventData, PlatformPointerEvent, RenderSurface } from '#platform/index';
 import { OffscreenPlatform } from '#platform/OffscreenPlatform';
 
@@ -72,7 +73,7 @@ describe('OffscreenPlatform', () => {
     const platform = new OffscreenPlatform(createSurface());
 
     platform.onSurfaceEvent('pointerdown', event => event.preventDefault());
-    platform.onSurfaceEvent('pointermove', () => undefined);
+    platform.onSurfaceEvent('pointermove', () => {});
 
     expect(platform.emitSurfaceEvent('pointerdown', createPointerEvent(1))).toBe(true);
     expect(platform.emitSurfaceEvent('pointermove', createPointerEvent(1))).toBe(false);
@@ -111,6 +112,49 @@ describe('OffscreenPlatform', () => {
 
     expect(seen).toEqual(['second', 'first']);
 
+    platform.destroy();
+  });
+
+  it('keeps delivering to later listeners when an earlier one throws', () => {
+    const platform = new OffscreenPlatform(createSurface());
+    const seen: string[] = [];
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+    platform.onSurfaceEvent('pointerdown', () => {
+      throw new Error('listener failed');
+    });
+    platform.onSurfaceEvent('pointerdown', event => {
+      seen.push('second');
+      event.preventDefault();
+    });
+
+    expect(() => platform.emitSurfaceEvent('pointerdown', createPointerEvent(1))).not.toThrow();
+    expect(seen).toEqual(['second']);
+    // The surviving listener's suppression still reaches the host.
+    expect(platform.emitSurfaceEvent('pointerdown', createPointerEvent(2))).toBe(true);
+    expect(error).toHaveBeenCalled();
+
+    error.mockRestore();
+    platform.destroy();
+  });
+
+  it('keeps delivering when a listener throws a value that cannot be stringified', () => {
+    const platform = new OffscreenPlatform(createSurface());
+    const seen: string[] = [];
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+    // A null-prototype object has no `toString`, so building a message with
+    // String() would throw again from inside the catch.
+    platform.onSurfaceEvent('pointerdown', () => {
+      throw Object.create(null);
+    });
+    platform.onSurfaceEvent('pointerdown', () => void seen.push('second'));
+
+    expect(() => platform.emitSurfaceEvent('pointerdown', createPointerEvent(1))).not.toThrow();
+    expect(seen).toEqual(['second']);
+    expect(error).toHaveBeenCalledTimes(1);
+
+    error.mockRestore();
     platform.destroy();
   });
 
@@ -169,7 +213,7 @@ describe('OffscreenPlatform', () => {
     // The adapter binds the realm's schedulers at construction, so it has to be
     // built after the spies are in place to route through them.
     const platform = new OffscreenPlatform(createSurface());
-    const handle = platform.requestFrame(() => undefined);
+    const handle = platform.requestFrame(() => {});
 
     platform.cancelFrame(handle);
 

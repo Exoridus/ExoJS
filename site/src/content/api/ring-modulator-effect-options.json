@@ -4,7 +4,7 @@
   "symbol": "RingModulatorEffectOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for RingModulatorEffect."
       ],
-      "importLine": "import { RingModulatorEffectOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { RingModulatorEffectOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {
@@ -55,7 +55,7 @@
         },
         {
           "name": "waveform",
-          "signature": "waveform?: OscillatorType",
+          "signature": "waveform?: RingModulatorWaveform",
           "signatureTokens": [
             {
               "text": "waveform",
@@ -70,13 +70,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "OscillatorType",
+              "text": "RingModulatorWaveform",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Carrier oscillator waveform shape. Default 'sine'. Any OscillatorType is accepted ('sine', 'square', 'sawtooth', 'triangle'). Non-sine shapes introduce additional harmonic content into both sidebands."
+          "description": "Carrier oscillator waveform shape. Default 'sine'. One of 'sine', 'square', 'sawtooth' or 'triangle'; 'custom' is not supported because no PeriodicWave is set. Non-sine shapes introduce additional harmonic content into both sidebands."
         },
         {
           "name": "wet",

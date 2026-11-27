@@ -6,6 +6,8 @@ import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Envelope } from '#audio/Envelope';
+import { NoopVoice } from '#audio/NoopVoice';
+import type { Voice } from '#audio/Playable';
 import { SoundPoolStrategy } from '#audio/Sound';
 import { Time } from '#core/units';
 
@@ -79,12 +81,14 @@ const setupSpy = (): {
   const oscillatorSpy = vi.spyOn(ctx, 'createOscillator').mockImplementation(() => {
     const node = createOscillatorMock();
     oscillators.push(node);
+
     return node as unknown as OscillatorNode;
   });
 
   const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
     const node = createGainMock();
     gains.push(node);
+
     return node as unknown as GainNode;
   });
 
@@ -282,6 +286,118 @@ describe('AudioGenerator', () => {
     gen.destroy();
   });
 
+  describe('replacing an explicit stop fade', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    test.each([undefined, Time.seconds(0)])('a generator without an envelope can stop immediately during a fade (fade=%s)', fade => {
+      const system = new AudioSystem();
+      const spy = setupSpy();
+      const gen = new AudioGenerator();
+      const voice = system.play(gen);
+
+      voice.stop(Time.seconds(1));
+      vi.advanceTimersByTime(100);
+      expect(voice.ended).toBe(false);
+
+      voice.stop(fade);
+
+      expect(voice.ended).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+      spy.restore();
+      gen.destroy();
+    });
+
+    test('a generator with an envelope can begin its release during a fade', () => {
+      const system = new AudioSystem();
+      const spy = setupSpy();
+      const envelope = new Envelope({ release: Time.seconds(0.5) });
+      const release = vi.spyOn(envelope, 'releaseAt');
+      const gen = new AudioGenerator({ envelope });
+      const voice = system.play(gen);
+
+      voice.stop(Time.seconds(1));
+      vi.advanceTimersByTime(100);
+      voice.stop();
+
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(spy.oscillators[0]!.stop).toHaveBeenCalledExactlyOnceWith(getAudioContext().currentTime + 0.5);
+      expect(voice.ended).toBe(false);
+      spy.oscillators[0]!.onended!();
+      expect(voice.ended).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+      spy.restore();
+      gen.destroy();
+    });
+
+    test('an explicit short fade can finish an envelope release earlier', () => {
+      const system = new AudioSystem();
+      const spy = setupSpy();
+      const gen = new AudioGenerator({ envelope: new Envelope({ release: Time.seconds(1) }) });
+      const voice = system.play(gen);
+
+      voice.stop();
+      voice.stop(Time.seconds(0.1));
+      vi.advanceTimersByTime(99);
+      expect(voice.ended).toBe(false);
+
+      vi.advanceTimersByTime(1);
+
+      expect(voice.ended).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+      spy.restore();
+      gen.destroy();
+    });
+
+    test.each([false, true])('a shorter fade replaces the pending timer (envelope=%s)', withEnvelope => {
+      const system = new AudioSystem();
+      const spy = setupSpy();
+      const gen = new AudioGenerator({ envelope: withEnvelope ? new Envelope() : null });
+      const voice = system.play(gen);
+
+      voice.stop(Time.seconds(1));
+      vi.advanceTimersByTime(100);
+      voice.stop(Time.seconds(0.2));
+      vi.advanceTimersByTime(199);
+      expect(voice.ended).toBe(false);
+
+      vi.advanceTimersByTime(1);
+
+      expect(voice.ended).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+      spy.restore();
+      gen.destroy();
+    });
+  });
+
+  test('repeated stop during the release tail does not reschedule its end', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const env = new Envelope({ release: Time.seconds(0.5) });
+    const release = vi.spyOn(env, 'releaseAt');
+    const gen = new AudioGenerator({ envelope: env });
+    let now = 1;
+
+    vi.spyOn(getAudioContext(), 'currentTime', 'get').mockImplementation(() => now);
+
+    const voice = system.play(gen);
+
+    voice.stop();
+    now = 1.2;
+    voice.stop();
+
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(spy.oscillators[0]!.stop).toHaveBeenCalledExactlyOnceWith(1.5);
+
+    spy.restore();
+    gen.destroy();
+  });
+
   // ---- Bus routing ----
 
   test('voice routes to system.sound by default', () => {
@@ -362,6 +478,228 @@ describe('AudioGenerator', () => {
     expect(gen.poolSize).toBe(1);
   });
 
+  test('shrinking poolSize stops the excess voices, and later plays stay within the new size', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 3 });
+    const voices = [system.play(gen), system.play(gen), system.play(gen)];
+
+    gen.poolSize = 1;
+
+    expect(voices.map(voice => voice.ended)).toEqual([true, true, false]);
+
+    const next = system.play(gen);
+
+    expect(voices[2]?.ended).toBe(true);
+    expect(next.ended).toBe(false);
+
+    spy.restore();
+    gen.destroy();
+  });
+
+  test('a replay from pool eviction keeps the available slot without an unbounded callback loop', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 1 });
+    const replayed: Voice[] = [];
+    let callbacks = 0;
+    let replaying = true;
+
+    const replay = (): void => {
+      if (!replaying) {
+        return;
+      }
+
+      // Turn an unbounded synchronous eviction regression into a test failure.
+      if (++callbacks > 10) {
+        throw new Error('replay limit reached');
+      }
+
+      const voice = system.play(gen);
+      replayed.push(voice);
+      voice.onEnd.add(replay);
+    };
+
+    const first = system.play(gen);
+    first.onEnd.add(replay);
+
+    try {
+      let requested: Voice | undefined;
+
+      expect(() => {
+        requested = system.play(gen, { bus: system.music });
+      }).not.toThrow();
+
+      expect(callbacks).toBe(1);
+      expect(first.ended).toBe(true);
+      expect(requested).toBeInstanceOf(NoopVoice);
+      expect(requested?.ended).toBe(true);
+      expect(requested?.bus).toBe(system.music);
+      expect(replayed).toHaveLength(1);
+      expect(replayed[0]?.ended).toBe(false);
+      expect(spy.oscillators).toHaveLength(2);
+
+      replaying = false;
+      gen.stopAll();
+      expect(replayed[0]?.ended).toBe(true);
+    } finally {
+      replaying = false;
+      gen.destroy();
+      system.destroy();
+      spy.restore();
+    }
+  });
+
+  test('shrinking poolSize finishes when every evicted voice replays the generator', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 3 });
+    const replayed: Voice[] = [];
+    let callbacks = 0;
+    let replaying = true;
+
+    const replay = (): void => {
+      if (!replaying) {
+        return;
+      }
+
+      if (++callbacks > 10) {
+        throw new Error('replay limit reached');
+      }
+
+      const voice = system.play(gen);
+      replayed.push(voice);
+      voice.onEnd.add(replay);
+    };
+
+    const original = [system.play(gen), system.play(gen), system.play(gen)];
+
+    for (const voice of original) {
+      voice.onEnd.add(replay);
+    }
+
+    try {
+      expect(() => {
+        gen.poolSize = 1;
+      }).not.toThrow();
+
+      expect(callbacks).toBeLessThanOrEqual(4);
+      expect(original.every(voice => voice.ended)).toBe(true);
+      expect(replayed.filter(voice => !voice.ended)).toHaveLength(1);
+
+      replaying = false;
+      gen.stopAll();
+      expect(replayed.every(voice => voice.ended)).toBe(true);
+    } finally {
+      replaying = false;
+      gen.destroy();
+      system.destroy();
+      spy.restore();
+    }
+  });
+
+  test('shrinking poolSize stops every selected victim before rethrowing an onEnd error', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 3 });
+    const first = system.play(gen);
+    const second = system.play(gen);
+    const survivor = system.play(gen);
+    const firstError = new Error('first listener failed');
+    const secondError = new Error('second listener failed');
+
+    first.onEnd.add(() => {
+      throw firstError;
+    });
+    second.onEnd.add(() => {
+      throw secondError;
+    });
+
+    try {
+      expect(() => {
+        gen.poolSize = 1;
+      }).toThrow(firstError);
+
+      expect(first.ended).toBe(true);
+      expect(second.ended).toBe(true);
+      expect(survivor.ended).toBe(false);
+    } finally {
+      second.onEnd.clear();
+      gen.destroy();
+      system.destroy();
+      spy.restore();
+    }
+  });
+
+  test('play honors capacity increased by an eviction callback without stopping its new voice', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 1 });
+    let replayed: Voice | undefined;
+    const first = system.play(gen);
+
+    first.onEnd.add(() => {
+      gen.poolSize = 2;
+      replayed = system.play(gen);
+    });
+
+    try {
+      const requested = system.play(gen);
+
+      expect(first.ended).toBe(true);
+      expect(replayed?.ended).toBe(false);
+      expect(requested.ended).toBe(false);
+      expect(spy.oscillators).toHaveLength(3);
+
+      gen.stopAll();
+      expect(replayed?.ended).toBe(true);
+      expect(requested.ended).toBe(true);
+    } finally {
+      gen.destroy();
+      system.destroy();
+      spy.restore();
+    }
+  });
+
+  test.each([false, true])('replay during pool shrinking preserves a silent voice while audible victims remain (held=%s)', held => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 3 });
+    const silent = system.play(gen) as AudioGeneratorVoice;
+
+    if (held) {
+      silent._setHeld(true);
+    } else {
+      silent.pause();
+    }
+
+    const firstAudible = system.play(gen);
+    const secondAudible = system.play(gen);
+    let replayed: Voice | undefined;
+
+    firstAudible.onEnd.add(() => {
+      replayed = system.play(gen);
+    });
+
+    try {
+      gen.poolSize = 2;
+
+      expect(silent.ended).toBe(false);
+      expect(silent._isHalted).toBe(true);
+      expect(firstAudible.ended).toBe(true);
+      expect(secondAudible.ended).toBe(true);
+      expect(replayed?.ended).toBe(false);
+
+      gen.stopAll();
+      expect(silent.ended).toBe(true);
+      expect(replayed?.ended).toBe(true);
+    } finally {
+      gen.destroy();
+      system.destroy();
+      spy.restore();
+    }
+  });
+
   test('poolStrategy setter updates the eviction strategy', () => {
     const gen = new AudioGenerator();
     gen.poolStrategy = SoundPoolStrategy.LeastRecentlyUsed;
@@ -374,6 +712,7 @@ describe('AudioGenerator', () => {
     vi.resetModules();
     vi.doMock('#audio/audioContext', async importOriginal => {
       const actual = await importOriginal<typeof import('#audio/audioContext')>();
+
       return { ...actual, isAudioContextReady: () => false };
     });
 
@@ -482,7 +821,7 @@ describe('AudioGenerator', () => {
 
     system.play(gen, { muted: true, volume: 0.8 });
 
-    expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), expect.any(Number));
+    expect(spy.gains[0].gain.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
 
     spy.restore();
     gen.destroy();
@@ -495,7 +834,7 @@ describe('AudioGenerator', () => {
 
     system.play(gen, { volume: 0.3 });
 
-    expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0.3, expect.any(Number), expect.any(Number));
+    expect(spy.gains[0].gain.setValueAtTime).toHaveBeenCalledWith(0.3, expect.any(Number));
 
     spy.restore();
     gen.destroy();
@@ -508,7 +847,7 @@ describe('AudioGenerator', () => {
 
     system.play(gen);
 
-    expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), expect.any(Number));
+    expect(spy.gains[0].gain.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
 
     spy.restore();
     gen.destroy();

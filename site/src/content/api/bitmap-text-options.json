@@ -182,7 +182,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "A pre-constructed FontFace to use as the font for this node. When passed to Text, the face is automatically registered with document.fonts. Load the face via FontFactory before constructing the node so glyphs render immediately. Takes precedence over fontFamily when both are set. ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); "
+          "description": "A pre-constructed FontFace to use as the font for this node. When passed to Text, the face is automatically registered with document.fonts. Load the face via FontFactory before constructing the node so glyphs render immediately. Takes precedence over fontFamily when both are set. ts const face = await loader.load({ type: 'font', source: 'roboto.woff2', family: 'Roboto' }); const label = new Text('Score: 0', { font: face, fontSize: 24 }); "
         },
         {
           "name": "fontFamily",
@@ -390,7 +390,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Multiplier of fontSize for the distance between lines. Default 1.2 - not a pixel value."
+          "description": "Multiplier of fontSize for the distance between lines. Default 1.2 - not a pixel value. Must be a positive finite number, else RangeError."
         },
         {
           "name": "msdf",
@@ -415,7 +415,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Set to true if the atlas was produced by msdf-atlas-gen (MSDF). Selects the text-msdf shader which applies the median SDF formula. Defaults to false (colour/RGBA atlas)."
+          "description": "Selects the text-msdf shader which applies the RGB median formula. Defaults to false (colour/RGBA atlas). Outlines and shadows need the font's declared distanceField range and zero value plus its glyph padding (BmFontData); their outward reach is the smaller of the encoded range outside the edge and the padding, times BitmapText.fontScale. Without that metadata the font draws fill only and an outline or visible shadow throws TextEffectError. A colour atlas never draws them. Read once at construction: setFont replaces the atlas without changing it, so a node switched between colour and MSDF fonts needs a new instance."
         },
         {
           "name": "outlineColor",
@@ -465,7 +465,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Outline width in SDF units (0..0.5). 0 disables the outline."
+          "description": "Outline extent outside the glyph edge, in logical pixels of the node's local space. 0 disables the outline. Must be finite and not negative, else RangeError; a width the node cannot draw throws TextEffectError."
         },
         {
           "name": "scale",
@@ -515,7 +515,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shadow opacity (0..1). 0 disables the shadow."
+          "description": "Shadow opacity (0..1). 0 disables the shadow; offsets and blur only matter above it."
         },
         {
           "name": "shadowBlur",
@@ -540,7 +540,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shadow blur softness (0..1). Larger values soften the shadow edge."
+          "description": "Half-width of the shadow's soft edge in logical pixels of the node's local space: the shadow fades from full strength shadowBlur pixels inside the offset glyph edge to nothing shadowBlur pixels outside it. A smooth ramp, not a Gaussian. 0 keeps a crisp, antialiased edge. Must be finite and not negative, else RangeError."
         },
         {
           "name": "shadowColor",
@@ -590,7 +590,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Horizontal shadow offset in pixels."
+          "description": "Horizontal shadow offset in logical pixels of the node's local space."
         },
         {
           "name": "shadowOffsetY",
@@ -615,7 +615,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Vertical shadow offset in pixels."
+          "description": "Vertical shadow offset in logical pixels of the node's local space."
         },
         {
           "name": "strikethrough",

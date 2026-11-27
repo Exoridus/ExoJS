@@ -1,6 +1,6 @@
 ---
 title: 'Grid pathfinding'
-description: 'Route agents over a weighted grid with @codexo/exojs-pathfinding: build a GridSpace from your own map data, read a PathResult, and shape the route with costs, diagonals, clearance and smoothing.'
+description: 'Route agents over a weighted grid with @codexo/exojs/pathfinding: build a GridSpace from your own map data, read a PathResult, and shape the route with costs, diagonals, clearance and smoothing.'
 ---
 
 import Callout from '../../../components/Callout.astro';
@@ -8,12 +8,12 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Grid pathfinding
 
-`@codexo/exojs-pathfinding` answers one question — *how does this actor get from here to there* — and it answers it over a world you describe, not one it owns. There is no scene node, no renderer, no asset type and no extension to activate: you build a **navigation space**, you construct a **`Pathfinder`**, and you own both.
+`@codexo/exojs/pathfinding` answers one question — *how does this actor get from here to there* — and it answers it over a world you describe, not one it owns. There is no scene node, no renderer, no asset type and no extension to activate: you build a **navigation space**, you construct a **`Pathfinder`**, and you own both.
 
-> **Note:** pathfinding ships as a separate package. Install it alongside `@codexo/exojs`:
+> **Note:** pathfinding ships as an optional Core subpath. Install Core and import from `@codexo/exojs/pathfinding`:
 >
 > ```sh
-> npm install @codexo/exojs @codexo/exojs-pathfinding
+> npm install @codexo/exojs
 > ```
 
 <Callout type="info" title="A library, not a registered extension">
@@ -94,7 +94,7 @@ Nothing has to be switched on. Painting a single weighted cell switches it back 
 
 ## Feeding it a tilemap
 
-The package has **no dependency on `@codexo/exojs-tilemap`**, in either direction. The bridge is the cost callback, and it lives in your game:
+The package has **no dependency on `@codexo/exojs/tilemap`**, in either direction. The bridge is the cost callback, and it lives in your game:
 
 <SourceSnippet
   source="examples/guides/pathfinding/tilemap-bridge.ts"
@@ -112,7 +112,7 @@ Keep the two in step wherever you edit the map:
   title="examples/guides/pathfinding/tilemap-bridge.ts"
 />
 
-The [Tilemap Navigation](/ExoJS/en/playground/?example=pathfinding/tilemap-navigation) example does exactly this against a live [`TileLayer`](/ExoJS/en/api/tile-layer/).
+For a [`TileLayer`](/ExoJS/en/api/tile-layer/), [`TileNavigationSpace`](/ExoJS/en/api/tile-navigation-space/) packages this bridge as a class: it takes the same cost callback, follows edits, chunk loads and evictions on its own, and resamples only what changed — see [Navigation agents](/ExoJS/en/guide/pathfinding/navigation-agents/), and the [Tilemap Navigation](/ExoJS/en/playground/?example=pathfinding/tilemap-navigation) example that uses it.
 
 ## Reachable areas
 

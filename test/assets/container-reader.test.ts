@@ -4,6 +4,7 @@ import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { parseContainer } from '#assets/container/assetContainer';
 import type { ContainerBlockStore } from '#assets/container/containerBlockStore';
 import { ContainerReader } from '#assets/container/ContainerReader';
+import { openContainerSource } from '#assets/container/containerSource';
 import { logger } from '#core/Logger';
 
 const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text);
@@ -71,7 +72,9 @@ const recordingStore = (): ContainerBlockStore & { readonly held: Map<string, Ui
     get: async hash => {
       const bytes = held.get(hash);
 
-      if (bytes !== undefined) hits.push(hash);
+      if (bytes !== undefined) {
+        hits.push(hash);
+      }
 
       return bytes === undefined ? undefined : new Uint8Array(bytes.slice().buffer);
     },
@@ -165,7 +168,7 @@ describe('ContainerReader degradation', () => {
   test('a server that ignores ranges leaves the reader on the whole file, and says so in development', async () => {
     const container = encodeContainer(threeBlockInputs(), { blockSize: 1024 });
     const { requests } = serve(container, { ranges: false });
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const reader = await ContainerReader.open('/pack.exoa');
 
     expect(reader.ranged).toBe(false);
@@ -182,7 +185,7 @@ describe('ContainerReader degradation', () => {
   test('a content-encoded response is refused for range use, and says so in development', async () => {
     const container = encodeContainer(threeBlockInputs(), { blockSize: 1024 });
     const { requests } = serve(container, { contentEncoding: 'gzip' });
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const reader = await ContainerReader.open('/pack.exoa');
 
     // Offsets would address the encoded stream, so the reader must not trust them.
@@ -252,7 +255,7 @@ describe('ContainerReader block store', () => {
     serve(container);
 
     const reader = await ContainerReader.open('/pack.exoa', {
-      store: { get: async () => undefined, put: async () => undefined },
+      store: { get: async () => {}, put: async () => {} },
     });
 
     expect(new Uint8Array(await reader.readEntry(reader.entry('b.bin')!))).toEqual(threeBlockInputs()[1]!.bytes);
@@ -300,5 +303,104 @@ describe('ContainerReader fragments', () => {
     const reader = await ContainerReader.open('/pack.exoa');
 
     await expect(reader.readEntryRange(reader.entry('note')!, 3, 10)).rejects.toThrow(AssetDecodeError);
+  });
+});
+
+describe('ContainerReader failed work', () => {
+  test('concurrent failures share one fetch and a later read retries', async () => {
+    const container = encodeContainer([{ source: 'note', type: 'text', bytes: utf8('hello') }]);
+    const { requests } = serve(container);
+    const reader = await ContainerReader.open('/pack.exoa');
+    const entry = reader.entry('note')!;
+    vi.mocked(global.fetch).mockRejectedValueOnce(new Error('offline'));
+
+    const failed = await Promise.allSettled([reader.readEntry(entry), reader.readEntry(entry)]);
+
+    expect(failed.map(result => result.status)).toEqual(['rejected', 'rejected']);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(text(await reader.readEntry(entry))).toBe('hello');
+    expect(requests).toHaveLength(2);
+    await reader.readEntry(entry);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  test.each([
+    ['get', false],
+    ['get', true],
+    ['put', false],
+    ['put', true],
+  ] as const)('%s failure (async=%s) leaves source reads usable', async (method, asynchronous) => {
+    const container = encodeContainer([{ source: 'note', type: 'text', bytes: utf8('hello') }]);
+
+    const failure = (): Promise<never> => {
+      if (asynchronous) {
+        return Promise.reject(new Error('storage unavailable'));
+      }
+
+      throw new Error('storage unavailable');
+    };
+
+    const store: ContainerBlockStore = { get: async () => undefined, put: async () => {} };
+    store[method] = failure;
+    const reader = ContainerReader.fromBuffer(container, { store });
+
+    expect(text(await reader.readEntry(reader.entry('note')!))).toBe('hello');
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
+});
+
+test('settlement from released pending work does not remove its replacement', async () => {
+  const container = encodeContainer([{ source: 'note', type: 'text', bytes: utf8('hello') }]);
+  serve(container);
+  const reader = await ContainerReader.open('/pack.exoa');
+  const fetch = vi.mocked(global.fetch);
+  const serveFetch = fetch.getMockImplementation()!;
+  let rejectOld = (_error: Error): void => {};
+  let resolveNew = (): void => {};
+  fetch.mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        rejectOld = reject;
+      }),
+  );
+  const entry = reader.entry('note')!;
+  const oldSettled = reader.readEntry(entry).catch(() => undefined);
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  reader.release();
+  fetch.mockImplementationOnce(
+    (...args) =>
+      new Promise(resolve => {
+        resolveNew = () => {
+          void serveFetch(...args).then(resolve);
+        };
+      }),
+  );
+  const replacement = reader.readEntry(entry);
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+  rejectOld(new Error('old source failure'));
+  await oldSettled;
+  const joined = reader.readEntry(entry);
+  resolveNew();
+  expect((await Promise.all([replacement, joined])).map(text)).toEqual(['hello', 'hello']);
+  expect(fetch).toHaveBeenCalledTimes(3);
+});
+
+describe('openContainerSource content-encoded prefix', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('a content-encoded 206 probe is refetched as the whole file', async () => {
+    const container = encodeContainer([{ source: 'big.bin', type: 'binary', bytes: noise(80000, 7) }], { blockSize: 65536 });
+    const { requests } = serve(container, { contentEncoding: 'gzip' });
+
+    const opened = await openContainerSource('/big.exoa');
+
+    expect(opened.source.byteLength).toBe(new Uint8Array(container).byteLength);
+    expect(requests).toHaveLength(2);
+    expect(requests[0]?.range).toBeDefined();
+    expect(requests[1]?.range).toBeUndefined();
   });
 });

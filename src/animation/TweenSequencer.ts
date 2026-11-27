@@ -103,11 +103,16 @@ export class TweenSequencer {
 
   /**
    * Playback progress in 0..1, advancing in discrete steps as each stage
-   * completes. Equals `1` when the entire sequence has finished.
+   * completes in either direction; it resets to `0` when a repeat starts.
+   * Equals `1` when the entire sequence has finished.
    */
   public get progress(): number {
     const n = this._stages.length;
-    if (n === 0) return 1;
+
+    if (n === 0) {
+      return 1;
+    }
+
     return Math.min(this._currentStageIndex / n, 1);
   }
 
@@ -123,12 +128,14 @@ export class TweenSequencer {
   public then(tween: Tween | Tween[]): this {
     const tweens = Array.isArray(tween) ? tween : [tween];
     this._stages.push({ type: 'tweens', tweens });
+
     return this;
   }
 
   /** Insert a fixed pause of `seconds` between stages. */
   public wait(seconds: number): this {
     this._stages.push({ type: 'delay', seconds });
+
     return this;
   }
 
@@ -140,6 +147,7 @@ export class TweenSequencer {
    */
   public repeat(count: number): this {
     this._repeatTotal = count;
+
     return this;
   }
 
@@ -149,6 +157,7 @@ export class TweenSequencer {
    */
   public yoyo(enabled = true): this {
     this._yoyo = enabled;
+
     return this;
   }
 
@@ -158,6 +167,7 @@ export class TweenSequencer {
    */
   public onStart(cb: () => void): this {
     this._onStartCb = cb;
+
     return this;
   }
 
@@ -168,6 +178,7 @@ export class TweenSequencer {
    */
   public onComplete(cb: () => void): this {
     this._onCompleteCb = cb;
+
     return this;
   }
 
@@ -185,6 +196,7 @@ export class TweenSequencer {
     this._startFired = false;
     this._system?.addTicker(this);
     this._startCurrentStage();
+
     return this;
   }
 
@@ -197,6 +209,7 @@ export class TweenSequencer {
       this._state = TweenSequencerState.Paused;
       this._pauseCurrentStageTweens();
     }
+
     return this;
   }
 
@@ -206,6 +219,7 @@ export class TweenSequencer {
       this._state = TweenSequencerState.Active;
       this._resumeCurrentStageTweens();
     }
+
     return this;
   }
 
@@ -220,6 +234,7 @@ export class TweenSequencer {
       this._stopCurrentStageTweens();
       this._system?.removeTicker(this);
     }
+
     return this;
   }
 
@@ -231,7 +246,9 @@ export class TweenSequencer {
    * system), call this manually and child tweens will also be advanced.
    */
   public update(deltaSeconds: number): void {
-    if (this._state !== TweenSequencerState.Active) return;
+    if (this._state !== TweenSequencerState.Active) {
+      return;
+    }
 
     if (!this._startFired) {
       this._startFired = true;
@@ -240,15 +257,20 @@ export class TweenSequencer {
 
     if (this._stages.length === 0) {
       this._finish();
+
       return;
     }
 
     const stageIndex = this._getActualStageIndex();
     const stage = this._stages[stageIndex];
-    if (stage === undefined) return;
+
+    if (stage === undefined) {
+      return;
+    }
 
     if (stage.type === 'delay') {
       this._delayElapsed += deltaSeconds;
+
       if (this._delayElapsed >= stage.seconds) {
         // The time past the stage's own duration belongs to the next stage.
         // Dropping it costs up to one frame per stage, which a repeated
@@ -282,7 +304,10 @@ export class TweenSequencer {
    * accounting for yoyo reversal.
    */
   private _getActualStageIndex(): number {
-    if (this._direction === 1) return this._currentStageIndex;
+    if (this._direction === 1) {
+      return this._currentStageIndex;
+    }
+
     return this._stages.length - 1 - this._currentStageIndex;
   }
 
@@ -295,7 +320,10 @@ export class TweenSequencer {
   private _startCurrentStage(carrySeconds = 0): void {
     const stageIndex = this._getActualStageIndex();
     const stage = this._stages[stageIndex];
-    if (stage === undefined) return;
+
+    if (stage === undefined) {
+      return;
+    }
 
     this._delayElapsed = stage.type === 'delay' ? Math.min(carrySeconds, stage.seconds) : 0;
 
@@ -307,6 +335,7 @@ export class TweenSequencer {
           // update list, so the system ticks it each frame.
           tween._attachSystem(this._system);
         }
+
         tween.start();
       }
     }
@@ -346,10 +375,17 @@ export class TweenSequencer {
   }
 
   private _getCurrentStageTweens(): readonly Tween[] {
-    if (this._stages.length === 0) return [];
+    if (this._stages.length === 0) {
+      return [];
+    }
+
     const stageIndex = this._getActualStageIndex();
     const stage = this._stages[stageIndex];
-    if (stage?.type === 'tweens') return stage.tweens;
+
+    if (stage?.type === 'tweens') {
+      return stage.tweens;
+    }
+
     return [];
   }
 

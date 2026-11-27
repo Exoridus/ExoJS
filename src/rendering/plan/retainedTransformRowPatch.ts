@@ -82,8 +82,7 @@ export const tryPatchRetainedTransformRow = (
     try {
       return renderer._patchOwnTransformRow(node, bundle, base);
     } catch {
-      // A renderer that declines mid-patch falls through to the generic
-      // shared-transform patch below, the same as one that has no patch at all.
+      return false;
     }
   }
 
@@ -159,23 +158,16 @@ export const isUnder = (node: RenderNode, ancestor: RenderNode): boolean => {
 };
 
 /**
- * Rewrite a moved node's snapshotted screen AABB in its captured draw record.
- * A record whose extent is one move out of date is not a rendering error by
- * itself - the replay re-derives nothing from it - but the optimizer reads it to
- * decide whether a batch run may be reordered past an intervening draw, and a
- * stale extent can hide a real overlap.
+ * Flag a moved node's snapshotted screen AABB in its captured draw record as
+ * out of date. Nothing re-derives from the extent during replay; only the
+ * optimizer's reorder-safety test reads it, and only for a scope that mixes
+ * pipelines, so it re-reads the live bounds on demand instead of every moved
+ * node paying for a bounds recompute each frame.
  */
-const refreshRetainedDrawBounds = (node: RenderNode, record: RetainedFragmentDraw | undefined): void => {
-  if (record === undefined) {
-    return;
+const markRetainedDrawBoundsStale = (record: RetainedFragmentDraw | undefined): void => {
+  if (record !== undefined) {
+    record.boundsStale = true;
   }
-
-  const bounds = node.getBounds();
-
-  record.minX = bounds.left;
-  record.minY = bounds.top;
-  record.maxX = bounds.right;
-  record.maxY = bounds.bottom;
 };
 
 /**
@@ -216,9 +208,9 @@ export const reconcileRetainedTransformRows = (
     // tier) or the fragment sits on entry replay. Both re-read each node's live
     // transform, so there is no row to patch. Only the RECORD's snapshotted
     // screen AABB is stale, and the optimizer's reorder-safety test reads it -
-    // refresh those and report the moves as accounted for.
-    const complete = forEachMovedNode(fragment, owns, (node, record) => {
-      refreshRetainedDrawBounds(node, record);
+    // flag those and report the moves as accounted for.
+    const complete = forEachMovedNode(fragment, owns, (_node, record) => {
+      markRetainedDrawBoundsStale(record);
 
       return true;
     });
@@ -251,7 +243,7 @@ export const reconcileRetainedTransformRows = (
   const patchableBundle = bundle as PatchableRetainedGroupBundle;
 
   const patched = forEachMovedNode(fragment, owns, (node, record) => {
-    refreshRetainedDrawBounds(node, record);
+    markRetainedDrawBoundsStale(record);
 
     return isEligible(node) && tryPatchRetainedTransformRow(node, record, patchableBundle, backend, base);
   });
@@ -304,56 +296,63 @@ export const reconcileRetainedTintRows = (
   const patchable = bundle !== null && typeof bundle.patchTintRow === 'function' && bundle.transformRowBase !== undefined;
   const base = fragment.recordedRowBase();
 
-  const applied = fragment.dirtyIndex.readSince(fragment.contentCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
-    const changed = node as unknown as RenderNode;
-    const drawable = changed as unknown as Drawable;
-    const rowIndex = fragment.recordedRowIndex(drawable);
+  const applied = fragment.dirtyIndex.readSince(
+    fragment.contentCursor,
+    DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect,
+    (node, marked) => {
+      const changed = node as unknown as RenderNode;
+      const drawable = changed as unknown as Drawable;
+      const rowIndex = fragment.recordedRowIndex(drawable);
 
-    // Same economy as the transform channel: a change to something this
-    // fragment drew is recognised by the row map, and only a mark the map does
-    // not know needs the walk to decide whether it is even ours. The root
-    // itself is ours: a change to it reaches everything below.
-    if (rowIndex === undefined && changed !== root && !owns(changed)) {
+      // Same economy as the transform channel: a change to something this
+      // fragment drew is recognised by the row map, and only a mark the map does
+      // not know needs the walk to decide whether it is even ours. The root
+      // itself is ours: a change to it reaches everything below.
+      if (rowIndex === undefined && changed !== root && !owns(changed)) {
+        return true;
+      }
+
+      // A change on or below a node the capture re-dispatches live is that
+      // dispatch's to pick up; the records hold nothing about it.
+      if (
+        rowIndex === undefined &&
+        changeBelongsToLiveEntry(changed, root, marked, candidate => fragment.hasLiveRecordFor(candidate), destinationOpaque)
+      ) {
+        return true;
+      }
+
+      if ((marked & (DirtyChannel.Content | DirtyChannel.Effect)) !== 0) {
+        // Not a tint-only change: nothing in a recorded product expresses a new
+        // texture, geometry or blend mode without re-recording it.
+        return false;
+      }
+
+      if (bundle === null) {
+        // No recording: the entry replay re-emits the draw and reads the live
+        // tint, so there is no baked row to correct.
+        return true;
+      }
+
+      if (!patchable) {
+        return false;
+      }
+
+      if (rowIndex === undefined) {
+        // Owned, but this product has no row for it: the capture culled it, or it
+        // arrived after the capture. Either way its colour cannot reach these
+        // pixels - a node that arrived also moved the structure revision, which
+        // the key check refuses on its own - so there is nothing to correct and
+        // nothing to rebuild for. Tinting something off-screen is an ordinary
+        // thing for a game to do every frame.
+        return true;
+      }
+
+      packTintRow(patchTintScratch, 0, drawable.tint);
+      bundle.patchTintRow!(rowIndex - base, patchTintScratch);
+
       return true;
-    }
-
-    // A change on or below a node the capture re-dispatches live is that
-    // dispatch's to pick up; the records hold nothing about it.
-    if (rowIndex === undefined && changeBelongsToLiveEntry(changed, root, marked, candidate => fragment.hasLiveRecordFor(candidate), destinationOpaque)) {
-      return true;
-    }
-
-    if ((marked & (DirtyChannel.Content | DirtyChannel.Effect)) !== 0) {
-      // Not a tint-only change: nothing in a recorded product expresses a new
-      // texture, geometry or blend mode without re-recording it.
-      return false;
-    }
-
-    if (bundle === null) {
-      // No recording: the entry replay re-emits the draw and reads the live
-      // tint, so there is no baked row to correct.
-      return true;
-    }
-
-    if (!patchable) {
-      return false;
-    }
-
-    if (rowIndex === undefined) {
-      // Owned, but this product has no row for it: the capture culled it, or it
-      // arrived after the capture. Either way its colour cannot reach these
-      // pixels - a node that arrived also moved the structure revision, which
-      // the key check refuses on its own - so there is nothing to correct and
-      // nothing to rebuild for. Tinting something off-screen is an ordinary
-      // thing for a game to do every frame.
-      return true;
-    }
-
-    packTintRow(patchTintScratch, 0, drawable.tint);
-    bundle.patchTintRow!(rowIndex - base, patchTintScratch);
-
-    return true;
-  });
+    },
+  );
 
   bundle?.flushRowPatches?.();
 

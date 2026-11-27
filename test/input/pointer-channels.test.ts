@@ -675,7 +675,13 @@ describe('Pointer — direct construction and getters', () => {
 
     const app = createMockApp(canvas);
     const channels = new Float32Array(ChannelSize.Container);
-    const pointer = new Pointer(makeEvent({ clientX: 400, clientY: 300, width: 20, height: 20 }), app, new BrowserPlatform(canvas), channels, 0);
+    const pointer = new Pointer(
+      makeEvent({ clientX: 400, clientY: 300, width: 20, height: 20 }),
+      app,
+      new BrowserPlatform(canvas),
+      channels,
+      0,
+    );
 
     expect(pointer.x).toBe(0);
     expect(pointer.y).toBe(0);
@@ -690,7 +696,13 @@ describe('Pointer — direct construction and getters', () => {
     const channels = new Float32Array(ChannelSize.Container);
 
     expect(() => {
-      const pointer = new Pointer(makeEvent({ clientX: 10, clientY: 10 }), null as unknown as Application, new BrowserPlatform(canvas), channels, 0);
+      const pointer = new Pointer(
+        makeEvent({ clientX: 10, clientY: 10 }),
+        null as unknown as Application,
+        new BrowserPlatform(canvas),
+        channels,
+        0,
+      );
 
       expect(pointer.x).toBe(0);
       expect(pointer.y).toBe(0);

@@ -195,7 +195,10 @@ const originalInflate = (RenderPlanBuilder.prototype as unknown as BuilderIntern
  * {@link restoreCaptureMargin}.
  */
 export const installCaptureMargin = (ratio: number): void => {
-  (RenderPlanBuilder.prototype as unknown as BuilderInternals)._inflateCaptureCullRect = function inflate(this: BuilderInternals, view: View): void {
+  (RenderPlanBuilder.prototype as unknown as BuilderInternals)._inflateCaptureCullRect = function inflate(
+    this: BuilderInternals,
+    view: View,
+  ): void {
     const rect = view.getBounds();
     const marginX = rect.width * ratio;
     const marginY = rect.height * ratio;
@@ -439,7 +442,8 @@ export const endProbeFrame = (root: RenderNode): ServedBy => {
     return served;
   }
 
-  const delta = (root as unknown as { _retainedRootRepresentation(): RetainedRootRepresentation })._retainedRootRepresentation().derivedProduct?.delta;
+  const delta = (root as unknown as { _retainedRootRepresentation(): RetainedRootRepresentation })._retainedRootRepresentation()
+    .derivedProduct?.delta;
 
   if (delta === undefined) {
     return served;

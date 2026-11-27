@@ -1,10 +1,10 @@
 // #region guide:falling-box
 import { Application, Color, Graphics, Scene, SystemOrder } from '@codexo/exojs';
-import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, PhysicsWorld } from '@codexo/exojs/physics';
 
 class FallingBoxScene extends Scene {
   override init(): void {
-    const world = new PhysicsWorld({ gravity: { x: 0, y: 980 } });
+    const world = new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep, gravity: { x: 0, y: 980 } });
     const floor = new Graphics();
     const box = new Graphics();
 

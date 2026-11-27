@@ -18,14 +18,6 @@
     "dist/exo.esm.js.map",
     "dist/exo.debug.esm.js",
     "dist/exo.debug.esm.js.map",
-    "dist/exo.iife.js",
-    "dist/exo.iife.js.map",
-    "dist/exo.iife.min.js",
-    "dist/exo.iife.min.js.map",
-    "dist/exo.full.iife.js",
-    "dist/exo.full.iife.js.map",
-    "dist/exo.full.iife.min.js",
-    "dist/exo.full.iife.min.js.map",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
@@ -68,9 +60,49 @@
       "import": "./dist/esm/debug/index.js",
       "default": "./dist/esm/debug/index.js"
     },
+    "./tilemap": {
+      "types": "./dist/esm/tilemap/index.d.ts",
+      "import": "./dist/esm/tilemap/index.js",
+      "default": "./dist/esm/tilemap/index.js"
+    },
+    "./particles": {
+      "types": "./dist/esm/particles/index.d.ts",
+      "import": "./dist/esm/particles/index.js",
+      "default": "./dist/esm/particles/index.js"
+    },
+    "./audio-fx": {
+      "types": "./dist/esm/audio-fx/index.d.ts",
+      "import": "./dist/esm/audio-fx/index.js",
+      "default": "./dist/esm/audio-fx/index.js"
+    },
+    "./physics": {
+      "types": "./dist/esm/physics/index.d.ts",
+      "import": "./dist/esm/physics/index.js",
+      "default": "./dist/esm/physics/index.js"
+    },
+    "./tilemap-physics": {
+      "types": "./dist/esm/tilemap-physics/index.d.ts",
+      "import": "./dist/esm/tilemap-physics/index.js",
+      "default": "./dist/esm/tilemap-physics/index.js"
+    },
+    "./lighting": {
+      "types": "./dist/esm/lighting/index.d.ts",
+      "import": "./dist/esm/lighting/index.js",
+      "default": "./dist/esm/lighting/index.js"
+    },
+    "./pathfinding": {
+      "types": "./dist/esm/pathfinding/index.d.ts",
+      "import": "./dist/esm/pathfinding/index.js",
+      "default": "./dist/esm/pathfinding/index.js"
+    },
     "./package.json": "./package.json"
   },
   "imports": {
+    "#physics-debug": {
+      "@codexo/exojs-source": "./packages/exojs-physics/src/debug/index.ts",
+      "types": "./dist/esm/physics/debug/index.d.ts",
+      "default": "./dist/esm/physics/debug/index.js"
+    },
     "#*.vert": "./src/*.vert",
     "#*.frag": "./src/*.frag",
     "#*.wgsl": "./src/*.wgsl",
@@ -81,61 +113,62 @@
     }
   },
   "prettier": "@codexo/exojs-config/prettier",
-  "lint-staged": {
-    "*.{ts,tsx,mts,cts,mjs,js,json,jsonc,md,mdx,css,yml,yaml,html}": "prettier --write",
-    "{src,test,examples,scripts,packages}/**/*.{ts,tsx,mts,cts}": "eslint --fix --no-warn-ignored --max-warnings=0"
-  },
   "scripts": {
     "bootstrap": "pnpm install --frozen-lockfile --ignore-scripts && pnpm build:tooling",
-    "bootstrap:dev": "pnpm bootstrap && pnpm exec husky && pnpm build:all && pnpm bench:setup && pnpm exec playwright install chromium && pnpm doctor",
+    "bootstrap:dev": "pnpm bootstrap && pnpm exec husky && pnpm build:all && pnpm exec playwright install chromium && pnpm doctor",
     "doctor": "tsx ./scripts/doctor.ts",
     "prepare": "husky && pnpm --filter @codexo/eslint-plugin-exojs build",
     "clean": "rimraf dist",
     "clean:artifacts": "tsx ./scripts/clean-artifacts.ts",
     "clean:all": "tsx ./scripts/clean-artifacts.ts --all",
-    "build": "pnpm build:tooling && pnpm clean && tsx scripts/build.ts",
+    "build": "pnpm build:tooling && pnpm clean && node --import tsx scripts/build.ts",
     "build:dev": "pnpm build:tooling && pnpm clean && tsx scripts/build.ts --dev",
     "build:watch": "tsx scripts/build.ts --dev --watch",
     "build:tooling": "pnpm --filter @codexo/exojs-build build && pnpm --filter @codexo/eslint-plugin-exojs build",
     "build:packages": "pnpm -r --filter \"./packages/**\" --filter \"!@codexo/exojs-build\" --filter \"!@codexo/exojs-bench\" build",
     "build:all": "pnpm build && pnpm build:packages",
     "typecheck": "exo-tsc --noEmit",
-    "typecheck:examples": "exo-tsc --noEmit -p tsconfig.examples.json",
+    "typecheck:examples": "pnpm examples:generate && exo-tsc --noEmit -p tsconfig.examples.json",
     "typecheck:templates": "exo-tsc --noEmit -p tsconfig.templates.json",
     "typecheck:workers": "exo-tsc --noEmit -p tsconfig.workers.json",
     "typecheck:scripts": "exo-tsc --noEmit -p tsconfig.scripts.json",
     "typecheck:type-tests": "tsx scripts/typecheck-type-tests.ts",
-    "typecheck:test": "tsx scripts/typecheck-tests.ts",
+    "typecheck:test": "node --import tsx scripts/typecheck-tests.ts",
     "typecheck:test:update-baseline": "tsx scripts/typecheck-tests.ts --update-baseline",
     "typecheck:guides": "tsx scripts/check-guide-no-check-reasons.ts && tsx scripts/extract-guide-snippets.ts && tsx scripts/typecheck-guides.ts",
     "typecheck:guides:update-baseline": "tsx scripts/extract-guide-snippets.ts --update-baseline",
     "typecheck:guides:no-check": "tsx scripts/check-guide-no-check-reasons.ts",
     "typecheck:guides:no-check:update-baseline": "tsx scripts/check-guide-no-check-reasons.ts --update-baseline",
     "typecheck:packages": "pnpm -r --filter \"./packages/**\" --filter \"!@codexo/exojs-bench\" typecheck",
-    "typecheck:bench": "pnpm bench:setup && pnpm --filter @codexo/exojs-bench typecheck",
+    "typecheck:bench": "pnpm --filter @codexo/exojs-bench typecheck",
     "typecheck:site": "pnpm --filter @codexo/exojs-examples check-ts",
     "typecheck:site-scripts": "pnpm --filter @codexo/exojs-examples check-ts:scripts",
-    "lint": "tsx ./scripts/lint.ts",
+    "lint": "node ./scripts/lint.ts",
+    "validation:unlock": "tsx scripts/lib/validation-lock.ts",
     "lint:fast": "pnpm lint --cache --cache-location .cache/eslintcache",
+    "lint:exojs:shadow": "pnpm build:tooling && node scripts/ci/lint-exojs-shadow.ts",
     "lint:site": "pnpm --filter @codexo/exojs-examples lint",
     "lint:all": "pnpm lint && pnpm lint:site",
-    "lint:source-hygiene": "tsx scripts/check-source-hygiene.ts",
+    "lint:fix": "pnpm lint --fix && pnpm lint:site --fix",
+    "lint:source-hygiene": "node --import tsx scripts/check-source-hygiene.ts",
     "lint:inline-source": "tsx scripts/check-inline-source.ts",
     "lint:changelog": "tsx scripts/check-changelog-untouched.ts",
-    "lint:file-symbols": "tsx scripts/check-file-symbol-naming.ts",
+    "lint:file-symbols": "node --import tsx scripts/check-file-symbol-naming.ts",
     "lint:config-paths": "tsx scripts/check-eslint-config-paths.ts",
     "lint:overrides:audit": "tsx scripts/audit-eslint-overrides.ts",
     "lint:js-files": "tsx scripts/check-javascript-files.ts",
     "lint:shaders": "tsx scripts/check-shader-sources.ts",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test": "vitest run --project=\"exojs*\" --project=rendering-perf",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "test": "tsx scripts/run-tests.ts --project=\"exojs*\" --project=rendering-perf",
     "test:core": "vitest run --project=exojs",
     "test:watch": "vitest --project=exojs",
     "test:coverage": "pnpm test --coverage",
     "test:alloc": "vitest run --project=rendering-alloc",
     "test:physics-perf": "vitest run --project=physics-perf",
     "test:production-stripping": "vitest run --project=exojs test/build-defines/production-stripping.test.ts",
+    "test:release-dist": "vitest run --project=release-dist",
+    "test:esm-importmap": "tsx scripts/ci/verify-esm-importmap.ts",
     "test:skips": "pnpm test --reporter=default --reporter=junit --outputFile.junit=./test-results/unit.junit.xml && tsx scripts/check-skipped-tests.ts",
     "test:skips:check": "tsx scripts/check-skipped-tests.ts",
     "test:skips:update-baseline": "tsx scripts/check-skipped-tests.ts --update-baseline",
@@ -150,16 +183,20 @@
     "test:browser:webgpu:firefox:isolated": "vitest run --project=browser-webgpu-firefox-isolated",
     "test:browser:assets": "vitest run --project=browser-assets-chromium",
     "test:browser:core": "vitest run --project=browser-core-chromium",
+    "test:browser:animated:webkit": "vitest run --project=browser-animated-images-webkit",
+    "test:browser:animated:safari": "vitest run --project=browser-animated-images-safari",
     "test:browser:audio": "vitest run --project=browser-audio-chromium",
+    "test:bench:browser": "vitest run --project=bench-browser",
     "test:browser:tilemap": "vitest run --project=browser-tilemap-chromium",
     "test:browser:build": "vitest run --project=browser-build-chromium",
     "test:parity": "tsx ./scripts/run-parity.ts --project=browser-webgpu test/rendering/parity",
     "test:parity:firefox": "tsx ./scripts/run-parity.ts --project=browser-webgpu-firefox test/rendering/parity",
     "test:parity:safari": "tsx ./scripts/run-parity.ts --project=browser-parity-safari",
     "test:examples:smoke": "pnpm --filter @codexo/exojs-examples examples:smoke",
-    "gates": "tsx ./scripts/ci/gates.ts",
-    "lanes": "tsx ./scripts/lanes.ts",
-    "qualify": "tsx ./scripts/ci/qualify.ts",
+    "test:playground:e2e": "pnpm --filter @codexo/exojs-examples playground:e2e",
+    "gates": "node ./scripts/ci/gates.ts",
+    "lanes": "node ./scripts/lanes.ts",
+    "qualify": "node ./scripts/ci/qualify.ts",
     "verify:quick": "pnpm gates all",
     "verify:exports": "tsx ./scripts/verify-exports.ts",
     "verify:declaration-imports": "tsx ./scripts/verify-declaration-imports.ts",
@@ -173,11 +210,15 @@
     "verify:create-exo-app": "tsx ./scripts/verify-create-exo-app.ts",
     "verify:external-consumers": "tsx ./scripts/release/external-consumers.ts",
     "docs:api:generate": "pnpm --filter @codexo/exojs-examples build:api",
-    "docs:api:check": "tsx scripts/check-api-docs-sync.ts",
+    "docs:api:check": "node --import tsx scripts/check-api-docs-sync.ts",
+    "docs:history:check": "node scripts/check-document-history.ts",
     "assets:compact": "tsx scripts/compact-example-assets.ts --write",
     "assets:compact:check": "tsx scripts/compact-example-assets.ts",
+    "examples:generate": "tsx scripts/generate-examples.ts",
     "examples:sync:check": "tsx scripts/check-examples-sync.ts",
-    "full-bundle:exports:check": "tsx scripts/check-dist-fresh.ts && tsx scripts/check-full-bundle-exports.ts",
+    "legacy-shims:generate": "tsx scripts/release/legacy-shims.ts",
+    "legacy-shims:check": "tsx scripts/release/legacy-shims.ts --check",
+    "dist:check": "node --import tsx scripts/check-dist-fresh.ts",
     "sync:example-capabilities": "tsx ./scripts/sync-example-capabilities.ts",
     "site:build": "tsx scripts/check-dist-fresh.ts && pnpm --filter @codexo/exojs-examples build",
     "size": "size-limit",
@@ -185,7 +226,8 @@
     "perf": "tsx ./scripts/perf.ts",
     "perf:smoke": "pnpm perf smoke",
     "bench": "pnpm --filter @codexo/exojs-bench bench",
-    "bench:setup": "pnpm --filter @codexo/exojs-bench bench:setup",
+    "bench:reference": "pnpm --filter @codexo/exojs-bench bench:reference",
+    "bench:competitive": "pnpm --filter @codexo/exojs-bench bench:competitive",
     "bench:micro": "vitest bench --run --project=\"exojs (bench)\"",
     "gate:bench:structural": "pnpm --filter @codexo/exojs-bench gate:structural",
     "webgpu:probe": "tsx scripts/webgpu-probe.ts",
@@ -199,8 +241,11 @@
     "release:publish": "tsx ./scripts/release/run.ts publish",
     "release:publish-independent": "tsx ./scripts/release/run.ts publish-independent",
     "release:bootstrap": "tsx ./scripts/release/run.ts bootstrap",
+    "release:registry-plan": "tsx ./scripts/release/run.ts registry-plan",
     "release:notes": "tsx ./scripts/generate-release-notes.ts",
-    "release:changelog": "tsx ./scripts/release/generate-changelog.ts"
+    "release:changelog": "tsx ./scripts/release/generate-changelog.ts",
+    "lint:react:shadow": "oxlint --config scripts/ci/oxlint-react-shadow.json --format=json packages/exojs-react/src packages/exojs-react/examples site/src/components",
+    "typecheck:native-api": "node packages/exojs-config/typescript/verify-native-api.mjs"
   },
   "license": "MIT",
   "publishConfig": {
@@ -221,42 +266,35 @@
       "gzip": true
     },
     {
-      "path": "dist/exo.iife.min.js",
-      "limit": "365 KB",
-      "gzip": true
-    },
-    {
-      "path": "dist/exo.full.iife.min.js",
-      "limit": "625 KB",
-      "gzip": true
-    },
-    {
-      "name": "@codexo/exojs-lighting",
-      "path": "packages/exojs-lighting/dist/esm/index.js",
-      "limit": "34 KB",
+      "name": "@codexo/exojs/lighting",
+      "path": "dist/esm/lighting/index.js",
+      "limit": "40 KB",
       "gzip": true,
       "ignore": [
-        "@codexo/exojs"
+        "../index.js",
+        "../../index.js"
       ]
     },
     {
-      "name": "@codexo/exojs-lighting (lightmap, no cascades)",
-      "path": "packages/exojs-lighting/dist/esm/index.js",
+      "name": "@codexo/exojs/lighting (lightmap, no cascades)",
+      "path": "dist/esm/lighting/index.js",
       "import": "{ LightmapLighting, PointLight, SpotLight, PolygonOccluder }",
-      "limit": "14 KB",
+      "limit": "18 KB",
       "gzip": true,
       "ignore": [
-        "@codexo/exojs"
+        "../index.js",
+        "../../index.js"
       ]
     },
     {
-      "name": "@codexo/exojs-lighting (forward, no occluder tracing)",
-      "path": "packages/exojs-lighting/dist/esm/index.js",
+      "name": "@codexo/exojs/lighting (forward, no occluder tracing)",
+      "path": "dist/esm/lighting/index.js",
       "import": "{ ForwardLighting, PointLight, SpotLight, LitMaterial, NormalMap }",
       "limit": "5 KB",
       "gzip": true,
       "ignore": [
-        "@codexo/exojs"
+        "../index.js",
+        "../../index.js"
       ]
     },
     {
@@ -269,6 +307,7 @@
     }
   ],
   "devDependencies": {
+    "@astrojs/compiler-rs": "0.5.0",
     "@codecov/rollup-plugin": "^2.0.1",
     "@codexo/eslint-plugin-exojs": "workspace:*",
     "@codexo/exojs-build": "workspace:*",
@@ -298,6 +337,9 @@
     "jiti": "^2.7.0",
     "jsdom": "^29.1.1",
     "lint-staged": "^17.5.1",
+    "oxfmt": "0.79.0",
+    "oxlint": "1.94.0",
+    "oxlint-tsgolint": "7.0.2007",
     "playwright": "^1.63.0",
     "prettier": "3.9.10",
     "rimraf": "^6.1.3",

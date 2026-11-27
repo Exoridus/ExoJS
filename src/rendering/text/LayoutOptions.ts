@@ -18,7 +18,7 @@ export interface LayoutOptions {
    * `overflow: 'ellipsis'` to mark the last kept line. When both a cap and a
    * `maxHeight` apply, the smaller one wins.
    *
-   * Must be a positive integer.
+   * Must be a positive safe integer. Invalid values throw `RangeError` in every build, including for empty text.
    */
   maxLines?: number;
   /**
@@ -56,8 +56,8 @@ export interface LayoutOptions {
    * a fixed gap each. Only reachable under `whiteSpace: 'pre'`; the collapsing
    * modes turn a tab into a single space before layout runs, as CSS does.
    *
-   * Must be a positive finite number. Ignored for browser-shaped lines, which
-   * the platform's text engine lays out whole.
+   * Must be a positive finite number. Invalid values throw `RangeError` in every build, including for empty text.
+   * Valid values have no effect on browser-shaped lines, which the platform's text engine lays out whole.
    */
   tabSize?: number;
   /**

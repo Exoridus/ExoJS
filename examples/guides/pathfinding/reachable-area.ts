@@ -1,4 +1,4 @@
-import { GridSpace, Pathfinder } from '@codexo/exojs-pathfinding';
+import { GridSpace, Pathfinder } from '@codexo/exojs/pathfinding';
 
 declare const unit: { tileX: number; tileY: number; movement: number };
 declare const highlight: (x: number, y: number, cost: number) => void;

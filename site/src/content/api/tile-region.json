@@ -4,7 +4,7 @@
   "symbol": "TileRegion",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 4,
   "counts": {
@@ -22,7 +22,7 @@
         "A half-open tile-coordinate rectangle covering `[x, x + width)` × `[y, y + height)`.",
         "Used to scope buildTileCollisionGeometry to part of a layer - a streamed chunk, the tiles around the player, a hand-picked room - instead of always rebuilding the whole map."
       ],
-      "importLine": "import { TileRegion } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileRegion } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

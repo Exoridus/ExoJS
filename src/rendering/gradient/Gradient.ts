@@ -57,7 +57,12 @@ export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
     this._stops = Gradient._normalizeStops(stops);
   }
 
-  public get stops(): readonly GradientStop[] {
+  /**
+   * The normalized stops, clamped and sorted by offset. The list is the
+   * gradient's own and is not copied: build a new gradient, or {@link copy}
+   * one, to change the stops.
+   */
+  public get stops(): ReadonlyArray<Readonly<GradientStop>> {
     return this._stops;
   }
 
@@ -101,8 +106,16 @@ export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
     return this._geometryEquals(other);
   }
 
-  public toTexture(width: number, height: number, options?: GradientToTextureOptions & { format?: TextureFormat.Rgba8 }): DataTexture<TextureFormat.Rgba8>;
-  public toTexture(width: number, height: number, options: GradientToTextureOptions & { format: TextureFormat.Rgba32F }): DataTexture<TextureFormat.Rgba32F>;
+  public toTexture(
+    width: number,
+    height: number,
+    options?: GradientToTextureOptions & { format?: TextureFormat.Rgba8 },
+  ): DataTexture<TextureFormat.Rgba8>;
+  public toTexture(
+    width: number,
+    height: number,
+    options: GradientToTextureOptions & { format: TextureFormat.Rgba32F },
+  ): DataTexture<TextureFormat.Rgba32F>;
   public toTexture(
     width: number,
     height: number,

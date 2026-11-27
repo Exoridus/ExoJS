@@ -166,6 +166,7 @@ describe('structural — Sprite', () => {
       const sprites = Array.from({ length: 1000 }, (_, i) => {
         const sprite = new Sprite(texture);
         sprite.setPosition(i % 100, Math.floor(i / 100));
+
         return sprite;
       });
 
@@ -175,7 +176,9 @@ describe('structural — Sprite', () => {
       expect(m.instances).toBe(1000);
       expect(m.visibleNodes).toBe(1000);
 
-      for (const sprite of sprites) sprite.destroy();
+      for (const sprite of sprites) {
+        sprite.destroy();
+      }
     });
   });
 
@@ -194,6 +197,7 @@ describe('structural — Sprite', () => {
       let frame = 0;
       const moving = measureSteadyFrame(harness, root, 2, () => {
         frame++;
+
         for (const sprite of sprites) {
           sprite.setPosition(sprite.position.x + (frame % 2 === 0 ? 1 : -1), sprite.position.y);
         }
@@ -221,10 +225,14 @@ describe('structural — Sprite', () => {
       const loose = Array.from({ length: 500 }, (_, i) => {
         const sprite = new Sprite(texture);
         sprite.setPosition((i * 7) % 640, (i * 13) % 480);
+
         return sprite;
       });
       const crossCall = measureCrossCallFrame(harness, loose, 2);
-      for (const sprite of loose) sprite.destroy();
+
+      for (const sprite of loose) {
+        sprite.destroy();
+      }
 
       const { root } = buildSpriteScene({ count: 500, textures: makeTextures(1) });
       const container = measureSteadyFrame(harness, root, 2);

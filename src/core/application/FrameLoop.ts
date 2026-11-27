@@ -89,6 +89,7 @@ export class FrameLoop {
     this._frameClock = new Clock(false, _platform);
     this._fixed = new FixedTimestep(fixedStepMs, FixedTimestep.deriveMaxSteps(maxDeltaMs, fixedStepMs));
     this._fixedSeconds = seconds(fixedStepMs / 1000);
+
     this._handler = (timestamp: number): void => {
       tick(timestamp);
 
@@ -96,7 +97,9 @@ export class FrameLoop {
       // reachable from outside the loop, so a manual call made while the loop
       // is live would otherwise fork a second frame chain and silently double
       // the frame rate.
-      if (this._active) this._request = this._platform.requestFrame(this._handler);
+      if (this._active) {
+        this._request = this._platform.requestFrame(this._handler);
+      }
     };
   }
 
@@ -251,7 +254,9 @@ export class FrameLoop {
 
   /** Close out a frame. Counted only while the loop is live, so a manual tick does not inflate the count. */
   public endFrame(): void {
-    if (this._active) this._frameCount++;
+    if (this._active) {
+      this._frameCount++;
+    }
   }
 
   /**
@@ -286,7 +291,9 @@ export class FrameLoop {
     for (let i = 1; i < displayFrameWindow; i++) {
       const candidate = this._rawDeltaWindow[i]!;
 
-      if (candidate < minimum) minimum = candidate;
+      if (candidate < minimum) {
+        minimum = candidate;
+      }
     }
 
     this._displayFrameSeconds = seconds(Math.min(Math.max(minimum / 1000, minDisplayFrameSeconds), maxDisplayFrameSeconds));

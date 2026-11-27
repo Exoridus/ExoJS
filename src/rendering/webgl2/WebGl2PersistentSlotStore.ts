@@ -33,6 +33,25 @@ const tintBytesPerSlot = TRANSFORM_TINT_BYTES_PER_ROW;
 const initialSlotCapacity = 1024;
 
 /**
+ * The renderer that owns a store's row layout and issues its draw. Assigned by
+ * the backend at acquisition; the backend routes the write and draw hooks back
+ * through it rather than re-resolving a renderer per call.
+ * @internal
+ */
+export interface PersistentSlotCapableRenderer {
+  readonly _supportsPersistentSlots?: boolean;
+  _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGl2Backend): WebGl2PersistentSlotStore | null;
+  _rekeyPersistentSlotStore(
+    store: WebGl2PersistentSlotStore,
+    source: RenderRootSource,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean;
+  _writePersistentSlotRows(store: WebGl2PersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void;
+  _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, offset: number, count: number, backend: WebGl2Backend): void;
+}
+
+/**
  * @internal
  *
  * One render root's persistent per-slot GPU state on WebGL2: the quad
@@ -65,20 +84,6 @@ const initialSlotCapacity = 1024;
  * generation exists for the cases where the contents genuinely stop being
  * trustworthy: a lost device, or an explicit release.
  */
-/**
- * The renderer that owns a store's row layout and issues its draw. Assigned by
- * the backend at acquisition; the backend routes the write and draw hooks back
- * through it rather than re-resolving a renderer per call.
- * @internal
- */
-export interface PersistentSlotCapableRenderer {
-  readonly _supportsPersistentSlots?: boolean;
-  _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGl2Backend): WebGl2PersistentSlotStore | null;
-  _rekeyPersistentSlotStore(store: WebGl2PersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean;
-  _writePersistentSlotRows(store: WebGl2PersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void;
-  _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, offset: number, count: number, backend: WebGl2Backend): void;
-}
-
 export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
   /** Set by the backend at acquisition; see {@link PersistentSlotCapableRenderer}. */
   public owner: PersistentSlotCapableRenderer | null = null;
@@ -146,6 +151,9 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
   private _maxTextureSize = WEBGL2_MIN_MAX_TEXTURE_SIZE;
   private _destroyed = false;
 
+  /** Invoked once when the store is destroyed; lets its owner stop tracking it. */
+  public onDestroyed: (() => void) | null = null;
+
   public get generation(): number {
     return this._generation;
   }
@@ -170,7 +178,8 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     return this._orderBuffer;
   }
 
-  /** GPU bytes the three stores plus the order buffer hold, for the memory report. */
+  /** CPU backing bytes of the three stores plus the order buffer's capacity. The order buffer's GPU store
+   * holds only the largest uploaded range, so this is an upper bound rather than exact GPU bytes. */
   public get byteLength(): number {
     return this._attributes.byteLength + this._transforms.byteLength + this._tints.byteLength + this._order.byteLength;
   }
@@ -386,10 +395,11 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     if (this._orderBuffer === null) {
       // Only the constructor still needs a narrowed view - it sizes the initial
       // store from what it is handed and takes no element count.
-      this._orderBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._order.subarray(0, uploadCount), BufferUsage.DynamicDraw).connect(
-        createRuntime(gl),
-        this._accountant ?? undefined,
-      );
+      this._orderBuffer = new WebGl2RenderBuffer(
+        BufferTypes.ArrayBuffer,
+        this._order.subarray(0, uploadCount),
+        BufferUsage.DynamicDraw,
+      ).connect(createRuntime(gl), this._accountant ?? undefined);
     } else {
       this._orderBuffer.upload(this._order, 0, uploadCount);
     }
@@ -438,6 +448,8 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     this.textureIndexOfHandle = new Uint8Array(0);
     this.spareTextureIndexOfHandle = new Uint8Array(0);
     this._order = new Uint32Array(0);
+    this.onDestroyed?.();
+    this.onDestroyed = null;
   }
 
   private _markDirty(slot: number): void {

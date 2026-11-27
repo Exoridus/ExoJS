@@ -1,4 +1,14 @@
-import { CallbackRenderPass, createFilterShader, type PassContext, RenderTexture, ScaleModes, ShaderFilter, TextureFormat } from '@codexo/exojs';
+import {
+  CallbackRenderPass,
+  createFilterShader,
+  type PassContext,
+  type ReadonlyRectangle,
+  type Rectangle,
+  RenderTexture,
+  ScaleModes,
+  ShaderFilter,
+  TextureFormat,
+} from '@codexo/exojs';
 
 import maskBlocksFragment from './shaders/mask-blocks.frag';
 import maskBlocksWgsl from './shaders/mask-blocks.wgsl';
@@ -6,15 +16,59 @@ import maskSuperblocksFragment from './shaders/mask-superblocks.frag';
 import maskSuperblocksWgsl from './shaders/mask-superblocks.wgsl';
 
 /**
- * Mask texels one block covers, on each axis. The transport chunk walks blocks
- * of this size and both halves of it repeat the number, so a change here is a
- * change in three places.
+ * Mask texels one block covers, on each axis. The transport walk and the two
+ * mask reductions repeat the number in both GLSL and WGSL, so a change here is
+ * a change in five places.
  * @internal
  */
 export const MASK_COARSE = 8;
 
 /** Existing mask blocks one superblock covers, on each axis. @internal */
 export const MASK_SUPER = 4;
+
+/**
+ * Share of superblocks holding a rasterised boundary from which the walk is
+ * faster without the superblock level than with it. Below it the level skips
+ * enough empty space to pay for itself; above it nearly every superblock is
+ * entered anyway and the level only adds work.
+ * @internal
+ */
+export const SUPERBLOCK_DENSE_OCCUPANCY = 0.085;
+
+/**
+ * Estimated share of a region's superblocks that hold the boundary of one of
+ * `shapes`. A shape larger than two superblocks across counts only its ring: a
+ * stretch meets such a shape at its boundary, so its interior never costs the
+ * walk a step. Overlap is counted twice, which overstates a crowded region.
+ * @internal
+ */
+export const superblockOccupancy = (
+  shapes: ReadonlyArray<{ getBounds(target: Rectangle): Rectangle }>,
+  scratch: Rectangle,
+  region: ReadonlyRectangle,
+  size: number,
+): number => {
+  const columns = Math.ceil(region.width / size);
+  const rows = Math.ceil(region.height / size);
+  let occupied = 0;
+
+  for (const drawable of shapes) {
+    const shape = drawable.getBounds(scratch);
+    const left = Math.max(shape.left, region.left);
+    const right = Math.min(shape.right, region.right);
+    const top = Math.max(shape.top, region.top);
+    const bottom = Math.min(shape.bottom, region.bottom);
+
+    if (right > left && bottom > top) {
+      const across = Math.ceil((right - region.left) / size) - Math.floor((left - region.left) / size);
+      const down = Math.ceil((bottom - region.top) / size) - Math.floor((top - region.top) / size);
+
+      occupied += across > 2 && down > 2 ? 2 * (across + down) - 4 : across * down;
+    }
+  }
+
+  return Math.min(1, occupied / Math.max(1, columns * rows));
+};
 
 /**
  * Reduces the occluder mask to one texel per block, marking a block wherever a

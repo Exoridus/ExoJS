@@ -3,6 +3,7 @@ import { Color } from '#core/Color';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
+import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
@@ -370,6 +371,40 @@ describe('WebGL2 stencil clipping', () => {
       root.destroy();
       (clipped.clipShape as Geometry).destroy();
       texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test.each(['texture', 'graphics'])('keeps asymmetric content and %s alpha masks upright', async maskKind => {
+    const backend = await createBackend();
+    const content = createSolidTexture('#ff0000');
+    const maskTexture = createSolidTexture('#ffffff');
+    const root = new Container();
+    const sprite = new Sprite(content);
+    const maskGraphics = new Graphics();
+    const contentContext = (content.source as HTMLCanvasElement).getContext('2d')!;
+    const maskContext = (maskTexture.source as HTMLCanvasElement).getContext('2d')!;
+
+    contentContext.fillStyle = '#0000ff';
+    contentContext.fillRect(0, 32, 64, 32);
+    maskContext.clearRect(0, 48, 64, 16);
+    maskGraphics.fillColor = Color.white;
+    maskGraphics.drawRectangle(0, 0, 64, 48);
+    sprite.mask = maskKind === 'texture' ? maskTexture : maskGraphics;
+    root.addChild(sprite);
+
+    try {
+      render(backend, root);
+      const readPixel = (x: number, y: number) => readWebGl2Pixel(backend, x, y);
+
+      expectPixelNear(readPixel(16, 12), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(16, 40), [0, 0, 255, 255]);
+      expectPixelNear(readPixel(16, 56), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      maskGraphics.destroy();
+      content.destroy();
+      maskTexture.destroy();
       backend.destroy();
     }
   });

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { NULL_SHA, pushBase } from '../../scripts/ci/push-range.ts';
+import { nearestMergeBase, NULL_SHA, pushBase } from '../../scripts/ci/push-range.ts';
 import { pushScope } from '../../scripts/ci/push-scope.ts';
 
 // The logic under test is the SAME module .husky/pre-push branches on, so these
@@ -79,7 +79,60 @@ describe('pre-push ref handling', () => {
 
   it('passes the selected previous remote SHA to both static gates and test lanes', () => {
     expect(hook).toContain('node scripts/ci/push-range.ts "$push_head_sha" "${push_base_sha:-$null_sha}"');
-    expect(hook).toContain('npm run gates -- affected "$lane_base" "$push_head_sha"');
-    expect(hook).toContain('npm run lanes -- --run --tests-only --base "$lane_base"');
+    expect(hook).toContain('npm run gates -- affected-fast "$lane_base" "$push_head_sha"');
+    expect(hook).toContain('npm run gates -- affected-rest "$lane_base" "$push_head_sha"');
+    expect(hook).toContain('npm run lanes -- --run --tests-only --pre-push --base "$lane_base"');
+  });
+
+  it('runs the cheap gates before the dist rebuild, and the rest after it', () => {
+    const fast = hook.indexOf('affected-fast');
+    const rebuild = hook.indexOf('check-dist-fresh.ts --rebuild');
+    const rest = hook.indexOf('affected-rest');
+
+    expect(fast).toBeGreaterThan(-1);
+    expect(fast).toBeLessThan(rebuild);
+    expect(rebuild).toBeLessThan(rest);
+  });
+});
+
+describe('nearestMergeBase', () => {
+  // `next` is ahead of the default branch, so its merge base is the closer one.
+  const fakeGit =
+    (bases: Record<string, string>, distances: Record<string, number>) =>
+    (...args: string[]): string => {
+      if (args[0] === 'merge-base') {
+        const base = bases[args[2]!];
+
+        if (base === undefined) {
+          throw new Error('unknown revision');
+        }
+
+        return `${base}\n`;
+      }
+
+      return `${distances[args[2]!.split('..')[0]!]}\n`;
+    };
+
+  it('prefers the integration branch the work actually descends from', () => {
+    const git = fakeGit({ 'origin/next': 'nextbase', 'origin/HEAD': 'mainbase' }, { nextbase: 3, mainbase: 320 });
+
+    expect(nearestMergeBase('head', ['origin/next', 'origin/HEAD'], git)).toBe('nextbase');
+  });
+
+  it('still uses the default branch when it is the closer base', () => {
+    const git = fakeGit({ 'origin/next': 'nextbase', 'origin/HEAD': 'mainbase' }, { nextbase: 40, mainbase: 2 });
+
+    expect(nearestMergeBase('head', ['origin/next', 'origin/HEAD'], git)).toBe('mainbase');
+  });
+
+  it('skips a ref that does not exist', () => {
+    const git = fakeGit({ 'origin/HEAD': 'mainbase' }, { mainbase: 5 });
+
+    expect(nearestMergeBase('head', ['origin/next', 'origin/HEAD'], git)).toBe('mainbase');
+  });
+
+  it('throws when no ref gives a base, so the caller validates everything', () => {
+    expect(() => nearestMergeBase('head', ['origin/next'], fakeGit({}, {}))).toThrow(/No merge base/);
+    expect(pushBase('head', NULL_SHA, () => nearestMergeBase('head', ['origin/next'], fakeGit({}, {})))).toBe('');
   });
 });

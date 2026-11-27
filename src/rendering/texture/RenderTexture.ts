@@ -72,7 +72,9 @@ export class RenderTexture extends RenderTarget {
     // texture requires OES_texture_float_linear, which is not guaranteed. Rgba8Srgb
     // is exactly as filterable as Rgba8, so it keeps the linear default. An
     // explicit `scaleMode` in `options` still overrides this.
-    const defaults: TextureOptions = isFloatFormat ? { ...RenderTexture.defaultOptions, scaleMode: ScaleModes.Nearest } : RenderTexture.defaultOptions;
+    const defaults: TextureOptions = isFloatFormat
+      ? { ...RenderTexture.defaultOptions, scaleMode: ScaleModes.Nearest }
+      : RenderTexture.defaultOptions;
 
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
       ...defaults,
@@ -207,6 +209,7 @@ export class RenderTexture extends RenderTarget {
 
   public setSize(width: number, height: number): this {
     assert(width > 0 && height > 0, `RenderTexture.setSize() dimensions must be positive (got ${width}×${height})`);
+
     if (!this._size.equals({ width, height })) {
       this._size.set(width, height);
       // Both halves of the default view. `resize` only restates its EXTENT; the
@@ -226,12 +229,53 @@ export class RenderTexture extends RenderTarget {
   }
 
   public override destroy(): void {
-    super.destroy();
-
-    this._source = null;
+    try {
+      super.destroy();
+    } finally {
+      if (this.destroyed) {
+        this._source = null;
+      }
+    }
   }
 
   private _touchTexture(): void {
     this._textureVersion++;
+    this._opaqueContent = false;
   }
 }
+
+/**
+ * Record what a clear of `target` just did to its coverage (see
+ * `RenderTarget._opaqueContent`). Only a single-attachment texture whose
+ * storage clamps to `[0, 1]` qualifies: the fixed-function Multiply shortcut
+ * that coverage unlocks multiplies unclamped values, while the backdrop
+ * compositor clamps them first, so over a float target the two disagree even
+ * at full coverage. The root target is left alone - its content is the
+ * presented canvas, which the browser may reset between frames, and its own
+ * `opaqueDestination` already answers for an alpha-less canvas.
+ * @internal
+ */
+export const markClearCoverage = (target: RenderTarget, opaque: boolean, cleared: RenderTarget[]): void => {
+  if (!(target instanceof RenderTexture) || (target.format !== TextureFormat.Rgba8 && target.format !== TextureFormat.Rgba8Srgb)) {
+    return;
+  }
+
+  if (opaque && !target._opaqueContent) {
+    cleared.push(target);
+  }
+
+  target._opaqueContent = opaque;
+};
+
+/**
+ * Drop every frame-scoped coverage fact {@link markClearCoverage} recorded:
+ * content kept from an earlier frame is not provably still the cleared one.
+ * @internal
+ */
+export const releaseOpaqueContent = (cleared: RenderTarget[]): void => {
+  for (const target of cleared) {
+    target._opaqueContent = false;
+  }
+
+  cleared.length = 0;
+};

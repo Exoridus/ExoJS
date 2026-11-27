@@ -14,179 +14,192 @@
  * different browser, sharing no comparison with it.
  */
 
-import BenchProfileReport from '../BenchProfileReport.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
-import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 import { benchProfiles, coversDomain, formatDay, machineName, olderThanReference, platformName } from '../../lib/bench-profiles';
+import BenchProfileReport from '../BenchProfileReport.astro';
+import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 
 interface Props {
-    locale: 'en' | 'de';
+  locale: 'en' | 'de';
 }
 
 const { locale } = Astro.props;
 const base = import.meta.env.BASE_URL;
 ---
 
-<DocsLayout title="ExoJS benchmark measurements" description="Every measured benchmark row, per machine, with spread, p95 and omissions." variant="wide">
-    <div class="prose bench-prose" data-pagefind-body={locale === 'en' ? true : undefined}>
-        {locale === 'de' && <EnglishFallbackNotice />}
+<DocsLayout
+  title="ExoJS benchmark measurements"
+  description="Every measured benchmark row, per machine, with spread, p95 and omissions."
+  variant="wide"
+>
+  <div class="prose bench-prose" data-pagefind-body={locale === 'en' ? true : undefined}>
+    {locale === 'de' && <EnglishFallbackNotice />}
 
-        <header class="bench-head">
-            <h1>All measurements</h1>
-            <p class="lede">Every measured load, run spread, pooled per-run p95, and documented exclusion. Read each profile with its own machine, browser, and engine revision; differences across profiles do not isolate one cause.</p>
-            <p class="back">
-                <a href={`${base}${locale}/benchmarks/`}>Back to the benchmark overview</a>
-            </p>
-        </header>
+    <header class="bench-head">
+      <h1>All measurements</h1>
+      <p class="lede">
+        Every measured load, run spread, pooled per-run p95, and documented exclusion. Read each profile with its own machine, browser, and
+        engine revision; differences across profiles do not isolate one cause.
+      </p>
+      <p class="back">
+        <a href={`${base}${locale}/benchmarks/`}>Back to the benchmark overview</a>
+      </p>
+    </header>
 
-        {benchProfiles.length === 0 ? (
-            <p class="empty">No measurements are published yet.</p>
-        ) : (
-            <>
-                {benchProfiles.length > 1 && (
-                    <div class="machines" role="group" aria-label="Machine">
-                        {benchProfiles.map((document, index) => (
-                            <button type="button" class="machine" data-machine={document.profile.slug} aria-pressed={index === 0 ? 'true' : 'false'}>
-                                {machineName(document.profile)}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {benchProfiles.map((document, index) => {
-                    const { profile } = document;
-                    const newer = olderThanReference(document);
-
-                    return (
-                        <div class="machine-panel" data-machine={profile.slug} hidden={index !== 0}>
-                            <p class="stamp">
-                                <b>{machineName(profile)}</b>
-                                <span>{platformName(profile)}</span>
-                                <span>ExoJS {profile.engineVersion}</span>
-                                <span>measured {formatDay(profile.measuredAt)}</span>
-                                <span>median of {profile.runs} pooled runs</span>
-                            </p>
-
-                            {newer !== null && (
-                                <p class="stale">
-                                    Measured with ExoJS {profile.engineVersion}; the newest published profile is {newer}. Read it against the others with
-                                    that in mind.
-                                </p>
-                            )}
-
-                            {coversDomain(document, 'rendering') && <BenchProfileReport document={document} domain="rendering" headingLevel={2} showTitle={false} />}
-                            {coversDomain(document, 'physics') && <BenchProfileReport document={document} domain="physics" headingLevel={2} showTitle={false} />}
-                        </div>
-                    );
-                })}
-            </>
+    {benchProfiles.length === 0 ? (
+      <p class="empty">No measurements are published yet.</p>
+    ) : (
+      <>
+        {benchProfiles.length > 1 && (
+          <div class="machines" role="group" aria-label="Machine">
+            {benchProfiles.map((document, index) => (
+              <button type="button" class="machine" data-machine={document.profile.slug} aria-pressed={index === 0 ? 'true' : 'false'}>
+                {machineName(document.profile)}
+              </button>
+            ))}
+          </div>
         )}
-    </div>
+
+        {benchProfiles.map((document, index) => {
+          const { profile } = document;
+          const newer = olderThanReference(document);
+
+          return (
+            <div class="machine-panel" data-machine={profile.slug} hidden={index !== 0}>
+              <p class="stamp">
+                <b>{machineName(profile)}</b>
+                <span>{platformName(profile)}</span>
+                <span>ExoJS {profile.engineVersion}</span>
+                <span>measured {formatDay(profile.measuredAt)}</span>
+                <span>median of {profile.runs} pooled runs</span>
+              </p>
+
+              {newer !== null && (
+                <p class="stale">
+                  Measured with ExoJS {profile.engineVersion}; the newest published profile is {newer}. Read it against the others with that
+                  in mind.
+                </p>
+              )}
+
+              {coversDomain(document, 'rendering') && (
+                <BenchProfileReport document={document} domain="rendering" headingLevel={2} showTitle={false} />
+              )}
+              {coversDomain(document, 'physics') && (
+                <BenchProfileReport document={document} domain="physics" headingLevel={2} showTitle={false} />
+              )}
+            </div>
+          );
+        })}
+      </>
+    )}
+  </div>
 </DocsLayout>
 
 <script>
-    // Which machine is shown belongs to the reader and is never derived from
-    // which one won more rows. Without JavaScript the first panel is the one
-    // that is not `hidden`, so the page still carries one machine's rows whole.
-    const buttons = document.querySelectorAll<HTMLButtonElement>('.machines .machine');
-    const panels = document.querySelectorAll<HTMLElement>('.machine-panel');
+  // Which machine is shown belongs to the reader and is never derived from
+  // which one won more rows. Without JavaScript the first panel is the one
+  // that is not `hidden`, so the page still carries one machine's rows whole.
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.machines .machine');
+  const panels = document.querySelectorAll<HTMLElement>('.machine-panel');
 
-    for (const button of buttons) {
-        button.addEventListener('click', () => {
-            for (const other of buttons) {
-                other.setAttribute('aria-pressed', String(other === button));
-            }
+  for (const button of buttons) {
+    button.addEventListener('click', () => {
+      for (const other of buttons) {
+        other.setAttribute('aria-pressed', String(other === button));
+      }
 
-            for (const panel of panels) {
-                panel.hidden = panel.dataset['machine'] !== button.dataset['machine'];
-            }
-        });
-    }
+      for (const panel of panels) {
+        panel.hidden = panel.dataset['machine'] !== button.dataset['machine'];
+      }
+    });
+  }
 </script>
 
 <style>
-    .bench-prose {
-        max-width: none;
-    }
+  .bench-prose {
+    max-width: none;
+  }
 
-    .bench-prose :where(p, li) {
-        max-width: none;
-    }
+  .bench-prose :where(p, li) {
+    max-width: none;
+  }
 
-    .bench-head {
-        margin-bottom: var(--s-5);
-    }
+  .bench-head {
+    margin-bottom: var(--s-5);
+  }
 
-    .bench-head h1 {
-        margin: 0 0 var(--s-2);
-    }
+  .bench-head h1 {
+    margin: 0 0 var(--s-2);
+  }
 
-    .lede {
-        margin: 0;
-        color: var(--fg-muted);
-        line-height: 1.6;
-    }
+  .lede {
+    margin: 0;
+    color: var(--fg-muted);
+    line-height: 1.6;
+  }
 
-    .back {
-        margin: var(--s-3) 0 0 !important;
-        font-size: 0.88rem;
-    }
+  .back {
+    /* stylelint-disable-next-line declaration-no-important -- outranks the prose margins the docs layout applies to every paragraph */
+    margin: var(--s-3) 0 0 !important;
+    font-size: 0.88rem;
+  }
 
-    .machines {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.3rem;
-        margin-bottom: var(--s-4);
-    }
+  .machines {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: var(--s-4);
+  }
 
-    .machines .machine {
-        font: inherit;
-        font-size: 0.85rem;
-        padding: 0.3rem 0.8rem;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: transparent;
-        color: var(--fg-muted);
-        cursor: pointer;
-    }
+  .machines .machine {
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    border: 0;
+    background: transparent;
+    color: var(--fg-muted);
+    cursor: pointer;
+  }
 
-    .machines .machine[aria-pressed='true'] {
-        border-color: var(--accent);
-        background: color-mix(in srgb, var(--accent) 14%, transparent);
-        color: var(--fg);
-        font-weight: 650;
-    }
+  .machines .machine[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--fg);
+    font-weight: 650;
+  }
 
-    .stamp {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.15rem var(--s-4);
-        margin: 0 0 var(--s-4) !important;
-        font-family: var(--f-mono);
-        font-size: 0.74rem;
-        color: var(--fg-faint);
-    }
+  .stamp {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem var(--s-4);
+    /* stylelint-disable-next-line declaration-no-important -- outranks the prose margins the docs layout applies to every paragraph */
+    margin: 0 0 var(--s-4) !important;
+    font-family: var(--f-mono);
+    font-size: 0.74rem;
+    color: var(--fg-faint);
+  }
 
-    .stamp b {
-        font-weight: 600;
-        color: var(--fg-muted);
-    }
+  .stamp b {
+    font-weight: 600;
+    color: var(--fg-muted);
+  }
 
-    .stale {
-        margin: 0 0 var(--s-4);
-        padding: var(--s-2) var(--s-3);
-        border-left: 3px solid var(--amber);
-        color: var(--fg-muted);
-        font-size: 0.85rem;
-    }
+  .stale {
+    margin: 0 0 var(--s-4);
+    padding: var(--s-2) var(--s-3);
+    border-left: 3px solid var(--amber);
+    color: var(--fg-muted);
+    font-size: 0.85rem;
+  }
 
-    .empty {
-        margin: 0;
-        padding: var(--s-4);
-        border: 1px solid var(--line-soft);
-        border-left: 3px solid var(--accent);
-        border-radius: var(--r-3);
-        background: var(--bg-elevated);
-        color: var(--fg-muted);
-    }
+  .empty {
+    margin: 0;
+    padding: var(--s-4);
+    border: 1px solid var(--line-soft);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--r-3);
+    background: var(--bg-elevated);
+    color: var(--fg-muted);
+  }
 </style>

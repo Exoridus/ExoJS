@@ -4,7 +4,7 @@
   "symbol": "RadianceLightingOptions",
   "kind": "interface",
   "subsystem": "lighting",
-  "importPath": "@codexo/exojs-lighting",
+  "importPath": "@codexo/exojs/lighting",
   "tier": "stable",
   "memberCount": 10,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for RadianceLighting."
       ],
-      "importLine": "import { RadianceLightingOptions } from '@codexo/exojs-lighting'",
+      "importLine": "import { RadianceLightingOptions } from '@codexo/exojs/lighting'",
       "sourceLink": null
     },
     {
@@ -176,7 +176,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Texels per logical unit of the light target. Light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill. Defaults to 0.5 under LightmapLighting and to 1 under RadianceLighting, which SAMPLES the field instead of painting into it: the occluder mask a ray reads is rasterised at this density, so a coarse field quantises the scene rather than the light and a source moving by less than a texel makes the whole picture jump."
+          "description": "Texels per logical unit of the light target. Light is low-frequency, so half resolution is hard to tell apart and costs a quarter of the fill. Defaults to 0.5 under LightmapLighting and to 1 under RadianceLighting, which SAMPLES the field instead of painting into it: the occluder mask a ray reads is rasterised at this density, so a coarse field quantises the scene rather than the light and a source moving by less than a texel makes the whole picture jump. Must be finite and above 0; anything else throws at construction."
         },
         {
           "name": "post",
@@ -288,7 +288,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Angular bins in each light's shadow map. A bin is the finest shadow edge the renderer can resolve, so a large light on a high-resolution canvas wants more of them; the cost is linear in the light count. Defaults to 256. It trades against how wide a penumbra can get. The shadow filter samples every bin under its kernel and spends at most 21 fetches doing it, so the widest kernel is ten bins either side - three percent of a turn at the default, and proportionally less as the resolution rises. Raising this sharpens the hard edge rather than widening the softest one."
+          "description": "Angular bins in each light's shadow map. Silhouettes, faces and corners keep their exact place within a bin, so edges sit where the geometry puts them, move smoothly with it, and a hard edge is drawn to the pixel at any resolution. The cost of building and uploading the rows is linear in the bins and the light count. Defaults to 256, clamped to 8..4096. A non-finite value throws. It bounds how wide a penumbra can get. The shadow filter reads every bin under its widest kernel and caps that kernel at ten bins either side - three percent of a turn at the default, and proportionally less as the resolution rises. Each bin is 32 bytes of row to build and upload."
         }
       ],
       "paragraphs": [],

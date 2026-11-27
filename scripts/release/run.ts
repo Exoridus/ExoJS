@@ -8,6 +8,7 @@
  *   tsx scripts/release/run.ts publish   [--execute] [--no-check-existing]
  *   tsx scripts/release/run.ts bootstrap <package> [--execute] [--skip-build]
  *   tsx scripts/release/run.ts publish-independent <package> [--execute] [--skip-build]
+ *   tsx scripts/release/run.ts registry-plan [--version X.Y.Z]
  *
  * `prepare` builds (optionally), freezes the exact source revision (failing on
  * a dirty tree or unknown revision), packs one tarball per lockstep package WITHOUT
@@ -22,21 +23,30 @@
  * `publish-independent` publishes a further version of a package that is off
  * the engine's lockstep line, which no coordinated release ever touches. Both
  * stand outside the build-once pipeline and touch one package each.
+ *
+ * `registry-plan` prints and records (`.release/registry-plan.{json,txt}`) the
+ * ordered registry actions of the release of `--version` (default: the current
+ * Core version), including which legacy shims it publishes and deprecates and
+ * why the others are not republished. It is a dry run only: it reads the
+ * working tree and release tags and has no execute mode.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { resolveRevision } from '@codexo/exojs-config/build-defines';
+
 import { checkAllTarballTypes } from './attw.ts';
 import { bootstrapPublish, bootstrapTargets } from './bootstrap-publish.ts';
 import { createExecRunner } from './command-runner.ts';
 import { verifyExternalConsumers } from './external-consumers.ts';
-import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import { assembleFullReleaseTree, compressTree, treeBytes } from './full-zip.ts';
-import { type ReleaseManifest, serializeManifest, renderChecksums } from './manifest.ts';
+import { shimReleaseStatus } from './legacy-shims.ts';
+import { LEGACY_SHIMS, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+import { type ReleaseManifest, renderChecksums, serializeManifest } from './manifest.ts';
 import { prepareRelease } from './prepare.ts';
 import { defaultPublishOptions, publishRelease } from './publish.ts';
+import { buildRegistryPlan, RegistryPlanError, renderRegistryPlan, writeRegistryPlan } from './registry-plan.ts';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const releaseDir = resolve(repoRoot, '.release');
@@ -51,6 +61,7 @@ const has = (flag: string): boolean => argv.includes(flag);
 const log = (message: string): void => {
   process.stdout.write(`${message}\n`);
 };
+
 // A `never` return only ends control flow for the caller when the callee is a
 // function declaration or a constant with an explicit type annotation.
 type Abort = (message: string) => never;
@@ -64,6 +75,7 @@ const ensureBuilt = (): void => {
   // The scaffolder (`cli` profile) emits a flat `dist/`; only the libraries carry `dist/esm`.
   const dists = LOCKSTEP_PACKAGES.map(p => resolve(repoRoot, p.dir, 'profile' in p && p.profile === 'cli' ? 'dist' : 'dist/esm'));
   const missing = dists.filter(d => !existsSync(d));
+
   if (missing.length > 0) {
     die(`Not built — missing ${missing.join(', ')}. Run "pnpm build" + extension builds, or pass --build.`);
   }
@@ -71,6 +83,7 @@ const ensureBuilt = (): void => {
 
 const build = (): void => {
   log('\n→ Building core + extensions (build-once)…');
+
   // Every lockstep package except Core lives in its own directory and is built
   // with `pnpm --filter <name> build`; pnpm resolves workspace-dependency order
   // itself (e.g. tilemap before tiled/ldtk). Core is the repository root and
@@ -83,7 +96,10 @@ const build = (): void => {
   for (const pkg of LOCKSTEP_PACKAGES) {
     const args = pkg.dir === '.' ? ['build'] : ['--filter', pkg.name, 'build'];
     const r = runner.run({ command: 'pnpm', args, cwd: repoRoot });
-    if (r.code !== 0) die(`build failed for ${pkg.name}:\n${r.stderr || r.stdout}`);
+
+    if (r.code !== 0) {
+      die(`build failed for ${pkg.name}:\n${r.stderr || r.stdout}`);
+    }
   }
 };
 
@@ -103,6 +119,7 @@ const freezeRevision = (): string => {
   // calls clean. `diff` hashes the content and answers the question actually
   // being asked here.
   const dirtyResult = runner.run({ command: 'git', args: ['diff', '--quiet', 'HEAD', '--'] });
+
   if (dirtyResult.code !== 0) {
     // Name the paths: "the tree is dirty" is unactionable in a CI log that has
     // just run a build over generated files, and the reason is usually one
@@ -121,25 +138,32 @@ const freezeRevision = (): string => {
   }
 
   const explicit = process.env['EXOJS_REVISION'];
+
   if (explicit) {
     log(`  using explicit EXOJS_REVISION=${explicit}`);
+
     return explicit;
   }
 
   const revision = resolveRevision({ cwd: repoRoot });
+
   if (revision === 'unknown') {
     die('Cannot determine source revision. Set EXOJS_REVISION or ensure Git metadata is available.');
   }
 
   log(`  revision: ${revision} (short: ${revision.slice(0, 7)})`);
+
   return revision;
 };
 
 const doPrepare = (): void => {
   mkdirSync(releaseDir, { recursive: true });
 
-  if (has('--build')) build();
-  else ensureBuilt();
+  if (has('--build')) {
+    build();
+  } else {
+    ensureBuilt();
+  }
 
   const revision = freezeRevision();
 
@@ -152,8 +176,14 @@ const doPrepare = (): void => {
   if (!has('--skip-attw')) {
     log('\n→ attw (are-the-types-wrong) on each tarball…');
     const attw = checkAllTarballTypes(runner, prepared.tarballs);
-    for (const r of attw.results) log(`  ${r.ok ? '✓' : '✗'} ${r.tarball.split(/[\\/]/).pop()}${r.detail ? ` — ${r.detail}` : ''}`);
-    if (!attw.ok) die('attw bundler check failed.');
+
+    for (const r of attw.results) {
+      log(`  ${r.ok ? '✓' : '✗'} ${r.tarball.split(/[\\/]/).pop()}${r.detail ? ` — ${r.detail}` : ''}`);
+    }
+
+    if (!attw.ok) {
+      die('attw bundler check failed.');
+    }
   }
 
   if (!has('--skip-consumers')) {
@@ -162,16 +192,31 @@ const doPrepare = (): void => {
     // `react`/`react-dom` peers cannot be resolved in an offline throwaway
     // project. attw still type-checks every packed tarball (react included).
     // Literal union from `as const` again - the manifest supplies plain strings.
-    const smokeNames: ReadonlySet<string> = new Set(LOCKSTEP_PACKAGES.filter(p => p.inOfflineSmoke).map(p => p.name));
+    // The legacy shims a release packs are smoke-tested with it: they peer on Core
+    // alone, so they install offline next to the Core tarball.
+    const smokeNames: ReadonlySet<string> = new Set([
+      ...LOCKSTEP_PACKAGES.filter(p => p.inOfflineSmoke).map(p => p.name),
+      ...LEGACY_SHIMS.map(p => p.name),
+    ]);
     const smokeTarballs = manifest.packages.filter(p => smokeNames.has(p.name)).map(p => resolve(stagingDir, p.file));
     const consumers = verifyExternalConsumers(smokeTarballs);
-    for (const c of consumers.checks) log(`  ${c.ok ? '✓' : '✗'} ${c.name}${c.detail ? ` — ${c.detail}` : ''}`);
-    if (!consumers.ok) die('external consumer smoke failed.');
+
+    for (const c of consumers.checks) {
+      log(`  ${c.ok ? '✓' : '✗'} ${c.name}${c.detail ? ` — ${c.detail}` : ''}`);
+    }
+
+    if (!consumers.ok) {
+      die('external consumer smoke failed.');
+    }
   }
 
   if (!has('--skip-zip')) {
     log('\n→ Assembling Full GitHub Release ZIP…');
-    if (!existsSync(siteDistDir)) die(`Missing ${siteDistDir}. Run "pnpm site:build" first.`);
+
+    if (!existsSync(siteDistDir)) {
+      die(`Missing ${siteDistDir}. Run "pnpm site:build" first.`);
+    }
+
     const tree = assembleFullReleaseTree({
       version: manifest.version,
       rootDir: repoRoot,
@@ -180,10 +225,15 @@ const doPrepare = (): void => {
       outDir: releaseDir,
       manifest,
     });
+
     if (tree.forbidden.length > 0) {
-      for (const hit of tree.forbidden) log(`  ✗ forbidden: ${hit.file} (${hit.pattern})`);
+      for (const hit of tree.forbidden) {
+        log(`  ✗ forbidden: ${hit.file} (${hit.pattern})`);
+      }
+
       die(`Full ZIP contains forbidden content (${tree.forbidden.length} hit(s)).`);
     }
+
     log(`  tree: ${tree.treeName} (${(treeBytes(tree.treeDir) / 1_048_576).toFixed(1)} MiB)`);
     const zip = compressTree(runner, { treeDir: tree.treeDir, treeName: tree.treeName, outDir: releaseDir });
     manifest = { ...manifest, fullZip: { file: `${tree.treeName}.zip`, sha256: zip.sha256, bytes: zip.bytes } };
@@ -196,9 +246,16 @@ const doPrepare = (): void => {
 };
 
 const doFullZip = (): void => {
-  if (!existsSync(manifestPath)) die('No manifest — run "release:prepare" first.');
+  if (!existsSync(manifestPath)) {
+    die('No manifest — run "release:prepare" first.');
+  }
+
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as ReleaseManifest;
-  if (!existsSync(siteDistDir)) die(`Missing ${siteDistDir}. Run "pnpm site:build" first.`);
+
+  if (!existsSync(siteDistDir)) {
+    die(`Missing ${siteDistDir}. Run "pnpm site:build" first.`);
+  }
+
   const tree = assembleFullReleaseTree({
     version: manifest.version,
     rootDir: repoRoot,
@@ -207,17 +264,25 @@ const doFullZip = (): void => {
     outDir: releaseDir,
     manifest,
   });
+
   if (tree.forbidden.length > 0) {
-    for (const hit of tree.forbidden) log(`  ✗ forbidden: ${hit.file} (${hit.pattern})`);
+    for (const hit of tree.forbidden) {
+      log(`  ✗ forbidden: ${hit.file} (${hit.pattern})`);
+    }
+
     die(`Full ZIP contains forbidden content (${tree.forbidden.length} hit(s)).`);
   }
+
   const zip = compressTree(runner, { treeDir: tree.treeDir, treeName: tree.treeName, outDir: releaseDir });
   writeManifest({ ...manifest, fullZip: { file: `${tree.treeName}.zip`, sha256: zip.sha256, bytes: zip.bytes } });
   log(`✓ ${tree.treeName}.zip (${(zip.bytes / 1_048_576).toFixed(1)} MiB)`);
 };
 
 const doPublish = (): void => {
-  if (!existsSync(manifestPath)) die('No manifest — run "release:prepare" first.');
+  if (!existsSync(manifestPath)) {
+    die('No manifest — run "release:prepare" first.');
+  }
+
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as ReleaseManifest;
 
   const options = {
@@ -231,11 +296,18 @@ const doPublish = (): void => {
   log(`  revision: ${manifest.shortRevision}`);
   const report = publishRelease(manifest, options, runner, file => resolve(stagingDir, file));
 
-  if (report.abortReason) die(`publish aborted: ${report.abortReason}`);
+  if (report.abortReason) {
+    die(`publish aborted: ${report.abortReason}`);
+  }
+
   for (const p of report.packages) {
     log(`  ${p.name}@${p.version}: publish=${p.publish}${p.detail ? ` — ${p.detail}` : ''}`);
   }
-  if (!report.ok) die('publish reported failure.');
+
+  if (!report.ok) {
+    die('publish reported failure.');
+  }
+
   log(`\n✓ publish ${options.dryRun ? 'dry-run' : 'run'} complete (ok).`);
 };
 
@@ -272,7 +344,38 @@ const doSinglePackage = (mode: 'bootstrap' | 'release'): void => {
   log(`  Next: ${report.followUp ?? ''}`);
 };
 
+const doRegistryPlan = (): void => {
+  const versionIndex = argv.indexOf('--version');
+  const core = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { name: string; version: string };
+  const releaseVersion = versionIndex === -1 ? core.version : (argv[versionIndex + 1] ?? '');
+
+  try {
+    // Every lockstep package is planned at the release version: before the cut
+    // that is what the cut will set, after it what the manifests carry.
+    const plan = buildRegistryPlan({
+      releaseVersion,
+      distTag: defaultPublishOptions(releaseVersion).distTag,
+      core: { name: core.name, version: releaseVersion },
+      lockstep: LOCKSTEP_PACKAGES.filter(pkg => pkg.dir !== '.').map(pkg => ({ name: pkg.name, version: releaseVersion })),
+      shims: LEGACY_SHIMS.map(shim => shimReleaseStatus(repoRoot, shim, releaseVersion)),
+    });
+    const written = writeRegistryPlan(plan, releaseDir);
+
+    log(`
+${renderRegistryPlan(plan)}`);
+    log(`  written: ${written.json}`);
+    log(`           ${written.text}`);
+  } catch (error) {
+    if (error instanceof RegistryPlanError) {
+      die(`registry plan refused: ${error.message}`);
+    }
+
+    throw error;
+  }
+};
+
 const command = argv[0];
+
 switch (command) {
   case 'prepare':
     doPrepare();
@@ -289,6 +392,9 @@ switch (command) {
   case 'publish-independent':
     doSinglePackage('release');
     break;
+  case 'registry-plan':
+    doRegistryPlan();
+    break;
   default:
-    die(`Unknown command "${command ?? ''}". Use: prepare | full-zip | publish | bootstrap | publish-independent.`);
+    die(`Unknown command "${command ?? ''}". Use: prepare | full-zip | publish | bootstrap | publish-independent | registry-plan.`);
 }

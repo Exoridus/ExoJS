@@ -4,7 +4,7 @@
   "symbol": "ParticleVectorWriter",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Writable two-component channel of a single particle."
       ],
-      "importLine": "import { ParticleVectorWriter } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleVectorWriter } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

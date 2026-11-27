@@ -16,7 +16,7 @@ export interface AudioAnalyserOptions {
   fftSize?: number;
   /** Time-domain smoothing constant in 0..1 applied between successive analyses. Default 0.8. */
   smoothingTimeConstant?: number;
-  /** Minimum dBFS rendered by the byte-domain spectrum getters. Default -100. */
+  /** Minimum dBFS rendered by byte spectra and the floor for mel float bands. Default -100. */
   minDecibels?: number;
   /** Maximum dBFS rendered by the byte-domain spectrum getters. Default -30. */
   maxDecibels?: number;
@@ -82,7 +82,23 @@ export class AudioAnalyser {
       source: options?.source ?? null,
     };
 
-    const binCount = this._options.fftSize >> 1;
+    const { fftSize, minDecibels, maxDecibels, smoothingTimeConstant } = this._options;
+
+    // The AnalyserNode throws on these only once a context exists, which is
+    // too late to point at the options when the context is still locked.
+    if (!Number.isInteger(fftSize) || fftSize < 32 || fftSize > 32768 || (fftSize & (fftSize - 1)) !== 0) {
+      throw new RangeError(`AudioAnalyser fftSize must be a power of two between 32 and 32768, got ${fftSize}.`);
+    }
+
+    if (!(minDecibels < maxDecibels)) {
+      throw new RangeError(`AudioAnalyser minDecibels (${minDecibels}) must be below maxDecibels (${maxDecibels}).`);
+    }
+
+    if (!(smoothingTimeConstant >= 0 && smoothingTimeConstant <= 1)) {
+      throw new RangeError(`AudioAnalyser smoothingTimeConstant must be within 0..1, got ${smoothingTimeConstant}.`);
+    }
+
+    const binCount = fftSize >> 1;
     this._byteSpectrum = new Uint8Array(binCount);
     this._floatSpectrum = new Float32Array(binCount);
     this._byteWaveform = new Uint8Array(binCount);
@@ -135,7 +151,10 @@ export class AudioAnalyser {
 
   public set smoothingTimeConstant(v: number) {
     this._options.smoothingTimeConstant = v;
-    if (this._analyser) this._analyser.smoothingTimeConstant = v;
+
+    if (this._analyser) {
+      this._analyser.smoothingTimeConstant = v;
+    }
   }
 
   public get minDecibels(): number {
@@ -144,7 +163,10 @@ export class AudioAnalyser {
 
   public set minDecibels(v: number) {
     this._options.minDecibels = v;
-    if (this._analyser) this._analyser.minDecibels = v;
+
+    if (this._analyser) {
+      this._analyser.minDecibels = v;
+    }
   }
 
   public get maxDecibels(): number {
@@ -153,7 +175,10 @@ export class AudioAnalyser {
 
   public set maxDecibels(v: number) {
     this._options.maxDecibels = v;
-    if (this._analyser) this._analyser.maxDecibels = v;
+
+    if (this._analyser) {
+      this._analyser.maxDecibels = v;
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -163,44 +188,52 @@ export class AudioAnalyser {
   /** Fill and return the byte frequency spectrum (0..255 per bin). */
   public getSpectrum(into?: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
     const buf = into ?? this._byteSpectrum;
+
     if (this._analyser) {
       this._analyser.getByteFrequencyData(buf);
     } else {
       buf.fill(0);
     }
+
     return buf;
   }
 
   /** Fill and return the float frequency spectrum (dB per bin). */
   public getSpectrumFloat(into?: Float32Array<ArrayBuffer>): Float32Array<ArrayBuffer> {
     const buf = into ?? this._floatSpectrum;
+
     if (this._analyser) {
       this._analyser.getFloatFrequencyData(buf);
     } else {
       buf.fill(0);
     }
+
     return buf;
   }
 
   /** Fill and return the byte time-domain waveform (0..255 per sample). */
   public getWaveform(into?: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
     const buf = into ?? this._byteWaveform;
+
     if (this._analyser) {
       this._analyser.getByteTimeDomainData(buf);
     } else {
       buf.fill(0);
     }
+
     return buf;
   }
 
   /** Fill and return the float time-domain waveform (-1..1 per sample). */
   public getWaveformFloat(into?: Float32Array<ArrayBuffer>): Float32Array<ArrayBuffer> {
     const buf = into ?? this._floatWaveform;
+
     if (this._analyser) {
       this._analyser.getFloatTimeDomainData(buf);
     } else {
       buf.fill(0);
     }
+
     return buf;
   }
 
@@ -213,7 +246,10 @@ export class AudioAnalyser {
    * Uses the byte spectrum (0..255), normalised by dividing by 255.
    */
   public getBandEnergy(fromHz: number, toHz: number): number {
-    if (!this._analyser) return 0;
+    if (!this._analyser) {
+      return 0;
+    }
+
     const ctx = getAudioContext();
     const nyquist = ctx.sampleRate / 2;
     const binCount = this.frequencyBinCount;
@@ -226,9 +262,11 @@ export class AudioAnalyser {
     const spectrum = this.getSpectrum();
     let sum = 0;
     const count = hi - lo + 1;
+
     for (let i = lo; i <= hi; i++) {
       sum += spectrum[i]!;
     }
+
     return sum / (count * 255);
   }
 
@@ -241,11 +279,20 @@ export class AudioAnalyser {
     };
   }
 
-  /** Return overall RMS energy across all bins, normalised 0..1. */
-  public getRms(): number {
-    if (!this._analyser) return 0;
+  /**
+   * Overall level, 0..1: the mean of the byte spectrum across every bin up to
+   * Nyquist, divided by 255. A spectrum average for meters and visualizers, not
+   * the RMS of the waveform; it follows the analyser's decibel range and
+   * smoothing.
+   */
+  public getLevel(): number {
+    if (!this._analyser) {
+      return 0;
+    }
+
     const ctx = getAudioContext();
     const nyquist = ctx.sampleRate / 2;
+
     return this.getBandEnergy(0, nyquist);
   }
 
@@ -276,6 +323,7 @@ export class AudioAnalyser {
 
     if (!this._analyser || filterbank === null) {
       out.fill(0);
+
       return out;
     }
 
@@ -285,7 +333,11 @@ export class AudioAnalyser {
     return out;
   }
 
-  /** Mel-scaled spectrum, float domain (dBFS values). Output length = `bands`. */
+  /**
+   * Mel band power in dBFS, floored at `minDecibels` for silence.
+   * Triangular weights sum linear power before conversion back to dBFS.
+   * Returns zeroes while no analyser is connected.
+   */
   public getSpectrumMelFloat(into?: Float32Array<ArrayBuffer>, options?: SpectrumMappingOptions): Float32Array<ArrayBuffer> {
     const bandCount = options?.bands ?? 32;
     const out = into ?? new Float32Array(bandCount);
@@ -293,11 +345,22 @@ export class AudioAnalyser {
 
     if (!this._analyser || filterbank === null) {
       out.fill(0);
+
       return out;
     }
 
     this._analyser.getFloatFrequencyData(this._floatSpectrum);
-    applyFilterbank(this._floatSpectrum, filterbank, out);
+
+    for (let b = 0; b < filterbank.length; b++) {
+      const { startBin, weights } = filterbank[b]!;
+      let power = 0;
+
+      for (let i = 0; i < weights.length; i++) {
+        power += Math.pow(10, this._floatSpectrum[startBin + i]! / 10) * weights[i]!;
+      }
+
+      out[b] = Math.max(this._analyser.minDecibels, 10 * Math.log10(power));
+    }
 
     return out;
   }
@@ -315,6 +378,7 @@ export class AudioAnalyser {
 
     if (!this._analyser || ranges === null) {
       out.fill(0);
+
       return out;
     }
 
@@ -332,6 +396,7 @@ export class AudioAnalyser {
 
     if (!this._analyser || ranges === null) {
       out.fill(0);
+
       return out;
     }
 
@@ -363,32 +428,42 @@ export class AudioAnalyser {
   // -----------------------------------------------------------------------
 
   private _getMelFilterbank(bands: number, fMin: number, fMax: number): MelBand[] | null {
-    if (!this._analyser) return null;
+    if (!this._analyser) {
+      return null;
+    }
+
     const ctx = getAudioContext();
     const fftSize = this._options.fftSize;
     const clampedFmax = Math.min(fMax, ctx.sampleRate / 2);
     const key = `${bands}|${fMin}|${clampedFmax}|${fftSize}`;
 
     let cached = this._melCache.get(key);
+
     if (cached === undefined) {
       cached = buildMelFilterbank(bands, fMin, clampedFmax, fftSize, ctx.sampleRate);
       this._melCache.set(key, cached);
     }
+
     return cached;
   }
 
   private _getLogRanges(bands: number, fMin: number, fMax: number): LogBandRange[] | null {
-    if (!this._analyser) return null;
+    if (!this._analyser) {
+      return null;
+    }
+
     const ctx = getAudioContext();
     const fftSize = this._options.fftSize;
     const clampedFmax = Math.min(fMax, ctx.sampleRate / 2);
     const key = `${bands}|${fMin}|${clampedFmax}|${fftSize}`;
 
     let cached = this._logCache.get(key);
+
     if (cached === undefined) {
       cached = buildLogRanges(bands, fMin, clampedFmax, fftSize, ctx.sampleRate);
       this._logCache.set(key, cached);
     }
+
     return cached;
   }
 
@@ -436,9 +511,11 @@ const applyFilterbank = (spectrum: Uint8Array | Float32Array, bands: MelBand[], 
   for (let b = 0; b < bands.length; b++) {
     const { startBin, weights } = bands[b]!;
     let sum = 0;
+
     for (let i = 0; i < weights.length; i++) {
       sum += spectrum[startBin + i]! * weights[i]!;
     }
+
     out[b] = sum;
   }
 };
@@ -448,9 +525,11 @@ const applyLogRanges = (spectrum: Uint8Array | Float32Array, ranges: LogBandRang
     const { startBin, endBin } = ranges[b]!;
     let sum = 0;
     const count = endBin - startBin + 1;
+
     for (let i = startBin; i <= endBin; i++) {
       sum += spectrum[i]!;
     }
+
     out[b] = sum / count;
   }
 };

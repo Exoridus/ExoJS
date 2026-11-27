@@ -211,6 +211,7 @@ export class RenderingContext implements DrawContext {
         view.update(ms);
       }
     }
+
     for (const view of this._renderedViews) {
       if (view !== this._view && !this._trackedViews.has(view)) {
         view.update(ms);
@@ -246,7 +247,16 @@ export class RenderingContext implements DrawContext {
    * Preserves the camera's center and zoom; only the visible area size changes.
    */
   public resize(width: number, height: number): void {
+    const zoom = this._view.zoomLevel;
+
+    // `View.resize` resets zoom along with the design space; reapply it so a
+    // zoomed camera keeps its apparent scale across canvas resizes.
     this._view.resize(width, height);
+
+    if (zoom !== 1) {
+      this._view.setZoom(zoom);
+    }
+
     this._screenView.resize(width, height);
     this._screenView.setCenter(width / 2, height / 2);
   }
@@ -266,15 +276,6 @@ export class RenderingContext implements DrawContext {
     playRenderTree(node, this._backend);
   }
 
-  /**
-   * Renders `node` into an off-screen {@link RenderTexture} and returns it.
-   *
-   * The View is centered at `(width / 2, height / 2)` so that the origin
-   * of the node's local space sits at the center of the render texture.
-   *
-   * Saves and restores the active render target and view so the caller's
-   * rendering state is undisturbed.
-   */
   /**
    * Whether a {@link RenderTexture} of the given color format can be rendered
    * into on the active backend. `'rgba8'` is always supported; the float formats
@@ -318,45 +319,57 @@ export class RenderingContext implements DrawContext {
    */
   public capture(node: RenderNode, options: CaptureOptions): RenderTexture {
     const target = new RenderTexture(options.width, options.height, options.format !== undefined ? { format: options.format } : undefined);
-    const view = new View(options.width / 2, options.height / 2, options.width, options.height);
+    const view = target.view;
     const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>).passCoordinator;
 
-    if (coordinator) {
-      coordinator.withChildPass(
-        {
-          target,
-          view,
-          load: options.clearColor !== undefined ? 'clear' : 'load',
-          clearColor: options.clearColor ?? null,
-          stencil: StencilAttachmentMode.None,
-        },
-        () => {
-          playRenderTree(node, this._backend);
-        },
-      );
+    try {
+      if (coordinator) {
+        coordinator.withChildPass(
+          {
+            target,
+            view,
+            load: options.clearColor !== undefined ? 'clear' : 'load',
+            clearColor: options.clearColor ?? null,
+            stencil: StencilAttachmentMode.None,
+          },
+          () => {
+            playRenderTree(node, this._backend);
+          },
+        );
+
+        return target;
+      }
+
+      // Legacy fallback for backends without a pass coordinator (e.g. test stubs).
+      const previousTarget = this._backend.renderTarget;
+      const previousView = this._backend.view;
+
+      try {
+        this._backend.setRenderTarget(target);
+        this._backend.setView(view);
+
+        if (options.clearColor !== undefined) {
+          this._backend.clear(options.clearColor);
+        }
+
+        playRenderTree(node, this._backend);
+      } finally {
+        this._backend.setRenderTarget(previousTarget);
+        this._backend.setView(previousView);
+      }
 
       return target;
+    } catch (error) {
+      try {
+        target.destroy();
+      } catch (cleanupError) {
+        throw new AggregateError([error, cleanupError], 'Capture failed and its render texture could not be released cleanly.', {
+          cause: cleanupError,
+        });
+      }
+
+      throw error;
     }
-
-    // Legacy fallback for backends without a pass coordinator (e.g. test stubs).
-    const previousTarget = this._backend.renderTarget;
-    const previousView = this._backend.view;
-
-    this._backend.setRenderTarget(target);
-    this._backend.setView(view);
-
-    if (options.clearColor !== undefined) {
-      this._backend.clear(options.clearColor);
-    }
-
-    try {
-      playRenderTree(node, this._backend);
-    } finally {
-      this._backend.setRenderTarget(previousTarget);
-      this._backend.setView(previousView);
-    }
-
-    return target;
   }
 
   /**
@@ -397,7 +410,10 @@ export class RenderingContext implements DrawContext {
    * without normalization or clamping. Half-float values are expanded to
    * float32. Mismatches throw.
    */
-  public readPixels(source: RenderTexture, options: ReadPixelsOptions<'float32'> & { dataType: 'float32' }): Promise<PixelData<Float32Array>>;
+  public readPixels(
+    source: RenderTexture,
+    options: ReadPixelsOptions<'float32'> & { dataType: 'float32' },
+  ): Promise<PixelData<Float32Array>>;
   public readPixels(source: RenderTexture, options?: ReadPixelsOptions): Promise<PixelData>;
   public readPixels(source: RenderTexture, options: ReadPixelsOptions<PixelDataType>): Promise<PixelData<PixelArray>>;
   public async readPixels(source: RenderTexture, options: ReadPixelsOptions<PixelDataType> = {}): Promise<PixelData<PixelArray>> {
@@ -434,7 +450,9 @@ export class RenderingContext implements DrawContext {
    * throws rather than silently erasing that emission - premultiplied data is
    * invalid in that configuration, not a transparent black pixel. Pass
    * `background` to composite over an opaque color instead, which always
-   * succeeds and returns alpha `1` everywhere.
+   * succeeds and returns alpha `1` everywhere. The check reads the region back
+   * once more in the source's own format, so the default doubles the download
+   * cost; `background` skips it.
    *
    * On WebGPU a 32-bit float source (`Rgba32F`) is only accepted on a device
    * that can filter it (`float32-filterable`); elsewhere the call rejects with a
@@ -481,7 +499,8 @@ export class RenderingContext implements DrawContext {
    * transform would otherwise compress but not erase.
    */
   private async _rejectOrphanedEmission(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<void> {
-    const dataType: PixelDataType = source.format === TextureFormat.Rgba16F || source.format === TextureFormat.Rgba32F ? 'float32' : 'uint8';
+    const dataType: PixelDataType =
+      source.format === TextureFormat.Rgba16F || source.format === TextureFormat.Rgba32F ? 'float32' : 'uint8';
     const raw = await this._backend.readPixels(source, x, y, width, height, dataType);
 
     for (let i = 0; i < raw.length; i += 4) {
@@ -511,7 +530,10 @@ export class RenderingContext implements DrawContext {
    * a reader is created for a purpose rather than kept around just in case.
    * Formats and regions are checked as for {@link readPixels}.
    */
-  public createPixelReader(source: RenderTexture, options: PixelReaderOptions<'float32'> & { dataType: 'float32' }): PixelReader<Float32Array>;
+  public createPixelReader(
+    source: RenderTexture,
+    options: PixelReaderOptions<'float32'> & { dataType: 'float32' },
+  ): PixelReader<Float32Array>;
   public createPixelReader(source: RenderTexture, options?: PixelReaderOptions): PixelReader;
   public createPixelReader(source: RenderTexture, options: PixelReaderOptions<PixelDataType>): PixelReader<PixelArray>;
   public createPixelReader(source: RenderTexture, options: PixelReaderOptions<PixelDataType> = {}): PixelReader<PixelArray> {
@@ -690,13 +712,20 @@ export class RenderingContext implements DrawContext {
     const mesh = (this._immediateMesh ??= new ImmediateMesh());
 
     // Set the view first: setView now only flushes when the view actually changes
-    // (not unconditionally). Correctness here rests on (a) the trailing flush()
+    // (not unconditionally). Correctness here rests on (a) the trailing pass submission
     // below - so a later drawGeometry cannot observe this pooled mesh through a
     // still-deferred draw - and (b) any renderer switch flushing its pending batch.
     this._backend.setView(view);
     mesh.configure(geometry, transform, material, options.tint ?? null);
     this._backend.draw(mesh);
-    this._backend.flush();
+
+    const backend = this._backend as RenderBackend & { flushPending?: () => unknown };
+
+    if (backend.flushPending) {
+      backend.flushPending();
+    } else {
+      backend.flush();
+    }
   }
 
   /**

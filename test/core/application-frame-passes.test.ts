@@ -3,6 +3,8 @@
  * into `app.frameTexture` and the pipeline is played against it.
  */
 import { Application } from '#core/Application';
+import type { Scene } from '#core/scene/Scene';
+import { SceneState } from '#core/scene/SceneState';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { RenderPass } from '#rendering/RenderPass';
 
@@ -75,6 +77,7 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
 
 class CountingPass extends RenderPass {
   public executions = 0;
+
   public constructor() {
     super();
   }
@@ -101,6 +104,33 @@ const drawFrame = (app: Application): void => {
 };
 
 describe('Application — frame passes', () => {
+  test('renders screen UI after frame effects and resolves the completed overlay before presentation', () => {
+    const app = new Application({ backend: { type: 'webgl2' } });
+    const order: string[] = [];
+    const pass = new CountingPass();
+    const ui = { _render: () => order.push('ui') };
+    const scene = { state: SceneState.Active, _peekUI: () => ui } as unknown as Scene;
+
+    vi.spyOn(app.scenes, 'currentScene', 'get').mockReturnValue(scene);
+    vi.spyOn(app.scenes, '_drawFrame').mockImplementation(() => {
+      order.push('world');
+
+      return app.scenes;
+    });
+    vi.spyOn(pass, 'execute').mockImplementation(() => {
+      order.push('lighting');
+    });
+    vi.spyOn(app.backend, 'resolveRenderTarget').mockImplementation(() => {
+      order.push('resolve');
+    });
+    app.framePasses.addPass(pass);
+    drawFrame(app);
+
+    expect(order).toEqual(['world', 'resolve', 'lighting', 'ui', 'resolve']);
+    vi.restoreAllMocks();
+    void app.destroy();
+  });
+
   beforeEach(() => {
     backendCalls.clear = 0;
     backendCalls.execute = 0;

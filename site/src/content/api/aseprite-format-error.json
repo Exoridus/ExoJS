@@ -1,6 +1,6 @@
 {
   "title": "AsepriteFormatError",
-  "description": "Thrown when an Aseprite JSON document does not match the expected shape. `source` is the URL of the file being parsed.",
+  "description": "Thrown when an Aseprite JSON document does not match the expected shape. `source` is the URL of the file being parsed. Loading through the Loader reports it as the load failure's `cause`, not as the rejection itself; when the stored document is not valid JSON, the cause is a `SyntaxError` instead.",
   "symbol": "AsepriteFormatError",
   "kind": "class",
   "subsystem": "aseprite",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Thrown when an Aseprite JSON document does not match the expected shape. `source` is the URL of the file being parsed."
+        "Thrown when an Aseprite JSON document does not match the expected shape. `source` is the URL of the file being parsed.",
+        "Loading through the Loader reports it as the load failure's `cause`, not as the rejection itself; when the stored document is not valid JSON, the cause is a `SyntaxError` instead."
       ],
       "importLine": "import { AsepriteFormatError } from '@codexo/exojs-aseprite'",
       "sourceLink": null

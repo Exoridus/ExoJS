@@ -112,11 +112,8 @@ export const resolveSiteChannel = (env: Env): SiteChannelConfig => {
 };
 
 /** The channel a push to `branch` publishes, or `null` for any other ref. */
-export const channelForBranch = (branch: string): SiteChannel | null => SITE_CHANNELS.find(channel => SITE_CHANNEL_BRANCH[channel] === branch) ?? null;
-
-/** Where an explicit channel switch leads; a local test build has no counterpart. */
-export const counterpartBasePath = (config: SiteChannelConfig): string | null =>
-  config.localTest ? null : SITE_CHANNEL_BASE[config.channel === 'stable' ? 'next' : 'stable'];
+export const channelForBranch = (branch: string): SiteChannel | null =>
+  SITE_CHANNELS.find(channel => SITE_CHANNEL_BRANCH[channel] === branch) ?? null;
 
 /**
  * `$GITHUB_OUTPUT` lines for building `ref`: a long-lived branch builds its own

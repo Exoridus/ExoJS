@@ -1,6 +1,7 @@
+import { Loader } from '#assets/Loader';
 import type { Application } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
-import type { SceneScope } from '#core/scene/SceneScope';
+import { SceneScope } from '#core/scene/SceneScope';
 import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import type { Seconds } from '#core/units';
@@ -8,7 +9,7 @@ import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import { FocusController } from '#input/FocusController';
 import type { Gamepad } from '#input/Gamepad';
 import type { GamepadButton } from '#input/GamepadButton';
-import type { InputSystem } from '#input/InputSystem';
+import { InputSystem } from '#input/InputSystem';
 import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -25,7 +26,19 @@ import { frameDelta } from './frame-delta';
  * 8, so glyph k spans [10k, 10k + 8]), and the transport-level helpers a field
  * test drives it with.
  */
-const fixedGlyphInfo: GlyphInfo = { x: 0, y: 0, width: 8, height: 16, advance: 10, ascent: 13, page: 0, uvLeft: 0, uvTop: 0, uvRight: 0.01, uvBottom: 0.02 };
+const fixedGlyphInfo: GlyphInfo = {
+  x: 0,
+  y: 0,
+  width: 8,
+  height: 16,
+  advance: 10,
+  ascent: 13,
+  page: 0,
+  uvLeft: 0,
+  uvTop: 0,
+  uvRight: 0.01,
+  uvBottom: 0.02,
+};
 const mockPage = {
   texture: {
     width: 1024,
@@ -39,7 +52,7 @@ const mockPage = {
     flipY: false,
     addDestroyListener: () => mockPage.texture,
     removeDestroyListener: () => mockPage.texture,
-    destroy: () => undefined,
+    destroy: () => {},
   },
   index: 0,
   mode: 'sdf' as const,
@@ -52,17 +65,20 @@ const mockAtlas: Partial<GlyphAtlas> = {
   onCleared: new Signal(),
 };
 const mockPool = { getAtlas: vi.fn(() => mockAtlas) };
+const cleanups: Array<() => void> = [];
 
 beforeEach(() => {
   resetDefaultGlyphAtlasPool(mockPool as unknown as GlyphAtlasPool);
 });
 afterEach(() => {
+  for (const cleanup of cleanups.splice(0)) {
+    cleanup();
+  }
+
   resetDefaultGlyphAtlasPool();
 
-  // Each focused field lazily creates a hidden <textarea> transport; the widget
-  // only removes it on destroy(). Tests build a fresh field per case and never
-  // destroy it, so clear any leftovers to keep `querySelector('textarea')`
-  // pointing at the field under test.
+  // A test may detach a field before scene cleanup. Remove any transport left
+  // by such a field so querySelector('textarea') still selects the next fixture.
   document.body.querySelectorAll('textarea').forEach(element => element.remove());
 });
 
@@ -85,7 +101,8 @@ export interface Harness {
   };
 }
 
-export const createUIApp = (platform: unknown = null): Harness => {
+/** Native mode uses DOM events and scene.app.input; the default exposes direct signal controls. */
+export const createUIApp = (platform: unknown = null, nativeInput = false): Harness => {
   const canvas = document.createElement('canvas');
   const signals = {
     onPointerEnter: new Signal<[Pointer]>(),
@@ -98,6 +115,7 @@ export const createUIApp = (platform: unknown = null): Harness => {
     onContextMenu: new Signal<[ContextMenuRequest]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    onMouseWheel: new Signal<[number, number]>(),
     onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
     _finishInteractionFrame: (): void => undefined,
   };
@@ -107,8 +125,11 @@ export const createUIApp = (platform: unknown = null): Harness => {
     platform: platform ?? new BrowserPlatform(canvas),
     width: 800,
     height: 600,
+    options: { input: {} },
+    loader: new Loader(),
     input: signals as unknown as InputSystem,
     onFrame: new Signal<[Seconds]>(),
+    onError: new Signal<[Error]>(),
     focus: null as FocusController | null,
     interaction: null as InteractionSystem | null,
     rendering: {
@@ -125,9 +146,30 @@ export const createUIApp = (platform: unknown = null): Harness => {
   };
   const typed = app as unknown as Application;
 
-  app.focus = new FocusController(typed);
+  if (nativeInput) {
+    app.input = new InputSystem(typed);
+  }
+
+  if (!nativeInput) {
+    app.focus = new FocusController(typed);
+  }
+
   app.interaction = new InteractionSystem(typed);
-  scene._attach(typed, {} as unknown as SceneScope<void>);
+  const scope = new SceneScope(typed, scene);
+
+  cleanups.push(() => {
+    scope.destroyFailedActivation();
+    app.interaction?.destroy();
+    app.focus?.destroy();
+
+    if (nativeInput) {
+      app.input.destroy();
+    }
+
+    app.loader.destroy();
+    app.onFrame.destroy();
+    app.onError.destroy();
+  });
   app.interaction.attachRoot(scene.root);
 
   return { scene, im: app.interaction, signals };

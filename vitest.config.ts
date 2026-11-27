@@ -8,7 +8,10 @@ import { webdriverio } from '@vitest/browser-webdriverio';
 import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 
 import { CHROMIUM_WEBGL2_ARGS, CHROMIUM_WEBGPU_ARGS, FIREFOX_WEBGL2_PREFS } from './scripts/ci/browser-profiles.ts';
+import { fileProgressReporterPlugin } from './scripts/ci/file-progress-reporter.ts';
 import { emitAllocationRecord, startHeapSampling, stopHeapSampling } from './test/perf/webgpu/heapSamplingCommands.ts';
+import { prepareGuideMedia } from './test/rendering/browser/guideMediaCommand.ts';
+import { startGuideMotion, stopGuideMotion } from './test/rendering/browser/guideMotionCommands.ts';
 import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink.ts';
 
 // Note: Vite alias matching uses longest-first order. Subpath aliases must come
@@ -21,23 +24,34 @@ const aliasConfig = [
   { find: '@codexo/exojs/extensions', replacement: fileURLToPath(new URL('./src/extensions/index.ts', import.meta.url)) },
   { find: '@codexo/exojs/renderer-sdk', replacement: fileURLToPath(new URL('./src/renderer-sdk.ts', import.meta.url)) },
   { find: '@codexo/exojs/debug', replacement: fileURLToPath(new URL('./src/debug/index.ts', import.meta.url)) },
+  // The demo-assets package is data plus factories; alias it to source like the
+  // other content packages. The subpath must come before the root alias.
+  {
+    find: '@codexo/exojs-demo-assets/extended',
+    replacement: fileURLToPath(new URL('./packages/exojs-demo-assets/src/extended.ts', import.meta.url)),
+  },
+  {
+    find: '@codexo/exojs-demo-assets',
+    replacement: fileURLToPath(new URL('./packages/exojs-demo-assets/src/index.ts', import.meta.url)),
+  },
+  // The runtime-module subpaths map to the module sources; the build compiles
+  // the same sources into `dist/esm/<subpath>/`, which this lane never builds.
+  { find: '@codexo/exojs/particles', replacement: fileURLToPath(new URL('./packages/exojs-particles/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs/audio-fx', replacement: fileURLToPath(new URL('./packages/exojs-audio-fx/src/index.ts', import.meta.url)) },
+  {
+    find: '@codexo/exojs/tilemap-physics',
+    replacement: fileURLToPath(new URL('./packages/exojs-tilemap-physics/src/index.ts', import.meta.url)),
+  },
+  { find: '@codexo/exojs/tilemap', replacement: fileURLToPath(new URL('./packages/exojs-tilemap/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs/physics', replacement: fileURLToPath(new URL('./packages/exojs-physics/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs/lighting', replacement: fileURLToPath(new URL('./packages/exojs-lighting/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs/pathfinding', replacement: fileURLToPath(new URL('./packages/exojs-pathfinding/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs', replacement: fileURLToPath(new URL('./src/index.ts', import.meta.url)) },
-  // @codexo/exojs-tiled depends on @codexo/exojs-tilemap; neither package
-  // exports a `@codexo/exojs-source` condition, so alias to source for in-repo tests.
-  // @codexo/exojs-physics is aliased too so the example physics↔tilemap bridge
-  // recipe (examples/shared/physics-tilemap.ts) can be unit-tested in-repo.
-  // @codexo/exojs-particles and @codexo/exojs-tilemap are aliased for the same
-  // reason: the benchmark's extension arms import them, and this lane runs
-  // without building the packages, so their `dist` entries resolve to nothing.
-  { find: '@codexo/exojs-particles', replacement: fileURLToPath(new URL('./packages/exojs-particles/src/index.ts', import.meta.url)) },
-  { find: '@codexo/exojs-tilemap', replacement: fileURLToPath(new URL('./packages/exojs-tilemap/src/index.ts', import.meta.url)) },
+  // The adapters publish no `@codexo/exojs-source` condition, so they are
+  // aliased to source for in-repo tests too.
   { find: '@codexo/exojs-tiled', replacement: fileURLToPath(new URL('./packages/exojs-tiled/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-aseprite', replacement: fileURLToPath(new URL('./packages/exojs-aseprite/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-ldtk', replacement: fileURLToPath(new URL('./packages/exojs-ldtk/src/index.ts', import.meta.url)) },
-  { find: '@codexo/exojs-physics', replacement: fileURLToPath(new URL('./packages/exojs-physics/src/index.ts', import.meta.url)) },
-  { find: '@codexo/exojs-tilemap-physics', replacement: fileURLToPath(new URL('./packages/exojs-tilemap-physics/src/index.ts', import.meta.url)) },
-  { find: '@codexo/exojs-lighting', replacement: fileURLToPath(new URL('./packages/exojs-lighting/src/index.ts', import.meta.url)) },
-  { find: '@codexo/exojs-pathfinding', replacement: fileURLToPath(new URL('./packages/exojs-pathfinding/src/index.ts', import.meta.url)) },
   // The CLI's `exo create` calls the scaffolder's library entry, whose package
   // resolves to built output. The unit lane runs without building the packages,
   // so an in-repo test would resolve nothing at all without this.
@@ -59,7 +73,7 @@ const EXTENSION_SOURCE_ROOTS = [
  *
  * A blanket alias cannot do this: each extension package carries its own `#*`
  * map pointing at its own `src`, so `#distributions/Curve` imported from inside
- * `@codexo/exojs-particles` would be sent into the engine tree, where no such
+ * the particles module would be sent into the engine tree, where no such
  * module exists. Declining for those importers leaves the specifier to Vite's
  * normal `imports` resolution, which `srcConditions` already steers to the
  * package's own sources.
@@ -71,8 +85,13 @@ const benchEngineHashImports = (): Plugin => {
     name: 'exojs-bench-engine-hash-imports',
     enforce: 'pre',
     async resolveId(source: string, importer: string | undefined, options) {
-      if (!source.startsWith('#')) return null;
-      if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(root))) return null;
+      if (!source.startsWith('#')) {
+        return null;
+      }
+
+      if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(root))) {
+        return null;
+      }
 
       // Re-enter resolution rather than returning the path: the engine's `#*`
       // specifiers carry no extension, and shader imports need `.frag`/`.wgsl`
@@ -109,8 +128,15 @@ const realShaderPlugin = createShaderPlugin();
 const sharedViteOptions = {
   resolve: { alias: aliasConfig, conditions: srcConditions },
   ssr: { resolve: { conditions: srcConditions } },
-  plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
-  define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
+  plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin, fileProgressReporterPlugin()],
+  define: {
+    __DEV__: JSON.stringify(true),
+    __VERSION__: JSON.stringify('0.0.0'),
+    __REVISION__: JSON.stringify('test'),
+    // Visual-review captures of the lightmap reference scenes are opt-in, so a
+    // normal or CI run records nothing; see CONTRIBUTING, "Visual evidence".
+    __EXOJS_CAPTURE_LIGHTMAP_REFERENCES__: JSON.stringify(process.env['EXOJS_CAPTURE_LIGHTMAP_REFERENCES'] === '1'),
+  },
 };
 
 // A project that must not inherit the shared Vite options (it tests the transforms
@@ -149,6 +175,12 @@ const webgpuMediaTests = ['test/rendering/browser/webgpu-*video*.test.ts'];
 const webgpuCoreTests = ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'];
 const webgpuCoreExclude = [...configDefaults.exclude, ...webgpuMediaTests];
 
+const releaseDistTests = [
+  'test/release/hybrid-runtime-exports.test.ts',
+  'test/release/hybrid-runtime-identity.test.ts',
+  'test/release/legacy-shims-tarball.test.ts',
+];
+
 // Specs that can take a Firefox process down or wedge it on Windows, so they run
 // in a browser of their own with a short deadline and cannot cost the whole Core
 // run: the device-churn regression (96 create/destroy cycles) crashes the GPU
@@ -156,7 +188,10 @@ const webgpuCoreExclude = [...configDefaults.exclude, ...webgpuMediaTests];
 // the OffscreenCanvas surface spec intermittently blocks the page inside native
 // WebGPU code, where no test timeout can fire. Chromium keeps both in Core, where
 // they pass.
-const firefoxIsolatedTests = ['test/rendering/browser/webgpu-device-lifecycle.test.ts', 'test/rendering/browser/webgpu-offscreen-surface.test.ts'];
+const firefoxIsolatedTests = [
+  'test/rendering/browser/webgpu-device-lifecycle.test.ts',
+  'test/rendering/browser/webgpu-offscreen-surface.test.ts',
+];
 const firefoxCoreExclude = [...webgpuCoreExclude, ...firefoxIsolatedTests];
 
 // Options every automated browser project shares. Vitest injects its own UI into
@@ -175,7 +210,9 @@ const browserWorkers = (variable: string, fallback?: number): { maxWorkers?: num
   const raw = process.env[variable];
   const value = raw === undefined ? fallback : Number.parseInt(raw, 10);
 
-  if (value !== undefined && (!Number.isInteger(value) || value < 1)) throw new Error(`${variable} must be a positive integer.`);
+  if (value !== undefined && (!Number.isInteger(value) || value < 1)) {
+    throw new Error(`${variable} must be a positive integer.`);
+  }
 
   return value === undefined ? {} : { maxWorkers: value };
 };
@@ -300,7 +337,20 @@ export default defineConfig({
           // `InlineWorker` needs a real Worker and a real object URL, neither
           // of which jsdom has; browser-core-chromium runs this suite.
           'test/core/browser/**/*.test.ts',
+          ...releaseDistTests,
         ],
+      }),
+      // Packs and installs the built Core, so it runs in the CI build job right
+      // after `pnpm build`, where `EXOJS_REQUIRE_PRODUCTION_BUILD=1` turns a
+      // missing dist into a failure. Inside the parallel suite these files
+      // could only skip, and a skip verifies nothing.
+      createJsdomTestProject({
+        name: 'release-dist',
+        include: releaseDistTests,
+      }),
+      createJsdomTestProject({
+        name: 'exojs-demo-assets',
+        include: ['packages/exojs-demo-assets/test/**/*.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-particles',
@@ -392,6 +442,15 @@ export default defineConfig({
         ...createJsdomTestProject({
           name: 'exojs-bench',
           include: ['packages/exojs-bench/test/**/*.test.ts'],
+          // Launches Chromium; runs in the bench lane, which provisions it.
+          exclude: [...configDefaults.exclude, 'packages/exojs-bench/test/**/*.browser.test.ts'],
+        }),
+        plugins: [benchEngineHashImports()],
+      },
+      {
+        ...createJsdomTestProject({
+          name: 'bench-browser',
+          include: ['packages/exojs-bench/test/**/*.browser.test.ts'],
         }),
         plugins: [benchEngineHashImports()],
       },
@@ -496,6 +555,7 @@ export default defineConfig({
           browser: {
             ...browserDefaults,
             enabled: true,
+            commands: { prepareGuideMedia, startGuideMotion, stopGuideMotion },
             headless: webgl2Headless,
             provider: playwright({
               launchOptions: { channel: 'chromium', args: [...CHROMIUM_WEBGL2_ARGS] },
@@ -547,6 +607,7 @@ export default defineConfig({
             ...browserDefaults,
             enabled: true,
             headless: !firefoxCiHeaded,
+            commands: { prepareGuideMedia },
             provider: playwright({
               launchOptions: {
                 firefoxUserPrefs: { ...FIREFOX_WEBGL2_PREFS },
@@ -714,7 +775,9 @@ export default defineConfig({
             provider: webdriverio({
               capabilities: {
                 'moz:firefoxOptions': { ...(process.env['EXOJS_FIREFOX_BINARY'] ? { binary: process.env['EXOJS_FIREFOX_BINARY'] } : {}) },
-                'wdio:geckodriverOptions': { ...(process.env['EXOJS_GECKODRIVER_BINARY'] ? { binary: process.env['EXOJS_GECKODRIVER_BINARY'] } : {}) },
+                'wdio:geckodriverOptions': {
+                  ...(process.env['EXOJS_GECKODRIVER_BINARY'] ? { binary: process.env['EXOJS_GECKODRIVER_BINARY'] } : {}),
+                },
               },
             }),
             instances: [{ browser: 'firefox' }],
@@ -867,6 +930,45 @@ export default defineConfig({
             headless: true,
             provider: playwright({ launchOptions: { channel: 'chromium' } }),
             instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── browser-animated-images-webkit - the animated image specs on WebKit ──
+      // The decoding spec also runs in browser-assets-chromium (the required
+      // lane). WebKit ships an ImageDecoder that composes disposal and blend
+      // incorrectly, so these specs are the ones that exercise the software
+      // compositor as the selected decoder. Not part of the CI lanes.
+      {
+        test: {
+          name: 'browser-animated-images-webkit',
+          globals: true,
+          include: ['test/assets/browser/animated-image-decoding.test.ts', 'test/rendering/browser/webgl2-animated-image.test.ts'],
+          setupFiles: browserSetupFiles,
+          browser: {
+            ...browserDefaults,
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'webkit' }],
+          },
+        },
+      },
+
+      // Real Safari through safaridriver (macOS, optional diagnostic): the engine
+      // whose ImageDecoder composition the other two projects can only approximate.
+      {
+        test: {
+          name: 'browser-animated-images-safari',
+          globals: true,
+          include: ['test/assets/browser/animated-image-decoding.test.ts', 'test/rendering/browser/webgl2-animated-image.test.ts'],
+          setupFiles: browserSetupFiles,
+          browser: {
+            ...browserDefaults,
+            enabled: true,
+            headless: false,
+            provider: webdriverio(),
+            instances: [{ browser: 'safari' }],
           },
         },
       },

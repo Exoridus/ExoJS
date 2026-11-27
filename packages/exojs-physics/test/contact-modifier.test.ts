@@ -34,7 +34,8 @@ describe('contact modifier', () => {
     const floor = addFloor(world, 100);
     const box = addBox(world, 0, 60);
 
-    const seen: { a: unknown; b: unknown; normalY: number; pointCount: number }[] = [];
+    const seen: Array<{ a: unknown; b: unknown; normalY: number; pointCount: number }> = [];
+
     world.contactModifier = contact => {
       seen.push({ a: contact.bodyA, b: contact.bodyB, normalY: contact.normalY, pointCount: contact.pointCount });
     };
@@ -74,6 +75,7 @@ describe('contact modifier', () => {
 
     const starts: CollisionEvent[] = [];
     world.onCollisionStart.add(event => starts.push(event));
+
     world.contactModifier = contact => {
       contact.enabled = false;
     };
@@ -91,8 +93,9 @@ describe('contact modifier', () => {
     addFloor(world, 100);
     addBox(world, 0, 60, 0.36, 0.5);
 
-    const observed: { friction: number; restitution: number; enabled: boolean }[] = [];
+    const observed: Array<{ friction: number; restitution: number; enabled: boolean }> = [];
     let step = 0;
+
     world.contactModifier = contact => {
       observed.push({ friction: contact.friction, restitution: contact.restitution, enabled: contact.enabled });
 
@@ -209,6 +212,7 @@ describe('contact modifier', () => {
     world.contactModifier = contact => {
       contact.enabled = false;
     };
+
     world.step(FRAME);
 
     expect(record.normalImpulse).toEqual([0, 0]);
@@ -242,6 +246,7 @@ describe('contact modifier', () => {
       box.linearVelocityY = velocityY;
 
       let movingUp = false;
+
       world.contactModifier = contact => {
         if (movingUp) {
           contact.enabled = false;

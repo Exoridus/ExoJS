@@ -69,9 +69,9 @@ class RawWorldAssetType extends AssetType<string, string, undefined, string> {
 const payload = '{"name":"level-1"}';
 
 const mockFetch = (): ReturnType<typeof vi.fn> => {
-  const fetchMock = vi.fn(async () => ({ ok: true, status: 200, statusText: 'OK', text: async () => payload }) as unknown as Response) as unknown as ReturnType<
-    typeof vi.fn
-  >;
+  const fetchMock = vi.fn(
+    async () => ({ ok: true, status: 200, statusText: 'OK', text: async () => payload }) as unknown as Response,
+  ) as unknown as ReturnType<typeof vi.fn>;
 
   global.fetch = fetchMock as unknown as typeof fetch;
 
@@ -106,7 +106,7 @@ describe('a runtime-installed asset type', () => {
     const worldType = new WorldAssetType();
 
     const first = createLoader(cache, worldType as never);
-    const loaded = await first.load(worldType.asset('level.world'));
+    const loaded = await first.load({ type: worldType, source: 'level.world' });
 
     expect(loaded).toBeInstanceOf(World);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -116,7 +116,7 @@ describe('a runtime-installed asset type', () => {
     // resident resources, which is what makes the next acquisition a real
     // cache read rather than a residency hit.
     const second = createLoader(cache, new WorldAssetType() as never);
-    const again = await second.load(worldType.asset('level.world'));
+    const again = await second.load({ type: worldType, source: 'level.world' });
 
     expect(again).toBeInstanceOf(World);
     expect((again as World).data.name).toBe('level-1');
@@ -133,12 +133,12 @@ describe('a runtime-installed asset type', () => {
     const worldType = new WorldAssetType();
     const first = createLoader(cache, worldType as never);
 
-    await first.load(worldType.asset('level.world'));
+    await first.load({ type: worldType, source: 'level.world' });
     first.destroy();
 
     const second = createLoader(cache, new WorldAssetType() as never);
 
-    await second.load(worldType.asset('level.world'));
+    await second.load({ type: worldType, source: 'level.world' });
     second.destroy();
 
     // Once per acquisition, from the stored TEXT both times - the factory is
@@ -156,15 +156,17 @@ describe('a runtime-installed asset type', () => {
     const rawType = new RawWorldAssetType();
     const loader = createLoader(cache, worldType as never, rawType as never);
 
-    await loader.load(worldType.asset('level.world'));
-    await loader.load(rawType.asset('level.world'));
+    await loader.load({ type: worldType, source: 'level.world' });
+    await loader.load({ type: rawType, source: 'level.world' });
 
     const source = 'url:https://assets.test/level.world';
 
     const version = worldType.layout.version;
 
     expect(store.records.get(serializeCacheRecordKey({ namespace: 'com.example.world', source, version, record: 'value' }))).toBe(payload);
-    expect(store.records.get(serializeCacheRecordKey({ namespace: 'com.example.world-raw', source, version, record: 'value' }))).toBe(payload);
+    expect(store.records.get(serializeCacheRecordKey({ namespace: 'com.example.world-raw', source, version, record: 'value' }))).toBe(
+      payload,
+    );
     expect(store.records.size).toBe(2);
 
     loader.destroy();
@@ -184,8 +186,8 @@ describe('a runtime-installed asset type', () => {
     const rawType = new RawWorldAssetType();
     const loader = createLoader(cache, worldType as never, rawType as never);
 
-    await loader.load(worldType.asset('level.world'));
-    await loader.load(rawType.asset('level.world'));
+    await loader.load({ type: worldType, source: 'level.world' });
+    await loader.load({ type: rawType, source: 'level.world' });
 
     expect(routed.records.size).toBe(0);
     expect(fallback.records.size).toBe(1);
@@ -205,13 +207,13 @@ describe('a runtime-installed asset type', () => {
     const worldType = new WorldAssetType();
     const first = createLoader(cache, worldType as never);
 
-    await first.load(worldType.asset('level.world'));
+    await first.load({ type: worldType, source: 'level.world' });
     first.destroy();
 
     const versionedType = new VersionedWorldAssetType();
     const second = createLoader(cache, versionedType as never);
 
-    await second.load(versionedType.asset('level.world'));
+    await second.load({ type: versionedType, source: 'level.world' });
     second.destroy();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);

@@ -32,7 +32,10 @@ for (const [job, { result }] of Object.entries(needs)) {
   const required = when === true || (when !== undefined && plan[when] === 'true');
   const ok = result === 'success' || (result === 'skipped' && !required);
   process.stdout.write(`${ok ? 'ok  ' : 'FAIL'} ${job.padEnd(12)} ${result}${required ? '' : ' (not required)'}\n`);
-  if (!ok) failed = true;
+
+  if (!ok) {
+    failed = true;
+  }
 }
 
 for (const job of Object.keys(REQUIRED_WHEN)) {

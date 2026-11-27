@@ -1,6 +1,8 @@
 import type { Application } from '#core/Application';
+import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import type { Seconds } from '#core/units';
+import type { TextEditKeyCapture } from '#input/InputSystem';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
 import type { Pointer } from '#input/Pointer';
@@ -14,10 +16,9 @@ import { Text } from '#rendering/text/Text';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 import type { TextLayoutResult } from '#rendering/text/types';
 
-import type { TextEditGranularity } from './TextEditingModel';
 import { glyphCount, glyphOffsetAtIndex, graphemeOffsets, TextEditingModel } from './TextEditingModel';
 import type { UIWidgetState } from './theme';
-import { resolveUISkin } from './theme';
+import { assertSkinSetTextEffects, resolveUISkin, themeSkinSet, type UITheme } from './theme';
 import { Widget } from './Widget';
 import { WidgetBackground } from './WidgetBackground';
 
@@ -57,14 +58,18 @@ const modifierChannels = new Set<number>([
   Keyboard.MetaRight,
 ]);
 
-/** The granularity a delete asks for; the word modifier wins over the line modifier. */
-const _deleteGranularity = (word: boolean, line: boolean): TextEditGranularity => {
-  if (word) {
-    return 'word';
-  }
-
-  return line ? 'line' : 'character';
-};
+const editingChannels = new Set<number>([
+  Keyboard.Left,
+  Keyboard.Right,
+  Keyboard.Up,
+  Keyboard.Down,
+  Keyboard.PageUp,
+  Keyboard.PageDown,
+  Keyboard.Home,
+  Keyboard.End,
+  Keyboard.Backspace,
+  Keyboard.Delete,
+]);
 
 /**
  * Base class of the text-editing widgets ({@link TextInput},
@@ -99,7 +104,7 @@ export abstract class TextEditWidget extends Widget {
   private _appliedPlaceholder: TextStyleOptions | null = null;
   private _readOnly: boolean;
   private _placeholder = '';
-  private readonly _hints: PlatformTextInputHints = {};
+  private _hints: PlatformTextInputHints = {};
   private _seam: PlatformTextInput | null = null;
   private _scrollX = 0;
   private _scrollY = 0;
@@ -109,6 +114,8 @@ export abstract class TextEditWidget extends Widget {
   private _blinkApp: Application | null = null;
   private _pointerInside = false;
   private _dragging = false;
+  /** The application the drag subscribed to; the field may have left the stage by the time it ends. */
+  private _dragApp: Application | null = null;
   /**
    * The contact that started the current selection drag. The drag follows the
    * application's pointer signals, which carry every contact, so a second
@@ -130,6 +137,7 @@ export abstract class TextEditWidget extends Widget {
    */
   private _hostDeletes = 0;
   private _hostLineBreaks = 0;
+  private _textKeyCapture: TextEditKeyCapture | null = null;
   private _wrap = false;
   /** The wrap width already pushed into the text node; `-1` for "not wrapping". */
   private _appliedWrapWidth = -1;
@@ -168,10 +176,16 @@ export abstract class TextEditWidget extends Widget {
 
     const x = event.x;
     const y = event.y;
-    const local = this._localPoint.set(x, y).transformInverse(this.getGlobalTransform());
+    const local = this._toLocalPoint(x, y);
+
+    if (local === null) {
+      return;
+    }
+
     const offset = this._offsetAtLocal(local.x, local.y);
     const now = performance.now();
-    const isDoublePress = now - this._lastPressTime < DOUBLE_CLICK_MS && Math.abs(x - this._lastPressX) < 4 && Math.abs(y - this._lastPressY) < 4;
+    const isDoublePress =
+      now - this._lastPressTime < DOUBLE_CLICK_MS && Math.abs(x - this._lastPressX) < 4 && Math.abs(y - this._lastPressY) < 4;
 
     this._lastPressTime = now;
     this._lastPressX = x;
@@ -196,7 +210,11 @@ export abstract class TextEditWidget extends Widget {
       return;
     }
 
-    const local = this._localPoint.set(x, y).transformInverse(this.getGlobalTransform());
+    const local = this._toLocalPoint(x, y);
+
+    if (local === null) {
+      return;
+    }
 
     this.model.setSelection(this._dragAnchor, this._offsetAtLocal(local.x, local.y));
     this._afterModelChange();
@@ -233,6 +251,14 @@ export abstract class TextEditWidget extends Widget {
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
     /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option */
+    if (this._stage?.app?.input._keyEventTextEditTarget != null) {
+      // This exact command already ran for its capture-time field (or the
+      // native IME). A later focus transfer must not apply it to another one.
+      event.preventDefault();
+
+      return;
+    }
+
     if (channel === Keyboard.Enter) {
       event.preventDefault();
 
@@ -261,7 +287,7 @@ export abstract class TextEditWidget extends Widget {
 
     const extend = this._shiftDown;
     const word = this._controlDown;
-    const consumed = this._handleEditKeys(channel, extend, word, this._shiftDown);
+    const consumed = this._handleEditKeys(channel, extend, word);
     /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
 
     if (consumed) {
@@ -270,7 +296,7 @@ export abstract class TextEditWidget extends Widget {
     }
   }
 
-  private _handleEditKeys(channel: number, extend: boolean, word: boolean, line: boolean): boolean {
+  private _handleEditKeys(channel: number, extend: boolean, word: boolean, shortcut = this._shortcutDown): boolean {
     // `channel` is a generic numeric input channel (KeyEvent.channel is
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
@@ -282,42 +308,51 @@ export abstract class TextEditWidget extends Widget {
     switch (channel) {
       case Keyboard.Left:
         this.model.moveCaret('backward', word ? 'word' : 'character', extend);
+
         return true;
       case Keyboard.Right:
         this.model.moveCaret('forward', word ? 'word' : 'character', extend);
+
         return true;
       case Keyboard.Up:
         this._moveByLines(-1, extend);
+
         return true;
       case Keyboard.Down:
         this._moveByLines(1, extend);
+
         return true;
       case Keyboard.PageUp:
         this._moveByLines(-this._visibleLineCount(), extend);
+
         return true;
       case Keyboard.PageDown:
         this._moveByLines(this._visibleLineCount(), extend);
+
         return true;
       case Keyboard.Home:
-        this.model.moveCaret('backward', 'line', extend);
+        this._moveToRowEdge('backward', extend);
+
         return true;
       case Keyboard.End:
-        this.model.moveCaret('forward', 'line', extend);
+        this._moveToRowEdge('forward', extend);
+
         return true;
       case Keyboard.Backspace:
-        this._deleteContent('backward', word, line);
+        this._deleteContent('backward', word);
+
         return true;
       case Keyboard.Delete:
-        this._deleteContent('forward', word, line);
+        this._deleteContent('forward', word);
+
         return true;
       default:
-        return this._applyShortcut(channel);
+        return this._applyShortcut(channel, shortcut, extend);
     }
     /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
   }
 
   private readonly _fieldRect = new Rectangle();
-  private readonly _localPoint = new Vector();
   private readonly _scratchTopLeft = new Vector();
   private readonly _scratchBottomRight = new Vector();
 
@@ -366,7 +401,11 @@ export abstract class TextEditWidget extends Widget {
     this.setSize(options.width ?? 200, options.height ?? 36);
   }
 
-  /** The text held, never masked. Assigning replaces the whole value. */
+  /**
+   * The text held, never masked. Assigning replaces the whole value and
+   * bypasses `maxLength` and `filter`, which gate edits rather than authored
+   * values.
+   */
   public get value(): string {
     return this.model.value;
   }
@@ -455,6 +494,7 @@ export abstract class TextEditWidget extends Widget {
   }
 
   public override destroy(): void {
+    this._releaseTextKeyCapture();
     this._stopBlink();
     this._stopPointerDrag();
     this._seam?.destroy();
@@ -463,7 +503,6 @@ export abstract class TextEditWidget extends Widget {
     this.onChange.destroy();
     this._onSubmit.destroy();
     this._fieldRect.destroy();
-    this._localPoint.destroy();
     this._scratchTopLeft.destroy();
     this._scratchBottomRight.destroy();
     super.destroy();
@@ -475,6 +514,11 @@ export abstract class TextEditWidget extends Widget {
     this._syncTextNode();
     this._updatePlaceholderVisibility();
     this._paintOverlays();
+  }
+
+  protected override _validateTheme(theme: UITheme): void {
+    assertSkinSetTextEffects(themeSkinSet(theme, 'textFieldSurface'), this._textStyle, this._textNode);
+    assertSkinSetTextEffects(themeSkinSet(theme, 'placeholder'), null, this._placeholderNode);
   }
 
   protected override _relayout(): void {
@@ -492,7 +536,9 @@ export abstract class TextEditWidget extends Widget {
   }
 
   protected set _softWrap(value: boolean) {
-    if (this._wrap === value) return;
+    if (this._wrap === value) {
+      return;
+    }
 
     this._wrap = value;
     this._applyWrapWidth();
@@ -509,10 +555,13 @@ export abstract class TextEditWidget extends Widget {
     const insets = this.contentInsets;
     const width = this._wrap && this.model.multiline ? Math.max(1, this._uiWidth - insets.left - insets.right) : -1;
 
-    if (width === this._appliedWrapWidth) return;
+    if (width === this._appliedWrapWidth) {
+      return;
+    }
 
     this._appliedWrapWidth = width;
-    this._textNode.layout = width < 0 ? { whiteSpace: 'pre', shaping: 'simple' } : { whiteSpace: 'pre', shaping: 'simple', maxWidth: width };
+    this._textNode.layout =
+      width < 0 ? { whiteSpace: 'pre', shaping: 'simple' } : { whiteSpace: 'pre', shaping: 'simple', maxWidth: width };
   }
 
   protected override _onThemeChanged(): void {
@@ -547,7 +596,9 @@ export abstract class TextEditWidget extends Widget {
 
   /** Assign input-method hints; forwarded to the transport on the next sync. */
   protected _setHints(hints: PlatformTextInputHints): void {
-    Object.assign(this._hints, hints);
+    // Replace the snapshot rather than patching it: the widget omits unset
+    // members, so a removed hint must clear the transport's previous value.
+    this._hints = { ...hints };
     this._seam?.setHints(this._hints);
   }
 
@@ -595,12 +646,25 @@ export abstract class TextEditWidget extends Widget {
     }
 
     this._bindSeam();
+
+    if (app !== null && this._seam?._synchronousKeyboard === true) {
+      const capture: TextEditKeyCapture = {
+        owner: this,
+        mode: channel => this._capturedKeyMode(app, channel),
+        handle: (channel, shift, control, shortcut) => this._applyCapturedKey(channel, shift, control, shortcut),
+      };
+
+      this._textKeyCapture = capture;
+      app.input._textEditKeyCapture = capture;
+    }
+
     this._invalidatePaint();
     this._syncSeam();
     this._seam?.focus();
   }
 
   private _loseEditFocus(): void {
+    this._releaseTextKeyCapture();
     this._stopBlink();
     // A modifier released while another node holds focus is never seen here,
     // so anything still held has to be forgotten rather than left latched.
@@ -613,6 +677,82 @@ export abstract class TextEditWidget extends Widget {
     this._syncSeam();
     this._seam?.destroy();
     this._seam = null;
+  }
+
+  private _releaseTextKeyCapture(): void {
+    const input = this._blinkApp?.input;
+
+    if (input?._textEditKeyCapture === this._textKeyCapture) {
+      input._textEditKeyCapture = null;
+    }
+
+    this._textKeyCapture = null;
+  }
+
+  private _canAcceptHostInput(app: Application): boolean {
+    const state = app.scenes.state;
+
+    return (
+      !this.destroyed &&
+      this.focused &&
+      this.focusable &&
+      this.visible &&
+      this.effectiveEnabled &&
+      this._stage?.app === app &&
+      (state === null || state === SceneState.Active) &&
+      !app.scenes._transitionGateOpen
+    );
+  }
+
+  private _capturedKeyMode(app: Application, channel: number): 'edit' | 'native' | null {
+    if (!this._canAcceptHostInput(app)) {
+      return null;
+    }
+
+    const values = app.input._actionSample().values;
+    const control = values[Keyboard.Control] !== 0;
+    const alt = values[Keyboard.Alt] !== 0;
+    const meta = values[Keyboard.Meta] !== 0;
+
+    /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- channels are generic numeric input channels */
+    const shortcut = (control || meta) && (channel === Keyboard.A || channel === Keyboard.Z || channel === Keyboard.Y);
+    const editing =
+      editingChannels.has(channel) || (channel === Keyboard.Enter && (this.model.multiline || this.model.composing)) || shortcut;
+
+    if (!editing) {
+      return null;
+    }
+
+    if (
+      this.model.composing ||
+      (alt && shortcut) ||
+      ((control || alt || meta || values[Keyboard.Shift] !== 0) && (channel === Keyboard.Backspace || channel === Keyboard.Delete))
+    ) {
+      return 'native';
+    }
+
+    return 'edit';
+    /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
+  }
+
+  private _applyCapturedKey(channel: number, shift: boolean, control: boolean, shortcut: boolean): void {
+    this._hostDeletes = 0;
+    this._hostLineBreaks = 0;
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- channels are generic numeric input channels
+      if (channel === Keyboard.Enter) {
+        if (!this._readOnly) {
+          this.model.insert('\n');
+        }
+      } else {
+        this._handleEditKeys(channel, shift, control, shortcut);
+      }
+    } finally {
+      if (!this.destroyed) {
+        this._afterModelChange();
+      }
+    }
   }
 
   private _stopBlink(): void {
@@ -651,7 +791,7 @@ export abstract class TextEditWidget extends Widget {
    * Apply the delete a keystroke asks for, unless the transport already
    * reported the same one - see {@link TextEditWidget._hostDeletes}.
    */
-  private _deleteContent(direction: 'backward' | 'forward', word: boolean, line: boolean): void {
+  private _deleteContent(direction: 'backward' | 'forward', word: boolean): void {
     if (this._readOnly) {
       return;
     }
@@ -662,26 +802,43 @@ export abstract class TextEditWidget extends Widget {
       return;
     }
 
-    this.model.deleteContent(direction, _deleteGranularity(word, line));
+    this.model.deleteContent(direction, word ? 'word' : 'character');
   }
 
   private _applyIntent(intent: TextEditIntent): void {
     this._goalX = null;
+    const app = this._stage?.app;
+
+    if (this._seam?._synchronousKeyboard === true && (app === undefined || !this._canAcceptHostInput(app))) {
+      this._syncSeam();
+
+      return;
+    }
+
+    const range = intent.kind === 'insert' || intent.kind === 'deleteContent' ? intent.range : undefined;
+
+    if (range !== undefined && (range.start !== this.model.selectionStart || range.end !== this.model.selectionEnd)) {
+      this.model.setSelection(range.start, range.end);
+    }
 
     if (this._readOnly) {
+      this._afterModelChange();
+
       return;
     }
 
     switch (intent.kind) {
       case 'insert':
-        this.model.insert(intent.text, 'input');
+        this.model.insert(intent.text, intent.source ?? 'input');
 
         if (intent.text === '\n') {
           this._hostLineBreaks++;
         }
+
         break;
       case 'deleteContent':
         this.model.deleteContent(intent.direction, intent.granularity);
+
         this._hostDeletes++;
         break;
       case 'historyUndo':
@@ -695,12 +852,12 @@ export abstract class TextEditWidget extends Widget {
     this._afterModelChange();
   }
 
-  private _applyShortcut(channel: number): boolean {
+  private _applyShortcut(channel: number, shortcut: boolean, shift: boolean): boolean {
     // `channel` is a generic numeric input channel (KeyEvent.channel is
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
     /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option */
-    if (!this._shortcutDown) {
+    if (!shortcut) {
       return false;
     }
 
@@ -719,7 +876,11 @@ export abstract class TextEditWidget extends Widget {
     }
 
     if (channel === Keyboard.Z) {
-      this.model.undo();
+      if (shift) {
+        this.model.redo();
+      } else {
+        this.model.undo();
+      }
 
       return true;
     }
@@ -747,6 +908,7 @@ export abstract class TextEditWidget extends Widget {
 
     this._dragging = true;
     this._dragPointerId = pointerId;
+    this._dragApp = app;
     app.input.onPointerMove.add(this._onPointerDragMove);
     app.input.onPointerUp.add(this._onPointerDragEnd);
     app.input.onPointerCancel.add(this._onPointerDragEnd);
@@ -760,9 +922,11 @@ export abstract class TextEditWidget extends Widget {
     this._dragging = false;
     this._dragPointerId = -1;
 
-    const app = this._stage?.app;
+    const app = this._dragApp;
 
-    if (app === undefined) {
+    this._dragApp = null;
+
+    if (app === null) {
       return;
     }
 
@@ -794,6 +958,24 @@ export abstract class TextEditWidget extends Widget {
 
     this.model.setSelection(extend ? this.model.anchor : offset, offset);
     this._goalX = goalX;
+  }
+
+  /**
+   * Move the caret to the start or end of the laid-out row it is on, so a soft
+   * wrap is a line end like a hard break. A caret exactly on a wrap boundary
+   * belongs to the earlier row, as it does for vertical motion.
+   */
+  private _moveToRowEdge(direction: 'backward' | 'forward', extend: boolean): void {
+    if (!this.model.multiline || this.model.maskChar !== null) {
+      this.model.moveCaret(direction, 'line', extend);
+
+      return;
+    }
+
+    const at = this._locate(this.model.focus);
+    const offset = this._offsetAt(at.line, direction === 'backward' ? 0 : Number.MAX_SAFE_INTEGER);
+
+    this.model.setSelection(extend ? this.model.anchor : offset, offset);
   }
 
   /** How many whole line boxes the content area shows - one page of vertical motion. */
@@ -998,7 +1180,9 @@ export abstract class TextEditWidget extends Widget {
     const limit = Math.max(0, this._layout().advance.height - Math.max(0, viewport));
     const next = Math.max(0, Math.min(value, limit));
 
-    if (this._scrollY === next) return;
+    if (this._scrollY === next) {
+      return;
+    }
 
     this._scrollY = next;
     this._applyScrollPosition();

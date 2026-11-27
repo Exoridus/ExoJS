@@ -59,7 +59,10 @@ export const defineColorImageDecodeProbes = (title: string, open: OpenColorProbe
 
     test('a PNG declared as numeric data reaches the shader with its stored bytes', async () => {
       const h = await start();
-      const texture = await new TextureFactory().create(await encodePng([128, 128, 255, 255]), factoryContext({ textureOptions: { colorSpace: 'none' } }));
+      const texture = await new TextureFactory().create(
+        await encodePng([128, 128, 255, 255]),
+        factoryContext({ textureOptions: { colorSpace: 'none' } }),
+      );
       const raw = new RenderTexture(2, 2, { format: TextureFormat.Rgba8 });
 
       try {

@@ -91,7 +91,16 @@ export const createZip = (entries: readonly ZipFixtureEntry[]): Buffer => {
   }
 
   const centralDirectory = Buffer.concat(centrals);
-  const end = Buffer.concat([u32(0x06054b50), u16(0), u16(0), u16(entries.length), u16(entries.length), u32(centralDirectory.length), u32(offset), u16(0)]);
+  const end = Buffer.concat([
+    u32(0x06054b50),
+    u16(0),
+    u16(0),
+    u16(entries.length),
+    u16(entries.length),
+    u32(centralDirectory.length),
+    u32(offset),
+    u16(0),
+  ]);
 
   return Buffer.concat([...locals, centralDirectory, end]);
 };

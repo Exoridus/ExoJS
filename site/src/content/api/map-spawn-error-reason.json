@@ -4,7 +4,7 @@
   "symbol": "MapSpawnErrorReason",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Why a MapSpawnError was raised."
       ],
-      "importLine": "import { MapSpawnErrorReason } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapSpawnErrorReason } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

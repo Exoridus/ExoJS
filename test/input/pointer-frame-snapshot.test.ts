@@ -319,7 +319,8 @@ describe('ordered channel event log', () => {
     readonly channels: readonly RawChannelEvent[];
   }
 
-  const frameBatches = (system: InputSystem): RawChannelEventBatch[] => (system as unknown as { frameBatches: RawChannelEventBatch[] }).frameBatches;
+  const frameBatches = (system: InputSystem): RawChannelEventBatch[] =>
+    (system as unknown as { frameBatches: RawChannelEventBatch[] }).frameBatches;
   const forSpace = (system: InputSystem): number[] =>
     frameBatches(system)
       .flatMap(batch => batch.channels)
@@ -330,6 +331,54 @@ describe('ordered channel event log', () => {
     canvas.dispatchEvent(new FocusEvent('focus'));
     window.dispatchEvent(new KeyboardEvent('keydown', { code }));
   };
+
+  it('records a modifier side and aggregate in one atomic batch', () => {
+    focusAndPress('ShiftLeft');
+
+    expect(frameBatches(im)).toHaveLength(1);
+    expect(frameBatches(im)[0]!.channels).toEqual(
+      expect.arrayContaining([
+        { channel: Keyboard.ShiftLeft, value: 1 },
+        { channel: Keyboard.Shift, value: 1 },
+      ]),
+    );
+    expect(frameBatches(im)[0]!.channels).toHaveLength(2);
+  });
+
+  it('records modifier releases atomically while respecting the other side', () => {
+    focusAndPress('ShiftLeft');
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftRight' }));
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'ShiftLeft' }));
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'ShiftRight' }));
+
+    const batches = frameBatches(im);
+    expect(batches).toHaveLength(4);
+    expect(batches[2]!.channels).toEqual([{ channel: Keyboard.ShiftLeft, value: 0 }]);
+    expect(batches[3]!.channels).toEqual(
+      expect.arrayContaining([
+        { channel: Keyboard.ShiftRight, value: 0 },
+        { channel: Keyboard.Shift, value: 0 },
+      ]),
+    );
+    expect(batches[3]!.channels).toHaveLength(2);
+  });
+
+  it('records focus-loss releases in one atomic batch', () => {
+    focusAndPress('ShiftLeft');
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+    im.preFrame(0 as never);
+    canvas.dispatchEvent(new FocusEvent('blur'));
+
+    expect(frameBatches(im)).toHaveLength(1);
+    expect(frameBatches(im)[0]!.channels).toEqual(
+      expect.arrayContaining([
+        { channel: Keyboard.ShiftLeft, value: 0 },
+        { channel: Keyboard.Shift, value: 0 },
+        { channel: Keyboard.A, value: 0 },
+      ]),
+    );
+    expect(frameBatches(im)[0]!.channels).toHaveLength(3);
+  });
 
   it('records a press then a release in that true order within one frame', () => {
     focusAndPress('Space');
@@ -454,7 +503,10 @@ describe('pointer dispatch order', () => {
 });
 
 describe('context menu policy', () => {
-  const createManager = (input?: { allowNativeContextMenu?: boolean; allowTextSelection?: boolean }): { im: InputSystem; canvas: HTMLCanvasElement } => {
+  const createManager = (input?: {
+    allowNativeContextMenu?: boolean;
+    allowTextSelection?: boolean;
+  }): { im: InputSystem; canvas: HTMLCanvasElement } => {
     const c = createCanvas();
     const app = {
       canvas: c,
@@ -570,5 +622,30 @@ describe('context menu policy', () => {
     allowed.canvas.dispatchEvent(passed);
     expect(passed.defaultPrevented).toBe(false);
     allowed.im.destroy();
+  });
+});
+
+describe('pointer button snapshot signals', () => {
+  it('hands raw listeners the original phase mask, independent of the final Pointer state', () => {
+    fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
+    im.preFrame(0 as never);
+
+    const seen: Array<[string, number | undefined, number | undefined, number]> = [];
+
+    im.onPointerDown.add((pointer, _x, _y, button, buttons) => {
+      seen.push(['down', button, buttons, pointer.buttons]);
+    });
+    im.onPointerUp.add((pointer, _x, _y, button, buttons) => {
+      seen.push(['up', button, buttons, pointer.buttons]);
+    });
+
+    fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, button: 2, buttons: 2 });
+    fire(canvas, 'pointerup', { clientX: 10, clientY: 10, button: 2, buttons: 0 });
+    im.preFrame(0 as never);
+
+    expect(seen).toEqual([
+      ['down', 2, 2, 0],
+      ['up', 2, 0, 0],
+    ]);
   });
 });

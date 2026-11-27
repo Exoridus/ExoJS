@@ -1,5 +1,7 @@
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
+import { Time } from '#core/units';
+import { InteractionEvent } from '#input/InteractionEvent';
 import { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
 import { Rectangle } from '#math/Rectangle';
@@ -10,6 +12,8 @@ import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import { Text } from '#rendering/text/Text';
+import { TextEffectError } from '#rendering/text/TextEffectError';
 import type { GlyphInfo } from '#rendering/text/types';
 import type { Texture } from '#rendering/texture/Texture';
 import { Button } from '#ui/Button';
@@ -21,15 +25,28 @@ import { ProgressBar } from '#ui/ProgressBar';
 import { Slider } from '#ui/Slider';
 import { Stack } from '#ui/Stack';
 import type { UITheme } from '#ui/theme';
-import { createUITheme } from '#ui/theme';
+import { createUITheme, defaultUITheme } from '#ui/theme';
 import { Toggle } from '#ui/Toggle';
 import { UIRoot } from '#ui/UIRoot';
+import { Widget } from '#ui/Widget';
 
-import { createUIApp, press } from '../support/text-field-harness';
+import { createUIApp, makePointer, press } from '../support/text-field-harness';
 
 // Text (used by Label/Button) needs a glyph atlas; inject a deterministic mock
 // so widgets are constructible without a real canvas (jsdom has no measureText).
-const fixedGlyphInfo: GlyphInfo = { x: 0, y: 0, width: 8, height: 16, advance: 10, ascent: 13, page: 0, uvLeft: 0, uvTop: 0, uvRight: 0.01, uvBottom: 0.02 };
+const fixedGlyphInfo: GlyphInfo = {
+  x: 0,
+  y: 0,
+  width: 8,
+  height: 16,
+  advance: 10,
+  ascent: 13,
+  page: 0,
+  uvLeft: 0,
+  uvTop: 0,
+  uvRight: 0.01,
+  uvBottom: 0.02,
+};
 const mockPage = {
   texture: {
     width: 1024,
@@ -43,7 +60,7 @@ const mockPage = {
     flipY: false,
     addDestroyListener: () => mockPage.texture,
     removeDestroyListener: () => mockPage.texture,
-    destroy: () => undefined,
+    destroy: () => {},
   },
   index: 0,
   mode: 'sdf' as const,
@@ -64,6 +81,96 @@ afterEach(() => {
   resetDefaultGlyphAtlasPool();
 });
 
+test('button borders stay inside their layout box in normal and focused states', () => {
+  const button = new Button({ width: 120, height: 36 });
+
+  for (const focused of [false, true]) {
+    if (focused) {
+      button.onFocus.dispatch(button);
+    }
+
+    const bounds = button.backgroundNode!.getBounds();
+    expect(bounds.left).toBeGreaterThanOrEqual(-0.001);
+    expect(bounds.top).toBeGreaterThanOrEqual(-0.001);
+    expect(bounds.right).toBeLessThanOrEqual(120.001);
+    expect(bounds.bottom).toBeLessThanOrEqual(36.001);
+  }
+});
+
+describe('Panel background and fill overrides', () => {
+  it('setBackground(null) returns the panel to its skin, dropping a fill override', () => {
+    const skinColor = new Panel().color!.clone();
+    const panel = new Panel().setFill({ color: Color.red });
+
+    expect(panel.color!.equals(Color.red)).toBe(true);
+
+    panel.setBackground(null);
+
+    expect(panel.color!.equals(skinColor)).toBe(true);
+    expect(panel.fillOverrides).toBeNull();
+  });
+
+  it('a fill override applied after a texture background is what the panel paints', () => {
+    const panel = new Panel().setBackground(textureStub());
+
+    panel.setFill({ color: Color.red });
+
+    expect(panel.color!.equals(Color.red)).toBe(true);
+  });
+});
+
+describe('text style overrides', () => {
+  it('Label and Button hand out a read-only snapshot, so only setTextStyle changes the style', () => {
+    const label = new Label('abc').setTextStyle({ fontSize: 20 });
+    const button = new Button({ label: 'ok' }).setTextStyle({ fontSize: 20 });
+
+    for (const widget of [label, button]) {
+      const overrides = widget.textStyleOverrides as { fontSize?: number };
+
+      expect(() => {
+        overrides.fontSize = 24;
+      }).toThrow(TypeError);
+      expect(widget.textStyleOverrides?.fontSize).toBe(20);
+    }
+  });
+});
+
+describe('text effect overrides', () => {
+  it('rejects an override the label cannot draw and keeps the previous one', () => {
+    const label = new Label('abc').setTextStyle({ outlineWidth: 2 });
+    const button = new Button({ label: 'ok' }).setTextStyle({ outlineWidth: 2 });
+
+    for (const widget of [label, button]) {
+      expect(() => widget.setTextStyle({ outlineWidth: 127 })).toThrow(TextEffectError);
+      expect(widget.textStyleOverrides?.outlineWidth).toBe(2);
+    }
+
+    // The rejected override never reaches a later layout pass.
+    expect(() => label.textNode.syncDirty()).not.toThrow();
+  });
+
+  it('a widget draws ordinary pixel effects without configuring a reach', () => {
+    const label = new Label('abc').setTextStyle({ outlineWidth: 4, shadowAlpha: 0.5, shadowOffsetX: 6, shadowOffsetY: 6 });
+
+    expect(label.textStyleOverrides?.outlineWidth).toBe(4);
+    expect(label.textNode.maxEffectExtent).toBe(126.5);
+  });
+
+  it('rejects a skin text style no label could draw when the theme is applied, and keeps the previous theme', () => {
+    const text = { outlineWidth: 127 };
+
+    expect(() => createUITheme({ label: { normal: { text } } })).toThrow(TextEffectError);
+
+    const panel = new Panel();
+    const before = panel.theme;
+
+    expect(() => panel.setTheme({ label: { normal: { text } } })).toThrow(TextEffectError);
+    expect(panel.themeOverrides).toBeNull();
+    expect(panel.theme).toBe(before);
+    expect(() => panel.setTheme({ label: { normal: { text: { outlineWidth: 6 } } } })).not.toThrow();
+  });
+});
+
 describe('Panel', () => {
   test('takes its explicit layout size', () => {
     const panel = new Panel({ width: 200, height: 100 });
@@ -72,12 +179,12 @@ describe('Panel', () => {
     expect(panel.uiHeight).toBe(100);
   });
 
-  test('defaults to zero size and no border when constructed with no options', () => {
+  test('defaults to zero size and inherits the panel border', () => {
     const panel = new Panel();
 
     expect(panel.uiWidth).toBe(0);
     expect(panel.uiHeight).toBe(0);
-    expect(panel.borderWidth).toBe(0);
+    expect(panel.borderWidth).toBe(1);
   });
 
   test('exposes its painted node and the fill values in effect', () => {
@@ -146,7 +253,7 @@ describe('Button', () => {
     const handler = vi.fn();
 
     button.onClick.add(handler);
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(handler).toHaveBeenCalledTimes(1);
   });
@@ -192,11 +299,11 @@ describe('Button', () => {
   test('pointer-down sets the pressed state only while enabled', () => {
     const button = new Button();
 
-    button.onPointerDown.dispatch({} as never); // enabled -> pressed + redraw
+    button.onPointerDown.dispatch({ button: 0 } as never); // enabled -> pressed + redraw
     button.onPointerUp.dispatch({} as never); // -> refreshState
 
     button.enabled = false;
-    expect(() => button.onPointerDown.dispatch({} as never)).not.toThrow(); // disabled -> no-op
+    expect(() => button.onPointerDown.dispatch({ button: 0 } as never)).not.toThrow(); // disabled -> no-op
   });
 
   test('a disabled button ignores a pointer tap (onClick not dispatched)', () => {
@@ -205,7 +312,7 @@ describe('Button', () => {
 
     button.onClick.add(handler);
     button.enabled = false;
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(handler).not.toHaveBeenCalled();
   });
@@ -235,7 +342,7 @@ describe('Button', () => {
     expect(button.interactive).toBe(false);
 
     button.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, button));
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
     expect(handler).not.toHaveBeenCalled();
   });
 
@@ -253,7 +360,7 @@ describe('Button', () => {
     expect(button.effectiveEnabled).toBe(true);
     expect(button.interactive).toBe(true);
 
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
     expect(handler).toHaveBeenCalledTimes(1);
   });
 });
@@ -459,6 +566,23 @@ describe('Stack', () => {
     expect(stack.uiWidth).toBe(40);
     expect(stack.uiHeight).toBe(20);
   });
+
+  test('a direction change restores a grown child to its natural size', () => {
+    const stack = new Stack({ direction: 'row', spacing: 0 });
+    const child = new Panel({ width: 40, height: 20 });
+
+    stack.addItem(child);
+    stack.setSize(100, 20);
+    stack.setGrow(child, 1);
+
+    expect(child.uiWidth).toBe(100);
+    expect(child.uiHeight).toBe(20);
+
+    stack.direction = 'column';
+
+    expect(child.uiWidth).toBe(40);
+    expect(child.uiHeight).toBe(20);
+  });
 });
 
 // ── Skins, themes and controlled setters ─────────────────────────────────────
@@ -469,14 +593,155 @@ const textureStub = (): Texture =>
     height: 64,
     version: 1,
     source: null,
-    addDestroyListener: () => undefined,
-    removeDestroyListener: () => undefined,
+    addDestroyListener: () => {},
+    removeDestroyListener: () => {},
   }) as unknown as Texture;
 
 const themeWith = (color: Color): UITheme =>
   createUITheme({ panel: { normal: { background: { kind: 'fill', color, borderColor: Color.black, borderWidth: 0, cornerRadius: 2 } } } });
 
 describe('widget skins', () => {
+  test('rejects a theme before a child override can combine into an undrawable effect', () => {
+    const root = new UIRoot();
+    const panel = new Panel();
+    const sibling = new Button({ label: 'First' });
+    const child = new Button({ label: 'Second' }).setTextStyle({ shadowOffsetX: 130 });
+    root.addChild(panel);
+    panel.addChild(sibling, child);
+    const previous = panel.theme;
+    const patch = { button: { normal: { text: { fontSize: 30, shadowAlpha: 1 } } } };
+
+    expect(() => panel.setTheme(patch)).toThrow(TextEffectError);
+    expect(panel.themeOverrides).toBeNull();
+    expect(panel.theme).toBe(previous);
+    expect(sibling.theme).toBe(previous);
+    expect(child.theme).toBe(previous);
+    expect(sibling.fontSize).toBe(16);
+
+    expect(() => {
+      root.theme = createUITheme(patch);
+    }).toThrow(TextEffectError);
+    expect(root.theme).toBe(previous);
+  });
+  test('re-centers both buttons after one reader settles a shared style change', () => {
+    const first = new Button({ width: 200, height: 48, label: 'Start' });
+    const second = new Button({ width: 120, height: 64, label: 'Play' });
+    second.labelNode.style = first.labelNode.style;
+
+    first.labelNode.style.fontSize = 30;
+    first.labelNode.syncDirty();
+    second.labelNode.syncDirty();
+
+    for (const button of [first, second]) {
+      const label = button.labelNode;
+      expect(label.textBounds.height).toBeCloseTo(36);
+      const ink = label.getLocalBounds();
+      expect(label.x + ink.x + ink.width / 2).toBeCloseTo(button.uiWidth / 2);
+      expect(label.y + ink.y + ink.height / 2).toBeCloseTo(button.uiHeight / 2);
+    }
+  });
+
+  test('repositions the button label for every state, including inset-only changes', () => {
+    const button = new Button({ width: 200, height: 48, label: 'Start' });
+    const event = { button: 0 } as InteractionEvent;
+
+    button.setTheme({
+      button: {
+        hover: { insets: { left: 12, right: 4, top: 14, bottom: 4 } },
+        pressed: { text: { fontSize: 30, fontWeight: 'bold' } },
+        focused: { text: { fontSize: 24, fontStyle: 'italic' } },
+        disabled: { text: { fontSize: 18, lineHeight: 2 } },
+      },
+    });
+
+    const assertCenter = (state: string, x: number, y: number): void => {
+      expect(button.state).toBe(state);
+      const label = button.labelNode;
+      const fill = label._fillBounds;
+      expect(label.x + fill.x + fill.width / 2).toBeCloseTo(x);
+      expect(label.y + fill.y + fill.height / 2).toBeCloseTo(y);
+    };
+
+    assertCenter('normal', 100, 24);
+    button.onPointerOver.dispatch(event);
+    assertCenter('hover', 104, 29);
+    button.onPointerDown.dispatch(event);
+    assertCenter('pressed', 100, 24);
+    button.onPointerUp.dispatch(event);
+    button.onPointerOut.dispatch(event);
+    button.onFocus.dispatch(button);
+    assertCenter('focused', 100, 24);
+    button.enabled = false;
+    assertCenter('disabled', 100, 24);
+  });
+
+  test('centers button fill in the widget and honors explicit asymmetric insets', () => {
+    const button = new Button({ width: 200, height: 44, label: 'Start' });
+    const label = button.labelNode;
+
+    expect(label.x + label._fillBounds.x + label._fillBounds.width / 2).toBeCloseTo(100);
+    expect(label.y + label._fillBounds.y + label._fillBounds.height / 2).toBeCloseTo(22);
+
+    button.setTheme({ button: { normal: { insets: { left: 18, right: 6, top: 10, bottom: 2 } } } });
+
+    expect(label.x + label._fillBounds.x + label._fillBounds.width / 2).toBeCloseTo(106);
+    expect(label.y + label._fillBounds.y + label._fillBounds.height / 2).toBeCloseTo(26);
+  });
+
+  test('sizes labels and aligns checkable text without including glyph padding', () => {
+    const root = new UIRoot();
+    const label = new Label('Score');
+    const toggle = new Toggle({ label: 'Motion' });
+
+    root.addChild(label, toggle);
+
+    expect(label.uiWidth).toBe(label.textNode.textBounds.width);
+    expect(label.uiHeight).toBe(label.textNode.textBounds.height);
+    expect(toggle.labelNode!.y + toggle.labelNode!._fillBounds.y + toggle.labelNode!._fillBounds.height / 2).toBeCloseTo(
+      toggle.uiHeight / 2,
+    );
+
+    toggle.setTheme({ toggleTrack: { focused: { text: { fontSize: 30 } } } });
+    toggle.onFocus.dispatch(toggle);
+
+    expect(toggle.labelNode!.y + toggle.labelNode!._fillBounds.y + toggle.labelNode!._fillBounds.height / 2).toBeCloseTo(
+      toggle.uiHeight / 2,
+    );
+  });
+
+  test('dropdown text adopts inherited normal, focused and row styles', () => {
+    const root = new UIRoot();
+    const dropdown = new Dropdown({ items: [{ label: 'First', value: 1 }], selectedIndex: 0, height: 40 });
+    const label = dropdown.children.find(child => child instanceof Text)!;
+
+    root.theme = createUITheme({
+      button: {
+        normal: { text: { fontSize: 18, fillColor: new Color(10, 20, 30) } },
+        focused: { text: { fontSize: 20, fillColor: new Color(30, 40, 50) } },
+      },
+      dropdownItem: { normal: { text: { fontSize: 22, fillColor: new Color(60, 70, 80) } } },
+    });
+    root.addChild(dropdown);
+
+    expect(label.style.fontSize).toBe(18);
+    expect(label.style.fillColor.r).toBe(10);
+    expect(label.y + label._fillBounds.y + label._fillBounds.height / 2).toBeCloseTo(20);
+
+    const row = dropdown.listNode.children.find(
+      (child): child is Container => child instanceof Container && child.children.some(node => node instanceof Text),
+    )!;
+    const rowText = row.children.find(child => child instanceof Text)!;
+
+    expect(rowText.style.fontSize).toBe(22);
+    expect(rowText.style.fillColor.r).toBe(60);
+
+    dropdown.onFocus.dispatch(dropdown);
+
+    expect(label.style.fontSize).toBe(20);
+    expect(label.style.fillColor.r).toBe(30);
+    expect(label.y + label._fillBounds.y + label._fillBounds.height / 2).toBeCloseTo(20);
+  });
+
   test('a panel paints the theme it inherits and follows a later theme change', () => {
     const root = new UIRoot();
     const panel = new Panel({ width: 40, height: 20 });
@@ -525,12 +790,12 @@ describe('widget skins', () => {
     const button = new Button({ width: 80, height: 30 });
 
     expect(button.state).toBe('normal');
-    expect(button.colors.hover?.r).toBe(74);
+    expect(button.colors.hover?.r).toBe(48);
 
     button.setFill({ color: new Color(3, 3, 3, 1) }, 'hover');
 
     expect(button.colors.hover?.r).toBe(3);
-    expect(button.colors.normal?.r).toBe(54);
+    expect(button.colors.normal?.r).toBe(35);
   });
 
   test('a disabled button paints its disabled skin', () => {
@@ -539,7 +804,7 @@ describe('widget skins', () => {
     button.enabled = false;
 
     expect(button.state).toBe('disabled');
-    expect(button.colors.disabled?.r).toBe(70);
+    expect(button.colors.disabled?.r).toBe(29);
   });
 
   test('a button follows the theme text style and re-centers the label', () => {
@@ -573,7 +838,7 @@ describe('widget skins', () => {
     bar.setTrackFill({ color: new Color(2, 2, 2, 1) });
 
     expect(bar.trackColor?.r).toBe(2);
-    expect(bar.fillColor?.r).toBe(80);
+    expect(bar.fillColor?.r).toBe(143);
     expect(bar.fillOverrides.bar).toBeNull();
   });
 });
@@ -591,7 +856,7 @@ describe('background input', () => {
     const panel = new Panel({ width: 40, height: 20, background: new Color(7, 8, 9, 1) });
 
     expect(panel.color?.r).toBe(7);
-    expect(panel.cornerRadius).toBe(8);
+    expect(panel.cornerRadius).toBe(10);
     expect(panel.fillOverrides?.color?.r).toBe(7);
   });
 
@@ -670,6 +935,21 @@ describe('ProgressBar fill modes', () => {
 });
 
 describe('Checkbox', () => {
+  test('a label change that resizes it lays out and paints once', () => {
+    const checkbox = new Checkbox({ label: 'On' });
+    const labelNode = checkbox.labelNode!;
+    const paint = vi.spyOn(checkbox as unknown as { _paintControl(): void }, '_paintControl');
+    const place = vi.spyOn(labelNode, 'setPosition');
+    const widthBefore = checkbox.uiWidth;
+
+    checkbox.label = 'A much longer label';
+
+    expect(checkbox.uiWidth).toBeGreaterThan(widthBefore);
+    expect(paint).toHaveBeenCalledOnce();
+    expect(place).toHaveBeenCalledOnce();
+    expect(labelNode.y + labelNode._fillBounds.y + labelNode._fillBounds.height / 2).toBeCloseTo(checkbox.uiHeight / 2);
+  });
+
   test('is interactive and focusable and starts unchecked', () => {
     const checkbox = new Checkbox();
 
@@ -683,7 +963,7 @@ describe('Checkbox', () => {
     const handler = vi.fn();
 
     checkbox.onChange.add(handler);
-    checkbox.onPointerTap.dispatch({} as never);
+    checkbox.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(checkbox.checked).toBe(true);
     expect(handler).toHaveBeenCalledWith(true, checkbox);
@@ -711,7 +991,7 @@ describe('Checkbox', () => {
 
     checkbox.enabled = false;
     checkbox.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, checkbox));
-    checkbox.onPointerTap.dispatch({} as never);
+    checkbox.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(checkbox.checked).toBe(false);
     expect(checkbox.interactive).toBe(false);
@@ -803,12 +1083,56 @@ describe('Toggle', () => {
     expect(toggle.trackNode).toBeInstanceOf(Graphics);
   });
 
+  test('the fill covers the track only while checked, between track and knob', () => {
+    const toggle = new Toggle({ width: 44, height: 24 });
+
+    new UIRoot().addChild(toggle);
+
+    expect(toggle.fillNode).toBeNull();
+
+    toggle.checked = true;
+
+    expect(toggle.fillNode).toBeInstanceOf(Graphics);
+    expect(toggle.children.indexOf(toggle.fillNode!)).toBe(toggle.children.indexOf(toggle.trackNode!) + 1);
+    expect(toggle.children.indexOf(toggle.knobNode!)).toBe(toggle.children.indexOf(toggle.fillNode!) + 1);
+
+    toggle.checked = false;
+
+    expect(toggle.fillNode).toBeNull();
+  });
+
+  test('a hand-written theme without toggleFill falls back to the default fill', () => {
+    const { toggleFill: _omitted, ...legacy } = defaultUITheme;
+    const toggle = new Toggle({ width: 44, height: 24 });
+    const root = new UIRoot();
+
+    root.theme = legacy;
+    root.addChild(toggle);
+    toggle.checked = true;
+
+    expect(toggle.fillNode).toBeInstanceOf(Graphics);
+  });
+
+  test('patching toggleFill over a theme that omits it starts from the default skin', () => {
+    const { toggleFill: _omitted, ...legacy } = defaultUITheme;
+    const patched = createUITheme(
+      {
+        toggleFill: {
+          normal: { background: { kind: 'fill', color: Color.red, borderColor: Color.black, borderWidth: 0, cornerRadius: 2 } },
+        },
+      },
+      legacy,
+    );
+
+    expect(patched.toggleFill?.normal.insets).toEqual(defaultUITheme.toggleFill.normal.insets);
+  });
+
   test('it flips on a tap like a checkbox does', () => {
     const toggle = new Toggle();
     const handler = vi.fn();
 
     toggle.onChange.add(handler);
-    toggle.onPointerTap.dispatch({} as never);
+    toggle.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(toggle.checked).toBe(true);
     expect(handler).toHaveBeenCalledTimes(1);
@@ -956,6 +1280,268 @@ describe('Dropdown', () => {
     { label: 'High', value: 'high' },
   ];
 
+  test('clamps an out-of-range initial selection to no selection', () => {
+    expect(new Dropdown({ items, selectedIndex: 99 }).selectedIndex).toBe(-1);
+    expect(new Dropdown({ items, selectedIndex: -2 }).selectedIndex).toBe(-1);
+    expect(new Dropdown({ items, selectedIndex: 2 }).selectedIndex).toBe(2);
+  });
+
+  test('re-clamps the open highlight when the items shrink, so Enter still picks a real item', () => {
+    const harness = createUIApp();
+    const wide = Array.from({ length: 5 }, (_, index) => ({ label: `Item ${index}`, value: index }));
+    const dropdown = new Dropdown({ items: wide, width: 180, height: 36 });
+
+    harness.scene.ui.addChild(dropdown);
+    dropdown.open();
+
+    for (let step = 0; step < 4; step++) {
+      dropdown.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Down, dropdown));
+    }
+
+    expect(dropdown.highlightedIndex).toBe(3);
+
+    const changes = vi.fn();
+
+    dropdown.onChange.add(changes);
+    dropdown.setItems([
+      { label: 'A', value: 3 },
+      { label: 'B', value: 4 },
+    ]);
+
+    expect(dropdown.highlightedIndex).toBe(1);
+
+    dropdown.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, dropdown));
+
+    expect(changes).toHaveBeenCalledOnce();
+    expect(dropdown.selectedValue).toBe(4);
+  });
+
+  test('an open list paints and picks above later widgets across its ancestor panels, then restores their order', () => {
+    const harness = createUIApp();
+    const panel = new Panel({ width: 220, height: 80 });
+    const stack = new Stack({ direction: 'column' });
+    const dropdown = new Dropdown({ items, selectedIndex: 0, width: 180, height: 36 });
+    const lowerButton = new Button({ label: 'Below', width: 180, height: 100 });
+    const otherPanel = new Panel({ width: 220, height: 160 });
+    const coveringButton = new Button({ label: 'Other panel', width: 180, height: 100 });
+    coveringButton.setPosition(0, 36);
+    otherPanel.addChild(coveringButton);
+    stack.addItem(dropdown);
+    stack.addItem(lowerButton);
+    panel.addChild(stack);
+    harness.scene.ui.addChild(panel, otherPanel);
+    const clicks = vi.fn();
+    coveringButton.onClick.add(clicks);
+    harness.im.focus(dropdown);
+    dropdown.open();
+
+    const tap = (): void => {
+      press(harness, 50, 90);
+      const pointer = makePointer(50, 90);
+      harness.signals.onPointerUp.dispatch(pointer, 50, 90);
+      harness.signals.onPointerTap.dispatch(pointer, 50, 90);
+      harness.im.preFrame(Time.seconds(1 / 60));
+    };
+
+    tap();
+
+    expect(dropdown.selectedValue).toBe('medium');
+    expect(dropdown.isOpen).toBe(false);
+    expect(clicks).not.toHaveBeenCalled();
+    tap();
+    expect(clicks).toHaveBeenCalledOnce();
+  });
+
+  test('closing one popup keeps another popup above covering siblings of their shared panel', () => {
+    const harness = createUIApp();
+    const panel = new Panel({ width: 220, height: 180 });
+    const first = new Dropdown({ items, selectedIndex: 0, width: 180, height: 36 });
+    const second = new Dropdown({ items, selectedIndex: 0, width: 180, height: 36 });
+    second.setPosition(0, 130);
+    panel.addChild(first, second);
+    const covering = new Button({ label: 'Covered', width: 180, height: 110 });
+    covering.setPosition(0, 166);
+    harness.scene.ui.addChild(panel, covering);
+    first.open();
+    harness.im.focus(second);
+    second.open();
+    first.close();
+
+    press(harness, 50, 220);
+    const pointer = makePointer(50, 220);
+    harness.signals.onPointerUp.dispatch(pointer, 50, 220);
+    harness.signals.onPointerTap.dispatch(pointer, 50, 220);
+    harness.im.preFrame(Time.seconds(1 / 60));
+
+    expect(second.selectedValue).toBe('medium');
+  });
+
+  test('detaching a panel closes its unfocused popup and releases its stacking claim', () => {
+    const harness = createUIApp();
+    const panel = new Panel({ width: 220, height: 100 });
+    const dropdown = new Dropdown({ items });
+    panel.addChild(dropdown);
+    harness.scene.ui.addChild(panel);
+    dropdown.open();
+
+    harness.scene.ui.removeChild(panel);
+
+    expect(dropdown.isOpen).toBe(false);
+    expect(panel.zIndex).toBe(0);
+    panel.destroy();
+  });
+
+  test.each(['remove', 'same-root', 'other-root'] as const)(
+    'a detached popup releases its stacking claim when an ancestor moves: %s',
+    move => {
+      const root = new UIRoot();
+      const otherRoot = new UIRoot();
+      const panel = new Container();
+      const nested = new Container();
+      const destination = new Container();
+      const dropdown = new Dropdown({ items });
+      panel.zIndex = 4;
+      nested.zIndex = 3;
+      dropdown.zIndex = 2;
+      nested.addChild(dropdown);
+      panel.addChild(nested);
+      root.addChild(panel, destination);
+      dropdown.open();
+
+      if (move === 'remove') {
+        root.removeChild(panel);
+      } else if (move === 'same-root') {
+        destination.addChild(panel);
+      } else {
+        otherRoot.addChild(panel);
+      }
+
+      expect(dropdown.isOpen).toBe(false);
+      expect(panel.zIndex).toBe(4);
+      expect(nested.zIndex).toBe(3);
+      expect(dropdown.zIndex).toBe(2);
+      panel.zIndex = 9;
+      const another = new Dropdown({ items });
+      root.addChild(another);
+      another.open().close();
+      expect(panel.zIndex).toBe(9);
+      root.destroy();
+      otherRoot.destroy();
+      panel.destroy();
+    },
+  );
+
+  test('a detached open subtree acquires popup ordering when an ancestor joins a UI root', () => {
+    const root = new UIRoot();
+    const panel = new Container();
+    const nested = new Container();
+    const dropdown = new Dropdown({ items });
+    const covering = new Container();
+    nested.addChild(dropdown);
+    panel.addChild(nested);
+    dropdown.open();
+    root.addChild(covering);
+    root.addChildAt(panel, 0);
+
+    expect(dropdown.isOpen).toBe(true);
+    expect(root._childrenInPaintOrder().at(-1) === panel).toBe(true);
+    dropdown.close();
+    expect(panel.zIndex).toBe(0);
+    expect(nested.zIndex).toBe(0);
+    expect(dropdown.zIndex).toBe(0);
+    root.destroy();
+  });
+
+  test('detaching a shared ancestor releases every detached popup', () => {
+    const root = new UIRoot();
+    const panel = new Container();
+    const first = new Dropdown({ items });
+    const second = new Dropdown({ items });
+    panel.addChild(first, second);
+    root.addChild(panel);
+    first.open();
+    second.open();
+
+    root.removeChild(panel);
+
+    expect(first.isOpen).toBe(false);
+    expect(second.isOpen).toBe(false);
+    expect(panel.zIndex).toBe(0);
+    expect(first.zIndex).toBe(0);
+    expect(second.zIndex).toBe(0);
+    panel.destroy();
+    root.destroy();
+  });
+
+  test('a closed dropdown does not acquire popup ordering when its ancestor joins a UI root', () => {
+    const root = new UIRoot();
+    const panel = new Container();
+    const dropdown = new Dropdown({ items });
+    panel.addChild(dropdown);
+    dropdown.open().close();
+
+    root.addChild(panel);
+
+    expect(dropdown.isOpen).toBe(false);
+    expect(panel.zIndex).toBe(0);
+    expect(dropdown.zIndex).toBe(0);
+    root.destroy();
+  });
+
+  test('list rows leave the rounded list border exposed instead of painting over it', () => {
+    const dropdown = new Dropdown({ items, width: 224, height: 36 });
+    dropdown.open();
+    const list = dropdown.listNode.getBounds();
+    const rows = dropdown.listNode.children.filter((node): node is Widget => node instanceof Widget);
+
+    for (const row of rows) {
+      const bounds = row.getBounds();
+      expect(bounds.left).toBeGreaterThan(list.left + 1);
+      expect(bounds.right).toBeLessThan(list.right - 1);
+      expect(bounds.top).toBeGreaterThan(list.top + 1);
+      expect(bounds.bottom).toBeLessThan(list.bottom - 1);
+    }
+  });
+
+  test('lays out every row before its first opening without needing a resize', () => {
+    const dropdown = new Dropdown({ items, width: 224, height: 36 });
+    const rows = dropdown.listNode.children.filter((node): node is Widget => node instanceof Widget);
+
+    expect(rows).toHaveLength(3);
+    expect(rows.map(row => [row.uiWidth, row.uiHeight, row.y])).toEqual([
+      [216, 36, 4],
+      [216, 36, 40],
+      [216, 36, 76],
+    ]);
+  });
+
+  test('a closed upward list does not make the card above its control clickable', () => {
+    const dropdown = new Dropdown({ items, width: 224, height: 36 });
+    dropdown.setSize(225, 36);
+    dropdown.setPosition(12, 140);
+    dropdown.listNode.setPosition(0, -108);
+
+    expect(dropdown.contains(30, 60)).toBe(false);
+    expect(dropdown.contains(30, 150)).toBe(true);
+  });
+
+  test('a pointer choice closes the list without reopening through the bubbled tap', () => {
+    const harness = createUIApp();
+    const dropdown = new Dropdown({ items, selectedIndex: 0, width: 224, height: 36 });
+    dropdown.setSize(225, 36);
+    harness.scene.ui.addChild(dropdown);
+    harness.im.focus(dropdown);
+    dropdown.open();
+    press(harness, 50, 90);
+    const pointer = makePointer(50, 90);
+    harness.signals.onPointerUp.dispatch(pointer, 50, 90);
+    harness.signals.onPointerTap.dispatch(pointer, 50, 90);
+    harness.im.preFrame(Time.seconds(1 / 60));
+
+    expect(dropdown.selectedValue).toBe('medium');
+    expect(dropdown.isOpen).toBe(false);
+  });
+
   test('it starts closed with nothing selected', () => {
     const dropdown = new Dropdown({ items });
 
@@ -967,14 +1553,14 @@ describe('Dropdown', () => {
   test('a tap opens the list and highlights the selection', () => {
     const dropdown = new Dropdown({ items, selectedIndex: 1 });
 
-    dropdown.onPointerTap.dispatch({} as never);
+    dropdown.onPointerTap.dispatch(new InteractionEvent('pointertap', dropdown, makePointer(10, 10), 10, 10, 0, 0));
 
     expect(dropdown.isOpen).toBe(true);
     expect(dropdown.highlightedIndex).toBe(1);
     expect(dropdown.listNode.visible).toBe(true);
     expect(dropdown.state).toBe('pressed');
 
-    dropdown.onPointerTap.dispatch({} as never);
+    dropdown.onPointerTap.dispatch(new InteractionEvent('pointertap', dropdown, makePointer(10, 10), 10, 10, 0, 0));
     expect(dropdown.isOpen).toBe(false);
   });
 
@@ -1065,6 +1651,20 @@ describe('Dropdown', () => {
     expect(dropdown.isOpen).toBe(false);
   });
 
+  test('a pointer press gives the dropdown keyboard focus before the first arrow key', () => {
+    const harness = createUIApp();
+    const dropdown = new Dropdown({ items, selectedIndex: 0 });
+    harness.scene.ui.addChild(dropdown);
+
+    press(harness, 10, 10);
+    expect(harness.im.focused).toBe(dropdown);
+    dropdown.open();
+    harness.signals.onKeyDown.dispatch(Keyboard.Down);
+    expect(dropdown.highlightedIndex).toBe(1);
+    harness.signals.onKeyDown.dispatch(Keyboard.Enter);
+    expect(dropdown.selectedIndex).toBe(1);
+  });
+
   test('disabling it closes the list and refuses to open', () => {
     const dropdown = new Dropdown({ items });
 
@@ -1124,5 +1724,74 @@ describe('Dropdown', () => {
     expect(dropdown.onChange.count).toBe(0);
 
     expect(() => dropdown.destroy()).not.toThrow();
+  });
+});
+
+describe('Dropdown item replacement', () => {
+  test('setItems keeps the closed label in step with the selected entry', () => {
+    const dropdown = new Dropdown({
+      items: [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium' },
+      ],
+      selectedIndex: 1,
+    });
+    const label = dropdown.children.find((child): child is Text => child instanceof Text)!;
+
+    dropdown.setItems([
+      { label: 'Low', value: 'low' },
+      { label: 'High', value: 'high' },
+    ]);
+
+    expect(label.text).toBe('High');
+  });
+});
+
+describe('primary-only pointer activation', () => {
+  it('does not activate a Button for secondary taps', () => {
+    const button = new Button();
+    const clicked = vi.fn();
+
+    button.onClick.add(clicked);
+    button.onPointerDown.dispatch({ button: 2 } as never);
+    expect(button.state).not.toBe('pressed');
+    button.onPointerTap.dispatch({ button: 2 } as never);
+    expect(clicked).not.toHaveBeenCalled();
+
+    button.onPointerTap.dispatch({ button: 0 } as never);
+    expect(clicked).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not toggle Checkbox or Toggle for secondary taps', () => {
+    for (const widget of [new Checkbox(), new Toggle()]) {
+      widget.onPointerTap.dispatch({ button: 2 } as never);
+      expect(widget.checked).toBe(false);
+
+      widget.onPointerTap.dispatch({ button: 0 } as never);
+      expect(widget.checked).toBe(true);
+    }
+  });
+
+  it('does not open a Dropdown for a secondary tap', () => {
+    const dropdown = new Dropdown({ items: [{ label: 'First', value: 1 }] });
+
+    dropdown.onPointerTap.dispatch({ button: 2, target: dropdown } as never);
+    expect(dropdown.isOpen).toBe(false);
+
+    dropdown.onPointerTap.dispatch({ button: 0, target: dropdown } as never);
+    expect(dropdown.isOpen).toBe(true);
+    dropdown.destroy();
+  });
+
+  it('does not begin a Slider drag with a secondary mouse button', () => {
+    const slider = new Slider();
+    const pointer = { id: 1 };
+
+    slider.onPointerDown.dispatch({ button: 2, pointer, x: 10, y: 10 } as never);
+    expect(slider.dragging).toBe(false);
+
+    slider.onPointerDown.dispatch({ button: 0, pointer, x: 10, y: 10 } as never);
+    expect(slider.dragging).toBe(true);
+    slider.destroy();
   });
 });

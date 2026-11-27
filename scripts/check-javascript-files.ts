@@ -43,19 +43,23 @@ const EXEMPTIONS: readonly Exemption[] = [
   },
   {
     path: 'packages/create-exo-app/bin/create-exo-app.js',
-    reason: 'npm/pnpm link this executable before builds; Node cannot strip TypeScript inside installed node_modules, and tsconfig.scripts.json checks it',
+    reason:
+      'npm/pnpm link this executable before builds; Node cannot strip TypeScript inside installed node_modules, and tsconfig.scripts.json checks it',
   },
   {
-    path: 'examples/',
-    reason: 'the playground catalog: `.ts` sources plus the `.js` twins the transpiler emits and `examples:sync:check` keeps in step',
+    path: 'packages/exojs-demo-assets/bin/copy-media.js',
+    reason:
+      'the media-copy command npm/pnpm link into a host project; Node cannot strip TypeScript inside installed node_modules, and tsconfig.scripts.json checks it',
+  },
+  {
+    path: 'packages/legacy/',
+    reason:
+      'the published forwarders of the retired runtime package names, loaded as-is from an installed package; generated from the release matrix and pinned by `legacy-shims:check`',
   },
   {
     path: 'packages/exojs-config/',
-    reason: 'shared presets that ESLint, Prettier, Vitest and Rolldown load at runtime, typed through JSDoc under `checkJs` (see tsconfig.scripts.json)',
-  },
-  {
-    path: 'site/public/brand/svgo.config.js',
-    reason: 'read by the `svgo` CLI, which loads a config module and understands no TypeScript',
+    reason:
+      'shared presets that ESLint, Prettier, Vitest and Rolldown load at runtime, typed through JSDoc under `checkJs` (see tsconfig.scripts.json)',
   },
 ];
 
@@ -70,7 +74,8 @@ const fail: Abort = message => {
 
 const isJavaScript = (file: string): boolean => JAVASCRIPT_EXTENSIONS.some(extension => file.endsWith(extension));
 
-const matches = (exemption: Exemption, file: string): boolean => (exemption.path.endsWith('/') ? file.startsWith(exemption.path) : file === exemption.path);
+const matches = (exemption: Exemption, file: string): boolean =>
+  exemption.path.endsWith('/') ? file.startsWith(exemption.path) : file === exemption.path;
 
 /** Tracked plus untracked-but-not-ignored files, so a stray lands here before it is committed. */
 const listFiles = (): string[] =>
@@ -85,7 +90,9 @@ const listFiles = (): string[] =>
 const javaScriptFiles = listFiles().filter(isJavaScript);
 
 if (javaScriptFiles.length === 0) {
-  fail('lint:js-files: found no JavaScript at all, which the exemptions below say is impossible - the scan itself is broken, not the tree.');
+  fail(
+    'lint:js-files: found no JavaScript at all, which the exemptions below say is impossible - the scan itself is broken, not the tree.',
+  );
 }
 
 const unexempted = javaScriptFiles.filter(file => !EXEMPTIONS.some(exemption => matches(exemption, file)));
@@ -125,4 +132,6 @@ if (stale.length > 0) {
   );
 }
 
-console.log(`\x1b[32mlint:js-files: ${javaScriptFiles.length} JavaScript file(s), all inside ${EXEMPTIONS.length} recorded exemption(s).\x1b[0m`);
+console.log(
+  `\x1B[32mlint:js-files: ${javaScriptFiles.length} JavaScript file(s), all inside ${EXEMPTIONS.length} recorded exemption(s).\x1B[0m`,
+);

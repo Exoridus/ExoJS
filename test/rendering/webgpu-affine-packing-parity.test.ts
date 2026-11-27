@@ -24,7 +24,11 @@ import { spriteVertexCoreWgsl } from '#rendering/sprite/materialSources';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 import { instancedMeshShaderSource, WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { geoPathEntries, shaderPathEntries } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
-import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import {
+  buildPersistentSpriteShaderSource,
+  buildSpriteShaderSource,
+  spriteBatchTextureSlotTiers,
+} from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
 // ── Fixtures: asymmetric (rotation + skew) affine matrices ───────────────────
@@ -148,7 +152,12 @@ describe('WGSL slot math parity across instanced renderers', () => {
     { name: 'sprite (shared vertex core)', source: spriteVertexCoreWgsl, slot: '', lx: 'localX', ly: 'localY' },
     { name: 'repeating-sprite (shader path)', source: shaderPathEntries, lx: 'lx', ly: 'ly' },
     { name: 'scalable-sprite (shared geometry path)', source: geoPathEntries, lx: 'lx', ly: 'ly' },
-    { name: 'mesh (instanced path)', source: instancedMeshShaderSource, lx: String.raw`input\.position\.x`, ly: String.raw`input\.position\.y` },
+    {
+      name: 'mesh (instanced path)',
+      source: instancedMeshShaderSource,
+      lx: String.raw`input\.position\.x`,
+      ly: String.raw`input\.position\.y`,
+    },
   ];
 
   test.each(cases)('$name applies the shared TransformSlot in canonical orientation', ({ source, slot, lx, ly }) => {

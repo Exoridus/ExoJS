@@ -10,13 +10,13 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 [Tiled](https://www.mapeditor.org/) is a popular open-source map editor. The official `@codexo/exojs-tiled` extension adds a `TiledMap` asset type that loads Tiled's JSON map format (`.tmj`) through the normal [`Loader`](/ExoJS/en/api/loader/) pipeline — fetching the map, resolving its tileset image references, and returning a `TiledMap` you can read for layer and tile data.
 
-> **Note:** `TiledMap` ships as an official ExoJS extension package, separate from the core. It is built on `@codexo/exojs-tilemap`, and both that package and `@codexo/exojs` are peer dependencies — install all three explicitly, on the same version:
+> **Note:** `TiledMap` ships as an official ExoJS extension package, separate from the core. It is built on `@codexo/exojs/tilemap`, which ships inside Core. Install Core and the separate adapter on compatible release lines:
 > ```sh
-> npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-tiled
+> npm install @codexo/exojs @codexo/exojs-tiled
 > ```
 
 <Callout type="pitfall" title="TiledMap is data, not something you can draw">
-Loading a map gives you layer grids and tileset textures — it is not a `Drawable`, so adding it to the scene puts nothing on screen. Load with `Asset.type('tileMap', path)` or call `toTileMap()`, then render the runtime through `TileMapNode`.
+Loading a map gives you layer grids and tileset textures — it is not a `Drawable`, so adding it to the scene puts nothing on screen. Load with `{ type: 'tileMap', source: path }` or call `toTileMap()`, then render the runtime through `TileMapNode`.
 </Callout>
 
 Like all extensions, the core ships nothing Tiled-specific — an `Application` only understands `.tmj` files once you activate the extension.
@@ -50,15 +50,14 @@ Loading a `.tmj` here throws `No renderer/handler` style errors directing you to
 
 Once the extension is active, load a `.tmj` map with an explicit descriptor or by path. Both resolve to the same handler.
 
-<Callout type="invalid" title="Orthogonal and isometric Tiled JSON maps">
-XML (`.tmx`/`.tsx`), staggered or hexagonal orientations, collection-of-images tilesets, and `zstd` compression each raise a clear error rather than loading. Export an orthogonal or isometric JSON map (`.tmj`) with CSV, gzip, or zlib data. Infinite (chunked) maps **are** supported: `toTileMap()` converts each chunked layer to an unbounded runtime layer whose data streams in on demand via `getChunkSource()` — see the [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter.
+<Callout type="invalid" title="Tiled JSON maps only">
+XML (`.tmx`/`.tsx`/`.tx`) and `zstd` compression raise a clear error rather than loading. Export a JSON map (`.tmj`) with CSV, gzip, or zlib data, and save object templates as JSON (`.tj`). Every orientation loads — orthogonal, isometric, staggered, and hexagonal — and infinite (chunked) maps **are** supported: `toTileMap()` converts each chunked layer to an unbounded runtime layer whose data streams in on demand via `getChunkSource()` — see the [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter.
 </Callout>
 
 ```ts
-import { Asset } from '@codexo/exojs';
 
 // Explicit type
-const map = await loader.load(Asset.type('tiledSource', 'levels/forest.tmj'));
+const map = await loader.load({ type: 'tiledSource', source: 'levels/forest.tmj' });
 
 // By path — the `.tmj` extension is registered, so the type is inferred
 const sameMap = await loader.load('levels/forest.tmj');
@@ -77,7 +76,7 @@ map.tileWidth;        // tile width in pixels
 map.tileHeight;       // tile height in pixels
 map.layers;           // readonly tile/object layers
 map.tilesets;         // readonly tileset definitions
-map.tilesets[0].texture; // the Texture resolved for an image tileset (undefined for a collection)
+map.tilesets[0].texture; // the Texture resolved for an atlas tileset (undefined for a collection)
 map.data;             // the raw parsed TiledMapData
 ```
 
@@ -102,7 +101,7 @@ Two Tiled property types aren't plain scalars and convert to structured values i
 - **`object`-typed properties** — a reference to another Tiled object by numeric id — convert to a `TilePropertyObjectRef`: `{ kind: 'objectRef', id }`. Resolve it by matching `id` against another object's `id` in the same map:
 
   ```js no-check -- reading a custom property needs the object narrowing the block leaves out for brevity
-  import { TilePropertyKind } from '@codexo/exojs-tilemap';
+  import { TilePropertyKind } from '@codexo/exojs/tilemap';
 
   const door = spawnLayer.objects.find(object => object.name === 'Door');
   const target = door.properties.linkedSwitch;
@@ -127,7 +126,7 @@ Before this conversion existed, `object`- and `class`-typed properties were indi
 An object placed with Tiled's *insert tile* tool converts to a `TileObject` — `kind` is `'tile'` and `tile` carries the resolved `ResolvedTile` (tileset, local tile id, flip flags):
 
 ```ts
-import { ObjectKind } from '@codexo/exojs-tilemap';
+import { ObjectKind } from '@codexo/exojs/tilemap';
 
 const tileMap = map.toTileMap();
 const [propLayer] = tileMap.objectLayers;
@@ -160,7 +159,7 @@ The two helpers behind this are exported for when you work with the parsed sourc
 An object drawn with Tiled's text tool converts to a `TextObject` — a `TileMapObject` whose `kind` is `'text'` and whose `text` field carries the styled content:
 
 ```ts
-import { ObjectKind } from '@codexo/exojs-tilemap';
+import { ObjectKind } from '@codexo/exojs/tilemap';
 
 const tileMap = map.toTileMap();
 const [captionLayer] = tileMap.objectLayers;
@@ -220,20 +219,28 @@ for (const shape of definition?.collision ?? []) {
 
 `buildTileCollisionGeometry(layer)` does that placement for a whole layer, applying each tile's flip/rotation transform plus the tileset and layer offsets and merging adjacent whole-cell boxes into as few rectangles as it can. It returns plain geometry — this package has no physics dependency.
 
-To go straight to colliders, `@codexo/exojs-tilemap-physics` builds and streams static bodies from that geometry:
+To go straight to colliders, `@codexo/exojs/tilemap-physics` builds and streams static bodies from that geometry:
 
 ```ts
-import { PhysicsWorld } from '@codexo/exojs-physics';
-import type { TileLayer } from '@codexo/exojs-tilemap';
-import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+import { Scene, SystemOrder } from '@codexo/exojs';
+import { PhysicsWorld } from '@codexo/exojs/physics';
+import type { TileLayer } from '@codexo/exojs/tilemap';
+import { TileColliderStreamer } from '@codexo/exojs/tilemap-physics';
 
 declare const ground: TileLayer;
 
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 } });
-const colliders = new TileColliderStreamer(world, ground);
+export class LevelScene extends Scene {
+  public override init(): void {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 }, fixedDelta: this.app.fixedTimeStep });
+    const colliders = new TileColliderStreamer(world, ground);
 
-// Tick this from your update loop.
-colliders.sync();
+    this.systems.add(world, { order: SystemOrder.Physics });
+    // Synced before each frame's fixed steps, so the world never steps over a
+    // chunk whose colliders are missing; registered after the world, so it is
+    // destroyed first and removes its bodies while the world still exists.
+    this.systems.add({ preFrame: () => colliders.sync(), destroy: () => colliders.destroy() });
+  }
+}
 ```
 
 It owns one static body per resident chunk and keeps them in step with the layer, so a streamed map gains and loses collision along with its chunks. See [Physics basics](/ExoJS/en/guide/physics/physics-basics/) for the mapping table and the two region modes.
@@ -246,7 +253,7 @@ The one exception is `zstd`: Tiled's zstd tile-layer compression has no native d
 
 ## Wang and autotile sets
 
-Wang sets — Tiled's terrain/auto-tile definitions — parse onto `TiledTileset.wangSets` as raw `TiledWangSetData`. Convert one with `tiledWangSetToWangSet` into a runtime `WangSet`, then apply it to a layer with `autoTile` (a full-layer pass) or `refreshCell` (an incremental, single-cell update) from `@codexo/exojs-tilemap`:
+Wang sets — Tiled's terrain/auto-tile definitions — parse onto `TiledTileset.wangSets` as raw `TiledWangSetData`. Convert one with `tiledWangSetToWangSet` into a runtime `WangSet`, then apply it to a layer with `autoTile` (a full-layer pass) or `refreshCell` (an incremental, single-cell update) from `@codexo/exojs/tilemap`:
 
 <SourceSnippet
   source="examples/guides/tiled-maps/wang-sets.ts"
@@ -259,10 +266,10 @@ Wang sets — Tiled's terrain/auto-tile definitions — parse onto `TiledTileset
 
 ## Per-tile animation
 
-Tiled's tile editor lets you give a tile an animation: a sequence of frames, each showing a different local tile ID for a set duration. `toTileMap()` carries these frames into `TileDefinition.animation`; `@codexo/exojs-tilemap` ships `TileAnimator` to drive them at runtime, RPG-Maker style — advancing every animated cell across one or more layers on a shared clock:
+Tiled's tile editor lets you give a tile an animation: a sequence of frames, each showing a different local tile ID for a set duration. `toTileMap()` carries these frames into `TileDefinition.animation`; `@codexo/exojs/tilemap` ships `TileAnimator` to drive them at runtime, RPG-Maker style — advancing every animated cell across one or more layers on a shared clock:
 
 ```ts
-import { TileAnimator } from '@codexo/exojs-tilemap';
+import { TileAnimator } from '@codexo/exojs/tilemap';
 
 const tileMap = map.toTileMap();
 const animator = new TileAnimator(tileMap.layers);
@@ -285,13 +292,14 @@ map.destroy(); // releases the TiledMap; does NOT destroy tileset textures
 
 ## Supported scope
 
-The extension covers the common orthogonal workflow, including format details beyond the basics:
+The extension covers the Tiled JSON workflow, including format details beyond the basics:
 
-- Orthogonal orientation
+- Orthogonal, isometric, staggered, and hexagonal orientations (see [Staggered and hexagonal maps](#staggered-and-hexagonal-maps) below)
 - Tile layers, including base64 and gzip/zlib-compressed `data`
 - Infinite (chunked) maps — each chunked layer becomes an unbounded runtime layer whose data streams in on demand via `getChunkSource()` (see the [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter)
-- Image-based (atlas) tilesets, embedded in the map or referenced externally (`.tsj`)
+- Atlas tilesets and collection-of-images tilesets, embedded in the map or referenced externally (`.tsj`)
 - Object layers — rectangle, ellipse, point, polygon, polyline, tile, and text objects
+- Object templates saved as JSON (`.tj`), merged into each placed object when the map loads
 - Image layers
 - Per-tile collision shapes, animation frames, and custom properties
 - Wang/autotile sets, via the `tiledWangSetToWangSet` conversion step (see [Wang and autotile sets](#wang-and-autotile-sets) above)
@@ -301,22 +309,22 @@ The extension covers the common orthogonal workflow, including format details be
 These raise a clear error or are intentionally absent from this release:
 
 - **`.tmx` maps and `.tsx` tilesets (XML)** — only the JSON format is parsed: `.tmj` for maps, `.tsj` for external tilesets. Export from Tiled as JSON.
-- **Non-orthogonal orientations** — isometric, staggered, and hexagonal throw.
-- **Collection-of-images tilesets** — a tileset built from one image per tile, rather than a single atlas, throws in `toTileMap()`. Use an atlas tileset.
+- **XML object templates (`.tx`)** — a map that places objects from an XML template fails to load with an error naming the template. Save templates as JSON (`.tj`) in Tiled; those are merged in.
+- **Hexagonal tiles rotated by 60° or 120°** — the runtime turns tiles only in quarter steps, so `toTileMap()` rejects a hexagonal map that uses those rotations. Flipped hexagonal tiles are fine.
+- **Tile collision on staggered and hexagonal maps** — `buildTileCollisionGeometry`, `TileColliderStreamer`, and `TileNavigationSpace` work on rectangular logical cells and throw for these grids. Build colliders and navigation for hexagons yourself.
 - **`zstd`-compressed tile data** — no native decoder is wired up; re-export with gzip, zlib, or uncompressed CSV data instead.
-- **Object templates (`.tx`)** — an object's template path is preserved on `TiledObject.template` but not fetched or merged into the object. Avoid templates, or resolve them yourself.
 - **Text kerning** — Tiled's per-text `kerning` flag is parsed (`TiledTextData.kerning`) but dropped during `toTileMap()`; it isn't carried into `TextStyle`.
 
 ## Where to look next
 
 - **Package README:** [`@codexo/exojs-tiled`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/README.md) — install, entry points, and the supported-format matrix.
-- **API reference:** the [`Loader`](/ExoJS/en/api/loader/) page documents `load(...)`, explicit `Asset.type(...)` descriptors, and the `.tmj` extension lookup.
+- **API reference:** the [`Loader`](/ExoJS/en/api/loader/) page documents `load(...)`, explicit `{ type, source }` descriptors, and the `.tmj` extension lookup.
 - **Spawning objects:** [Worlds and level streaming](/ExoJS/en/guide/assets/worlds-and-spawning/) turns an object layer into game objects with `MapObjectSpawner`, and shows how to drive several Tiled maps as one streamed world.
 - **Extension model:** the [Particles](/ExoJS/en/guide/effects/particles/) chapter walks through the same activation model for the sibling renderer extension.
 
 ## Isometric coordinates and physics
 
-The [Isometric Landscape example](/ExoJS/en/playground/examples/tilemap/tiled-isometric/) loads a real isometric `.tmj` map using Kenney's Isometric Tiles Landscape assets (CC0). Click to pick a diamond and move a physics actor; the central bridge passes between the authored collider banks.
+The [Tilemap Projections example](/ExoJS/en/playground/examples/tilemap/tiled-isometric/) loads real isometric and hexagonal maps. Select one large projection and point at cells to inspect its screen-to-tile conversion. Physics integration remains a separate example.
 
 `TileMap.projection` owns the mapping. `tileToPixel(tx, ty)` returns the top vertex of an isometric cell; `pixelToTile(x, y)` inverse-projects and floors both coordinates. Negative cells work for infinite maps. Pass map-local display coordinates after undoing camera and scene transforms. This selects a logical cell, not the opaque pixel of artwork extending above it.
 
@@ -326,4 +334,24 @@ Object layers expose logical shapes for gameplay. Use `layer.getDisplayObject(ob
 
 `TileColliderStreamer` and `buildObjectLayerColliders` operate in logical space. Bind an actor explicitly with `TilePhysicsBinding(body, node, map.projection)` and synchronize after stepping physics. Its node parent uses map display coordinates. The binding leaves sprite rotation and scale application-owned. Do not also use a direct physics-to-node binding for that node.
 
-The WebGL2 and WebGPU renderers share projected geometry and global diagonal ordering across storage chunks. Bounds include tall artwork and tileset offsets; only consecutive equal-texture runs batch. More texture changes can therefore increase draw calls. LDtk stays natively orthogonal, and staggered/hexagonal maps are not supported.
+The WebGL2 and WebGPU renderers share projected geometry and global diagonal ordering across storage chunks. Bounds include tall artwork and tileset offsets; only consecutive equal-texture runs batch. More texture changes can therefore increase draw calls. LDtk stays natively orthogonal.
+
+## Staggered and hexagonal maps
+
+Staggered and hexagonal maps keep Tiled's layout: `TileProjection` carries the map's `staggerAxis`, `staggerIndex`, and `hexSideLength`, `tileToPixel(tx, ty)` returns the top-left corner of a cell's bounding box, and `pixelToTile(x, y)` picks the cell the editor would pick at that point — including at cell edges and for negative cells of infinite maps. Tiled stores the objects of these maps in plain pixels, so object layers need no projection here.
+
+Cells draw row by row; when columns are staggered, each row draws its unshifted columns before its shifted ones. That order holds across storage chunks, so artwork taller than its cell overlaps the row above it as it does in Tiled. A hexagonal tile may be flipped but not turned by 60° or 120°.
+
+Physics and navigation stay with rectangular cells. Tile collision, `TileColliderStreamer`, and `TileNavigationSpace` reject these grids instead of treating hexagons as squares.
+
+## Collection-of-images tilesets
+
+A tileset made of one image per tile converts to a runtime `TileSet` whose `tileImages` holds each tile's own texture region; `getTileTexture(id)` returns it for either kind of tileset. Every image keeps its own size and is drawn bottom-left aligned in its cell, so larger images extend up and to the right, and tiles removed in the editor leave their ids empty. Tiled 1.9 sub-rectangles of a shared image are honoured.
+
+Tiles that stay inside their cells batch into one draw per texture and chunk: an atlas costs one draw, a collection one per image. Artwork that overhangs its cell, and the tiles drawn over it, keep cell order so overlapping images stack as in Tiled, and each change of texture in that order costs another draw. Prefer an atlas for dense layers and a collection for scattered props.
+
+## Object templates
+
+An object placed from a template stores only its id, its position, and the fields it overrides. When the map loads, every template is fetched once through the map's dependency scope and merged into its instances: the instance keeps its own id, position, and overrides, inherits every other field, and merges properties by name. A tile template's tile is renumbered into the map's gids for the same tileset. `TiledObject.template` keeps the template path.
+
+A map built from data without the Loader keeps its templates unresolved, and `toTileMap()` rejects it rather than producing objects that lack their template's fields.

@@ -8,9 +8,15 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # HUDs, menus, and widgets
 
-A scene has two drawing surfaces with different responsibilities. `scene.root` contains the world you render explicitly. `scene.ui` contains screen-fixed UI that the engine renders automatically above that world. Put a score, health bar, or menu on `ui` so camera movement does not move the interface.
+A scene has two drawing surfaces with different responsibilities. `scene.root` contains the world rendered by the default scene draw hook. `scene.ui` contains screen-fixed UI that the engine renders automatically above that world. Put a score, health bar, or menu on `ui` so camera movement does not move the interface.
+
+The UI is composed after scene transitions and frame effects, before the output transform. Lighting, bloom, and scene fades therefore leave its controls and text unchanged. Put interface artwork in `scene.root` instead when it should participate in those effects or a transition snapshot.
 
 Core includes retained UI widgets. You do not need an extra package for buttons, panels, text inputs, sliders, or dropdowns. Use DOM UI instead when the surrounding application, accessibility requirements, browser-native controls, or document layout make it the better host.
+
+Widgets start with a shared dark theme, system typography, and mint accents for focus and values. No stylesheet or image pack is required. Set `scene.ui.theme = createUITheme(...)` to customize the layer, or use a widget's theme overrides for a local variation. Theme changes apply to existing labels as well as backgrounds; the surrounding website's CSS does not determine the native widget theme. The [Widget Lab](/ExoJS/en/tools/widget-lab/) shows every control in both the default and the site theme, with their interaction, disabled, popup and teardown behavior.
+
+Buttons center their visible glyph fill in the widget. Theme insets define the content rectangle, so unequal insets shift its center. Text styles and asynchronously loaded font faces update placement automatically.
 
 ## Build a small HUD
 
@@ -21,6 +27,16 @@ This complete scene renders only UI, so it does not need a world `draw` hook:
 The root owns the widgets and releases them with the scene. The button's signal belongs to that button. A subscription to an external application event or DOM object is a different lifetime and must be released explicitly.
 
 Do not render `scene.ui` again from `draw`; that would duplicate the automatic overlay. Add world content to `root` and render that root normally when the scene also has gameplay.
+
+## A name form with one submit rule
+
+This complete program uses `TextInput`, `Button`, `Label`, and `Stack`. Pointer activation, focused Enter/Space on the button, text-field Submit, and the explicit gamepad Confirm path all call the same validation. It needs no assets or optional runtime module.
+
+<SourceSnippet source="examples/guides/ui-and-widgets/name-form.ts" region="name-form" language="ts" title="A mounted form with shared submit validation" />
+
+Click or tab into the canvas. Tab/Shift-Tab and the built-in D-pad navigation move focus; this form adds South only when the Save button is focused and effectively enabled. It does not synthesize Enter globally. The scene owns the widgets and the input registration, so they clean up together. The text field uses the DOM editing/IME bridge rather than gameplay key-to-character conversion.
+
+This is a dedicated menu scene with no competing gameplay ActionMap. In an in-game dialog, combine an interaction scope with the game's input-scope/pause policy: focused widgets do not erase an action that has already been sampled. See [Keyboard and actions](/ExoJS/en/guide/input/keyboard-and-actions/) and [Pause menus](/ExoJS/en/guide/recipes/pause-menu/).
 
 ## Layout relative to the host
 
@@ -38,7 +54,7 @@ A widget's UI dimensions, drawable bounds, origin, and text ink bounds are relat
 | A command | `Button` with a clear label and activation behavior. |
 | A setting | `Checkbox`, `Slider`, or `Dropdown` as appropriate. |
 | Text entry | `TextInput` or `TextArea`. |
-| Grouped or overflowing content | `Panel`, `Stack`, and `ScrollView`. |
+| Grouped or overflowing content | `Panel`, `Stack`, and `ScrollContainer`. |
 
 The API reference owns each widget's exact options, defaults, and events. The normal workflow is to create the widget, place it in a layout, subscribe to a meaningful user action, and update the displayed value when application state changes. Do not duplicate authoritative game state inside several unrelated widget callbacks.
 

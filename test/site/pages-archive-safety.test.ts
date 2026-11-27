@@ -4,7 +4,15 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { checkArchiveEntries, checkTreeSafety, extractTar, extractZip, readTarEntries, readZipEntries, readZipFile } from '../../scripts/pages/archive-safety';
+import {
+  checkArchiveEntries,
+  checkTreeSafety,
+  extractTar,
+  extractZip,
+  readTarEntries,
+  readZipEntries,
+  readZipFile,
+} from '../../scripts/pages/archive-safety';
 import { evaluateSiteSize, SITE_SIZE_REFUSE_BYTES, SITE_SIZE_WARN_BYTES } from '../../scripts/pages/site-budget';
 import { createTar, createZip } from '../support/archive-fixtures';
 
@@ -26,7 +34,11 @@ const limits = { maxUnpackedBytes: 1_000_000 };
 
 describe('zip archives', () => {
   it('reads and extracts a well-formed archive', () => {
-    const zip = createZip([{ name: 'en/' }, { name: 'en/index.html', data: '<p>hi</p>' }, { name: 'index.html', data: 'root', store: true }]);
+    const zip = createZip([
+      { name: 'en/' },
+      { name: 'en/index.html', data: '<p>hi</p>' },
+      { name: 'index.html', data: 'root', store: true },
+    ]);
     expect(readZipEntries(zip).map(entry => [entry.name, entry.type])).toEqual([
       ['en', 'directory'],
       ['en/index.html', 'file'],
@@ -120,7 +132,9 @@ describe('tar archives', () => {
   });
 
   it('refuses an archive past the unpacked budget', () => {
-    expect(() => extractTar(createTar([{ name: 'big.bin', data: Buffer.alloc(4096) }]), work, { maxUnpackedBytes: 1000 })).toThrow(/budget/);
+    expect(() => extractTar(createTar([{ name: 'big.bin', data: Buffer.alloc(4096) }]), work, { maxUnpackedBytes: 1000 })).toThrow(
+      /budget/,
+    );
   });
 });
 

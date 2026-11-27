@@ -120,4 +120,10 @@ Members a running iteration did not start with are not visited, and members remo
 
 ## Saving scenes with components
 
-Components are not part of the serialized format yet. `Scene.serialize()` and `Prefab.from()` therefore throw, naming the node and the component class, when the tree carries any — a save never drops them silently. Pass `{ omitComponents: true }` to write the visual data alone, and re-attach components in code after loading, as you do for other behaviour. See [Serialization & prefabs](/ExoJS/en/guide/runtime/serialization-and-prefabs/).
+Format 4 supports registered component **data**. Register the exact component class with `app.serializers.components.register`, providing a stable type id, a parser, a constructor callback returning a fresh detached instance, and a serializer for the fields to persist. Optional versions and migrations evolve those fields without serializing executable code.
+
+<SourceSnippet source="examples/guides/serialization-and-prefabs/registered-component.ts" region="component-data" language="ts" title="The component and its persisted data" />
+
+<SourceSnippet source="examples/guides/serialization-and-prefabs/registered-component.ts" region="component-registration" language="ts" title="Register once on the owning application's registry" />
+
+`Scene.serialize()` uses the application's registry. `Prefab.from` and `Prefab.instantiate` must receive that same registry explicitly. Unregistered components throw; `{ omitComponents: true }` intentionally omits **all** components, including registered ones. The special `scene.root` and `scene.ui` objects cannot persist their own attached components; attach persisted components to descendants instead. Methods, live signals, input bindings, and system registrations remain code. See [Serialization and prefabs](/ExoJS/en/guide/runtime/serialization-and-prefabs/) for local references and asset readiness.

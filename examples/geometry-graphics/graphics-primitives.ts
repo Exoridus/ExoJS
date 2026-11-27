@@ -1,4 +1,13 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+} from '@codexo/exojs';
 
 class GraphicsPrimitivesScene extends Scene {
   private sceneRoot!: Container;

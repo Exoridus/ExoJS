@@ -16,8 +16,8 @@
  * with that path while this directory holds the files flat. The prefix is
  * therefore stripped from incoming requests, and the printed URL includes it.
  */
-import { createServer } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -71,6 +71,7 @@ const server = createServer((request, response) => {
     if (!filePath.startsWith(ROOT)) {
       response.writeHead(403);
       response.end('Forbidden');
+
       return;
     }
 
@@ -81,6 +82,7 @@ const server = createServer((request, response) => {
     if (!existsSync(filePath)) {
       response.writeHead(404);
       response.end(`Not found: ${urlPath}`);
+
       return;
     }
 

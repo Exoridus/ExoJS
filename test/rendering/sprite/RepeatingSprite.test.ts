@@ -246,11 +246,13 @@ describe('RepeatingSprite — setter validation (size)', () => {
     const tex = makeTex(128, 64);
     const sprite = new RepeatingSprite(tex);
     const prev = sprite.width;
+
     try {
       sprite.width = -5;
     } catch {
       /* expected */
     }
+
     expect(sprite.width).toBe(prev);
   });
 
@@ -272,11 +274,13 @@ describe('RepeatingSprite — setter validation (size)', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex, { width: 200, height: 100 });
     void sprite.quads;
+
     try {
       sprite.setSize(Infinity, 50);
     } catch {
       /* expected */
     }
+
     expect(sprite.width).toBe(200);
     expect(sprite.height).toBe(100);
   });
@@ -286,11 +290,13 @@ describe('RepeatingSprite — setter validation (size)', () => {
     const region = makeRegion(tex);
     const sprite = new RepeatingSprite(region);
     void sprite.quads;
+
     try {
       sprite.setSize(-10, 50);
     } catch {
       /* expected */
     }
+
     expect(getDirty(sprite)).toBe(false);
   });
 });
@@ -312,11 +318,13 @@ describe('RepeatingSprite — setter validation (modes/fits)', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex);
     const prev = sprite.modeX;
+
     try {
       sprite.modeX = 'bad' as never;
     } catch {
       /* expected */
     }
+
     expect(sprite.modeX).toBe(prev);
   });
 
@@ -369,11 +377,13 @@ describe('RepeatingSprite — setter validation (offset)', () => {
   test('setOffset preserves both offsets on rejection', () => {
     const tex = makeTex();
     const sprite = new RepeatingSprite(tex, { offsetX: 5, offsetY: 10 });
+
     try {
       sprite.setOffset(NaN, 20);
     } catch {
       /* expected */
     }
+
     expect(sprite.offsetX).toBe(5);
     expect(sprite.offsetY).toBe(10);
   });
@@ -383,11 +393,13 @@ describe('RepeatingSprite — setter validation (offset)', () => {
     const region = makeRegion(tex);
     const sprite = new RepeatingSprite(region);
     void sprite.quads;
+
     try {
       sprite.setOffset(NaN, 0);
     } catch {
       /* expected */
     }
+
     expect(getDirty(sprite)).toBe(false);
   });
 });

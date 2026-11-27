@@ -1,0 +1,2702 @@
+{
+  "version": 1,
+  "measuredOn": "2026-11-22",
+  "repository": "https://github.com/Exoridus/ExoJS",
+  "pullRequest": 1131,
+  "integrationBase": "9a4dea791ec4f7c9b74e853775c4de48e09ecf41",
+  "interpretation": {
+    "ciElapsed": "First job start to verdict completion, including failed verdicts when explicitly marked failure; excludes initial queue time.",
+    "jobTimes": "Individual jobs include setup and teardown and are not additive wall times.",
+    "comparison": "Do not compare normal PR example sampling/no coverage against full catalog/coverage as equivalent scopes.",
+    "caches": "No controlled empty-store cold-cache comparison.",
+    "finalQualification": "The PR records the exact final published head and complete full-qualification runs without requiring a self-referential documentation commit.",
+    "testCounts": "Vitest test-case counts, not individual expect/assertion invocation counts."
+  },
+  "ciObservations": [
+    {
+      "head": "5b7aab32bddc2f27a09344468351a064fb5fad54",
+      "run": 44964984546,
+      "url": "https://github.com/Exoridus/ExoJS/actions/runs/44964984546",
+      "scope": "early-tooling-pr-no-site-smoke",
+      "conclusion": "success",
+      "firstJobToVerdictSeconds": 601,
+      "jobs": [
+        {
+          "name": "plan",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:06:18Z",
+          "completedAt": "2026-11-22T00:06:31Z",
+          "seconds": 13
+        },
+        {
+          "name": "test (webgpu)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:06:33Z",
+          "completedAt": "2026-11-22T00:15:32Z",
+          "seconds": 539
+        },
+        {
+          "name": "gates (sync)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:06:33Z",
+          "completedAt": "2026-11-22T00:08:46Z",
+          "seconds": 133
+        },
+        {
+          "name": "gates (typecheck)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:06:33Z",
+          "completedAt": "2026-11-22T00:08:46Z",
+          "seconds": 133
+        },
+        {
+          "name": "gates (lint)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:06:33Z",
+          "completedAt": "2026-11-22T00:10:02Z",
+          "seconds": 209
+        },
+        {
+          "name": "test (webgl)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:06:34Z",
+          "completedAt": "2026-11-22T00:10:48Z",
+          "seconds": 254
+        },
+        {
+          "name": "test (firefox)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:06:33Z",
+          "completedAt": "2026-11-22T00:12:16Z",
+          "seconds": 343
+        },
+        {
+          "name": "build",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:06:33Z",
+          "completedAt": "2026-11-22T00:08:53Z",
+          "seconds": 140
+        },
+        {
+          "name": "test (unit)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:06:33Z",
+          "completedAt": "2026-11-22T00:14:28Z",
+          "seconds": 475
+        },
+        {
+          "name": "verify (package)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:08:55Z",
+          "completedAt": "2026-11-22T00:11:15Z",
+          "seconds": 140
+        },
+        {
+          "name": "site",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-22T00:08:54Z",
+          "completedAt": "2026-11-22T00:08:54Z",
+          "seconds": 0
+        },
+        {
+          "name": "smoke",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-22T00:08:54Z",
+          "completedAt": "2026-11-22T00:08:54Z",
+          "seconds": 0
+        },
+        {
+          "name": "skip-budget",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:15:33Z",
+          "completedAt": "2026-11-22T00:16:07Z",
+          "seconds": 34
+        },
+        {
+          "name": "verdict",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:16:09Z",
+          "completedAt": "2026-11-22T00:16:19Z",
+          "seconds": 10
+        }
+      ]
+    },
+    {
+      "head": "9a4dea791ec4f7c9b74e853775c4de48e09ecf41",
+      "run": 44967144139,
+      "url": "https://github.com/Exoridus/ExoJS/actions/runs/44967144139",
+      "scope": "upstream-full-push-coverage-full-example-catalog",
+      "conclusion": "success",
+      "firstJobToVerdictSeconds": 1778,
+      "jobs": [
+        {
+          "name": "plan",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:32:49Z",
+          "completedAt": "2026-11-22T00:33:10Z",
+          "seconds": 21
+        },
+        {
+          "name": "build",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:33:12Z",
+          "completedAt": "2026-11-22T00:35:18Z",
+          "seconds": 126
+        },
+        {
+          "name": "gates (lint)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:33:12Z",
+          "completedAt": "2026-11-22T00:37:01Z",
+          "seconds": 229
+        },
+        {
+          "name": "test (tilemap)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:33:12Z",
+          "completedAt": "2026-11-22T00:34:21Z",
+          "seconds": 69
+        },
+        {
+          "name": "test (bench)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:33:13Z",
+          "completedAt": "2026-11-22T00:40:45Z",
+          "seconds": 452
+        },
+        {
+          "name": "test (audio)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:33:13Z",
+          "completedAt": "2026-11-22T00:34:48Z",
+          "seconds": 95
+        },
+        {
+          "name": "test (firefox)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:33:12Z",
+          "completedAt": "2026-11-22T00:37:48Z",
+          "seconds": 276
+        },
+        {
+          "name": "test (webgpu)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:33:12Z",
+          "completedAt": "2026-11-22T00:43:49Z",
+          "seconds": 637
+        },
+        {
+          "name": "gates (sync)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:33:12Z",
+          "completedAt": "2026-11-22T00:35:20Z",
+          "seconds": 128
+        },
+        {
+          "name": "test (webgl)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:33:13Z",
+          "completedAt": "2026-11-22T00:41:23Z",
+          "seconds": 490
+        },
+        {
+          "name": "gates (typecheck)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:33:12Z",
+          "completedAt": "2026-11-22T00:34:41Z",
+          "seconds": 89
+        },
+        {
+          "name": "test (unit)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:33:13Z",
+          "completedAt": "2026-11-22T00:47:23Z",
+          "seconds": 850
+        },
+        {
+          "name": "site",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:35:20Z",
+          "completedAt": "2026-11-22T00:38:21Z",
+          "seconds": 181
+        },
+        {
+          "name": "verify (create-exo-app)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:35:20Z",
+          "completedAt": "2026-11-22T00:36:17Z",
+          "seconds": 57
+        },
+        {
+          "name": "verify (package)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:35:21Z",
+          "completedAt": "2026-11-22T00:37:22Z",
+          "seconds": 121
+        },
+        {
+          "name": "smoke",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:38:23Z",
+          "completedAt": "2026-11-22T01:02:15Z",
+          "seconds": 1432
+        },
+        {
+          "name": "skip-budget",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:47:26Z",
+          "completedAt": "2026-11-22T00:48:09Z",
+          "seconds": 43
+        },
+        {
+          "name": "verdict",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:02:17Z",
+          "completedAt": "2026-11-22T01:02:27Z",
+          "seconds": 10
+        }
+      ]
+    },
+    {
+      "head": "88cbe0a16e46e2492544bd31fd82f9d8e2254281",
+      "run": 44968455136,
+      "url": "https://github.com/Exoridus/ExoJS/actions/runs/44968455136",
+      "scope": "full-shadow-pr-example-sample",
+      "conclusion": "failure",
+      "firstJobToVerdictSeconds": 1034,
+      "jobs": [
+        {
+          "name": "plan",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:49:02Z",
+          "completedAt": "2026-11-22T00:49:18Z",
+          "seconds": 16
+        },
+        {
+          "name": "build",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:49:25Z",
+          "completedAt": "2026-11-22T00:51:52Z",
+          "seconds": 147
+        },
+        {
+          "name": "gates (typecheck)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:49:20Z",
+          "completedAt": "2026-11-22T00:50:53Z",
+          "seconds": 93
+        },
+        {
+          "name": "test (tilemap)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:49:21Z",
+          "completedAt": "2026-11-22T00:50:53Z",
+          "seconds": 92
+        },
+        {
+          "name": "gates (lint)",
+          "conclusion": "failure",
+          "startedAt": "2026-11-22T00:49:21Z",
+          "completedAt": "2026-11-22T00:50:13Z",
+          "seconds": 52
+        },
+        {
+          "name": "test (firefox)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:49:25Z",
+          "completedAt": "2026-11-22T00:54:13Z",
+          "seconds": 288
+        },
+        {
+          "name": "test (unit)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:49:20Z",
+          "completedAt": "2026-11-22T00:57:03Z",
+          "seconds": 463
+        },
+        {
+          "name": "test (webgpu)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:49:20Z",
+          "completedAt": "2026-11-22T01:00:12Z",
+          "seconds": 652
+        },
+        {
+          "name": "gates (sync)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:49:20Z",
+          "completedAt": "2026-11-22T00:51:29Z",
+          "seconds": 129
+        },
+        {
+          "name": "test (webgl)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:49:20Z",
+          "completedAt": "2026-11-22T00:53:48Z",
+          "seconds": 268
+        },
+        {
+          "name": "test (bench)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:49:21Z",
+          "completedAt": "2026-11-22T00:57:04Z",
+          "seconds": 463
+        },
+        {
+          "name": "test (audio)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:49:20Z",
+          "completedAt": "2026-11-22T00:50:54Z",
+          "seconds": 94
+        },
+        {
+          "name": "site",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:51:54Z",
+          "completedAt": "2026-11-22T00:54:32Z",
+          "seconds": 158
+        },
+        {
+          "name": "verify (package)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:51:54Z",
+          "completedAt": "2026-11-22T00:53:26Z",
+          "seconds": 92
+        },
+        {
+          "name": "verify (release)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:51:54Z",
+          "completedAt": "2026-11-22T00:53:52Z",
+          "seconds": 118
+        },
+        {
+          "name": "verify (create-exo-app)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:51:54Z",
+          "completedAt": "2026-11-22T00:52:50Z",
+          "seconds": 56
+        },
+        {
+          "name": "smoke (examples)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:54:34Z",
+          "completedAt": "2026-11-22T00:56:42Z",
+          "seconds": 128
+        },
+        {
+          "name": "smoke (playground)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T00:54:34Z",
+          "completedAt": "2026-11-22T01:05:55Z",
+          "seconds": 681
+        },
+        {
+          "name": "skip-budget",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:00:13Z",
+          "completedAt": "2026-11-22T01:00:42Z",
+          "seconds": 29
+        },
+        {
+          "name": "verdict",
+          "conclusion": "failure",
+          "startedAt": "2026-11-22T01:05:57Z",
+          "completedAt": "2026-11-22T01:06:16Z",
+          "seconds": 19
+        }
+      ]
+    },
+    {
+      "head": "89995924c9dc73b5b3e4a6e5025b68d72f2f8900",
+      "run": 44972691207,
+      "url": "https://github.com/Exoridus/ExoJS/actions/runs/44972691207",
+      "scope": "full-shadow-pr-example-sample-plus-core-replay",
+      "conclusion": "failure",
+      "firstJobToVerdictSeconds": 1322.0,
+      "jobs": [
+        {
+          "name": "plan",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:42:16Z",
+          "completedAt": "2026-11-22T01:42:30Z",
+          "seconds": 14.0
+        },
+        {
+          "name": "build",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:42:32Z",
+          "completedAt": "2026-11-22T01:44:42Z",
+          "seconds": 130.0
+        },
+        {
+          "name": "gates (sync)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:42:31Z",
+          "completedAt": "2026-11-22T01:44:44Z",
+          "seconds": 133.0
+        },
+        {
+          "name": "gates (typecheck)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:42:31Z",
+          "completedAt": "2026-11-22T01:44:14Z",
+          "seconds": 103.0
+        },
+        {
+          "name": "gates (lint)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:42:31Z",
+          "completedAt": "2026-11-22T01:45:39Z",
+          "seconds": 188.0
+        },
+        {
+          "name": "test (webgl)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:42:32Z",
+          "completedAt": "2026-11-22T01:47:55Z",
+          "seconds": 323.0
+        },
+        {
+          "name": "test (tilemap)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:42:31Z",
+          "completedAt": "2026-11-22T01:43:52Z",
+          "seconds": 81.0
+        },
+        {
+          "name": "test (bench)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:42:31Z",
+          "completedAt": "2026-11-22T01:52:18Z",
+          "seconds": 587.0
+        },
+        {
+          "name": "test (webgpu)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:42:32Z",
+          "completedAt": "2026-11-22T02:04:05Z",
+          "seconds": 1293.0
+        },
+        {
+          "name": "test (audio)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:42:32Z",
+          "completedAt": "2026-11-22T01:44:10Z",
+          "seconds": 98.0
+        },
+        {
+          "name": "test (unit)",
+          "conclusion": "failure",
+          "startedAt": "2026-11-22T01:42:31Z",
+          "completedAt": "2026-11-22T01:50:39Z",
+          "seconds": 488.0
+        },
+        {
+          "name": "test (firefox)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:42:32Z",
+          "completedAt": "2026-11-22T01:47:47Z",
+          "seconds": 315.0
+        },
+        {
+          "name": "site",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:44:45Z",
+          "completedAt": "2026-11-22T01:47:55Z",
+          "seconds": 190.0
+        },
+        {
+          "name": "verify (package)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:44:44Z",
+          "completedAt": "2026-11-22T01:47:04Z",
+          "seconds": 140.0
+        },
+        {
+          "name": "verify (release)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:44:45Z",
+          "completedAt": "2026-11-22T01:46:28Z",
+          "seconds": 103.0
+        },
+        {
+          "name": "verify (create-exo-app)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:44:45Z",
+          "completedAt": "2026-11-22T01:45:50Z",
+          "seconds": 65.0
+        },
+        {
+          "name": "smoke (playground-rendering)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:47:56Z",
+          "completedAt": "2026-11-22T01:50:55Z",
+          "seconds": 179.0
+        },
+        {
+          "name": "smoke (playground-assets)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:47:57Z",
+          "completedAt": "2026-11-22T01:50:56Z",
+          "seconds": 179.0
+        },
+        {
+          "name": "smoke (playground-lifecycle)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:47:57Z",
+          "completedAt": "2026-11-22T01:51:57Z",
+          "seconds": 240.0
+        },
+        {
+          "name": "smoke (examples)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:47:57Z",
+          "completedAt": "2026-11-22T01:50:37Z",
+          "seconds": 160.0
+        },
+        {
+          "name": "smoke (playground-shell)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T01:47:57Z",
+          "completedAt": "2026-11-22T01:51:45Z",
+          "seconds": 228.0
+        },
+        {
+          "name": "verdict",
+          "conclusion": "failure",
+          "startedAt": "2026-11-22T02:04:07Z",
+          "completedAt": "2026-11-22T02:04:18Z",
+          "seconds": 11.0
+        },
+        {
+          "name": "skip-budget",
+          "conclusion": "skipped",
+          "startedAt": "2026-11-22T02:04:05Z",
+          "completedAt": "2026-11-22T02:04:05Z",
+          "seconds": 0.0
+        }
+      ]
+    },
+    {
+      "head": "ea34a371ea1c80b84f76bf494c15b2dff017c545",
+      "run": 44974423318,
+      "url": "https://github.com/Exoridus/ExoJS/actions/runs/44974423318",
+      "scope": "full-shadow-pr-example-sample-no-replay",
+      "conclusion": "success",
+      "firstJobToVerdictSeconds": 680.0,
+      "jobs": [
+        {
+          "name": "plan",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:18Z",
+          "completedAt": "2026-11-22T02:05:29Z",
+          "seconds": 11.0
+        },
+        {
+          "name": "gates (lint)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:32Z",
+          "completedAt": "2026-11-22T02:08:01Z",
+          "seconds": 149.0
+        },
+        {
+          "name": "build",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:31Z",
+          "completedAt": "2026-11-22T02:07:16Z",
+          "seconds": 105.0
+        },
+        {
+          "name": "test (tilemap)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:31Z",
+          "completedAt": "2026-11-22T02:06:35Z",
+          "seconds": 64.0
+        },
+        {
+          "name": "test (webgl)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:32Z",
+          "completedAt": "2026-11-22T02:11:23Z",
+          "seconds": 351.0
+        },
+        {
+          "name": "test (unit)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:32Z",
+          "completedAt": "2026-11-22T02:15:32Z",
+          "seconds": 600.0
+        },
+        {
+          "name": "gates (typecheck)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:31Z",
+          "completedAt": "2026-11-22T02:07:05Z",
+          "seconds": 94.0
+        },
+        {
+          "name": "test (audio)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:31Z",
+          "completedAt": "2026-11-22T02:06:46Z",
+          "seconds": 75.0
+        },
+        {
+          "name": "test (bench)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:32Z",
+          "completedAt": "2026-11-22T02:13:17Z",
+          "seconds": 465.0
+        },
+        {
+          "name": "gates (sync)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:31Z",
+          "completedAt": "2026-11-22T02:07:42Z",
+          "seconds": 131.0
+        },
+        {
+          "name": "test (webgpu)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:32Z",
+          "completedAt": "2026-11-22T02:14:52Z",
+          "seconds": 560.0
+        },
+        {
+          "name": "test (firefox)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:05:32Z",
+          "completedAt": "2026-11-22T02:10:48Z",
+          "seconds": 316.0
+        },
+        {
+          "name": "site",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:07:17Z",
+          "completedAt": "2026-11-22T02:09:49Z",
+          "seconds": 152.0
+        },
+        {
+          "name": "verify (package)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:07:17Z",
+          "completedAt": "2026-11-22T02:08:57Z",
+          "seconds": 100.0
+        },
+        {
+          "name": "verify (create-exo-app)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:07:17Z",
+          "completedAt": "2026-11-22T02:08:08Z",
+          "seconds": 51.0
+        },
+        {
+          "name": "verify (release)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:07:18Z",
+          "completedAt": "2026-11-22T02:09:21Z",
+          "seconds": 123.0
+        },
+        {
+          "name": "smoke (playground-rendering)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:09:51Z",
+          "completedAt": "2026-11-22T02:13:27Z",
+          "seconds": 216.0
+        },
+        {
+          "name": "smoke (playground-lifecycle)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:09:51Z",
+          "completedAt": "2026-11-22T02:12:41Z",
+          "seconds": 170.0
+        },
+        {
+          "name": "smoke (playground-shell)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:09:51Z",
+          "completedAt": "2026-11-22T02:12:47Z",
+          "seconds": 176.0
+        },
+        {
+          "name": "smoke (examples)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:09:51Z",
+          "completedAt": "2026-11-22T02:12:04Z",
+          "seconds": 133.0
+        },
+        {
+          "name": "smoke (playground-assets)",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:09:51Z",
+          "completedAt": "2026-11-22T02:13:27Z",
+          "seconds": 216.0
+        },
+        {
+          "name": "skip-budget",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:15:35Z",
+          "completedAt": "2026-11-22T02:16:26Z",
+          "seconds": 51.0
+        },
+        {
+          "name": "verdict",
+          "conclusion": "success",
+          "startedAt": "2026-11-22T02:16:27Z",
+          "completedAt": "2026-11-22T02:16:38Z",
+          "seconds": 11.0
+        }
+      ]
+    }
+  ],
+  "localPair": {
+    "canonicalHead": "c69a495301cd7028c2596f9a35c6581e1f9d86b1",
+    "localHead": "53b47ce79b8d33a32bce2e1bc04c905f14242491",
+    "tree": "b337105c028430ca40a3a3b7711c4026e66a954a",
+    "node": "v24.22.3",
+    "resources": {
+      "rootMaxWorkers": 4,
+      "workersOverride": "4",
+      "availableParallelism": 9,
+      "cpuModel": "AMD EPYC 9V74 80-Core Processor",
+      "totalMemoryBytes": 10451427328,
+      "projectSettings": [
+        {
+          "name": "exojs",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-demo-assets",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-particles",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-tilemap",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-tiled",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-aseprite",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-ldtk",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-physics",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-tilemap-physics",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-lighting",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-pathfinding",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-audio-fx",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-react",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-bench",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-build",
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-eslint-plugin",
+          "pool": "forks"
+        },
+        {
+          "name": "exojs-cli",
+          "maxWorkers": 4,
+          "pool": "forks"
+        },
+        {
+          "name": "rendering-perf",
+          "maxWorkers": 4,
+          "pool": "forks"
+        }
+      ]
+    },
+    "cachePolicy": "Existing own-checkout caches retained; no result reuse; each invocation uses a fresh Vitest context. Tooling built before pair.",
+    "ordering": "One full run followed by one selected AnimatedSprite run in fresh processes.",
+    "backgroundActivity": "Two brief single-worker reporter fixtures and small commit hooks; no competing complete validation.",
+    "naga": "Absent locally; local skips are not equivalent to strict CI, which requires Naga.",
+    "runs": [
+      {
+        "mode": "full",
+        "projects": ["exojs*", "rendering-perf"],
+        "coverage": false,
+        "initializationMs": 1062.447299,
+        "inventory": 1111,
+        "selected": 1111,
+        "discoveryMs": 30.614746000000196,
+        "executionMs": 367633.298975,
+        "testFiles": 1111,
+        "tests": 19828,
+        "passed": 19782,
+        "failed": 0,
+        "pending": 46,
+        "success": true,
+        "unhandledErrors": [],
+        "exitCode": 0,
+        "processWallMs": 370813.36996400205
+      },
+      {
+        "mode": "related",
+        "projects": ["exojs*", "rendering-perf"],
+        "coverage": false,
+        "initializationMs": 1472.311018,
+        "inventory": 1111,
+        "selected": 907,
+        "discoveryMs": 29019.164351,
+        "executionMs": 317514.34663299995,
+        "testFiles": 907,
+        "tests": 16231,
+        "passed": 16185,
+        "failed": 0,
+        "pending": 46,
+        "success": true,
+        "unhandledErrors": [],
+        "exitCode": 0,
+        "processWallMs": 349293.3396330009
+      }
+    ],
+    "audit": {
+      "fullFiles": 1111,
+      "relatedFiles": 907,
+      "excludedFiles": 204,
+      "retainedFileTestIdentityAndStatusEqual": true,
+      "exactSelectedInventoryExecuted": true,
+      "cacheUnchangedBetweenProcesses": true,
+      "processWallReductionMs": 21520.03033100115,
+      "processWallReductionPercent": 5.8034666692547425,
+      "matchingRetainedTests": 16231
+    },
+    "cleanAfterPair": true,
+    "harness": {
+      "method": "selectAffectedTests followed by execution of the selected specifications in one fresh Vitest context.",
+      "projects": ["exojs*", "rendering-perf"],
+      "coverage": false,
+      "excludes": [
+        "separate-process CI discovery and adapter admission",
+        "complete pre-push hook and supervisor",
+        "allocation and physics qualification"
+      ],
+      "scopeWarning": "Do not apply the measured process-wall percentage to a complete production lane or workflow.",
+      "laterChanges": "Through87ffba1: empty-plan failure-path fix, two real-child regression cases and documentation. This pair measures only the pinned c69a495 tree."
+    }
+  },
+  "oxc": {
+    "format": {
+      "oxfmt": "0.79.0",
+      "astroCompiler": "0.5.0",
+      "prettier": "3.9.9",
+      "nonAstroComparedFiles": 3544,
+      "astroComparedFiles": 87,
+      "typescriptLayoutChanges": 15,
+      "prettierRoundTripExact": true,
+      "astroByteEquivalent": true,
+      "localPrettierSeconds": 53.041,
+      "localOxfmtSeconds": 1.479,
+      "freshProcesses": true,
+      "warmFilesystem": true
+    },
+    "lint": {
+      "oxlint": "1.94.0",
+      "typeAwareBackend": "7.0.2007",
+      "activeEslintRuleIds": 513,
+      "nativeCandidates": 273,
+      "evaluatedDelegatableRuleIds": 241,
+      "customExojsRulesRetained": 10,
+      "securityRulesRetained": 11,
+      "matchedFiles": 3154,
+      "originalSeconds": 150.237,
+      "hybridSeconds": 110.407,
+      "standardHybridWithInventorySeconds": 119.323,
+      "heapMiBEachVariant": 4096,
+      "eslintCache": false,
+      "scope": "Engine and package passes; excludes React/site and installation.",
+      "freshProcesses": true,
+      "warmFilesystem": true,
+      "unfilteredNativeDiagnostics": 20,
+      "mismatchedRulesRetainedInEslint": 7,
+      "namedProjectFilesOnFullEslint": 348,
+      "suppressionFilesOnFullEslint": 60
+    }
+  },
+  "freshLocalEvidence": {
+    "recordedAt": "2026-11-22T02:44:54.338233+00:00",
+    "host": {
+      "versions": {
+        "node": "v24.22.3",
+        "pnpm": "11.25.0",
+        "vitest": "5.0.2",
+        "vite": "8.3.0",
+        "typescript": "6.0.3",
+        "oxlint": "1.94.0",
+        "tsx": "4.23.15"
+      },
+      "operatingSystem": "Debian GNU/Linux 13.7 (trixie)",
+      "kernel": "Linux 6.18.57",
+      "architecture": "x86_64",
+      "cpuModel": "AMD EPYC 9V74 80-Core Processor",
+      "availableParallelism": 9,
+      "visibleMemoryBytes": 10451427328,
+      "workers": 4,
+      "pool": "forks",
+      "coverage": false,
+      "optionalNagaInstalled": false,
+      "browserExecutionIncluded": false
+    },
+    "prerequisites": {
+      "frozenOfflineInstallExitCode": 0,
+      "toolingBuildExitCode": 0,
+      "productionCoreBuildExitCode": 0,
+      "lockSha256": "63f08da5285e77f1ca316a94e800ba62114e3f096eedaa18dfbe8c3b1556aca6",
+      "coreSourceHash": "ad1b2d6015b45164997950a90559140746c86d23",
+      "coreDistStamp": "ad1b2d6015b45164997950a90559140746c86d23",
+      "requiredArtifactHashesRecorded": true
+    },
+    "skips": {
+      "sameInBothRuns": true,
+      "total": 46,
+      "cases": [
+        {
+          "test": "test/rendering/wgsl-naga-validation.test.ts",
+          "count": 42,
+          "reason": "Optional local Naga validator absent; CI requires it."
+        },
+        {
+          "test": "packages/exojs-bench/test/smoke.test.ts",
+          "count": 1,
+          "reason": "Real GPU unavailable to this unit context."
+        },
+        {
+          "test": "packages/exojs-bench/test/split-screen.test.ts",
+          "count": 2,
+          "reason": "Real GPU unavailable to this unit context."
+        },
+        {
+          "test": "test/perf/rendering/sweep.test.ts",
+          "count": 1,
+          "reason": "Opt-in rendering sweep not requested."
+        }
+      ]
+    },
+    "scenarios": {
+      "status": "passed",
+      "commit": "87ffba14e11ce246f18df6fb68cbe7c0626051de",
+      "tree": "668b10fe6d327cc8d33d7f48dc0a8f4596916b97",
+      "namedCaseCount": 9,
+      "method": "Each scope uses one fresh Vitest context and reuses it for the named diagnostic cases; these discovery durations are not independent cold timings. No browser tests executed.",
+      "cleanActualRange": {
+        "unit": {
+          "mode": "full",
+          "inventory": 1111,
+          "selected": 1111,
+          "discoveryMs": 33.912,
+          "fallbackReasons": ["The changed-file inventory is empty; the affected scope is unknown."]
+        },
+        "gpu": {
+          "mode": "full",
+          "inventory": 132,
+          "selected": 132,
+          "discoveryMs": 10.916,
+          "fallbackReasons": ["The changed-file inventory is empty; the affected scope is unknown."]
+        }
+      },
+      "cases": [
+        {
+          "name": "Sprite",
+          "changedFiles": ["src/rendering/sprite/Sprite.ts"],
+          "unit": {
+            "mode": "related",
+            "inventory": 1111,
+            "selected": 907,
+            "discoveryMs": 24891.125,
+            "fallbackReasons": []
+          },
+          "gpu": {
+            "mode": "related",
+            "inventory": 132,
+            "selected": 131,
+            "discoveryMs": 7462.535,
+            "fallbackReasons": [],
+            "selectedByProject": {
+              "browser-webgpu (chromium)": 129,
+              "browser-webgpu-media (chromium)": 2
+            }
+          }
+        },
+        {
+          "name": "AnimatedSprite",
+          "changedFiles": ["src/rendering/sprite/AnimatedSprite.ts"],
+          "unit": {
+            "mode": "related",
+            "inventory": 1111,
+            "selected": 907,
+            "discoveryMs": 11935.759,
+            "fallbackReasons": []
+          },
+          "gpu": {
+            "mode": "related",
+            "inventory": 132,
+            "selected": 131,
+            "discoveryMs": 2858.774,
+            "fallbackReasons": [],
+            "selectedByProject": {
+              "browser-webgpu (chromium)": 129,
+              "browser-webgpu-media (chromium)": 2
+            }
+          }
+        },
+        {
+          "name": "WebGL2 Sprite shader",
+          "changedFiles": ["src/rendering/webgl2/shaders/sprite.frag"],
+          "unit": {
+            "mode": "full",
+            "inventory": 1111,
+            "selected": 1111,
+            "discoveryMs": 5551.112,
+            "fallbackReasons": ["A plugin watch input has no resolved dependency edge: src/rendering/webgl2/shaders/sprite.frag"]
+          },
+          "gpu": {
+            "mode": "related",
+            "inventory": 132,
+            "selected": 131,
+            "discoveryMs": 2810.742,
+            "fallbackReasons": [],
+            "selectedByProject": {
+              "browser-webgpu (chromium)": 129,
+              "browser-webgpu-media (chromium)": 2
+            }
+          }
+        },
+        {
+          "name": "Shared shader packer",
+          "changedFiles": ["packages/exojs-build/src/shaderPlugin.ts"],
+          "unit": {
+            "mode": "full",
+            "inventory": 1111,
+            "selected": 1111,
+            "discoveryMs": 10.416,
+            "fallbackReasons": [
+              "Global, generated or unclassified input requires the complete inventory: packages/exojs-build/src/shaderPlugin.ts"
+            ]
+          },
+          "gpu": {
+            "mode": "full",
+            "inventory": 132,
+            "selected": 132,
+            "discoveryMs": 1.318,
+            "fallbackReasons": [
+              "Global, generated or unclassified input requires the complete inventory: packages/exojs-build/src/shaderPlugin.ts"
+            ],
+            "selectedByProject": {
+              "browser-webgpu (chromium)": 130,
+              "browser-webgpu-media (chromium)": 2
+            }
+          }
+        },
+        {
+          "name": "Audio",
+          "changedFiles": ["src/audio/Sound.ts"],
+          "unit": {
+            "mode": "related",
+            "inventory": 1111,
+            "selected": 932,
+            "discoveryMs": 12225.195,
+            "fallbackReasons": []
+          },
+          "gpu": {
+            "mode": "related",
+            "inventory": 132,
+            "selected": 131,
+            "discoveryMs": 2683.821,
+            "fallbackReasons": [],
+            "selectedByProject": {
+              "browser-webgpu (chromium)": 129,
+              "browser-webgpu-media (chromium)": 2
+            }
+          }
+        },
+        {
+          "name": "Documentation",
+          "changedFiles": ["README.md"],
+          "unit": {
+            "mode": "related",
+            "inventory": 1111,
+            "selected": 907,
+            "discoveryMs": 11855.937,
+            "fallbackReasons": []
+          },
+          "gpu": {
+            "mode": "related",
+            "inventory": 132,
+            "selected": 131,
+            "discoveryMs": 2468.109,
+            "fallbackReasons": [],
+            "selectedByProject": {
+              "browser-webgpu (chromium)": 129,
+              "browser-webgpu-media (chromium)": 2
+            }
+          }
+        },
+        {
+          "name": "Global Vitest config",
+          "changedFiles": ["vitest.config.ts"],
+          "unit": {
+            "mode": "full",
+            "inventory": 1111,
+            "selected": 1111,
+            "discoveryMs": 9.16,
+            "fallbackReasons": ["Global, generated or unclassified input requires the complete inventory: vitest.config.ts"]
+          },
+          "gpu": {
+            "mode": "full",
+            "inventory": 132,
+            "selected": 132,
+            "discoveryMs": 1.283,
+            "fallbackReasons": ["Global, generated or unclassified input requires the complete inventory: vitest.config.ts"],
+            "selectedByProject": {
+              "browser-webgpu (chromium)": 130,
+              "browser-webgpu-media (chromium)": 2
+            }
+          }
+        },
+        {
+          "name": "Deleted or renamed source",
+          "changedFiles": ["src/rendering/sprite/Sprite.ts", "src/rendering/sprite/__removed_input__.ts"],
+          "unit": {
+            "mode": "full",
+            "inventory": 1111,
+            "selected": 1111,
+            "discoveryMs": 11.875,
+            "fallbackReasons": ["A deleted, renamed or unreadable input cannot be resolved: src/rendering/sprite/__removed_input__.ts"]
+          },
+          "gpu": {
+            "mode": "full",
+            "inventory": 132,
+            "selected": 132,
+            "discoveryMs": 1.267,
+            "fallbackReasons": ["A deleted, renamed or unreadable input cannot be resolved: src/rendering/sprite/__removed_input__.ts"],
+            "selectedByProject": {
+              "browser-webgpu (chromium)": 130,
+              "browser-webgpu-media (chromium)": 2
+            }
+          },
+          "evidenceKind": "Synthetic deleted/unreadable placeholder, not an actual Git rename."
+        },
+        {
+          "name": "Sprite and documentation",
+          "changedFiles": ["src/rendering/sprite/Sprite.ts", "README.md"],
+          "unit": {
+            "mode": "related",
+            "inventory": 1111,
+            "selected": 907,
+            "discoveryMs": 11733.462,
+            "fallbackReasons": []
+          },
+          "gpu": {
+            "mode": "related",
+            "inventory": 132,
+            "selected": 131,
+            "discoveryMs": 2709.672,
+            "fallbackReasons": [],
+            "selectedByProject": {
+              "browser-webgpu (chromium)": 129,
+              "browser-webgpu-media (chromium)": 2
+            }
+          }
+        }
+      ],
+      "representativeMembership": [
+        {
+          "scenario": "Sprite",
+          "source": "src/rendering/sprite/Sprite.ts",
+          "test": "test/rendering/sprite/sprite.test.ts",
+          "project": "exojs",
+          "retained": true,
+          "dependencyReason": {
+            "kind": "dependency",
+            "change": "src/rendering/sprite/Sprite.ts",
+            "path": ["src/rendering/sprite/Sprite.ts", "test/rendering/sprite/sprite.test.ts"],
+            "detail": "Resolved Vite imports reach this changed file."
+          }
+        },
+        {
+          "scenario": "AnimatedSprite",
+          "source": "src/rendering/sprite/AnimatedSprite.ts",
+          "test": "test/rendering/animated-sprite.test.ts",
+          "project": "exojs",
+          "retained": true,
+          "dependencyReason": {
+            "kind": "dependency",
+            "change": "src/rendering/sprite/AnimatedSprite.ts",
+            "path": ["src/rendering/sprite/AnimatedSprite.ts", "test/rendering/animated-sprite.test.ts"],
+            "detail": "Resolved Vite imports reach this changed file."
+          }
+        }
+      ],
+      "retentionCauses": [
+        {
+          "scenario": "Sprite",
+          "selectionClasses": {
+            "dependency-and-conservative": 494,
+            "conservative-only": 413
+          },
+          "groups": [
+            {
+              "group": "Audio",
+              "inventory": 98,
+              "selected": 63,
+              "selectionClasses": {
+                "conservative-only": 32,
+                "dependency-and-conservative": 31
+              }
+            },
+            {
+              "group": "Serialization",
+              "inventory": 2,
+              "selected": 2,
+              "selectionClasses": {
+                "conservative-only": 1,
+                "dependency-and-conservative": 1
+              }
+            },
+            {
+              "group": "UI",
+              "inventory": 15,
+              "selected": 14,
+              "selectionClasses": {
+                "dependency-and-conservative": 10,
+                "conservative-only": 4
+              }
+            }
+          ],
+          "topConservativeRoots": [
+            {
+              "root": "src/rendering/Container.ts",
+              "detail": "A DOM or CSS computed property assignment can load an asset outside the import graph.",
+              "testFiles": 111
+            },
+            {
+              "root": "src/core/nodeDirtyIndex.ts",
+              "detail": "A DOM or CSS computed property assignment can load an asset outside the import graph.",
+              "testFiles": 53
+            },
+            {
+              "root": "src/animation/Tween.ts",
+              "detail": "A DOM or CSS computed property assignment can load an asset outside the import graph.",
+              "testFiles": 38
+            }
+          ]
+        },
+        {
+          "scenario": "AnimatedSprite",
+          "selectionClasses": {
+            "dependency-and-conservative": 316,
+            "conservative-only": 591
+          },
+          "groups": [
+            {
+              "group": "Audio",
+              "inventory": 98,
+              "selected": 63,
+              "selectionClasses": {
+                "conservative-only": 33,
+                "dependency-and-conservative": 30
+              }
+            },
+            {
+              "group": "Serialization",
+              "inventory": 2,
+              "selected": 2,
+              "selectionClasses": {
+                "conservative-only": 1,
+                "dependency-and-conservative": 1
+              }
+            },
+            {
+              "group": "UI",
+              "inventory": 15,
+              "selected": 14,
+              "selectionClasses": {
+                "dependency-and-conservative": 10,
+                "conservative-only": 4
+              }
+            }
+          ],
+          "topConservativeRoots": [
+            {
+              "root": "src/rendering/Container.ts",
+              "detail": "A DOM or CSS computed property assignment can load an asset outside the import graph.",
+              "testFiles": 111
+            },
+            {
+              "root": "src/core/nodeDirtyIndex.ts",
+              "detail": "A DOM or CSS computed property assignment can load an asset outside the import graph.",
+              "testFiles": 53
+            },
+            {
+              "root": "src/animation/Tween.ts",
+              "detail": "A DOM or CSS computed property assignment can load an asset outside the import graph.",
+              "testFiles": 38
+            }
+          ]
+        }
+      ]
+    },
+    "rename": {
+      "head": "87ffba14e11ce246f18df6fb68cbe7c0626051de",
+      "tree": "668b10fe6d327cc8d33d7f48dc0a8f4596916b97",
+      "name": "Actual staged Sprite rename",
+      "oldPath": "src/rendering/sprite/Sprite.ts",
+      "newPath": "src/rendering/sprite/Sprite.__rename_probe__.ts",
+      "gitNameStatus": "R100\tsrc/rendering/sprite/Sprite.ts\tsrc/rendering/sprite/Sprite.__rename_probe__.ts",
+      "changedFiles": ["src/rendering/sprite/Sprite.__rename_probe__.ts", "src/rendering/sprite/Sprite.ts"],
+      "mode": "full",
+      "inventory": 1111,
+      "selected": 1111,
+      "discoveryMs": 127.306,
+      "processWallMs": 4431.605,
+      "fallbackReasons": ["A deleted, renamed or unreadable input cannot be resolved: src/rendering/sprite/Sprite.ts"],
+      "exitCode": 0,
+      "originalSha256": "4bd70e2a40d9a17e71fbb3684b62df1048a8b5f9d2d0323df57b40304f480648",
+      "restoredSha256": "4bd70e2a40d9a17e71fbb3684b62df1048a8b5f9d2d0323df57b40304f480648",
+      "renamedPathRemoved": true,
+      "status": "passed",
+      "trackedTreeAndIndexCleanAfter": true,
+      "execution": "Discovery only; staged real Git R100 rename supplied both identities. Existing Git-range rename regression tests are separate evidence."
+    },
+    "mutations": {
+      "status": "passed",
+      "commit": "87ffba14e11ce246f18df6fb68cbe7c0626051de",
+      "scope": ["exojs"],
+      "baseline": {
+        "exitCode": 0,
+        "wallMs": 3044.282,
+        "files": 2,
+        "numTotalTests": 73,
+        "numPassedTests": 73,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "success": true
+      },
+      "restored": {
+        "exitCode": 0,
+        "wallMs": 2629.18,
+        "files": 2,
+        "numTotalTests": 73,
+        "numPassedTests": 73,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "success": true
+      },
+      "cases": [
+        {
+          "name": "sprite",
+          "source": "src/rendering/sprite/Sprite.ts",
+          "test": "test/rendering/sprite/sprite.test.ts",
+          "before": "return (Math.abs(this.scale.x) * this._textureFrame.width) / this._frameResolution;",
+          "after": "return (Math.abs(this.scale.x) * this._textureFrame.height) / this._frameResolution;",
+          "originalSha256": "4bd70e2a40d9a17e71fbb3684b62df1048a8b5f9d2d0323df57b40304f480648",
+          "mutatedSha256": "77a34bf228df81e894c49811ebf86d06fba453cae271ccf81a0ee7ff63e60ba3",
+          "restoredSha256": "4bd70e2a40d9a17e71fbb3684b62df1048a8b5f9d2d0323df57b40304f480648",
+          "selectionMode": "related",
+          "inventory": 770,
+          "selected": 598,
+          "selectionMs": 12045.963,
+          "directDependencyMembershipVerified": true,
+          "testResult": {
+            "exitCode": 1,
+            "wallMs": 2952.365,
+            "files": 1,
+            "numTotalTests": 31,
+            "numPassedTests": 27,
+            "numFailedTests": 4,
+            "numPendingTests": 0,
+            "success": false
+          }
+        },
+        {
+          "name": "animated-sprite",
+          "source": "src/rendering/sprite/AnimatedSprite.ts",
+          "test": "test/rendering/animated-sprite.test.ts",
+          "before": "this._elapsedFrameTime = seconds(this._elapsedFrameTime + deltaSeconds);",
+          "after": "this._elapsedFrameTime = seconds(this._elapsedFrameTime + deltaSeconds / 1000);",
+          "originalSha256": "220b79dad5838435f614ae50182f4249b2fba1fbe9b793e286d79c4e9c52205b",
+          "mutatedSha256": "ab15e7e42e6f205b1dfb297b910c2d7054ea42e55ba2bc8007cc168f02c32c35",
+          "restoredSha256": "220b79dad5838435f614ae50182f4249b2fba1fbe9b793e286d79c4e9c52205b",
+          "selectionMode": "related",
+          "inventory": 770,
+          "selected": 598,
+          "selectionMs": 12137.133,
+          "directDependencyMembershipVerified": true,
+          "testResult": {
+            "exitCode": 1,
+            "wallMs": 2577.412,
+            "files": 1,
+            "numTotalTests": 42,
+            "numPassedTests": 19,
+            "numFailedTests": 23,
+            "numPendingTests": 0,
+            "success": false
+          }
+        }
+      ],
+      "trackedTreeCleanAfter": true,
+      "assertionsOrTimeoutsModified": false
+    },
+    "prePush": {
+      "status": "blocked",
+      "complete": false,
+      "isBenchmark": false,
+      "base": "87ffba14e11ce246f18df6fb68cbe7c0626051de",
+      "fixtureCommit": "7af572aa606de7ab051226277298350ee6badba2",
+      "fixtureTree": "d3842effd61a97b391ec70ebf7befd80c9479ec8",
+      "fixtureSource": "src/rendering/sprite/Sprite.ts",
+      "commentOnlyDiffVerified": true,
+      "originalSourceSha256": "4bd70e2a40d9a17e71fbb3684b62df1048a8b5f9d2d0323df57b40304f480648",
+      "fixtureSourceSha256": "fa602c13c05eeb5774a86481db86829bb9a8dbab4c90f9e3b9e02fd6d82d4372",
+      "restoredSourceSha256": "4bd70e2a40d9a17e71fbb3684b62df1048a8b5f9d2d0323df57b40304f480648",
+      "command": ["sh", ".husky/pre-push"],
+      "rangeInputKind": "Explicit existing-branch parent/head refs on stdin",
+      "actualPushPerformed": false,
+      "productionHookAndCommandsUnmodified": true,
+      "normalPreCommitHooksPassed": true,
+      "workers": 4,
+      "exitCode": 1,
+      "processWallMs": 1579.236,
+      "stages": [
+        {
+          "id": "range-resolution",
+          "startMs": 0,
+          "durationMs": 324.802,
+          "exitCode": 0
+        },
+        {
+          "id": "fast-static",
+          "startMs": 324.802,
+          "durationMs": 1254.433,
+          "exitCode": 1
+        }
+      ],
+      "failure": {
+        "stage": "fast-static",
+        "gate": "lint:file-symbols",
+        "command": "pnpm run lint:file-symbols",
+        "cause": "The host denied the tsx CLI Unix IPC listen operation with EPERM.",
+        "retryOrBypassPerformed": false
+      },
+      "notReached": ["dist freshness/rebuild", "remaining static gates", "test lanes", "allocation checks"],
+      "artifactStateBeforeCommentFixture": {
+        "stale": [],
+        "unbuilt": [
+          "@codexo/exojs-aseprite",
+          "@codexo/exojs-demo-assets",
+          "@codexo/exojs-ldtk",
+          "@codexo/exojs-react",
+          "@codexo/exojs-tiled"
+        ]
+      },
+      "historicalGreenWholeHookBaselineAvailable": false
+    },
+    "restoration": {
+      "head": "87ffba14e11ce246f18df6fb68cbe7c0626051de",
+      "tree": "668b10fe6d327cc8d33d7f48dc0a8f4596916b97",
+      "source": "src/rendering/sprite/Sprite.ts",
+      "originalSha256": "4bd70e2a40d9a17e71fbb3684b62df1048a8b5f9d2d0323df57b40304f480648",
+      "restoredSha256": "4bd70e2a40d9a17e71fbb3684b62df1048a8b5f9d2d0323df57b40304f480648",
+      "sourceHash": "ad1b2d6015b45164997950a90559140746c86d23",
+      "distStamp": "ad1b2d6015b45164997950a90559140746c86d23",
+      "artifactState": {
+        "stale": [],
+        "unbuilt": [
+          "@codexo/exojs-aseprite",
+          "@codexo/exojs-demo-assets",
+          "@codexo/exojs-ldtk",
+          "@codexo/exojs-react",
+          "@codexo/exojs-tiled"
+        ]
+      },
+      "trackedTreeAndIndexClean": true,
+      "fixtureCommitPreservedPrivately": true,
+      "numericAndReceiverExperimentsExcluded": true
+    }
+  },
+  "ciShadowAndProbes": {
+    "version": 1,
+    "publishedHead": "87ffba14e11ce246f18df6fb68cbe7c0626051de",
+    "testedBase": "9a4dea791ec4f7c9b74e853775c4de48e09ecf41",
+    "testedCheckout": "b1bd3dceac6545c21fe12622da9ee81e939d1ae3",
+    "testedTree": "668b10fe6d327cc8d33d7f48dc0a8f4596916b97",
+    "mainRun": {
+      "id": 44976278981,
+      "conclusion": "success",
+      "firstJobStartedAt": "2026-11-22T02:28:56Z",
+      "firstJobToVerdictSeconds": 1063.0,
+      "creationToVerdictSeconds": 1066.0,
+      "scope": "PR full native tests, nine diagnostic scenarios, sampled examples, then labeled unit and Media replays",
+      "coverage": false
+    },
+    "limits": [
+      "Observed end-to-end duration includes explicitly labeled diagnostic discovery and subset replays.",
+      "No subtracted or projected duration is claimed as a measured green ordinary PR run.",
+      "This sampled PR run is not the coverage/full-example scope of the 9a4 baseline.",
+      "Setup is the reusable setup action; required is primary command time; tail is reporting and cleanup after the final required/probe command; other includes intervening downloads and step gaps.",
+      "API job/step times have one-second resolution; log and Vitest timings are separate measurements."
+    ],
+    "companions": [
+      {
+        "name": "Windows",
+        "run": 44976278939,
+        "head": "87ffba14e11ce246f18df6fb68cbe7c0626051de",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 137066830314,
+            "name": "supervisor",
+            "conclusion": "success",
+            "wallSeconds": 163.0
+          }
+        ]
+      },
+      {
+        "name": "WorkflowLint",
+        "run": 44976278989,
+        "head": "87ffba14e11ce246f18df6fb68cbe7c0626051de",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 137066829966,
+            "name": "Lint workflows",
+            "conclusion": "success",
+            "wallSeconds": 13.0
+          }
+        ]
+      },
+      {
+        "name": "Asset",
+        "run": 44976278996,
+        "head": "87ffba14e11ce246f18df6fb68cbe7c0626051de",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 137066830064,
+            "name": "transactions (windows-latest)",
+            "conclusion": "success",
+            "wallSeconds": 83.0
+          },
+          {
+            "id": 137066830205,
+            "name": "transactions (ubuntu-latest)",
+            "conclusion": "success",
+            "wallSeconds": 48.0
+          }
+        ]
+      }
+    ],
+    "jobs": [
+      {
+        "id": 137066830126,
+        "name": "plan",
+        "conclusion": "success",
+        "wallSeconds": 15.0,
+        "phasesSeconds": {
+          "setup": 0,
+          "discovery": 0,
+          "required": 0,
+          "probe": 0,
+          "tail": 2.0,
+          "startupCheckout": 13.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137066901082,
+        "name": "build",
+        "conclusion": "success",
+        "wallSeconds": 164.0,
+        "phasesSeconds": {
+          "setup": 51.0,
+          "discovery": 0,
+          "required": 97.0,
+          "probe": 0,
+          "tail": 8.0,
+          "startupCheckout": 7.0,
+          "other": 1.0
+        }
+      },
+      {
+        "id": 137066901087,
+        "name": "gates (lint)",
+        "conclusion": "success",
+        "wallSeconds": 153.0,
+        "phasesSeconds": {
+          "setup": 21.0,
+          "discovery": 0,
+          "required": 123.0,
+          "probe": 0,
+          "tail": 2.0,
+          "startupCheckout": 7.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137066901137,
+        "name": "gates (sync)",
+        "conclusion": "success",
+        "wallSeconds": 91.0,
+        "phasesSeconds": {
+          "setup": 24.0,
+          "discovery": 0,
+          "required": 59.0,
+          "probe": 0,
+          "tail": 2.0,
+          "startupCheckout": 6.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137066901164,
+        "name": "test (tilemap)",
+        "conclusion": "success",
+        "wallSeconds": 91.0,
+        "phasesSeconds": {
+          "setup": 61.0,
+          "discovery": 12.0,
+          "required": 4.0,
+          "probe": 0,
+          "tail": 5.0,
+          "startupCheckout": 9.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137066901174,
+        "name": "gates (typecheck)",
+        "conclusion": "success",
+        "wallSeconds": 143.0,
+        "phasesSeconds": {
+          "setup": 22.0,
+          "discovery": 0,
+          "required": 112.0,
+          "probe": 0,
+          "tail": 2.0,
+          "startupCheckout": 7.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137066901188,
+        "name": "test (webgl)",
+        "conclusion": "success",
+        "wallSeconds": 312.0,
+        "phasesSeconds": {
+          "setup": 79.0,
+          "discovery": 23.0,
+          "required": 190.0,
+          "probe": 0,
+          "tail": 12.0,
+          "startupCheckout": 8.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137066901219,
+        "name": "test (webgpu)",
+        "conclusion": "success",
+        "wallSeconds": 564.0,
+        "phasesSeconds": {
+          "setup": 60.0,
+          "discovery": 18.0,
+          "required": 451.0,
+          "probe": 13.0,
+          "tail": 10.0,
+          "startupCheckout": 12.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137066901220,
+        "name": "test (unit)",
+        "conclusion": "success",
+        "wallSeconds": 989.0,
+        "phasesSeconds": {
+          "setup": 31.0,
+          "discovery": 58.0,
+          "required": 483.0,
+          "probe": 392.0,
+          "tail": 12.0,
+          "startupCheckout": 13.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137066901229,
+        "name": "test (audio)",
+        "conclusion": "success",
+        "wallSeconds": 89.0,
+        "phasesSeconds": {
+          "setup": 60.0,
+          "discovery": 5.0,
+          "required": 9.0,
+          "probe": 0,
+          "tail": 6.0,
+          "startupCheckout": 9.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137066901234,
+        "name": "test (firefox)",
+        "conclusion": "success",
+        "wallSeconds": 291.0,
+        "phasesSeconds": {
+          "setup": 70.0,
+          "discovery": 18.0,
+          "required": 180.0,
+          "probe": 0,
+          "tail": 11.0,
+          "startupCheckout": 12.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137066901283,
+        "name": "test (bench)",
+        "conclusion": "success",
+        "wallSeconds": 480.0,
+        "phasesSeconds": {
+          "setup": 58.0,
+          "discovery": 0,
+          "required": 411.0,
+          "probe": 0,
+          "tail": 4.0,
+          "startupCheckout": 7.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137067587309,
+        "name": "site",
+        "conclusion": "success",
+        "wallSeconds": 145.0,
+        "phasesSeconds": {
+          "setup": 27.0,
+          "discovery": 0,
+          "required": 98.0,
+          "probe": 0,
+          "tail": 10.0,
+          "startupCheckout": 10.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137067587356,
+        "name": "verify (create-exo-app)",
+        "conclusion": "success",
+        "wallSeconds": 60.0,
+        "phasesSeconds": {
+          "setup": 26.0,
+          "discovery": 0,
+          "required": 24.0,
+          "probe": 0,
+          "tail": 3.0,
+          "startupCheckout": 7.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137067587375,
+        "name": "verify (package)",
+        "conclusion": "success",
+        "wallSeconds": 126.0,
+        "phasesSeconds": {
+          "setup": 29.0,
+          "discovery": 0,
+          "required": 88.0,
+          "probe": 0,
+          "tail": 2.0,
+          "startupCheckout": 7.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137067587388,
+        "name": "verify (release)",
+        "conclusion": "success",
+        "wallSeconds": 98.0,
+        "phasesSeconds": {
+          "setup": 18.0,
+          "discovery": 0,
+          "required": 70.0,
+          "probe": 0,
+          "tail": 2.0,
+          "startupCheckout": 8.0,
+          "other": 0.0
+        }
+      },
+      {
+        "id": 137068161243,
+        "name": "smoke (playground-rendering)",
+        "conclusion": "success",
+        "wallSeconds": 199.0,
+        "phasesSeconds": {
+          "setup": 43.0,
+          "discovery": 0,
+          "required": 141.0,
+          "probe": 0,
+          "tail": 4.0,
+          "startupCheckout": 7.0,
+          "other": 4.0
+        }
+      },
+      {
+        "id": 137068161247,
+        "name": "smoke (playground-assets)",
+        "conclusion": "success",
+        "wallSeconds": 187.0,
+        "phasesSeconds": {
+          "setup": 36.0,
+          "discovery": 0,
+          "required": 135.0,
+          "probe": 0,
+          "tail": 3.0,
+          "startupCheckout": 9.0,
+          "other": 4.0
+        }
+      },
+      {
+        "id": 137068161251,
+        "name": "smoke (playground-shell)",
+        "conclusion": "success",
+        "wallSeconds": 175.0,
+        "phasesSeconds": {
+          "setup": 50.0,
+          "discovery": 0,
+          "required": 104.0,
+          "probe": 0,
+          "tail": 4.0,
+          "startupCheckout": 11.0,
+          "other": 6.0
+        }
+      },
+      {
+        "id": 137068161253,
+        "name": "smoke (playground-lifecycle)",
+        "conclusion": "success",
+        "wallSeconds": 164.0,
+        "phasesSeconds": {
+          "setup": 31.0,
+          "discovery": 0,
+          "required": 121.0,
+          "probe": 0,
+          "tail": 2.0,
+          "startupCheckout": 7.0,
+          "other": 3.0
+        }
+      },
+      {
+        "id": 137068161254,
+        "name": "smoke (examples)",
+        "conclusion": "success",
+        "wallSeconds": 158.0,
+        "phasesSeconds": {
+          "setup": 42.0,
+          "discovery": 0,
+          "required": 100.0,
+          "probe": 0,
+          "tail": 4.0,
+          "startupCheckout": 8.0,
+          "other": 4.0
+        }
+      },
+      {
+        "id": 137070752228,
+        "name": "skip-budget",
+        "conclusion": "success",
+        "wallSeconds": 35.0,
+        "phasesSeconds": {
+          "setup": 23.0,
+          "discovery": 0,
+          "required": 1.0,
+          "probe": 0,
+          "tail": 2.0,
+          "startupCheckout": 8.0,
+          "other": 1.0
+        }
+      },
+      {
+        "id": 137070896498,
+        "name": "verdict",
+        "conclusion": "success",
+        "wallSeconds": 17.0,
+        "phasesSeconds": {
+          "setup": 0,
+          "discovery": 0,
+          "required": 0,
+          "probe": 0,
+          "tail": 2.0,
+          "startupCheckout": 15.0,
+          "other": 0.0
+        }
+      }
+    ],
+    "fullShadowAudits": [
+      {
+        "lane": "audio",
+        "inventoryFiles": 10,
+        "auditedFiles": 10,
+        "counts": {
+          "failed": 0,
+          "passed": 38,
+          "pending": 0,
+          "skipped": 0,
+          "total": 38
+        },
+        "invocations": 1,
+        "allInventoriesComplete": true,
+        "allReasonsPassed": true,
+        "unhandledErrors": 0,
+        "excludedFailures": 0,
+        "identityAndExactUnionValidated": true
+      },
+      {
+        "lane": "firefox",
+        "inventoryFiles": 131,
+        "auditedFiles": 131,
+        "counts": {
+          "failed": 0,
+          "passed": 943,
+          "pending": 0,
+          "skipped": 2,
+          "total": 945
+        },
+        "invocations": 1,
+        "allInventoriesComplete": true,
+        "allReasonsPassed": true,
+        "unhandledErrors": 0,
+        "excludedFailures": 0,
+        "identityAndExactUnionValidated": true
+      },
+      {
+        "lane": "tilemap",
+        "inventoryFiles": 1,
+        "auditedFiles": 1,
+        "counts": {
+          "failed": 0,
+          "passed": 1,
+          "pending": 0,
+          "skipped": 0,
+          "total": 1
+        },
+        "invocations": 1,
+        "allInventoriesComplete": true,
+        "allReasonsPassed": true,
+        "unhandledErrors": 0,
+        "excludedFailures": 0,
+        "identityAndExactUnionValidated": true
+      },
+      {
+        "lane": "unit",
+        "inventoryFiles": 1111,
+        "auditedFiles": 1111,
+        "counts": {
+          "failed": 0,
+          "passed": 19815,
+          "pending": 0,
+          "skipped": 15,
+          "total": 19830
+        },
+        "invocations": 1,
+        "allInventoriesComplete": true,
+        "allReasonsPassed": true,
+        "unhandledErrors": 0,
+        "excludedFailures": 0,
+        "identityAndExactUnionValidated": true
+      },
+      {
+        "lane": "webgl",
+        "inventoryFiles": 142,
+        "auditedFiles": 142,
+        "counts": {
+          "failed": 0,
+          "passed": 1021,
+          "pending": 0,
+          "skipped": 2,
+          "total": 1023
+        },
+        "invocations": 4,
+        "allInventoriesComplete": true,
+        "allReasonsPassed": true,
+        "unhandledErrors": 0,
+        "excludedFailures": 0,
+        "identityAndExactUnionValidated": true
+      },
+      {
+        "lane": "webgpu",
+        "inventoryFiles": 132,
+        "auditedFiles": 132,
+        "counts": {
+          "failed": 0,
+          "passed": 865,
+          "pending": 0,
+          "skipped": 0,
+          "total": 865
+        },
+        "invocations": 2,
+        "allInventoriesComplete": true,
+        "allReasonsPassed": true,
+        "unhandledErrors": 0,
+        "excludedFailures": 0,
+        "identityAndExactUnionValidated": true
+      }
+    ],
+    "selectedExecutionReceipts": [
+      {
+        "lane": "unit",
+        "scenario": "AnimatedSprite",
+        "executionMode": "selected",
+        "fullInventoryAudited": false,
+        "inventoryValidated": true,
+        "selectedInventoryComplete": true,
+        "reason": "passed",
+        "unhandledErrors": 0,
+        "inventory": 1111,
+        "selected": 907,
+        "omitted": 204,
+        "projects": [
+          "exojs",
+          "exojs-aseprite",
+          "exojs-audio-fx",
+          "exojs-bench",
+          "exojs-build",
+          "exojs-cli",
+          "exojs-demo-assets",
+          "exojs-eslint-plugin",
+          "exojs-ldtk",
+          "exojs-lighting",
+          "exojs-particles",
+          "exojs-pathfinding",
+          "exojs-physics",
+          "exojs-react",
+          "exojs-tiled",
+          "exojs-tilemap",
+          "exojs-tilemap-physics",
+          "rendering-perf"
+        ],
+        "fileStates": {
+          "passed": 906,
+          "skipped": 1
+        },
+        "counts": {
+          "failed": 0,
+          "passed": 16218,
+          "pending": 0,
+          "skipped": 15,
+          "total": 16233
+        },
+        "identityAndExactScenarioSetValidated": true,
+        "junit": [
+          {
+            "testcases": 16233,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 15
+          }
+        ]
+      },
+      {
+        "lane": "webgpu",
+        "scenario": "AnimatedSprite",
+        "executionMode": "selected",
+        "fullInventoryAudited": false,
+        "inventoryValidated": true,
+        "selectedInventoryComplete": true,
+        "reason": "passed",
+        "unhandledErrors": 0,
+        "inventory": 2,
+        "selected": 2,
+        "omitted": 0,
+        "projects": ["browser-webgpu-media (chromium)"],
+        "fileStates": {
+          "passed": 2
+        },
+        "counts": {
+          "failed": 0,
+          "passed": 14,
+          "pending": 0,
+          "skipped": 0,
+          "total": 14
+        },
+        "identityAndExactScenarioSetValidated": true,
+        "junit": [
+          {
+            "testcases": 14,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ]
+      }
+    ],
+    "smoke": {
+      "playgroundChecks": 66,
+      "playgroundUnique": 66,
+      "playgroundSuiteCounts": {
+        "shell": 27,
+        "rendering": 3,
+        "lifecycle": 14,
+        "assets": 22
+      },
+      "examples": 17,
+      "exampleMode": "sample",
+      "failed": 0,
+      "skipped": 0,
+      "equalPlaygroundIdentitiesToPreviousSplit": true
+    },
+    "actualChangeDiscovery": [
+      {
+        "lane": "audio",
+        "name": "change",
+        "mode": "full",
+        "inventoryFiles": 10,
+        "selectedFiles": 10,
+        "discoverySeconds": 0.0043,
+        "fallbackReasonCount": 39
+      },
+      {
+        "lane": "firefox",
+        "name": "change",
+        "mode": "full",
+        "inventoryFiles": 131,
+        "selectedFiles": 131,
+        "discoverySeconds": 0.0145,
+        "fallbackReasonCount": 39
+      },
+      {
+        "lane": "tilemap",
+        "name": "change",
+        "mode": "full",
+        "inventoryFiles": 1,
+        "selectedFiles": 1,
+        "discoverySeconds": 0.0152,
+        "fallbackReasonCount": 39
+      },
+      {
+        "lane": "unit",
+        "name": "change",
+        "mode": "full",
+        "inventoryFiles": 1111,
+        "selectedFiles": 1111,
+        "discoverySeconds": 0.0318,
+        "fallbackReasonCount": 39
+      },
+      {
+        "lane": "webgl",
+        "name": "change",
+        "mode": "full",
+        "inventoryFiles": 142,
+        "selectedFiles": 142,
+        "discoverySeconds": 0.0194,
+        "fallbackReasonCount": 39
+      },
+      {
+        "lane": "webgpu",
+        "name": "change",
+        "mode": "full",
+        "inventoryFiles": 132,
+        "selectedFiles": 132,
+        "discoverySeconds": 0.0157,
+        "fallbackReasonCount": 39
+      }
+    ],
+    "probeScenarioDiscovery": [
+      {
+        "lane": "unit",
+        "name": "AnimatedSprite",
+        "mode": "related",
+        "inventoryFiles": 1111,
+        "selectedFiles": 907,
+        "discoverySeconds": 8.4829,
+        "fallbackReasonCount": 0
+      },
+      {
+        "lane": "webgpu",
+        "name": "AnimatedSprite",
+        "mode": "related",
+        "inventoryFiles": 132,
+        "selectedFiles": 131,
+        "discoverySeconds": 2.1083,
+        "fallbackReasonCount": 0
+      }
+    ],
+    "criticalPathSeconds": {
+      "plan": 15,
+      "dispatchToUnit": 3,
+      "unit": 989,
+      "dispatchToSkipBudget": 2,
+      "skipBudget": 35,
+      "dispatchToVerdict": 2,
+      "verdict": 17
+    },
+    "executionTimings": {
+      "unit": {
+        "fullNativeVitestSeconds": 441.28,
+        "replayVitestSeconds": 389.36,
+        "replayShellSeconds": 392.064,
+        "supervisorPassed": 62,
+        "allocationPassed": 13,
+        "allocationVitestSeconds": 14.57,
+        "physicsPassed": 2,
+        "physicsVitestSeconds": 12.76,
+        "comparisonLimit": "Sequential replay uses a precomputed plan; excludes discovery and required supervisor/allocation/physics work."
+      },
+      "webgpu": {
+        "nativeCoreFiles": 130,
+        "nativeCoreTests": 851,
+        "nativeCoreVitestSeconds": 430.26,
+        "nativeMediaFiles": 2,
+        "nativeMediaTests": 14,
+        "nativeMediaVitestSeconds": 9.62,
+        "mediaReplayVitestSeconds": 9.13,
+        "mediaReplayShellSeconds": 12.336,
+        "comparisonLimit": "Media replay validates the browser execution receipt; it selects both Media files and is not a speedup claim."
+      }
+    },
+    "setupCosts": {
+      "build": {
+        "actions": [
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "seconds": 6.175
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "seconds": 9.84
+          },
+          {
+            "name": "Run pnpm bootstrap",
+            "seconds": 11.823
+          },
+          {
+            "name": "Run actions/cache@v5",
+            "seconds": 3.497
+          },
+          {
+            "name": "Run pnpm exec playwright install --with-deps chromium",
+            "seconds": 18.049
+          }
+        ],
+        "packageStorePrimaryKeyHit": true,
+        "browserPrimaryKeyHit": true,
+        "browserBinaryDownloadObserved": false
+      },
+      "gates (lint)": {
+        "actions": [
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "seconds": 3.34
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "seconds": 4.996
+          },
+          {
+            "name": "Run pnpm bootstrap",
+            "seconds": 10.006
+          }
+        ],
+        "packageStorePrimaryKeyHit": true,
+        "browserPrimaryKeyHit": false,
+        "browserBinaryDownloadObserved": false
+      },
+      "test (webgpu)": {
+        "actions": [
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "seconds": 9.154
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "seconds": 10.179
+          },
+          {
+            "name": "Run pnpm bootstrap",
+            "seconds": 8.059
+          },
+          {
+            "name": "Run actions/cache@v5",
+            "seconds": 6.279
+          },
+          {
+            "name": "Run pnpm exec playwright install --with-deps chromium",
+            "seconds": 25.617
+          }
+        ],
+        "packageStorePrimaryKeyHit": true,
+        "browserPrimaryKeyHit": true,
+        "browserBinaryDownloadObserved": false
+      },
+      "test (unit)": {
+        "actions": [
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "seconds": 7.634
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "seconds": 11.479
+          },
+          {
+            "name": "Run pnpm bootstrap",
+            "seconds": 8.131
+          },
+          {
+            "name": "Run actions/cache@v5",
+            "seconds": 1.758
+          }
+        ],
+        "packageStorePrimaryKeyHit": true,
+        "browserPrimaryKeyHit": false,
+        "browserBinaryDownloadObserved": false
+      }
+    },
+    "negativeFixtureAnnotations": {
+      "count": 3,
+      "classification": "Expected failing-command and timeout records emitted by passing supervisor tests; not CI job failures."
+    },
+    "cacheArchiveBytes": {
+      "packageStore": 266445733,
+      "chromium": 283886483
+    },
+    "companionExecutionCounts": {
+      "Windows": {
+        "supervisorCases": 63,
+        "supervisorPassed": 62,
+        "supervisorSkipped": 1,
+        "vitestFiles": 9,
+        "vitestCases": 318,
+        "vitestPassed": 311,
+        "vitestSkipped": 7,
+        "failed": 0
+      },
+      "Asset": {
+        "platforms": ["Linux", "Windows"],
+        "filesPerPlatform": 3,
+        "passedTestsPerPlatform": 32,
+        "failed": 0
+      }
+    }
+  },
+  "fullBaseline": {
+    "version": 1,
+    "run": 44967144139,
+    "head": "9a4dea791ec4f7c9b74e853775c4de48e09ecf41",
+    "event": "push",
+    "conclusion": "success",
+    "firstJobToVerdictSeconds": 1778.0,
+    "coverage": true,
+    "examples": {
+      "total": 121,
+      "passed": 118,
+      "skipped": 3,
+      "failed": 0,
+      "skippedIdentities": [
+        "custom-renderers/custom-triangle-renderer.js",
+        "lighting/radiance-rooms.js",
+        "performance/backend-comparison.js"
+      ]
+    },
+    "playground": {
+      "checks": 66,
+      "passed": 66,
+      "failed": 0
+    },
+    "unit": {
+      "files": 1099,
+      "passedFiles": 1097,
+      "skippedFiles": 2,
+      "tests": 19452,
+      "passedTests": 19434,
+      "skippedTests": 18,
+      "failedTests": 0,
+      "vitestSeconds": 748.21,
+      "supervisorPassed": 62,
+      "allocationPassed": 13,
+      "physicsPassed": 2
+    },
+    "criticalPathSeconds": {
+      "plan": 21,
+      "dispatchPlanToBuild": 2,
+      "build": 126,
+      "dispatchBuildToSite": 2,
+      "site": 181,
+      "dispatchSiteToSmoke": 2,
+      "smoke": 1432,
+      "dispatchSmokeToVerdict": 2,
+      "verdict": 10
+    },
+    "jobs": [
+      {
+        "id": 137038622036,
+        "name": "plan",
+        "seconds": 21.0,
+        "setupSeconds": 0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137038725384,
+        "name": "build",
+        "seconds": 126.0,
+        "setupSeconds": 40.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137038725415,
+        "name": "gates (lint)",
+        "seconds": 229.0,
+        "setupSeconds": 20.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137038725422,
+        "name": "test (tilemap)",
+        "seconds": 69.0,
+        "setupSeconds": 50.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137038725427,
+        "name": "test (bench)",
+        "seconds": 452.0,
+        "setupSeconds": 52.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137038725432,
+        "name": "test (audio)",
+        "seconds": 95.0,
+        "setupSeconds": 64.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137038725444,
+        "name": "test (firefox)",
+        "seconds": 276.0,
+        "setupSeconds": 70.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137038725446,
+        "name": "test (webgpu)",
+        "seconds": 637.0,
+        "setupSeconds": 38.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137038725455,
+        "name": "gates (sync)",
+        "seconds": 128.0,
+        "setupSeconds": 24.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137038725468,
+        "name": "test (webgl)",
+        "seconds": 490.0,
+        "setupSeconds": 87.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137038725519,
+        "name": "gates (typecheck)",
+        "seconds": 89.0,
+        "setupSeconds": 18.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137038725537,
+        "name": "test (unit)",
+        "seconds": 850.0,
+        "setupSeconds": 29.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137039258342,
+        "name": "site",
+        "seconds": 181.0,
+        "setupSeconds": 25.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137039258354,
+        "name": "verify (create-exo-app)",
+        "seconds": 57.0,
+        "setupSeconds": 24.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137039258399,
+        "name": "verify (package)",
+        "seconds": 121.0,
+        "setupSeconds": 31.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137040028044,
+        "name": "smoke",
+        "seconds": 1432.0,
+        "setupSeconds": 38.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137042291616,
+        "name": "skip-budget",
+        "seconds": 43.0,
+        "setupSeconds": 26.0,
+        "conclusion": "success"
+      },
+      {
+        "id": 137045988119,
+        "name": "verdict",
+        "seconds": 10.0,
+        "setupSeconds": 0,
+        "conclusion": "success"
+      }
+    ],
+    "webgpu": {
+      "coreFiles": 130,
+      "coreTests": 851,
+      "coreVitestSeconds": 560.84,
+      "mediaFiles": 2,
+      "mediaTests": 14,
+      "mediaVitestSeconds": 12.32
+    },
+    "lintGateSeconds": {
+      "formatCheck": 43.9,
+      "lintAll": 143.5
+    }
+  },
+  "sourceHookPortability": {
+    "localCommit": "7230567f96d35a9f97c23d0eda7885c4385ce2dd",
+    "canonicalCommit": "f2e7fcf046bba7a57f4c97e22f233c0c1e7dd2ff",
+    "tree": "bc83a4c99251cf9a6a0839c7b1266bdd9a3ec7ea",
+    "changedManifestScripts": 12,
+    "changedDirectPreflights": 1,
+    "scope": "Resolved source hooks: existing TypeScript script targets and arguments execute via node --import tsx, without the additional CLI IPC wrapper. Broad/global paths retain other CLI entrypoints.",
+    "verification": {
+      "realPnpmFileSymbolValidSourceExitCode": 0,
+      "realPnpmFileSymbolInvalidSourceExitCode": 1,
+      "existingLanePlanHookTestsPassed": 86,
+      "independentReview": "No remaining source-scope blocker; package cwd, extensionless imports, generator and argument-failure checks passed."
+    },
+    "reference": "https://tsx.hirok.io/dev-api/node-cli",
+    "defaultHeapHookAttempt": {
+      "base": "41de51c7d56f705dfed23174e812b58bc255033b",
+      "head": "d960e99d79aab676200eef80523013e2ef7993bb",
+      "tree": "5a33682033db2741363dc7ebaa35ef1af3a312b1",
+      "command": ["sh", ".husky/pre-push"],
+      "actualPushPerformed": false,
+      "startedAt": "2026-11-22T02:51:33Z",
+      "workersOverride": 4,
+      "sourceSha256": "35015f4e4ec80b054f105c0ecb3e0ea1f64f6ac85f80c65cf3c4f1b23fc38b87",
+      "cachePolicy": "Own checkout dependency/build/test caches retained after the green pair and final-head diagnostic checks; normal hook dist freshness and lane cleanup remain enabled.",
+      "exitCode": 1,
+      "processWallMs": 211077.12526799878,
+      "stages": [
+        {
+          "id": "range-resolution",
+          "startMs": 0,
+          "durationMs": 271.7589720014075,
+          "exitCode": 0
+        },
+        {
+          "id": "fast-static",
+          "startMs": 271.7589720014075,
+          "durationMs": 5331.043836999015,
+          "exitCode": 0
+        },
+        {
+          "id": "dist-freshness",
+          "startMs": 5602.802809000423,
+          "durationMs": 11433.962298000552,
+          "exitCode": 0
+        },
+        {
+          "id": "static",
+          "startMs": 17036.765107000974,
+          "durationMs": 194040.3601609978,
+          "exitCode": 1
+        }
+      ],
+      "complete": false,
+      "isSuccessfulBenchmark": false,
+      "failure": "Required ESLint engine pass exhausted the default Node heap; tests/allocation were not reached.",
+      "baselineLocalTree": "bc83a4c99251cf9a6a0839c7b1266bdd9a3ec7ea",
+      "baselineCanonicalCommit": "f2e7fcf046bba7a57f4c97e22f233c0c1e7dd2ff",
+      "passedBeforeFailure": [
+        "fast static gates",
+        "natural production and package builds",
+        "core typecheck",
+        "worker typecheck",
+        "test typecheck",
+        "API synchronization",
+        "document history"
+      ],
+      "baselineRestoredSourceSha256": "4bd70e2a40d9a17e71fbb3684b62df1048a8b5f9d2d0323df57b40304f480648",
+      "baselineRestoredSourceAndDistStamp": "ad1b2d6015b45164997950a90559140746c86d23"
+    },
+    "measuredHostMemory": {
+      "defaultHeapLimitBytes": 2348810240,
+      "availableMemoryBytes": 8378327040,
+      "totalMemoryBytes": 10451427328,
+      "constrainedMemoryBytes": 0,
+      "nodeOptions": null
+    },
+    "configuredHeapQualification": {
+      "nodeOptions": "--max-old-space-size=4096",
+      "workers": 4,
+      "scope": "Only the real hook child environment; no production default, gate, assertion, timeout or cleanup change.",
+      "interpretation": "A configured resource profile, not a speedup over either failed default-profile attempt.",
+      "outcomeLocation": "https://github.com/Exoridus/ExoJS/pull/1131"
+    }
+  }
+}

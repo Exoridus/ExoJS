@@ -26,6 +26,10 @@ export class RenderTarget {
    * the WebGL2 on-screen root uses the default framebuffer's stencil (requested
    * at context creation), so the flag only affects offscreen WebGL2 targets.
    *
+   * The flag is never cleared and the stencil storage lives until the target is
+   * destroyed, so a pooled target that was clipped once keeps that memory while
+   * it is reused for non-clip rendering.
+   *
    * The WebGPU backend does not consult this flag: it allocates a separate
    * `depth24plus-stencil8` attachment per clipped target (root included) on
    * demand, sized to the colour attachment's physical pixels.
@@ -46,6 +50,17 @@ export class RenderTarget {
    * wrong here silently blends against coverage that is not there.
    */
   public opaqueDestination = false;
+
+  /**
+   * Set by the backend while this frame's last full-target clear of this
+   * target was opaque, and dropped at the next frame or storage change - see
+   * `markClearCoverage` for the targets that qualify. Every
+   * fixed-function blend mode composites alpha source-over or preserves it,
+   * and the backdrop compositor writes source-over coverage too, so nothing
+   * drawn after such a clear can lower a pixel's alpha below 1.
+   * @internal
+   */
+  public _opaqueContent = false;
 
   /**
    * Samples per pixel this target's colour attachment is rendered at. `1`
@@ -70,6 +85,7 @@ export class RenderTarget {
   private _depthTexture: DepthTexture | null = null;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
   private _isDestroyed = false;
+  private _isDestroying = false;
   private _version = 0;
   protected _size: Size;
   protected _viewport: Rectangle = new Rectangle();
@@ -191,10 +207,21 @@ export class RenderTarget {
     return this;
   }
 
+  /**
+   * The viewport `view` maps to, in whole pixels of this target's coordinate
+   * space (logical units for a root target). The returned
+   * {@link Rectangle} is this target's own reusable storage: the next call
+   * rewrites it, so copy the values out when they must outlive it.
+   */
   public getViewport(view: View = this._view): Rectangle {
     const { x, y, width, height } = view.viewport;
 
-    return this._viewport.set(Math.round(x * this.width), Math.round(y * this.height), Math.round(width * this.width), Math.round(height * this.height));
+    return this._viewport.set(
+      Math.round(x * this.width),
+      Math.round(y * this.height),
+      Math.round(width * this.width),
+      Math.round(height * this.height),
+    );
   }
 
   public updateViewport(): this {
@@ -205,7 +232,10 @@ export class RenderTarget {
 
   public mapPixelToCoords(point: Vector, view: View = this._view): Vector {
     const viewport = this.getViewport(view);
-    const normalized = new Vector(-1 + (2 * (point.x - viewport.left)) / viewport.width, 1 - (2 * (point.y - viewport.top)) / viewport.height);
+    const normalized = new Vector(
+      -1 + (2 * (point.x - viewport.left)) / viewport.width,
+      1 - (2 * (point.y - viewport.top)) / viewport.height,
+    );
 
     return normalized.transform(view.getInverseTransform());
   }
@@ -229,7 +259,10 @@ export class RenderTarget {
 
     point.transform(view.getTransform());
 
-    return point.set((((point.x + 1) / 2) * viewport.width + viewport.left) | 0, (((-point.y + 1) / 2) * viewport.height + viewport.top) | 0);
+    return point.set(
+      (((point.x + 1) / 2) * viewport.width + viewport.left) | 0,
+      (((-point.y + 1) / 2) * viewport.height + viewport.top) | 0,
+    );
   }
 
   public destroy(): void {
@@ -237,18 +270,34 @@ export class RenderTarget {
     // whole teardown again - `_defaultView`, `_viewport` and `_size` would each
     // take a second `destroy()`, and a listener re-registered after the first
     // call would fire against already-released GPU state.
-    if (this._isDestroyed) {
+    if (this._isDestroyed || this._isDestroying) {
       return;
     }
 
-    this._isDestroyed = true;
+    this._isDestroying = true;
 
-    // Before the listeners fire: they are how the backends drop the framebuffer
-    // this attachment is bound into.
-    this._depthTexture?.destroy();
+    const errors: unknown[] = [];
 
-    for (const listener of [...this._destroyListeners]) {
-      listener();
+    // Backends must finish queued draws before the resource becomes unbindable.
+    try {
+      // Before the listeners fire: they are how the backends drop the framebuffer
+      // this attachment is bound into.
+      try {
+        this._depthTexture?.destroy();
+      } catch (error) {
+        errors.push(error);
+      }
+
+      for (const listener of [...this._destroyListeners]) {
+        try {
+          listener();
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+    } finally {
+      this._isDestroyed = true;
+      this._isDestroying = false;
     }
 
     this._destroyListeners.clear();
@@ -260,6 +309,10 @@ export class RenderTarget {
     this._defaultView.destroy();
     this._viewport.destroy();
     this._size.destroy();
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
   }
 
   /**
@@ -281,5 +334,6 @@ export class RenderTarget {
 
   protected _touch(): void {
     this._version++;
+    this._opaqueContent = false;
   }
 }

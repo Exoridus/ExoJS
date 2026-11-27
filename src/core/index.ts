@@ -1,4 +1,4 @@
-export { Application, ApplicationState } from './Application';
+export { Application, type ApplicationDestroyOutcome, type ApplicationDestroyStatus, ApplicationState } from './Application';
 export { BehaviorComponent } from './BehaviorComponent';
 export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';
@@ -59,7 +59,22 @@ export type {
   WebGpuBackendConfig,
 } from '#core/application/ApplicationOptions';
 export { onAppInitialized } from '#core/application/devHooks';
-export type { PhasedSceneTransitionOptions, SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/scene/PhasedSceneTransition';
+export type { CheckedHistory } from '#core/document/CheckedHistory';
+export {
+  DocumentMigrationError,
+  DocumentSchemaError,
+  DocumentVersionError,
+  type DocumentVersionProblem,
+} from '#core/document/documentErrors';
+export { DocumentHistory, type DocumentHistoryOptions, type VersionedDocument } from '#core/document/DocumentHistory';
+export type { DocumentParser } from '#core/document/DocumentParser';
+export type { CurrentVersion, Latest, MigrationChain, MigrationStep, VersionRegisterError } from '#core/document/documentVersions';
+export type { Migration } from '#core/document/Migration';
+export type {
+  PhasedSceneTransitionOptions,
+  SceneTransitionPhaseContext,
+  SceneTransitionPhaseRequirements,
+} from '#core/scene/PhasedSceneTransition';
 export { PhasedSceneTransition } from '#core/scene/PhasedSceneTransition';
 export { Scene } from '#core/scene/Scene';
 export { SceneAvailability } from '#core/scene/SceneAvailability';
@@ -110,13 +125,33 @@ export type {
 } from '#core/scene/sceneTypes';
 export { CrossFadeSceneTransition, type CrossFadeSceneTransitionOptions } from '#core/scene/transitions/CrossFadeSceneTransition';
 export { FadeSceneTransition, type FadeSceneTransitionOptions } from '#core/scene/transitions/FadeSceneTransition';
-export { type SlideDirection, type SlideMode, SlideSceneTransition, type SlideSceneTransitionOptions } from '#core/scene/transitions/SlideSceneTransition';
+export {
+  LoadingSceneTransition,
+  type LoadingSceneTransitionOptions,
+  type LoadingSceneTransitionOverlay,
+} from '#core/scene/transitions/LoadingSceneTransition';
+export {
+  type SlideDirection,
+  type SlideMode,
+  SlideSceneTransition,
+  type SlideSceneTransitionOptions,
+} from '#core/scene/transitions/SlideSceneTransition';
+export { type ComponentTypeDefinition, ComponentTypeRegistry } from '#core/serialization/ComponentTypeRegistry';
+export type { LocalReference } from '#core/serialization/localReferences';
 export type { DeserializeContext, NodeSerializer, SerializeContext } from '#core/serialization/NodeSerializer';
 export { Prefab } from '#core/serialization/Prefab';
 export type { SceneNodeConstructor } from '#core/serialization/SerializationRegistry';
 export { registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';
-export type { SerializedAssetRef, SerializedNode, SerializedPrefab, SerializedScene, SerializeOptions } from '#core/serialization/types';
-export { SERIALIZATION_VERSION } from '#core/serialization/types';
+export type { Serializer } from '#core/serialization/Serializer';
+export type {
+  DeserializeOptions,
+  SerializedAssetRef,
+  SerializedNode,
+  SerializedPrefab,
+  SerializedScene,
+  SerializeOptions,
+} from '#core/serialization/types';
+export { SERIALIZATION_VERSION, type SerializedComponent } from '#core/serialization/types';
 export { CanvasSizing, type CanvasSizingContext, type CanvasSizingHostMetrics, type CanvasSizingMetrics } from '#core/sizing/CanvasSizing';
 export { CappedResolutionCanvasSizing } from '#core/sizing/CappedResolutionCanvasSizing';
 export { FixedResolutionCanvasSizing } from '#core/sizing/FixedResolutionCanvasSizing';

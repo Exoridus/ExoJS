@@ -26,17 +26,21 @@ import { runScenario, writeResults } from './harness';
 /** Build a regular N-gon as a Polygon at (cx, cy) with given radius. */
 const makeRegularPolygon = (cx: number, cy: number, radius: number, sides: number): Polygon => {
   const points: Vector[] = [];
+
   for (let i = 0; i < sides; i++) {
     const angle = (2 * Math.PI * i) / sides;
     points.push(new Vector(Math.cos(angle) * radius, Math.sin(angle) * radius));
   }
+
   return new Polygon(points, cx, cy);
 };
 
 const rng = (seed: number) => {
   let s = seed;
+
   return () => {
     s = (s * 1664525 + 1013904223) & 0xffffffff;
+
     return (s >>> 0) / 0xffffffff;
   };
 };
@@ -77,6 +81,7 @@ const results: BenchmarkResult[] = [];
             a.destroy();
             b.destroy();
           }
+
           polygons.length = 0;
         },
       },
@@ -117,6 +122,7 @@ const results: BenchmarkResult[] = [];
             a.destroy();
             b.destroy();
           }
+
           circles.length = 0;
         },
       },
@@ -148,15 +154,18 @@ const results: BenchmarkResult[] = [];
         },
         tick() {
           const qt = new Quadtree<number>(new Rectangle(0, 0, 5000, 5000));
+
           for (const item of items) {
             qt.insert(item);
           }
+
           qt.destroy();
         },
         teardown() {
           for (const item of items) {
             item.bounds.destroy();
           }
+
           items = [];
           bounds.destroy();
         },
@@ -183,12 +192,14 @@ const results: BenchmarkResult[] = [];
         name: 'quadtree-query-10k',
         setup() {
           qt = new Quadtree<number>(new Rectangle(0, 0, 5000, 5000));
+
           for (let i = 0; i < ITEMS; i++) {
             qt.insert({
               bounds: new Rectangle(rand() * 4900, rand() * 4900, 20 + rand() * 60, 20 + rand() * 60),
               payload: i,
             });
           }
+
           for (let i = 0; i < QUERIES; i++) {
             queryPoints.push([rand() * 5000, rand() * 5000]);
           }
@@ -243,9 +254,11 @@ const results: BenchmarkResult[] = [];
           for (const r of statics) {
             r.destroy();
           }
+
           for (const { rect } of movers) {
             rect.destroy();
           }
+
           statics.length = 0;
           movers.length = 0;
         },

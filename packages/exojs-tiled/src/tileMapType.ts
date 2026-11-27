@@ -1,6 +1,6 @@
 import type { AssetFactory } from '@codexo/exojs';
 import { type AssetRequest, AssetType } from '@codexo/exojs';
-import { TileMap } from '@codexo/exojs-tilemap';
+import { TileMap } from '@codexo/exojs/tilemap';
 
 import { resolveTiledOptions, type TiledLoadOptions } from './tiledOptions';
 import { tiledSourceType } from './tiledSourceType';
@@ -35,7 +35,7 @@ export class TileMapAssetType extends AssetType<void, TileMap, TiledLoadOptions>
   public createFactory(): AssetFactory<void, TileMap, TiledLoadOptions> {
     return {
       async create(_source, context) {
-        const tiledMap = await context.dependencies.load(tiledSourceType.asset(context.source, context.options));
+        const tiledMap = await context.dependencies.load({ type: tiledSourceType, source: context.source, ...context.options });
 
         return tiledMap.toTileMap();
       },

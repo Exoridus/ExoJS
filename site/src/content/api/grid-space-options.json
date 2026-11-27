@@ -4,7 +4,7 @@
   "symbol": "GridSpaceOptions",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 6,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for GridSpace."
       ],
-      "importLine": "import { GridSpaceOptions } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { GridSpaceOptions } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

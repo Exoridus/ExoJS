@@ -15,6 +15,7 @@ export const premultiply = (linear: LinearRgb, alpha: number): LinearRgb => [lin
 
 export const sourceOver = (source: LinearRgb, sourceAlpha: number, destination: LinearRgb, destinationAlpha: number): Rgba => {
   const destinationWeight = 1 - sourceAlpha;
+
   return [
     source[0] + destination[0] * destinationWeight,
     source[1] + destination[1] * destinationWeight,
@@ -47,7 +48,11 @@ export const displayOutput = (color: LinearRgb, alpha: number, options: DisplayO
   let outputAlpha = alpha;
 
   if (options.matte !== undefined) {
-    straight = [color[0] + (1 - alpha) * options.matte[0], color[1] + (1 - alpha) * options.matte[1], color[2] + (1 - alpha) * options.matte[2]];
+    straight = [
+      color[0] + (1 - alpha) * options.matte[0],
+      color[1] + (1 - alpha) * options.matte[1],
+      color[2] + (1 - alpha) * options.matte[2],
+    ];
     outputAlpha = 1;
   } else if (alpha > 0) {
     straight = [color[0] / alpha, color[1] / alpha, color[2] / alpha];

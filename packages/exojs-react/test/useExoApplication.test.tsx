@@ -1,5 +1,5 @@
 import { type Application, Color, ManualCanvasSizing } from '@codexo/exojs';
-import { render } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,24 +10,36 @@ import { MockApplication } from './support/mock-application';
 // ApplicationState, ...) stays real via `importActual`. The mock module is
 // imported INSIDE the factory because `vi.mock` is hoisted above the file's
 // imports, so top-level bindings are not yet initialised when it runs.
+const construction = vi.hoisted(() => vi.fn());
+
 vi.mock('@codexo/exojs', async importActual => {
   const actual = await importActual<typeof import('@codexo/exojs')>();
   const { MockApplication: MockApp, configureApplicationState } = await import('./support/mock-application');
   configureApplicationState(actual.ApplicationState);
-  return { ...actual, Application: MockApp };
+
+  return {
+    ...actual,
+    Application: class extends MockApp {
+      public constructor(options: ConstructorParameters<typeof MockApp>[0]) {
+        construction();
+        super(options);
+      }
+    },
+  };
 });
 
-/**
- * Drives `useExoApplication` WITHOUT ever attaching the returned `canvasRef` to
- * an element - exercises the mount effect's early-return guard (`canvasRef.current`
- * stays null, so no Application is constructed).
- */
-function NoCanvasHarness({ options, expose }: { options?: ExoApplicationOptions; expose: (result: UseExoApplicationResult) => void }): ReactElement {
+const NoCanvasHarness = ({
+  options,
+  expose,
+}: {
+  options?: ExoApplicationOptions;
+  expose: (result: UseExoApplicationResult) => void;
+}): ReactElement => {
   const result = useExoApplication(options);
   expose(result);
 
   return <div data-testid="no-canvas" />;
-}
+};
 
 interface HarnessProps {
   options?: ExoApplicationOptions;
@@ -36,26 +48,23 @@ interface HarnessProps {
   expose: (result: UseExoApplicationResult) => void;
 }
 
-/**
- * Drives `useExoApplication` and - crucially - attaches the returned `canvasRef`
- * to a real `<canvas>`, which is what makes the hook's mount effect create the
- * Application (it bails out when `canvasRef.current` is null). `expose` hands the
- * latest hook result back to the test on every render.
- */
-function Harness({ options, onReady, onError, expose }: HarnessProps): ReactElement {
+const Harness = ({ options, onReady, onError, expose }: HarnessProps): ReactElement => {
   const result = useExoApplication(options, onReady, onError);
   expose(result);
 
   return <canvas ref={result.canvasRef} data-testid="exo-canvas" />;
-}
+};
 
-function mount(initial: Omit<HarnessProps, 'expose'>): {
+const mount = (
+  initial: Omit<HarnessProps, 'expose'>,
+): {
   result: () => UseExoApplicationResult;
   rerender: (next: Omit<HarnessProps, 'expose'>) => void;
   unmount: () => void;
   getCanvas: () => HTMLElement;
-} {
+} => {
   let latest: UseExoApplicationResult | undefined;
+
   const expose = (r: UseExoApplicationResult): void => {
     latest = r;
   };
@@ -68,15 +77,35 @@ function mount(initial: Omit<HarnessProps, 'expose'>): {
     unmount: () => utils.unmount(),
     getCanvas: () => utils.getByTestId('exo-canvas'),
   };
-}
+};
+
+describe('useExoApplication - delayed canvas', () => {
+  it('creates an application when the canvas attaches after mount', () => {
+    let latest!: UseExoApplicationResult;
+
+    const Delayed = ({ show }: { show: boolean }): ReactElement => {
+      latest = useExoApplication();
+
+      return show ? <canvas ref={latest.canvasRef} /> : <div />;
+    };
+
+    const view = render(<Delayed show={false} />);
+    expect(latest.app).toBeNull();
+    view.rerender(<Delayed show />);
+    expect(MockApplication.instances).toHaveLength(1);
+    expect(latest.app).toBe(MockApplication.instances[0]);
+  });
+});
 
 const onlyInstance = (): MockApplication => {
   expect(MockApplication.instances).toHaveLength(1);
+
   return MockApplication.instances[0]!;
 };
 
 beforeEach(() => {
   MockApplication.reset();
+  construction.mockReset();
 });
 
 describe('useExoApplication — construction & wiring', () => {
@@ -99,7 +128,11 @@ describe('useExoApplication — construction & wiring', () => {
     const app = onlyInstance();
 
     expect(app.options.clearColor).toBe(clearColor);
-    expect((app.options['rendering'] as { color?: unknown } | undefined)?.color).toEqual({ workingFormat: 'hdr', toneMapping: 'reinhard', exposure: 1 });
+    expect((app.options['rendering'] as { color?: unknown } | undefined)?.color).toEqual({
+      workingFormat: 'hdr',
+      toneMapping: 'reinhard',
+      exposure: 1,
+    });
   });
 
   it('returns a canvasRef whose identity is stable across re-renders', () => {
@@ -115,7 +148,7 @@ describe('useExoApplication — construction & wiring', () => {
 });
 
 describe('useExoApplication — canvasRef never attached', () => {
-  it('does not construct an Application while canvasRef.current stays null', () => {
+  it('does not construct an Application until a canvas attaches', () => {
     let latest: UseExoApplicationResult | undefined;
     render(<NoCanvasHarness options={{ canvas: { width: 800, height: 600 } }} expose={r => (latest = r)} />);
 
@@ -125,13 +158,57 @@ describe('useExoApplication — canvasRef never attached', () => {
 });
 
 describe('useExoApplication — identity vs live options', () => {
-  it('recreates (and destroys) the Application when the backend type changes', () => {
+  it('waits for teardown before constructing a replacement on the canvas', async () => {
+    const harness = mount({ options: { backend: { type: 'webgl2' } } });
+    const first = onlyInstance();
+    let finish!: () => void;
+    first.destroy.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          finish = resolve;
+        }),
+    );
+
+    harness.rerender({ options: { backend: { type: 'webgpu' } } });
+    expect(MockApplication.instances).toHaveLength(1);
+    await act(async () => {
+      finish();
+    });
+    await waitFor(() => expect(MockApplication.instances).toHaveLength(2));
+  });
+
+  it.each(['construction', 'onReady'] as const)('reports replacement %s failures after teardown', async failurePoint => {
+    const onError = vi.fn();
+    const onReady = vi.fn();
+    const harness = mount({ options: { backend: { type: 'webgl2' } }, onReady, onError });
+    let finish!: () => void;
+    onlyInstance().destroy.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          finish = resolve;
+        }),
+    );
+    const error = new Error('replacement failed');
+    const failingCallback = failurePoint === 'construction' ? construction : onReady;
+    failingCallback.mockImplementationOnce(() => {
+      throw error;
+    });
+
+    harness.rerender({ options: { backend: { type: 'webgpu' } }, onReady, onError });
+    expect(onError).not.toHaveBeenCalled();
+    await act(async () => {
+      finish();
+    });
+    await waitFor(() => expect(onError).toHaveBeenCalledExactlyOnceWith(error));
+  });
+
+  it('recreates (and destroys) the Application when the backend type changes', async () => {
     const harness = mount({ options: { backend: { type: 'webgl2' }, canvas: { width: 800, height: 600 } } });
     const first = onlyInstance();
 
     harness.rerender({ options: { backend: { type: 'webgpu' }, canvas: { width: 800, height: 600 } } });
 
-    expect(MockApplication.instances).toHaveLength(2);
+    await waitFor(() => expect(MockApplication.instances).toHaveLength(2));
     expect(first.destroy).toHaveBeenCalledTimes(1);
     expect(harness.result().app).toBe(MockApplication.instances[1]);
   });

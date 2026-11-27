@@ -43,8 +43,10 @@ const setupBiquadSpy = (): { nodes: MockBiquad[]; restore: () => void } => {
       context: ctx,
     };
     nodes.push(node);
+
     return node as unknown as BiquadFilterNode;
   });
+
   return { nodes, restore: () => spy.mockRestore() };
 };
 
@@ -165,5 +167,9 @@ describe('BiquadEffect', () => {
 
     spy.restore();
     fx.destroy();
+  });
+
+  test('a non-finite frequency is rejected at construction', () => {
+    expect(() => new BiquadEffect({ frequency: Number.NaN })).toThrow(RangeError);
   });
 });

@@ -1,4 +1,5 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 const glsl = `#version 300 es
 precision mediump float; uniform float uProgress; in vec2 vUv; out vec4 fragColor;
@@ -29,12 +30,13 @@ class LoadingProgressWithShaderScene extends Scene {
     this.progress = { v: 0 };
     this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
     this.label.setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
-    this.ring = new Sprite(this.loader.get('image/uv-grid-256.png'))
+    this.ring = new Sprite(assets.uvGrid256.source)
       .setAnchor(0.5)
       .setScale(2.4)
       .setPosition(width / 2, height / 2);
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uProgress: 0 } });
+    this.filter = this.track(new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uProgress: 0 } }));
     this.ring.filters = [this.filter];
+    this.root.addChild(this.ring, this.label);
     app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
   }
 
@@ -44,11 +46,6 @@ class LoadingProgressWithShaderScene extends Scene {
   }
 
   // #endregion guide:progress-ring
-
-  override draw(context: RenderingContext): void {
-    context.render(this.ring);
-    context.render(this.label);
-  }
 }
 
 const app = new Application({
@@ -60,9 +57,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(14, 18, 28),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(LoadingProgressWithShaderScene);

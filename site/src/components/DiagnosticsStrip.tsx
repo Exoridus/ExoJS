@@ -77,18 +77,22 @@ const countBySeverity = (diagnostics: ReadonlyArray<EditorDiagnostic>): Record<E
     info: 0,
     hint: 0,
   };
+
   for (const diagnostic of diagnostics) {
     counts[diagnostic.severity] += 1;
   }
+
   return counts;
 };
 
 const pickTopDiagnostic = (diagnostics: ReadonlyArray<EditorDiagnostic>): EditorDiagnostic | null => {
   let top: EditorDiagnostic | null = null;
+
   for (const diagnostic of diagnostics) {
     if (!top || SEVERITY_RANK[diagnostic.severity] > SEVERITY_RANK[top.severity]) {
       top = diagnostic;
     }
   }
+
   return top;
 };

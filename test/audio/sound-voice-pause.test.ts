@@ -54,8 +54,10 @@ const setupSourceSpy = (): { sources: MockBufferSource[]; restore: () => void } 
       buffer: null,
     };
     sources.push(node);
+
     return node as unknown as AudioBufferSourceNode;
   });
+
   return { sources, restore: (): void => spy.mockRestore() };
 };
 
@@ -74,13 +76,16 @@ const setupPannerSpy = (): { panners: PannerNode[]; restore: () => void } => {
       orientationZ: makeParam(),
     } as unknown as PannerNode;
     panners.push(node);
+
     return node;
   });
+
   return { panners, restore: (): void => spy.mockRestore() };
 };
 
 /** A voice over the sprite window [2, 3] of a 10s buffer. */
-const playClipVoice = (system: AudioSystem, sound: Sound): SoundVoice & Pausable => system.play(sound.sprite('hit')) as SoundVoice & Pausable;
+const playClipVoice = (system: AudioSystem, sound: Sound): SoundVoice & Pausable =>
+  system.play(sound.sprite('hit')) as SoundVoice & Pausable;
 
 describe('SoundVoice — Pausable', () => {
   beforeEach(() => setCurrentTime(0));
@@ -137,6 +142,23 @@ describe('SoundVoice — Pausable', () => {
     setCurrentTime(5.5);
     expect(voice.time).toBeCloseTo(0.75, 6);
 
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('pause retains the playhead advanced by rate and detune', () => {
+    const factory = setupSourceSpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = system.play(sound, { playbackRate: 1.5, detune: 1200 }) as SoundVoice & Pausable;
+
+    setCurrentTime(1);
+    expect(voice.time).toBeCloseTo(3);
+    voice.pause();
+    setCurrentTime(5);
+    expect(voice.time).toBeCloseTo(3);
+    voice.resume();
+    expect(factory.sources[1].start).toHaveBeenCalledWith(0, 3, 7);
     factory.restore();
     sound.destroy();
   });

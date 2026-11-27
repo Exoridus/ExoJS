@@ -52,7 +52,8 @@ export const resolvePixelRegionBounds = (method: string, source: RenderTexture, 
   const width = region !== undefined ? Math.trunc(region.width) : source.width;
   const height = region !== undefined ? Math.trunc(region.height) : source.height;
 
-  if (width <= 0 || height <= 0 || x < 0 || y < 0 || x + width > source.width || y + height > source.height) {
+  // Negated positive form so a NaN coordinate or extent is refused too.
+  if (!(width > 0 && height > 0 && x >= 0 && y >= 0 && x + width <= source.width && y + height <= source.height)) {
     throw new Error(`${method} region ${width}x${height} at ${x},${y} does not lie inside the ${source.width}x${source.height} texture.`);
   }
 
@@ -79,8 +80,11 @@ export const resolvePixelRegion = (
     dataType === 'uint8'
       ? source.format === TextureFormat.Rgba8 || source.format === TextureFormat.Rgba8Srgb
       : dataType === 'float32' && (source.format === TextureFormat.Rgba16F || source.format === TextureFormat.Rgba32F);
+
   if (!valid) {
-    throw new Error(`${method} cannot read '${source.format}' as '${dataType}'. Use uint8 for rgba8/rgba8srgb or float32 for rgba16f/rgba32f.`);
+    throw new Error(
+      `${method} cannot read '${source.format}' as '${dataType}'. Use uint8 for rgba8/rgba8srgb or float32 for rgba16f/rgba32f.`,
+    );
   }
 
   return resolvePixelRegionBounds(method, source, region);
@@ -338,15 +342,21 @@ export class PixelReader<T extends PixelArray = Uint8ClampedArray> {
 
     const { x, y, width, height } = resolvePixelRegion('PixelReader', this.source, this._region, this._dataType);
 
-    this._sourceWidth = this.source.width;
-    this._sourceHeight = this.source.height;
-
     if (width === this._width && height === this._height && this._region !== undefined) {
+      this._sourceWidth = this.source.width;
+      this._sourceHeight = this.source.height;
+
       return;
     }
 
+    // Created before the old readback is released so a failing allocation leaves
+    // the reader on its previous, still usable readback.
+    const readback = this._backend.createPixelReadback(this.source, x, y, width, height, this.slots, this._dataType);
+
     this._readback.destroy();
-    this._readback = this._backend.createPixelReadback(this.source, x, y, width, height, this.slots, this._dataType);
+    this._readback = readback;
+    this._sourceWidth = this.source.width;
+    this._sourceHeight = this.source.height;
     this._width = width;
     this._height = height;
     this._generation++;
@@ -359,7 +369,9 @@ export class PixelReader<T extends PixelArray = Uint8ClampedArray> {
     this._heldSlots = [];
 
     for (let slot = 0; slot < this.slots; slot++) {
-      this._reads.push(new PixelRead(this, slot, { width: this._width, height: this._height, data: this._readback.data(slot) as T }, this._generation));
+      this._reads.push(
+        new PixelRead(this, slot, { width: this._width, height: this._height, data: this._readback.data(slot) as T }, this._generation),
+      );
       this._heldSlots.push(false);
     }
   }

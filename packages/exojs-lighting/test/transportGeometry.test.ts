@@ -4,10 +4,12 @@ import { resolve } from 'node:path';
 import { Color, Rectangle } from '@codexo/exojs';
 import { describe, expect, test } from 'vitest';
 
+import { MASK_COARSE, MASK_SUPER } from '../src/backends/maskBlocks';
 import {
   sourceDensity,
   sourceRadius,
   TransportCapacityError,
+  transportCellBlocks,
   transportChannels,
   transportEmitterTexels,
   TransportGeometry,
@@ -19,6 +21,20 @@ import { PointLight } from '../src/lights/PointLight';
 import { SpotLight } from '../src/lights/SpotLight';
 
 const region = new Rectangle(0, 0, 100, 100);
+
+test('mask hierarchy constants agree across CPU and shader implementations', () => {
+  for (const [name, expected, files] of [
+    ['MASK_COARSE', MASK_COARSE, ['mask-blocks.frag', 'mask-blocks.wgsl', 'transport.frag', 'transport.wgsl']],
+    ['MASK_SUPER', MASK_SUPER, ['mask-superblocks.frag', 'mask-superblocks.wgsl', 'transport.frag', 'transport.wgsl']],
+  ] as const) {
+    for (const file of files) {
+      const source = readFileSync(resolve(__dirname, '../src/backends/shaders', file), 'utf8');
+      const value = new RegExp(`${name}(?:: i32)? = (\\d+)`).exec(source)?.[1];
+
+      expect(Number(value)).toBe(expected);
+    }
+  }
+});
 
 /** A flat segment buffer as `OccluderField` hands one over. */
 const segmentBuffer = (...quads: number[][]): Float32Array => Float32Array.from(quads.flat());
@@ -123,7 +139,9 @@ const touchesBox = (ax: number, ay: number, bx: number, by: number, left: number
 };
 
 const emitter = (tables: TransportTables, id: number): number[] =>
-  Array.from(tables.emitters.subarray(id * transportEmitterTexels * transportChannels, (id + 1) * transportEmitterTexels * transportChannels));
+  Array.from(
+    tables.emitters.subarray(id * transportEmitterTexels * transportChannels, (id + 1) * transportEmitterTexels * transportChannels),
+  );
 
 describe('TransportGeometry', () => {
   test('lists a segment in every cell its bounding box touches', () => {
@@ -189,6 +207,7 @@ describe('TransportGeometry', () => {
   test('matches an exact cell-intersection reference across clipped and reversed segments', () => {
     const geometry = new TransportGeometry();
     let state = 0x9e3779b9;
+
     const random = (): number => {
       state = Math.imul(state ^ (state >>> 16), 0x21f0aaad);
       state = Math.imul(state ^ (state >>> 15), 0x735a2d97);
@@ -196,6 +215,7 @@ describe('TransportGeometry', () => {
 
       return (state >>> 0) / 0x1_0000_0000;
     };
+
     const cases: number[][] = [
       [20, 5, 20, 95],
       [5, 20, 95, 20],
@@ -335,13 +355,17 @@ describe('TransportGeometry', () => {
     const dark = new PointLight({ radius: 100, intensity: 0 });
     const inverted = new PointLight({ radius: 100, intensity: -1 });
     const broken = new PointLight({ radius: 100, intensity: Number.NaN });
+    const unbounded = new PointLight({ radius: 100, intensity: Number.POSITIVE_INFINITY });
+    const infiniteReach = new PointLight({ radius: Number.POSITIVE_INFINITY });
     const on = new PointLight({ radius: 100 });
 
     dark.position.set(10, 10);
     inverted.position.set(20, 20);
     broken.position.set(30, 30);
     on.position.set(40, 40);
-    geometry.build(new Float32Array(0), 0, [dark, inverted, broken, on], region, 10);
+    unbounded.position.set(50, 50);
+    infiniteReach.position.set(60, 60);
+    geometry.build(new Float32Array(0), 0, [dark, inverted, broken, unbounded, infiniteReach, on], region, 10);
 
     // A negative intensity would otherwise be written as a negative density
     // and subtract light along every ray that crossed the source.
@@ -485,5 +509,13 @@ describe('TransportGeometry', () => {
       expect(tables.cellSize).toBeGreaterThan(8);
       expect(segmentsAt(tables, 0, 0)).toEqual([0]);
     });
+  });
+});
+
+describe('transportCellBlocks', () => {
+  test('uses coarse cells for sparse geometry and finer cells once it is dense', () => {
+    expect(transportCellBlocks(0)).toBe(8);
+    expect(transportCellBlocks(256)).toBe(8);
+    expect(transportCellBlocks(257)).toBe(4);
   });
 });

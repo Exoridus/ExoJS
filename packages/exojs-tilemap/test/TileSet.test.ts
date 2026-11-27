@@ -7,20 +7,18 @@ import type { TileDefinition } from '../src/types';
 
 // ── Test helpers ──────────────────────────────────────────────────────────
 
-const fakeTexture = (width = 512, height = 512): Texture => {
-  return {
+const fakeTexture = (width = 512, height = 512): Texture =>
+  ({
     width,
     height,
     uid: 0,
     label: 'test',
     destroy: () => {},
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const fakeRegion = (width = 512, height = 512): TextureRegion => {
-  return new TextureRegion(fakeTexture(width, height), { x: 0, y: 0, width, height });
-};
+const fakeRegion = (width = 512, height = 512): TextureRegion =>
+  new TextureRegion(fakeTexture(width, height), { x: 0, y: 0, width, height });
 
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -170,5 +168,13 @@ describe('TileSet.setDefinitions', () => {
 
     expect(ts.getTileDefinition(2)).toBeUndefined();
     expect(ts.getTileDefinition(0)).toBeDefined();
+  });
+
+  it('rejects an out-of-range batch without clearing the installed definitions', () => {
+    const ts = new TileSet({ name: 't', texture: fakeRegion(), tileWidth: 32, tileHeight: 32, tileCount: 4 });
+    ts._setDefinition(2, { properties: { kept: true } });
+
+    expect(() => ts.setDefinitions([{ localTileId: 0 }, { localTileId: 4 }])).toThrow(/out of range/);
+    expect(ts.getTileDefinition(2)?.properties).toEqual({ kept: true });
   });
 });

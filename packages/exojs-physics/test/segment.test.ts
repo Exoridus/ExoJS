@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Manifold } from '../src/collision/Manifold';
 import { collide, testOverlap } from '../src/collision/narrowphase';
+import { segmentSegmentDistanceSquared } from '../src/collision/segments';
 import { BoxShape, CapsuleShape, CircleShape, PhysicsBody, PhysicsWorld, SegmentShape } from '../src/index';
 import { colliderAt } from './support';
 
@@ -11,6 +12,21 @@ import { colliderAt } from './support';
  */
 
 const DT = 1 / 60;
+
+describe('segment closest points', () => {
+  it('handles overlapping, parallel, degenerate and endpoint-clamped segments', () => {
+    const a = { x: 0, y: 0 };
+    const b = { x: 0, y: 0 };
+
+    expect(segmentSegmentDistanceSquared(0, 0, 4, 0, 2, 0, 6, 0, a, b)).toBe(0);
+    expect(a).toEqual({ x: 2, y: 0 });
+    expect(b).toEqual(a);
+    expect(segmentSegmentDistanceSquared(0, 0, 4, 0, 2, 3, 6, 3, a, b)).toBe(9);
+    expect(segmentSegmentDistanceSquared(0, 0, 0, 0, 2, 0, 4, 0, a, b)).toBe(4);
+    expect(a).toEqual({ x: 0, y: 0 });
+    expect(b).toEqual({ x: 2, y: 0 });
+  });
+});
 
 describe('SegmentShape', () => {
   it('is boundary geometry and reports no mass properties', () => {
@@ -59,7 +75,9 @@ describe('a dynamic body must carry mass', () => {
 
   it('accepts a boundary collider alongside a solid one', () => {
     const world = new PhysicsWorld();
-    const body = world.add(new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new BoxShape(10, 10) }, { shape: new SegmentShape(-10, 0, 10, 0) }] }));
+    const body = world.add(
+      new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new BoxShape(10, 10) }, { shape: new SegmentShape(-10, 0, 10, 0) }] }),
+    );
 
     // The segment contributes collision only; the mass is the box's alone.
     expect(body.mass).toBeCloseTo(100);

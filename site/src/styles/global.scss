@@ -52,7 +52,7 @@ body {
   color: var(--color-text);
   font-size: var(--text-md);
   line-height: var(--leading-normal);
-  text-rendering: optimizeLegibility;
+  text-rendering: optimizelegibility;
 }
 
 a {
@@ -95,9 +95,11 @@ kbd {
 :where(pre.astro-code) {
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-card);
+  // stylelint-disable declaration-no-important -- Shiki writes inline styles on the generated <pre>, which only !important can outrank
   padding: 0.92rem 1rem !important;
   overflow: auto;
   background: var(--color-code-bg) !important;
+  // stylelint-enable declaration-no-important
   box-shadow: var(--shadow-sm);
   font-size: 0.9rem;
   line-height: 1.68;
@@ -110,6 +112,7 @@ kbd {
 // Dual-theme `<Code>`/markdown output still defines `--shiki-dark`; we just pin
 // to it regardless of the site's data-theme.
 :where(pre.astro-code, pre.astro-code span) {
+  // stylelint-disable-next-line declaration-no-important -- Shiki writes inline styles on the generated <pre>, which only !important can outrank
   color: var(--shiki-dark) !important;
 }
 
@@ -474,10 +477,12 @@ h4 :where(code) {
   outline-offset: 2px;
 }
 
+// stylelint-disable selector-max-id -- the skip link jumps to the main region by id, the one element the layout guarantees
 #main-content:focus,
 #main-content:focus-visible {
   outline: none;
 }
+// stylelint-enable selector-max-id
 
 .app-shell {
   min-height: 100vh;
@@ -503,9 +508,11 @@ h4 :where(code) {
   *,
   *::before,
   *::after {
+    // stylelint-disable declaration-no-important -- the reduced-motion reset has to outrank every component's own animation and transition
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+    // stylelint-enable declaration-no-important
   }
 }

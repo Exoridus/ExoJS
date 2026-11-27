@@ -1,9 +1,19 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, ShaderFilter, Sprite } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  ShaderFilter,
+  Sprite,
+} from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, mountControls, slider } from '@examples/runtime';
 
 // A detailed full-frame texture so grain + vignette read as a screen-wide post
 // effect rather than decorating one small sprite.
-const UV_GRID = assets.technical.filtering.uvGrid256;
+const UV_GRID = assets.uvGrid256;
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uTime; uniform float uIntensity; in vec2 vUv; out vec4 fragColor;
@@ -28,13 +38,13 @@ class NoiseVignetteScene extends Scene {
   private filter!: ShaderFilter;
   private sprite!: Sprite;
   private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
     const app = this.app;
     const { width, height } = app;
 
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
+    this.filter = this.track(new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } }));
 
     // Fill the whole 16:9 frame so the post effect covers the viewport.
     const texture = this.loader.get(UV_GRID);
@@ -51,14 +61,11 @@ class NoiseVignetteScene extends Scene {
       hint: 'A single-pass filter adds animated grain and a radial vignette across the frame.',
     });
 
-    this.panel = mountControlPanel({ title: 'Grade' });
-    this.panel.addSlider({
-      label: 'Intensity',
-      min: 0,
-      max: 1,
-      step: 0.01,
-      value: this.intensity,
-      onChange: value => {
+    this.panel = demoPanel({
+      scene: this,
+      title: 'Grade',
+      controls: { intensity: slider('Intensity', { min: 0, max: 1, step: 0.01, value: this.intensity }) },
+      onChange: (_key, value) => {
         this.intensity = value;
         this.filter.setUniform('uIntensity', value);
         this.hud.setStatus(this.statusText());

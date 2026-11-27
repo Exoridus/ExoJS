@@ -39,7 +39,8 @@ export class SoundFactory implements AssetFactory<ArrayBuffer, Sound, SoundAsset
     let audioBuffer: AudioBuffer;
 
     try {
-      audioBuffer = await decodeAudioData(source);
+      // Web Audio consumes its input buffer; the source may still belong to a cache or another acquisition.
+      audioBuffer = await decodeAudioData(source.slice(0, source.byteLength));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
@@ -51,7 +52,8 @@ export class SoundFactory implements AssetFactory<ArrayBuffer, Sound, SoundAsset
     }
 
     const sidecar = typeof options.sprites === 'string' ? options.sprites : null;
-    const sprites = typeof options.sprites === 'string' ? await loadSoundSpriteSheet(options.sprites, context.dependencies) : options.sprites;
+    const sprites =
+      typeof options.sprites === 'string' ? await loadSoundSpriteSheet(options.sprites, context.dependencies) : options.sprites;
 
     try {
       return new Sound(audioBuffer, {
@@ -63,7 +65,9 @@ export class SoundFactory implements AssetFactory<ArrayBuffer, Sound, SoundAsset
       // A clip that the sheet's own shape check accepts can still be rejected
       // by `Sound` - only it knows the buffer duration. From a sidecar that is
       // a content failure, not a caller mistake.
-      if (sidecar === null) throw error;
+      if (sidecar === null) {
+        throw error;
+      }
 
       const message = error instanceof Error ? error.message : String(error);
 

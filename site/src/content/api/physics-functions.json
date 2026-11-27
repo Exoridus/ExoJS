@@ -1,10 +1,10 @@
 {
   "title": "Physics Functions",
-  "description": "Free functions and constants exported from @codexo/exojs-physics.",
+  "description": "Free functions and constants exported from @codexo/exojs/physics.",
   "symbol": "Physics Functions",
   "kind": "namespace",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -19,7 +19,7 @@
       "title": "Overview",
       "members": [],
       "paragraphs": [
-        "Free functions and constants exported from @codexo/exojs-physics. Import any of them directly, for example `import { shouldCollide } from '@codexo/exojs-physics'`."
+        "Free functions and constants exported from @codexo/exojs/physics. Import any of them directly, for example `import { shouldCollide } from '@codexo/exojs/physics'`."
       ],
       "importLine": null,
       "sourceLink": null

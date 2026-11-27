@@ -1,92 +1,168 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Sound, Text } from '@codexo/exojs';
-import { DelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import {
+  Application,
+  AudioBus,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  type Sound,
+  Text,
+  type Voice,
+} from '@codexo/exojs';
+import { AudioAnalyser, DelayEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, demoPanel, startExample, toggle } from '@examples/runtime';
+
+const PRESETS = {
+  Dry: { duration: 0.2, wet: 0, delay: 0, feedback: 0 },
+  'Small room': { duration: 0.55, wet: 0.22, delay: 0, feedback: 0 },
+  Hall: { duration: 2.6, wet: 0.35, delay: 0, feedback: 0 },
+  Echo: { duration: 0.2, wet: 0, delay: 0.4, feedback: 0.4 },
+} as const;
+type Preset = keyof typeof PRESETS;
 
 class ReverbAndDelayScene extends Scene {
-  private sound!: Sound;
+  private sounds: Sound[] = [];
+  private voices: Voice[] = [];
+  private bus!: AudioBus;
   private reverb!: ReverbEffect;
   private delay!: DelayEffect;
-  private label!: Text;
-  private panel!: ReturnType<typeof mountControlPanel>;
-  private hud!: ReturnType<typeof mountControls>;
-  private preset = 'Small room';
-  private bypass = false;
-  private reverbWet = 0.3;
-  private delayWet = 0.12;
+  private analyser!: AudioAnalyser;
+  private readonly graphics = this.track(new Graphics());
+  private readonly label = this.track(new Text('', { fillColor: new Color(236, 239, 242), align: 'center' })).setAnchor(0.5);
+  private panel!: ReturnType<
+    typeof demoPanel<{
+      source: ReturnType<typeof choice<'Wood impact' | 'Short voice'>>;
+      preset: ReturnType<typeof choice<Preset>>;
+      bypass: ReturnType<typeof toggle>;
+    }>
+  >;
+  private alive = true;
+  private playbackEpoch = 0;
+  private failure = '';
+  private peak = 0;
+  private rms = 0;
 
   override init(): void {
-    const audio = this.app.audio;
-    this.sound = this.loader.get('audio/impact-light.ogg');
-    this.reverb = new ReverbEffect({ wet: 0.3, decay: 1.3 });
-    this.delay = new DelayEffect({ wet: 0.12, delaySeconds: 0.18, feedback: 0.2 });
-    audio.sound.addEffect(this.reverb);
-    audio.sound.addEffect(this.delay);
-
-    this.label = new Text('Sound -> Reverb -> Delay -> Sound bus', { fillColor: Color.white, fontSize: 25 });
-    this.label.setPosition(365, 250);
-    this.hud = mountControls({
-      title: 'Reverb and Delay',
-      status: 'Small room: play the impact, then compare presets and bypass.',
-      hint: 'The dry/wet path stays audible as the room and echo change.',
-    });
-    this.panel = mountControlPanel({ title: 'Space and echoes' });
-    this.panel.addButton({
-      label: 'Play impact',
-      onClick: () => {
-        if (!audio.locked) {
-          audio.play(this.sound, { bus: audio.sound });
-        }
+    this.sounds = [this.loader.get(assets.soundImpactWood), this.loader.get(assets.voiceMissionComplete)];
+    this.bus = new AudioBus('effect-comparison', { parent: this.app.audio.sound });
+    this.app.audio.registerBus(this.bus);
+    this.reverb = new ReverbEffect({ durationSeconds: 0.2, wet: 0 });
+    this.delay = new DelayEffect({ wet: 0, delaySeconds: 0.36, feedback: 0 });
+    this.bus.addEffect(this.reverb).addEffect(this.delay);
+    this.analyser = new AudioAnalyser({ source: this.bus, smoothingTimeConstant: 0 });
+    this.panel = demoPanel({
+      scene: this,
+      layout: 'bar',
+      controls: {
+        source: choice('Source', ['Wood impact', 'Short voice']),
+        preset: choice('Space', Object.keys(PRESETS) as Preset[]),
+        bypass: toggle('Bypass', false),
       },
-    });
-    this.panel.addButton({ label: 'Small room', onClick: () => this.setPreset('Small room', 0.3, 1.3, 0.12, 0.18, 0.2) });
-    this.panel.addButton({ label: 'Large hall', onClick: () => this.setPreset('Large hall', 0.55, 5, 0.18, 0.32, 0.3) });
-    this.panel.addButton({ label: 'Echo', onClick: () => this.setPreset('Echo', 0.12, 1.5, 0.55, 0.48, 0.55) });
-    this.panel.addToggle({
-      label: 'Bypass',
-      value: false,
-      onChange: value => {
-        this.bypass = value;
-        this.applyWet();
+      actions: {
+        Play: () => void this.play(),
+        Stop: () => this.stop(),
       },
+      onChange: (_key, _value, values) => this.applyPreset(values.preset, values.bypass),
     });
   }
 
-  private setPreset(name: string, reverbWet: number, decay: number, delayWet: number, delaySeconds: number, feedback: number): void {
-    this.preset = name;
-    this.reverb.decay = decay;
-    this.delay.delaySeconds = delaySeconds;
-    this.delay.feedback = feedback;
-    this.reverbWet = reverbWet;
-    this.delayWet = delayWet;
-    this.applyWet();
+  private applyPreset(name: Preset, bypass: boolean): void {
+    this.stop();
+    const preset = PRESETS[name];
+    this.reverb.durationSeconds = preset.duration;
+    this.reverb.wet = bypass ? 0 : preset.wet;
+    this.delay.wet = bypass ? 0 : preset.delay;
+    this.delay.feedback = preset.feedback;
   }
 
-  private applyWet(): void {
-    this.reverb.wet = this.bypass ? 0 : this.reverbWet;
-    this.delay.wet = this.bypass ? 0 : this.delayWet;
-    this.hud.setStatus(`${this.preset}${this.bypass ? ' (bypassed)' : ''}: reverb ${this.reverb.wet.toFixed(2)}, delay ${this.delay.wet.toFixed(2)}.`);
+  private async play(): Promise<void> {
+    const epoch = this.playbackEpoch;
+
+    try {
+      // Sounds played while locked are skipped, and the unlock this gesture starts settles asynchronously.
+      await new Promise<void>(resolve => this.app.audio.onUnlock.add(() => resolve()));
+
+      if (!this.alive || epoch !== this.playbackEpoch) {
+        return;
+      }
+
+      const sound = this.sounds[this.panel.values.source === 'Wood impact' ? 0 : 1]!;
+
+      await sound.loaded;
+
+      if (!this.alive || epoch !== this.playbackEpoch) {
+        return;
+      }
+
+      if (!sound.ready) {
+        this.failure = 'Source unavailable: media has not loaded';
+
+        return;
+      }
+
+      this.voices = this.voices.filter(voice => !voice.ended);
+      this.voices.push(this.app.audio.play(sound, { bus: this.bus, volume: 0.32 }));
+      this.failure = '';
+    } catch {
+      this.failure = 'Source media failed to load. Try another source.';
+    }
+  }
+
+  private stop(): void {
+    this.playbackEpoch++;
+    this.voices.forEach(voice => voice.stop());
+    this.voices = [];
   }
 
   override draw(context: RenderingContext): void {
+    const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    let sum = 0;
+    this.peak = 0;
+    const samples = this.analyser.getWaveformFloat();
+
+    for (const sample of samples) {
+      sum += sample * sample;
+      this.peak = Math.max(this.peak, Math.abs(sample));
+    }
+
+    this.rms = Math.sqrt(sum / samples.length);
+    const x = width * 0.15 * scale,
+      y = contentHeight * 0.55 * scale,
+      w = width * 0.7 * scale;
+    this.graphics.clear();
+    this.graphics.fillColor = new Color(25, 31, 36);
+    this.graphics.drawRectangle(x, y, w, 20 * scale);
+    this.graphics.fillColor = new Color(101, 210, 210);
+    this.graphics.drawRectangle(x, y, w * Math.min(1, this.rms * 4), 20 * scale);
+    this.label.text = `${this.panel.values.source} -> ${this.panel.values.bypass ? 'Bypass (dry)' : this.panel.values.preset}\nOutput RMS (relative) ${this.rms.toFixed(3)} | peak ${this.peak.toFixed(3)}`;
+    this.label.style.fontSize = 16 * scale;
+    this.label.setPosition((width * scale) / 2, y - 38 * scale);
+    context.render(this.graphics);
     context.render(this.label);
+    this.panel.status(
+      this.failure ||
+        `${this.app.audio.locked ? 'Click to enable audio' : 'AudioContext running'} | ${this.sounds.every(sound => sound.ready) ? 'Sources ready' : this.sounds.some(sound => sound.state === 'failed') ? 'Media failed' : 'Media loading'} | fixed source gain 0.32 | Stop ends the voice, tails decay`,
+      this.failure ? 'error' : 'neutral',
+    );
   }
 
   override destroy(): void {
-    this.app.audio.sound.removeEffect(this.delay).removeEffect(this.reverb);
+    this.alive = false;
+    this.stop();
+    this.analyser?.destroy();
+    this.bus?.removeEffect(this.delay).removeEffect(this.reverb);
     this.delay?.destroy();
     this.reverb?.destroy();
+    this.app.audio.unregisterBus(this.bus);
     this.panel?.dispose();
-    this.hud?.dispose();
-    this.label?.destroy();
     super.destroy();
   }
 }
-
 const app = new Application({
   scenes: { ReverbAndDelayScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
-  clearColor: Color.black,
-  loader: { basePath: 'assets/' },
+  clearColor: new Color(11, 16, 20),
 });
-
-await app.start(ReverbAndDelayScene);
+await startExample(app, () => app.start(ReverbAndDelayScene));

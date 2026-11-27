@@ -4,7 +4,7 @@
   "symbol": "Pathfinder",
   "kind": "class",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -23,7 +23,7 @@
         "One pathfinder owns the search buffers and reuses them across every query, including queries against different spaces of different sizes, so a search itself allocates nothing once the buffers have reached their size. The result objects are freshly allocated by design: callers hold on to a path, and pooling something a caller retains trades a little garbage for use-after-reuse bugs.",
         "A pathfinder holds no world state and no lifecycle - construct one per system that needs paths, or share one, as long as queries do not interleave with a mutation of the space being searched."
       ],
-      "importLine": "import { Pathfinder } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { Pathfinder } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

@@ -59,7 +59,7 @@ interface MockApplicationOptions {
  * still-resolving mock factory and deadlock the module loader.
  */
 class MockSignal<Args extends unknown[]> {
-  private readonly _handlers: ((...args: Args) => void)[] = [];
+  private readonly _handlers: Array<(...args: Args) => void> = [];
 
   public get count(): number {
     return this._handlers.length;
@@ -73,6 +73,7 @@ class MockSignal<Args extends unknown[]> {
 
   public remove(handler: (...args: Args) => void): void {
     const index = this._handlers.indexOf(handler);
+
     if (index !== -1) {
       this._handlers.splice(index, 1);
     }

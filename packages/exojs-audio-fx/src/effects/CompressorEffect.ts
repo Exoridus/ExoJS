@@ -2,8 +2,11 @@ import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link CompressorEffect}. All values are clamped to their valid ranges on assignment. */
 export interface CompressorEffectOptions {
+  /** Level in dBFS above which compression begins. Range -100..0, default -24. */
   threshold?: number;
+  /** Width in dB of the soft-knee transition around the threshold. Range 0..40, default 30. */
   knee?: number;
+  /** Input-to-output dB ratio above the threshold. Range 1..20, default 12. */
   ratio?: number;
   /** Time in seconds for the compressor to engage after the signal exceeds the threshold. Range 0..1, default 0.003. */
   attack?: number;
@@ -36,12 +39,18 @@ export class CompressorEffect extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._node) throw new Error('CompressorEffect not yet initialized.');
+    if (!this._node) {
+      throw new Error('CompressorEffect not yet initialized.');
+    }
+
     return this._node;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._node) throw new Error('CompressorEffect not yet initialized.');
+    if (!this._node) {
+      throw new Error('CompressorEffect not yet initialized.');
+    }
+
     return this._node;
   }
 
@@ -52,6 +61,7 @@ export class CompressorEffect extends AudioEffect {
 
   public set threshold(value: number) {
     this._threshold = Math.max(-100, Math.min(0, value));
+
     if (this._node) {
       this._node.threshold.setTargetAtTime(this._threshold, this._node.context.currentTime, 0.01);
     }
@@ -64,6 +74,7 @@ export class CompressorEffect extends AudioEffect {
 
   public set knee(value: number) {
     this._knee = Math.max(0, Math.min(40, value));
+
     if (this._node) {
       this._node.knee.setTargetAtTime(this._knee, this._node.context.currentTime, 0.01);
     }
@@ -76,6 +87,7 @@ export class CompressorEffect extends AudioEffect {
 
   public set ratio(value: number) {
     this._ratio = Math.max(1, Math.min(20, value));
+
     if (this._node) {
       this._node.ratio.setTargetAtTime(this._ratio, this._node.context.currentTime, 0.01);
     }
@@ -88,6 +100,7 @@ export class CompressorEffect extends AudioEffect {
 
   public set attack(value: number) {
     this._attack = Math.max(0, Math.min(1, value));
+
     if (this._node) {
       this._node.attack.setTargetAtTime(this._attack, this._node.context.currentTime, 0.01);
     }
@@ -100,6 +113,7 @@ export class CompressorEffect extends AudioEffect {
 
   public set release(value: number) {
     this._release = Math.max(0, Math.min(1, value));
+
     if (this._node) {
       this._node.release.setTargetAtTime(this._release, this._node.context.currentTime, 0.01);
     }

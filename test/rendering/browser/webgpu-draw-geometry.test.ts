@@ -104,7 +104,8 @@ const screenView = (): View => new View(canvasSize / 2, canvasSize / 2, canvasSi
 // what the pass count is asserted on, so run the same frame a few times first.
 const settleFrames = 3;
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 interface DrawCall {
   readonly geometry: Geometry;
@@ -135,7 +136,9 @@ const drawGeometries = async (
     };
 
     if (encoded) {
-      if (!(await drawWebGpuEncoded(ctx, backend, drawAll))) return false;
+      if (!(await drawWebGpuEncoded(ctx, backend, drawAll))) {
+        return false;
+      }
     } else {
       backend.resetStats();
       backend.clear(Color.black);

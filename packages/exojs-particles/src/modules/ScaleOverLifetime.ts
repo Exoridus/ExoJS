@@ -8,8 +8,6 @@ import { ParticleCurveLookup, particleLookupGlsl, particleLookupWgsl, sampleCurv
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
-const lookupSize = 256;
-
 /**
  * Sets every live particle's scale to a curve sampled at the particle's
  * current lifetime ratio. Both axes share one curve; non-uniform per-axis
@@ -79,4 +77,4 @@ scale = vec2(ScaleOverLifetime_sample(timing.x / max(timing.y, 0.000001)).r);
 }
 
 /** Texture width for the curve lookup table. Exposed for ParticleGpuState. */
-export const scaleLookupSize = lookupSize;
+export { lookupSize as scaleLookupSize } from './particleLookup';

@@ -16,7 +16,17 @@ import { Texture } from '#rendering/texture/Texture';
 import { cascadeUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { transportCascadeShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
 import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Once } from './_backendSetup';
-import { COARSE_LEVEL, MERGE_CELL, MERGE_PROBES, MERGE_RANGE, MERGE_SPACING, MERGE_TILE, MERGE_WORLD, type MergeCase, mergeCases } from './_cascadeMergeCases';
+import {
+  COARSE_LEVEL,
+  MERGE_CELL,
+  MERGE_PROBES,
+  MERGE_RANGE,
+  MERGE_SPACING,
+  MERGE_TILE,
+  MERGE_WORLD,
+  type MergeCase,
+  mergeCases,
+} from './_cascadeMergeCases';
 import { probeMask, probeTables } from './_transportProbe';
 
 const size = MERGE_PROBES * MERGE_TILE;

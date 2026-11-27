@@ -3,7 +3,7 @@ import {
   Color,
   Container,
   FixedResolutionCanvasSizing,
-  type RenderingContext,
+  Keyboard,
   RepeatingSprite,
   ScaleModes,
   Scene,
@@ -11,8 +11,8 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaOccluder, type Lighting, type LightingDebugView, LightmapLighting, PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { AlphaOccluder, type Lighting, LightmapLighting, PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs/lighting';
+import { choice, demoPanel, slider, startExample, toggle } from '@examples/runtime';
 
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
 // draws a light and the one that transports it.
@@ -51,42 +51,49 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
+
   if (context === null) {
     throw new Error('2D canvas context unavailable.');
   }
+
   paint(context);
+
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };
 
-const floorTexture = canvasTexture(64, context => {
-  context.fillStyle = '#3b3a36';
-  context.fillRect(0, 0, 64, 64);
-  context.fillStyle = '#343330';
-  context.fillRect(0, 0, 32, 32);
-  context.fillRect(32, 32, 32, 32);
-});
+const createFloorTexture = (): Texture =>
+  canvasTexture(64, context => {
+    context.fillStyle = '#3b3a36';
+    context.fillRect(0, 0, 64, 64);
+    context.fillStyle = '#343330';
+    context.fillRect(0, 0, 32, 32);
+    context.fillRect(32, 32, 32, 32);
+  });
 
-const stoneTexture = canvasTexture(8, context => {
-  context.fillStyle = '#726a5e';
-  context.fillRect(0, 0, 8, 8);
-});
+const createStoneTexture = (): Texture =>
+  canvasTexture(8, context => {
+    context.fillStyle = '#726a5e';
+    context.fillRect(0, 0, 8, 8);
+  });
 
 // Saturated and bright on purpose: what a surface gives back is its own colour
 // times what fell on it, so a dark or grey panel returns either nothing worth
 // seeing or the lamp's own light again.
-const panelTexture = canvasTexture(8, context => {
-  context.fillStyle = '#ff3b2f';
-  context.fillRect(0, 0, 8, 8);
-});
+const createPanelTexture = (): Texture =>
+  canvasTexture(8, context => {
+    context.fillStyle = '#ff3b2f';
+    context.fillRect(0, 0, 8, 8);
+  });
 
 // A mid neutral, where the rest of the floor is dark stone. The bounce is
 // multiplied by whatever colour the receiver already has, so a dark floor
 // shows a correct bounce as nothing at all - and a near-white one shows it as
 // a wash the direct light saturates anyway.
-const apronTexture = canvasTexture(8, context => {
-  context.fillStyle = '#8d8a82';
-  context.fillRect(0, 0, 8, 8);
-});
+const createApronTexture = (): Texture =>
+  canvasTexture(8, context => {
+    context.fillStyle = '#8d8a82';
+    context.fillRect(0, 0, 8, 8);
+  });
 
 interface Wall {
   readonly x: number;
@@ -121,7 +128,7 @@ const bouncePanel: Wall = { x: 452, y: 400, width: 26, height: 230 };
 const bounceApron: Wall = { x: 360, y: 400, width: 150, height: 250 };
 
 /** A wall's own box, as the four corners an occluder takes. */
-const outline = (wall: Wall): readonly { x: number; y: number }[] => {
+const outline = (wall: Wall): ReadonlyArray<{ x: number; y: number }> => {
   const halfWidth = wall.width / 2;
   const halfHeight = wall.height / 2;
 
@@ -142,7 +149,6 @@ const outline = (wall: Wall): readonly { x: number; y: number }[] => {
 const bounceFactor = 0.9;
 
 /** Levels the debug cycle walks, in the order it walks them. */
-const debugViews: readonly LightingDebugView[] = [null, 'light', 'mask', 'occluders'];
 
 /** Texels of light field per logical pixel. Stated here so the panel can show what was actually run at. */
 const lightResolution = 1;
@@ -156,35 +162,27 @@ const lampAt = (phase: number): { x: number; y: number } => ({
   y: 360 + Math.cos(phase * 0.22) * 150,
 });
 
-/**
- * Seconds for one full loop of BOTH terms, so a phase slider covers the whole
- * path and the same phase is always the same place. The two rates are 0.3 and
- * 0.22, whose common period is `2 * pi` over their greatest common measure of
- * 0.02 - not over their difference.
- */
-const loopSeconds = (Math.PI * 2) / 0.02;
-
-/** Where the status line reads the lamp's real position into. */
-const lampPosition = { x: 0, y: 0 };
-
 class RadianceRoomsScene extends Scene {
   private world!: Container;
   private panel!: Sprite;
   private lighting!: Lighting;
+  private lamp!: PointLight;
   private cascading = true;
   private intensity = 3;
   private softness = 0.35;
   private bounce = true;
   private moving = true;
-  private debug: LightingDebugView = null;
   private elapsed = 0;
-  private hud!: ReturnType<typeof mountControls>;
-  private phaseControl!: { set(value: number): void };
 
   override init(): void {
     const { width, height } = this.app;
 
     this.world = new Container();
+    this.root.addChild(this.world);
+    const floorTexture = this.track(createFloorTexture());
+    const stoneTexture = this.track(createStoneTexture());
+    const panelTexture = this.track(createPanelTexture());
+    const apronTexture = this.track(createApronTexture());
 
     // Repeated, not stretched: a 64px tile scaled to the whole canvas turns its
     // own checker into two quadrant-sized blocks whose edges read as a defect
@@ -217,106 +215,39 @@ class RadianceRoomsScene extends Scene {
     this.panel.setPosition(bouncePanel.x, bouncePanel.y);
     this.world.addChild(this.panel);
 
-    this.build();
-
-    this.hud = mountControls({
-      title: 'Radiance Rooms',
-      hint: 'One lamp, one doorway. Switch the renderer to see the difference between a light that is drawn and light that is transported - they are different transport models and will not agree pixel for pixel. Pause the motion and set a phase to compare the two at the same instant.',
-      status: '',
-    });
-
-    const panel = mountControlPanel({ title: 'Lighting', corner: 'top-right' });
-
-    panel.addToggle({
-      label: 'Radiance',
-      value: true,
-      onChange: value => {
-        // A renderer is chosen by constructing it, so switching means building
-        // a new system - which is all a system is here: it owns its passes and
-        // takes them out again on `destroy()`. Importing the class is also what
-        // links it, so a project that only ever builds one leaves the other
-        // out of its bundle.
-        this.cascading = value;
-        this.build();
+    // A renderer is chosen by constructing it, so switching means building a
+    // new system - which is all a system is here: it owns its passes and takes
+    // them out again on `destroy()`. Importing the class is also what links it,
+    // so a project that only ever builds one leaves the other out of its bundle.
+    // Space pauses the lamp, so both renderers can be compared at one instant.
+    this.lamp = this.track(
+      new PointLight({ radius: 600, intensity: this.intensity, softness: this.softness, color: new Color(255, 226, 180) }),
+    );
+    this.build(this.cascading, this.bounce);
+    const panel = demoPanel({
+      scene: this,
+      corner: 'top-right',
+      controls: {
+        renderer: choice('Renderer', ['Radiance', 'Lightmap']),
+        bounce: toggle('Bounce', this.bounce),
+        moving: toggle('Motion', this.moving),
+        lamp: slider('Lamp', { min: 0.5, max: 6, step: 0.1, value: this.intensity, format: v => v.toFixed(1) }),
+        // Source size under radiance, filter width under lightmap. See the
+        // note at the top of the file: the two are not the same quantity.
+        softness: slider('Softness', { min: 0, max: 1, step: 0.05, value: this.softness }),
+      },
+      onChange: (_key, _value, values) => {
+        this.moving = values.moving;
+        this.intensity = values.lamp;
+        this.softness = values.softness;
+        // Only the cascades bounce; under the quads the toggle changes nothing.
+        this.build(values.renderer === 'Radiance', values.bounce);
+        this.lamp.intensity = this.intensity;
+        this.lamp.softness = this.softness;
       },
     });
 
-    panel.addToggle({
-      label: 'Bounce',
-      value: this.bounce,
-      onChange: value => {
-        this.bounce = value;
-
-        // Only the cascades bounce; under the quads the toggle has nothing to
-        // rebuild.
-        if (this.cascading) {
-          this.build();
-        }
-      },
-    });
-
-    panel.addToggle({
-      label: 'Motion',
-      value: this.moving,
-      onChange: value => {
-        this.moving = value;
-      },
-    });
-
-    this.phaseControl = panel.addSlider({
-      label: 'Phase',
-      min: 0,
-      max: 1,
-      // A step is a step along the PATH, and the path is `loopSeconds` long:
-      // at this rate one is about ten pixels of lamp, which is what makes the
-      // slider a way to place the lamp rather than to jump it across the room.
-      step: 0.001,
-      value: 0,
-      onChange: value => {
-        // Placing the lamp by hand is what makes a comparison reproducible:
-        // the same phase is the same position in either renderer, however long
-        // either has been running.
-        this.elapsed = value * loopSeconds;
-        this.moveLamp();
-      },
-    });
-
-    panel.addCycle({
-      label: 'Field',
-      options: ['shaded', 'light', 'mask', 'occluders'],
-      index: 0,
-      onChange: index => {
-        this.debug = debugViews[index] ?? null;
-        this.lighting.debug = this.debug;
-      },
-    });
-
-    panel.addSlider({
-      label: 'Lamp',
-      min: 0.5,
-      max: 6,
-      step: 0.1,
-      value: this.intensity,
-      onChange: value => {
-        this.intensity = value;
-        this.lamp.intensity = value;
-      },
-    });
-
-    panel.addSlider({
-      // Source size under radiance, filter width under lightmap. See the note
-      // at the top of the file: the two are not the same quantity, and the
-      // slider is labelled for neither so that the difference stays visible.
-      label: 'Softness',
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: this.softness,
-      onChange: value => {
-        this.softness = value;
-        this.lamp.softness = value;
-      },
-    });
+    this.inputs.onTrigger(Keyboard.Space, () => panel.step('moving'));
   }
 
   override update(delta: Seconds): void {
@@ -325,24 +256,9 @@ class RadianceRoomsScene extends Scene {
     }
 
     this.elapsed += delta;
-    this.phaseControl.set((this.elapsed % loopSeconds) / loopSeconds);
     // Moving the lamp is the clearest way to see that nothing about the far
     // room is baked: the wedge through the doorway sweeps with it.
     this.moveLamp();
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.world);
-
-    // Read off the lamp itself, not recomputed from the clock: the status line
-    // is what says two renderers were compared under the same conditions, so
-    // it has to report where the light actually is.
-    this.lamp.getWorldPosition(lampPosition);
-    const bounce = this.cascading && this.bounce ? 'bounce' : 'no bounce';
-
-    this.hud.setStatus(
-      `${this.lighting.quality} - ${bounce} - ${this.app.width}x${this.app.height} at ${lightResolution}x - lamp ${lampPosition.x.toFixed(1)}, ${lampPosition.y.toFixed(1)} - draw calls ${context.stats.drawCalls}`,
-    );
   }
 
   private moveLamp(): void {
@@ -351,25 +267,29 @@ class RadianceRoomsScene extends Scene {
     this.lamp.setPosition(x, y);
   }
 
-  private get lamp(): PointLight {
-    return this.lighting.lights[0] as PointLight;
-  }
+  /** Builds the lighting system for the selected renderer, unless it is already the one running. */
+  private build(cascading: boolean, bounce: boolean): void {
+    if (this.lighting !== undefined && cascading === this.cascading && (bounce === this.bounce || !cascading)) {
+      return;
+    }
 
-  /** Build the lighting system for the renderer currently selected. */
-  private build(): void {
+    this.cascading = cascading;
+    this.bounce = bounce;
+
     if (this.lighting !== undefined) {
       this.systems.remove(this.lighting);
       this.lighting.destroy();
     }
 
-    const options = { ambient: new Color(10, 11, 16), lightResolution };
+    const options = { scene: this, ambient: new Color(10, 11, 16), lightResolution };
 
     this.lighting = this.cascading
       ? new RadianceLighting(this.app, { ...options, bounce: this.bounce ? bounceFactor : 0 })
       : new LightmapLighting(this.app, options);
-    this.lighting.debug = this.debug;
     this.systems.add(this.lighting);
-    this.lighting.add(new PointLight({ radius: 600, intensity: this.intensity, softness: this.softness, color: new Color(255, 226, 180) }));
+    // Registration does not own a light. Reuse the scene-owned lamp when
+    // the selected renderer or bounce setting replaces the lighting system.
+    this.lighting.add(this.lamp);
     // Placed straight away rather than on the next tick: switching renderer
     // while the motion is paused would otherwise leave the new lamp at the
     // origin, and the A/B this scene exists for would compare two different
@@ -404,4 +324,4 @@ const app = new Application({
   clearColor: new Color(3, 4, 7),
 });
 
-await app.start(RadianceRoomsScene);
+await startExample(app, () => app.start(RadianceRoomsScene));

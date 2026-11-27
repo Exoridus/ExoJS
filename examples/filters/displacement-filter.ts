@@ -13,9 +13,10 @@ import {
   TextureFormat,
   WrapModes,
 } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, mountControls, slider, toggle } from '@examples/runtime';
 
-const SHIP = assets.demo.textures.shipA;
+const SHIP = assets.ship;
 const MAP_SIZE = 256;
 
 // The displacement map: red is the horizontal direction, green the vertical,
@@ -56,13 +57,13 @@ class DisplacementFilterScene extends Scene {
   private sprite!: Sprite;
   private scrolling = true;
   private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
     const { width, height } = this.app;
 
     this.map = rippleMap();
-    this.ripple = new DisplacementFilter({ map: this.map, scale: 24 });
+    this.ripple = this.track(new DisplacementFilter({ map: this.map, scale: 24 }));
     this.sprite = new Sprite(this.loader.get(SHIP))
       .setAnchor(0.5)
       .setScale(10)
@@ -75,29 +76,25 @@ class DisplacementFilterScene extends Scene {
       status: this.statusText(),
     });
 
-    this.panel = mountControlPanel({ title: 'Ripple' });
-    this.panel.addSlider({
-      label: 'Scale',
-      min: 0,
-      max: 80,
-      step: 1,
-      value: this.ripple.scaleX,
-      onChange: value => {
-        this.ripple.setScale(value);
-        this.refresh();
+    this.panel = demoPanel({
+      scene: this,
+      title: 'Ripple',
+      controls: {
+        scale: slider('Scale', { min: 0, max: 80, step: 1, value: this.ripple.scaleX }),
+        scrolling: toggle('Scroll', this.scrolling),
       },
-    });
-    this.panel.addToggle({
-      label: 'Scroll',
-      value: this.scrolling,
-      onChange: on => {
-        this.scrolling = on;
+      onChange: (_key, _value, values) => {
+        this.ripple.setScale(values.scale);
+        this.scrolling = values.scrolling;
+        this.refresh();
       },
     });
   }
 
   override update(delta: Seconds): void {
-    if (!this.scrolling) return;
+    if (!this.scrolling) {
+      return;
+    }
 
     this.ripple.offsetU += delta * 0.08;
     this.ripple.offsetV += delta * 0.13;
@@ -126,9 +123,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(18, 30, 46),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(DisplacementFilterScene);

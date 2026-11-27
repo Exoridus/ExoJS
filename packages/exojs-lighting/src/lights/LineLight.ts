@@ -31,17 +31,22 @@ export interface LineLightOptions extends LightOptions {
  *
  * # Renderers
  *
- * `lightmap` and `radiance` light the capsule. `forward` shades inside the
- * sprite stage, where a light is a position and a radius, and so lights a line
- * light as a point at its centre whose radius is the whole reach.
+ * All three renderers light a capsule. `forward` uses the nearest point on
+ * the segment in its sprite shader (but casts no occluder shadows); `lightmap`
+ * accumulates the capsule into its light target; `radiance` transports light
+ * from an extended capsule emitter.
  *
  * # Shadows
  *
- * The shadow map is polar around the segment's CENTRE, the same as for a point
- * light. That is exact for a fragment the segment subtends little of, and
- * approximate near a long tube's ends, where a physically lit occluder would
- * be lit from many points along the segment at once. {@link LightOptions.softness}
- * is the knob that stands in for it.
+ * Under `lightmap`, a nonzero-length segment casts four polar shadow fans
+ * from stratified positions along its length. Their weighted visibility
+ * approximates an extended area emitter and produces a geometrically varying
+ * penumbra even with zero `softness`. This is four-point sampling, not an
+ * analytic solution; long lines can show finite-sample banding and cost four
+ * shadow rows and up to four filtered shadow lookups per fragment. A zero-length
+ * line uses one row. {@link LightOptions.softness} additionally softens each
+ * sampled ray. `radiance` transports from its capsule emitter; `forward`
+ * currently has no occluder-shadow path.
  */
 export class LineLight extends Light {
   /** Length of the emitting segment in pixels. */

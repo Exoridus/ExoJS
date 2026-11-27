@@ -14,7 +14,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codexo/exojs/tilemap';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -51,7 +51,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 
 // On the software (SwiftShader) adapter the WebGPU device can be dropped
 // mid-test. Treat that as an unavailable-adapter skip rather than a failure.
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a scene inside a validation error scope.
 // Returns false when the device dropped mid-test (caller should bail).

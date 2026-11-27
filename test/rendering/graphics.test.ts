@@ -18,6 +18,30 @@ const createLinearGradient = (): LinearGradient =>
   );
 
 describe('Graphics', () => {
+  test('a path with only one distinct point leaves existing drawing intact', () => {
+    const graphics = new Graphics();
+    graphics.lineWidth = 2;
+    graphics.drawPath([0, 0, 10, 0]);
+    const mesh = graphics.children[0];
+
+    expect(graphics.drawPath([4, 5, 4, 5, 4, 5])).toBe(graphics);
+    expect(graphics.children).toEqual([mesh]);
+    graphics.drawPath([0, 0, 0, 10]);
+    expect(graphics.children).toHaveLength(2);
+    graphics.destroy();
+  });
+
+  test('a rounded rectangle stroke has finite vertices around every corner', () => {
+    const graphics = new Graphics();
+    graphics.lineWidth = 1;
+    graphics.lineColor = Color.white;
+    graphics.fillColor = Color.black;
+    graphics.drawRoundedRectangle(0, 0, 120, 36, 8);
+
+    const stroke = graphics.getChildAt(1) as Mesh;
+    expect(Array.from(stroke.vertices).every(Number.isFinite)).toBe(true);
+  });
+
   test('lineWidth getter reflects the last assigned value', () => {
     const graphics = new Graphics();
 
@@ -347,14 +371,14 @@ describe('Graphics', () => {
   describe('child-type guard', () => {
     test('addChild rejects a non-Mesh child', () => {
       const graphics = new Graphics();
-      const nonMesh = { destroy: () => undefined } as unknown as RenderNode;
+      const nonMesh = { destroy: () => {} } as unknown as RenderNode;
 
       expect(() => graphics.addChild(nonMesh)).toThrow('Graphics can only contain Mesh children.');
     });
 
     test('addChildAt rejects a non-Mesh child', () => {
       const graphics = new Graphics();
-      const nonMesh = { destroy: () => undefined } as unknown as RenderNode;
+      const nonMesh = { destroy: () => {} } as unknown as RenderNode;
 
       expect(() => graphics.addChildAt(nonMesh, 0)).toThrow('Graphics can only contain Mesh children.');
     });

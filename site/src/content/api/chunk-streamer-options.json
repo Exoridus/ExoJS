@@ -4,7 +4,7 @@
   "symbol": "ChunkStreamerOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for a ChunkStreamer. All optional."
       ],
-      "importLine": "import { ChunkStreamerOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ChunkStreamerOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

@@ -1,15 +1,15 @@
 {
   "title": "PhysicsWorld",
-  "description": "The collision/query world: owns bodies, colliders, the detection backend, bindings, the query engine and the fixed-step accumulator. Stepped by the caller (commonly from a `Scene.update`), each fixed sub-step it integrates body velocities, runs broad- and narrow-phase detection, solves contacts and integrates positions, then fires immutable contact/sensor events and writes bound node transforms. It holds **no module-level state**, so any number of worlds run in isolation. The dynamics are a native, warm-started **TGS-Soft** solver (Box2D-v3 \"soft step\"): each fixed step runs detection once, then several sub-steps, each integrating gravity over the sub-step and solving contacts with a soft position bias plus a bias-free relax pass; a 2-point block normal solve propagates stack loads, and restitution is a separate final pass. Decoupling stiffness from the iteration count keeps tall towers stable. The detection backend sits behind an internal seam, so the solver is swappable without touching this public surface. **Operating envelope.** The soft solver trades a little accuracy for robustness, so it has a few documented limits - each stays finite and stable, and each is pinned by a gate in `dynamics.test.ts` or `contact-push-out.test.ts`: - **Resting contacts** settle within a small, fixed tolerance. A face contact settles at exactly that tolerance; a single-point contact settles slightly deeper, and that gap grows with acceleration. Very high accelerations eventually exceed what the push-out can resolve within a step, at which point the contact holds a slightly deeper resting depth instead of the tolerance - keep gravity in the range ordinary 2D games use. - **Mass ratio** - contacts between bodies of very different mass degrade gradually rather than at a fixed ratio. What sets the practical limit is how thick the supporting geometry is relative to the lighter body, not the ratio alone: a light body squeezed against a boundary thinner than itself is the case that fails first, and it fails by sinking through. - **Scale-relative behaviour** - the solver's tolerances are absolute lengths, so a very small shape sees them as a large fraction of itself, and a very large one as a negligible one. Keep the shapes of one world within a couple of orders of magnitude of each other. - **CCD is opt-in and translation-only** - detection runs once per fixed step, so an ordinary body that crosses more than roughly half a barrier's total thickness within one step may end up on the wrong side of it, either passing through or being resolved out of the far face. Flag fast projectiles with PhysicsBody.isBullet: each of the body's colliders is then shape-cast along the step's motion (an exact translation-only sweep of the full shape, not just the centre) and clamped at the first impact. Rotation over the step is not swept - a long body spinning fast enough to sweep past an obstacle within one step can still miss it. - **PhysicsWorldOptions.subStepCount** - the default `4` is load-bearing for tall-stack stability; lowering it below `2` visibly degrades stacking, so do not reduce it for performance. - **Broad phase is a dynamic AABB tree** (`AabbTreeBroadPhase`), stateful across fixed steps: a collider whose tight AABB stays inside its stored fat AABB costs nothing to re-sync, and only colliders that actually move outside their margin trigger a tree update and a local re-query for new neighbours. Detection still walks every live collider once per step (a cheap containment check for each), so there is a small linear floor, but the dominant cost - reinsertion and neighbour discovery - is driven by how much actually moved, not by the total live collider count; sleeping bodies skip that dominant cost entirely. Scales to tens of thousands of simultaneously-live colliders, including dense clusters that would degrade a sort-and-sweep broad phase; very large or highly dynamic worlds may still benefit from splitting into several smaller `PhysicsWorld` instances (e.g. per room/chunk).",
+  "description": "The collision/query world: owns bodies, colliders, the detection backend, bindings, the query engine and the fixed-step accumulator. Stepped by the caller (commonly from a `Scene.update`): each fixed step runs broad- and narrow-phase detection once, then sub-steps that integrate body velocities, solve contacts and integrate positions; the step then fires immutable contact/sensor events. Bound node transforms are not written per sub-step: a manual step presents them once when it returns, while a hosted fixed step defers to the variable update, which presents interpolated transforms. It holds **no module-level state**, so any number of worlds run in isolation. The dynamics are a native, warm-started **TGS-Soft** solver (Box2D-v3 \"soft step\"): each fixed step runs detection once, then several sub-steps, each integrating gravity over the sub-step and solving contacts with a soft position bias plus a bias-free relax pass; a 2-point block normal solve propagates stack loads, and restitution is a separate final pass. Decoupling stiffness from the iteration count keeps tall towers stable. The detection backend sits behind an internal seam, so the solver is swappable without touching this public surface. **Operating envelope.** The soft solver trades a little accuracy for robustness, so it has a few documented limits - each stays finite and stable, and each is pinned by a gate in `dynamics.test.ts` or `contact-push-out.test.ts`: - **Resting contacts** settle within a small, fixed tolerance. A face contact settles at exactly that tolerance; a single-point contact settles slightly deeper, and that gap grows with acceleration. Very high accelerations eventually exceed what the push-out can resolve within a step, at which point the contact holds a slightly deeper resting depth instead of the tolerance - keep gravity in the range ordinary 2D games use. - **Mass ratio** - contacts between bodies of very different mass degrade gradually rather than at a fixed ratio. What sets the practical limit is how thick the supporting geometry is relative to the lighter body, not the ratio alone: a light body squeezed against a boundary thinner than itself is the case that fails first, and it fails by sinking through. - **Scale-relative behaviour** - the solver's tolerances are absolute lengths, so a very small shape sees them as a large fraction of itself, and a very large one as a negligible one. Keep the shapes of one world within a couple of orders of magnitude of each other. - **CCD is opt-in and translation-only** - detection runs once per fixed step, so an ordinary body that crosses more than roughly half a barrier's total thickness within one step may end up on the wrong side of it, either passing through or being resolved out of the far face. Flag fast projectiles with PhysicsBody.isBullet: each of the body's colliders is then shape-cast along the step's motion (an exact translation-only sweep of the full shape, not just the centre) and clamped at the first impact. Rotation over the step is not swept - a long body spinning fast enough to sweep past an obstacle within one step can still miss it. - **PhysicsWorldOptions.subStepCount** - the default `4` is load-bearing for tall-stack stability; lowering it below `2` visibly degrades stacking, so do not reduce it for performance. - **Broad phase is a dynamic AABB tree** (`AabbTreeBroadPhase`), stateful across fixed steps: a collider whose tight AABB stays inside its stored fat AABB costs nothing to re-sync, and only colliders that actually move outside their margin trigger a tree update and a local re-query for new neighbours. Detection still walks every live collider once per step (a cheap containment check for each), so there is a small linear floor, but the dominant cost - reinsertion and neighbour discovery - is driven by how much actually moved, not by the total live collider count; sleeping bodies skip that dominant cost entirely. Scales to tens of thousands of simultaneously-live colliders, including dense clusters that would degrade a sort-and-sweep broad phase; very large or highly dynamic worlds may still benefit from splitting into several smaller `PhysicsWorld` instances (e.g. per room/chunk).",
   "symbol": "PhysicsWorld",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
-  "memberCount": 40,
+  "memberCount": 41,
   "counts": {
     "constructors": 1,
-    "methods": 19,
+    "methods": 20,
     "properties": 16,
     "events": 4
   },
@@ -19,11 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The collision/query world: owns bodies, colliders, the detection backend, bindings, the query engine and the fixed-step accumulator. Stepped by the caller (commonly from a `Scene.update`), each fixed sub-step it integrates body velocities, runs broad- and narrow-phase detection, solves contacts and integrates positions, then fires immutable contact/sensor events and writes bound node transforms. It holds **no module-level state**, so any number of worlds run in isolation.",
+        "The collision/query world: owns bodies, colliders, the detection backend, bindings, the query engine and the fixed-step accumulator. Stepped by the caller (commonly from a `Scene.update`): each fixed step runs broad- and narrow-phase detection once, then sub-steps that integrate body velocities, solve contacts and integrate positions; the step then fires immutable contact/sensor events. Bound node transforms are not written per sub-step: a manual step presents them once when it returns, while a hosted fixed step defers to the variable update, which presents interpolated transforms. It holds **no module-level state**, so any number of worlds run in isolation.",
         "The dynamics are a native, warm-started **TGS-Soft** solver (Box2D-v3 \"soft step\"): each fixed step runs detection once, then several sub-steps, each integrating gravity over the sub-step and solving contacts with a soft position bias plus a bias-free relax pass; a 2-point block normal solve propagates stack loads, and restitution is a separate final pass. Decoupling stiffness from the iteration count keeps tall towers stable. The detection backend sits behind an internal seam, so the solver is swappable without touching this public surface.",
         "**Operating envelope.** The soft solver trades a little accuracy for robustness, so it has a few documented limits - each stays finite and stable, and each is pinned by a gate in `dynamics.test.ts` or `contact-push-out.test.ts`: - **Resting contacts** settle within a small, fixed tolerance. A face contact settles at exactly that tolerance; a single-point contact settles slightly deeper, and that gap grows with acceleration. Very high accelerations eventually exceed what the push-out can resolve within a step, at which point the contact holds a slightly deeper resting depth instead of the tolerance - keep gravity in the range ordinary 2D games use. - **Mass ratio** - contacts between bodies of very different mass degrade gradually rather than at a fixed ratio. What sets the practical limit is how thick the supporting geometry is relative to the lighter body, not the ratio alone: a light body squeezed against a boundary thinner than itself is the case that fails first, and it fails by sinking through. - **Scale-relative behaviour** - the solver's tolerances are absolute lengths, so a very small shape sees them as a large fraction of itself, and a very large one as a negligible one. Keep the shapes of one world within a couple of orders of magnitude of each other. - **CCD is opt-in and translation-only** - detection runs once per fixed step, so an ordinary body that crosses more than roughly half a barrier's total thickness within one step may end up on the wrong side of it, either passing through or being resolved out of the far face. Flag fast projectiles with PhysicsBody.isBullet: each of the body's colliders is then shape-cast along the step's motion (an exact translation-only sweep of the full shape, not just the centre) and clamped at the first impact. Rotation over the step is not swept - a long body spinning fast enough to sweep past an obstacle within one step can still miss it. - **PhysicsWorldOptions.subStepCount** - the default `4` is load-bearing for tall-stack stability; lowering it below `2` visibly degrades stacking, so do not reduce it for performance. - **Broad phase is a dynamic AABB tree** (`AabbTreeBroadPhase`), stateful across fixed steps: a collider whose tight AABB stays inside its stored fat AABB costs nothing to re-sync, and only colliders that actually move outside their margin trigger a tree update and a local re-query for new neighbours. Detection still walks every live collider once per step (a cheap containment check for each), so there is a small linear floor, but the dominant cost - reinsertion and neighbour discovery - is driven by how much actually moved, not by the total live collider count; sleeping bodies skip that dominant cost entirely. Scales to tens of thousands of simultaneously-live colliders, including dense clusters that would degrade a sort-and-sweep broad phase; very large or highly dynamic worlds may still benefit from splitting into several smaller `PhysicsWorld` instances (e.g. per room/chunk)."
       ],
-      "importLine": "import { PhysicsWorld } from '@codexo/exojs-physics'",
+      "importLine": "import { PhysicsWorld } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {
@@ -246,7 +246,7 @@
             }
           ],
           "returnType": "PhysicsBody",
-          "description": "Convenience: create a body carrying a single collider, add it to the world and bind it to node in one call. The node tracks body.position after each step. Returns the body. Equivalent to new PhysicsBody(...) + add + bind. When options.position/options.angle are omitted, the body starts at node's current WORLD position/rotation (via getWorldTransform(), composed through any transform-group boundary) rather than (0, 0) - otherwise a body attached to an already-placed node would visibly \"teleport\" to the origin on the next step. Pass position/angle explicitly to override."
+          "description": "Convenience: create a body carrying a single collider, add it to the world and bind it to node in one call. The node tracks body.position after each step. Returns the body. Equivalent to new PhysicsBody(...) + add + bind. If binding fails, the newly created body and collider are destroyed with the usual callback deferral. When options.position/options.angle are omitted, the body starts at node's current WORLD position pivot/rotation (including its origin and composed through any transform-group boundary) rather than (0, 0) - otherwise a body attached to an already-placed node would visibly \"teleport\" to the origin on the next step. Pass position/angle explicitly to override."
         },
         {
           "name": "bind",
@@ -390,7 +390,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Destroy a body and its colliders. Every dynamic body touching it is woken, so anything that was resting on the destroyed body falls once its support is gone. Deferred when called inside a callback."
+          "description": "Destroy a body and its colliders. Every dynamic body touching it is woken, so anything that was resting on the destroyed body falls once its support is gone. Deferred when called inside a callback. Rejects bodies owned by another world before changing either world."
         },
         {
           "name": "destroyCollider",
@@ -437,11 +437,11 @@
             }
           ],
           "returnType": "void",
-          "description": "Destroy a single collider, recomputing its body's mass. Wakes every dynamic body touching it, the same way destroyBody does. Deferred when called inside a callback."
+          "description": "Destroy a single collider, recomputing its body's mass. Wakes every dynamic body touching it, the same way destroyBody does. Deferred when called inside a callback. Rejects colliders owned by another world before changing either world."
         },
         {
           "name": "fixedUpdate",
-          "signature": "fixedUpdate(_step: Seconds): void",
+          "signature": "fixedUpdate(step: Seconds): void",
           "signatureTokens": [
             {
               "text": "fixedUpdate",
@@ -452,7 +452,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_step",
+              "text": "step",
               "kind": "param"
             },
             {
@@ -478,13 +478,13 @@
           ],
           "params": [
             {
-              "name": "_step",
+              "name": "step",
               "type": "Seconds",
               "optional": false
             }
           ],
           "returnType": "void",
-          "description": "Advance by exactly one fixed step, driven directly by the engine's own fixed-timestep scheduler when this world is registered as a System (app.systems.add(world, { order: SystemOrder.Physics }) or the scene equivalent) - bypasses timeStepper's variable-delta accumulator entirely, since the caller has already decided exactly when a fixed step occurs. Prefer this over manual step once the world is system-registered; step remains available for advanced manual driving. Always advances by exactly timeStepper's configured fixedDelta, regardless of the caller's actual fixed-step interval - if the engine's Application.fixedTimeStep doesn't match this world's fixedDelta, the simulation stays deterministic but runs at the wrong wall-clock speed relative to real time."
+          "description": "Advance by exactly one fixed step on the host's clock. Called by the system registry the world is registered with (scene.systems or app.systems), once per host fixed step; the world's own accumulator is not involved. step must equal this world's PhysicsWorldOptions.fixedDelta: construct a hosted world with fixedDelta: app.fixedTimeStep. A step that differs by more than 1e-9 relative to fixedDelta, or is not a positive finite number, throws before anything in the world changes - no body, controller, contact or queued command is touched - because simulating fixedDelta per host step would run the world faster or slower than its host."
         },
         {
           "name": "forEachAabbHit",
@@ -1378,7 +1378,7 @@
             }
           ],
           "returnType": "RayHit | null",
-          "description": "Nearest collider hit by the ray, or null."
+          "description": "Nearest collider entry hit by the ray, or null. Solids containing the origin are ignored."
         },
         {
           "name": "rayCastAll",
@@ -1613,7 +1613,7 @@
             }
           ],
           "returnType": "RayHit[]",
-          "description": "All collider hits along the ray, sorted by distance. Writes into out (cleared) if given."
+          "description": "All collider entry hits along the ray, sorted by distance. Solids containing the origin are ignored. Writes into out (cleared) if given."
         },
         {
           "name": "remove",
@@ -1710,6 +1710,177 @@
           "description": "Remove a joint, waking both bodies so they respond to the lost constraint. Deferred when called inside a callback."
         },
         {
+          "name": "shapeCast",
+          "signature": "shapeCast(shape: AnyShape, position: Readonly<PointLike>, displacement: Readonly<PointLike>, options?: ShapeCastOptions, out?: ShapeCastHit): ShapeCastHit | null",
+          "signatureTokens": [
+            {
+              "text": "shapeCast",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "shape",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyShape",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "position",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "displacement",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShapeCastOptions",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShapeCastHit",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShapeCastHit",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "shape",
+              "type": "AnyShape",
+              "optional": false
+            },
+            {
+              "name": "position",
+              "type": "Readonly<PointLike>",
+              "optional": false
+            },
+            {
+              "name": "displacement",
+              "type": "Readonly<PointLike>",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ShapeCastOptions",
+              "optional": true
+            },
+            {
+              "name": "out",
+              "type": "ShapeCastHit",
+              "optional": true
+            }
+          ],
+          "returnType": "ShapeCastHit | null",
+          "description": "Translates shape from position by displacement and returns the first collider in its way, or null when the whole motion is free. The cast is exact and translation-only, the same sweep PhysicsBody.isBullet relies on, so thin geometry cannot be skipped however long the motion is. Static, kinematic and dynamic colliders block alike, at their current placement. Sensors block only with ShapeCastOptions.includeSensors. Chains stay one-sided: a shape crossing a chain from its back face passes. A collider the shape already overlaps or touches at position is reported with ShapeCastHit.initialOverlap set and fraction 0 - but only when the displacement does not lead out of it, so a shape resting against a wall can still cast along it or away from it. With a zero displacement the cast reports the deepest such overlap, or null. Pass out to reuse a hit object; the cast then allocates nothing."
+        },
+        {
           "name": "step",
           "signature": "step(frameDeltaSeconds: number): void",
           "signatureTokens": [
@@ -1754,7 +1925,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Advance the world by frameDeltaSeconds. Accumulates into fixed steps; each fixed step runs detection once, then a TGS-Soft sub-step loop (integrate gravity, solve contacts with a soft bias, integrate positions, relax) and a restitution pass, then writes the accumulated motion into each body. Finally dispatches events and writes bound node transforms. **Prefer registering the world as a system instead** (app.systems.add(world, { order: SystemOrder.Physics }) or the scene equivalent) so fixedUpdate drives stepping directly from the engine's own fixed-timestep scheduler - one call per fixed step, no accumulator duplication. step remains available here for manual/advanced driving (e.g. a fixed-but-non-standard rate, or stepping outside the normal frame loop entirely): pass any delta and this accumulator converts it into the right number of fixed sub-steps (0, 1, or several, clamped by PhysicsWorldOptions.maxSubSteps). Either way the simulation is frame-rate independent and deterministic - the same sequence of deltas replays identically. timeStepper.alpha ([0, 1)) is the leftover sub-step fraction after this call, for callers that want to interpolate a bound node's rendered position between the last two fixed states instead of snapping to the latest one (bindings do not do this automatically - bind always writes the latest fixed-step transform verbatim)."
+          "description": "Advance the world by frameDeltaSeconds on its own clock. Accumulates into fixed steps of PhysicsWorldOptions.fixedDelta; each fixed step runs detection once, then a TGS-Soft sub-step loop (integrate gravity, solve contacts with a soft bias, integrate positions, relax) and a restitution pass, then writes the accumulated motion into each body. Finally dispatches events and presents bound nodes. **In a scene, prefer registering the world as the scene's system instead** (this.systems.add(world, { order: SystemOrder.Physics })), so fixedUpdate steps it on the application's fixed-step clock. step is the manual path for a world with no host: pass any delta and the accumulator converts it into 0, 1 or several fixed steps, at most PhysicsWorldOptions.maxSubSteps, dropping the backlog beyond that. A world is driven one way or the other; a registered world that is also stepped by hand advances twice, which development builds report. The same sequence of deltas replays identically. timeStepper.alpha ([0, 1)) is the leftover fraction of a step after this call, which an interpolating world uses by default to place bound nodes."
         },
         {
           "name": "unbind",
@@ -1978,7 +2149,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Supplies the [0, 1) blend factor for interpolated bindings. Defaults to this world's own accumulator; point it at the host's own fraction (() => app.frameAlpha) when the world runs as a System, because fixedUpdate never advances the local accumulator."
+          "description": "Supplies the [0, 1) blend factor for interpolated bindings. Defaults to this world's own accumulator; point it at the host's own fraction (() => app.frameAlpha) when the world runs as a system, because fixedUpdate never advances the local accumulator. The default presents a hosted world's latest step as it stands."
         },
         {
           "name": "gravity",

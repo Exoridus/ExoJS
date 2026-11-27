@@ -4,7 +4,7 @@
   "symbol": "ParticleRenderMode",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 13,
   "counts": {
@@ -25,7 +25,7 @@
         "**Limits of the seam.** The executors are deliberately thin, so a new mode has to stay inside what they can express:",
         "- The geometry's `stride` must be a multiple of 4. WebGPU's `queue.writeBuffer` validates its copy size against that alignment and rejects anything else, so a mode with, say, a 38-byte stride draws on WebGL2 and fails validation on WebGPU. - An **indexed, non-instanced** mode always draws the geometry's fixed `indexCount` and ignores count on both backends. That is right for a fixed-topology mode and wrong for one whose element count varies per frame; such a mode needs the executors taught to derive an index count from count first. No mode ships in that shape today. - An **instanced** mode that declares no vertexGeometry has to derive its vertices in the shader from the vertex index, and its dataLayout must carry the indices that address them. Without either there is nothing to tell the executors how many vertices one instance spans."
       ],
-      "importLine": "import { ParticleRenderMode } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleRenderMode } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

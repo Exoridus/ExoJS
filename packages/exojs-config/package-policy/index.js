@@ -196,6 +196,128 @@ export function verifyCliPackage(dir, opts) {
 }
 
 /**
+ * Verify a legacy shim: a published package that keeps a retired name
+ * importable by forwarding to Core subpaths.
+ *
+ * A shim must not be able to carry a second implementation or reach a consumer
+ * with anything but Core: it ships its forwarder files and nothing else,
+ * depends on nothing, peers on `@codexo/exojs` alone and runs no lifecycle
+ * script. Every file it ships is a statement of the form
+ * `export ... from '@codexo/exojs/<subpath>'`.
+ * @param {string} dir
+ * @param {{ name: string, targets: readonly string[] }} opts the Core specifiers the shim may forward to
+ * @returns {PolicyResult}
+ */
+export function verifyLegacyShimPackage(dir, opts) {
+  const pkg = read(dir);
+  /** @type {PolicyCheck[]} */
+  const checks = [];
+  /** @type {(name: string, cond: unknown, detail?: string) => number} */
+  const ok = (name, cond, detail) => checks.push({ name, ok: Boolean(cond), detail });
+  /** @type {string[]} */
+  const files = Array.isArray(pkg.files) ? pkg.files : [];
+  const code = files.filter(file => /\.(?:js|d\.ts)$/.test(file));
+  const forwarder = /^export (?:\*|\{[^}]+\}) from '([^']+)';$/;
+
+  ok('name matches', pkg.name === opts.name, `${pkg.name} vs ${opts.name}`);
+  ok('type: module', pkg.type === 'module');
+  ok('not private', pkg.private !== true);
+  ok('has version', typeof pkg.version === 'string');
+  ok('has repository field', pkg.repository != null);
+  ok('publishConfig public', pkg.publishConfig?.access === 'public');
+  ok('library sideEffects: false', pkg.sideEffects === false);
+  ok('exports "." entry', pkg.exports?.['.']?.types && pkg.exports['.'].import);
+  ok('exports ./package.json', pkg.exports?.['./package.json'] === './package.json');
+  ok('ships LICENSE and README', files.includes('LICENSE') && files.includes('README.md'));
+  ok('LICENSE file present', existsSync(join(dir, 'LICENSE')));
+  ok('README present', existsSync(join(dir, 'README.md')));
+  ok('ships forwarders only', files.length === code.length + 2, files.join(', '));
+  ok('peer @codexo/exojs only', JSON.stringify(Object.keys(pkg.peerDependencies ?? {})) === '["@codexo/exojs"]');
+  ok('no dependencies', !pkg.dependencies && !pkg.optionalDependencies && !pkg.bundleDependencies && !pkg.bundledDependencies);
+  ok('no lifecycle scripts', !pkg.scripts || Object.keys(pkg.scripts).length === 0);
+  ok('no imports map', pkg.imports === undefined);
+
+  for (const file of code) {
+    const path = join(dir, file);
+    const lines = existsSync(path) ? readFileSync(path, 'utf8').trim().split('\n') : [];
+    const targets = lines.map(line => forwarder.exec(line)?.[1]);
+    ok(
+      `${file} only forwards to Core`,
+      lines.length > 0 && targets.every(target => target !== undefined && opts.targets.includes(target)),
+      targets.join(', '),
+    );
+  }
+
+  return { ok: checks.every(c => c.ok), checks };
+}
+
+/**
+ * Verify a published content package (`@codexo/exojs-demo-assets`).
+ *
+ * Content ships data plus small descriptor factories, not engine code. It is
+ * judged against the same publish contract as a runtime package, except that
+ * its compiled tree lives under `dist/` (the default instance addresses its
+ * media with `new URL('../media/...', import.meta.url)`, which has to resolve
+ * from `dist/` as well as from `src/`), and it must not carry engine
+ * lifecycle scripts: installing it may copy nothing and run nothing.
+ *
+ * @param {string} dir
+ * @param {{ name: string }} opts
+ * @returns {PolicyResult}
+ */
+export function verifyContentPackage(dir, opts) {
+  const pkg = read(dir);
+  /** @type {PolicyCheck[]} */
+  const checks = [];
+  /** @type {(name: string, cond: unknown, detail?: string) => number} */
+  const ok = (name, cond, detail) => checks.push({ name, ok: Boolean(cond), detail });
+
+  ok('name matches', pkg.name === opts.name, `${pkg.name} vs ${opts.name}`);
+  ok('type: module', pkg.type === 'module');
+  ok('not private', pkg.private !== true);
+  ok('has version', typeof pkg.version === 'string');
+  ok('exports map', pkg.exports && typeof pkg.exports === 'object');
+  ok('exports "." entry', pkg.exports?.['.']?.types && pkg.exports['.'].import);
+  ok('exports ./extended entry', pkg.exports?.['./extended']?.types && pkg.exports['./extended'].import);
+  ok('exports ./manifest.json', pkg.exports?.['./manifest.json'] === './manifest.json');
+  ok('exports ./media/*', pkg.exports?.['./media/*'] === './media/*');
+  ok('exports ./package.json', pkg.exports?.['./package.json'] === './package.json');
+  ok('files allowlist', Array.isArray(pkg.files) && pkg.files.length > 0);
+  ok(
+    'files ship dist',
+    /** @type {string[]} */ (pkg.files ?? []).some(f => f.includes('dist')),
+  );
+  ok('files ship media', (pkg.files ?? []).includes('media/'));
+  ok('files ship manifest.json', (pkg.files ?? []).includes('manifest.json'));
+  ok('files ship THIRD_PARTY_NOTICES.md', (pkg.files ?? []).includes('THIRD_PARTY_NOTICES.md'));
+  ok('ships LICENSE', (pkg.files ?? []).includes('LICENSE'));
+  ok('publishConfig public', pkg.publishConfig?.access === 'public');
+  ok('LICENSE file present', existsSync(join(dir, 'LICENSE')));
+  ok('README present', existsSync(join(dir, 'README.md')));
+  ok('has repository field', pkg.repository != null);
+  ok('has copy bin', pkg.bin != null && typeof pkg.bin === 'object' && 'exojs-demo-assets-copy' in pkg.bin);
+  // Content is imported by a running engine, so it declares the engine as a
+  // peer - but never as a production dependency, which would install its own
+  // engine copy.
+  ok('peer @codexo/exojs', Boolean(pkg.peerDependencies?.['@codexo/exojs']));
+  ok('no production deps', !pkg.dependencies || Object.keys(pkg.dependencies).length === 0);
+  // No install-time behavior: install scripts and pre/post lifecycle hooks
+  // would run on every consumer install and break the no-IO import contract.
+  ok(
+    'no install scripts',
+    pkg.scripts?.postinstall === undefined && pkg.scripts?.preinstall === undefined && pkg.scripts?.install === undefined,
+  );
+  ok('library sideEffects: false', pkg.sideEffects === false);
+
+  const exportTargets = JSON.stringify(pkg.exports ?? {});
+  ok('no raw .ts runtime entry', !/\.ts"/.test(exportTargets.replace(/\.d\.ts"/g, '')));
+  ok('no @/ alias in manifest', !JSON.stringify(pkg).includes('"@/'));
+  ok('no workspace: in deps', !JSON.stringify(pkg.dependencies ?? {}).includes('workspace:'));
+
+  return { ok: checks.every(c => c.ok), checks };
+}
+
+/**
  * Verify the private shared-config package.
  * @param {string} dir
  * @returns {PolicyResult}

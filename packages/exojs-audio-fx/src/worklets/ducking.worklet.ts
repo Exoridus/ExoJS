@@ -30,7 +30,10 @@ class DuckingProcessor extends DisposableProcessor {
   private _envelope = 0;
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
-    if (this._destroyed) return false;
+    if (this._destroyed) {
+      return false;
+    }
+
     const main = inputs[0];
     const sidechain = inputs[1];
     const output = outputs[0];
@@ -45,9 +48,11 @@ class DuckingProcessor extends DisposableProcessor {
     const releaseCoeff = parameters['release']![0]!;
 
     const blockLength = main[0]?.length ?? 0;
+
     for (let i = 0; i < blockLength; i++) {
       // Sidechain detection level: mono-mixed rectified L+R.
       let scSample = 0;
+
       if (sidechain && sidechain.length > 0) {
         const left = sidechain[0]?.[i] ?? 0;
         const right = sidechain[1]?.[i] ?? left;
@@ -65,6 +70,7 @@ class DuckingProcessor extends DisposableProcessor {
       for (let ch = 0; ch < main.length; ch++) {
         const mainCh = main[ch];
         const outCh = output[ch];
+
         if (mainCh && outCh && i < mainCh.length) {
           outCh[i] = mainCh[i]! * gain;
         }

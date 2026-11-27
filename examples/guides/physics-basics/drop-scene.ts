@@ -1,5 +1,5 @@
 import { Scene, type Seconds, Sprite } from '@codexo/exojs';
-import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:drop-scene
 class DropScene extends Scene {

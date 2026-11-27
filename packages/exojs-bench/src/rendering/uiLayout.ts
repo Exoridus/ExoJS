@@ -97,7 +97,8 @@ export const layoutTreeShape = (widgets: number): LayoutTreeShape => {
 };
 
 /** Leaf widgets in row `row` of a tree of `shape`; the last row is short when the count does not divide evenly. */
-export const widgetsInRow = (shape: LayoutTreeShape, row: number): number => Math.max(0, Math.min(WIDGETS_PER_ROW, shape.widgets - row * WIDGETS_PER_ROW));
+export const widgetsInRow = (shape: LayoutTreeShape, row: number): number =>
+  Math.max(0, Math.min(WIDGETS_PER_ROW, shape.widgets - row * WIDGETS_PER_ROW));
 
 /**
  * Distance between two changed leaves.
@@ -116,7 +117,8 @@ export const widgetMutationStride = (widgets: number): number => {
 };
 
 /** Whether leaf `index` has its width changed on pass `pass`. */
-export const isWidgetMutated = (index: number, pass: number, widgets: number): boolean => (index + pass) % widgetMutationStride(widgets) === 0;
+export const isWidgetMutated = (index: number, pass: number, widgets: number): boolean =>
+  (index + pass) % widgetMutationStride(widgets) === 0;
 
 /**
  * Visit the leaves pass `pass` changes, in ascending index order.
@@ -143,7 +145,8 @@ export const forEachMutatedWidget = (pass: number, widgets: number, visit: (inde
 };
 
 /** Width leaf `index` carries on pass `pass`. */
-export const widgetWidthAt = (index: number, pass: number, widgets: number): number => (isWidgetMutated(index, pass, widgets) ? WIDGET_WIDE : WIDGET_WIDTH);
+export const widgetWidthAt = (index: number, pass: number, widgets: number): number =>
+  isWidgetMutated(index, pass, widgets) ? WIDGET_WIDE : WIDGET_WIDTH;
 
 /** Viewport pass `pass` resolves against. */
 export const layoutViewportAt = (pass: number): (typeof LAYOUT_VIEWPORTS)[number] => LAYOUT_VIEWPORTS[pass % LAYOUT_VIEWPORTS.length]!;

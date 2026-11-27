@@ -4,7 +4,7 @@
   "symbol": "AttractToPoint",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 12,
   "counts": {
@@ -23,7 +23,7 @@
         "Use cases: orbit anchors, pin emitters to a moving target, simulate a \"black hole\" pickup. For repulsion, use RepelFromPoint; for tangential motion, layer with OrbitalForce.",
         "GPU-eligible."
       ],
-      "importLine": "import { AttractToPoint } from '@codexo/exojs-particles'",
+      "importLine": "import { AttractToPoint } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

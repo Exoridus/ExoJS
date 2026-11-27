@@ -4,7 +4,7 @@
   "symbol": "ParticleEmitter",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 1,
   "counts": {
@@ -22,7 +22,7 @@
         "The emitting face of a particle system: the only supported way to bring particles into existence.",
         "Emission is the one per-particle write that is true on every backend, because spawn values always originate on the CPU and are uploaded from there."
       ],
-      "importLine": "import { ParticleEmitter } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleEmitter } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

@@ -4,6 +4,8 @@ import angularAverageFragment from './shaders/angular-average.frag';
 import angularAverageWgsl from './shaders/angular-average.wgsl';
 import cascadeGatherTransportFragment from './shaders/cascade-gather-transport.frag';
 import cascadeGatherTransportWgsl from './shaders/cascade-gather-transport.wgsl';
+import cascadeGatherTransportNormalsFragment from './shaders/cascade-gather-transport-normals.frag';
+import cascadeGatherTransportNormalsWgsl from './shaders/cascade-gather-transport-normals.wgsl';
 import cascadeTransportFragment from './shaders/cascade-transport.frag';
 import cascadeTransportWgsl from './shaders/cascade-transport.wgsl';
 import transportFragment from './shaders/transport.frag';
@@ -43,6 +45,9 @@ const bindings = (names: readonly string[], language: 'glsl' | 'wgsl'): string =
 
 /** The chunk's own textures, which every shader that walks binds. */
 const WALK_TEXTURES = ['uSegments', 'uEmitters', 'uCells', 'uIndices', 'uMask', 'uMaskCoarse', 'uMaskSuper'] as const;
+
+/** What the receiver reads on top of the chunk's own when it shades against normals. */
+const GATHER_NORMAL_TEXTURES = [...WALK_TEXTURES, 'uNormal'] as const;
 
 /** The raw direction tile reduced by the angular-average pass. @internal */
 export const angularAverageUniforms = { uTile: UniformType.Float } as const;
@@ -99,12 +104,24 @@ ${body}`;
 /**
  * The finest cascade read back out at each fragment, with the way from the
  * fragment to each of its four probes walked.
+ *
+ * With `normals` the shader also reads the normal prepass at the fragment and
+ * weights each direction a probe holds by what that surface takes of it, so it
+ * has to be given the finest level's directions rather than their mean.
  * @internal
  */
-export const transportGatherShader = <U extends Record<string, UniformType>>(uniforms: U): Shader<U & typeof transportUniforms> =>
+export const transportGatherShader = <U extends Record<string, UniformType>>(
+  uniforms: U,
+  normals = false,
+): Shader<U & typeof transportUniforms> =>
   createFilterShader({
-    glsl: { fragment: glsl(WALK_TEXTURES, cascadeGatherTransportFragment) },
-    wgsl: wgsl(WALK_TEXTURES, cascadeGatherTransportWgsl),
+    glsl: {
+      fragment: glsl(
+        normals ? GATHER_NORMAL_TEXTURES : WALK_TEXTURES,
+        normals ? cascadeGatherTransportNormalsFragment : cascadeGatherTransportFragment,
+      ),
+    },
+    wgsl: wgsl(normals ? GATHER_NORMAL_TEXTURES : WALK_TEXTURES, normals ? cascadeGatherTransportNormalsWgsl : cascadeGatherTransportWgsl),
     uniforms: { ...uniforms, ...transportUniforms },
   });
 

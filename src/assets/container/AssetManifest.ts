@@ -75,11 +75,20 @@ const SYNTHETIC_BASE = 'https://exojs.invalid/';
  * the raw text would pass them through.
  */
 const resolvePackUrl = (manifestUrl: string, name: string, file: unknown): string => {
-  if (typeof file !== 'string' || file === '') fail(`pack "${name}" has no "file"`);
-  if (file.startsWith('/') || file.includes('\\') || file.includes(':')) fail(`pack "${name}" has a "file" that is not a path beside the manifest`);
+  if (typeof file !== 'string' || file === '') {
+    fail(`pack "${name}" has no "file"`);
+  }
 
-  const slash = manifestUrl.lastIndexOf('/');
-  const directory = slash === -1 ? './' : manifestUrl.slice(0, slash + 1);
+  if (file.startsWith('/') || file.includes('\\') || file.includes(':')) {
+    fail(`pack "${name}" has a "file" that is not a path beside the manifest`);
+  }
+
+  // A signed manifest URL can carry a `/` inside its query or fragment; only the
+  // path component decides where the packs live.
+  const queryStart = manifestUrl.search(/[?#]/);
+  const manifestPath = queryStart === -1 ? manifestUrl : manifestUrl.slice(0, queryStart);
+  const slash = manifestPath.lastIndexOf('/');
+  const directory = slash === -1 ? './' : manifestPath.slice(0, slash + 1);
   const hasDocumentBase = typeof location !== 'undefined';
   const base = hasDocumentBase ? location.href : SYNTHETIC_BASE;
   let directoryUrl: URL;
@@ -103,16 +112,27 @@ const resolvePackUrl = (manifestUrl: string, name: string, file: unknown): strin
 };
 
 const readPack = (name: string, value: unknown, manifestUrl: string): ManifestPack => {
-  if (!isRecord(value)) fail(`pack "${name}" is not an object`);
+  if (!isRecord(value)) {
+    fail(`pack "${name}" is not an object`);
+  }
 
   const { hash, byteLength, blockCount, entries } = value;
 
   if (typeof hash !== 'string' || hash.length !== HASH_HEX_LENGTH || !HASH_PATTERN.test(hash)) {
     fail(`pack "${name}" has no ${HASH_HEX_LENGTH}-character lowercase hex SHA-256 "hash"`);
   }
-  if (!isSize(byteLength)) fail(`pack "${name}" has an invalid "byteLength"`);
-  if (!isSize(blockCount)) fail(`pack "${name}" has an invalid "blockCount"`);
-  if (!Array.isArray(entries) || entries.some(entry => typeof entry !== 'string')) fail(`pack "${name}" has no "entries" array of sources`);
+
+  if (!isSize(byteLength)) {
+    fail(`pack "${name}" has an invalid "byteLength"`);
+  }
+
+  if (!isSize(blockCount)) {
+    fail(`pack "${name}" has an invalid "blockCount"`);
+  }
+
+  if (!Array.isArray(entries) || entries.some(entry => typeof entry !== 'string')) {
+    fail(`pack "${name}" has no "entries" array of sources`);
+  }
 
   return { name, url: resolvePackUrl(manifestUrl, name, value.file), hash, byteLength, blockCount, entries: entries as string[] };
 };
@@ -180,13 +200,19 @@ export class AssetManifest {
    * manifest is deployed at even when nothing fetched it.
    */
   public static parse(document: unknown, url: string): AssetManifest {
-    if (!isRecord(document)) fail(`"${url}" is not a JSON object`);
+    if (!isRecord(document)) {
+      fail(`"${url}" is not a JSON object`);
+    }
+
     if (document.version !== MANIFEST_VERSION) {
       fail(
         `"${url}" states version ${JSON.stringify(document.version)}, and this build reads version ${MANIFEST_VERSION} - rebuild it with \`exo assets pack\``,
       );
     }
-    if (!isRecord(document.packs)) fail(`"${url}" has no "packs" object`);
+
+    if (!isRecord(document.packs)) {
+      fail(`"${url}" has no "packs" object`);
+    }
 
     const packs = new Map<string, ManifestPack>();
 
@@ -233,7 +259,9 @@ export class AssetManifest {
    */
   public packFor(source: string): ManifestPack | undefined {
     for (const pack of this._packs.values()) {
-      if (pack.entries.includes(source)) return pack;
+      if (pack.entries.includes(source)) {
+        return pack;
+      }
     }
 
     return undefined;

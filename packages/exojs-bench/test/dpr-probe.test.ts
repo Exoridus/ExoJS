@@ -12,7 +12,7 @@ import {
   TEXT_RATIO_CELLS,
   totalInternalTargetPixels,
 } from '../src/rendering/dpr-probe/matrix';
-import { createWebGpuGpuTimer, WEBGPU_NO_TIMESTAMP_NOTE } from '../src/rendering/page/gpuFrameTimer';
+import { createWebGl2GpuTimer, createWebGpuGpuTimer, WEBGPU_NO_TIMESTAMP_NOTE } from '../src/rendering/page/gpuFrameTimer';
 
 /**
  * Node-side tests for the DPR probe.
@@ -24,6 +24,85 @@ import { createWebGpuGpuTimer, WEBGPU_NO_TIMESTAMP_NOTE } from '../src/rendering
  * halves (`scenes.ts`, `runner.ts`) need a real GPU and are exercised by the
  * probe itself on the device.
  */
+
+describe('WebGL GPU timer', () => {
+  test('reports a frame when query allocation fails', async () => {
+    const gl = {
+      getExtension: () => ({ TIME_ELAPSED_EXT: 3, GPU_DISJOINT_EXT: 4 }),
+      getParameter: () => false,
+      createQuery: () => null,
+    } as unknown as WebGL2RenderingContext;
+    const timer = createWebGl2GpuTimer(gl);
+
+    timer.beginFrame();
+    timer.endFrame();
+    await timer.collect();
+    expect(timer.note).toMatch(/failed/i);
+  });
+
+  test('preserves the capture when querying a frame fails', async () => {
+    const gl = {
+      QUERY_RESULT_AVAILABLE: 1,
+      getExtension: () => ({ TIME_ELAPSED_EXT: 3, GPU_DISJOINT_EXT: 4 }),
+      createQuery: () => ({}),
+      beginQuery: () => {},
+      endQuery: () => {},
+      getParameter: () => false,
+      deleteQuery: () => {},
+      getQueryParameter: () => {
+        throw new Error('context lost');
+      },
+    } as unknown as WebGL2RenderingContext;
+    const timer = createWebGl2GpuTimer(gl);
+
+    timer.beginFrame();
+    timer.endFrame();
+    await expect(timer.collect()).resolves.toMatchObject({
+      frameMs: [],
+      queueMs: [],
+      timing: { status: 'failed', attemptedFrames: 1, validFrames: 0, unresolvedFrames: 1 },
+    });
+    expect(timer.note).toMatch(/failed/i);
+  });
+
+  test('reports dropped disjoint frames alongside retained samples', async () => {
+    let disjoint = false;
+    let ready = true;
+    const gl = {
+      QUERY_RESULT_AVAILABLE: 1,
+      QUERY_RESULT: 2,
+      getExtension: () => ({ TIME_ELAPSED_EXT: 3, GPU_DISJOINT_EXT: 4 }),
+      createQuery: () => ({}),
+      beginQuery: () => {},
+      endQuery: () => {},
+      getQueryParameter: (_query: unknown, name: number) => (name === 1 ? ready : 1_000_000),
+      getParameter: () => {
+        const observed = disjoint;
+
+        disjoint = false;
+
+        return observed;
+      },
+      deleteQuery: () => {},
+    } as unknown as WebGL2RenderingContext;
+    const timer = createWebGl2GpuTimer(gl);
+
+    timer.beginFrame();
+    timer.endFrame();
+    timer.beginFrame();
+    disjoint = true;
+    timer.endFrame();
+    ready = false;
+    timer.beginFrame();
+    timer.endFrame();
+    const samples = await timer.collect();
+
+    expect(samples.frameMs).toEqual([1]);
+    expect(samples.timing).toMatchObject({ attemptedFrames: 3, validFrames: 1, invalidFrames: 1, unresolvedFrames: 1 });
+    expect(timer.note).toMatch(/disjoint/i);
+    expect(timer.note).toMatch(/unresolved/i);
+  });
+});
 
 describe('probe matrix', () => {
   test('covers every scene at every pixel ratio, with a probe arm only where an internal target exists', () => {
@@ -53,7 +132,10 @@ describe('probe matrix', () => {
 
     for (const cell of cells) {
       const previous = groups[groups.length - 1];
-      const isNewGroup = previous === undefined || cells[cells.indexOf(cell) - 1]?.scene !== cell.scene || cells[cells.indexOf(cell) - 1]?.mode !== cell.mode;
+      const isNewGroup =
+        previous === undefined ||
+        cells[cells.indexOf(cell) - 1]?.scene !== cell.scene ||
+        cells[cells.indexOf(cell) - 1]?.mode !== cell.mode;
 
       if (isNewGroup) {
         groups.push([cell.pixelRatio]);
@@ -99,8 +181,8 @@ describe('probe matrix', () => {
 });
 
 /** A backend stand-in that records the sizes it was asked to allocate. */
-const createFakeBackend = (): { acquireRenderTexture: (width: number, height: number) => unknown; calls: [number, number][] } => {
-  const calls: [number, number][] = [];
+const createFakeBackend = (): { acquireRenderTexture: (width: number, height: number) => unknown; calls: Array<[number, number]> } => {
+  const calls: Array<[number, number]> = [];
 
   return {
     calls,
@@ -113,8 +195,11 @@ const createFakeBackend = (): { acquireRenderTexture: (width: number, height: nu
 };
 
 /** A `cacheAsTexture` node stand-in with the same recording behaviour. */
-const createFakeCacheNode = (): { _renderPlanEnsureCacheTexture: (width: number, height: number) => unknown; calls: [number, number][] } => {
-  const calls: [number, number][] = [];
+const createFakeCacheNode = (): {
+  _renderPlanEnsureCacheTexture: (width: number, height: number) => unknown;
+  calls: Array<[number, number]>;
+} => {
+  const calls: Array<[number, number]> = [];
 
   return {
     calls,
@@ -155,6 +240,30 @@ describe('internal-target instrumentation', () => {
 
     expect(node.calls).toEqual([[592, 406]]);
     expect(recorder.summary()).toEqual([{ kind: 'cache', width: 592, height: 406, count: 1 }]);
+  });
+
+  test('forwards the optional format argument to both instrumented methods', () => {
+    const received: unknown[][] = [];
+
+    const record = (...args: unknown[]): unknown => {
+      received.push(args);
+
+      return undefined;
+    };
+
+    const backend = { acquireRenderTexture: record };
+    const node = { _renderPlanEnsureCacheTexture: record };
+    const recorder = createTargetRecorder();
+
+    instrumentAcquireRenderTexture(backend, recorder);
+    instrumentCacheTexture(node, recorder);
+    backend.acquireRenderTexture(8, 4, 'rgba16float' as never);
+    node._renderPlanEnsureCacheTexture(8, 4, 'rgba16float' as never);
+
+    expect(received).toEqual([
+      [8, 4, 'rgba16float'],
+      [8, 4, 'rgba16float'],
+    ]);
   });
 
   test('restoring puts the original method back, so the probe cannot leak into a later cell', () => {
@@ -230,6 +339,7 @@ describe('internal-target pixel accounting', () => {
 
 /** A minimal capture used to pin the serialized shape. */
 const sampleCell: ProbeCellResult = {
+  runId: 0,
   index: 0,
   startOffsetMs: 12.5,
   scene: 'blur',
@@ -337,5 +447,30 @@ describe('missing timestamp-query', () => {
     // still gathered, because it measures a different thing and says so.
     expect(samples.frameMs).toEqual([]);
     expect(samples.queueMs).toHaveLength(1);
+  });
+});
+
+describe('prototype-backed instrumentation restore', () => {
+  test('removes the own property it added, so the prototype method is reachable again', () => {
+    class Backend {
+      public acquired: number[][] = [];
+
+      public acquireRenderTexture(width: number, height: number): void {
+        this.acquired.push([width, height]);
+      }
+    }
+
+    const backend = new Backend();
+    const recorder = createTargetRecorder();
+    const restore = instrumentAcquireRenderTexture(backend, recorder);
+
+    // The instrumentation shadows the prototype method with an own property.
+    expect(Object.hasOwn(backend, 'acquireRenderTexture')).toBe(true);
+
+    restore();
+
+    expect(Object.hasOwn(backend, 'acquireRenderTexture')).toBe(false);
+    backend.acquireRenderTexture(16, 16);
+    expect(backend.acquired).toEqual([[16, 16]]);
   });
 });

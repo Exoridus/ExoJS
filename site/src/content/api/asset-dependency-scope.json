@@ -1,6 +1,6 @@
 {
   "title": "AssetDependencyScope",
-  "description": "The seam through which a factory acquires the assets its resource depends on. Everything loaded through it is owned by the resource being built and is released with it, unless another owner holds it independently - so a font's page textures survive exactly as long as the font, however many consumers the deduplicated font itself has. It is deliberately narrower than the scope backing it: a factory may acquire dependencies, but not release them, tear the scope down, or unpack a container into it. Those decisions belong to whoever owns the resource.",
+  "description": "The seam through which a factory acquires the assets its resource depends on. Everything loaded through it is owned by the resource being built and is released with it, unless another owner holds it independently - so a font's page textures survive exactly as long as the font, however many consumers the deduplicated font itself has. It is deliberately narrower than the scope backing it: a factory may acquire dependencies, but not release them, tear the scope down, open a child scope, or unpack a container into it. Those decisions belong to whoever owns the resource.",
   "symbol": "AssetDependencyScope",
   "kind": "type",
   "subsystem": "assets",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "The seam through which a factory acquires the assets its resource depends on.",
         "Everything loaded through it is owned by the resource being built and is released with it, unless another owner holds it independently - so a font's page textures survive exactly as long as the font, however many consumers the deduplicated font itself has.",
-        "It is deliberately narrower than the scope backing it: a factory may acquire dependencies, but not release them, tear the scope down, or unpack a container into it. Those decisions belong to whoever owns the resource."
+        "It is deliberately narrower than the scope backing it: a factory may acquire dependencies, but not release them, tear the scope down, open a child scope, or unpack a container into it. Those decisions belong to whoever owns the resource."
       ],
       "importLine": "import { AssetDependencyScope } from '@codexo/exojs'",
       "sourceLink": null
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "AssetDependencyScope",
-          "signature": "Pick<LoaderScope, \"createScope\" | \"get\" | \"load\">",
+          "signature": "Pick<LoaderScope, \"get\" | \"load\">",
           "signatureTokens": [
             {
               "text": "Pick",
@@ -48,14 +48,6 @@
             },
             {
               "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"createScope\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
               "kind": "punctuation"
             },
             {

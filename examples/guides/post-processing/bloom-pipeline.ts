@@ -3,7 +3,7 @@ import {
   BlurFilter,
   CallbackRenderPass,
   Color,
-  RenderingContext,
+  type RenderingContext,
   RenderNodePass,
   RenderPipeline,
   RenderTexture,
@@ -31,7 +31,7 @@ class BloomScene extends Scene {
     this.baseSprite = new Sprite(this.baseRt);
     this.glowSprite = new Sprite(this.blurredRt).setTint(new Color(255, 255, 255, 0.8)).setBlendMode(BlendModes.Additive);
 
-    this.blur = new BlurFilter({ strength: 5 });
+    this.blur = this.track(new BlurFilter({ strength: 5 }));
 
     this.pipeline = new RenderPipeline()
       // Pass 1: base scene at normal tint, into baseRt

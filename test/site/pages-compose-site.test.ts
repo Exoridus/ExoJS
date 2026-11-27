@@ -12,7 +12,13 @@ import {
   findCrossChannelReferences,
   parseChannelsDocument,
 } from '../../scripts/pages/compose-site';
-import { createSiteBuildManifest, hashTreeFiles, SITE_BUILD_FILE, type SiteBuildIdentity, verifySiteTree } from '../../scripts/pages/site-manifest';
+import {
+  createSiteBuildManifest,
+  hashTreeFiles,
+  SITE_BUILD_FILE,
+  type SiteBuildIdentity,
+  verifySiteTree,
+} from '../../scripts/pages/site-manifest';
 
 /**
  * The composer joins two independently qualified channel trees into the one
@@ -92,7 +98,16 @@ describe('composeSite (W02)', () => {
     const report = compose(out, buildChannel('stable', 'a', stableFiles), buildChannel('next', '1', nextFiles));
 
     expect(report.problems).toEqual([]);
-    expect(readdirSync(out).sort()).toEqual(['.nojekyll', 'channels.json', 'en', 'index.html', 'next', 'pagefind', 'preview.html', SITE_BUILD_FILE]);
+    expect(readdirSync(out).sort()).toEqual([
+      '.nojekyll',
+      'channels.json',
+      'en',
+      'index.html',
+      'next',
+      'pagefind',
+      'preview.html',
+      SITE_BUILD_FILE,
+    ]);
     expect(readFileSync(join(out, 'next/preview.html'), 'utf8')).toBe('preview next');
     expect(readFileSync(join(out, '.nojekyll'), 'utf8')).toBe('');
   });
@@ -161,7 +176,10 @@ describe('composeSite refuses inconsistent channels (W07)', () => {
     const dir = join(work, 'local');
     mkdirSync(dir);
     writeFileSync(join(dir, 'index.html'), 'x');
-    writeFileSync(join(dir, SITE_BUILD_FILE), JSON.stringify(createSiteBuildManifest(dir, { ...identity('stable', 'a'), localTest: true })));
+    writeFileSync(
+      join(dir, SITE_BUILD_FILE),
+      JSON.stringify(createSiteBuildManifest(dir, { ...identity('stable', 'a'), localTest: true })),
+    );
     expect(compose(join(work, 'out'), dir, null).problems.join('\n')).toMatch(/local test/);
   });
 

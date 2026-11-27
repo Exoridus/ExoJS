@@ -108,6 +108,7 @@ const sampleBytes = async (samplingInterval: number, body: () => void): Promise<
       session.post(method, params, (error: Error | null, result?: unknown) => {
         if (error) {
           reject(error);
+
           return;
         }
 
@@ -148,7 +149,11 @@ const sampleBytes = async (samplingInterval: number, body: () => void): Promise<
  * see {@link measureColdStartAllocation}), and a window that straddles that work
  * reports a start-up total divided by the window length, not a rate.
  */
-export const measureFrameAllocation = async (harness: WebGl2Harness, root: RenderNode, options: FrameAllocationOptions = {}): Promise<FrameAllocation> => {
+export const measureFrameAllocation = async (
+  harness: WebGl2Harness,
+  root: RenderNode,
+  options: FrameAllocationOptions = {},
+): Promise<FrameAllocation> => {
   const frames = options.frames ?? 200;
   const warmup = options.warmup ?? 30;
   const samplingInterval = options.samplingInterval ?? 512;

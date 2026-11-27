@@ -1,11 +1,13 @@
-import { AudioEffect, Sound } from '@codexo/exojs';
+import { AudioEffect, logger, Sound } from '@codexo/exojs';
 
 /** Construction options for {@link ConvolutionEffect}. */
 export interface ConvolutionEffectOptions {
   /**
    * Impulse response. Accepts a decoded `AudioBuffer` or a `Sound` (its
-   * `audioBuffer` is used). If omitted the effect runs dry (passthrough) until
-   * {@link ConvolutionEffect.setImpulse} is called.
+   * `audioBuffer` is used); a `Sound` set before the effect is set up is
+   * resolved when the graph is built. A `Sound` still undecoded at that point
+   * is treated as absent and is not applied later, and with no impulse the wet
+   * path is silent while the dry path runs at `1 - wet`.
    */
   impulse?: AudioBuffer | Sound;
   /**
@@ -78,7 +80,7 @@ interface ConvolutionEffectSetup {
  *
  * @example
  * ```ts
- * const hall = await loader.load(Asset.type('sound', 'hall.wav'));
+ * const hall = await loader.load({ type: 'sound', source: 'hall.wav' });
  * const reverb = new ConvolutionEffect({ impulse: hall, wet: 0.6 });
  * bus.addEffect(reverb);
  * ```
@@ -107,7 +109,10 @@ export class ConvolutionEffect extends AudioEffect {
    * not yet initialized.
    */
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('ConvolutionEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('ConvolutionEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
@@ -116,7 +121,10 @@ export class ConvolutionEffect extends AudioEffect {
    * not yet initialized.
    */
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('ConvolutionEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('ConvolutionEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -130,6 +138,7 @@ export class ConvolutionEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet * this._gain, ctx.currentTime, 0.01);
@@ -151,9 +160,11 @@ export class ConvolutionEffect extends AudioEffect {
 
   public set normalize(value: boolean) {
     this._normalize = value;
+
     if (this._setup) {
       const { convolver } = this._setup;
       convolver.normalize = this._normalize;
+
       if (convolver.buffer !== null) {
         // Re-assign so the new normalize value takes effect immediately.
         // (The Web Audio spec only applies normalize on buffer assignment.)
@@ -174,6 +185,7 @@ export class ConvolutionEffect extends AudioEffect {
 
   public set gain(value: number) {
     this._gain = Math.max(0, Math.min(4, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet * this._gain, ctx.currentTime, 0.01);
@@ -182,27 +194,36 @@ export class ConvolutionEffect extends AudioEffect {
 
   /**
    * Set or replace the impulse response. Accepts a decoded `AudioBuffer`, a
-   * `Sound` (its `audioBuffer` is used), or `null` to clear the IR (wet path
-   * goes silent). Safe to call before the audio context is ready - the impulse
-   * is stored and applied once nodes are created.
+   * `Sound` (its `audioBuffer` is read immediately, so the `Sound` must already
+   * be decoded), or `null` to clear the IR (wet path goes silent). Safe to call
+   * before the audio context is ready - the impulse is stored and applied once
+   * nodes are created.
    *
    * **Web Audio note:** `normalize` is written to the convolver *before*
    * `buffer` is assigned, as required by the spec for the value to take effect.
+   * Only mono, stereo and four-channel impulses are accepted. Conversion
+   * failures are logged and leave the previous impulse in place.
    */
   public setImpulse(ir: AudioBuffer | Sound | null): void {
-    const generation = ++this._impulseGeneration;
-
     if (!this._setup) {
       // Store for application in _setupNodes once the context is ready.
       this._pendingImpulse = ir;
+
       return;
     }
 
     const resolved = this._resolveBuffer(ir);
+
+    if (resolved !== null && resolved.numberOfChannels !== 1 && resolved.numberOfChannels !== 2 && resolved.numberOfChannels !== 4) {
+      throw new RangeError('ConvolutionEffect requires a mono, stereo or four-channel impulse response.');
+    }
+
+    const generation = ++this._impulseGeneration;
     const rate = this._setup.convolver.context.sampleRate;
 
     if (resolved === null || resolved.sampleRate === rate) {
       this._applyImpulse(resolved);
+
       return;
     }
 
@@ -211,17 +232,32 @@ export class ConvolutionEffect extends AudioEffect {
     // resamples as it plays. Assets decoded before a live context exists land
     // at the default rate, so an IR routinely needs a conversion pass first.
     // The wet path keeps the previous IR until the new one is converted.
-    void resampleBuffer(resolved, rate).then(converted => {
-      // A newer impulse may have been requested while this one converted.
-      if (this._impulseGeneration === generation && this._setup) {
-        this._applyImpulse(converted);
-      }
-    });
+    void resampleBuffer(resolved, rate)
+      .then(converted => {
+        // A newer impulse may have been requested while this one converted.
+        if (this._impulseGeneration === generation && this._setup) {
+          this._applyImpulse(converted);
+        }
+      })
+      .catch((error: unknown) => {
+        if (this._impulseGeneration === generation && this._setup) {
+          try {
+            logger.error('ConvolutionEffect could not convert the impulse response; the previous impulse remains active.', {
+              source: 'ConvolutionEffect',
+              ...(error instanceof Error && { error }),
+            });
+          } catch {
+            // A failed log sink must not turn a handled conversion failure into an unhandled rejection.
+          }
+        }
+      });
   }
 
   /** Assign an IR that is known to match the context rate. */
   private _applyImpulse(buffer: AudioBuffer | null): void {
-    if (!this._setup) return;
+    if (!this._setup) {
+      return;
+    }
 
     const { convolver } = this._setup;
 
@@ -232,6 +268,7 @@ export class ConvolutionEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.convolver.disconnect();
@@ -243,8 +280,14 @@ export class ConvolutionEffect extends AudioEffect {
   }
 
   private _resolveBuffer(ir: AudioBuffer | Sound | null): AudioBuffer | null {
-    if (ir === null) return null;
-    if (ir instanceof Sound) return ir.audioBuffer;
+    if (ir === null) {
+      return null;
+    }
+
+    if (ir instanceof Sound) {
+      return ir.audioBuffer;
+    }
+
     return ir;
   }
 

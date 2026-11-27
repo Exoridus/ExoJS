@@ -5,7 +5,10 @@ import { CompressedTextureFormat, orderCompressedFormats } from '#rendering/text
  * only carries a feature that was requested at `requestDevice`. Each family maps
  * its members onto the `GPUTextureFormat` strings the device accepts.
  */
-const families: ReadonlyArray<{ readonly feature: GPUFeatureName; readonly formats: Readonly<Partial<Record<CompressedTextureFormat, GPUTextureFormat>>> }> = [
+const families: ReadonlyArray<{
+  readonly feature: GPUFeatureName;
+  readonly formats: Readonly<Partial<Record<CompressedTextureFormat, GPUTextureFormat>>>;
+}> = [
   {
     feature: 'texture-compression-bc',
     formats: {

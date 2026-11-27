@@ -141,7 +141,7 @@ const assertClaimable = (action: Action, name: string, pending: ReadonlySet<Acti
  * on the instance, so a map reads like the control scheme it describes.
  *
  * Each action instance belongs to exactly one `ActionMap`, checked and
- * rejected at construction (see {@link claimAction}) - an action's
+ * rejected at construction (see `assertClaimable`) - an action's
  * frame-to-frame state (an aggregate value, and for {@link ButtonAction} an
  * edge) is meaningful only when exactly one caller samples it once per real
  * frame; two maps sharing an instance would silently corrupt whichever
@@ -275,7 +275,7 @@ class ActionMapBase<T extends ActionRecord> {
    * older save file freezing it.
    *
    * @throws {InputBindingError} If an override names an action this map does not declare,
-   * its kind does not match that action, or it contains an unknown input token.
+   * its kind does not match that action, or its binding structure or input tokens are invalid.
    */
   public applyProfile(profile: BindingProfile | null): void {
     const changes: Array<readonly [Action, unknown]> = [];
@@ -375,8 +375,24 @@ class ActionMapBase<T extends ActionRecord> {
   private _applyAtomically(changes: ReadonlyArray<readonly [Action, unknown]>): void {
     const slot: GamepadSlot = this._gamepad?.slot ?? 0;
 
-    for (const [action, binding] of changes) {
-      (action as ActionBase<unknown>)._rebind(binding, slot);
+    const applied: Array<readonly [ActionBase<unknown>, unknown, GamepadSlot]> = [];
+
+    try {
+      for (const [action, binding] of changes) {
+        const target = action as ActionBase<unknown>;
+        const previous = [target, target.binding, target._gamepadSlot] as const;
+
+        target._rebind(binding, slot);
+        applied.push(previous);
+      }
+    } catch (error: unknown) {
+      // A later descriptor was rejected: put back the ones already applied, so a
+      // profile is taken whole or not at all.
+      for (const [target, binding, previousSlot] of applied.reverse()) {
+        target._rebind(binding, previousSlot);
+      }
+
+      throw error;
     }
 
     const owner = this._owner;
@@ -406,6 +422,7 @@ class ActionMapBase<T extends ActionRecord> {
     this._owner = null;
     this._availability = null;
     this._wasAvailable = true;
+    this._dropTickInput();
     owner._releaseActionMapCapture?.(this);
     owner._detachActionMap(this);
   }
@@ -478,13 +495,16 @@ class ActionMapBase<T extends ActionRecord> {
       if (this._wasAvailable) {
         this._reset();
       }
+
       this._wasAvailable = false;
+
       return;
     }
 
     if (!this._wasAvailable) {
       const owner = this._owner;
       this._wasAvailable = true;
+
       if (owner !== null) {
         this._ownership.arm(owner._currentBatchSequence?.() ?? 0, owner._snapshotActionChannels?.() ?? null);
       }
@@ -521,13 +541,31 @@ class ActionMapBase<T extends ActionRecord> {
     }
   }
 
-  /** Clear every action's state - used when an owner stops feeding the map. @internal */
-  public _reset(): void {
+  /**
+   * Clear every action's state - used when an owner stops feeding the map.
+   * Occurrences already sampled for the next fixed step go with it unless
+   * `dropTickInput` is `false`, for a reset that does not end ownership (a
+   * scope above the map opening or closing).
+   *
+   * @internal
+   */
+  public _reset(dropTickInput = true): void {
     for (const action of this._actions) {
       action._reset();
     }
 
+    if (dropTickInput) {
+      this._dropTickInput();
+    }
+
     this._ownership.reset();
+  }
+
+  /** Forget every occurrence sampled for a fixed step that has not started yet. @internal */
+  public _dropTickInput(): void {
+    for (const action of this._actions) {
+      action._dropTickInput();
+    }
   }
 }
 

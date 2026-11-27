@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Record key, when the operation targets a single record. Explicitly undefined is accepted - a store-wide operation has none."
+          "description": "Record key as serializeCacheRecordKey spells it, when the operation targets a single record. Explicitly undefined is accepted - a store-wide operation has none."
         },
         {
           "name": "message",

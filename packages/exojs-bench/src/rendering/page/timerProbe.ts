@@ -1,7 +1,7 @@
 /**
  * Timer-methodology probe for the WebGPU benchmark frame-time metric.
  *
- * `stallProbe.ts` answers "what does the engine do on this frame". This probe
+ * A stall probe answers "what does the engine do on this frame". This probe
  * answers a different question: "what does the harness's WebGPU frame-time
  * SAMPLE actually measure". It therefore records the full event timeline of a
  * timed frame -
@@ -24,8 +24,8 @@
  * timestamps are injected by wrapping the live `GPUDevice`'s
  * `createCommandEncoder`/`beginRenderPass`/`finish`, and the `timestamp-query`
  * feature is obtained by wrapping `GPUAdapter.prototype.requestDevice` before the
- * engine asks for its device. The same prototype-patching technique the stall
- * stall probe uses.
+ * engine asks for its device. The same prototype-patching technique a stall
+ * probe uses.
  *
  * @internal Test/perf-only.
  */
@@ -47,17 +47,18 @@ const SEED = 0xc0ffee;
 
 /**
  * Timestamps a single command encoder may carry. `resolveQuerySet` writes into
- * the destination buffer at a 256-byte-aligned offset, so each encoder is given
- * its own 256-byte slot = 32 timestamps = 16 render passes. The engine opens one
- * pass per encoder on every archetype this probe runs, so the cap is headroom.
+ * the destination buffer at a 256-byte-aligned offset, so each encoder gets its
+ * own 256-byte slot regardless of how few timestamps it holds. The engine opens
+ * one pass per encoder on every archetype this probe runs; a second pass is
+ * headroom, and further passes are left untimed.
  */
-const TIMESTAMPS_PER_ENCODER = 32;
+const TIMESTAMPS_PER_ENCODER = 4;
 /** Bytes one encoder's resolved timestamps occupy (`resolveQuerySet` alignment). */
 const RESOLVE_STRIDE_BYTES = 256;
 /** Encoders whose passes can be timestamped in one run. */
 const MAX_TIMED_ENCODERS = 512;
-/** Timestamp query slots. Reused across encoders; a run that exhausts them stops instrumenting. */
-const QUERY_CAPACITY = 2048;
+/** Timestamp query slots; every timed encoder reserves its own range, so a run that exhausts them stops instrumenting. */
+const QUERY_CAPACITY = MAX_TIMED_ENCODERS * TIMESTAMPS_PER_ENCODER;
 
 /** Frame pacing under test. */
 export type TimerProbeMode =
@@ -162,7 +163,7 @@ export interface TimerFrameRecord {
 export interface TimerControlResult {
   /** Smallest non-zero `performance.now()` delta observed in a tight loop (ms). */
   readonly nowMinDeltaMs: number;
-  /** Distinct `performance.now()` deltas observed, most frequent first, as `[deltaMs, count]`. */
+  /** Up to eight most frequent `performance.now()` deltas, most frequent first, as `[deltaMs, count]`. */
   readonly nowDeltaHistogram: ReadonlyArray<readonly [number, number]>;
   /** Whether the page is cross-origin isolated (which lifts Chromium's 100µs clock clamp). */
   readonly crossOriginIsolated: boolean;
@@ -282,7 +283,9 @@ const writeBufferBytes = (args: readonly unknown[]): number => {
 
   if (typeof size === 'number') {
     const elementSize =
-      ArrayBuffer.isView(data) && !(data instanceof DataView) ? ((data as unknown as { BYTES_PER_ELEMENT: number }).BYTES_PER_ELEMENT ?? 1) : 1;
+      ArrayBuffer.isView(data) && !(data instanceof DataView)
+        ? ((data as unknown as { BYTES_PER_ELEMENT: number }).BYTES_PER_ELEMENT ?? 1)
+        : 1;
 
     return size * elementSize;
   }
@@ -330,7 +333,7 @@ interface TimestampRig {
   readonly notes: readonly string[];
 }
 
-const createTimestampRig = (device: GPUDevice): TimestampRig => {
+export const createTimestampRig = (device: GPUDevice): TimestampRig => {
   const notes: string[] = [];
 
   if (!device.features.has('timestamp-query')) {
@@ -677,6 +680,28 @@ const runControls = async (device: GPUDevice | null, samples: number, timestamps
 };
 
 /**
+ * Whether every resolved render-pass timestamp is an integer number of
+ * microseconds, or `null` when no timestamp was resolved at all.
+ *
+ * An empty sample set is the absence of the observation, not evidence that the
+ * clock quantises: a rig that is available but never resolved a pass (for
+ * example a query pool that never completed) used to report `true` because
+ * `every` on an empty array is `true`.
+ */
+export const timestampsQuantized = (
+  rig: { readonly available: boolean } | null,
+  frames: ReadonlyArray<Pick<TimerFrameRecord, 'gpuPassMs'>>,
+): boolean | null => {
+  if (rig === null || !rig.available) {
+    return null;
+  }
+
+  const timed = frames.filter(frame => frame.gpuPassMs !== null);
+
+  return timed.length === 0 ? null : timed.every(frame => Number.isInteger(Math.round((frame.gpuPassMs ?? 0) * 1e4) / 1e3));
+};
+
+/**
  * Run one timer-methodology cell and return its full event timeline.
  *
  * Installed on `globalThis` so the Node driver invokes it through
@@ -691,106 +716,108 @@ export const runTimerProbe = async (spec: TimerProbeSpec): Promise<TimerProbeRes
 
   const notes: string[] = [];
   const restores: Restore[] = [];
-
-  if (spec.timestampQueries && spec.backend === 'webgpu') {
-    restores.push(patchRequestDeviceForTimestamps());
-  }
-
   const canvas = freshCanvas();
   const adapter = createExoJsAdapter(undefined, spec.config);
+  let initialised = false;
 
-  await adapter.init(canvas, spec.backend);
+  // Every global patch is installed inside the try, so a failing setup still restores it.
+  try {
+    if (spec.timestampQueries && spec.backend === 'webgpu') {
+      restores.push(patchRequestDeviceForTimestamps());
+    }
 
-  const device = spec.backend === 'webgpu' ? (adapter.gpuDevice?.() ?? null) : null;
+    await adapter.init(canvas, spec.backend);
+    initialised = true;
 
-  if (spec.backend === 'webgpu' && device === null) {
-    notes.push('no GPUDevice exposed; the queue-completion timeline is absent');
-  }
+    const device = spec.backend === 'webgpu' ? (adapter.gpuDevice?.() ?? null) : null;
 
-  device?.addEventListener('uncapturederror', event => {
-    notes.push(`uncaptured WebGPU error: ${(event as GPUUncapturedErrorEvent).error.message}`);
-  });
+    if (spec.backend === 'webgpu' && device === null) {
+      notes.push('no GPUDevice exposed; the queue-completion timeline is absent');
+    }
 
-  const counters = newFrameCounters();
+    device?.addEventListener('uncapturederror', event => {
+      notes.push(`uncaptured WebGPU error: ${(event as GPUUncapturedErrorEvent).error.message}`);
+    });
 
-  restores.push(
-    patchMethod(
-      DerivedSelectionState.prototype as unknown as Record<string, unknown>,
-      'update',
-      original =>
-        function update(this: DerivedSelectionState, ...args: never[]): unknown {
-          const result = (original as (this: DerivedSelectionState, ...a: never[]) => unknown).apply(this, args);
-
-          counters.selections++;
-          counters.entered += this.enteredCount;
-
-          return result;
-        },
-    ),
-  );
-
-  let epoch = 0;
-
-  if (device !== null) {
-    const queueRecord = (device as unknown as { queue: Record<string, unknown> }).queue;
+    const counters = newFrameCounters();
 
     restores.push(
       patchMethod(
-        queueRecord,
-        'writeBuffer',
+        DerivedSelectionState.prototype as unknown as Record<string, unknown>,
+        'update',
         original =>
-          function writeBuffer(this: unknown, ...args: never[]): unknown {
-            counters.writeBufferBytes += writeBufferBytes(args as readonly unknown[]);
+          function update(this: DerivedSelectionState, ...args: never[]): unknown {
+            const result = (original as (this: DerivedSelectionState, ...a: never[]) => unknown).apply(this, args);
 
-            return (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
-          },
-      ),
-    );
-
-    restores.push(
-      patchMethod(
-        queueRecord,
-        'submit',
-        original =>
-          function submit(this: unknown, ...args: never[]): unknown {
-            const result = (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
-            const at = performance.now() - epoch;
-
-            counters.submits++;
-            counters.firstSubmitAt ??= at;
-            counters.lastSubmitAt = at;
+            counters.selections++;
+            counters.entered += this.enteredCount;
 
             return result;
           },
       ),
     );
-  }
 
-  // Control-arm targets. `getContext('webgpu')` returns the context the engine
-  // already configured on this canvas; it never creates a second one.
-  const canvasContext = spec.mode === 'canvas-clear' ? (canvas.getContext('webgpu') as GPUCanvasContext | null) : null;
-  const offscreen =
-    spec.mode === 'offscreen-clear' && device !== null
-      ? device.createTexture({
-          label: 'timer-probe:offscreen',
-          size: { width: STAGE_WIDTH, height: STAGE_HEIGHT },
-          format: navigator.gpu.getPreferredCanvasFormat(),
-          usage: GPUTextureUsage.RENDER_ATTACHMENT,
-        })
-      : null;
+    let epoch = 0;
 
-  const rig = spec.timestampQueries && device !== null ? createTimestampRig(device) : null;
+    if (device !== null) {
+      const queueRecord = (device as unknown as { queue: Record<string, unknown> }).queue;
 
-  if (rig !== null) {
-    restores.push(...rig.restores);
-    notes.push(...rig.notes);
-  }
+      restores.push(
+        patchMethod(
+          queueRecord,
+          'writeBuffer',
+          original =>
+            function writeBuffer(this: unknown, ...args: never[]): unknown {
+              counters.writeBufferBytes += writeBufferBytes(args as readonly unknown[]);
 
-  const frames: TimerFrameRecord[] = [];
-  const doneAt = new Map<number, number>();
-  const pending: Array<Promise<void>> = [];
+              return (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
+            },
+        ),
+      );
 
-  try {
+      restores.push(
+        patchMethod(
+          queueRecord,
+          'submit',
+          original =>
+            function submit(this: unknown, ...args: never[]): unknown {
+              const result = (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
+              const at = performance.now() - epoch;
+
+              counters.submits++;
+              counters.firstSubmitAt ??= at;
+              counters.lastSubmitAt = at;
+
+              return result;
+            },
+        ),
+      );
+    }
+
+    // Control-arm targets. `getContext('webgpu')` returns the context the engine
+    // already configured on this canvas; it never creates a second one.
+    const canvasContext = spec.mode === 'canvas-clear' ? (canvas.getContext('webgpu') as GPUCanvasContext | null) : null;
+    const offscreen =
+      spec.mode === 'offscreen-clear' && device !== null
+        ? device.createTexture({
+            label: 'timer-probe:offscreen',
+            size: { width: STAGE_WIDTH, height: STAGE_HEIGHT },
+            format: navigator.gpu.getPreferredCanvasFormat(),
+            usage: GPUTextureUsage.RENDER_ATTACHMENT,
+          })
+        : null;
+
+    const rig = spec.timestampQueries && device !== null ? createTimestampRig(device) : null;
+
+    if (rig !== null) {
+      restores.push(...rig.restores);
+      notes.push(...rig.notes);
+    }
+
+    const frames: TimerFrameRecord[] = [];
+    const doneAt = new Map<number, number>();
+    const pending: Array<Promise<void>> = [];
+
     adapter.buildScene(archetype, spec.nodeCount, SEED);
 
     let frameIndex = 0;
@@ -894,10 +921,7 @@ export const runTimerProbe = async (spec: TimerProbeSpec): Promise<TimerProbeRes
       notes.push(...rig.notes.filter(note => !notes.includes(note)));
     }
 
-    const quantized =
-      rig === null || !rig.available
-        ? null
-        : frames.filter(frame => frame.gpuPassMs !== null).every(frame => Number.isInteger(Math.round((frame.gpuPassMs ?? 0) * 1e4) / 1e3));
+    const quantized = timestampsQuantized(rig, frames);
 
     const controls = spec.controls ? await runControls(device, spec.controlSamples, quantized) : null;
 
@@ -907,7 +931,9 @@ export const runTimerProbe = async (spec: TimerProbeSpec): Promise<TimerProbeRes
       restore();
     }
 
-    adapter.teardown();
+    if (initialised) {
+      adapter.teardown();
+    }
   }
 };
 

@@ -24,20 +24,28 @@ import type { ArchetypeId, Backend, CellResult, StructuralCounters } from './Eng
 /**
  * Archetypes the gate does not guard, with the reason it cannot.
  *
- * Both exclusions are empirical, from a run comparing every archetype's counters
- * on a real GPU (RTX 5070 Ti / D3D11) against SwiftShader at the gate's own node
- * count. Every other archetype produced byte-identical draw, bind and upload
- * counts on both, which is the precondition the gate's CI residency rests on -
- * so all three counters are guarded, and a counter that had differed would have
- * been dropped from the gate rather than given a tolerance.
+ * The exclusions are deliberate and recorded per archetype in the mapping. A run
+ * comparing every archetype's counters on a real GPU (RTX 5070 Ti / D3D11)
+ * against SwiftShader at the gate's own node count showed byte-identical draw,
+ * bind and upload counts for the archetypes that stayed in the gate - the
+ * precondition the gate's CI residency rests on. A counter that had differed
+ * would have been dropped from the gate rather than given a tolerance.
  */
 export const UNGUARDED_ARCHETYPES: Readonly<Partial<Record<ArchetypeId, string>>> = {
-  'batch-breaking': 'the cell does not complete on a software rasterizer (40 distinct textures wedge it), so it has no counters there to compare',
+  'batch-breaking':
+    'the cell does not complete on a software rasterizer (40 distinct textures wedge it), so it has no counters there to compare',
   'text-dynamic': 'the cell aborts on a software rasterizer as too slow, so its counters cover an unpredictable number of frames',
   overdraw:
     'its fill cost dominates the gate wall clock in software (stacked full-viewport quads are hundreds of millions of shaded pixels per frame) while its draw structure is a single call that static-heavy already guards',
   'fill-layers':
     'the same stacked full-viewport geometry as overdraw, and unguarded for the same reason: enormous fill in software, no draw structure static-heavy does not already guard',
+  'dirty-0': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-1': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-10': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-25': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-50': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-75': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-100': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
 };
 
 /** Identity of one guarded cell. */
@@ -55,10 +63,15 @@ export interface GateCellKey {
 }
 
 /** One baseline entry: a guarded cell and the counters it must produce. */
-export interface GateBaselineCell extends GateCellKey, StructuralCounters {}
+export interface GateBaselineCell extends GateCellKey, StructuralCounters {
+  readonly countBasis: 'per-frame' | 'total';
+  readonly frames: number;
+}
 
 /** The committed baseline file. */
 export interface GateBaseline {
+  readonly schemaVersion: 1;
+  readonly countBasis: 'per-cell';
   /**
    * When and against what the baseline was recorded. Informational only - the
    * gate never compares versions, because a version bump is not a structural
@@ -103,7 +116,8 @@ export interface GateOutcome {
 }
 
 /** Stable identity string for a cell. */
-export const gateCellId = (cell: GateCellKey): string => `${cell.engine}/${cell.config}/${cell.backend}/${cell.archetype}/${cell.nodeCount}`;
+export const gateCellId = (cell: GateCellKey): string =>
+  `${cell.engine}/${cell.config}/${cell.backend}/${cell.archetype}/${cell.nodeCount}`;
 
 /** Whether the gate guards this archetype; see {@link UNGUARDED_ARCHETYPES}. */
 export const isGuarded = (archetype: string): boolean => !(archetype in UNGUARDED_ARCHETYPES);
@@ -117,12 +131,61 @@ const keyOf = (result: CellResult): GateCellKey => ({
   nodeCount: result.spec.nodeCount,
 });
 
-/** Turn a run's results into a baseline file, keeping only the guarded, successfully measured cells. */
+const structuralCountProblem = (result: CellResult): string | null => {
+  const measurement = result.structuralMeasurement;
+
+  if (measurement?.schemaVersion !== 1 || (measurement.basis !== 'per-frame' && measurement.basis !== 'total')) {
+    return `structural count basis '${measurement?.basis ?? 'unknown'}' is not supported; schema 1 with explicit units is required`;
+  }
+
+  if (typeof measurement.totals !== 'object' || measurement.totals === null) {
+    return 'structural count basis has no raw totals';
+  }
+
+  if (!Number.isSafeInteger(measurement.frames) || measurement.frames <= 0) {
+    return 'structural count basis has no positive measured frame count';
+  }
+
+  for (const counter of ['drawCalls', 'textureBinds', 'bufferUploads'] as const) {
+    const total = measurement.totals[counter];
+    const count = result.structural[counter];
+
+    if (
+      !Number.isSafeInteger(total) ||
+      total < 0 ||
+      !Number.isSafeInteger(count) ||
+      total / (measurement.basis === 'per-frame' ? measurement.frames : 1) !== count
+    ) {
+      return `structural count basis does not match the raw ${counter} total and measured frames`;
+    }
+  }
+
+  return null;
+};
+
+/** Record guarded successful cells with explicit units and measured frames. Unknown or inconsistent units are rejected. */
 export const recordBaseline = (results: readonly CellResult[], recorded: GateBaseline['recorded']): GateBaseline => ({
+  schemaVersion: 1,
+  countBasis: 'per-cell',
   recorded,
   cells: results
     .filter(result => result.status === 'ok' && isGuarded(result.spec.archetype))
-    .map(result => ({ ...keyOf(result), ...result.structural }))
+    .map(result => {
+      const problem = structuralCountProblem(result);
+
+      if (problem !== null) {
+        throw new Error(
+          `Cannot record ${gateCellId(keyOf(result))}: ${problem}. Reacquire the cell with explicit units and measured frames.`,
+        );
+      }
+
+      return {
+        ...keyOf(result),
+        ...result.structural,
+        countBasis: result.structuralMeasurement!.basis,
+        frames: result.structuralMeasurement!.frames,
+      };
+    })
     .sort((left, right) => gateCellId(left).localeCompare(gateCellId(right))),
 });
 
@@ -136,6 +199,10 @@ export const recordBaseline = (results: readonly CellResult[], recorded: GateBas
  * baseline deliberately.
  */
 export const compareToBaseline = (baseline: GateBaseline, results: readonly CellResult[]): GateOutcome => {
+  if (baseline.schemaVersion !== 1 || baseline.countBasis !== 'per-cell') {
+    throw new Error('Unsupported structural baseline schema or count basis. Qualify its units before migrating or re-recording it.');
+  }
+
   const measured = new Map(results.map(result => [gateCellId(keyOf(result)), result]));
   const baselineIds = new Set(baseline.cells.map(gateCellId));
   const deviations: GateDeviation[] = [];
@@ -144,6 +211,15 @@ export const compareToBaseline = (baseline: GateBaseline, results: readonly Cell
   let compared = 0;
 
   for (const expected of baseline.cells) {
+    if (
+      (expected.countBasis !== 'per-frame' && expected.countBasis !== 'total') ||
+      !Number.isSafeInteger(expected.frames) ||
+      expected.frames <= 0 ||
+      [expected.drawCalls, expected.textureBinds, expected.bufferUploads].some(count => !Number.isSafeInteger(count) || count < 0)
+    ) {
+      throw new Error(`Unsupported structural baseline units or frame count for ${gateCellId(expected)}.`);
+    }
+
     const result = measured.get(gateCellId(expected));
 
     if (result === undefined) {
@@ -154,6 +230,31 @@ export const compareToBaseline = (baseline: GateBaseline, results: readonly Cell
 
     if (result.status !== 'ok') {
       unmeasured.push({ ...expected, note: result.note ?? `cell status '${result.status}'` });
+
+      continue;
+    }
+
+    const problem = structuralCountProblem(result);
+
+    if (problem !== null) {
+      unmeasured.push({ ...expected, note: problem });
+
+      continue;
+    }
+
+    const measurement = result.structuralMeasurement!;
+
+    if (measurement.basis !== expected.countBasis) {
+      unmeasured.push({
+        ...expected,
+        note: `structural count basis '${measurement.basis}' does not match baseline '${expected.countBasis}'`,
+      });
+
+      continue;
+    }
+
+    if (expected.countBasis === 'total' && measurement.frames !== expected.frames) {
+      unmeasured.push({ ...expected, note: `structural totals cover ${measurement.frames} frames; baseline covers ${expected.frames}` });
 
       continue;
     }
@@ -174,12 +275,22 @@ export const compareToBaseline = (baseline: GateBaseline, results: readonly Cell
   return { compared, deviations, missing, unknown, unmeasured };
 };
 
-/** Whether an outcome fails the gate. */
-export const isGateFailure = (outcome: GateOutcome): boolean => outcome.deviations.length > 0 || outcome.missing.length > 0 || outcome.unmeasured.length > 0;
+/**
+ * Whether an outcome fails the gate.
+ *
+ * A comparison that compared no cell fails too: an empty baseline would
+ * otherwise be indistinguishable from a clean run.
+ */
+export const isGateFailure = (outcome: GateOutcome): boolean =>
+  outcome.compared === 0 || outcome.deviations.length > 0 || outcome.missing.length > 0 || outcome.unmeasured.length > 0;
 
 /** Human-readable gate report, one line per finding. */
 export const formatGateOutcome = (outcome: GateOutcome): string => {
   const lines: string[] = [];
+
+  if (outcome.compared === 0) {
+    lines.push('FAIL no guarded cell was compared: the baseline holds no cell that this run measured');
+  }
 
   for (const deviation of outcome.deviations) {
     lines.push(`FAIL ${gateCellId(deviation.cell)}: ${deviation.counter} ${String(deviation.expected)} -> ${String(deviation.actual)}`);

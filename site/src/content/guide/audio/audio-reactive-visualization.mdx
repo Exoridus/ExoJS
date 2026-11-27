@@ -10,7 +10,7 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 An audio-reactive scene maps a live signal to a visual property. Use an `AudioAnalyser` for amplitude and spectrum, and a `BeatDetector` when the visual needs an estimated rhythmic grid. Start with a sound that already plays reliably through the intended bus or voice; analysis does not replace loading, playback, or audio unlock.
 
-The analyser and detector tap a live bus, voice, node, or supported stream. They do not analyse a `Sound` or `AudioStream` asset descriptor merely because that asset has loaded. A bus tap sees the signals routed through that bus; a voice tap isolates one playback.
+The analyser and detector tap a live bus, voice, node, or supported stream. They do not analyse a `Sound`, `Music` or `AudioStream` asset descriptor merely because that asset has loaded. A bus tap sees the signals routed through that bus; a voice tap isolates one playback.
 
 ## Read once and update existing visuals
 

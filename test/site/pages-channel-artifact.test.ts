@@ -5,7 +5,13 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { candidateArtifactName, openChannelArchive, parseCandidateArtifactName, verifyChannelTree, verifyDigest } from '../../scripts/pages/channel-artifact';
+import {
+  candidateArtifactName,
+  openChannelArchive,
+  parseCandidateArtifactName,
+  verifyChannelTree,
+  verifyDigest,
+} from '../../scripts/pages/channel-artifact';
 import { createSiteBuildManifest, SITE_BUILD_FILE, type SiteBuildIdentity } from '../../scripts/pages/site-manifest';
 import { createZip } from '../support/archive-fixtures';
 
@@ -52,7 +58,14 @@ describe('candidate artifact names', () => {
   });
 
   it('rejects anything else', () => {
-    for (const name of [`site-dist-${SHA}`, `site-beta-${SHA}-1`, `site-next-${SHA.slice(1)}-1`, `site-next-${SHA}-0`, `site-next-${SHA}-1x`, 'github-pages']) {
+    for (const name of [
+      `site-dist-${SHA}`,
+      `site-beta-${SHA}-1`,
+      `site-next-${SHA.slice(1)}-1`,
+      `site-next-${SHA}-0`,
+      `site-next-${SHA}-1x`,
+      'github-pages',
+    ]) {
       expect(parseCandidateArtifactName(name), `${name}`).toBeNull();
     }
   });
@@ -101,6 +114,8 @@ describe('openChannelArchive', () => {
     const digest = `sha256:${createHash('sha256').update(zip).digest('hex')}`;
     const out = join(work, 'out');
     expect(openChannelArchive(zip, { digest, channel: 'next', sourceSha: SHA, outDir: out }).manifest.contentHash).toHaveLength(64);
-    expect(() => openChannelArchive(zip, { digest: `sha256:${'0'.repeat(64)}`, channel: 'next', sourceSha: SHA, outDir: join(work, 'o2') })).toThrow(/digest/);
+    expect(() =>
+      openChannelArchive(zip, { digest: `sha256:${'0'.repeat(64)}`, channel: 'next', sourceSha: SHA, outDir: join(work, 'o2') }),
+    ).toThrow(/digest/);
   });
 });

@@ -4,7 +4,7 @@
   "symbol": "ChunkCoord",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A signed chunk coordinate pair."
       ],
-      "importLine": "import { ChunkCoord } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ChunkCoord } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

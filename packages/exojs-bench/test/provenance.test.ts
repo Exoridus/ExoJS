@@ -1,4 +1,18 @@
-import { classifyPrerelease, DEFAULT_RENDERING_BROWSER, parsePlatformDeclaration, parseRenderingBrowser } from '../src/shared/provenance';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
+import os from 'node:os';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { vi } from 'vitest';
+
+import {
+  classifyPrerelease,
+  DEFAULT_RENDERING_BROWSER,
+  parsePlatformDeclaration,
+  parseRenderingBrowser,
+  readLibraryProvenance,
+} from '../src/shared/provenance';
 
 /**
  * The provenance decisions a run cannot take back: which browser it was
@@ -8,6 +22,38 @@ import { classifyPrerelease, DEFAULT_RENDERING_BROWSER, parsePlatformDeclaration
  * version or a pre-release bit that quietly reads "stable" would publish a
  * claim no measurement supports.
  */
+
+test('only infers Windows 10 or 11 from a 10.0 kernel release', async () => {
+  const platform = vi.spyOn(os, 'platform').mockReturnValue('win32');
+  const release = vi.spyOn(os, 'release');
+
+  try {
+    for (const [version, major] of [
+      ['6.1.7601', 0],
+      ['11.0.30000', 0],
+      ['10.0.19045', 10],
+      ['10.0.22621', 11],
+    ] as const) {
+      release.mockReturnValue(version);
+      syncBuiltinESMExports();
+      vi.resetModules();
+      const provenance = await import('../src/shared/provenance');
+
+      expect(provenance.readOsRelease()).toBe(`win32 ${version}`);
+      expect(provenance.readPlatformVersion().major).toBe(major);
+    }
+
+    release.mockReturnValue('6.1.7601');
+    syncBuiltinESMExports();
+    vi.resetModules();
+    const provenance = await import('../src/shared/provenance');
+    expect(provenance.readPlatformVersion(parsePlatformDeclaration('7'))).toMatchObject({ major: 7, source: 'declared' });
+  } finally {
+    platform.mockRestore();
+    release.mockRestore();
+    syncBuiltinESMExports();
+  }
+});
 
 describe('parseRenderingBrowser', () => {
   test('defaults to the documented browser when no selector was given', () => {
@@ -80,7 +126,41 @@ describe('parsePlatformDeclaration', () => {
     expect(parsePlatformDeclaration(undefined)).toBeUndefined();
   });
 
-  test.each(['macos', 'true', '10.0.26200', '0', '100', '27-preview', '27 beta', ''])('refuses %s, which is not a plausible major version', raw => {
-    expect(() => parsePlatformDeclaration(raw)).toThrow(/major version/);
+  test.each(['macos', 'true', '10.0.26200', '0', '100', '27-preview', '27 beta', ''])(
+    'refuses %s, which is not a plausible major version',
+    raw => {
+      expect(() => parsePlatformDeclaration(raw)).toThrow(/major version/);
+    },
+  );
+});
+
+describe('readLibraryProvenance', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'exojs-bench-provenance-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('reports an absent package as not installed', () => {
+    const [entry] = readLibraryProvenance(['missing-arm'], () => {
+      throw new Error('not found');
+    });
+
+    expect(entry).toMatchObject({ name: 'missing-arm', version: 'not-installed', resolvedFrom: '' });
+  });
+
+  test('reports an installed package with an unreadable manifest as unreadable, keeping the path', () => {
+    const manifest = join(dir, 'package.json');
+
+    writeFileSync(manifest, '{ version: ');
+
+    const [entry] = readLibraryProvenance(['broken-arm'], () => manifest);
+
+    expect(entry?.version).toBe('unreadable');
+    expect(entry?.resolvedFrom).toContain(manifest);
   });
 });

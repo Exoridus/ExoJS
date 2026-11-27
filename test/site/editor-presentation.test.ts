@@ -1,0 +1,208 @@
+// @vitest-environment node
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { runInNewContext } from 'node:vm';
+
+import ts from 'typescript';
+import { describe, expect, it, vi } from 'vitest';
+
+import type { Example } from '../../site/src/lib/types';
+import { configureUrls } from '../../site/src/lib/url-builder';
+
+const { Editor } = await vi.importActual<{ Editor: (props: Record<string, unknown>) => unknown }>('../../site/src/components/Editor');
+const { EditorPreview } = await vi.importActual<{ EditorPreview: (props: Record<string, unknown>) => unknown }>(
+  '../../site/src/components/EditorPreview',
+);
+
+configureUrls({ baseUrl: 'https://example.test/ExoJS/' });
+
+const siteRequire = createRequire(new URL('../../site/package.json', import.meta.url));
+const { createElement, createRef } = siteRequire('react');
+const { renderToStaticMarkup } = siteRequire('react-dom/server');
+
+const example: Example = {
+  slug: 'retro-display',
+  path: 'filters/crt-scanlines.js',
+  title: 'Retro Display',
+  description: 'Compare scanlines, grain and RGB separation on the same image.',
+  backend: 'core',
+  section: 'effects',
+  language: 'typescript',
+  level: 'intermediate',
+  apiLinks: ['shader-filter'],
+};
+
+const render = (): string =>
+  renderToStaticMarkup(
+    createElement(Editor, {
+      activeExample: example,
+      catalogLoadError: null,
+      selectedVersionId: 'current',
+      showSidebarToggle: false,
+      sidebarOpen: true,
+      sidebarToggleRef: createRef(),
+      onToggleSidebar: () => undefined,
+    }),
+  );
+
+describe('playground presentation', () => {
+  it('starts with the demo above the editor before browser preferences are applied', () => {
+    expect(render()).toContain('data-layout="stacked"');
+  });
+
+  it('explains the full example title and learning goal before the preview', () => {
+    const html = render();
+
+    expect(html).toMatch(/<h1[^>]*>Retro Display<\/h1>/);
+    expect(html).toContain(example.description);
+    expect(html.indexOf(example.description)).toBeLessThan(html.indexOf('aria-label="Example preview"'));
+  });
+
+  it('gives the isolated preview an accessible example-specific title', () => {
+    const html = renderToStaticMarkup(
+      createElement(EditorPreview, { sourceCode: 'console.log("ready")', exampleMeta: example, selectedVersionId: 'current' }),
+    );
+
+    expect(html).toContain('title="Live demo: Retro Display"');
+    expect(html).toContain('<iframe');
+  });
+
+  it('runs an empty valid module while reserving the loading view for absent source', () => {
+    const empty = renderToStaticMarkup(
+      createElement(EditorPreview, { sourceCode: '', exampleMeta: example, selectedVersionId: 'current' }),
+    );
+    const loading = renderToStaticMarkup(
+      createElement(EditorPreview, { sourceCode: null, exampleMeta: example, selectedVersionId: 'current' }),
+    );
+
+    expect(empty).toContain('<iframe');
+    expect(loading).not.toContain('<iframe');
+  });
+
+  it('offers an accessible divider and narrow-screen Demo and Code views', () => {
+    const html = render();
+
+    expect(html).toContain('aria-label="Resize preview and editor"');
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain('>Demo</button>');
+    expect(html).toContain('>Code</button>');
+  });
+
+  it('keeps a stable header without a duplicate information panel', () => {
+    const html = render();
+    const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+    expect(header).toContain('data-example-header');
+    expect(header).toContain('data-header-row="primary"');
+    expect(header).toContain('data-header-row="context"');
+    expect(header).not.toMatch(/<summary[^>]*>Info<\/summary>/);
+    expect(header).not.toContain('<h2');
+    expect(header).toContain('aria-label="Example view"');
+  });
+
+  it('keeps one full context block open for the demo with a named disclosure for mobile code', () => {
+    const html = render();
+
+    expect(html).toMatch(/<details[^>]*data-example-context[^>]*open=""/);
+    expect(html).toMatch(/<summary[^>]*hidden=""[^>]*>Example context<\/summary>/);
+    expect(html.split(example.description)).toHaveLength(3); // visible text and its existing title attribute
+  });
+
+  it('keeps unknown renderer diagnostics out of the presentation', () => {
+    expect(render()).not.toContain('Renderer not reported');
+  });
+
+  it('does not reserve a console row before anything has been logged', () => {
+    expect(render()).not.toContain('No messages');
+  });
+
+  it('links the APIs explicitly taught by this example before chapter-wide suggestions', () => {
+    expect(render()).toContain('/en/api/shader-filter/');
+  });
+});
+
+it('explains an unknown example and offers explicit recovery', () => {
+  const html = renderToStaticMarkup(
+    createElement(Editor, {
+      activeExample: null,
+      catalogLoadError: null,
+      selectionError: 'The requested example does not exist.',
+      selectedVersionId: 'current',
+      showSidebarToggle: false,
+      sidebarOpen: true,
+      sidebarToggleRef: createRef(),
+      onToggleSidebar() {},
+      onSelectStartingExample() {},
+      onRecoverCurrent() {},
+    }),
+  );
+  expect(html).toContain('The requested example does not exist.');
+  expect(html).toContain('Open starting example');
+  expect(html).not.toContain('<iframe');
+});
+
+it('renders an empty loaded program as a ready preview rather than a spinner', () => {
+  const html = renderToStaticMarkup(createElement(EditorPreview, { sourceCode: '', exampleMeta: example, selectedVersionId: 'current' }));
+  expect(html).toContain('<iframe');
+});
+
+it('only offers current recovery when the requested version is invalid', () => {
+  const html = renderToStaticMarkup(
+    createElement(Editor, {
+      activeExample: null,
+      catalogLoadError: null,
+      selectionError: 'The requested version is not recognized.',
+      selectedVersionId: '',
+      showSidebarToggle: false,
+      sidebarOpen: true,
+      sidebarToggleRef: createRef(),
+      onToggleSidebar() {},
+      onSelectStartingExample() {},
+      onRecoverCurrent() {},
+    }),
+  );
+  expect(html).toContain('Open current Playground');
+  expect(html).not.toContain('Open starting example');
+});
+
+describe('source and execution feedback', () => {
+  const file = ts.createSourceFile('Editor.tsx', readFileSync('site/src/components/Editor.tsx', 'utf8'), ts.ScriptTarget.Latest, true);
+  const declarations: string[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ['getRunFeedback', 'getRunMessage'].includes(node.name.getText(file))) {
+      declarations.push(`const ${node.getText(file)};`);
+    }
+
+    ts.forEachChild(node, visit);
+  };
+
+  visit(file);
+
+  const feedback = (
+    status: string,
+    sourceError: { summary: string } | null,
+    renderer: { phase: string; actual?: string } | null = null,
+  ) => {
+    const code = ts.transpileModule(declarations.join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+
+    return runInNewContext(`${code}\ngetRunFeedback(status, false, renderer, sourceError);`, { status, renderer, sourceError });
+  };
+
+  it('reports a settled source failure even if execution had been loading or compiling', () => {
+    for (const status of ['idle', 'compiling', 'running']) {
+      expect(feedback(status, { summary: 'Failed to load example source' })).toEqual({
+        status: 'error',
+        message: 'Example source could not be loaded.',
+      });
+    }
+  });
+
+  it('clears only derived source feedback when loading recovers', () => {
+    expect(feedback('idle', null, { phase: 'active', actual: 'webgl2' })).toEqual({ status: 'idle', message: 'Ready to play' });
+    expect(feedback('error', null, { phase: 'active', actual: 'webgl2' })).toEqual({
+      status: 'error',
+      message: 'Run failed. Check the editor and Output.',
+    });
+    expect(feedback('compiling', null)).toEqual({ status: 'compiling', message: 'Compiling changes…' });
+  });
+});

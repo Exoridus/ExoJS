@@ -5,33 +5,67 @@ on:
     branches: [main, next]
     paths:
       - '.github/workflows/local-validation-windows.yml'
+      - '.github/actions/setup/action.yml'
       - '.nvmrc'
       - 'scripts/lanes.ts'
       - 'scripts/lib/**'
       - 'scripts/ci/lanes.ts'
       - 'scripts/ci/local-lanes.ts'
       - 'scripts/ci/select-lanes.ts'
+      - 'scripts/ci/format-scope.ts'
+      - 'scripts/ci/related-tests.ts'
+      - 'scripts/ci/affected-*.ts'
+      - 'scripts/run-tests.ts'
+      - 'scripts/ci/local-policy.ts'
       - 'scripts/ci/qualify.ts'
       - 'scripts/ci/capability.ts'
       - 'scripts/ci/browser-*.ts'
       - 'test/ci/validation.node.ts'
       - 'test/ci/qualify.node.ts'
+      - 'test/ci/format-scope.test.ts'
+      - 'test/ci/related-tests.test.ts'
+      - 'test/ci/affected-*.test.ts'
+      - 'test/ci/run-tests.test.ts'
+      - 'test/core/browser/fixtures/inline-worker-*.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'vitest.config.ts'
+      - 'packages/exojs-config/**'
+      - 'packages/exojs-build/**'
       - 'test/ci/fixtures/validation-*.ts'
   push:
     branches: [main, next]
     paths:
       - '.github/workflows/local-validation-windows.yml'
+      - '.github/actions/setup/action.yml'
       - '.nvmrc'
       - 'scripts/lanes.ts'
       - 'scripts/lib/**'
       - 'scripts/ci/lanes.ts'
       - 'scripts/ci/local-lanes.ts'
       - 'scripts/ci/select-lanes.ts'
+      - 'scripts/ci/format-scope.ts'
+      - 'scripts/ci/related-tests.ts'
+      - 'scripts/ci/affected-*.ts'
+      - 'scripts/run-tests.ts'
+      - 'scripts/ci/local-policy.ts'
       - 'scripts/ci/qualify.ts'
       - 'scripts/ci/capability.ts'
       - 'scripts/ci/browser-*.ts'
       - 'test/ci/validation.node.ts'
       - 'test/ci/qualify.node.ts'
+      - 'test/ci/format-scope.test.ts'
+      - 'test/ci/related-tests.test.ts'
+      - 'test/ci/affected-*.test.ts'
+      - 'test/ci/run-tests.test.ts'
+      - 'test/core/browser/fixtures/inline-worker-*.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'vitest.config.ts'
+      - 'packages/exojs-config/**'
+      - 'packages/exojs-build/**'
       - 'test/ci/fixtures/validation-*.ts'
   workflow_dispatch:
 
@@ -45,7 +79,7 @@ concurrency:
 jobs:
   supervisor:
     runs-on: windows-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -54,3 +88,6 @@ jobs:
           package-manager-cache: false
       - name: Check process ownership, cancellation and lane execution
         run: node --test test/ci/validation.node.ts test/ci/qualify.node.ts
+      - uses: ./.github/actions/setup
+      - name: Check format scope, dependency selection and native execution
+        run: pnpm exec vitest run --project exojs test/ci/format-scope.test.ts test/ci/related-tests.test.ts test/ci/affected- test/ci/run-tests.test.ts

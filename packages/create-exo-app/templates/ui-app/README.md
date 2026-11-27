@@ -12,6 +12,8 @@ Nothing reads a value back out of a widget. Each control writes into a draft obj
 
 That separation is what lets you add a control without touching anything that consumes the settings, and it is what makes `Revert` a two-line method instead of a walk over every widget on screen.
 
+For a smaller form with Button, TextInput, shared validation, keyboard focus and explicit gamepad Confirm, see the [name-form recipe](https://exoridus.github.io/ExoJS/en/guide/runtime/ui-and-widgets/#a-name-form-with-one-submit-rule). The [font recipe](https://exoridus.github.io/ExoJS/en/guide/rendering/text/#system-web-and-bitmap-fonts-in-one-scene) compares system, web and bitmap fonts with their supported effects.
+
 ## Theming
 
 Every widget resolves its colours from the inherited `UITheme` and its own interaction state. `createUITheme` and `defaultUITheme` are exported from core: patch the roles you care about and pass the result down, rather than styling widgets one at a time.

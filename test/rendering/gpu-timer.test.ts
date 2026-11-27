@@ -8,8 +8,13 @@
  * real device can be asked to produce on demand.
  */
 
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
 import { createWebGl2GpuTimer } from '#rendering/webgl2/createWebGl2GpuTimer';
+import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { WebGpuGpuTimer } from '#rendering/webgpu/WebGpuGpuTimer';
+
+import { createMockWebGpuEnvironment } from './webgpuMockEnvironment';
 
 // ---------------------------------------------------------------------------
 // WebGL2
@@ -124,6 +129,17 @@ describe('createWebGl2GpuTimer', () => {
     expect(() => timer.endFrame()).not.toThrow();
     expect(timer.lastFrameMs).toBeNull();
   });
+
+  test('a frame that never ended does not leak its open query into the next frame', () => {
+    const { gl, state } = makeGl();
+    const timer = createWebGl2GpuTimer(gl)!;
+
+    timer.beginFrame();
+    timer.beginFrame();
+
+    expect(state.deleted).toBe(1);
+    expect(state.open).not.toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -140,10 +156,11 @@ const bytesPerQuery = 8;
 const makeDevice = ({ feature = true }: { feature?: boolean } = {}) => {
   const timestamps: bigint[] = [];
   const submitted: unknown[] = [];
+  const mapping = { fails: false };
 
   const makeBuffer = (): GPUBuffer =>
     ({
-      mapAsync: () => Promise.resolve(),
+      mapAsync: () => (mapping.fails ? Promise.reject(new Error('device lost')) : Promise.resolve()),
       getMappedRange: (offset: number, size: number) => {
         const view = new BigUint64Array(size / bytesPerQuery);
 
@@ -153,17 +170,17 @@ const makeDevice = ({ feature = true }: { feature?: boolean } = {}) => {
 
         return view.buffer;
       },
-      unmap: () => undefined,
-      destroy: () => undefined,
+      unmap: () => {},
+      destroy: () => {},
     }) as unknown as GPUBuffer;
 
   const device = {
     features: { has: (name: string) => feature && name === 'timestamp-query' },
-    createQuerySet: () => ({ destroy: () => undefined }),
+    createQuerySet: () => ({ destroy: () => {} }),
     createBuffer: makeBuffer,
     createCommandEncoder: () => ({
-      resolveQuerySet: () => undefined,
-      copyBufferToBuffer: () => undefined,
+      resolveQuerySet: () => {},
+      copyBufferToBuffer: () => {},
       finish: () => ({}),
     }),
     queue: {
@@ -173,7 +190,7 @@ const makeDevice = ({ feature = true }: { feature?: boolean } = {}) => {
     },
   };
 
-  return { device: device as unknown as GPUDevice, timestamps, submitted };
+  return { device: device as unknown as GPUDevice, timestamps, submitted, mapping };
 };
 
 describe('WebGpuGpuTimer', () => {
@@ -191,13 +208,17 @@ describe('WebGpuGpuTimer', () => {
 
       Object.defineProperty(globalThis, name, { configurable: true, value });
       restore.push(() =>
-        previous ? Object.defineProperty(globalThis, name, previous) : Object.defineProperty(globalThis, name, { configurable: true, value: undefined }),
+        previous
+          ? Object.defineProperty(globalThis, name, previous)
+          : Object.defineProperty(globalThis, name, { configurable: true, value: undefined }),
       );
     }
   });
 
   afterEach(() => {
-    for (const undo of restore.splice(0)) undo();
+    for (const undo of restore.splice(0)) {
+      undo();
+    }
   });
 
   test('returns null when the device carries no timestamp-query feature', () => {
@@ -235,6 +256,24 @@ describe('WebGpuGpuTimer', () => {
 
     await vi.waitFor(() => expect(timer.lastFrameMs).not.toBeNull());
     expect(timer.lastFrameMs).toBeCloseTo(1.999, 3);
+  });
+
+  test('a rejected readback stops reporting the previous sample', async () => {
+    const { device, timestamps, mapping } = makeDevice();
+    const timer = WebGpuGpuTimer.create(device)!;
+
+    timer.beginFrame();
+    timer.acquirePassWrites();
+    timestamps.push(1_000n, 1_500_000n);
+    timer.endFrame();
+    await vi.waitFor(() => expect(timer.lastFrameMs).not.toBeNull());
+
+    mapping.fails = true;
+    timer.beginFrame();
+    timer.acquirePassWrites();
+    timer.endFrame();
+
+    await vi.waitFor(() => expect(timer.lastFrameMs).toBeNull());
   });
 
   test('an unavailable or non-increasing pair is dropped rather than folded in', async () => {
@@ -301,5 +340,34 @@ describe('WebGpuGpuTimer', () => {
 
     // Double-destroy must stay safe.
     expect(() => timer.destroy()).not.toThrow();
+  });
+});
+
+describe('WebGpuBackend GPU timing', () => {
+  test('a timing request made before initialize() is applied once the device exists', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const timer = WebGpuGpuTimer.create(makeDevice().device)!;
+    const create = vi.spyOn(WebGpuGpuTimer, 'create').mockReturnValue(timer);
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: { canvas: { width: 16, height: 16 }, clearColor: Color.black },
+      } as unknown as Application;
+      const backend = new WebGpuBackend(app);
+
+      expect(backend.setGpuTimingEnabled(true)).toBe(false);
+
+      await backend.initialize();
+
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(backend.setGpuTimingEnabled(true)).toBe(true);
+      expect(create).toHaveBeenCalledTimes(1);
+
+      backend.destroy();
+    } finally {
+      create.mockRestore();
+      environment.restore();
+    }
   });
 });

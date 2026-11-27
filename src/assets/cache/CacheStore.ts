@@ -26,8 +26,13 @@ import type { CacheRecordKey } from './CacheRecordKey';
  */
 export interface CacheStore {
   /**
-   * Stable identifier for this store, used in diagnostics to name which store
-   * of a multi-store route failed.
+   * Stable identifier for this store, for the application's own logging and
+   * for telling one store of a multi-store route apart.
+   *
+   * The cache itself does not include it in diagnostics: when it wraps an
+   * unknown failure, the {@link AssetCacheError} names the asset type's
+   * namespace in `store`; an already-structured error passes through with
+   * whatever `store` its backend set.
    */
   readonly id: string;
 

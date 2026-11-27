@@ -78,13 +78,20 @@ const parseQuery = (query: string): { browser: string; version: number } | null 
   const comparator = words.length === 3 ? words[1] : undefined;
   const versionText = words.length === 3 ? words[2] : words[1];
 
-  if (name === undefined || versionText === undefined || words.length > 3) return null;
-  if (words.length === 3 && comparator !== '>=') return null;
+  if (name === undefined || versionText === undefined || words.length > 3) {
+    return null;
+  }
+
+  if (words.length === 3 && comparator !== '>=') {
+    return null;
+  }
 
   const browser = BROWSER_ALIASES.get(name);
   const version = Number(versionText);
 
-  if (browser === undefined || !Number.isFinite(version) || version <= 0) return null;
+  if (browser === undefined || !Number.isFinite(version) || version <= 0) {
+    return null;
+  }
 
   return { browser, version };
 };
@@ -103,7 +110,9 @@ export const evaluateBrowserTargets = (queries: readonly string[]): BrowserTarge
   for (const query of queries) {
     const trimmed = query.trim();
 
-    if (!trimmed || trimmed.startsWith('#')) continue;
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
 
     const parsed = parseQuery(trimmed);
 

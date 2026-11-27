@@ -4,7 +4,7 @@
   "symbol": "PolygonObject",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 14,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A closed polygon; `points` are relative to the object origin."
       ],
-      "importLine": "import { PolygonObject } from '@codexo/exojs-tilemap'",
+      "importLine": "import { PolygonObject } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

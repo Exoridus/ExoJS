@@ -4,7 +4,7 @@
   "symbol": "FloodRegion",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Result of Pathfinder.floodFrom: every node reached, with its cost."
       ],
-      "importLine": "import { FloodRegion } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { FloodRegion } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

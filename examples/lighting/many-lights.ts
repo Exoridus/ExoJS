@@ -12,8 +12,8 @@ import {
   Texture,
   TextureFormat,
 } from '@codexo/exojs';
-import { ForwardLighting, Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { ForwardLighting, type Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs/lighting';
+import { type DemoPanel, demoPanel, slider, type SliderSpec } from '@examples/runtime';
 
 // The FORWARD renderer under load: the light list is a data texture, not a
 // uniform array, so the light count is a shader loop bound rather than a
@@ -35,10 +35,13 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
+
   if (context === null) {
     throw new Error('2D canvas context unavailable.');
   }
+
   paint(context);
+
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };
 
@@ -47,6 +50,7 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
 const dataTexture = (size: number, fill: (data: Uint8Array) => void): Texture => {
   const data = new Uint8Array(size * size * 4);
   fill(data);
+
   return new DataTexture({
     width: size,
     height: size,
@@ -73,6 +77,7 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
 const normalTexture = dataTexture(TILE_SIZE, data => {
   const half = TILE_SIZE / 2;
   const bevel = 14;
+
   for (let y = 0; y < TILE_SIZE; y++) {
     for (let x = 0; x < TILE_SIZE; x++) {
       const edge = Math.min(x, y, TILE_SIZE - 1 - x, TILE_SIZE - 1 - y);
@@ -96,8 +101,10 @@ const normalTexture = dataTexture(TILE_SIZE, data => {
 // distinguishable without any of them blowing out to white.
 const lightColor = (index: number): Color => {
   const hue = (index * HUE_STEP) % 360;
+
   const component = (offset: number): number => {
     const k = (offset + hue / 30) % 12;
+
     return Math.round(255 * (0.62 - 0.38 * Math.max(-1, Math.min(k - 3, 9 - k, 1))));
   };
 
@@ -122,10 +129,11 @@ class ManyLightsScene extends Scene {
   private draggingFirst = false;
   private manualFirst = true;
   private elapsed = 0;
-  private hud!: ReturnType<typeof mountControls>;
+  private panel!: DemoPanel<{ lights: SliderSpec }>;
   private readonly onPointerDown = (_pointer: unknown, x: number, y: number): void => {
     const marker = this.orbits[0]?.marker;
     this.draggingFirst = !!marker && Math.hypot(x - marker.x, y - marker.y) < 36;
+
     if (this.draggingFirst) {
       this.manualFirst = true;
     }
@@ -134,6 +142,7 @@ class ManyLightsScene extends Scene {
     if (!this.draggingFirst) {
       return;
     }
+
     this.orbits[0]!.light.setPosition(x, y);
     this.orbits[0]!.marker.setPosition(x, y);
   };
@@ -179,25 +188,15 @@ class ManyLightsScene extends Scene {
 
     this.orbits[0]!.light.setPosition(width * 0.25, height / 2);
     this.orbits[0]!.marker.setPosition(width * 0.25, height / 2);
-    this.setVisibleLights(this.visibleLights);
-
-    this.hud = mountControls({
-      title: 'Normal-Mapped Lighting',
-      hint: `Drag the large light marker across the normal-mapped tiles or change the count. Up to ${MAX_LIGHTS} lights share one material; this forward-lighting scene has no shadows.`,
-      status: '',
+    this.panel = demoPanel({
+      scene: this,
+      corner: 'top-right',
+      controls: {
+        lights: slider('Active lights', { min: 1, max: MAX_LIGHTS, value: this.visibleLights, step: 1, format: value => `${value}` }),
+      },
+      actions: { 'Resume first orbit': () => (this.manualFirst = false) },
+      onChange: (_key, value) => this.setVisibleLights(value),
     });
-
-    const panel = mountControlPanel({ title: 'Lights', corner: 'top-right' });
-
-    panel.addSlider({
-      label: 'Active lights',
-      min: 1,
-      max: MAX_LIGHTS,
-      step: 1,
-      value: this.visibleLights,
-      onChange: value => this.setVisibleLights(value),
-    });
-    panel.addButton({ label: 'Resume first orbit', onClick: () => (this.manualFirst = false) });
 
     this.app.input.onPointerDown.add(this.onPointerDown);
     this.app.input.onPointerMove.add(this.onPointerMove);
@@ -229,6 +228,7 @@ class ManyLightsScene extends Scene {
       if (index === 0 && this.manualFirst) {
         continue;
       }
+
       const orbit = this.orbits[index]!;
       const angle = this.elapsed * orbit.speed + orbit.phase;
       const x = width / 2 + Math.cos(angle) * orbit.radiusX;
@@ -242,7 +242,7 @@ class ManyLightsScene extends Scene {
   override draw(context: RenderingContext): void {
     context.render(this.floor);
     context.render(this.markerLayer);
-    this.hud.setStatus(`${this.lighting.activeLightCount} lights - draw calls ${context.stats.drawCalls}`);
+    this.panel.status(`${this.lighting.activeLightCount} lights - draw calls ${context.stats.drawCalls}`);
   }
 
   override destroy(): void {
@@ -250,7 +250,7 @@ class ManyLightsScene extends Scene {
     this.app.input.onPointerMove.remove(this.onPointerMove);
     this.app.input.onPointerUp.remove(this.onPointerEnd);
     this.app.input.onPointerCancel.remove(this.onPointerEnd);
-    this.hud.dispose();
+    this.panel.dispose();
     super.destroy();
   }
 }

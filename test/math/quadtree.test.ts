@@ -2,9 +2,10 @@ import type { QuadtreeItem } from '#math/Quadtree';
 import { Quadtree } from '#math/Quadtree';
 import { Rectangle } from '#math/Rectangle';
 
-const makeItem = (x: number, y: number, width: number, height: number, payload = `${x},${y},${width},${height}`): QuadtreeItem<string> => {
-  return { bounds: new Rectangle(x, y, width, height), payload };
-};
+const makeItem = (x: number, y: number, width: number, height: number, payload = `${x},${y},${width},${height}`): QuadtreeItem<string> => ({
+  bounds: new Rectangle(x, y, width, height),
+  payload,
+});
 
 describe('Quadtree', () => {
   describe('insert()', () => {
@@ -228,6 +229,18 @@ describe('Quadtree', () => {
       tree.insert(makeItem(2, 2, 2, 2, 'b')); // forces subdivision
 
       expect(() => tree.destroy()).not.toThrow();
+    });
+
+    test('leaves the caller-owned bounds rectangle usable', () => {
+      const onChange = vi.fn();
+      const bounds = new Rectangle(0, 0, 100, 100, onChange);
+      const tree = new Quadtree<string>(bounds);
+
+      tree.destroy();
+      bounds.set(10, 10, 50, 50);
+
+      expect(onChange).toHaveBeenCalled();
+      expect(bounds.width).toBe(50);
     });
   });
 });

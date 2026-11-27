@@ -151,10 +151,11 @@ export class DropShadowFilter extends Filter {
 
   /**
    * Shadow colour; its alpha is the shadow's opacity. Assigning copies the
-   * value, so the caller's colour can be reused.
+   * value, so the caller's colour can be reused. Reading returns an independent
+   * copy; assign an edited copy back to update the shadow and invalidate caches.
    */
   public get color(): Color {
-    return this._color;
+    return this._color.clone();
   }
 
   public set color(color: Color) {

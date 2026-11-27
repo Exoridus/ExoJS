@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { LdtkData } from '../src/LdtkData';
 import { LdtkMap } from '../src/LdtkMap';
+import { resolveLdtkLayerParallax } from '../src/ldtkParallax';
 import { ldtkToTileMap } from '../src/ldtkToTileMap';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -119,8 +120,8 @@ const layeredData: LdtkData = {
           visible: true,
           iid: 'bbbbbbbb-0000-0000-0000-000000000002',
           intGridCsv: [
-            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
           ],
         },
         {
@@ -379,6 +380,19 @@ describe('ldtkToTileMap', () => {
       },
     };
 
+    it('uses minimal layer dimensions for unscaled parallax compensation', () => {
+      const data: LdtkData = {
+        ...parallaxData,
+        defs: {
+          ...parallaxData.defs,
+          layers: parallaxData.defs.layers.map(def => (def.uid === 101 ? { ...def, parallaxScaling: false } : def)),
+        },
+      };
+      const layer = { layerDefUid: 101, __cWid: 8, __cHei: 4, __gridSize: 16 };
+
+      expect(resolveLdtkLayerParallax(data, layer)).toMatchObject({ offsetX: -32, offsetY: 8, parallaxScale: 1 });
+    });
+
     it('converts a layer def parallax factor into the runtime TileLayer parallaxX/Y (1 - factor)', () => {
       const result = ldtkToTileMap(parallaxData);
       const tilesLayer = result.levels[0]?.layers.find(l => l.name === 'Tiles');
@@ -429,7 +443,8 @@ describe('ldtkToTileMap', () => {
         },
         levels: layeredData.levels.map(level => ({
           ...level,
-          layerInstances: level.layerInstances?.map(layer => (layer.layerDefUid === 101 ? { ...layer, pxOffsetX: 3, pxOffsetY: 4 } : layer)) ?? null,
+          layerInstances:
+            level.layerInstances?.map(layer => (layer.layerDefUid === 101 ? { ...layer, pxOffsetX: 3, pxOffsetY: 4 } : layer)) ?? null,
         })),
       };
       const tilesLayer = ldtkToTileMap(data).levels[0]?.layers.find(l => l.name === 'Tiles');
@@ -480,6 +495,7 @@ describe('ldtkToTileMap', () => {
   describe('single-world backward compatibility (no data.worlds)', () => {
     it('never adds an ldtkWorldIid property key when the document has no worlds', () => {
       const result = ldtkToTileMap(multiLevelData);
+
       for (const level of result.levels) {
         expect(Object.hasOwn(level.properties, 'ldtkWorldIid')).toBe(false);
       }

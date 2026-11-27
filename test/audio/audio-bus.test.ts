@@ -16,6 +16,7 @@ interface MockGainNode {
   gain: {
     setTargetAtTime: MockInstance;
     cancelScheduledValues: MockInstance;
+    cancelAndHoldAtTime?: MockInstance;
     setValueAtTime: MockInstance;
     linearRampToValueAtTime: MockInstance;
     value: number;
@@ -72,6 +73,7 @@ const spyOnBusCreation = (): BusSpy => {
   let gainCallCount = 0;
   const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
     gainCallCount++;
+
     return (gainCallCount % 2 === 1 ? inputNode : outputNode) as unknown as GainNode;
   });
   const pannerSpy = vi.spyOn(ctx, 'createStereoPanner').mockReturnValue(panNode as unknown as StereoPannerNode);
@@ -182,26 +184,99 @@ describe('AudioBus', () => {
     expect(bus.pan).toBe(0.5);
   });
 
-  // 5. Muted zeroes the gain via setTargetAtTime
-  test('setting muted=true calls setTargetAtTime(0) on outputNode', () => {
+  test('a new bus starts at its volume instead of ramping down from unity', () => {
     const spy = spyOnBusCreation();
 
-    const bus = new AudioBus('muted-test', { muted: false });
-    bus.muted = true;
+    const bus = new AudioBus('initial-volume-test', { volume: 0.4 });
 
-    expect(spy.outputNode.gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), 0.01);
+    expect(spy.outputNode.gain.setValueAtTime).toHaveBeenCalledWith(0.4, expect.any(Number));
+    expect(spy.outputNode.gain.setTargetAtTime).not.toHaveBeenCalled();
+    expect(spy.outputNode.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
 
     spy.restore();
     bus.destroy();
   });
 
-  test('setting muted=false calls setTargetAtTime(volume) on outputNode', () => {
+  test('a bus created muted starts silent', () => {
+    const spy = spyOnBusCreation();
+
+    const bus = new AudioBus('initial-muted-test', { volume: 0.4, muted: true });
+
+    expect(spy.outputNode.gain.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+
+    spy.restore();
+    bus.destroy();
+  });
+
+  test('muting schedules a finite ramp ending at exact zero', () => {
+    const spy = spyOnBusCreation();
+
+    const bus = new AudioBus('muted-test', { muted: false });
+    bus.muted = true;
+
+    expect(spy.outputNode.gain.linearRampToValueAtTime).toHaveBeenCalledTimes(1);
+    const [target, end] = spy.outputNode.gain.linearRampToValueAtTime.mock.calls[0]!;
+    expect(target).toBe(0);
+    expect(end).toBeGreaterThan(getAudioContext().currentTime);
+    expect(end).toBeLessThanOrEqual(getAudioContext().currentTime + 0.1);
+
+    spy.restore();
+    bus.destroy();
+  });
+
+  test('unmuting ramps back to the configured volume', () => {
     const spy = spyOnBusCreation();
 
     const bus = new AudioBus('unmuted-test', { volume: 0.8, muted: true });
     bus.muted = false;
 
-    expect(spy.outputNode.gain.setTargetAtTime).toHaveBeenCalledWith(0.8, expect.any(Number), 0.01);
+    expect(spy.outputNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.8, expect.any(Number));
+
+    spy.restore();
+    bus.destroy();
+  });
+
+  test('replacing volume automation holds the current gain and cancels the old endpoint', () => {
+    const spy = spyOnBusCreation();
+    const gain = spy.outputNode.gain;
+    gain.cancelAndHoldAtTime = vi.fn();
+    const bus = new AudioBus('replace-volume');
+    const now = getAudioContext().currentTime;
+
+    bus.volume = 0;
+    gain.value = 0.35;
+    gain.cancelAndHoldAtTime.mockImplementation(() => {
+      gain.value = 1;
+    });
+    bus.volume = 0.6;
+
+    expect(gain.setValueAtTime).toHaveBeenLastCalledWith(0.35, now);
+    expect(gain.cancelAndHoldAtTime).toHaveBeenCalledTimes(2);
+    expect(gain.cancelAndHoldAtTime).toHaveBeenLastCalledWith(now);
+    expect(gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0.6, expect.any(Number));
+    expect(gain.cancelAndHoldAtTime.mock.invocationCallOrder[1]).toBeLessThan(gain.linearRampToValueAtTime.mock.invocationCallOrder[1]!);
+    expect(gain.cancelScheduledValues).not.toHaveBeenCalled();
+
+    spy.restore();
+    bus.destroy();
+  });
+
+  test('without cancelAndHoldAtTime a replacement starts at the gain before cancellation', () => {
+    const spy = spyOnBusCreation();
+    const gain = spy.outputNode.gain;
+    const bus = new AudioBus('replace-volume-fallback');
+    bus.volume = 0;
+    gain.value = 0.35;
+    gain.cancelScheduledValues.mockImplementation(() => {
+      gain.value = 1;
+    });
+
+    bus.volume = 0.6;
+
+    expect(gain.cancelScheduledValues).toHaveBeenCalledTimes(2);
+    expect(gain.cancelScheduledValues).toHaveBeenLastCalledWith(getAudioContext().currentTime);
+    expect(gain.setValueAtTime).toHaveBeenLastCalledWith(0.35, getAudioContext().currentTime);
+    expect(gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0.6, expect.any(Number));
 
     spy.restore();
     bus.destroy();
@@ -280,6 +355,30 @@ describe('AudioBus', () => {
     vi.advanceTimersByTime(500);
     expect(bus.muted).toBe(true);
 
+    spy.restore();
+    bus.destroy();
+  });
+
+  test.each([false, true])('fadeOut holds gain before cancelling an active ramp (native hold: %s)', nativeHold => {
+    const spy = spyOnBusCreation();
+    const bus = new AudioBus('interrupted-fade');
+    const gain = spy.outputNode.gain;
+    gain.value = 0.35;
+    const cancel = vi.fn(() => {
+      gain.value = 1;
+    });
+
+    if (nativeHold) {
+      gain.cancelAndHoldAtTime = cancel;
+    } else {
+      gain.cancelScheduledValues = cancel;
+    }
+
+    bus.fadeOut(Time.seconds(0.05), { stopAfter: false });
+
+    expect(cancel).toHaveBeenCalledWith(getAudioContext().currentTime);
+    expect(gain.setValueAtTime).toHaveBeenLastCalledWith(0.35, getAudioContext().currentTime);
+    expect(gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0, getAudioContext().currentTime + 0.05);
     spy.restore();
     bus.destroy();
   });
@@ -411,11 +510,11 @@ describe('AudioBus', () => {
   test('setting volume to its current value does not re-apply the gain', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('volume-noop', { volume: 0.5 });
-    spy.outputNode.gain.setTargetAtTime.mockClear();
+    spy.outputNode.gain.linearRampToValueAtTime.mockClear();
 
     bus.volume = 0.5;
 
-    expect(spy.outputNode.gain.setTargetAtTime).not.toHaveBeenCalled();
+    expect(spy.outputNode.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
 
     spy.restore();
     bus.destroy();
@@ -424,11 +523,11 @@ describe('AudioBus', () => {
   test('setting muted to its current value does not re-apply the gain', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('muted-noop', { muted: true });
-    spy.outputNode.gain.setTargetAtTime.mockClear();
+    spy.outputNode.gain.linearRampToValueAtTime.mockClear();
 
     bus.muted = true;
 
-    expect(spy.outputNode.gain.setTargetAtTime).not.toHaveBeenCalled();
+    expect(spy.outputNode.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
 
     spy.restore();
     bus.destroy();
@@ -635,7 +734,7 @@ describe('AudioBus', () => {
     bus.destroy();
   });
 
-  test('fadeOut(0) mutes immediately (stopAfter defaults to true) without scheduling a ramp', () => {
+  test('fadeOut(0) mutes immediately using the bounded de-click ramp', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('fade-out-zero');
 
@@ -643,7 +742,7 @@ describe('AudioBus', () => {
 
     expect(result).toBe(bus);
     expect(bus.muted).toBe(true);
-    expect(spy.outputNode.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
+    expect(spy.outputNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
 
     spy.restore();
     bus.destroy();
@@ -708,7 +807,7 @@ describe('AudioBus', () => {
     vi.resetModules();
     const fakeSignal = new Signal<[AudioContext]>();
 
-    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn() } });
+    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn(), setValueAtTime: vi.fn() } });
     const fakeCtx = {
       currentTime: 0,
       destination: {},
@@ -741,11 +840,79 @@ describe('AudioBus', () => {
     vi.resetModules();
   });
 
+  test('onceSetup() after destroy() queues nothing, and a late ready signal builds no nodes', async () => {
+    vi.resetModules();
+    const fakeSignal = new Signal<[AudioContext]>();
+    const createGain = vi.fn();
+    const fakeCtx = { currentTime: 0, destination: {}, createGain, createStereoPanner: vi.fn() } as unknown as AudioContext;
+
+    vi.doMock('#audio/audioContext', () => ({
+      getAudioContext: () => fakeCtx,
+      isAudioContextReady: () => false,
+      onAudioContextReady: fakeSignal,
+    }));
+
+    const { AudioBus: DeferredAudioBus } = await import('#audio/AudioBus');
+    const bus = new DeferredAudioBus('late-setup');
+    const callback = vi.fn();
+
+    bus.destroy();
+    bus.onceSetup(callback);
+
+    expect((bus as unknown as { _pendingSetup: unknown })._pendingSetup).toBeNull();
+
+    (bus as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(fakeCtx);
+
+    expect(callback).not.toHaveBeenCalled();
+    expect(createGain).not.toHaveBeenCalled();
+
+    vi.doUnmock('#audio/audioContext');
+    vi.resetModules();
+  });
+
+  test('a throwing setup callback does not skip the next one or the rest of the unlock dispatch', async () => {
+    vi.resetModules();
+    const fakeSignal = new Signal<[AudioContext]>();
+    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn(), setValueAtTime: vi.fn() } });
+    const fakeCtx = {
+      currentTime: 0,
+      destination: {},
+      createGain: makeFakeGain,
+      createStereoPanner: () => ({ connect: vi.fn(), disconnect: vi.fn(), pan: { setTargetAtTime: vi.fn() } }),
+    } as unknown as AudioContext;
+
+    vi.doMock('#audio/audioContext', () => ({
+      getAudioContext: () => fakeCtx,
+      isAudioContextReady: () => false,
+      onAudioContextReady: fakeSignal,
+    }));
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { AudioBus: DeferredAudioBus } = await import('#audio/AudioBus');
+    const bus = new DeferredAudioBus('throwing-setup');
+    const second = vi.fn();
+    const laterListener = vi.fn();
+
+    bus.onceSetup(() => {
+      throw new Error('first failed');
+    });
+    bus.onceSetup(second);
+    fakeSignal.add(laterListener);
+
+    expect(() => fakeSignal.dispatch(fakeCtx)).not.toThrow();
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(laterListener).toHaveBeenCalledTimes(1);
+
+    consoleErrorSpy.mockRestore();
+    vi.doUnmock('#audio/audioContext');
+    vi.resetModules();
+  });
+
   test('onceSetup() flushes queued callbacks once the bus sets up (AU3)', async () => {
     vi.resetModules();
     const fakeSignal = new Signal<[AudioContext]>();
 
-    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn() } });
+    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn(), setValueAtTime: vi.fn() } });
     const fakeCtx = {
       currentTime: 0,
       destination: {},
@@ -786,7 +953,7 @@ describe('AudioBus', () => {
     vi.resetModules();
     const fakeSignal = new Signal<[AudioContext]>();
 
-    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn() } });
+    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn(), setValueAtTime: vi.fn() } });
     const fakeCtx = {
       currentTime: 0,
       destination: {},

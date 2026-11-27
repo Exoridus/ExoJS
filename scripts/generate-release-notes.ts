@@ -82,6 +82,7 @@ const readTextFile = (path: string, description: string): string => {
 
 const parseTag = (tag: string): ParsedTagVersion => {
   const match = semverTagPattern.exec(tag);
+
   if (!match || !match.groups) {
     fail(`Invalid --tag "${tag}". Expected a semver tag like "v0.8.4".`);
   }
@@ -103,9 +104,11 @@ const compareVersions = (left: ParsedTagVersion, right: ParsedTagVersion): numbe
   if (left.major !== right.major) {
     return left.major - right.major;
   }
+
   if (left.minor !== right.minor) {
     return left.minor - right.minor;
   }
+
   return left.patch - right.patch;
 };
 
@@ -116,6 +119,7 @@ const parseChangelogEntries = (changelog: string): ChangelogEntry[] => {
 
   while (match) {
     const version = match.groups?.version;
+
     if (typeof version === 'string') {
       const headingStart = match.index;
       const headingEnd = changelog.indexOf('\n', headingStart);
@@ -137,6 +141,7 @@ const parseChangelogEntries = (changelog: string): ChangelogEntry[] => {
   return entriesWithBounds.map((entry, index) => {
     const bodyEnd = index < entriesWithBounds.length - 1 ? entriesWithBounds[index + 1].headingStart : changelog.length;
     const sectionBody = changelog.slice(entry.bodyStart, bodyEnd).trim();
+
     return {
       releaseDate: entry.releaseDate,
       sectionBody,
@@ -148,6 +153,7 @@ const parseChangelogEntries = (changelog: string): ChangelogEntry[] => {
 const getMatchingChangelogEntry = (changelog: string, version: string): DatedChangelogEntry => {
   const entries = parseChangelogEntries(changelog);
   const matchingEntry = entries.find(entry => entry.version === version);
+
   if (!matchingEntry) {
     fail(`Missing changelog section for version ${version}. Expected heading: "## [${version}] - YYYY-MM-DD".`);
   }
@@ -169,11 +175,13 @@ const resolveRepoUrl = (repo: string): string => {
   if (!repoSlugPattern.test(repo)) {
     fail(`Invalid --repo "${repo}". Expected "owner/repo", for example "Exoridus/ExoJS".`);
   }
+
   return `https://github.com/${repo}`;
 };
 
 const parseTagVersion = (tag: string): ParsedTagVersion | null => {
   const match = semverTagPattern.exec(tag);
+
   if (!match || !match.groups) {
     return null;
   }
@@ -190,6 +198,7 @@ const parseTagVersion = (tag: string): ParsedTagVersion | null => {
 const getGitSemverTags = (cwd: string): string[] => {
   try {
     const raw = execSync('git tag --list "v*"', { cwd, encoding: 'utf8' });
+
     return raw
       .split('\n')
       .map(tag => tag.trim())
@@ -207,6 +216,7 @@ const resolvePreviousTagFromGit = (cwd: string, currentVersion: ParsedTagVersion
     .sort(compareVersions);
 
   const previous = candidates.at(-1);
+
   return previous ? previous.tag : null;
 };
 
@@ -219,16 +229,19 @@ const resolvePreviousTagFromChangelog = (changelog: string, currentVersion: Pars
     .sort(compareVersions);
 
   const previous = candidates.at(-1);
+
   return previous ? previous.tag : null;
 };
 
 const resolvePreviousTag = (cwd: string, changelog: string, currentVersion: ParsedTagVersion): string => {
   const fromGit = resolvePreviousTagFromGit(cwd, currentVersion);
+
   if (fromGit) {
     return fromGit;
   }
 
   const fromChangelog = resolvePreviousTagFromChangelog(changelog, currentVersion);
+
   if (fromChangelog) {
     return fromChangelog;
   }
@@ -242,7 +255,9 @@ const applyTemplate = (template: string, replacements: Record<string, string>): 
     if (Object.hasOwn(replacements, key)) {
       return replacements[key];
     }
+
     unresolved.add(key);
+
     return `\${${key}}`;
   });
 
@@ -278,8 +293,10 @@ export const generateReleaseNotes = (options: GenerateReleaseNotesOptions): Gene
   });
 
   let writtenToPath: string | undefined;
+
   if (options.outputPath) {
     const outputPath = resolve(cwd, options.outputPath);
+
     try {
       mkdirSync(dirname(outputPath), { recursive: true });
       writeFileSync(outputPath, `${renderedNotes}\n`);
@@ -307,16 +324,19 @@ const parseCliArgs = (argv: string[]): ParsedCliArgs => {
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
+
     // A bare "--" separator may be forwarded by the package manager (pnpm v10+
     // passes it through to the script rather than consuming it); ignore it.
     if (arg === '--') {
       continue;
     }
+
     if (!supported.has(arg)) {
       fail(`Unknown argument "${arg}". Supported arguments: --tag, --repo, --out, --changelog, --template`);
     }
 
     const value = argv[index + 1];
+
     if (!value || value.startsWith('--')) {
       fail(`Missing value for argument "${arg}".`);
     }
@@ -326,16 +346,19 @@ const parseCliArgs = (argv: string[]): ParsedCliArgs => {
   }
 
   const tag = values.get('--tag');
+
   if (!tag) {
     fail('Missing required argument --tag (example: --tag v0.8.4).');
   }
 
   const repo = values.get('--repo');
+
   if (!repo) {
     fail('Missing required argument --repo (example: --repo Exoridus/ExoJS).');
   }
 
   const outputPath = values.get('--out');
+
   if (!outputPath) {
     fail('Missing required argument --out (example: --out .release/release-notes.md).');
   }
@@ -371,6 +394,7 @@ const runCli = (): void => {
 
 const isMainModule = (() => {
   const entrypoint = process.argv[1];
+
   if (!entrypoint) {
     return false;
   }

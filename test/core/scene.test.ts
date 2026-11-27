@@ -25,7 +25,7 @@ const createRuntime = (): { backend: RenderBackend; context: RenderingContext } 
   const stats = createRenderStats();
 
   const backend: RenderBackend = {
-    ...createRenderBackendDouble({ renderTarget: renderTarget, stats }),
+    ...createRenderBackendDouble({ renderTarget, stats }),
     stats,
     renderTarget,
     get view() {
@@ -261,6 +261,17 @@ describe('Scene', () => {
       const scene = new Scene();
 
       expect(() => scene.destroy()).not.toThrow();
+    });
+  });
+
+  describe('ui after destroy', () => {
+    test('throws and allocates no UIRoot once the scene was torn down', () => {
+      const scene = new Scene();
+
+      scene._teardownInternals();
+
+      expect(() => scene.ui).toThrow(/after the scene was destroyed/);
+      expect(scene._peekUI()).toBeNull();
     });
   });
 });

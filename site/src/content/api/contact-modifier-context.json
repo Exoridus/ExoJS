@@ -4,7 +4,7 @@
   "symbol": "ContactModifierContext",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 11,
   "counts": {
@@ -24,7 +24,7 @@
         "Writing a control affects this step only; the values are re-derived from the two colliders before the modifier runs again.",
         "A chain collider is solved per edge, so a body touching several edges of one chain reaches the modifier once per edge, each time with the same authored collider pair. Decide from the contact's own normal and penetration rather than from the pair's identity if that distinction matters."
       ],
-      "importLine": "import { ContactModifierContext } from '@codexo/exojs-physics'",
+      "importLine": "import { ContactModifierContext } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

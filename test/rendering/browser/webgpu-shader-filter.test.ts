@@ -59,7 +59,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 // On the software (SwiftShader) adapter the WebGPU device can drop
 // mid-test; treat that as a device-lost skip rather than a failure (mirrors
 // every other webgpu-*.test.ts in this suite).
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Ignores the input texture entirely and paints solid opaque red - so the
 // only way `output` ends up as anything other than red is the draw through
@@ -76,13 +77,19 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
 }
 `;
 
-const fullQuadVertices = (): Float32Array => new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
+const fullQuadVertices = (): Float32Array =>
+  new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
 const fullQuadUvs = (): Float32Array => new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]);
 
 // `output` is an offscreen RenderTexture, never presented directly - draw it
 // onto the (still-root) canvas through the real mesh path, then sample the
 // presented canvas via a 2D context to get CPU-side pixel access.
-const readTexturePixel = (backend: WebGpuBackend, texture: RenderTexture, x: number, y: number): readonly [number, number, number, number] => {
+const readTexturePixel = (
+  backend: WebGpuBackend,
+  texture: RenderTexture,
+  x: number,
+  y: number,
+): readonly [number, number, number, number] => {
   const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
   try {

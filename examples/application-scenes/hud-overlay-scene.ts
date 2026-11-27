@@ -1,4 +1,14 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Label, ProgressBar, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Label,
+  ProgressBar,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+} from '@codexo/exojs';
 
 /**
  * A screen-fixed HUD on `scene.ui` sits above the world automatically - no

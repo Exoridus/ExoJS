@@ -12,6 +12,8 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Circle } from '#math/Circle';
+import { Rectangle } from '#math/Rectangle';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
@@ -73,6 +75,78 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
 };
 
 describe('Graphics solid fill WebGL2 browser', () => {
+  test('shared live rectangles refresh cached draws and survive one Graphics teardown', async () => {
+    const backend = await createBackend();
+    const source = new Rectangle(8, 8, 16, 32);
+    const first = new Graphics({ fill: Color.red });
+    const second = new Graphics({ fill: Color.blue });
+    const handle = first.addShape(source);
+    second.addShape(source);
+
+    try {
+      for (const graphics of [first, second, first, second]) {
+        render(backend, graphics);
+        expectPixelNear(readWebGl2Pixel(backend, 40, 20), [0, 0, 0, 255]);
+      }
+
+      source.width = 48;
+
+      for (const [graphics, color] of [
+        [first, [255, 0, 0, 255]],
+        [second, [0, 0, 255, 255]],
+      ] as const) {
+        render(backend, graphics);
+        expectPixelNear(readWebGl2Pixel(backend, 40, 20), [...color]);
+      }
+
+      handle.setStyle({ fill: Color.green });
+      const graphics = first;
+      render(backend, graphics);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 20), [0, 255, 0, 255]);
+      first.destroy();
+      source.width = 16;
+
+      for (const graphics of [second, second]) {
+        render(backend, graphics);
+        expectPixelNear(readWebGl2Pixel(backend, 40, 20), [0, 0, 0, 255]);
+      }
+    } finally {
+      first.destroy();
+      second.destroy();
+      source.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('cut-outs leave the clear color where the union of cuts covers a live rectangle', async () => {
+    const backend = await createBackend();
+    const source = new Rectangle(8, 8, 48, 48);
+    const hole = new Circle(28, 28, 10);
+    const notch = new Rectangle(40, 40, 24, 24);
+    const graphics = new Graphics({ fill: Color.green });
+
+    graphics.addShape(source).cutShape(hole).cutShape(notch);
+
+    try {
+      render(backend, graphics);
+      expectPixelNear(readWebGl2Pixel(backend, 28, 28), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 50, 50), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 12, 12), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 20, 50), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 50, 20), [0, 255, 0, 255]);
+
+      hole.destroy();
+      render(backend, graphics);
+      expectPixelNear(readWebGl2Pixel(backend, 28, 28), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 50, 50), [0, 0, 0, 255]);
+    } finally {
+      graphics.destroy();
+      source.destroy();
+      notch.destroy();
+      backend.destroy();
+    }
+  });
+
   test('solid-color rectangle fill renders the fill color inside and the clear color outside', async () => {
     const backend = await createBackend();
     const graphics = new Graphics();

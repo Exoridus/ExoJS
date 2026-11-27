@@ -4,6 +4,7 @@
  * the adapter's teardown follows who created it.
  */
 
+import { textSourceCodec } from '#assets/AssetSourceCodec';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import type { NetworkHint, PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 
@@ -130,6 +131,103 @@ const createRecordingPlatform = (): PlatformAdapter & {
     destroy: () => void calls.push('destroy'),
   };
 };
+
+class TestDocument {
+  public constructor(public readonly text: string) {}
+}
+
+declare module '#assets/AssetDefinitions' {
+  interface AssetDefinitions {
+    testDocument: { resource: TestDocument; config: { source: string }; isValue: true };
+  }
+}
+
+describe('application asset definitions', async () => {
+  const Application = await loadApplication();
+
+  test('startup and pre-use registration share a registry without changing an in-flight claim', async () => {
+    const disposed = vi.fn();
+    const destroyed = vi.fn();
+    const replaced = vi.fn();
+    const codec = { ...textSourceCodec, decode: async (text: string) => ({ text }) };
+    const initial = { create: async (source: { text: string }) => new TestDocument(source.text), destroy: replaced };
+    const active = {
+      create: async (source: { text: string }) => new TestDocument(source.text.toUpperCase()),
+      dispose: disposed,
+      destroy: destroyed,
+    };
+    const initialSerializer = { serialize: (value: TestDocument) => ({ text: value.text.toLowerCase() }) };
+    const activeSerializer = { serialize: (value: TestDocument) => ({ text: value.text }) };
+    const parser = {
+      parse(value: unknown): { text: string } {
+        if (typeof value !== 'object' || value === null || !('text' in value) || typeof value.text !== 'string') {
+          throw new TypeError('Expected a document body with text.');
+        }
+
+        return { text: value.text };
+      },
+    };
+    const migration = { from: 1, to: 2, migrate: (source: { message: string }) => ({ text: source.message }) } as const;
+    const app = new Application({
+      loader: { basePath: 'https://assets.test/' },
+      assetTypes: [
+        [
+          TestDocument,
+          { type: 'testDocument', loader: initial, parser, version: 2, migrations: [migration], serializer: initialSerializer },
+        ],
+      ],
+    });
+    const other = new Application();
+    const asset = { type: 'testDocument', source: 'message.txt' } as const;
+    const first = app.loader.createScope();
+    const second = app.loader.createScope();
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ $type: 'testDocument', $version: 1, message: 'message' })));
+    vi.stubGlobal('fetch', fetch);
+
+    try {
+      expect(app.loader.hasLoadable(TestDocument)).toBe(true);
+      expect(other.loader.hasLoadable(TestDocument)).toBe(false);
+      expect(app.assets._serializerFor(TestDocument)).toBe(initialSerializer);
+      expect(() => app.assets.define(TestDocument, { type: 'testDocument', loader: active, codec, parser } as never)).toThrow(
+        /cannot specify both a codec and a document history/,
+      );
+      expect(() => app.assets.define(TestDocument, { type: 'testDocument', loader: active, parser, version: 2 } as never)).toThrow(
+        /no migration from version 1 to 2/,
+      );
+      expect(app.assets._serializerFor(TestDocument)).toBe(initialSerializer);
+      app.assets.define(TestDocument, {
+        type: 'testDocument',
+        loader: active,
+        parser,
+        version: 2,
+        migrations: [migration],
+        serializer: activeSerializer,
+      });
+      expect(replaced).toHaveBeenCalledOnce();
+
+      const one = first.load(asset);
+      expect(() => app.assets.define(TestDocument, { type: 'testDocument', codec, loader: initial })).toThrow(/already in use/);
+      const [a, b] = await Promise.all([one, second.load(asset)]);
+
+      expect(a).toBe(b);
+      expect(a).toBeInstanceOf(TestDocument);
+      expect(a.text).toBe('MESSAGE');
+      expect(app.assets._serializerFor(TestDocument)?.serialize(a)).toEqual({ text: 'MESSAGE' });
+      expect(fetch).toHaveBeenCalledOnce();
+      first.destroy();
+      expect(disposed).not.toHaveBeenCalled();
+      second.destroy();
+      expect(disposed).toHaveBeenCalledExactlyOnceWith(a);
+    } finally {
+      await app.destroy();
+      await other.destroy();
+      vi.unstubAllGlobals();
+    }
+
+    expect(destroyed).toHaveBeenCalledOnce();
+    expect(() => app.assets.define(TestDocument, { type: 'testDocument', codec, loader: initial })).toThrow(/destroyed/);
+  });
+});
 
 describe('platform injection', () => {
   afterEach(() => {
@@ -267,9 +365,12 @@ describe('BrowserPlatform', () => {
 
     expect(platform.surfaceFocused).toBe(false);
 
+    const focus = vi.spyOn(canvas, 'focus');
+
     platform.focusSurface();
 
     expect(platform.surfaceFocused).toBe(true);
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
 
     canvas.remove();
   });

@@ -4,7 +4,7 @@
   "symbol": "ParticleMaterial",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 14,
   "counts": {
@@ -23,7 +23,7 @@
         "`Material`'s constructor is protected, so every material family declares a thin subclass that fixes target and opens construction up - this is the particle counterpart of core's `MeshMaterial` and `SpriteMaterial`.",
         "Particle draws bind their system-level state (transform, local bounds, texture) through the renderer rather than through the material, so this subclass adds no behaviour of its own; it exists to name the contract."
       ],
-      "importLine": "import { ParticleMaterial } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleMaterial } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

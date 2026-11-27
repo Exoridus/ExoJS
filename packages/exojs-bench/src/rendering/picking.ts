@@ -17,15 +17,16 @@ export const PICK_RECT_SIZE = 16;
 /** Gap between rectangles. Wide enough that a fair share of the queries land on nothing. */
 export const PICK_RECT_GAP = 8;
 
-/** One queried point. */
+/** One queried point, in logical viewport pixels. */
 export interface PickPoint {
   readonly x: number;
   readonly y: number;
 }
 
 /**
- * Rectangle layout: a grid that fills the viewport and then wraps into further
- * columns of the same grid, so the count scales the index rather than the area.
+ * Rectangle layout: a grid that fills the viewport and then stacks further
+ * layers of the same grid on top of it, so the count scales the index rather
+ * than the area.
  *
  * Keeping the area fixed is what separates this scene from a drawing one. The
  * query always searches the same screen region; what grows is how many
@@ -37,9 +38,9 @@ export const pickRectAt = (index: number): PickPoint => {
   const columns = Math.max(1, Math.floor(VIEWPORT_WIDTH / stride));
   const rows = Math.max(1, Math.floor(VIEWPORT_HEIGHT / stride));
   const cell = index % (columns * rows);
-  // Layers past the first are inset by a few pixels, so stacked rectangles
-  // overlap rather than coincide: a query then has to order candidates by depth
-  // instead of returning whichever it met first.
+  // Each layer is inset by a few pixels, cycling through four offsets, so most
+  // stacked rectangles overlap rather than coincide: a query then has to order
+  // candidates by depth instead of returning whichever it met first.
   const layer = Math.floor(index / (columns * rows));
   const inset = (layer % 4) * 2;
 

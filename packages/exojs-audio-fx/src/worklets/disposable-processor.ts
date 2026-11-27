@@ -8,13 +8,16 @@
  * Disconnecting an `AudioWorkletNode` does not end its processor: while
  * `process()` keeps returning `true` the processor stays active and is called
  * every render quantum until the AudioContext itself closes. Returning `false`
- * after the owner's destroy is what lets the browser release it.
+ * after the owner's destroy is what lets the browser release it. Subclasses must
+ * return `false` from `process()` while `_destroyed` is set; this class only
+ * records the request.
  */
 export abstract class DisposableProcessor extends AudioWorkletProcessor {
   protected _destroyed = false;
 
   public constructor(options?: unknown) {
     super(options);
+
     this.port.onmessage = event => {
       if ((event.data as { type?: unknown } | null)?.type === 'destroy') {
         this._destroyed = true;

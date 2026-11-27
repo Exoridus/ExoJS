@@ -22,7 +22,13 @@ export const RUN_ARTIFACTS: readonly string[] = [
 ];
 
 /** Caches and synced inputs a build recreates; deleting one only costs the next build its warm start. */
-export const BUILD_CACHES: readonly string[] = ['.cache', 'site/.astro', 'site/public/vendor', 'site/public/assets', 'site/public/examples'];
+export const BUILD_CACHES: readonly string[] = [
+  '.cache',
+  'site/.astro',
+  'site/public/vendor',
+  'site/public/assets',
+  'site/public/examples',
+];
 
 const directorySize = (dir: string): number => {
   let total = 0;
@@ -30,8 +36,11 @@ const directorySize = (dir: string): number => {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
 
-    if (entry.isDirectory()) total += directorySize(full);
-    else if (entry.isFile()) total += statSync(full).size;
+    if (entry.isDirectory()) {
+      total += directorySize(full);
+    } else if (entry.isFile()) {
+      total += statSync(full).size;
+    }
   }
 
   return total;
@@ -46,4 +55,5 @@ export interface ArtifactPresence {
 export const presentArtifacts = (root: string, paths: readonly string[]): ArtifactPresence[] =>
   paths.filter(path => existsSync(join(root, path))).map(path => ({ path, bytes: directorySize(join(root, path)) }));
 
-export const formatBytes = (bytes: number): string => (bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(0)} MB` : `${(bytes / 1024).toFixed(0)} KB`);
+export const formatBytes = (bytes: number): string =>
+  bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(0)} MB` : `${(bytes / 1024).toFixed(0)} KB`;

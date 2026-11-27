@@ -17,7 +17,9 @@ describe('BlurFilter kernel shape (WebGPU)', () => {
     const { root, texture } = blurScene([new BlurFilter({ strength: 4 })]);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) {
+        return;
+      }
 
       const pixel = readWebGpuPixels(backend, BLUR_SCENE_SIZE);
       const corner = pixel(DIAGONAL[0], DIAGONAL[1]);

@@ -1,0 +1,34 @@
+{
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgl2",
+  "hardware": {
+    "touch": "NOT_TESTED",
+    "gamepad": "NOT_TESTED",
+    "ime": "NOT_TESTED",
+    "mobileKeyboard": "NOT_TESTED",
+    "audio": "NOT_APPLICABLE: silent examples"
+  },
+  "records": [
+    {
+      "example": "ui/settings-menu",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: Tab/Shift-Tab traverses all widgets; size/motion/choice/reset work; fixed HUD score and health buttons work while world rotates",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "ui/settings-menu",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: Tab/Shift-Tab traverses all widgets; size/motion/choice/reset work; fixed HUD score and health buttons work while world rotates",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ]
+    }
+  ]
+}

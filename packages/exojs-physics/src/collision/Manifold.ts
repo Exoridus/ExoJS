@@ -8,8 +8,8 @@ export interface ManifoldPoint {
   penetration: number;
   /**
    * Stable feature id identifying which geometric features produced this point.
-   * Constant across frames while the contact features are unchanged - the basis
-   * for warm-starting the solver later.
+   * Constant across frames while the contact features are unchanged, and the key
+   * the solver's warm-start cache matches accumulated impulses by.
    */
   id: number;
 }
@@ -18,8 +18,7 @@ export interface ManifoldPoint {
  * A contact manifold: the collision normal (oriented from collider A toward
  * collider B) plus 1-2 contact points. A `Manifold` is reused across narrow-phase
  * calls - it preallocates its two points and `reset()`s `pointCount` to 0. The
- * generation here is forward-looking work for the dynamics solver; in this
- * collision/query release it drives debug draw and validates the narrow phase.
+ * contact solver consumes its points and feature ids, and debug draw renders them.
  */
 export class Manifold {
   /** Collision normal X (unit, A → B). */

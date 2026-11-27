@@ -3,8 +3,11 @@ import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 
 import type { LayoutOptions } from './LayoutOptions';
-import { buildTextPageQuads, emptyTextLayout } from './textLayout';
-import type { StyleChangeHint, TextStyle } from './TextStyle';
+import { TextEffectError } from './TextEffectError';
+import type { TextEffectCapability, TextEffectIssue } from './textEffects';
+import { checkTextEffectValues, textEffectAntialiasReserve } from './textEffects';
+import { buildTextPageQuads, emptyTextLayout, validateLayoutOptions } from './textLayout';
+import type { StyleChangeHint, TextStyle, TextStyleOptions } from './TextStyle';
 import { mergeHint } from './TextStyle';
 import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
 
@@ -34,6 +37,20 @@ export abstract class AbstractText extends Drawable {
   private _lastLayout: TextLayoutResult | null = null;
   /** Heaviest change awaiting a layout pass, or `null` when settled. */
   private _pendingHint: StyleChangeHint | null = 'font';
+  /** Each node observes a shared style independently of every other reader. */
+  private _styleRevision = 0;
+
+  /** Called after new metrics and quads have been published, so an owning widget can read them. @internal */
+  public _onLayout: (() => void) | null = null;
+
+  /** Visible fill geometry, excluding padding and effects. @internal */
+  public get _fillBounds(): TextLayoutResult['ink'] {
+    this.syncDirty();
+
+    const layout = this._lastLayout;
+
+    return layout?.fill ?? { x: 0, y: 0, width: layout?.advance.width ?? 0, height: layout?.advance.height ?? 0 };
+  }
 
   /**
    * Stamps the node content-dirty when the attached style is mutated IN PLACE.
@@ -49,6 +66,7 @@ export abstract class AbstractText extends Drawable {
 
   protected constructor(text: string, style: TextStyle, layout: LayoutOptions) {
     super();
+    validateLayoutOptions(layout);
     this._text = text;
     this._style = style;
     this._style.onChange.add(this._onStyleChange);
@@ -83,7 +101,10 @@ export abstract class AbstractText extends Drawable {
   }
 
   public set text(v: string) {
-    if (this._text === v) return;
+    if (this._text === v) {
+      return;
+    }
+
     this._text = v;
     this._markDirty('layout');
   }
@@ -97,12 +118,15 @@ export abstract class AbstractText extends Drawable {
    * Carries layout keys only. A subclass whose options bag merges style and
    * layout into one flat object (as `TextOptions` does) still reports just the
    * layout half here.
+   *
+   * Assigning an invalid `maxLines` or `tabSize` throws `RangeError` and preserves the previous layout.
    */
   public get layout(): Readonly<LayoutOptions> {
     return this._layout;
   }
 
   public set layout(v: LayoutOptions) {
+    validateLayoutOptions(v);
     this._layout = pickLayoutOptions(v);
     this._markDirty('layout');
   }
@@ -177,13 +201,17 @@ export abstract class AbstractText extends Drawable {
    * its own, so manual calls are rarely needed.
    */
   public syncDirty(): void {
-    if (this.destroyed) return;
+    if (this.destroyed) {
+      return;
+    }
 
     // Consumed BEFORE the pass runs, so the re-entrant read inside
     // `_updateOrigin()` below sees a settled node instead of recursing.
     const hint = this._consumePendingHint();
 
-    if (hint === null || hint === 'tint') return;
+    if (hint === null || hint === 'tint') {
+      return;
+    }
 
     const result = this._runLayout(hint);
 
@@ -199,12 +227,71 @@ export abstract class AbstractText extends Drawable {
     // width has to re-derive its origin - otherwise a centred label drifts
     // left as it grows. Mirrors what Sprite does when it switches sub-frame.
     this._updateOrigin();
+    this._onLayout?.();
   }
 
   public override destroy(): void {
     this._style.onChange.remove(this._onStyleChange);
+    this._style._removeEffectHost(this);
     this._pageQuads = [];
+    this._onLayout = null;
     super.destroy();
+  }
+
+  // ── Effects ──────────────────────────────────────────────────────────────
+
+  /**
+   * Largest outline width, or shadow offset plus blur, this node can draw, in
+   * logical pixels of its local space. `0` when its glyphs have no usable
+   * distance field.
+   */
+  public get maxEffectExtent(): number {
+    const capability = this._effectCeiling();
+
+    return capability.reason === null ? Math.max(0, capability.outward - textEffectAntialiasReserve) : 0;
+  }
+
+  /**
+   * The first outline or shadow in `style` this node cannot draw, or `null`.
+   *
+   * Answers what assigning the style would throw as a {@link TextEffectError},
+   * without throwing. Defaults to the attached style.
+   */
+  public checkEffects(style: TextStyle | TextStyleOptions = this._style): TextEffectIssue | null {
+    return checkTextEffectValues(
+      this._effectCeiling(),
+      style.outlineWidth ?? 0,
+      style.shadowAlpha ?? 0,
+      style.shadowOffsetX ?? 0,
+      style.shadowOffsetY ?? 0,
+      style.shadowBlur ?? 0,
+    );
+  }
+
+  /** @internal */
+  public _checkEffectValues(
+    outlineWidth: number,
+    shadowAlpha: number,
+    shadowOffsetX: number,
+    shadowOffsetY: number,
+    shadowBlur: number,
+  ): TextEffectIssue | null {
+    return checkTextEffectValues(this._effectCeiling(), outlineWidth, shadowAlpha, shadowOffsetX, shadowOffsetY, shadowBlur);
+  }
+
+  /**
+   * What this node's glyph source can encode. Read by the renderers on every
+   * repack, so implementations return a cached object.
+   * @internal
+   */
+  public abstract _textEffectCapability(): TextEffectCapability;
+
+  /**
+   * The most this node can ever draw: what the capability checks measure
+   * against. A node whose capability can still grow reports where it stops.
+   */
+  protected _effectCeiling(): TextEffectCapability {
+    return this._textEffectCapability();
   }
 
   // ── Protected ────────────────────────────────────────────────────────────
@@ -227,26 +314,65 @@ export abstract class AbstractText extends Drawable {
    * it so the replaced style stops driving this node.
    */
   protected _replaceStyle(style: TextStyle): void {
+    if (style !== this._style) {
+      this._assertEffects(this._effectCeiling(), style);
+    }
+
     this._style.onChange.remove(this._onStyleChange);
+    this._style._removeEffectHost(this);
     this._style = style;
+    this._styleRevision = 0;
     this._style.onChange.add(this._onStyleChange);
+    this._style._addEffectHost(this);
     this._markDirty('font');
   }
 
   /**
-   * Take the heaviest pending hint and settle the node, folding in whatever
-   * the attached {@link TextStyle} has latched since the last pass. A style
-   * carries its own dirty flag because it is mutated in place rather than
-   * assigned, so polling it here is what makes `label.style.align = ...` land.
+   * Validate the constructor's style and start constraining it. Subclasses
+   * call this once their glyph source is known, at the end of construction.
+   */
+  protected _attachEffectHost(): void {
+    this._assertEffects(this._effectCeiling(), this._style);
+    this._style._addEffectHost(this);
+  }
+
+  /** Throws when `capability` cannot draw the effects of `style`; changes nothing. */
+  protected _assertEffects(capability: TextEffectCapability, style: TextStyle): void {
+    const found = checkTextEffectValues(
+      capability,
+      style.outlineWidth,
+      style.shadowAlpha,
+      style.shadowOffsetX,
+      style.shadowOffsetY,
+      style.shadowBlur,
+    );
+
+    if (found !== null) {
+      throw new TextEffectError(found, this._effectContext);
+    }
+  }
+
+  /** Name reported by {@link TextEffectError} messages; survives minification. */
+  protected abstract readonly _effectContext: string;
+
+  /**
+   * Rearm the style's change signal without acknowledging any other node's revision.
    */
   protected _consumePendingHint(): StyleChangeHint | null {
     const own = this._pendingHint;
-    const style = this._style.consumeDirty();
+    const style = this._style._hintSince(this._styleRevision);
 
+    this._styleRevision = this._style._revision;
+    this._style.consumeDirty();
     this._pendingHint = null;
 
-    if (own === null) return style;
-    if (style === null) return own;
+    if (own === null) {
+      return style;
+    }
+
+    if (style === null) {
+      return own;
+    }
 
     return mergeHint(own, style);
   }

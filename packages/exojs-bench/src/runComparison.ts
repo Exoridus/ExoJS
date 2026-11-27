@@ -2,11 +2,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 import { aggregatePhysicsRuns, aggregateRenderingRuns } from './comparison/aggregate';
+import { readComparisonInputs } from './comparison/inputs';
 import { renderComparison } from './comparison/render';
 import type { PhysicsReportData } from './physics/report';
 import { buildProfileDocument, writeProfileDocument } from './profile/document';
 import type { ReportData } from './rendering/report';
-import { parseArgList, parseArgs } from './shared/args';
+import { parseArgs } from './shared/args';
 
 /**
  * Generate the published cross-library comparison from measured runs.
@@ -68,16 +69,13 @@ const readResults = <T>(path: string): T => {
 const main = (): void => {
   const argv = process.argv.slice(2);
   const args = parseArgs(argv);
-  const renderingPaths = parseArgList(argv, 'rendering');
-  const physicsPaths = parseArgList(argv, 'physics');
+  const { renderingPaths, physicsPaths } = readComparisonInputs(argv);
   const outPath = resolve(args.get('out') ?? DEFAULT_OUT);
 
-  if (renderingPaths.length === 0 && physicsPaths.length === 0) {
-    throw new Error('Nothing to compare: pass --rendering and/or --physics pointing at a run results.json. Repeat either flag once per run.');
-  }
-
-  const rendering = renderingPaths.length === 0 ? undefined : aggregateRenderingRuns(renderingPaths.map(path => readResults<ReportData>(path)));
-  const physics = physicsPaths.length === 0 ? undefined : aggregatePhysicsRuns(physicsPaths.map(path => readResults<PhysicsReportData>(path)));
+  const rendering =
+    renderingPaths.length === 0 ? undefined : aggregateRenderingRuns(renderingPaths.map(path => readResults<ReportData>(path)));
+  const physics =
+    physicsPaths.length === 0 ? undefined : aggregatePhysicsRuns(physicsPaths.map(path => readResults<PhysicsReportData>(path)));
   const document = renderComparison({ ...(rendering !== undefined && { rendering }), ...(physics !== undefined && { physics }) });
 
   mkdirSync(dirname(outPath), { recursive: true });

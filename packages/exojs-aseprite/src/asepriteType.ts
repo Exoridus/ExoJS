@@ -1,5 +1,5 @@
 import type { AssetFactory, AssetSourceCodec, Texture } from '@codexo/exojs';
-import { Asset, AssetType, jsonSourceCodec } from '@codexo/exojs';
+import { AssetType, jsonSourceCodec } from '@codexo/exojs';
 
 /** The JSON codec, narrowed to the two acquisition halves this type reuses verbatim. */
 const jsonStringCodec = jsonSourceCodec as Required<AssetSourceCodec<unknown, string>>;
@@ -42,6 +42,12 @@ const resolveAsepriteUrl = (ref: string, base: string): string => {
   // A root-relative base must produce a root-relative result again - dropping
   // the leading slash would make the browser re-resolve the reference against
   // the document base URL (e.g. `/site/assets/x.png` → `/site/site/assets/...`).
+  // A protocol-relative base keeps both slashes for the same reason; the
+  // synthetic resolution already dropped the authority prefix.
+  if (base.startsWith('//')) {
+    return `//${relative}`;
+  }
+
   return base.startsWith('/') ? `/${relative}` : relative;
 };
 
@@ -50,6 +56,10 @@ const resolveAsepriteUrl = (ref: string, base: string): string => {
 /**
  * Thrown when an Aseprite JSON document does not match the expected shape.
  * `source` is the URL of the file being parsed.
+ *
+ * Loading through the Loader reports it as the load failure's `cause`, not as
+ * the rejection itself; when the stored document is not valid JSON, the cause
+ * is a `SyntaxError` instead.
  */
 export class AsepriteFormatError extends Error {
   public readonly source: string;
@@ -93,7 +103,138 @@ const validateAsepriteData = (raw: unknown, source: string): AsepriteData => {
     throw new AsepriteFormatError(source, '"frames" must be an array or an object');
   }
 
+  validateFrames(frames, source);
+  validateFrameTags(meta.frameTags, source);
+  validateSlices(meta.slices, source);
+
   return doc as unknown as AsepriteData;
+};
+
+const DIRECTIONS: readonly string[] = ['forward', 'reverse', 'pingpong', 'pingpong_reverse'];
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+
+const isRect = (value: unknown): boolean =>
+  isRecord(value) && [value.x, value.y, value.w, value.h].every(component => typeof component === 'number' && Number.isFinite(component));
+
+const isFrameIndex = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0;
+
+const validateFrames = (frames: object, source: string): void => {
+  // A rotated packed frame stores its pixels transposed; the runtime samples
+  // the rectangle verbatim, so accepting it would render wrong pixels.
+  const frameEntries: Array<[string, unknown]> = Array.isArray(frames)
+    ? frames.map((frame, index) => [String(index), frame])
+    : Object.entries(frames);
+
+  for (const [key, frame] of frameEntries) {
+    if (isRecord(frame) && frame.rotated === true) {
+      throw new AsepriteFormatError(
+        source,
+        `"frames.${key}" is rotated; packed rotated frames are not supported - export the sheet with rotation disabled`,
+      );
+    }
+
+    if (
+      !isRecord(frame) ||
+      !isRect(frame.frame) ||
+      typeof frame.duration !== 'number' ||
+      !Number.isFinite(frame.duration) ||
+      typeof frame.trimmed !== 'boolean' ||
+      !isRect(frame.spriteSourceSize)
+    ) {
+      throw new AsepriteFormatError(
+        source,
+        `"frames.${key}" must have frame and spriteSourceSize rectangles, a finite duration and a boolean trimmed flag`,
+      );
+    }
+
+    const size = frame.sourceSize;
+
+    if (
+      size !== undefined &&
+      (!isRecord(size) ||
+        typeof size.w !== 'number' ||
+        !Number.isFinite(size.w) ||
+        size.w <= 0 ||
+        typeof size.h !== 'number' ||
+        !Number.isFinite(size.h) ||
+        size.h <= 0)
+    ) {
+      throw new AsepriteFormatError(source, `"frames.${key}.sourceSize" must have positive finite w and h`);
+    }
+  }
+};
+
+/** A malformed tag would otherwise become a clip with no frames or a `NaN` repeat count. */
+const validateFrameTags = (tags: unknown, source: string): void => {
+  if (tags === undefined) {
+    return;
+  }
+
+  if (!Array.isArray(tags)) {
+    throw new AsepriteFormatError(source, '"meta.frameTags" must be an array');
+  }
+
+  for (const [index, tag] of tags.entries()) {
+    const where = `"meta.frameTags[${index}]"`;
+
+    if (!isRecord(tag) || typeof tag.name !== 'string') {
+      throw new AsepriteFormatError(source, `${where} must be an object with a string "name"`);
+    }
+
+    if (!isFrameIndex(tag.from) || !isFrameIndex(tag.to) || tag.from > tag.to) {
+      throw new AsepriteFormatError(source, `${where} ("${tag.name}") needs frame indices with from <= to`);
+    }
+
+    if (typeof tag.direction !== 'string' || !DIRECTIONS.includes(tag.direction)) {
+      throw new AsepriteFormatError(source, `${where} ("${tag.name}") has an unknown direction ${JSON.stringify(tag.direction)}`);
+    }
+
+    const repeat = tag.repeat;
+    const wholeRepeat = typeof repeat === 'string' ? /^\d+$/.test(repeat) : isFrameIndex(repeat);
+
+    if (repeat !== undefined && !wholeRepeat) {
+      throw new AsepriteFormatError(
+        source,
+        `${where} ("${tag.name}") has a repeat count that is not a whole number: ${JSON.stringify(tag.repeat)}`,
+      );
+    }
+  }
+};
+
+const validateSlices = (slices: unknown, source: string): void => {
+  if (slices === undefined) {
+    return;
+  }
+
+  if (!Array.isArray(slices)) {
+    throw new AsepriteFormatError(source, '"meta.slices" must be an array');
+  }
+
+  for (const [index, slice] of slices.entries()) {
+    const where = `"meta.slices[${index}]"`;
+
+    if (!isRecord(slice) || typeof slice.name !== 'string' || !Array.isArray(slice.keys)) {
+      throw new AsepriteFormatError(source, `${where} must be an object with a string "name" and a "keys" array`);
+    }
+
+    for (const key of slice.keys as unknown[]) {
+      const pivot = isRecord(key) ? key.pivot : undefined;
+      const valid =
+        isRecord(key) &&
+        isFrameIndex(key.frame) &&
+        isRect(key.bounds) &&
+        (key.center === undefined || isRect(key.center)) &&
+        (pivot === undefined || (isRecord(pivot) && typeof pivot.x === 'number' && typeof pivot.y === 'number'));
+
+      if (!valid) {
+        throw new AsepriteFormatError(
+          source,
+          `${where} ("${slice.name}") has a key without a frame index and bounds, or with a malformed centre or pivot`,
+        );
+      }
+    }
+  }
 };
 
 /**
@@ -117,7 +258,10 @@ export class AsepriteAssetType extends AssetType<AsepriteData, AsepriteSheet, un
   public createFactory(): AssetFactory<AsepriteData, AsepriteSheet> {
     return {
       async create(source, context) {
-        const texture: Texture = await context.dependencies.load(Asset.type('texture', resolveAsepriteUrl(source.meta.image, context.source)));
+        const texture: Texture = await context.dependencies.load({
+          type: 'texture',
+          source: resolveAsepriteUrl(source.meta.image, context.source),
+        });
 
         return AsepriteSheet.parse(source, texture);
       },

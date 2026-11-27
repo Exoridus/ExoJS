@@ -11,6 +11,7 @@ import {
   type View,
 } from '@codexo/exojs';
 
+import { shadowRowTexels } from '../occluders/shadowMap';
 import glslFragment from './shaders/shadow-march.frag';
 import wgslFragment from './shaders/shadow-march.wgsl';
 
@@ -51,9 +52,10 @@ const createFilter = (lights: DataTexture<TextureFormat.Rgba32F>): ShaderFilter<
  * further out than that casts no shadow here where the segment walk would
  * still find it.
  *
- * The atlas is a float render target, which WebGL2 only has with
- * `EXT_color_buffer_float` - {@link isSupported} is the question to ask before
- * building one.
+ * The atlas is an `Rgba16F` render target: WebGL2 can render into one only
+ * with a float-colour extension, WebGPU natively, and the frame lighting
+ * backend builds a filler only where the active backend reports
+ * `TextureFormat.Rgba16F` renderable.
  * @internal
  */
 export class ShadowMarchFiller {
@@ -75,10 +77,10 @@ export class ShadowMarchFiller {
   public constructor(mask: RenderTexture, bins: number) {
     this._mask = mask;
     this._bins = bins;
-    // Half-float rather than the CPU filler's `R32F`: a normalized distance
+    // Half-float rather than the CPU filler's `RGBA32F`: a normalized distance
     // needs the range and not the mantissa, and `Rgba16F` is the only float
     // format both backends render into without a device feature.
-    this._atlas = new RenderTexture(bins, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });
+    this._atlas = new RenderTexture(bins * shadowRowTexels, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });
     this._lights = new DataTexture({ width: 1, height: lightRows, format: TextureFormat.Rgba32F });
     this._filter = createFilter(this._lights);
     this.pass = new CallbackRenderPass((pass: PassContext) => this._march(pass), { label: 'lighting:shadow-march', enabled: false });
@@ -106,7 +108,7 @@ export class ShadowMarchFiller {
       this._filter = createFilter(this._lights);
     }
 
-    this._atlas.setSize(this._bins, Math.max(1, this._lights.width));
+    this._atlas.setSize(this._bins * shadowRowTexels, Math.max(1, this._lights.width));
     this._lights.buffer.fill(0);
   }
 

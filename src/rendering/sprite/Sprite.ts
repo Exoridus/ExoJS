@@ -1,3 +1,4 @@
+import type { LoaderScope } from '#assets/LoaderScope';
 import { invariant } from '#core/dev';
 import { Interval } from '#math/Interval';
 import { Rectangle } from '#math/Rectangle';
@@ -8,7 +9,7 @@ import type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { RenderNode } from '#rendering/RenderNode';
 import { invalidateOnTextureLoad } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
-import type { Texture } from '#rendering/texture/Texture';
+import { Texture } from '#rendering/texture/Texture';
 
 /**
  * Internal dirty-flag bitmask used by {@link Sprite} to lazily recompute
@@ -48,7 +49,19 @@ export enum SpriteFlags {
  */
 export class Sprite extends Drawable {
   private _texture: Texture | RenderTexture | null = null;
+  declare private _textureClaim: LoaderScope | undefined;
+  declare private _claimedScope: LoaderScope | null | undefined;
+  declare private _claimedAsset: object | null | undefined;
+  private _textureClaimRevision = 0;
+  private readonly _onDynamicTextureUpdate = (texture: Texture): void => {
+    if (texture._getFrameSource() !== null && !this.destroyed) {
+      // A retained subtree can skip collecting this sprite entirely. Its
+      // texture's new pixels must therefore dirty the node proactively.
+      this.invalidateContent();
+    }
+  };
   private _textureFrame: Rectangle = new Rectangle();
+  private _frameResolution = 1;
   /**
    * Scratch rectangle for {@link resetTextureFrame}. `setTextureFrame` reads
    * its `frame` argument again after re-entering node code (bounds/origin
@@ -83,19 +96,19 @@ export class Sprite extends Drawable {
   private _normalsBuiltAtVersion = -1;
 
   /**
-   * Create a sprite for `texture`, or an empty one when the argument is omitted
+   * Create a sprite for `texture` or an asset path, or an empty one when the argument is omitted
    * or `null` - a textureless sprite draws nothing until {@link setTexture} is
    * called, which is the intended way to build a sprite whose texture is still
    * loading.
    */
-  public constructor(texture: Texture | RenderTexture | null = null) {
+  public constructor(texture: Texture | RenderTexture | string | null = null) {
     super();
 
     // Mark vertices and normals dirty from the start.
     this.flags.addMask(SpriteFlags.Vertices | SpriteFlags.Normals);
 
     if (texture !== null) {
-      this.setTexture(texture);
+      this.setTexture(typeof texture === 'string' ? new Texture(texture) : texture);
     }
   }
 
@@ -177,7 +190,7 @@ export class Sprite extends Drawable {
   private _pendingHeight: number | null = null;
 
   public get width(): number {
-    return Math.abs(this.scale.x) * this._textureFrame.width;
+    return (Math.abs(this.scale.x) * this._textureFrame.width) / this._frameResolution;
   }
 
   public set width(value: number) {
@@ -188,30 +201,33 @@ export class Sprite extends Drawable {
     // nothing, and the sprite would surface at the texture's own size.
     if (this._textureFrame.width === 0) {
       this._pendingWidth = value;
+
       return;
     }
 
     this._pendingWidth = null;
-    this.scale.x = value / this._textureFrame.width;
+    this.scale.x = (value * this._frameResolution) / this._textureFrame.width;
   }
 
   public get height(): number {
-    return Math.abs(this.scale.y) * this._textureFrame.height;
+    return (Math.abs(this.scale.y) * this._textureFrame.height) / this._frameResolution;
   }
 
   public set height(value: number) {
     if (this._textureFrame.height === 0) {
       this._pendingHeight = value;
+
       return;
     }
 
     this._pendingHeight = null;
-    this.scale.y = value / this._textureFrame.height;
+    this.scale.y = (value * this._frameResolution) / this._textureFrame.height;
   }
 
   /**
-   * World-space corner positions of the sprite quad, computed lazily from the
-   * current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3]
+   * Rendering-space corner positions of the sprite quad: world space normally,
+   * group-local space below a retained transform boundary. Computed lazily from
+   * the current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3]
    * (TL, TR, BR, BL). Cached until the transform is invalidated.
    */
   public get vertices(): Float32Array {
@@ -301,7 +317,19 @@ export class Sprite extends Drawable {
     );
 
     if (this._texture !== texture) {
-      this._texture = texture;
+      const previous = this._texture;
+
+      if (!this._syncTextureClaim(this.parent?._getAssetScope() ?? null, texture, true)) {
+        return this;
+      }
+
+      if (previous instanceof Texture) {
+        previous._removeUpdateListener(this._onDynamicTextureUpdate);
+      }
+
+      if (texture instanceof Texture) {
+        texture._addUpdateListener(this._onDynamicTextureUpdate);
+      }
 
       if (texture !== null) {
         this.resetTextureFrame();
@@ -318,6 +346,67 @@ export class Sprite extends Drawable {
     return this;
   }
 
+  public override _setAssetScope(scope: LoaderScope | null): void {
+    this._syncTextureClaim(scope);
+  }
+
+  public override _validateAssetScope(scope: LoaderScope | null): void {
+    const asset = this._texture instanceof Texture ? this._texture._pathAsset() : null;
+
+    if (scope !== null && asset !== null) {
+      scope._assertLeafOwner(asset);
+    }
+  }
+
+  private _syncTextureClaim(scope: LoaderScope | null, nextTexture = this._texture, publishTexture = false): boolean {
+    const texture = scope !== null && nextTexture instanceof Texture ? nextTexture._pathAsset() : null;
+    const revision = ++this._textureClaimRevision;
+
+    if (scope === (this._claimedScope ?? null) && texture === (this._claimedAsset ?? null)) {
+      if (publishTexture) {
+        this._texture = nextTexture;
+      }
+
+      return true;
+    }
+
+    const previous = this._textureClaim;
+    let claim: LoaderScope | undefined;
+
+    // The new claim is taken before the old one is released: when both name the same asset, releasing first would evict and refetch it.
+    if (scope !== null && texture !== null) {
+      claim = scope.createScope();
+
+      try {
+        claim.get(texture);
+      } catch (error) {
+        claim.destroy();
+
+        throw error;
+      }
+    }
+
+    // Acquisition may run application callbacks. A newer swap, detach or destroy
+    // owns the final state; abandon this claim instead of publishing stale work.
+    if (revision !== this._textureClaimRevision || (this.destroyed && claim !== undefined)) {
+      claim?.destroy();
+
+      return false;
+    }
+
+    this._textureClaim = claim;
+    this._claimedScope = claim === undefined ? null : scope;
+    this._claimedAsset = claim === undefined ? null : texture;
+
+    if (publishTexture) {
+      this._texture = nextTexture;
+    }
+
+    previous?.destroy();
+
+    return revision === this._textureClaimRevision;
+  }
+
   /**
    * A deferred texture handle starts 0×0 until its payload loads, so the frame
    * reset above snapped to a 0×0 frame. Re-reset once it becomes ready so the
@@ -330,18 +419,18 @@ export class Sprite extends Drawable {
       return;
     }
 
-    void this._healOnTextureLoad(texture);
+    const spriteRef = new WeakRef(this);
+    const loaded = texture._loadState?.whenReady(texture) ?? texture.loaded;
+
+    void loaded.then(
+      ready => spriteRef.deref()?._healOnTextureLoad(ready),
+      () => undefined,
+    );
   }
 
-  private async _healOnTextureLoad(texture: Texture): Promise<void> {
-    try {
-      await texture.loaded;
-    } catch {
-      return; // failed load shows Texture.missing; nothing to heal
-    }
-
+  private _healOnTextureLoad(texture: Texture): void {
     // Guard against a texture swap or destroy between scheduling and resolution.
-    if (this._texture !== texture || this.destroyed) {
+    if (this._texture !== texture || this.destroyed || texture.destroyed) {
       return;
     }
 
@@ -365,8 +454,15 @@ export class Sprite extends Drawable {
 
       this.setTextureFrame(this._resetFrameScratch.set(0, 0, texture.width, texture.height), false);
 
-      if (width !== null) this.width = width;
-      if (height !== null) this.height = height;
+      if (width !== null) {
+        this.width = width;
+      }
+
+      if (height !== null) {
+        this.height = height;
+      }
+    } else if (this._frameResolution !== texture._assetResolution) {
+      this.setTextureFrame(this._textureFrame, false);
     }
   }
 
@@ -394,17 +490,30 @@ export class Sprite extends Drawable {
 
     this._textureFrame.copy(frame);
     this.flags.addMask(SpriteFlags.TextureCoords);
-    this.setLocalBounds(0, 0, frame.width, frame.height);
+    this._frameResolution = this._texture instanceof Texture ? this._texture._assetResolution : 1;
+    const logicalWidth = frame.width / this._frameResolution;
+    const logicalHeight = frame.height / this._frameResolution;
+    this.setLocalBounds(0, 0, logicalWidth, logicalHeight);
 
     // Sizing against an empty frame is skipped rather than assigned: the size
     // setters hold what they cannot express yet, and a zero from this internal
     // path is the absence of a size, not a caller asking for one.
     if (resetSize) {
-      if (frame.width !== 0) this.width = frame.width;
-      if (frame.height !== 0) this.height = frame.height;
+      if (frame.width !== 0) {
+        this.width = logicalWidth;
+      }
+
+      if (frame.height !== 0) {
+        this.height = logicalHeight;
+      }
     } else {
-      if (width !== 0) this.width = width;
-      if (height !== 0) this.height = height;
+      if (width !== 0) {
+        this.width = width;
+      }
+
+      if (height !== 0) {
+        this.height = height;
+      }
     }
 
     // The local bounds changed size - re-derive the origin from the
@@ -442,6 +551,10 @@ export class Sprite extends Drawable {
    * computed from `vertices`. Used by the SAT collision system.
    */
   public override getNormals(): Vector[] {
+    if (this._resolveTransformGroupAnchor() !== null) {
+      return super.getNormals();
+    }
+
     // Read vertices first: the getter settles the world-transform version and
     // rebuilds the quad if an ancestor moved, so the version compare below
     // sees the up-to-date value.
@@ -488,6 +601,10 @@ export class Sprite extends Drawable {
    * scalar interval. Used by the SAT collision system.
    */
   public override project(axis: Vector, result: Interval = new Interval()): Interval {
+    if (this._resolveTransformGroupAnchor() !== null) {
+      return super.project(axis, result);
+    }
+
     // vertices is a fixed 8-element Float32Array (4 corners).
     const v = this.vertices;
     const x1 = v[0]!;
@@ -514,11 +631,11 @@ export class Sprite extends Drawable {
    * A {@link RenderNode.hitArea} replaces the quad test entirely.
    */
   public override contains(x: number, y: number): boolean {
-    if (this.hitArea !== null) {
+    if (this.hitArea !== null || this._resolveTransformGroupAnchor() !== null) {
       return super.contains(x, y);
     }
 
-    if (this.isAlignedBox) {
+    if (this._isWorldAligned()) {
       return this.getBounds().contains(x, y);
     }
 
@@ -558,6 +675,12 @@ export class Sprite extends Drawable {
   }
 
   public override destroy(): void {
+    this._textureClaimRevision++;
+
+    if (this._texture instanceof Texture) {
+      this._texture._removeUpdateListener(this._onDynamicTextureUpdate);
+    }
+
     super.destroy();
 
     if (this._normals !== null) {

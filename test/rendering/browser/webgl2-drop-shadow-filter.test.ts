@@ -18,7 +18,10 @@ const withScene = async (filters: readonly Filter[], read: (pixel: (x: number, y
     root.destroy();
     texture.destroy();
     backend.destroy();
-    for (const filter of filters) filter.destroy();
+
+    for (const filter of filters) {
+      filter.destroy();
+    }
   }
 };
 

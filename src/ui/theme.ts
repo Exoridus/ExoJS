@@ -1,7 +1,10 @@
 import { Color } from '#core/Color';
 import type { AnimatedSpriteClipDefinition } from '#rendering/sprite/AnimatedSprite';
 import type { NineSliceInsets, NineSliceModes } from '#rendering/sprite/nineSlice';
-import type { TextStyleOptions } from '#rendering/text/TextStyle';
+import type { Text } from '#rendering/text/Text';
+import { TextEffectError } from '#rendering/text/TextEffectError';
+import { autoTextEffectCapability, checkTextEffectValues } from '#rendering/text/textEffects';
+import { TextStyle, type TextStyleOptions } from '#rendering/text/TextStyle';
 import type { Texture } from '#rendering/texture/Texture';
 import type { TextureRegion } from '#rendering/texture/TextureRegion';
 
@@ -140,6 +143,7 @@ export type UIThemeRole =
   | 'checkbox'
   | 'checkboxMark'
   | 'toggleTrack'
+  | 'toggleFill'
   | 'toggleKnob'
   | 'sliderTrack'
   | 'sliderFill'
@@ -151,8 +155,14 @@ export type UIThemeRole =
   | 'caret'
   | 'selection';
 
-/** Skins for every role, as resolved for a widget. */
-export type UITheme = Readonly<Record<UIThemeRole, UISkinSet>>;
+/**
+ * Skins for every role, as resolved for a widget. `toggleFill` may be left out
+ * of a hand-written theme: a checked {@link Toggle} then uses the default
+ * theme's fill.
+ */
+export type UITheme = Readonly<Record<Exclude<UIThemeRole, 'toggleFill'>, UISkinSet>> & {
+  readonly toggleFill?: UISkinSet;
+};
 
 /** Skin fields to override; an omitted field keeps the inherited one. */
 export type UISkinPatch = Partial<UISkin>;
@@ -183,7 +193,9 @@ export interface UIFillPatch {
  *
  * @internal
  */
-export const backgroundOptionsFrom = (options: { [Key in keyof UIBackgroundOptions]?: UIBackgroundOptions[Key] | undefined }): UIBackgroundOptions => ({
+export const backgroundOptionsFrom = (options: {
+  [Key in keyof UIBackgroundOptions]?: UIBackgroundOptions[Key] | undefined;
+}): UIBackgroundOptions => ({
   ...(options.slices !== undefined && { slices: options.slices }),
   ...(options.border !== undefined && { border: options.border }),
   ...(options.modes !== undefined && { modes: options.modes }),
@@ -214,7 +226,12 @@ export const createUIBackground = (source: Texture | TextureRegion | UIBackgroun
   return {
     kind: 'nineSlice',
     texture: source,
-    slices: options.slices ?? { left: thirdOf(source.width), top: thirdOf(source.height), right: thirdOf(source.width), bottom: thirdOf(source.height) },
+    slices: options.slices ?? {
+      left: thirdOf(source.width),
+      top: thirdOf(source.height),
+      right: thirdOf(source.width),
+      bottom: thirdOf(source.height),
+    },
     ...(options.border !== undefined && { border: options.border }),
     ...(options.modes !== undefined && { modes: options.modes }),
   };
@@ -232,105 +249,115 @@ const fill = (color: Color, cornerRadius: number, borderColor: Color = new Color
   cornerRadius,
 });
 
-const skin = (background: UIBackground, text: TextStyleOptions = {}, insets: UIInsets = zeroInsets): UISkin => ({ background, text, insets });
+const skin = (background: UIBackground, text: TextStyleOptions = {}, insets: UIInsets = zeroInsets): UISkin => ({
+  background,
+  text,
+  insets,
+});
 
-const buttonText: TextStyleOptions = { fillColor: new Color(255, 255, 255, 1), fontSize: 16, align: 'center' };
+const textColor = new Color(234, 241, 245);
+const mutedColor = new Color(165, 184, 197);
+const accentColor = new Color(143, 224, 181);
+const borderColor = new Color(64, 84, 100);
+const disabledColor = new Color(114, 133, 146);
+const controlText: TextStyleOptions = { fontFamily: 'system-ui', fillColor: textColor, fontSize: 16 };
+const buttonText: TextStyleOptions = { ...controlText, fontWeight: '600', align: 'center' };
+const disabledText: TextStyleOptions = { ...controlText, fillColor: disabledColor };
+const buttonInsets: UIInsets = { left: 14, top: 8, right: 14, bottom: 8 };
+const fieldInsets: UIInsets = { left: 12, top: 8, right: 12, bottom: 8 };
 
-const controlText: TextStyleOptions = { fillColor: new Color(255, 255, 255, 1), fontSize: 16 };
-
-const disabledText: TextStyleOptions = { fillColor: new Color(150, 156, 168, 1), fontSize: 16 };
-
-/**
- * The theme a UI layer uses until one is assigned. It reproduces the widgets'
- * built-in look, so assigning a patch changes only what the patch names.
- */
-export const defaultUITheme: UITheme = {
+/** Asset-free dark surfaces, readable typography and mint interaction accents. */
+export const defaultUITheme: Required<UITheme> = {
   panel: {
-    normal: skin(fill(new Color(30, 34, 45, 0.92), 8, new Color(255, 255, 255, 0.12), 0)),
+    normal: skin(fill(new Color(22, 35, 44), 10, new Color(52, 73, 86), 1)),
   },
   button: {
-    normal: skin(fill(new Color(54, 120, 220, 1), 8), buttonText),
-    hover: skin(fill(new Color(74, 140, 240, 1), 8), buttonText),
-    pressed: skin(fill(new Color(40, 96, 180, 1), 8), buttonText),
-    disabled: skin(fill(new Color(70, 76, 90, 1), 8), buttonText),
-    focused: skin(fill(new Color(54, 120, 220, 1), 8, new Color(255, 255, 255, 0.85), 2), buttonText),
+    normal: skin(fill(new Color(35, 55, 68), 8, borderColor, 1), buttonText, buttonInsets),
+    hover: skin(fill(new Color(48, 74, 89), 8, new Color(111, 145, 159), 1), buttonText, buttonInsets),
+    pressed: skin(fill(accentColor, 8, accentColor, 1), { ...buttonText, fillColor: new Color(18, 40, 30) }, buttonInsets),
+    disabled: skin(fill(new Color(29, 43, 53), 8, new Color(45, 62, 73), 1), { ...buttonText, fillColor: disabledColor }, buttonInsets),
+    focused: skin(fill(new Color(35, 55, 68), 8, accentColor, 2), buttonText, buttonInsets),
   },
   label: {
-    normal: skin(noBackground, { fillColor: new Color(255, 255, 255, 1), fontSize: 16 }),
+    normal: skin(noBackground, controlText),
   },
   progressBarTrack: {
-    normal: skin(fill(new Color(255, 255, 255, 0.16), 4)),
+    normal: skin(fill(new Color(35, 55, 68), 4)),
   },
   progressBarFill: {
-    normal: skin(fill(new Color(80, 220, 120, 1), 4)),
+    normal: skin(fill(accentColor, 4)),
   },
   scrollbarTrack: {
-    normal: skin(fill(new Color(255, 255, 255, 0.08), 6)),
+    normal: skin(fill(new Color(17, 26, 34), 4)),
   },
   scrollbarThumb: {
-    normal: skin(fill(new Color(255, 255, 255, 0.28), 6)),
-    hover: skin(fill(new Color(255, 255, 255, 0.42), 6)),
-    pressed: skin(fill(new Color(255, 255, 255, 0.56), 6)),
+    normal: skin(fill(new Color(90, 116, 132), 4)),
+    hover: skin(fill(mutedColor, 4)),
+    pressed: skin(fill(accentColor, 4)),
   },
   checkbox: {
-    normal: skin(fill(new Color(255, 255, 255, 0.12), 4, new Color(255, 255, 255, 0.35), 2), controlText),
-    hover: skin(fill(new Color(255, 255, 255, 0.2), 4, new Color(255, 255, 255, 0.5), 2), controlText),
-    pressed: skin(fill(new Color(255, 255, 255, 0.28), 4, new Color(255, 255, 255, 0.6), 2), controlText),
-    disabled: skin(fill(new Color(255, 255, 255, 0.06), 4, new Color(255, 255, 255, 0.15), 2), disabledText),
-    focused: skin(fill(new Color(255, 255, 255, 0.12), 4, new Color(120, 180, 255, 1), 2), controlText),
+    normal: skin(fill(new Color(17, 26, 34), 5, borderColor, 1), controlText),
+    hover: skin(fill(new Color(35, 55, 68), 5, mutedColor, 1), controlText),
+    pressed: skin(fill(new Color(48, 74, 89), 5, accentColor, 1), controlText),
+    disabled: skin(fill(new Color(24, 35, 44), 5, new Color(45, 62, 73), 1), disabledText),
+    focused: skin(fill(new Color(17, 26, 34), 5, accentColor, 2), controlText),
   },
   checkboxMark: {
-    normal: skin(fill(new Color(80, 220, 120, 1), 2)),
-    disabled: skin(fill(new Color(120, 130, 140, 1), 2)),
+    normal: skin(fill(accentColor, 2)),
+    disabled: skin(fill(disabledColor, 2)),
   },
   toggleTrack: {
-    normal: skin(fill(new Color(255, 255, 255, 0.16), 999, new Color(255, 255, 255, 0.28), 2), controlText),
-    hover: skin(fill(new Color(255, 255, 255, 0.24), 999, new Color(255, 255, 255, 0.4), 2), controlText),
-    pressed: skin(fill(new Color(255, 255, 255, 0.3), 999, new Color(255, 255, 255, 0.5), 2), controlText),
-    disabled: skin(fill(new Color(255, 255, 255, 0.08), 999, new Color(255, 255, 255, 0.12), 2), disabledText),
-    focused: skin(fill(new Color(255, 255, 255, 0.16), 999, new Color(120, 180, 255, 1), 2), controlText),
+    normal: skin(fill(new Color(35, 55, 68), 999, borderColor, 1), controlText),
+    hover: skin(fill(new Color(48, 74, 89), 999, mutedColor, 1), controlText),
+    pressed: skin(fill(new Color(48, 74, 89), 999, accentColor, 1), controlText),
+    disabled: skin(fill(new Color(24, 35, 44), 999, new Color(45, 62, 73), 1), disabledText),
+    focused: skin(fill(new Color(35, 55, 68), 999, accentColor, 2), controlText),
+  },
+  toggleFill: {
+    normal: skin(fill(accentColor, 999)),
+    disabled: skin(fill(new Color(45, 62, 73), 999)),
   },
   toggleKnob: {
-    normal: skin(fill(new Color(240, 244, 250, 1), 999)),
-    disabled: skin(fill(new Color(130, 138, 150, 1), 999)),
+    normal: skin(fill(textColor, 999)),
+    disabled: skin(fill(disabledColor, 999)),
   },
   sliderTrack: {
-    normal: skin(fill(new Color(255, 255, 255, 0.16), 3)),
-    disabled: skin(fill(new Color(255, 255, 255, 0.08), 3)),
+    normal: skin(fill(new Color(35, 55, 68), 3)),
+    disabled: skin(fill(new Color(24, 35, 44), 3)),
   },
   sliderFill: {
-    normal: skin(fill(new Color(54, 120, 220, 1), 3)),
-    disabled: skin(fill(new Color(90, 96, 110, 1), 3)),
+    normal: skin(fill(accentColor, 3)),
+    disabled: skin(fill(disabledColor, 3)),
   },
   sliderThumb: {
-    normal: skin(fill(new Color(240, 244, 250, 1), 999)),
-    hover: skin(fill(new Color(255, 255, 255, 1), 999)),
-    pressed: skin(fill(new Color(210, 220, 235, 1), 999)),
-    disabled: skin(fill(new Color(130, 138, 150, 1), 999)),
-    focused: skin(fill(new Color(240, 244, 250, 1), 999, new Color(120, 180, 255, 1), 2)),
+    normal: skin(fill(textColor, 999, new Color(17, 26, 34), 2)),
+    hover: skin(fill(accentColor, 999, new Color(17, 26, 34), 2)),
+    pressed: skin(fill(accentColor, 999, textColor, 2)),
+    disabled: skin(fill(disabledColor, 999)),
+    focused: skin(fill(textColor, 999, accentColor, 2)),
   },
   dropdownList: {
-    normal: skin(fill(new Color(24, 28, 38, 0.98), 8, new Color(255, 255, 255, 0.18), 1)),
+    normal: skin(fill(new Color(22, 35, 44), 8, borderColor, 1), controlText, { left: 4, top: 4, right: 4, bottom: 4 }),
   },
   dropdownItem: {
-    normal: skin(fill(new Color(255, 255, 255, 0), 4), controlText),
-    hover: skin(fill(new Color(255, 255, 255, 0.14), 4), controlText),
-    pressed: skin(fill(new Color(54, 120, 220, 1), 4), controlText),
-    disabled: skin(fill(new Color(255, 255, 255, 0), 4), disabledText),
+    normal: skin(fill(new Color(22, 35, 44), 4), controlText),
+    hover: skin(fill(new Color(48, 74, 89), 4), controlText),
+    pressed: skin(fill(accentColor, 4), { ...controlText, fillColor: new Color(18, 40, 30) }),
+    disabled: skin(fill(new Color(22, 35, 44), 4), disabledText),
   },
   textFieldSurface: {
-    normal: skin(fill(new Color(255, 255, 255, 0.08), 6, new Color(255, 255, 255, 0.18), 1), controlText, { left: 8, top: 6, right: 8, bottom: 6 }),
-    disabled: skin(fill(new Color(255, 255, 255, 0.04), 6, new Color(255, 255, 255, 0.08), 1), disabledText, { left: 8, top: 6, right: 8, bottom: 6 }),
-    focused: skin(fill(new Color(255, 255, 255, 0.1), 6, new Color(120, 180, 255, 1), 1), controlText, { left: 8, top: 6, right: 8, bottom: 6 }),
+    normal: skin(fill(new Color(17, 26, 34), 8, borderColor, 1), controlText, fieldInsets),
+    disabled: skin(fill(new Color(24, 35, 44), 8, new Color(45, 62, 73), 1), disabledText, fieldInsets),
+    focused: skin(fill(new Color(17, 26, 34), 8, accentColor, 2), controlText, fieldInsets),
   },
   placeholder: {
-    normal: skin(noBackground, { fillColor: new Color(255, 255, 255, 0.35), fontSize: 16 }),
+    normal: skin(noBackground, { ...controlText, fillColor: mutedColor }),
   },
   caret: {
-    normal: skin(fill(new Color(120, 180, 255, 1), 0)),
+    normal: skin(fill(accentColor, 0)),
   },
   selection: {
-    normal: skin(fill(new Color(54, 120, 220, 0.35), 0)),
+    normal: skin(fill(new Color(143, 224, 181, 0.28), 2)),
   },
 };
 
@@ -340,6 +367,9 @@ const neutralFill: UIFillBackground = fill(new Color(0, 0, 0, 0), 0, new Color(0
  * Apply a widget's fill overrides on top of the background its skin provides.
  * A patched skin that does not paint a fill (a nine-slice, or nothing) becomes
  * one: the caller asked for a colour, so they get a colour.
+ * An empty patch object still counts as an override: with a nine-slice or no
+ * background it yields a transparent fill, while an existing fill keeps its
+ * colour, border and radius. Pass `null` for no override.
  *
  * @internal
  */
@@ -359,14 +389,61 @@ export const applyUIFillPatch = (background: UIBackground, patch: UIFillPatch | 
   };
 };
 
+/** The skin set `theme` defines for `role`, or the default theme's when a hand-written theme leaves the role out. */
+export const themeSkinSet = (theme: UITheme, role: UIThemeRole): UISkinSet => theme[role] ?? defaultUITheme[role];
+
 /** The skin a state paints with, falling back to `normal` where undefined. */
 export const resolveUISkin = (set: UISkinSet, state: UIWidgetState): UISkin => set[state] ?? set.normal;
 
-const mergeSkin = (base: UISkin, patch: UISkinPatch): UISkin => ({
-  background: patch.background ?? base.background,
-  text: patch.text ?? base.text,
-  insets: patch.insets ?? base.insets,
-});
+/**
+ * Reject a skin text style whose outline or shadow no label could draw, at the
+ * moment the skin is applied rather than when a widget first lays out with it.
+ * @internal
+ */
+const assertSkinTextEffects = (options: TextStyleOptions): TextStyle => {
+  const text = new TextStyle(options);
+  const issue = checkTextEffectValues(
+    autoTextEffectCapability,
+    text.outlineWidth,
+    text.shadowAlpha,
+    text.shadowOffsetX,
+    text.shadowOffsetY,
+    text.shadowBlur,
+  );
+
+  if (issue !== null) {
+    throw new TextEffectError(issue, 'UI skin text style');
+  }
+
+  return text;
+};
+
+/** @internal */
+export const assertSkinSetTextEffects = (set: UISkinSet, override?: TextStyleOptions | null, node?: Text | null): void => {
+  const seen = new Set<TextStyleOptions>();
+
+  for (const { text } of Object.values(set)) {
+    if (seen.has(text)) {
+      continue;
+    }
+
+    seen.add(text);
+    const style = assertSkinTextEffects(override == null ? text : { ...text, ...override });
+    node?._assertStyleFits(style);
+  }
+};
+
+const mergeSkin = (base: UISkin, patch: UISkinPatch): UISkin => {
+  if (patch.text !== undefined) {
+    assertSkinTextEffects(patch.text);
+  }
+
+  return {
+    background: patch.background ?? base.background,
+    text: patch.text ?? base.text,
+    insets: patch.insets ?? base.insets,
+  };
+};
 
 const mergeSkinSet = (base: UISkinSet, patch: UISkinSetPatch): UISkinSet => {
   const merged: { normal: UISkin } & Partial<Record<Exclude<UIWidgetState, 'normal'>, UISkin>> = { ...base };
@@ -401,7 +478,7 @@ export const createUITheme = (patch: UIThemePatch, base: UITheme = defaultUIThem
     const setPatch = patch[role];
 
     if (setPatch !== undefined) {
-      merged[role] = mergeSkinSet(base[role], setPatch);
+      merged[role] = mergeSkinSet(themeSkinSet(base, role), setPatch);
     }
   }
 

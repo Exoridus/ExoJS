@@ -1,5 +1,5 @@
 import { radiansToDegrees, Sprite, Texture } from '@codexo/exojs';
-import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
 const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 100, y: 0 }, colliders: [{ shape: new BoxShape(32, 32) }] }));

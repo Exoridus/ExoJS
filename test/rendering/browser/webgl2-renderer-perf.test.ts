@@ -28,7 +28,7 @@
 // Imports (after vi.mock hoisting)
 // ---------------------------------------------------------------------------
 
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode, TileSet } from '@codexo/exojs/tilemap';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -504,7 +504,7 @@ describe('WebGL2 renderer perf — Tilemap', () => {
     }
   });
 
-  it('4 interleaved tilesets in one 32×32 chunk → 4 draws (one page per tileset)', async () => {
+  it('4 interleaved tilesets in one 32×32 chunk → 1 ordered multi-atlas draw', async () => {
     const pixelSize = 32 * 16;
     const backend = await createTilemapBackend(pixelSize, pixelSize);
 
@@ -519,7 +519,7 @@ describe('WebGL2 renderer perf — Tilemap', () => {
     node.setPosition(0, 0);
 
     try {
-      expect(render(backend, node)).toBe(4);
+      expect(render(backend, node)).toBe(1);
     } finally {
       node.destroy();
       textures.forEach(t => t.destroy());

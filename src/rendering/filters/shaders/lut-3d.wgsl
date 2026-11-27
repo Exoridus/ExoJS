@@ -1,6 +1,7 @@
 @group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
 @group(1) @binding(1) var uLut: texture_2d<f32>;
+@group(1) @binding(2) var uLutSampler: sampler;
 
 fn sampleLut3d(c: vec3<f32>) -> vec3<f32> {
     let n = uniforms.uLutSize;
@@ -16,8 +17,8 @@ fn sampleLut3d(c: vec3<f32>) -> vec3<f32> {
     let gOff = clamp(c.g, 0.0, 1.0) * (n - 1.0) * invN + halfRow;
     let uLow = bLow * invN + rOff + halfPx;
     let uHigh = bHigh * invN + rOff + halfPx;
-    let lo = textureSample(uLut, uSampler, vec2<f32>(uLow, gOff)).rgb;
-    let hi = textureSample(uLut, uSampler, vec2<f32>(uHigh, gOff)).rgb;
+    let lo = textureSample(uLut, uLutSampler, vec2<f32>(uLow, gOff)).rgb;
+    let hi = textureSample(uLut, uLutSampler, vec2<f32>(uHigh, gOff)).rgb;
     return mix(lo, hi, bFrac);
 }
 

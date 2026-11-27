@@ -4,7 +4,7 @@
   "symbol": "TremoloEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 11,
   "counts": {
@@ -27,7 +27,7 @@
         "lfoOscillator ── lfoGain (depth / 2) ── tremoloGain.gain lfoOscillator ── panGain (depth) ── panner.pan ```",
         "Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `tremoloGain.gain` base = `1 - depth / 2`."
       ],
-      "importLine": "import { TremoloEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { TremoloEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

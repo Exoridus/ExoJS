@@ -2,6 +2,7 @@ import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 
 import { Texture } from './Texture';
 import type { TextureColorSpace, TextureOptions } from './TextureOptions';
+import { isArrayBuffer, isUint8Array, typedArrayName } from './typedArrayBrand';
 
 /**
  * Pixel format for {@link DataTexture} - the {@link TextureFormat} subset that
@@ -154,6 +155,10 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
   public constructor(options: DataTextureOptions & { format: F }) {
     const textureOptions = { ...DataTexture.defaultOptions, ...options.textureOptions };
 
+    // An explicitly undefined option must not override the data default; a
+    // numeric texture is never colour-managed.
+    textureOptions.colorSpace ??= 'none';
+
     if (textureOptions.colorSpace === 'srgb') {
       throw new Error("DataTexture colorSpace cannot be 'srgb' - numerical data is never colour-managed.");
     }
@@ -165,6 +170,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
     if (!Number.isInteger(width) || width <= 0) {
       throw new Error(`DataTexture width must be a positive integer (got ${width}).`);
     }
+
     if (!Number.isInteger(height) || height <= 0) {
       throw new Error(`DataTexture height must be a positive integer (got ${height}).`);
     }
@@ -177,28 +183,40 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
 
     if (data === undefined) {
       buffer = isFloatFormat(format) ? new Float32Array(expectedBytes / 4) : new Uint8Array(expectedBytes);
-    } else if (data instanceof ArrayBuffer) {
+    } else if (isArrayBuffer(data)) {
       if (data.byteLength !== expectedBytes) {
-        throw new Error(`DataTexture data byteLength ${data.byteLength} does not match ${width}x${height} ${format} (${expectedBytes} bytes expected).`);
+        throw new Error(
+          `DataTexture data byteLength ${data.byteLength} does not match ${width}x${height} ${format} (${expectedBytes} bytes expected).`,
+        );
       }
+
       buffer = isFloatFormat(format) ? new Float32Array(data) : new Uint8Array(data);
-    } else if (data instanceof Uint8Array) {
+    } else if (isUint8Array(data)) {
       if (isFloatFormat(format)) {
         throw new Error(`DataTexture format '${format}' requires a Float32Array, got Uint8Array.`);
       }
+
       if (data.byteLength !== expectedBytes) {
-        throw new Error(`DataTexture Uint8Array length ${data.length} does not match ${width}x${height} ${format} (${expectedBytes} expected).`);
+        throw new Error(
+          `DataTexture Uint8Array length ${data.length} does not match ${width}x${height} ${format} (${expectedBytes} expected).`,
+        );
       }
+
       buffer = data;
-    } else {
-      // Float32Array
+    } else if (typedArrayName(data) === 'Float32Array') {
       if (!isFloatFormat(format)) {
         throw new Error(`DataTexture format '${format}' requires a Uint8Array, got Float32Array.`);
       }
+
       if (data.byteLength !== expectedBytes) {
-        throw new Error(`DataTexture Float32Array byteLength ${data.byteLength} does not match ${width}x${height} ${format} (${expectedBytes} expected).`);
+        throw new Error(
+          `DataTexture Float32Array byteLength ${data.byteLength} does not match ${width}x${height} ${format} (${expectedBytes} expected).`,
+        );
       }
+
       buffer = data;
+    } else {
+      throw new Error('DataTexture data must be a Uint8Array, Float32Array or ArrayBuffer.');
     }
 
     this.format = format;
@@ -258,16 +276,18 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
    * than {@link commit} for ring-buffer patterns where only one row or column
    * changes per frame. If a region was already pending, the union is uploaded.
    *
-   * Coordinates are pixel-space with origin at the top-left. Bounds are clamped
-   * to the texture dimensions; out-of-range rectangles throw.
+   * Coordinates are pixel-space with origin at the top-left. They are not
+   * clamped: a rectangle that leaves the texture throws.
    */
   public commitRect(x: number, y: number, width: number, height: number): this {
     if (!Number.isInteger(x) || !Number.isInteger(y) || !Number.isInteger(width) || !Number.isInteger(height)) {
       throw new Error(`DataTexture commitRect requires integer coordinates (got ${x}, ${y}, ${width}, ${height}).`);
     }
+
     if (width <= 0 || height <= 0) {
       throw new Error(`DataTexture commitRect requires positive width and height (got ${width}, ${height}).`);
     }
+
     if (x < 0 || y < 0 || x + width > this.width || y + height > this.height) {
       throw new Error(`DataTexture commitRect (${x}, ${y}, ${width}, ${height}) is out of bounds for ${this.width}x${this.height}.`);
     }

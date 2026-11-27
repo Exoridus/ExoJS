@@ -49,7 +49,8 @@ const budgetLineColor = new Color(255, 96, 96, 0.4);
  * GPU results resolve a frame or more after the frame they describe, so the row
  * is labelled `last` rather than presented as this frame's cost.
  */
-const formatGpuFrameTime = (gpuFrameTimeMs: number | null): string => (gpuFrameTimeMs === null ? 'pending' : `${gpuFrameTimeMs.toFixed(2)}ms last`);
+const formatGpuFrameTime = (gpuFrameTimeMs: number | null): string =>
+  gpuFrameTimeMs === null ? 'pending' : `${gpuFrameTimeMs.toFixed(2)}ms last`;
 
 /** Recursively count nodes under a RenderNode. */
 const countNodes = (node: RenderNode): number => {
@@ -71,8 +72,9 @@ const countNodes = (node: RenderNode): number => {
  * draw-call count, scene-node count, and how many of the last 120 frames ran
  * over {@link frameBudget}, alongside a 120-sample frame-time sparkline.
  *
- * The layer asks the backend for hardware GPU timing when it first becomes
- * visible and turns it off again in {@link destroy}. Devices that expose no GPU
+ * The layer asks the backend for hardware GPU timing while it is shown and
+ * turns it off again when it is hidden (its own flag or the overlay's master
+ * switch) and in {@link destroy}. Devices that expose no GPU
  * timer report `GPU: n/a`; where one exists, the value is the last frame whose
  * results have come back, which trails the frame on screen.
  *
@@ -106,6 +108,7 @@ export class PerformanceLayer extends DebugLayer {
   // on. A device without one never produces a sample, so the row says so once
   // instead of reading as a frame that took no GPU time.
   private _gpuTimingAvailable = false;
+  private _gpuTimingRequested = false;
 
   // Root container - lazily initialized on first update() call so the
   // glyph atlas is not touched in environments where canvas 2D is absent.
@@ -138,8 +141,12 @@ export class PerformanceLayer extends DebugLayer {
     // layer is first made visible - not at DebugOverlay construction time.
     if (this._root === null) {
       this._build();
-      // Deferred to here for the same reason: nothing is allocated on the GPU
-      // until the panel is actually shown.
+    }
+
+    // Requested here rather than on show for the same reason: nothing is
+    // allocated on the GPU until the panel is actually drawn.
+    if (!this._gpuTimingRequested) {
+      this._gpuTimingRequested = true;
       this._gpuTimingAvailable = this._app.backend.setGpuTimingEnabled(true);
     }
 
@@ -214,10 +221,11 @@ export class PerformanceLayer extends DebugLayer {
     if (this._root !== null) {
       this._root.destroy();
       this._root = null;
-      this._app.backend.setGpuTimingEnabled(false);
-      this._gpuTimingAvailable = false;
     }
 
+    this._releaseGpuTiming();
+
+    this._overBudgetPainted = false;
     this._textFps = null;
     this._textFrame = null;
     this._textGpu = null;
@@ -225,6 +233,20 @@ export class PerformanceLayer extends DebugLayer {
     this._textNodes = null;
     this._textBudget = null;
     this._sparkline = null;
+  }
+
+  protected override _onShownChanged(shown: boolean): void {
+    if (!shown) {
+      this._releaseGpuTiming();
+    }
+  }
+
+  private _releaseGpuTiming(): void {
+    if (this._gpuTimingRequested) {
+      this._gpuTimingRequested = false;
+      this._gpuTimingAvailable = false;
+      this._app.backend.setGpuTimingEnabled(false);
+    }
   }
 
   // -----------------------------------------------------------------------

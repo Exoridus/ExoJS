@@ -75,6 +75,7 @@ describe('audio/audio-context — getOfflineAudioContext()', () => {
       public currentTime = 0;
       public sampleRate = 44100;
       public destination = {};
+
       public constructor() {
         audioContextCreations++;
       }
@@ -87,6 +88,7 @@ describe('audio/audio-context — getOfflineAudioContext()', () => {
       ) {
         offlineCreations++;
       }
+
       public decodeAudioData(): Promise<AudioBuffer> {
         return Promise.resolve({} as AudioBuffer);
       }
@@ -134,15 +136,26 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
 
     public removeEventListener(type: string, cb: () => void): void {
       const arr = this._listeners.get(type);
-      if (!arr) return;
+
+      if (!arr) {
+        return;
+      }
+
       const index = arr.indexOf(cb);
-      if (index !== -1) arr.splice(index, 1);
+
+      if (index !== -1) {
+        arr.splice(index, 1);
+      }
     }
 
     /** Real browsers fire `statechange` once `resume()` settles - mirrored here. */
     public resume(): Promise<void> {
       this.state = 'running';
-      for (const cb of this._listeners.get('statechange') ?? []) cb();
+
+      for (const cb of this._listeners.get('statechange') ?? []) {
+        cb();
+      }
+
       return Promise.resolve();
     }
   }
@@ -174,16 +187,25 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
 
     public removeEventListener(type: string, cb: () => void): void {
       const arr = this._listeners.get(type);
-      if (!arr) return;
+
+      if (!arr) {
+        return;
+      }
+
       const index = arr.indexOf(cb);
-      if (index !== -1) arr.splice(index, 1);
+
+      if (index !== -1) {
+        arr.splice(index, 1);
+      }
     }
 
     public resume(): Promise<void> {
       this.resumeCallCount++;
       this.state = 'running';
 
-      for (const cb of this._listeners.get('statechange') ?? []) cb();
+      for (const cb of this._listeners.get('statechange') ?? []) {
+        cb();
+      }
 
       return Promise.resolve();
     }
@@ -191,7 +213,9 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     public simulateExternalSuspend(): void {
       this.state = 'suspended';
 
-      for (const cb of this._listeners.get('statechange') ?? []) cb();
+      for (const cb of this._listeners.get('statechange') ?? []) {
+        cb();
+      }
     }
   }
 
@@ -253,6 +277,32 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     expect(removedEvents).toContain('keydown');
   });
 
+  it('unlocks on a mouse press the canvas consumes before it reaches the document', async () => {
+    Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: UnlockableAudioContext });
+    Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: class {} });
+
+    const { getAudioContext } = await import('#audio/audioContext');
+    const ctx = getAudioContext();
+    const canvas = document.createElement('canvas');
+
+    // What the input system does with a press on its surface: cancel it, so no
+    // compatibility `mousedown` follows, and stop it from propagating further.
+    canvas.addEventListener('pointerdown', event => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    });
+    document.body.append(canvas);
+
+    try {
+      canvas.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+
+      expect(ctx.state).toBe('running');
+    } finally {
+      canvas.remove();
+    }
+  });
+
   it('a second interaction event arriving synchronously after the first sees the context already running', async () => {
     // Deliberately no addEventListener/statechange support here: unlike
     // UnlockableAudioContext, resume() must NOT synchronously cascade into
@@ -263,8 +313,10 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
       public currentTime = 0;
       public sampleRate = 44100;
       public destination = {};
+
       public resume(): Promise<void> {
         this.state = 'running'; // set synchronously, like a real AudioContext
+
         return Promise.resolve();
       }
     }
@@ -304,7 +356,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     // successful unlock fires - exercising the second operand of
     // `removeInteractionListeners`'s `!interactionListenersAdded ||
     // !canUseDocument()` guard.
-    onAudioContextReady.once(() => undefined);
+    onAudioContextReady.once(() => {});
     const ctx = getAudioContext();
 
     vi.stubGlobal('document', undefined);
@@ -407,7 +459,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     vi.stubGlobal('document', undefined);
 
     expect(() => {
-      onAudioContextReady.once(() => undefined);
+      onAudioContextReady.once(() => {});
       getAudioContext();
     }).not.toThrow();
   });

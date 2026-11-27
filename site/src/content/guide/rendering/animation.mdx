@@ -16,6 +16,14 @@ ExoJS gives you three layers of animation control, each suited to a different ki
 
 All three can coexist in one scene. Use tweens for UI transitions and canned motion paths; use manual updates for physics, input-driven movement, and any logic where the next position depends on something other than time alone; use animated sprites for character animation playback.
 
+## A complete sprite and animation scene
+
+The still sprite uses `Sprite(path)`; the animated sprite uses `AnimatedSprite(new Texture(path), clips)`, the existing constructor contract. The supplied character sheet has known 128 x 128 frames at the listed atlas coordinates, so no dimensions-dependent setup needs to wait. Scene attachment starts both texture loads. The constructor copies the Rectangle inputs, which the example then releases.
+
+<SourceSnippet source="examples/guides/animation/sprite-animation.ts" region="sprite-animation" language="ts" title="Lazy textures, named clips, mounted canvas, and explicit pause policy" />
+
+Install `@codexo/exojs-demo-assets` alongside Core to run this program. Click or tab to the canvas, then press P to pause and resume. `this.animations.add(..., { when: SceneAvailability.Active })` makes playback follow gameplay pause. The pause toggle uses `Always` so the same binding can resume the scene. All nodes and registrations end with the scene. Use [the character recipe](/ExoJS/en/guide/physics/character-movement/#idle-walk-and-jump-in-one-scene) when clips follow simulated movement.
+
 ## Tweens
 
 A [`Tween`](/ExoJS/en/api/tween/) interpolates numeric properties on any target object from their current value to configured end values over a duration in seconds. Create one through `app.tweens.create(target)`, configure it fluently, and call `start()`:
@@ -228,10 +236,11 @@ Call `setClips()` to replace all clips at once with a map.
 
 ### Per-frame timing and offsets
 
-Two optional clip fields cover cases a single `fps` value can't express:
+Optional clip fields cover timing and trimmed-frame geometry:
 
 - **`frameDurations`** — a per-frame hold time in seconds, parallel to `frames`. When present it drives playback timing directly and `fps` is ignored while advancing frames (still accepted as a display-only average). Use it for clips with intentionally uneven pacing, such as an impact frame that lingers longer than the rest.
-- **`frameOffsets`** — a per-frame local draw offset (`{ x, y }` in local pixels), parallel to `frames`. Use it to keep frames anchored to a stable point when the source frames are trimmed to different sizes — without it, differently-trimmed frames jitter around their own top-left corner.
+- **`frameOffsets`** - per-frame local draw offsets (`{ x, y }` in logical pixels), parallel to `frames`, locating trimmed content in its original canvas.
+- **`sourceSize`** - the original untrimmed `{ width, height }` in local logical pixels before node scale. Anchors use this canvas size, and metadata-bearing clips keep node scale across frame/tag changes. Give clips from the same authored canvas the same size. Without this optional field, existing clips retain the inferred-size and display-size fallback.
 
 ```ts
 import { AnimatedSprite, Rectangle, Time } from '@codexo/exojs';
@@ -282,7 +291,7 @@ player.onComplete.add(clip => {
 });
 ```
 
-Playback advances by itself. Once the sprite is part of the scene tree, the engine's `AnimationSystem` (`app.animations`) ticks every playing `AnimatedSprite` once per frame — there is nothing to call from your own `update`:
+Playback advances by itself. Choose `scene.animations.add(sprite, { when: SceneAvailability.Active })` when it must stop during gameplay pause; untracked automatic animation has application scheduling. Once the sprite is part of the scene tree, the engine's `AnimationSystem` (`app.animations`) ticks every playing `AnimatedSprite` once per frame — there is nothing to call from your own `update`:
 
 <SourceSnippet
   source="examples/guides/animation/tween-scene.ts"
@@ -334,12 +343,12 @@ Frame-loop animation — the `update(delta)` pattern where you read `delta` and 
 <a id="tween-basics"></a>
 <ExamplePreview chapter="tweens-animation" slug="tween-basics" />
 
-Click to interrupt a moving sprite or press Space to enable a yoyo round trip.
+Click or tap a target to move the sprite. Select Roundtrip from Mode to return to the starting point, or press Space to pause and resume.
 
 <a id="frame-animation"></a>
 <ExamplePreview chapter="tweens-animation" slug="frame-animation" />
 
-Named spritesheet clips played by `AnimatedSprite`, with automatic scene-tree advancement.
+Compare fixed and adjustable clip FPS, pause both clips, or advance the same 0.1 seconds of clip time. The immediate-mode sprites are advanced explicitly together.
 
 ## Where to go next
 

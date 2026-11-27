@@ -164,6 +164,7 @@ const makeWebGpuBackend = (env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
 
   const execute = vi.fn(pass => {
     pass.execute(backend);
+
     return backend;
   });
   const getTextureBinding = vi.fn(() => ({
@@ -195,6 +196,7 @@ const makeWebGpuBackend = (env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     clear() {
@@ -205,6 +207,7 @@ const makeWebGpuBackend = (env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
     },
     setView(view: View | null) {
       currentTarget.setView(view);
+
       return this;
     },
     setRenderTarget(target: RenderTarget | null) {
@@ -269,7 +272,9 @@ const makeWebGpuBackend = (env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
 
   // The shader filter records into the backend-owned coordinator's active pass;
   // give the mock a real coordinator over itself (it satisfies WebGpuPassBackend).
-  (backend as unknown as { passCoordinator: WebGpuPassCoordinator }).passCoordinator = new WebGpuPassCoordinator(backend as unknown as WebGpuPassBackend);
+  (backend as unknown as { passCoordinator: WebGpuPassCoordinator }).passCoordinator = new WebGpuPassCoordinator(
+    backend as unknown as WebGpuPassBackend,
+  );
 
   return backend;
 };
@@ -293,6 +298,7 @@ const makeWebGl2Backend = (): RenderBackend => {
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     clear() {
@@ -303,10 +309,12 @@ const makeWebGl2Backend = (): RenderBackend => {
     },
     setView(view: View | null) {
       currentTarget.setView(view);
+
       return this;
     },
     setRenderTarget(target: RenderTarget | null) {
       currentTarget = target ?? root;
+
       return this;
     },
     pushScissorRect() {
@@ -379,15 +387,53 @@ fn vertexMain(@location(0) aPosition: vec2<f32>, @location(1) aUv: vec2<f32>) ->
 ${minimalFragSrc}`;
 
 /** The WebGPU pass a filter built on its first attachment, or `null`. */
-const wgslPassOf = (filter: ShaderFilter): Record<string, unknown> | null => {
-  return (filter as unknown as Record<string, Record<string, unknown> | null>)['_wgslPass'] ?? null;
-};
+const wgslPassOf = (filter: ShaderFilter): Record<string, unknown> | null =>
+  (filter as unknown as Record<string, Record<string, unknown> | null>)['_wgslPass'] ?? null;
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('ShaderFilter on WebGPU', () => {
+  test('texture binding count and sample type changes rebuild the cached layout', () => {
+    const backend = makeWebGpuBackend(env);
+    const first = new Texture(document.createElement('canvas'));
+    const second = new Texture(document.createElement('canvas'));
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc, uniforms: { uFirst: first } });
+    const input = new RenderTexture(16, 16);
+    const output = new RenderTexture(16, 16);
+    const userLayout = (): GPUBindGroupLayoutDescriptor => env.createBindGroupLayout.mock.calls.at(-1)![0] as GPUBindGroupLayoutDescriptor;
+
+    try {
+      filter.apply(backend, input, output);
+      expect(Array.from(userLayout().entries)).toHaveLength(3);
+
+      filter.setUniform('uSecond', second);
+      filter.apply(backend, input, output);
+      expect(Array.from(userLayout().entries)).toHaveLength(5);
+      expect(env.createRenderPipeline).toHaveBeenCalledTimes(2);
+
+      filter.setUniform('uSecond', 0);
+      filter.apply(backend, input, output);
+      expect(Array.from(userLayout().entries)).toHaveLength(3);
+
+      filter.setUniform('uFirst', second);
+      filter.apply(backend, input, output);
+      expect(env.createRenderPipeline).toHaveBeenCalledTimes(3);
+
+      vi.mocked(backend.isNonFilterableTexture).mockReturnValue(true);
+      filter.apply(backend, input, output);
+      expect(Array.from(userLayout().entries)[1]!.texture?.sampleType).toBe('unfilterable-float');
+      expect(env.createRenderPipeline).toHaveBeenCalledTimes(4);
+    } finally {
+      filter.destroy();
+      first.destroy();
+      second.destroy();
+      input.destroy();
+      output.destroy();
+    }
+  });
+
   let env: MockWebGpuEnv;
 
   beforeEach(() => {
@@ -604,6 +650,31 @@ describe('ShaderFilter on WebGPU', () => {
     larger.destroy();
   });
 
+  test('an Int32Array uniform reaches the buffer as integer bits', () => {
+    const backend = makeWebGpuBackend(env);
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc, uniforms: { uCount: new Int32Array([7, -2]) } });
+    const input = new RenderTexture(16, 16);
+    const output = new RenderTexture(64, 64);
+
+    filter.apply(backend, input, output);
+
+    const call = env.queue.writeBuffer.mock.calls.find((args: unknown[]) => {
+      const data = args[2] as Float32Array;
+
+      return data instanceof Float32Array && data.length === 4 && new Int32Array(data.buffer, data.byteOffset, 4)[0] === 7;
+    });
+
+    expect(call).toBeDefined();
+
+    const data = call![2] as Float32Array;
+
+    expect(Array.from(new Int32Array(data.buffer, data.byteOffset, 4))).toEqual([7, -2, 0, 0]);
+
+    filter.destroy();
+    input.destroy();
+    output.destroy();
+  });
+
   // 12. Number uniform → 16-byte aligned slot in the user UBO
   test('number uniform is placed at the start of a 16-byte slot', () => {
     const backend = makeWebGpuBackend(env);
@@ -652,7 +723,14 @@ describe('ShaderFilter on WebGPU', () => {
     const userUboCall = env.queue.writeBuffer.mock.calls.find((args: unknown[]) => {
       const data = args[2] as Float32Array;
 
-      return data instanceof Float32Array && data.length === 8 && data[0] === 1 && data[1] === 2 && data[2] === 3 && Math.abs(data[4] - 9.9) < 0.001;
+      return (
+        data instanceof Float32Array &&
+        data.length === 8 &&
+        data[0] === 1 &&
+        data[1] === 2 &&
+        data[2] === 3 &&
+        Math.abs(data[4] - 9.9) < 0.001
+      );
     });
 
     expect(userUboCall).toBeDefined();
@@ -767,7 +845,7 @@ describe('ShaderFilter on WebGPU', () => {
   test('destroy() clears the uniforms map', () => {
     const filter = new ShaderFilter({
       wgsl: minimalFragSrc,
-      uniforms: { uTime: 1.0 },
+      uniforms: { uTime: 1 },
     });
 
     filter.destroy();

@@ -61,7 +61,9 @@ describe('ParticleBufferLayout', () => {
   });
 
   test('rejects overlapping attribute ranges', () => {
-    expect(() => new ParticleBufferLayout({ attributes: [attribute('a_position', 0), attribute('a_scale', 4)], stride: 16 })).toThrow(/overlaps/i);
+    expect(() => new ParticleBufferLayout({ attributes: [attribute('a_position', 0), attribute('a_scale', 4)], stride: 16 })).toThrow(
+      /overlaps/i,
+    );
   });
 
   test('rejects an attribute reaching past the stride', () => {
@@ -69,7 +71,9 @@ describe('ParticleBufferLayout', () => {
   });
 
   test('rejects an unknown topology', () => {
-    expect(() => new ParticleBufferLayout({ attributes: [attribute('a_position', 0)], stride: 8, topology: 'points' as never })).toThrow(/topology/i);
+    expect(() => new ParticleBufferLayout({ attributes: [attribute('a_position', 0)], stride: 8, topology: 'points' as never })).toThrow(
+      /topology/i,
+    );
   });
 });
 

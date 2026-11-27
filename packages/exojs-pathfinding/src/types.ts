@@ -43,7 +43,10 @@ export interface PathResult<Payload = unknown> {
    * for smoothed paths, whose steps are no longer space edges.
    */
   readonly edges: ReadonlyArray<PathEdge<Payload>>;
-  /** Total traversal cost of {@link nodes}. Smoothing does not change it. */
+  /**
+   * Total traversal cost of the unsmoothed graph-search result. Smoothing
+   * changes only the waypoints and does not recompute this value.
+   */
   readonly cost: number;
   /**
    * `space.revision` at search time. Compare it against the space's current

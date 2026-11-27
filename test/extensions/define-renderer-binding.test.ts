@@ -12,10 +12,10 @@ import { Text } from '#rendering/text/Text';
 
 const stubRenderer = <Target extends Drawable>(): Renderer<RenderBackend, Target> => ({
   backendType: RenderBackendType.WebGl2,
-  connect: () => undefined,
-  disconnect: () => undefined,
-  render: () => undefined,
-  flush: () => undefined,
+  connect: () => {},
+  disconnect: () => {},
+  render: () => {},
+  flush: () => {},
 });
 
 describe('defineRendererBinding', () => {
@@ -35,7 +35,7 @@ describe('defineRendererBinding', () => {
   });
 
   it('passes undefined through for an unsupported backend', () => {
-    const binding = defineRendererBinding([Sprite], () => undefined);
+    const binding = defineRendererBinding([Sprite], () => {});
 
     expect(binding.create({} as RenderBackend)).toBeUndefined();
   });

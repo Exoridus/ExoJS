@@ -135,7 +135,9 @@ export class ScopeLevel {
     const watermark = owner._currentBatchSequence();
 
     for (const map of this._maps) {
-      map._reset();
+      // What the map sampled before the mask changed was its input when it
+      // happened; the next fixed step still owns it.
+      map._reset(false);
       map._armBaseline(watermark, this._maskedSnapshot(owner, masked));
     }
   }
@@ -165,7 +167,7 @@ export class ScopeLevel {
     const derived = this._derived;
 
     if (derived === null) {
-      this._derived = { values, batches: this._batches, frameId: sample.frameId, timestamp: sample.timestamp };
+      this._derived = { values, batches: this._batches, frameId: sample.frameId, timestamp: sample.timestamp, clock: sample.clock };
 
       return this._derived;
     }

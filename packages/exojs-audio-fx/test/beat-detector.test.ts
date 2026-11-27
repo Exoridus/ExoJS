@@ -20,15 +20,36 @@ interface MockWorkletNode {
   port: MockPort;
 }
 
-const getMockWorkletNode = (detector: BeatDetector): MockWorkletNode | null => {
+const getMockWorkletNode = (detector: BeatDetector): MockWorkletNode | null =>
   // Access via internal field (test-only)
-  return (detector as unknown as { _workletNode: MockWorkletNode | null })._workletNode;
-};
+  (detector as unknown as { _workletNode: MockWorkletNode | null })._workletNode;
 
 const simulateMessage = (detector: BeatDetector, data: unknown): void => {
   const node = getMockWorkletNode(detector);
+
   if (node?.port.onmessage) {
-    node.port.onmessage({ data });
+    const message = data as Record<string, unknown>;
+    const now = getAudioContext().currentTime;
+    node.port.onmessage({
+      data: {
+        predictionValidUntil: now + 10,
+        meterEstimate: {
+          selected: {
+            cyclePulses: message.barLength ?? 4,
+            phasePulses: ((message.barPosition as number) ?? 1) - 1,
+            pulsePeriodSeconds: 0.5,
+            denominator: null,
+          },
+          alternatives: [],
+          reason: 'available',
+          score: 1,
+          origin: 'convention',
+          evidenceThroughAudioTime: message.analysisTime ?? now,
+          validUntilAudioTime: now + 10,
+        },
+        ...message,
+      },
+    });
   }
 };
 
@@ -36,12 +57,11 @@ const simulateMessage = (detector: BeatDetector, data: unknown): void => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeMediaStream = (): MediaStream => {
-  return { getTracks: () => [] } as unknown as MediaStream;
-};
+const makeMediaStream = (): MediaStream => ({ getTracks: () => [] }) as unknown as MediaStream;
 
 const makeVoiceLike = (): Voice => {
   const ctx = getAudioContext();
+
   return { output: ctx.createGain() } as unknown as Voice;
 };
 
@@ -69,15 +89,18 @@ const withSuspendedBeatDetectorContext = async <T>(
     }
   }
   Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: SuspendedMockAudioContext });
+
   try {
     vi.resetModules();
     const fresh = await import('@codexo/exojs');
     const { BeatDetector: FreshBeatDetector } = await import('../src/BeatDetector');
+
     const flipToReady = (): void => {
       const ctx = fresh.getAudioContext();
       (ctx as unknown as { state: AudioContextState }).state = 'running';
       fresh.getAudioContext(); // re-trigger monitoring — dispatches ready to every pending handler
     };
+
     return await run({ fresh, FreshBeatDetector, flipToReady });
   } finally {
     Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: OriginalAudioContext });
@@ -190,8 +213,13 @@ describe('BeatDetector', () => {
     it('worklet node has numberOfInputs:1 numberOfOutputs:0', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        opts: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = opts;
+
         return new OrigAWN(c, name, opts);
       });
       const d = new BeatDetector();
@@ -221,11 +249,13 @@ describe('BeatDetector', () => {
       const d = new BeatDetector();
       await d.ready;
       const outputNode = bus.getOutputNode();
+
       if (outputNode) {
         const connectSpy = vi.spyOn(outputNode, 'connect');
         d.source = bus;
         expect(connectSpy).toHaveBeenCalled();
       }
+
       d.destroy();
       bus.destroy();
     });
@@ -304,7 +334,7 @@ describe('BeatDetector', () => {
         timeSignature: { numerator: 4, denominator: 4 },
         lookahead: [],
         nextBeatTime: 1.5,
-        nextDownbeatTime: 2.0,
+        nextDownbeatTime: 2,
       });
       expect(d.tempo).toBe(128);
       expect(d.confidence).toBeCloseTo(0.7);
@@ -315,7 +345,7 @@ describe('BeatDetector', () => {
     it('lookahead is a frozen array', async () => {
       const d = new BeatDetector();
       await d.ready;
-      const upcoming = [{ audioTime: 1.0, tempo: 120, isDownbeat: true, beatInBar: 1 }];
+      const upcoming = [{ audioTime: 1, tempo: 120, isDownbeat: true, beatInBar: 1 }];
       simulateMessage(d, {
         type: 'state',
         tempo: 120,
@@ -330,8 +360,8 @@ describe('BeatDetector', () => {
         barLength: 4,
         timeSignature: { numerator: 4, denominator: 4 },
         lookahead: upcoming,
-        nextBeatTime: 1.0,
-        nextDownbeatTime: 1.0,
+        nextBeatTime: 1,
+        nextDownbeatTime: 1,
       });
       expect(Object.isFrozen(d.lookahead)).toBe(true);
       d.destroy();
@@ -370,7 +400,7 @@ describe('BeatDetector', () => {
       d.onBeat.add(handler);
       simulateMessage(d, {
         type: 'beat',
-        audioTime: 1.0,
+        audioTime: 1,
         tempo: 120,
         confidence: 0.8,
         beatPhase: 0,
@@ -379,7 +409,7 @@ describe('BeatDetector', () => {
         beatInBar: 2,
       });
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler.mock.calls[0][0]).toMatchObject({ audioTime: 1.0, tempo: 120 });
+      expect(handler.mock.calls[0][0]).toMatchObject({ audioTime: 1, tempo: 120 });
       d.destroy();
     });
 
@@ -392,7 +422,7 @@ describe('BeatDetector', () => {
       d.onDownbeat.add(downbeatHandler);
       simulateMessage(d, {
         type: 'beat',
-        audioTime: 2.0,
+        audioTime: 2,
         tempo: 120,
         confidence: 0.9,
         beatPhase: 0,
@@ -412,7 +442,7 @@ describe('BeatDetector', () => {
       d.onDownbeat.add(downbeatHandler);
       simulateMessage(d, {
         type: 'beat',
-        audioTime: 3.0,
+        audioTime: 3,
         tempo: 120,
         confidence: 0.9,
         beatPhase: 0,
@@ -451,7 +481,7 @@ describe('BeatDetector', () => {
       d.onBeat.add(handler);
       simulateMessage(d, {
         type: 'beat',
-        audioTime: 2.0,
+        audioTime: 2,
         tempo: 120,
         confidence: 0.8,
         beatPhase: 0,
@@ -471,7 +501,7 @@ describe('BeatDetector', () => {
       d.onBeat.add(handler);
       simulateMessage(d, {
         type: 'beat',
-        audioTime: 1.0,
+        audioTime: 1,
         tempo: 120,
         confidence: 0.8,
         beatPhase: 0,
@@ -504,13 +534,13 @@ describe('BeatDetector', () => {
       d.onBarStart.add(handler);
       simulateMessage(d, {
         type: 'barStart',
-        audioTime: 4.0,
+        audioTime: 4,
         tempo: 120,
         confidence: 0.85,
         barNumber: 2,
       });
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler.mock.calls[0][0]).toMatchObject({ barNumber: 2, audioTime: 4.0 });
+      expect(handler.mock.calls[0][0]).toMatchObject({ barNumber: 2, audioTime: 4 });
       d.destroy();
     });
   });
@@ -521,10 +551,16 @@ describe('BeatDetector', () => {
     const captureProcessorOptions = (): { get: () => Record<string, unknown> | undefined } => {
       let captured: Record<string, unknown> | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        opts: AudioWorkletNodeOptions,
+      ) {
         captured = opts.processorOptions as Record<string, unknown>;
+
         return new OrigAWN(c, name, opts);
       });
+
       return { get: () => captured };
     };
 
@@ -574,6 +610,7 @@ describe('BeatDetector', () => {
     it('switches to 3/4 after sustained 3/4 state messages', async () => {
       const d = new BeatDetector();
       await d.ready;
+
       // Simulate ~20 state messages with 3/4 TS
       for (let i = 0; i < 20; i++) {
         simulateMessage(d, {
@@ -584,7 +621,7 @@ describe('BeatDetector', () => {
           gridStability: 0.8,
           tempoCandidates: [],
           rms: 0.3,
-          onsetStrength: 1.0,
+          onsetStrength: 1,
           bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
           barPosition: (i % 3) + 1,
           barLength: 3,
@@ -594,6 +631,7 @@ describe('BeatDetector', () => {
           nextDownbeatTime: (i + 1) * 0.5,
         });
       }
+
       expect(d.timeSignature).toEqual({ numerator: 3, denominator: 4 });
       expect(d.barLength).toBe(3);
       d.destroy();
@@ -602,6 +640,7 @@ describe('BeatDetector', () => {
     it('switches back to 4/4 after sustained 4/4 state messages following 3/4', async () => {
       const d = new BeatDetector();
       await d.ready;
+
       // First switch to 3/4
       for (let i = 0; i < 20; i++) {
         simulateMessage(d, {
@@ -612,7 +651,7 @@ describe('BeatDetector', () => {
           gridStability: 0.8,
           tempoCandidates: [],
           rms: 0.3,
-          onsetStrength: 1.0,
+          onsetStrength: 1,
           bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
           barPosition: (i % 3) + 1,
           barLength: 3,
@@ -622,6 +661,7 @@ describe('BeatDetector', () => {
           nextDownbeatTime: (i + 1) * 0.5,
         });
       }
+
       expect(d.timeSignature).toEqual({ numerator: 3, denominator: 4 });
 
       // Then switch back to 4/4
@@ -634,7 +674,7 @@ describe('BeatDetector', () => {
           gridStability: 0.8,
           tempoCandidates: [],
           rms: 0.3,
-          onsetStrength: 1.0,
+          onsetStrength: 1,
           bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
           barPosition: (i % 4) + 1,
           barLength: 4,
@@ -644,6 +684,7 @@ describe('BeatDetector', () => {
           nextDownbeatTime: (i + 1) * 0.5,
         });
       }
+
       expect(d.timeSignature).toEqual({ numerator: 4, denominator: 4 });
       expect(d.barLength).toBe(4);
       d.destroy();
@@ -655,8 +696,13 @@ describe('BeatDetector', () => {
       // forwarded correctly so the worklet can apply it.
       let capturedProcessorOptions: Record<string, unknown> | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        opts: AudioWorkletNodeOptions,
+      ) {
         capturedProcessorOptions = opts.processorOptions as Record<string, unknown>;
+
         return new OrigAWN(c, name, opts);
       });
       const d = new BeatDetector();
@@ -669,8 +715,13 @@ describe('BeatDetector', () => {
     it('forwards enableTimeSignatureDetection=false to worklet processorOptions', async () => {
       let capturedProcessorOptions: Record<string, unknown> | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        opts: AudioWorkletNodeOptions,
+      ) {
         capturedProcessorOptions = opts.processorOptions as Record<string, unknown>;
+
         return new OrigAWN(c, name, opts);
       });
       const d = new BeatDetector({ enableTimeSignatureDetection: false });
@@ -690,14 +741,14 @@ describe('BeatDetector', () => {
         gridStability: 0.8,
         tempoCandidates: [],
         rms: 0.3,
-        onsetStrength: 1.0,
+        onsetStrength: 1,
         bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
         barPosition: 2,
         barLength: 3,
         timeSignature: { numerator: 3, denominator: 4 },
         lookahead: [],
-        nextBeatTime: 1.0,
-        nextDownbeatTime: 2.0,
+        nextBeatTime: 1,
+        nextDownbeatTime: 2,
       });
       expect(d.barPosition).toBe(2);
       expect(d.barLength).toBe(3);
@@ -708,9 +759,9 @@ describe('BeatDetector', () => {
       const d = new BeatDetector();
       await d.ready;
       const upcoming = [
-        { audioTime: 1.0, tempo: 120, isDownbeat: true, beatInBar: 1 },
+        { audioTime: 1, tempo: 120, isDownbeat: true, beatInBar: 1 },
         { audioTime: 1.5, tempo: 120, isDownbeat: false, beatInBar: 2 },
-        { audioTime: 2.0, tempo: 120, isDownbeat: false, beatInBar: 3 },
+        { audioTime: 2, tempo: 120, isDownbeat: false, beatInBar: 3 },
         { audioTime: 2.5, tempo: 120, isDownbeat: true, beatInBar: 1 },
       ];
       simulateMessage(d, {
@@ -721,14 +772,14 @@ describe('BeatDetector', () => {
         gridStability: 0.8,
         tempoCandidates: [],
         rms: 0.3,
-        onsetStrength: 1.0,
+        onsetStrength: 1,
         bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
         barPosition: 1,
         barLength: 3,
         timeSignature: { numerator: 3, denominator: 4 },
         lookahead: upcoming,
-        nextBeatTime: 1.0,
-        nextDownbeatTime: 1.0,
+        nextBeatTime: 1,
+        nextDownbeatTime: 1,
       });
       expect(d.lookahead[0].beatInBar).toBe(1);
       expect(d.lookahead[0].isDownbeat).toBe(true);
@@ -738,6 +789,74 @@ describe('BeatDetector', () => {
       expect(d.lookahead[2].isDownbeat).toBe(false);
       expect(d.lookahead[3].beatInBar).toBe(1);
       expect(d.lookahead[3].isDownbeat).toBe(true);
+      d.destroy();
+    });
+  });
+
+  // ---- onBeatPredicted ----
+
+  describe('onBeatPredicted', () => {
+    const schedule = (lookaheadRevision: number, firstTime: number): Record<string, unknown> => ({
+      type: 'state',
+      tempo: 120,
+      beatPhase: 0,
+      confidence: 0.8,
+      gridStability: 0.8,
+      tempoCandidates: [],
+      rms: 0.3,
+      onsetStrength: 1,
+      bandEnergy: { low: 0.3, mid: 0.2, high: 0.1 },
+      barPosition: 4,
+      barLength: 4,
+      timeSignature: { numerator: 4, denominator: 4 },
+      lookahead: [
+        { audioTime: firstTime, tempo: 120, isDownbeat: true, beatInBar: 1 },
+        { audioTime: firstTime + 0.5, tempo: 120, isDownbeat: false, beatInBar: 2 },
+      ],
+      lookaheadRevision,
+      nextBeatTime: firstTime,
+      nextDownbeatTime: firstTime,
+    });
+
+    it('dispatches once per schedule, not on every state update repeating it', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const handler = vi.fn();
+      d.onBeatPredicted.add(handler);
+
+      simulateMessage(d, schedule(1, 1));
+      simulateMessage(d, schedule(1, 1));
+      simulateMessage(d, schedule(1, 1));
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenLastCalledWith(expect.objectContaining({ audioTime: 1, beatInBar: 1 }));
+      d.destroy();
+    });
+
+    it('dispatches a new schedule even when it predicts the same time', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const handler = vi.fn();
+      d.onBeatPredicted.add(handler);
+
+      simulateMessage(d, schedule(1, 1));
+      simulateMessage(d, schedule(2, 1));
+
+      expect(handler).toHaveBeenCalledTimes(2);
+      d.destroy();
+    });
+
+    it('skips a schedule replaced before it was delivered', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const handler = vi.fn();
+      d.onBeatPredicted.add(handler);
+
+      simulateMessage(d, schedule(1, 1));
+      simulateMessage(d, schedule(3, 2));
+
+      expect(handler).toHaveBeenCalledTimes(2);
+      expect(handler).toHaveBeenLastCalledWith(expect.objectContaining({ audioTime: 2 }));
       d.destroy();
     });
   });
@@ -821,7 +940,7 @@ describe('BeatDetector', () => {
         timeSignature: { numerator: 4, denominator: 4 },
         lookahead: [],
         nextBeatTime: 1.25,
-        nextDownbeatTime: 3.0,
+        nextDownbeatTime: 3,
       });
       expect(d.beatPhase).toBeCloseTo(0.25);
       expect(d.nextBeatTime).toBeCloseTo(1.25);
@@ -829,7 +948,7 @@ describe('BeatDetector', () => {
       expect(d.rms).toBeCloseTo(0.4);
       expect(d.onsetStrength).toBeCloseTo(0.9);
       expect(d.bandEnergy).toEqual({ low: 0.1, mid: 0.2, high: 0.3 });
-      expect(d.nextDownbeatTime).toBeCloseTo(3.0);
+      expect(d.nextDownbeatTime).toBeCloseTo(3);
       d.destroy();
     });
 
@@ -1111,6 +1230,7 @@ describe('BeatDetector', () => {
       let capturedCallback: (() => void) | undefined;
       vi.spyOn(bus, 'onceSetup').mockImplementation(cb => {
         capturedCallback = cb;
+
         return () => {};
       });
 
@@ -1209,7 +1329,63 @@ describe('BeatDetector', () => {
       d.destroy();
     });
   });
+
+  describe('worklet option validation', () => {
+    it.each([
+      { minBpm: -1 },
+      { minBpm: 0 },
+      { minBpm: Number.NaN },
+      { minBpm: Number.POSITIVE_INFINITY },
+      { maxBpm: -1 },
+      { maxBpm: Number.NaN },
+      { maxBpm: Number.POSITIVE_INFINITY },
+      { minBpm: 300, maxBpm: 50 },
+      { minBpm: 100, maxBpm: 100 },
+      { hopSize: 0 },
+      { hopSize: -1 },
+      { hopSize: 1.5 },
+      { hopSize: Number.NaN },
+      { hopSize: Number.POSITIVE_INFINITY },
+      { fastTempoWindowSec: 0 },
+      { fastTempoWindowSec: -1 },
+      { fastTempoWindowSec: Number.NaN },
+      { fastTempoWindowSec: Number.POSITIVE_INFINITY },
+      { stableTempoWindowSec: 0 },
+      { stableTempoWindowSec: -1 },
+      { stableTempoWindowSec: Number.NaN },
+      { stableTempoWindowSec: Number.POSITIVE_INFINITY },
+      { fastTempoWindowSec: 8, stableTempoWindowSec: 2.5 },
+      { acfIntervalHops: 0 },
+      { acfIntervalHops: -1 },
+      { acfIntervalHops: 1.5 },
+      { acfIntervalHops: Number.NaN },
+      { acfIntervalHops: Number.POSITIVE_INFINITY },
+      { melBands: 0 },
+      { melBands: -1 },
+      { melBands: 1.5 },
+      { melBands: Number.NaN },
+      { melBands: Number.POSITIVE_INFINITY },
+      { minSettlingMs: -1 },
+      { minSettlingMs: Number.NaN },
+      { minSettlingMs: Number.POSITIVE_INFINITY },
+    ])('rejects invalid analysis options %j before registering a worklet', options => {
+      expect(() => new BeatDetector(options)).toThrow(RangeError);
+      expect(addModuleMock).not.toHaveBeenCalled();
+    });
+
+    it('accepts equal tempo windows and zero settling time', async () => {
+      const detector = new BeatDetector({ fastTempoWindowSec: 2.5, stableTempoWindowSec: 2.5, minSettlingMs: 0 });
+      await detector.ready;
+      detector.destroy();
+    });
+  });
+
+  describe('BeatDetector fftSize validation', () => {
+    it.each([[1000], [32], [Number.NaN]])('rejects fftSize %s', fftSize => {
+      expect(() => new BeatDetector({ fftSize })).toThrow(RangeError);
+    });
+  });
 });
 
 // Import for the type in the test above
-import type { UpcomingBeat } from '../src/BeatDetector';
+import type { UpcomingBeat } from '../src/beatScheduleTypes';

@@ -52,7 +52,13 @@ const createMockBackend = () => {
   });
 
   const instancedDraws: Array<{ mesh: Mesh; transforms: readonly Matrix[]; tints: readonly Color[]; count: number }> = [];
-  const drawInstanced = vi.fn(function (this: RenderBackend, mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number) {
+  const drawInstanced = vi.fn(function (
+    this: RenderBackend,
+    mesh: Mesh,
+    transforms: readonly Matrix[],
+    tints: readonly Color[],
+    count: number,
+  ) {
     instancedDraws.push({ mesh, transforms, tints, count });
 
     return this;
@@ -177,6 +183,25 @@ describe('RenderingContext', () => {
     expect(drawEvents[1]).toBe(green);
   });
 
+  test('resize keeps the camera zoom and maps the new design space', () => {
+    const { backend } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const view = new View(500, 400, 320, 200).setZoom(2);
+
+    context.view = view;
+    context.resize(640, 400);
+
+    expect(view.zoomLevel).toBe(2);
+    expect(view.width).toBeCloseTo(320);
+    expect(view.height).toBeCloseTo(200);
+    expect(view.center.x).toBe(500);
+
+    const corner = view.screenToWorld(0, 0);
+
+    expect(corner.x).toBeCloseTo(340, 2);
+    expect(corner.y).toBeCloseTo(300, 2);
+  });
+
   test('stats exposes backend stats', () => {
     const { backend } = createMockBackend();
     const context = new RenderingContext(backend);
@@ -261,6 +286,45 @@ describe('RenderingContext', () => {
     expect(clearCalls[0].equals(Color.red)).toBe(true);
 
     result.destroy();
+  });
+
+  test.each(['draw', 'clear', 'coordinator'])('capture releases its unreturned texture after a %s failure', stage => {
+    const { backend, draw, clear, setRenderTargetSpy } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const sprite = new Sprite(createTexture());
+    const failure = new Error('capture failed');
+    const previousTarget = backend.renderTarget;
+    const previousView = backend.view;
+    let allocated: RenderTarget | null = null;
+
+    if (stage === 'coordinator') {
+      Object.defineProperty(backend, 'passCoordinator', {
+        value: {
+          withChildPass(descriptor: { target: RenderTarget }): void {
+            allocated = descriptor.target;
+
+            throw failure;
+          },
+        },
+      });
+    } else if (stage === 'clear') {
+      clear.mockImplementation(() => {
+        throw failure;
+      });
+    } else {
+      draw.mockImplementation(() => {
+        throw failure;
+      });
+    }
+
+    expect(() => context.capture(sprite, { width: 64, height: 64, clearColor: Color.black })).toThrow(failure);
+
+    allocated ??= setRenderTargetSpy.mock.calls[0]![0]!;
+
+    expect(allocated.destroyed).toBe(true);
+    expect(backend.renderTarget).toBe(previousTarget);
+    expect(backend.view).toBe(previousView);
+    sprite.destroy();
   });
 
   test('renderTo restores previous render target on exception', () => {

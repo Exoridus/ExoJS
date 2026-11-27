@@ -1,6 +1,7 @@
 // Correctness rules shared by every ExoJS source tree that is linted with type
 // information - Core, the extension packages, and the React binding's `.ts`
-// modules.
+// modules. How code is spelled - function style, braces, imports, blank lines -
+// is not correctness and lives in `style.js`.
 //
 // Everything here was measured against the repository before being switched on,
 // and the rules that were rejected are recorded next to the ones that were not,
@@ -20,9 +21,6 @@
  */
 export const typeAwareCorrectnessRules = {
   // ── typescript-eslint: strictTypeChecked additions that hold here ─────────
-  // A type-only re-export that is spelled as a value export keeps a runtime
-  // binding alive in the bundle for nothing.
-  '@typescript-eslint/consistent-type-exports': 'error',
   '@typescript-eslint/no-deprecated': 'error',
   // Spreading a Map, a Promise or a class instance is almost always a mistake;
   // spreading a string is how the text layout walks code points, and that is
@@ -51,23 +49,6 @@ export const typeAwareCorrectnessRules = {
   // repository uses one deliberately in every such place.
   '@typescript-eslint/switch-exhaustiveness-check': ['error', { considerDefaultExhaustiveForUnions: true }],
   '@typescript-eslint/use-unknown-in-catch-callback-variable': 'error',
-
-  // ── Function style ───────────────────────────────────────────────────────
-  // Every function value is an expression: callbacks are arrows, and a module's
-  // own functions are constants rather than declarations, so a name is bound
-  // where it is written instead of being hoisted to the top of the module.
-  //
-  // Class methods stay methods - turning one into an arrow field moves it off
-  // the prototype, allocates it per instance and breaks `super`. TypeScript
-  // overload sets are exempt from `func-style` on their own; a generator has no
-  // arrow form and takes `const g = function* () {}`.
-  //
-  // An assertion or `never` signature is only honoured on a function
-  // declaration or on a constant carrying an explicit type annotation, so the
-  // few guards in the tree name their signature (see `core/dev.ts`).
-  'func-style': ['error', 'expression'],
-  'prefer-arrow-callback': 'error',
-  'arrow-body-style': ['error', 'as-needed'],
 
   // ── Unicorn: correctness and modern APIs ─────────────────────────────────
   'unicorn/consistent-date-clone': 'error',
@@ -101,7 +82,6 @@ export const typeAwareCorrectnessRules = {
   'unicorn/prefer-native-coercion-functions': 'error',
   'unicorn/prefer-negative-index': 'error',
   'unicorn/prefer-object-from-entries': 'error',
-  'unicorn/prefer-optional-catch-binding': 'error',
   'unicorn/prefer-regexp-test': 'error',
   'unicorn/prefer-string-slice': 'error',
   'unicorn/prefer-string-starts-ends-with': 'error',
@@ -110,7 +90,6 @@ export const typeAwareCorrectnessRules = {
   'unicorn/require-array-join-separator': 'error',
   'unicorn/require-number-to-fixed-digits-argument': 'error',
   'unicorn/text-encoding-identifier-case': 'error',
-  'unicorn/escape-case': 'error',
   'unicorn/prefer-unicode-code-point-escapes': 'error',
   'unicorn/catch-error-name': 'error',
   // Covers `.size` as well as `.length`, so an emptiness check reads the same
@@ -342,9 +321,9 @@ export const typeAwareCorrectnessRules = {
 //   prefer-direct-iteration 11, prefer-minimal-ternary 10,
 //   prefer-object-iterable-methods 9, prefer-math-constants 9,
 //   no-negated-array-predicate 9, prefer-else-if 9, prefer-then-catch 8,
-//   prefer-dispose 7, prefer-array-from-map 7, operator-assignment 6,
+//   prefer-dispose 7, prefer-array-from-map 7,
 //   prefer-uint8array-base64 5, prefer-string-repeat 5, no-useless-else 3,
 //   prefer-add-event-listener-options 3, prefer-type-literal-last 3,
 //   iteration-fallback-style 25, class-reference-in-static-methods 26,
 //   prefer-promise-with-resolvers 27, no-useless-coercion 23,
-//   logical-assignment-operators 2, prefer-smaller-scope 2, prefer-private-class-fields 2
+//   prefer-smaller-scope 2, prefer-private-class-fields 2

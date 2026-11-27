@@ -61,7 +61,23 @@ describe('validateSitePath', () => {
   });
 
   it('rejects absolute, traversing, Windows-shaped and control-character paths', () => {
-    for (const path of ['', '/etc/passwd', '../outside', 'a/../../b', 'a/./b', 'a//b', 'a/', 'C:/x', 'c:x', 'a\\b', 'a\u0000b', 'a\nb', 'a:b', '.', '..']) {
+    for (const path of [
+      '',
+      '/etc/passwd',
+      '../outside',
+      'a/../../b',
+      'a/./b',
+      'a//b',
+      'a/',
+      'C:/x',
+      'c:x',
+      'a\\b',
+      'a\u0000b',
+      'a\nb',
+      'a:b',
+      '.',
+      '..',
+    ]) {
       expect(validateSitePath(path), `${JSON.stringify(path)}`).not.toBeNull();
     }
   });
@@ -121,7 +137,8 @@ describe('createSiteBuildManifest', () => {
 });
 
 describe('parseSiteBuildManifest', () => {
-  const valid = (): Record<string, unknown> => JSON.parse(JSON.stringify(createSiteBuildManifest(tree, identity))) as Record<string, unknown>;
+  const valid = (): Record<string, unknown> =>
+    JSON.parse(JSON.stringify(createSiteBuildManifest(tree, identity))) as Record<string, unknown>;
 
   it('round-trips a written manifest', () => {
     const manifest = createSiteBuildManifest(tree, identity);
@@ -147,7 +164,9 @@ describe('parseSiteBuildManifest', () => {
     expect(() => parseSiteBuildManifest(null)).toThrow();
     expect(() => parseSiteBuildManifest('{}')).toThrow();
     const files = valid()['files'] as Array<Record<string, unknown>>;
-    const selfListed = [...files, { path: SITE_BUILD_FILE, size: 1, sha256: '0'.repeat(64) }].sort((a, b) => (String(a['path']) < String(b['path']) ? -1 : 1));
+    const selfListed = [...files, { path: SITE_BUILD_FILE, size: 1, sha256: '0'.repeat(64) }].sort((a, b) =>
+      String(a['path']) < String(b['path']) ? -1 : 1,
+    );
     expect(() => parseSiteBuildManifest({ ...valid(), files: selfListed, fileCount: selfListed.length })).toThrow(SITE_BUILD_FILE);
   });
 });

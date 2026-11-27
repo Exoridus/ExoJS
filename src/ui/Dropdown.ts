@@ -1,12 +1,16 @@
 import { Signal } from '#core/Signal';
+import type { InteractionEvent } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
+import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
+import { Graphics } from '#rendering/primitives/Graphics';
 import { Text } from '#rendering/text/Text';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import type { UIWidgetState } from './theme';
-import { resolveUISkin } from './theme';
+import { assertSkinSetTextEffects, resolveUISkin, themeSkinSet, type UITheme } from './theme';
+import { UIRoot } from './UIRoot';
 import { Widget } from './Widget';
 import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
@@ -47,20 +51,29 @@ class DropdownRow extends Widget {
   private readonly _surface = new WidgetBackground(this, 0);
   private readonly _text: Text;
   private readonly _padding: number;
+  private readonly _textStyle: TextStyleOptions;
+  private _appliedText: TextStyleOptions;
   private _highlighted = false;
 
   public constructor(label: string, padding: number, style: TextStyleOptions) {
     super();
 
     this._padding = padding;
-    this._text = new Text(label, style);
+    this._textStyle = style;
+    this._appliedText = this._skin('dropdownItem').text;
+    this._text = new Text(label, { ...this._appliedText, ...style });
+    this._text._onLayout = this._positionText;
     this.addChild(this._text);
 
     this.interactive = true;
     this.cursor = 'pointer';
     this.onPointerOver.add(() => this.setHighlighted(true));
     this.onPointerOut.add(() => this.setHighlighted(false));
-    this.onPointerTap.add(() => this.onPick.dispatch(this));
+    this.onPointerTap.add(event => {
+      if (event.button === 0) {
+        this.onPick.dispatch(this);
+      }
+    });
   }
 
   /** Whether this row is the one an Enter would pick. */
@@ -75,17 +88,32 @@ class DropdownRow extends Widget {
     }
   }
 
+  protected override _validateTheme(theme: UITheme): void {
+    assertSkinSetTextEffects(themeSkinSet(theme, 'dropdownItem'), this._textStyle, this._text);
+  }
+
   protected override _repaint(): void {
+    const text = this._skin('dropdownItem').text;
+
+    if (text !== this._appliedText) {
+      this._appliedText = text;
+      this._text.style = { ...text, ...this._textStyle };
+      this._positionText();
+    }
+
     this._surface.apply(this._skin('dropdownItem').background, this._uiWidth, this._uiHeight);
   }
 
   protected override _relayout(): void {
     super._relayout();
 
-    const bounds = this._text.getLocalBounds();
-
-    this._text.setPosition(this._padding, (this._uiHeight - bounds.height) / 2);
+    this._positionText();
   }
+
+  private readonly _positionText = (): void => {
+    const fill = this._text._fillBounds;
+    this._text.setPosition(this._padding - fill.x, (this._uiHeight - fill.height) / 2 - fill.y);
+  };
 
   public override destroy(): void {
     this.onPick.destroy();
@@ -106,15 +134,18 @@ class DropdownRow extends Widget {
  * The closed control paints the `button` role - the same states a
  * {@link Button} does - the open list the `dropdownList` role, and each row the
  * `dropdownItem` role, with the highlighted row in its `hover` state. The list
- * is a child of the dropdown, so it draws above whatever the dropdown itself
- * draws above and is clipped by the same ancestors.
+ * remains a child of the dropdown and keeps its ancestor clips. Inside a
+ * {@link UIRoot}, opening raises its stacking contexts above sibling UI;
+ * closing restores their previous order without changing layout or tab order.
  */
 export class Dropdown<T = string> extends Widget {
-  /** Fires when the selection changes, with the value and its index. */
+  /** Fires when the selection moves to another entry, with its value and index; clearing the selection does not fire. */
   public readonly onChange = new Signal<[value: T, index: number, dropdown: Dropdown<T>]>();
 
   private readonly _surface = new WidgetBackground(this, 0);
+  private readonly _controlHitArea = new Rectangle();
   private readonly _label: Text;
+  private readonly _arrow = new Graphics();
   private readonly _list = new Container();
   private readonly _listSurface = new WidgetBackground(this._list, 0);
   private readonly _rows: DropdownRow[] = [];
@@ -122,11 +153,14 @@ export class Dropdown<T = string> extends Widget {
   private readonly _placeholder: string;
   private readonly _padding: number;
   private readonly _textStyle: TextStyleOptions | null;
+  private _appliedText: TextStyleOptions;
   private _rowHeight: number;
   private _selectedIndex: number;
   private _highlightIndex = -1;
   private _open = false;
   private _pointerInside = false;
+  private _popupRoot: UIRoot | null = null;
+  private readonly _popupAncestors: Container[] = [];
 
   public constructor(options: DropdownOptions<T> = {}) {
     super();
@@ -136,15 +170,22 @@ export class Dropdown<T = string> extends Widget {
     this._padding = options.padding ?? 12;
     this._textStyle = options.textStyle ?? null;
     this._rowHeight = options.height ?? 36;
-    this._selectedIndex = options.selectedIndex ?? -1;
+    this._selectedIndex =
+      options.selectedIndex !== undefined && options.selectedIndex >= 0 && options.selectedIndex < this._items.length
+        ? options.selectedIndex
+        : -1;
 
-    this._label = new Text(this._labelText(), { ...resolveUISkin(this.theme.button, 'normal').text, align: 'left', ...this._textStyle });
+    this._appliedText = resolveUISkin(this.theme.button, 'normal').text;
+    this._label = new Text(this._labelText(), { ...this._appliedText, align: 'left', ...this._textStyle });
+    this._label._onLayout = this._positionLabel;
     this.addChild(this._label);
+    this.addChild(this._arrow);
 
     this._list.visible = false;
     this.addChild(this._list);
 
     this.interactive = true;
+    this.hitArea = this._controlHitArea;
     this.focusable = true;
     this.cursor = 'pointer';
     this._trackFocus();
@@ -156,6 +197,7 @@ export class Dropdown<T = string> extends Widget {
 
     this.setSize(options.width ?? 180, this._rowHeight);
     this._buildRows();
+    this._invalidateLayout();
   }
 
   /** The entries to choose from. */
@@ -168,7 +210,10 @@ export class Dropdown<T = string> extends Widget {
     this._items.length = 0;
     this._items.push(...items);
     this._selectedIndex = Math.min(this._selectedIndex, this._items.length - 1);
+    this._highlightIndex = Math.min(this._highlightIndex, this._items.length - 1);
     this._buildRows();
+    this._syncHighlight();
+    this._label.text = this._labelText();
     this._invalidateLayout();
 
     return this;
@@ -204,6 +249,7 @@ export class Dropdown<T = string> extends Widget {
       this._open = true;
       this._highlightIndex = this._selectedIndex;
       this._list.visible = true;
+      this._updatePopupRoot();
       this._syncHighlight();
       this._refreshState();
       this._invalidateBoundsCascade();
@@ -218,6 +264,9 @@ export class Dropdown<T = string> extends Widget {
       this._open = false;
       this._highlightIndex = -1;
       this._list.visible = false;
+      this._clearPopupAncestors();
+      this._popupRoot?._releasePopup(this);
+      this._popupRoot = null;
       this._syncHighlight();
       this._refreshState();
       this._invalidateBoundsCascade();
@@ -246,24 +295,51 @@ export class Dropdown<T = string> extends Widget {
     return this._list;
   }
 
+  protected override _validateTheme(theme: UITheme): void {
+    assertSkinSetTextEffects(themeSkinSet(theme, 'button'), this._textStyle, this._label);
+  }
+
   protected override _repaint(): void {
+    const text = resolveUISkin(this.theme.button, this._skinState).text;
+
+    if (text !== this._appliedText) {
+      this._appliedText = text;
+      this._label.style = { ...text, align: 'left', ...this._textStyle };
+      this._positionLabel();
+    }
+
+    this._arrow.clear();
+    this._arrow.fillColor = this._label.style.fillColor;
+    this._arrow.drawPolygon(this._open ? [0, 5, 5, 0, 10, 5] : [0, 0, 10, 0, 5, 5]);
+    this._arrow.setPosition(this._uiWidth - this._padding - 10, (this._uiHeight - 5) / 2);
+
     this._surface.apply(resolveUISkin(this.theme.button, this._skinState).background, this._uiWidth, this._uiHeight);
-    this._listSurface.apply(this._skin('dropdownList').background, this._uiWidth, this._rowHeight * this._rows.length);
+    const listSkin = this._skin('dropdownList');
+    this._listSurface.apply(
+      listSkin.background,
+      this._uiWidth,
+      this._rowHeight * this._rows.length + listSkin.insets.top + listSkin.insets.bottom,
+    );
   }
 
   protected override _relayout(): void {
     super._relayout();
 
-    const bounds = this._label.getLocalBounds();
-
-    this._label.setPosition(this._padding, (this._uiHeight - bounds.height) / 2);
+    this._controlHitArea.set(0, 0, this._uiWidth, this._uiHeight);
+    this._positionLabel();
     this._list.setPosition(0, this._uiHeight);
+    const insets = this._skin('dropdownList').insets;
 
     for (const [index, row] of this._rows.entries()) {
-      row.setSize(this._uiWidth, this._rowHeight);
-      row.setPosition(0, index * this._rowHeight);
+      row.setSize(Math.max(0, this._uiWidth - insets.left - insets.right), this._rowHeight);
+      row.setPosition(insets.left, insets.top + index * this._rowHeight);
     }
   }
+
+  private readonly _positionLabel = (): void => {
+    const fill = this._label._fillBounds;
+    this._label.setPosition(this._padding - fill.x, (this._uiHeight - fill.height) / 2 - fill.y);
+  };
 
   protected override _onEnabledChanged(effectiveEnabled: boolean): void {
     this.interactive = effectiveEnabled;
@@ -283,7 +359,58 @@ export class Dropdown<T = string> extends Widget {
     this._refreshState();
   }
 
+  /** @internal - an already-open detached control can be inserted directly into a UI root. */
+  public override _setParent(parent: Container | null): void {
+    super._setParent(parent);
+
+    if (this._open) {
+      this._updatePopupRoot();
+    }
+  }
+
+  private _updatePopupRoot(): void {
+    this._clearPopupAncestors();
+    let root: UIRoot | null = null;
+
+    for (let parent = this.parent; parent !== null; parent = parent.parent) {
+      if (parent instanceof UIRoot) {
+        root = parent;
+        break;
+      }
+
+      this._popupAncestors.push(parent);
+      parent._addParentChangeListener(this._onPopupAncestorChanged);
+    }
+
+    if (root === this._popupRoot) {
+      return;
+    }
+
+    if (root === null && this._popupRoot !== null) {
+      this.close();
+
+      return;
+    }
+
+    this._popupRoot?._releasePopup(this);
+    this._popupRoot = root;
+    root?._raisePopup(this);
+  }
+
+  private _clearPopupAncestors(): void {
+    for (const ancestor of this._popupAncestors) {
+      ancestor._removeParentChangeListener(this._onPopupAncestorChanged);
+    }
+
+    this._popupAncestors.length = 0;
+  }
+
+  private readonly _onPopupAncestorChanged = (): void => {
+    this._updatePopupRoot();
+  };
+
   public override destroy(): void {
+    this.close();
     this.onChange.destroy();
     this._surface.destroy();
     this._listSurface.destroy();
@@ -303,10 +430,8 @@ export class Dropdown<T = string> extends Widget {
 
     this._rows.length = 0;
 
-    const style: TextStyleOptions = { ...resolveUISkin(this.theme.dropdownItem, 'normal').text, ...this._textStyle };
-
     for (const item of this._items) {
-      const row = new DropdownRow(item.label, this._padding, style);
+      const row = new DropdownRow(item.label, this._padding, this._textStyle ?? {});
 
       row.onPick.add(picked => {
         this._select(this._rows.indexOf(picked));
@@ -369,8 +494,8 @@ export class Dropdown<T = string> extends Widget {
     this._refreshState();
   };
 
-  private readonly _onTap = (): void => {
-    if (this.effectiveEnabled) {
+  private readonly _onTap = (event: InteractionEvent): void => {
+    if (this.effectiveEnabled && event.button === 0 && event.target === this) {
       this.toggle();
     }
   };

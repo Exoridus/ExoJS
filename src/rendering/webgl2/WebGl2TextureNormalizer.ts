@@ -100,10 +100,11 @@ export class WebGl2TextureNormalizer {
   private _sourceLocation: WebGLUniformLocation | null = null;
   private _levelScaleLocation: WebGLUniformLocation | null = null;
 
-  /** Straight-source scratch holding the base level; smaller levels share its corner. */
+  /** Fixed-function tests the pass disables and restores, snapshotted in {@link _rasterEnabled}. */
   private readonly _rasterCapabilities: Int32Array;
   private readonly _rasterEnabled = new Uint8Array(passThroughRasterCapabilities);
 
+  /** Straight-source scratch holding the base level; smaller levels share its corner. */
   private _staging: WebGLTexture | null = null;
   private _stagingFormat = 0;
   private _stagingWidth = 0;
@@ -211,6 +212,7 @@ export class WebGl2TextureNormalizer {
     gl.activeTexture(gl.TEXTURE0);
 
     const unitZeroBinding = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
+    const unitZeroSampler = (gl.getParameter(gl.SAMPLER_BINDING) as WebGLSampler | null | undefined) ?? null;
 
     gl.activeTexture(typeof previousUnit === 'number' ? previousUnit : gl.TEXTURE0);
 
@@ -229,24 +231,35 @@ export class WebGl2TextureNormalizer {
       enabled[index] = gl.isEnabled(capabilities[index]!) ? 1 : 0;
     }
 
-    // After the captures: building the program leaves the vertex array and array
-    // buffer unbound, which would otherwise be recorded as what the caller had.
-    const program = this._ensureProgram();
+    let attached = false;
 
     try {
+      // Setup changes the array-buffer and VAO bindings even when it fails.
+      // Keep it inside the same restore boundary as the upload and draw.
+      const program = this._ensureProgram();
+
       gl.bindFramebuffer(gl.FRAMEBUFFER, this._framebuffer);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, target.destination, target.level);
+      attached = true;
       gl.useProgram(program);
       gl.bindVertexArray(this._quadArray);
       // The level is written in full, so blending would mix the normalized texel
       // with whatever the level held instead of replacing it.
       gl.disable(gl.BLEND);
+
       // The frame in progress may have a clip, a stencil test or a colour mask
       // live; any of them would cut the level being written short.
-      for (let index = 0; index < passThroughRasterCapabilities; index++) gl.disable(capabilities[index]!);
+      for (let index = 0; index < passThroughRasterCapabilities; index++) {
+        gl.disable(capabilities[index]!);
+      }
+
       gl.colorMask(true, true, true, true);
       gl.viewport(0, 0, target.width, target.height);
       gl.activeTexture(gl.TEXTURE0);
+
+      if (unitZeroSampler !== null) {
+        gl.bindSampler(0, null);
+      }
 
       upload(gl);
 
@@ -267,7 +280,27 @@ export class WebGl2TextureNormalizer {
 
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, quadVertexCount);
     } finally {
-      this._restore(previousFramebuffer, previousViewport, previousProgram, previousArray, previousBuffer, previousUnit, previousBinding, unitZeroBinding);
+      // Setup can fail before our framebuffer is bound. Detaching in that
+      // case would remove the caller's color attachment instead.
+      if (attached) {
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
+      }
+
+      if (unitZeroSampler !== null) {
+        gl.bindSampler(0, unitZeroSampler);
+      }
+
+      this._restore(
+        previousFramebuffer,
+        previousViewport,
+        previousProgram,
+        previousArray,
+        previousBuffer,
+        previousUnit,
+        previousBinding,
+        unitZeroBinding,
+      );
+
       for (let index = 0; index < passThroughRasterCapabilities; index++) {
         if (enabled[index] === 1) {
           gl.enable(capabilities[index]!);
@@ -283,10 +316,6 @@ export class WebGl2TextureNormalizer {
   /**
    * Put the context back the way the pass found it, then ask the backend to
    * re-establish whatever its own caches still describe.
-   *
-   * The attachment is detached while the pass's OWN framebuffer is still bound -
-   * it lives on that framebuffer, not on whatever was bound before - and only
-   * then is the previous framebuffer restored.
    *
    * The borrowed unit's texture binding is restored too, and it is the one
    * omission that is not merely a cache inconsistency. The staging texture
@@ -314,7 +343,6 @@ export class WebGl2TextureNormalizer {
   ): void {
     const gl = this._gl;
 
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     gl.useProgram(program);
     gl.bindVertexArray(array);
@@ -407,10 +435,22 @@ export class WebGl2TextureNormalizer {
 
     const gl = this._gl;
     const vertex = this._compile(gl.VERTEX_SHADER, vertexSource);
-    const fragment = this._compile(gl.FRAGMENT_SHADER, fragmentSource);
+    let fragment: WebGLShader;
+
+    try {
+      fragment = this._compile(gl.FRAGMENT_SHADER, fragmentSource);
+    } catch (error) {
+      gl.deleteShader(vertex);
+
+      throw error;
+    }
+
     const program = gl.createProgram();
 
     if (program === null) {
+      gl.deleteShader(vertex);
+      gl.deleteShader(fragment);
+
       throw new Error('WebGL2: could not create the colour-normalization program.');
     }
 
@@ -432,14 +472,33 @@ export class WebGl2TextureNormalizer {
       });
     }
 
+    // `_program` is the "fully built" marker the guard above returns on, so it is
+    // published only after every companion object exists.
+    try {
+      this._framebuffer = gl.createFramebuffer();
+      this._quadBuffer = this._createQuadBuffer(gl);
+      this._quadArray = this._createQuadArray(gl, program);
+    } catch (error) {
+      this._releaseProgramObjects(gl, program);
+
+      throw error;
+    }
+
     this._program = program;
     this._sourceLocation = gl.getUniformLocation(program, 'u_source');
     this._levelScaleLocation = gl.getUniformLocation(program, 'u_levelScale');
-    this._framebuffer = gl.createFramebuffer();
-    this._quadBuffer = this._createQuadBuffer(gl);
-    this._quadArray = this._createQuadArray(gl, program);
 
     return program;
+  }
+
+  private _releaseProgramObjects(gl: WebGL2RenderingContext, program: WebGLProgram): void {
+    gl.deleteVertexArray(this._quadArray);
+    gl.deleteBuffer(this._quadBuffer);
+    gl.deleteFramebuffer(this._framebuffer);
+    gl.deleteProgram(program);
+    this._quadArray = null;
+    this._quadBuffer = null;
+    this._framebuffer = null;
   }
 
   private _compile(type: number, source: string): WebGLShader {

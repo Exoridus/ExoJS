@@ -4,7 +4,7 @@
   "symbol": "DuckingEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 15,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Sidechain compressor (ducker) implemented as an WorkletEffect. Attenuates the main audio signal whenever the `sidechain` AudioBus exceeds the threshold, then releases when it drops back down. Commonly used to duck background music under dialogue or sound effects. Attack and release times are expressed in milliseconds and converted internally to one-pole filter coefficients."
       ],
-      "importLine": "import { DuckingEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { DuckingEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

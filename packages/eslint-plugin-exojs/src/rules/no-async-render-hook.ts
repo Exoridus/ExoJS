@@ -28,7 +28,7 @@ const DEFAULT_HOOKS: Readonly<Record<string, readonly string[]>> = {
 
 /** Options for {@link noAsyncRenderHook}. */
 export interface NoAsyncRenderHookOptions {
-  /** Base class name to the hooks that must stay synchronous in its subclasses. */
+  /** Additional base classes and hooks, or replacements for individual built-in bases. */
   readonly hooks?: Readonly<Record<string, readonly string[]>>;
 }
 
@@ -57,21 +57,27 @@ export const noAsyncRenderHook: Rule.RuleModule = {
   },
   create(context) {
     const options = (context.options[0] ?? {}) as NoAsyncRenderHookOptions;
-    const hooks = options.hooks ?? DEFAULT_HOOKS;
+    const hooks = { ...DEFAULT_HOOKS, ...options.hooks };
 
     const check = (member: FunctionMember & Rule.NodeParentExtension): void => {
       const fn = memberFunction(member);
 
-      if (!fn?.async) return;
+      if (!fn?.async) {
+        return;
+      }
 
       const owner = owningClass(member);
       const base = owner === undefined ? undefined : superClassName(owner);
 
-      if (base === undefined || !Object.hasOwn(hooks, base)) return;
+      if (base === undefined || !Object.hasOwn(hooks, base)) {
+        return;
+      }
 
       const name = staticKeyName(member.key, member.computed);
 
-      if (name === undefined || !hooks[base]!.includes(name)) return;
+      if (name === undefined || !hooks[base]!.includes(name)) {
+        return;
+      }
 
       context.report({ node: member.key, messageId: 'asyncRenderHook', data: { name, base } });
     };
@@ -79,13 +85,17 @@ export const noAsyncRenderHook: Rule.RuleModule = {
     return {
       // `class Pass extends RenderPass { async execute(context) {} }`
       MethodDefinition(node) {
-        if (node.kind !== 'method' || node.static) return;
+        if (node.kind !== 'method' || node.static) {
+          return;
+        }
 
         check(node);
       },
       // `class Pass extends RenderPass { execute = async (context) => {}; }`
       PropertyDefinition(node) {
-        if (node.static) return;
+        if (node.static) {
+          return;
+        }
 
         check(node);
       },

@@ -4,7 +4,7 @@
   "symbol": "TileCollisionGeometry",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Collision geometry extracted from a tile layer: whole-cell boxes merged into as few TileCollisionRects as a greedy pass can manage, plus every other shape passed through individually."
       ],
-      "importLine": "import { TileCollisionGeometry } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileCollisionGeometry } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {
@@ -59,7 +59,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Merged whole-cell rectangles, in row-major order."
+          "description": "Whole-cell rectangles: row-major when merging, otherwise in the order cells were claimed."
         },
         {
           "name": "shapes",

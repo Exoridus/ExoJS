@@ -177,13 +177,19 @@ const isSize = (value: unknown): value is number => typeof value === 'number' &&
  */
 const DEFLATE_MAX_EXPANSION = 1032;
 
-const isHash = (value: unknown): value is string => typeof value === 'string' && value.length === HASH_HEX_LENGTH && HASH_PATTERN.test(value);
+const isHash = (value: unknown): value is string =>
+  typeof value === 'string' && value.length === HASH_HEX_LENGTH && HASH_PATTERN.test(value);
 
 const readHash = (record: Record<string, unknown>, source: string): Pick<ContainerEntry, 'hash'> => {
   const { hash } = record;
 
-  if (hash === undefined) return {};
-  if (!isHash(hash)) fail(`entry "${source}" has a "hash" that is not a ${HASH_HEX_LENGTH}-character lowercase hex SHA-256`);
+  if (hash === undefined) {
+    return {};
+  }
+
+  if (!isHash(hash)) {
+    fail(`entry "${source}" has a "hash" that is not a ${HASH_HEX_LENGTH}-character lowercase hex SHA-256`);
+  }
 
   return { hash };
 };
@@ -196,13 +202,33 @@ const readEntry = (value: unknown, i: number, dataLength: number): ContainerEntr
   const record = value as Record<string, unknown>;
   const { source, type, offset, length, mime } = record;
 
-  if (typeof source !== 'string') fail(`entry ${i} has a non-string "source"`);
-  if (typeof type !== 'string') fail(`entry ${i} ("${source}") has a non-string "type"`);
-  if (!isSize(offset)) fail(`entry "${source}" has an invalid "offset"`);
-  if (!isSize(length)) fail(`entry "${source}" has an invalid "length"`);
-  if (offset % CONTAINER_ALIGNMENT !== 0) fail(`entry "${source}" starts at ${offset}, which is not a multiple of ${CONTAINER_ALIGNMENT}`);
-  if (offset + length > dataLength) fail(`entry "${source}" runs past the data section (offset ${offset} + length ${length} > ${dataLength})`);
-  if (mime !== undefined && typeof mime !== 'string') fail(`entry "${source}" has a non-string "mime"`);
+  if (typeof source !== 'string') {
+    fail(`entry ${i} has a non-string "source"`);
+  }
+
+  if (typeof type !== 'string') {
+    fail(`entry ${i} ("${source}") has a non-string "type"`);
+  }
+
+  if (!isSize(offset)) {
+    fail(`entry "${source}" has an invalid "offset"`);
+  }
+
+  if (!isSize(length)) {
+    fail(`entry "${source}" has an invalid "length"`);
+  }
+
+  if (offset % CONTAINER_ALIGNMENT !== 0) {
+    fail(`entry "${source}" starts at ${offset}, which is not a multiple of ${CONTAINER_ALIGNMENT}`);
+  }
+
+  if (offset + length > dataLength) {
+    fail(`entry "${source}" runs past the data section (offset ${offset} + length ${length} > ${dataLength})`);
+  }
+
+  if (mime !== undefined && typeof mime !== 'string') {
+    fail(`entry "${source}" has a non-string "mime"`);
+  }
 
   return {
     source,
@@ -229,27 +255,60 @@ const readBlock = (value: unknown, i: number, expectedOffset: number, storedLimi
   const record = value as Record<string, unknown>;
   const { offset, length, storedOffset, storedLength, codec, hash } = record;
 
-  if (!isSize(offset)) fail(`block ${i} has an invalid "offset"`);
-  if (!isSize(length)) fail(`block ${i} has an invalid "length"`);
-  if (!isSize(storedOffset)) fail(`block ${i} has an invalid "storedOffset"`);
-  if (!isSize(storedLength)) fail(`block ${i} has an invalid "storedLength"`);
-  if (offset !== expectedOffset) fail(`block ${i} covers the data section from ${offset}, but the previous block ends at ${expectedOffset}`);
-  if (typeof codec !== 'string' || !CODECS.has(codec)) {
-    fail(`block ${i} has an unsupported codec ${JSON.stringify(codec)} (this build decodes ${[...CODECS].map(name => `"${name}"`).join(' and ')})`);
+  if (!isSize(offset)) {
+    fail(`block ${i} has an invalid "offset"`);
   }
-  if (codec === 'none' && storedLength !== length) fail(`block ${i} stores ${storedLength} bytes uncoded but covers ${length} bytes`);
+
+  if (!isSize(length)) {
+    fail(`block ${i} has an invalid "length"`);
+  }
+
+  if (!isSize(storedOffset)) {
+    fail(`block ${i} has an invalid "storedOffset"`);
+  }
+
+  if (!isSize(storedLength)) {
+    fail(`block ${i} has an invalid "storedLength"`);
+  }
+
+  if (offset !== expectedOffset) {
+    fail(`block ${i} covers the data section from ${offset}, but the previous block ends at ${expectedOffset}`);
+  }
+
+  if (typeof codec !== 'string' || !CODECS.has(codec)) {
+    fail(
+      `block ${i} has an unsupported codec ${JSON.stringify(codec)} (this build decodes ${[...CODECS].map(name => `"${name}"`).join(' and ')})`,
+    );
+  }
+
+  if (codec === 'none' && storedLength !== length) {
+    fail(`block ${i} stores ${storedLength} bytes uncoded but covers ${length} bytes`);
+  }
+
   if (codec === 'deflate-raw' && length > storedLength * DEFLATE_MAX_EXPANSION) {
     fail(`block ${i} claims ${length} bytes from ${storedLength} stored ones, past what ${codec} can produce`);
   }
-  if (!isHash(hash)) fail(`block ${i} has no ${HASH_HEX_LENGTH}-character lowercase hex SHA-256 "hash"`);
-  if (storedOffset + storedLength > storedLimit) fail(`block ${i} runs past the container (${storedOffset} + ${storedLength} > ${storedLimit} bytes)`);
+
+  if (!isHash(hash)) {
+    fail(`block ${i} has no ${HASH_HEX_LENGTH}-character lowercase hex SHA-256 "hash"`);
+  }
+
+  if (storedOffset + storedLength > storedLimit) {
+    fail(`block ${i} runs past the container (${storedOffset} + ${storedLength} > ${storedLimit} bytes)`);
+  }
 
   return { offset, length, storedOffset, storedLength, codec: codec as ContainerCodec, hash };
 };
 
 // `BufferSource` excludes a view over a `SharedArrayBuffer`, so the stored
 // bytes have to be declared over the plain `ArrayBuffer` the container is in.
-const decodeBlock = async (block: ContainerBlock, stored: Uint8Array<ArrayBuffer>, into: Uint8Array, at: number, index: number): Promise<void> => {
+const decodeBlock = async (
+  block: ContainerBlock,
+  stored: Uint8Array<ArrayBuffer>,
+  into: Uint8Array,
+  at: number,
+  index: number,
+): Promise<void> => {
   if (block.codec === 'none') {
     into.set(stored, at);
 
@@ -272,7 +331,10 @@ const decodeBlock = async (block: ContainerBlock, stored: Uint8Array<ArrayBuffer
     for (;;) {
       const { done, value } = await reader.read();
 
-      if (done) break;
+      if (done) {
+        break;
+      }
+
       if (written + value.byteLength > block.length) {
         await reader.cancel();
         fail(`block ${index} decodes to more than the ${block.length} bytes it covers`);
@@ -286,7 +348,9 @@ const decodeBlock = async (block: ContainerBlock, stored: Uint8Array<ArrayBuffer
     // throws. Callers branch on the container being unreadable, not on which
     // engine reported it, so the failure keeps the type every other malformed
     // container has.
-    if (error instanceof AssetDecodeError) throw error;
+    if (error instanceof AssetDecodeError) {
+      throw error;
+    }
 
     fail(`block ${index} is not readable as "${block.codec}"`);
   }
@@ -340,7 +404,11 @@ export const decodeContainerData = async (container: ParsedContainer, buffer: Ar
  * Throws when the bytes are unreadable as the block's codec, or decode to a
  * length other than the region the block claims to cover.
  */
-export const decodeContainerBlock = async (block: ContainerBlock, stored: Uint8Array<ArrayBuffer>, index = 0): Promise<Uint8Array<ArrayBuffer>> => {
+export const decodeContainerBlock = async (
+  block: ContainerBlock,
+  stored: Uint8Array<ArrayBuffer>,
+  index = 0,
+): Promise<Uint8Array<ArrayBuffer>> => {
   const into = new Uint8Array(new ArrayBuffer(block.length));
 
   await decodeBlock(block, stored, into, 0, index);
@@ -349,7 +417,8 @@ export const decodeContainerBlock = async (block: ContainerBlock, stored: Uint8A
 };
 
 /** Read one entry's asset bytes out of a decoded data section. */
-export const readContainerEntry = (entry: ContainerEntry, data: ArrayBuffer): ArrayBuffer => data.slice(entry.offset, entry.offset + entry.length);
+export const readContainerEntry = (entry: ContainerEntry, data: ArrayBuffer): ArrayBuffer =>
+  data.slice(entry.offset, entry.offset + entry.length);
 
 /**
  * Parse and validate a container's header and JSON head from a prefix of the
@@ -382,6 +451,7 @@ export const parseContainerHead = (prefix: ArrayBuffer, totalLength: number): Pa
   }
 
   const version = view.getUint32(4, true);
+
   if (version !== CONTAINER_VERSION) {
     // Earlier versions are not read partially: each of them framed the file
     // differently, so a reader cannot tell where anything is. A container is
@@ -390,30 +460,36 @@ export const parseContainerHead = (prefix: ArrayBuffer, totalLength: number): Pa
   }
 
   const flags = view.getUint32(8, true);
+
   if (flags !== 0) {
     fail(`header flags ${flags} are set, but this version defines none`);
   }
 
   const headLength = view.getUint32(12, true);
   const headEnd = CONTAINER_HEADER_SIZE + headLength;
+
   if (headEnd > buffer.byteLength) {
     fail(`head length ${headLength} runs past the buffer (size ${buffer.byteLength})`);
   }
 
   const dataOffset = view.getUint32(16, true);
+
   if (dataOffset < headEnd || dataOffset > totalLength) {
     fail(`data offset ${dataOffset} is outside the container (head ends at ${headEnd}, size ${totalLength})`);
   }
+
   if (dataOffset % CONTAINER_ALIGNMENT !== 0) {
     fail(`data offset ${dataOffset} is not a multiple of ${CONTAINER_ALIGNMENT}`);
   }
 
   const blockSize = view.getUint32(20, true);
+
   if (blockSize === 0) {
     fail('block size is zero');
   }
 
   let parsed: unknown;
+
   try {
     parsed = JSON.parse(new TextDecoder().decode(bytes.subarray(CONTAINER_HEADER_SIZE, headEnd)));
   } catch {
@@ -426,8 +502,13 @@ export const parseContainerHead = (prefix: ArrayBuffer, totalLength: number): Pa
 
   const head = parsed as Record<string, unknown>;
 
-  if (!Array.isArray(head.entries)) fail('head has no "entries" array');
-  if (!Array.isArray(head.blocks)) fail('head has no "blocks" array');
+  if (!Array.isArray(head.entries)) {
+    fail('head has no "entries" array');
+  }
+
+  if (!Array.isArray(head.blocks)) {
+    fail('head has no "blocks" array');
+  }
 
   const storedLimit = totalLength - dataOffset;
   const blocks: ContainerBlock[] = [];
