@@ -1,9 +1,9 @@
 // Centralized TypeScript compiler contract for the ExoJS monorepo.
 //
-// The repository carries two compilers side by side. `typescript` is the
-// TypeScript 6 JavaScript Compiler API, used by everything that calls
-// `createProgram` and friends. `@typescript/native` is the TypeScript 7 native
-// compiler, used for command-line compilation and declaration emit.
+// The repository currently carries the classic TypeScript 6 compiler API for
+// unported AST/legacy tooling and native TypeScript 7.1 for all CLI typechecking
+// and declaration emission. The native 7.1 entry points (sync/ast/factory) are
+// validated separately; this wrapper MUST never silently fall back to TS 7.0.
 //
 // Both packages ship a `tsc` binary, so a bare `tsc` is resolved by the
 // installer rather than by intent - and it changed owner silently when the
@@ -27,6 +27,7 @@ import { dirname, join } from 'node:path';
 
 const NATIVE_PACKAGE = '@typescript/native';
 const REQUIRED_MAJOR = 7;
+const REQUIRED_MINOR = 1;
 
 const require = createRequire(import.meta.url);
 
@@ -53,10 +54,10 @@ const readManifestVersion = () => {
  */
 export const typescriptCompilerPath = () => {
   const version = readManifestVersion();
-  const major = Number.parseInt(version, 10);
-  if (major !== REQUIRED_MAJOR) {
+  const [major, minor] = version.split('.').map(Number);
+  if (major !== REQUIRED_MAJOR || minor !== REQUIRED_MINOR) {
     throw new Error(
-      `${NATIVE_PACKAGE} must be TypeScript ${REQUIRED_MAJOR}.x, found ${version}. ` +
+      `${NATIVE_PACKAGE} must be TypeScript ${REQUIRED_MAJOR}.${REQUIRED_MINOR}.x, found ${version}. ` +
         'Run `pnpm install` and check the alias in the root package.json.',
     );
   }
@@ -96,6 +97,7 @@ export const runTypeScriptCompiler = (args, options = {}) => {
     cwd: options.cwd,
     stdio: options.stdio ?? 'inherit',
     encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
   });
   if (result.error) throw result.error;
   return { status: result.status ?? 1, output: `${result.stdout ?? ''}${result.stderr ?? ''}` };

@@ -29,7 +29,6 @@ import { createRuntimeModuleBuildOptions, createShippedExternalsPlugin, type Run
 import { runTypeScriptCompiler } from '@codexo/exojs-config/typescript/compiler';
 import { build as buildWorker } from 'esbuild';
 import { type OutputOptions, type Plugin, type PreRenderedChunk, rolldown, type RolldownOptions, watch } from 'rolldown';
-import ts from 'typescript';
 
 import { rewriteModuleSpecifiers } from './lib/module-specifiers.ts';
 import {
@@ -323,26 +322,27 @@ const runJob = async (options: RolldownOptions): Promise<void> => {
 
 const DECLARATION_STAGING = resolvePath(rootDir, 'dist', '.declarations');
 
-/** The files a package's own `tsconfig.json` type-checks, so the composed emit sees exactly what each package does. */
+/** Resolve the root file set with the same native compiler that emits declarations. */
 const programFiles = (configPath: string): string[] => {
-  const parsed = ts.getParsedCommandLineOfConfigFile(
-    configPath,
-    {},
-    {
-      ...ts.sys,
-      onUnRecoverableConfigFileDiagnostic: diagnostic => {
-        throw new Error(`cannot read ${configPath}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, ' ')}`);
-      },
-    },
-  );
+  const result = runTypeScriptCompiler(['--showConfig', '-p', configPath], { cwd: rootDir, stdio: 'pipe' });
 
-  if (parsed === undefined || parsed.errors.length > 0) {
-    const reason = parsed?.errors.map(error => ts.flattenDiagnosticMessageText(error.messageText, '\n')).join('; ') ?? 'unreadable';
-
-    throw new Error(`cannot read ${configPath}: ${reason}`);
+  if (result.status !== 0) {
+    throw new Error(`cannot read ${configPath}: ${result.output}`);
   }
 
-  return parsed.fileNames;
+  let parsed: { files?: unknown };
+
+  try {
+    parsed = JSON.parse(result.output) as { files?: unknown };
+  } catch {
+    throw new Error(`cannot parse native config ${configPath}: ${result.output}`);
+  }
+
+  if (!Array.isArray(parsed.files) || !parsed.files.every(file => typeof file === 'string')) {
+    throw new Error(`native config ${configPath} did not supply an explicit file list`);
+  }
+
+  return parsed.files.map(file => resolvePath(dirname(configPath), file));
 };
 
 const listFiles = (dir: string): string[] =>

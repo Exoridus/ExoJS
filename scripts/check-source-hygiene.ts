@@ -42,7 +42,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import ts from 'typescript';
+import { getLeadingCommentRanges, withNativeSourceFile } from '@codexo/exojs-config/typescript/ast';
 
 /**
  * Hyphenated tokens that match the tracker-ID shape but are not work items:
@@ -275,11 +275,18 @@ const isGenerated = (source: string): boolean => GENERATED_BANNER.test(source.sp
  * leading trivia of the following token, and the end-of-file token catches the
  * ones that close a file.
  */
-const collectComments = (sourceFile: ts.SourceFile, source: string): ts.CommentRange[] => {
-  const seen = new Set<number>();
-  const comments: ts.CommentRange[] = [];
+type NativeSourceFile = Parameters<Parameters<typeof withNativeSourceFile>[2]>[0];
+type NativeAstNode = ReturnType<NativeSourceFile['getChildren']>[number];
+interface CommentSpan {
+  readonly pos: number;
+  readonly end: number;
+}
 
-  const visit = (node: ts.Node): void => {
+const collectComments = (sourceFile: NativeSourceFile, source: string): CommentSpan[] => {
+  const seen = new Set<number>();
+  const comments: CommentSpan[] = [];
+
+  const visit = (node: NativeAstNode): void => {
     const children = node.getChildren(sourceFile);
 
     if (children.length > 0) {
@@ -290,7 +297,7 @@ const collectComments = (sourceFile: ts.SourceFile, source: string): ts.CommentR
       return;
     }
 
-    for (const range of ts.getLeadingCommentRanges(source, node.getFullStart()) ?? []) {
+    for (const range of getLeadingCommentRanges(source, node.getFullStart()) ?? []) {
       if (seen.has(range.pos)) {
         continue;
       }
@@ -316,7 +323,7 @@ interface LineRange {
  * whole span rather than the comment's first line is what puts an existing
  * JSDoc block in scope when a single sentence inside it is rewritten.
  */
-const isInScope = (sourceFile: ts.SourceFile, comment: ts.CommentRange, ranges: readonly LineRange[] | null): boolean => {
+const isInScope = (sourceFile: NativeSourceFile, comment: CommentSpan, ranges: readonly LineRange[] | null): boolean => {
   if (ranges === null) {
     return true;
   }
@@ -379,43 +386,44 @@ const scanFile = (repoPath: string, absolutePath: string, ranges: readonly LineR
     return [];
   }
 
-  const sourceFile = ts.createSourceFile(absolutePath, source, ts.ScriptTarget.Latest, true);
-  const violations: Violation[] = [];
+  return withNativeSourceFile(absolutePath, source, sourceFile => {
+    const violations: Violation[] = [];
 
-  for (const comment of collectComments(sourceFile, source)) {
-    if (!isInScope(sourceFile, comment, ranges)) {
-      continue;
-    }
+    for (const comment of collectComments(sourceFile, source)) {
+      if (!isInScope(sourceFile, comment, ranges)) {
+        continue;
+      }
 
-    const text = source.slice(comment.pos, comment.end);
-    const matches: Match[] = [];
+      const text = source.slice(comment.pos, comment.end);
+      const matches: Match[] = [];
 
-    for (const rule of RULES) {
-      for (const pattern of rule.patterns) {
-        for (const match of text.matchAll(pattern)) {
-          if (rule.allow?.(match[0], text)) {
-            continue;
+      for (const rule of RULES) {
+        for (const pattern of rule.patterns) {
+          for (const match of text.matchAll(pattern)) {
+            if (rule.allow?.(match[0], text)) {
+              continue;
+            }
+
+            matches.push({ rule: rule.name, start: match.index, end: match.index + match[0].length, text: match[0] });
           }
-
-          matches.push({ rule: rule.name, start: match.index, end: match.index + match[0].length, text: match[0] });
         }
+      }
+
+      for (const match of dedupe(matches)) {
+        const { line } = sourceFile.getLineAndCharacterOfPosition(comment.pos + match.start);
+
+        violations.push({
+          file: repoPath,
+          line: line + 1,
+          rule: match.rule,
+          kind: commentKind(text),
+          text: summarize(match.text),
+        });
       }
     }
 
-    for (const match of dedupe(matches)) {
-      const { line } = sourceFile.getLineAndCharacterOfPosition(comment.pos + match.start);
-
-      violations.push({
-        file: repoPath,
-        line: line + 1,
-        rule: match.rule,
-        kind: commentKind(text),
-        text: summarize(match.text),
-      });
-    }
-  }
-
-  return violations;
+    return violations;
+  });
 };
 
 /**
@@ -446,44 +454,45 @@ const fixFile = (absolutePath: string, ranges: readonly LineRange[] | null): num
     return 0;
   }
 
-  const sourceFile = ts.createSourceFile(absolutePath, source, ts.ScriptTarget.Latest, true);
-  const comments = collectComments(sourceFile, source).sort((a, b) => a.pos - b.pos);
+  return withNativeSourceFile(absolutePath, source, sourceFile => {
+    const comments = collectComments(sourceFile, source).sort((a, b) => a.pos - b.pos);
 
-  let result = '';
-  let cursor = 0;
-  let fixed = 0;
+    let result = '';
+    let cursor = 0;
+    let fixed = 0;
 
-  for (const comment of comments) {
-    if (!isInScope(sourceFile, comment, ranges)) {
-      continue;
+    for (const comment of comments) {
+      if (!isInScope(sourceFile, comment, ranges)) {
+        continue;
+      }
+
+      const text = source.slice(comment.pos, comment.end);
+
+      let replaced = text;
+      let hits = 0;
+
+      for (const [pattern, ascii] of SAFE_PUNCTUATION) {
+        hits += replaced.match(pattern)?.length ?? 0;
+        replaced = replaced.replaceAll(pattern, ascii);
+      }
+
+      if (hits === 0) {
+        continue;
+      }
+
+      result += source.slice(cursor, comment.pos) + replaced;
+      cursor = comment.end;
+      fixed += hits;
     }
 
-    const text = source.slice(comment.pos, comment.end);
-
-    let replaced = text;
-    let hits = 0;
-
-    for (const [pattern, ascii] of SAFE_PUNCTUATION) {
-      hits += replaced.match(pattern)?.length ?? 0;
-      replaced = replaced.replaceAll(pattern, ascii);
+    if (fixed === 0) {
+      return 0;
     }
 
-    if (hits === 0) {
-      continue;
-    }
+    writeFileSync(absolutePath, result + source.slice(cursor), 'utf8');
 
-    result += source.slice(cursor, comment.pos) + replaced;
-    cursor = comment.end;
-    fixed += hits;
-  }
-
-  if (fixed === 0) {
-    return 0;
-  }
-
-  writeFileSync(absolutePath, result + source.slice(cursor), 'utf8');
-
-  return fixed;
+    return fixed;
+  });
 };
 
 interface Scope {

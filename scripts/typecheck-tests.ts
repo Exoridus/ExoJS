@@ -23,10 +23,10 @@
  * with no file at all (bad config, missing lib) are always reported: those are
  * failures of the gate itself.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { globSync, readFileSync, writeFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 
-import ts from 'typescript';
+import { checkNativeProject, type NativeDiagnostic } from './lib/native-compiler-diagnostics.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const TEST_DIR = resolve(REPO_ROOT, 'test');
@@ -43,12 +43,6 @@ interface Baseline {
   note: string;
   files: Record<string, number>;
 }
-
-const FORMAT_HOST: ts.FormatDiagnosticsHost = {
-  getCanonicalFileName: fileName => fileName,
-  getCurrentDirectory: () => REPO_ROOT,
-  getNewLine: () => ts.sys.newLine,
-};
 
 // A `never` return only ends control flow for the caller when the callee is a
 // function declaration or a constant with an explicit type annotation.
@@ -75,31 +69,16 @@ const writeBaseline = (files: Record<string, number>): void => {
   writeFileSync(BASELINE_PATH, `${JSON.stringify({ note: BASELINE_NOTE, files: sorted }, null, 2)}\n`, 'utf8');
 };
 
-const configFile = ts.readConfigFile(CONFIG_PATH, ts.sys.readFile);
-
-if (configFile.error) {
-  fail(ts.formatDiagnosticsWithColorAndContext([configFile.error], FORMAT_HOST));
-}
-
-// Relative paths in the config - `include`, `paths`, `exclude` - are resolved
-// against the directory the config lives in, not the repository root. Passing
-// the wrong base leaves every workspace `paths` mapping pointing one level off,
-// which surfaces as a wall of TS2307 rather than as a config error.
-const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, TEST_DIR, undefined, CONFIG_PATH);
-
-if (parsed.errors.length > 0) {
-  fail(ts.formatDiagnosticsWithColorAndContext(parsed.errors, FORMAT_HOST));
-}
-
-const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options });
+// Delegate configuration, typechecking, and project resolution to native TypeScript.
+const native = checkNativeProject(CONFIG_PATH, REPO_ROOT);
 
 /** Repo-relative, forward-slashed path, or `null` for anything outside `test/`. */
-const testRelativePath = (diagnostic: ts.Diagnostic): string | null => {
-  if (diagnostic.file === undefined) {
+const testRelativePath = (diagnostic: NativeDiagnostic): string | null => {
+  if (diagnostic.file === null) {
     return null;
   }
 
-  const relativePath = relative(TEST_DIR, resolve(diagnostic.file.fileName));
+  const relativePath = relative(TEST_DIR, resolve(diagnostic.file));
 
   if (relativePath.length === 0 || relativePath.startsWith('..')) {
     return null;
@@ -108,14 +87,14 @@ const testRelativePath = (diagnostic: ts.Diagnostic): string | null => {
   return `test/${relativePath.split('\\').join('/')}`;
 };
 
-const all = ts.getPreEmitDiagnostics(program);
-const configErrors = all.filter(diagnostic => diagnostic.file === undefined);
+const all = native.diagnostics;
+const configErrors = all.filter(diagnostic => diagnostic.file === null);
 
 if (configErrors.length > 0) {
-  fail(ts.formatDiagnosticsWithColorAndContext(configErrors, FORMAT_HOST));
+  fail(configErrors.map(diagnostic => diagnostic.line).join('\n'));
 }
 
-const byFile = new Map<string, ts.Diagnostic[]>();
+const byFile = new Map<string, NativeDiagnostic[]>();
 
 for (const diagnostic of all) {
   const file = testRelativePath(diagnostic);
@@ -174,7 +153,7 @@ if (regressions.length > 0) {
   for (const { file, baseline: budget, actual: count } of regressions.sort((a, b) => a.file.localeCompare(b.file))) {
     const diagnostics = byFile.get(file) ?? [];
 
-    console.error(ts.formatDiagnosticsWithColorAndContext(diagnostics, FORMAT_HOST));
+    console.error(diagnostics.map(diagnostic => diagnostic.line).join('\n'));
     console.error(`  ${file}: ${count} error(s), budget ${budget}.`);
   }
 
@@ -192,5 +171,5 @@ if (improvements.length > 0) {
 const total = Object.values(actual).reduce((sum, count) => sum + count, 0);
 
 console.log(
-  `typecheck:test: ${parsed.fileNames.length} file(s) checked, ${total} known error(s) across ${Object.keys(actual).length} file(s), all within budget.`,
+  `typecheck:test: ${globSync('**/*.{ts,tsx}', { cwd: TEST_DIR }).length} source file(s) checked, ${total} known error(s) across ${Object.keys(actual).length} file(s), all within budget.`,
 );

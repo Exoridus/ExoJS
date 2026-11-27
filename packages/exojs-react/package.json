@@ -29,7 +29,7 @@
     "build": "node --import tsx ../../scripts/build-extension.ts",
     "build:dev": "tsx ../../scripts/build-extension.ts --dev",
     "typecheck": "exo-tsc --noEmit && exo-tsc --noEmit -p tsconfig.test.json && exo-tsc --noEmit -p tsconfig.examples.json",
-    "lint": "eslint --max-warnings=0 ."
+    "lint": "oxlint --config ../../scripts/ci/oxlint-react-shadow.json --max-warnings=0 src examples && eslint --max-warnings=0 ."
   },
   "peerDependencies": {
     "@codexo/exojs": "0.19.x",

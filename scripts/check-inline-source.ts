@@ -35,7 +35,7 @@ import { readdir } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import ts from 'typescript';
+import { isStringLiteralLikeNode, isTemplateExpression, withNativeSourceFile } from '@codexo/exojs-config/typescript/ast';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const SELF_PATH = fileURLToPath(import.meta.url);
@@ -133,28 +133,29 @@ const GENERATED_BANNER_LINES = 5;
 
 const isGenerated = (text: string): boolean => GENERATED_BANNER.test(text.split('\n', GENERATED_BANNER_LINES).join('\n'));
 
-/** Every string and template literal in `source`, with its 1-based line. */
-const collectLiterals = (source: ts.SourceFile): Array<{ text: string; line: number }> => {
-  const literals: Array<{ text: string; line: number }> = [];
+/** Every string and template literal in one leased native syntax tree. */
+const collectLiterals = (filename: string, text: string): Array<{ text: string; line: number }> =>
+  withNativeSourceFile(filename, text, source => {
+    const literals: Array<{ text: string; line: number }> = [];
 
-  const visit = (node: ts.Node): void => {
-    if (ts.isStringLiteralLike(node) || ts.isTemplateExpression(node)) {
-      // A template with substitutions still reads as one body of code; taking
-      // the raw text of every span keeps an interpolated worker visible.
-      const text = ts.isTemplateExpression(node)
-        ? node.head.text + node.templateSpans.map(span => span.literal.text).join('\n')
-        : node.text;
+    const visit = (node: Parameters<Parameters<typeof source.forEachChild>[0]>[0]): void => {
+      if (isStringLiteralLikeNode(node) || isTemplateExpression(node)) {
+        const literalText = isTemplateExpression(node)
+          ? node.head.text + node.templateSpans.map(span => span.literal.text).join('\n')
+          : node.text;
 
-      literals.push({ text, line: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1 });
-    }
+        literals.push({ text: literalText, line: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1 });
+      }
 
-    ts.forEachChild(node, visit);
-  };
+      node.forEachChild(child => {
+        visit(child);
+      });
+    };
 
-  visit(source);
+    visit(source);
 
-  return literals;
-};
+    return literals;
+  });
 
 const collectFiles = async (root: string): Promise<string[]> => {
   const absoluteRoot = resolve(REPO_ROOT, root);
@@ -208,10 +209,9 @@ const checkFile = (absolutePath: string): Violation[] => {
     return [];
   }
 
-  const source = ts.createSourceFile(absolutePath, text, ts.ScriptTarget.Latest, true);
   const violations: Violation[] = [];
 
-  for (const literal of collectLiterals(source)) {
+  for (const literal of collectLiterals(absolutePath, text)) {
     if (literal.text.length < MINIMUM_INTERESTING_LENGTH || !isMultiLine(literal.text)) {
       continue;
     }

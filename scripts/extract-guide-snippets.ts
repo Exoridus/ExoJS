@@ -90,7 +90,7 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-import ts from 'typescript';
+import { isClassDeclaration, withNativeSourceFile } from '@codexo/exojs-config/typescript/ast';
 
 import { parseFences } from './guide-fences.ts';
 import { buildPageModule, type PageBlock } from './guide-page-module.ts';
@@ -528,16 +528,18 @@ const collectFileImportLines = (filePath: string): string[] => {
 const collectFileClasses = (filePath: string): string[] => {
   try {
     const content = readFileSync(join(REPO_ROOT, filePath), 'utf8');
-    const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.ES2022, true);
-    const classes: string[] = [];
 
-    for (const stmt of sourceFile.statements) {
-      if (ts.isClassDeclaration(stmt) && stmt.heritageClauses?.length) {
-        classes.push(content.slice(stmt.getStart(sourceFile), stmt.end).replace(/^export\s+/, ''));
+    return withNativeSourceFile(filePath, content, sourceFile => {
+      const classes: string[] = [];
+
+      for (const stmt of sourceFile.statements) {
+        if (isClassDeclaration(stmt) && stmt.heritageClauses?.length) {
+          classes.push(content.slice(stmt.getStart(sourceFile), stmt.end).replace(/^export\s+/, ''));
+        }
       }
-    }
 
-    return classes;
+      return classes;
+    });
   } catch {
     return [];
   }
@@ -670,14 +672,16 @@ const wrapFragment = (body: string): string => {
  */
 const splitSiblingMethods = (body: string): string[] => {
   const wrapped = `class __Probe {\n${body}\n}`;
-  const sourceFile = ts.createSourceFile('__probe.ts', wrapped, ts.ScriptTarget.ES2022, true);
-  const classDecl = sourceFile.statements.find(ts.isClassDeclaration);
 
-  if (!classDecl || classDecl.members.length === 0) {
-    return [body];
-  }
+  return withNativeSourceFile('__probe.ts', wrapped, sourceFile => {
+    const classDecl = sourceFile.statements.find(isClassDeclaration);
 
-  return classDecl.members.map(member => wrapped.slice(member.pos, member.end).trim()).filter(Boolean);
+    if (!classDecl || classDecl.members.length === 0) {
+      return [body];
+    }
+
+    return classDecl.members.map(member => wrapped.slice(member.pos, member.end).trim()).filter(Boolean);
+  });
 };
 
 /** Converts one BARE block's body into one-or-more synthetic class-member
