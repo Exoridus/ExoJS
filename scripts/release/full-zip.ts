@@ -20,7 +20,7 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 
-import { ModuleKind, ScriptTarget, transpileModule } from 'typescript';
+import { transpileNative } from '@codexo/exojs-config/typescript/transpile';
 
 import type { CommandRunner } from './command-runner.ts';
 import { isEngineExtension, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
@@ -152,9 +152,7 @@ export const writeSiteServer = (siteDir: string): void => {
   // and type-checked with the rest of the tooling, while the file that ships
   // has to run on whatever Node the person unpacking the archive has, without a
   // type-stripping flag.
-  const server = transpileModule(template.replace('__SITE_BASE__', base), {
-    compilerOptions: { target: ScriptTarget.ES2023, module: ModuleKind.ESNext },
-  }).outputText;
+  const server = transpileNative(template.replace('__SITE_BASE__', base), { target: 'es2023' });
 
   writeFileSync(join(siteDir, 'serve.mjs'), server, 'utf8');
   writeFileSync(

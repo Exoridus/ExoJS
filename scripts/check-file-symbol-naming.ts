@@ -30,7 +30,18 @@ import { readFileSync, statSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { basename, join, relative, resolve } from 'node:path';
 
-import ts from 'typescript';
+import {
+  isClassDeclaration,
+  isEnumDeclaration,
+  isFunctionDeclaration,
+  isIdentifier,
+  isInterfaceDeclaration,
+  isModuleDeclaration,
+  isTypeAliasDeclaration,
+  isVariableStatement,
+  SyntaxKind,
+  withNativeSourceFile,
+} from '@codexo/exojs-config/typescript/ast';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 
@@ -83,43 +94,45 @@ interface Surface {
   readonly otherValues: readonly string[];
 }
 
-const readSurface = (absolutePath: string): Surface => {
-  const source = ts.createSourceFile(absolutePath, readFileSync(absolutePath, 'utf8'), ts.ScriptTarget.Latest, true);
+const readSurface = (absolutePath: string): Surface =>
+  withNativeSourceFile(absolutePath, readFileSync(absolutePath, 'utf8'), source => {
+    const exported = new Set<string>();
+    const classes: string[] = [];
+    const otherValues: string[] = [];
 
-  const exported = new Set<string>();
-  const classes: string[] = [];
-  const otherValues: string[] = [];
+    const isExported = (statement: (typeof source.statements)[number]): boolean => {
+      const annotated = statement as typeof statement & { modifiers?: ReadonlyArray<{ kind: number }> };
 
-  const isExported = (node: ts.Node): boolean =>
-    ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword);
+      return annotated.modifiers?.some(modifier => modifier.kind === SyntaxKind.ExportKeyword) ?? false;
+    };
 
-  for (const statement of source.statements) {
-    if (ts.isClassDeclaration(statement) && statement.name && isExported(statement)) {
-      exported.add(statement.name.text);
-      classes.push(statement.name.text);
-    } else if ((ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) && isExported(statement)) {
-      exported.add(statement.name.text);
-    } else if (ts.isEnumDeclaration(statement) && isExported(statement)) {
-      exported.add(statement.name.text);
-      otherValues.push(statement.name.text);
-    } else if (ts.isFunctionDeclaration(statement) && statement.name && isExported(statement)) {
-      exported.add(statement.name.text);
-      otherValues.push(statement.name.text);
-    } else if (ts.isModuleDeclaration(statement) && isExported(statement) && ts.isIdentifier(statement.name)) {
-      exported.add(statement.name.text);
-      otherValues.push(statement.name.text);
-    } else if (ts.isVariableStatement(statement) && isExported(statement)) {
-      for (const declaration of statement.declarationList.declarations) {
-        if (ts.isIdentifier(declaration.name)) {
-          exported.add(declaration.name.text);
-          otherValues.push(declaration.name.text);
+    for (const statement of source.statements) {
+      if (isClassDeclaration(statement) && statement.name && isExported(statement)) {
+        exported.add(statement.name.text);
+        classes.push(statement.name.text);
+      } else if ((isInterfaceDeclaration(statement) || isTypeAliasDeclaration(statement)) && isExported(statement)) {
+        exported.add(statement.name.text);
+      } else if (isEnumDeclaration(statement) && isExported(statement)) {
+        exported.add(statement.name.text);
+        otherValues.push(statement.name.text);
+      } else if (isFunctionDeclaration(statement) && statement.name && isExported(statement)) {
+        exported.add(statement.name.text);
+        otherValues.push(statement.name.text);
+      } else if (isModuleDeclaration(statement) && isExported(statement) && isIdentifier(statement.name)) {
+        exported.add(statement.name.text);
+        otherValues.push(statement.name.text);
+      } else if (isVariableStatement(statement) && isExported(statement)) {
+        for (const declaration of statement.declarationList.declarations) {
+          if (isIdentifier(declaration.name)) {
+            exported.add(declaration.name.text);
+            otherValues.push(declaration.name.text);
+          }
         }
       }
     }
-  }
 
-  return { classes, exported, otherValues };
-};
+    return { classes, exported, otherValues };
+  });
 
 interface Violation {
   readonly file: string;
