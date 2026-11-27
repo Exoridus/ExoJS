@@ -445,7 +445,7 @@
       "path": "application-scenes/picture-in-picture.js",
       "language": "typescript",
       "title": "Picture in Picture",
-      "description": "Embed a secondary scene view inside the main view — classic minimap or security-camera picture-in-picture layout.",
+      "description": "Render the same Scene and sprite through two Views: a main camera and a smaller tracking inset. The inset zooms out to show more of the same world.",
       "backend": "core",
       "tags": ["camera", "scene", "rendering"],
       "level": "advanced"
@@ -455,7 +455,7 @@
       "path": "render-targets/mini-map.js",
       "language": "typescript",
       "title": "Minimap",
-      "description": "Navigate a world while comparing its main view and clickable minimap. WASD / arrows / stick move. One world renders through two cameras; the circular HUD uses a render texture.",
+      "description": "Move with WASD, arrows or a gamepad stick while comparing the main view and circular minimap. Two cameras render the same world; the minimap follows the player through a render texture.",
       "backend": "core",
       "tags": ["rendering", "camera", "advanced"],
       "level": "intermediate"
@@ -470,7 +470,7 @@
       "description": "One loaded spritesheet character with adjustable FPS, Play/Pause and a live frame index. Space pauses or resumes.",
       "backend": "core",
       "tags": ["animation", "sprite"],
-      "capabilities": ["keyboard"],
+      "capabilities": [],
       "level": "intermediate"
     },
     {
@@ -480,8 +480,9 @@
       "title": "Tweens and Easing",
       "description": "Compare easing curves and raw time, replace an active tween, and follow a sequence of route segments. Click a target. Click again to interrupt. Arrows change ease.",
       "backend": "core",
+      "featured": true,
       "tags": ["animation", "tween"],
-      "capabilities": ["keyboard", "pointer"],
+      "capabilities": ["pointer"],
       "level": "intro"
     },
     {
@@ -534,8 +535,9 @@
       "title": "Boss Intro Cinematic",
       "description": "A tween-driven boss reveal: letterbox bars, a camera push-in, a typewriter title punched with a screen shake and a music swell. Press R or click to replay once it has played out.",
       "backend": "core",
+      "featured": true,
       "tags": ["animation", "audio", "scene"],
-      "capabilities": ["pointer", "keyboard", "audio"],
+      "capabilities": ["pointer", "audio"],
       "level": "intermediate"
     }
   ],
@@ -566,7 +568,7 @@
       "path": "text-fonts/multiline-and-wrap.js",
       "language": "typescript",
       "title": "Multiline and Wrap",
-      "description": "Configure word-wrap width, line height, and horizontal alignment for multi-line Text drawables.",
+      "description": "Compare word wrapping, breaking a long unbroken token, and an unwrapped line. Three Text columns show how maxWidth and breakWords change the layout.",
       "backend": "core",
       "tags": ["text"],
       "level": "intermediate"
@@ -576,7 +578,7 @@
       "path": "text-fonts/bitmap-text-basic.js",
       "language": "typescript",
       "title": "Bitmap Text",
-      "description": "Compare bitmap glyphs and rasterized text at integer and fractional scales and distinguish missing fonts from missing glyphs. The same word: prebuilt atlas beside browser raster. Fractional scale reveals sampling.",
+      "description": "Compare the same word rendered from a bitmap atlas and by the browser. Choose an integer or fractional scale to inspect sampling, then pause or resume the bitmap counter.",
       "backend": "core",
       "tags": ["bitmap", "text", "bmfont"],
       "level": "intermediate"
@@ -661,6 +663,7 @@
       "title": "Write a Fragment Filter",
       "description": "Move the pointer over a UV grid to place a ripple while one typed uniform schema feeds matching GLSL and WGSL filter shaders for time and pointer position.",
       "backend": "core",
+      "featured": true,
       "tags": ["fx", "filter", "shader", "pointer"],
       "capabilities": ["pointer"],
       "level": "advanced"
@@ -711,7 +714,7 @@
       "path": "render-targets/water-mirror.js",
       "language": "typescript",
       "title": "Water Reflection and Distortion",
-      "description": "Capture and flip a live reflection, then drag horizontally across the water to change the strength of its scrolling displacement map (left is calm, right is strong).",
+      "description": "Compare a live subject with its transparent, vertically flipped render-texture capture over a stable water surface. Pause motion, choose Calm or Ripples, or drag across the water to change displacement strength.",
       "backend": "core",
       "tags": ["fx", "rendering", "displacement", "pointer"],
       "capabilities": ["pointer"],
@@ -722,10 +725,10 @@
       "path": "sprites-textures/video-drawable.js",
       "language": "typescript",
       "title": "Play a Video Texture",
-      "description": "Play, pause and seek an existing video after an explicit gesture and inspect load, media and teardown states. Muted SDR video. Play explicitly; clip changes preserve pause, seek and loop.",
+      "description": "Choose one of two existing videos, then explicitly play, pause and seek while inspecting load and media states. Muted SDR video; keys 1 and 2 select clips, and clip changes preserve pause, seek and loop.",
       "backend": "core",
       "tags": ["sprite", "rendering"],
-      "capabilities": ["pointer", "keyboard"],
+      "capabilities": ["pointer"],
       "level": "advanced"
     },
     {
@@ -860,7 +863,7 @@
       "path": "showcase/audio-reactive-particles.js",
       "language": "typescript",
       "title": "Audio Reactive Particles",
-      "description": "Particles driven by the music: low-band energy sets how many spawn and high-band energy how wide they spread, so silence stays still; detected beats recolour the stream.",
+      "description": "Start the music, then compare bass-driven particle density and treble-driven spread using the live band meters. Pause, mute, or swap the band roles; detected beats change colour. Silence produces no new particles.",
       "backend": "core",
       "featured": true,
       "tags": ["audio", "reactive", "particles"],
@@ -1181,11 +1184,11 @@
       "path": "tilemap/tiled-infinite-map.js",
       "language": "typescript",
       "title": "Streaming Tile Worlds",
-      "description": "Explore a streamed world and inspect resident chunk boundaries and ownership. WASD, arrows or left stick pan; cyan outlines are resident chunks.",
+      "description": "Explore an authored island with Home and Explore, or pan freely with WASD, arrows or a stick. Cyan outlines mark loaded ground chunks; the readout distinguishes visible content from the resident cache. Blue areas contain no authored tiles.",
       "backend": "core",
       "tags": ["tilemap", "tiled", "streaming"],
       "level": "advanced",
-      "capabilities": ["keyboard"]
+      "capabilities": ["pointer"]
     },
     {
       "slug": "worker-streamed-terrain",
@@ -1215,10 +1218,11 @@
       "path": "physics/sprite-follows-body.js",
       "language": "typescript",
       "title": "Drag and Throw Physics",
-      "description": "Grab a dynamic body at the pointer with MouseJoint, drag and release to throw; world.attach keeps the sprite on its rotating, colliding body. Press C for colliders.",
+      "description": "Grab a crate or character with a mouse or touch, drag, then release to throw. Watch the sprites follow their rotating, colliding bodies. Press C to inspect colliders.",
       "backend": "core",
+      "featured": true,
       "tags": ["physics", "binding", "pointer", "joints"],
-      "capabilities": ["pointer", "keyboard"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {

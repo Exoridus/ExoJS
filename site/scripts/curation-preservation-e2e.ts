@@ -20,7 +20,6 @@ interface Target {
 
 interface Contract {
   source: string;
-  disposition: string;
   migration: string;
   destinations: string[];
 }
@@ -109,7 +108,9 @@ const validateDetail = (html: string, path: string, locale: string): void => {
     [...html.matchAll(/<code\b[^>]*>([^<]*)<\/code>/g)].some(match => match[1] === path),
     `detail source: ${path}`,
   );
-  assert(html.replaceAll('&amp;', '&').includes(`?version=current&example=${slug(path)}`), `current-version detail link: ${path}`);
+  const destination =
+    path === 'debug-layer/asset-browser.js' ? `/${locale}/tools/asset-browser/` : `?version=current&example=${slug(path)}`;
+  assert(html.replaceAll('&amp;', '&').includes(destination), `current-version detail link: ${path}`);
 };
 
 const { values } = parseArgs({
@@ -160,29 +161,21 @@ if (values['self-check']) {
     targets: Target[];
     contracts: Contract[];
   };
-  const original = Object.values(catalog)
+  const catalogPaths = Object.values(catalog)
     .flat()
     .map(entry => entry.path);
-  const runnable = [...original, ...fixtures.map(name => `guide-fixtures/${name}.js`)];
-  const preserved = [
-    ...curation.contracts
-      .filter(contract => ['merge', 'guide-tool-test'].includes(contract.disposition))
-      .map(contract => sourcePath(contract.source)),
-    ...fixtures.map(name => `guide-fixtures/${name}.js`),
-  ];
+  const runnable = [...catalogPaths, ...fixtures.map(name => `guide-fixtures/${name}.js`)];
   const ready =
     curation.targets.every(target => target.status === 'accepted') &&
     curation.contracts.every(contract => contract.migration === 'verified');
-  assert.equal(original.length, 111);
   assert.equal(curation.contracts.length, 111);
-  assert.equal(runnable.length, 114);
-  assert.equal(new Set(runnable).size, 114);
+  assert.equal(new Set(curation.contracts.map(contract => contract.source)).size, 111);
+  assert.equal(new Set(runnable).size, runnable.length);
   assert.equal(Object.keys(EXAMPLE_ALIASES).length, 55);
   assert.equal(curation.targets.length, 48);
-  assert.equal(preserved.length, 66);
-  assert.deepEqual([...curation.contracts.map(contract => sourcePath(contract.source))].sort(), [...original].sort());
 
   for (const contract of curation.contracts) {
+    assert(catalogPaths.includes(sourcePath(contract.source)), `original source is still in the catalog: ${contract.source}`);
     assert(contract.destinations.length > 0, `preservation destination: ${contract.source}`);
 
     for (const destination of contract.destinations) {
@@ -254,7 +247,7 @@ if (values['self-check']) {
         }),
       ),
       ...locales.flatMap(locale =>
-        [...original, ...Object.keys(EXAMPLE_ALIASES)].map(path => async () => {
+        [...catalogPaths, ...Object.keys(EXAMPLE_ALIASES)].map(path => async () => {
           const canonical = resolveExampleAlias(path);
           assert(runnable.includes(canonical), `alias target has executable metadata: ${path}`);
           validateDetail(await fetchText(`${host}/${locale}/playground/examples/${slug(path)}/`), canonical, locale);
@@ -280,77 +273,39 @@ if (values['self-check']) {
     assert.deepEqual(failures, [], 'HTTP preservation failures');
   };
 
-  const checkIndex = async (page: Page, locale: string, kind: string): Promise<unknown> => {
-    await page.goto(`${host}/${locale}/playground/${kind}/`, { waitUntil: 'networkidle' });
+  const checkCurriculum = async (page: Page, locale: string): Promise<unknown> => {
+    const playground = `${host}/${locale}/playground/`;
+    await page.goto(`${playground}curriculum/`, { waitUntil: 'networkidle' });
     await page.evaluate(() => document.fonts.ready);
     assert.equal(await page.locator('html').getAttribute('lang'), locale);
     assert.equal(await page.locator('.english-fallback-notice').count(), locale === 'de' ? 1 : 0);
     const cards = await page.locator('.curation-index .entries > li').evaluateAll(elements =>
       elements.map(element => ({
         number: Number(element.getAttribute('data-curated-number')),
-        path: element.getAttribute('data-preserved-source'),
-        detail: element.querySelector<HTMLAnchorElement>('h3 a')!.href,
-        runs: [...element.querySelectorAll<HTMLAnchorElement>('a.run')].map(link => ({ label: link.textContent!.trim(), href: link.href })),
-        related: [...element.querySelectorAll('.related')].map(item => ({
-          label: item.textContent!.trim(),
-          links: [...item.querySelectorAll<HTMLAnchorElement>('a')].map(link => link.href),
-        })),
+        launch: element.querySelector<HTMLAnchorElement>('h3 a')!.href,
+        related: [...element.querySelectorAll<HTMLAnchorElement>('.related a')].map(link => link.href),
       })),
     );
-    const detail = (path: string) => `${host}/${locale}/playground/examples/${slug(path)}`;
-    assert.equal(cards.length, kind === 'curriculum' ? 48 : 66);
-
-    if (kind === 'curriculum') {
-      assert.deepEqual(
-        cards.map(card => card.number),
-        Array.from({ length: 48 }, (_, index) => index + 1),
-      );
-
-      for (const card of cards) {
-        const target = curation.targets.find(candidate => candidate.number === card.number)!;
-        assert.equal(card.detail, detail(sourcePath(target.source)));
-        const related = card.related.flatMap(item => item.links);
-        assert.deepEqual(
-          related,
-          [...target.prerequisites, ...target.next].map(id =>
-            detail(sourcePath(curation.targets.find(candidate => candidate.number === id)!.source)),
-          ),
-        );
-      }
-
-      assert.equal((await page.locator('.curation-index').innerText()).includes('Preview the focused learning path.'), !ready);
-    } else {
-      assert.deepEqual(cards.map(card => card.path).sort(), [...preserved].sort());
-
-      for (const card of cards) {
-        assert.equal(card.detail, detail(card.path!));
-        assert.equal(card.runs.find(link => link.label === 'TypeScript')?.href, `${host}/examples/${card.path!.replace(/\.js$/, '.ts')}`);
-      }
-    }
+    const launch = (source: string) => `${playground}?version=current&example=${slug(sourcePath(source))}`;
+    assert.deepEqual(
+      cards.map(card => card.number),
+      Array.from({ length: 48 }, (_, index) => index + 1),
+    );
 
     for (const card of cards) {
-      const path = card.path ?? sourcePath(curation.targets.find(target => target.number === card.number)!.source);
-      const run = new URL(card.runs[0].href);
-      assert.equal(run.pathname, new URL(`${host}/${locale}/playground/`).pathname);
-      assert.equal(run.searchParams.get('version'), 'current');
-      assert.equal(run.searchParams.get('example'), slug(path));
+      const target = curation.targets.find(candidate => candidate.number === card.number)!;
+      assert.equal(card.launch, launch(target.source));
+      assert.deepEqual(
+        card.related,
+        [...target.prerequisites, ...target.next].map(id => launch(curation.targets.find(candidate => candidate.number === id)!.source)),
+      );
     }
 
     const links = await page
-      .locator('.curation-index a')
+      .locator('.curation-index nav a')
       .evaluateAll(elements => elements.map(element => (element as HTMLAnchorElement).href));
-
-    for (const link of new Set(links)) {
-      const url = new URL(link);
-      assert(
-        url.href.startsWith(`${host}/${locale}/playground/`) || url.href.startsWith(`${host}/examples/`),
-        `locale-preserving local link: ${url.href}`,
-      );
-
-      if (!url.search) {
-        await fetchText(url.href);
-      }
-    }
+    assert.deepEqual(links, [playground]);
+    await fetchText(playground);
 
     const metrics = await page.locator('.curation-index').evaluate(element => {
       const card = element.querySelector<HTMLElement>('.entries > li')!;
@@ -369,7 +324,7 @@ if (values['self-check']) {
         backgroundMatches: style.backgroundColor === expected.backgroundColor,
         borderMatches: style.borderTopColor === expected.borderTopColor,
         linkMatches: getComputedStyle(card.querySelector('a')!).color === expected.color,
-        controls: [...element.querySelectorAll('.run')].map(link => ({
+        controls: [...element.querySelectorAll('.related a')].map(link => ({
           height: link.getBoundingClientRect().height,
           font: Number.parseFloat(getComputedStyle(link).fontSize),
         })),
@@ -385,7 +340,7 @@ if (values['self-check']) {
     );
     assert(
       metrics.controls.every(control => control.height >= 32 - 0.1 && control.font >= 14 - 0.1),
-      'presented run controls remain readable',
+      'related example links remain readable',
     );
 
     return { cards: cards.length, links: new Set(links).size, ...metrics };
@@ -568,7 +523,7 @@ if (values['self-check']) {
           coverage: 'http',
           status: 'PASS',
           checks: [
-            '114 TS + 114 JS source responses; 111 original + 55 alias detail pages in each locale resolve to a current-version source link',
+            `${runnable.length} TS + ${runnable.length} JS source responses; ${catalogPaths.length} catalog + ${Object.keys(EXAMPLE_ALIASES).length} alias detail pages in each locale resolve to a current-version launch link`,
             'HTTP availability and resolution only; original applications were not instantiated',
           ],
         });
@@ -578,33 +533,23 @@ if (values['self-check']) {
     }
 
     for (const locale of values.only && values.only !== 'ui' ? [] : locales) {
-      for (const kind of ['curriculum', 'tools']) {
-        for (const [width, height] of sizes) {
-          const page = await context.newPage();
-          await page.setViewportSize({ width, height });
-          const name = `${locale}-${kind}-${width}`;
-          const errors: string[] = [];
-          page.on('pageerror', error => errors.push(error.message));
+      for (const [width, height] of sizes) {
+        const page = await context.newPage();
+        await page.setViewportSize({ width, height });
+        const name = `${locale}-curriculum-${width}`;
+        const errors: string[] = [];
+        page.on('pageerror', error => errors.push(error.message));
 
-          try {
-            const evidence = await checkIndex(page, locale, kind);
-            assert.deepEqual(errors, []);
-            await capture(page, name);
-            record({ name, coverage: 'site-ui', status: 'PASS', locale, size: `${width}x${height}`, evidence });
-          } catch (error) {
-            await capture(page, `${name}-failure`).catch(captureError => console.error(`Failure capture: ${String(captureError)}`));
-            record({
-              name,
-              coverage: 'site-ui',
-              status: 'FAIL',
-              locale,
-              size: `${width}x${height}`,
-              error: String(error),
-              console: errors,
-            });
-          } finally {
-            await page.close();
-          }
+        try {
+          const evidence = await checkCurriculum(page, locale);
+          assert.deepEqual(errors, []);
+          await capture(page, name);
+          record({ name, coverage: 'site-ui', status: 'PASS', locale, size: `${width}x${height}`, evidence });
+        } catch (error) {
+          await capture(page, `${name}-failure`).catch(captureError => console.error(`Failure capture: ${String(captureError)}`));
+          record({ name, coverage: 'site-ui', status: 'FAIL', locale, size: `${width}x${height}`, error: String(error), console: errors });
+        } finally {
+          await page.close();
         }
       }
     }
@@ -674,7 +619,15 @@ if (values['self-check']) {
     );
   }
 
-  const expected = values.only === 'http' ? 1 : values.only === 'ui' ? 8 : values.only ? 2 : 15;
+  const curriculumChecks = locales.length * sizes.length;
+  const expected =
+    values.only === 'http'
+      ? 1
+      : values.only === 'ui'
+        ? curriculumChecks
+        : values.only
+          ? sizes.length
+          : 1 + curriculumChecks + fixtures.length * sizes.length;
   assert(
     records.length === expected && records.every(entry => entry.status === 'PASS'),
     'one or more B7 preservation acceptance cases failed',

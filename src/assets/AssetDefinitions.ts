@@ -1,4 +1,5 @@
-import type { AudioStream } from '#audio/AudioStream';
+import type { AudioStream, AudioStreamReconnectOptions } from '#audio/AudioStream';
+import type { Music } from '#audio/Music';
 import type { AudioSpriteClip } from '#audio/Sound';
 import type { Sound } from '#audio/Sound';
 import type { MediaCrossOrigin, PlaybackOptions, StreamingLoadEvent } from '#core/types';
@@ -7,7 +8,7 @@ import type { Texture } from '#rendering/texture/Texture';
 import type { TextureOptions } from '#rendering/texture/TextureOptions';
 import type { Video } from '#rendering/video/Video';
 
-import type { Asset, LeaflessAsset, ResourceAsset, ValueAsset } from './Asset';
+import type { AssetDescriptorLeaf, AssetDescriptorResource, LocatorAssetDescriptor, ValidatedLeafDescriptor } from './AssetDescriptor';
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 import type { AssetRef } from './AssetRef';
 import type { DecodedImage } from './factories/ImageFactory';
@@ -35,7 +36,7 @@ export interface AssetDefinitions {
     };
   };
   music: {
-    resource: AudioStream;
+    resource: Music;
     config: {
       source: string;
       mimeType?: string;
@@ -43,6 +44,17 @@ export interface AssetDefinitions {
       loadEvent?: StreamingLoadEvent;
       playbackOptions?: Partial<PlaybackOptions>;
       stallTimeout?: number;
+    };
+  };
+  audioStream: {
+    resource: AudioStream;
+    config: {
+      source: string;
+      crossOrigin?: MediaCrossOrigin;
+      loadEvent?: StreamingLoadEvent;
+      playbackOptions?: Partial<PlaybackOptions>;
+      stallTimeout?: number;
+      reconnect?: AudioStreamReconnectOptions | false;
     };
   };
   json: { resource: unknown; config: { source: string } };
@@ -101,10 +113,10 @@ export type CoreValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'subtitle' | 
 /**
  * The built-in types that hand out no catalog leaf at all - the type-level
  * mirror of the built-in types whose `leaf` is `'none'`. Their assets load
- * directly (`loader.load(Asset.type('music', ...))`) but cannot be held by a
+ * directly (`loader.load({ type: 'music', source })`) but cannot be held by a
  * catalog, inferred from a bare path, or handed out by `get()`.
  */
-export type LeaflessAssetKind = 'bmFont' | 'font' | 'image' | 'svg' | 'music' | 'video';
+export type LeaflessAssetKind = 'bmFont' | 'font' | 'image' | 'svg' | 'music' | 'audioStream' | 'video';
 
 /**
  * Types that a declaration-merged {@link AssetDefinitions} entry marks as value
@@ -139,17 +151,6 @@ type DeclaredValueAssetKind = {
 // load-bearing for any consumer build that DOES see a package augmentation.
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 export type ValueAssetKind = CoreValueAssetKind | DeclaredValueAssetKind;
-
-export type AssetInput = AnyAssetConfig | Asset<unknown>;
-
-export type InferAssetResource<I extends AssetInput> =
-  I extends Asset<infer T>
-    ? T
-    : I extends { parse: (raw: never) => infer R }
-      ? R
-      : I extends { type: infer K extends keyof AssetDefinitions }
-        ? AssetDefinitions[K]['resource']
-        : never;
 
 // ---------------------------------------------------------------------------
 // Type-level bare-path inference (mirror of the runtime built-in suffix table)
@@ -260,8 +261,12 @@ export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
 /** {@link LeafForPath}, branded - the leaf a bare path materializes as inside a catalog. */
 export type CatalogLeafForPath<S extends string> = [KindByPath<S>] extends [never] ? unknown : CatalogLeafForKind<KindByPath<S>>;
 
-/** A single catalog field input: a bare path string, an `Asset.type(...)` descriptor, or an explicit config. */
-export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
+/**
+ * A single catalog field input: a bare path string or a descriptor with a
+ * string source. The built-in descriptor shapes are listed so a literal's
+ * options - and a `parse` transform's parameter - are contextually typed.
+ */
+export type CatalogEntry = string | AnyAssetConfig | LocatorAssetDescriptor;
 
 /**
  * The diagnostic a bare path with an unregistered suffix turns into at the
@@ -269,7 +274,7 @@ export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
  * not assignable to it, so the error names the path and the way out.
  */
 export type UnrecognisedAssetSuffix<S extends string> =
-  `ExoJS: no built-in asset type claims the suffix of "${S}". Name it with Asset.type(...) or use a compound suffix.`;
+  `ExoJS: no built-in asset type claims the suffix of "${S}". Name it with a descriptor ({ type, source }) or use a compound suffix.`;
 
 /**
  * The diagnostic an entry of a type without a catalog leaf turns into at the
@@ -285,8 +290,9 @@ export type LeaflessCatalogEntry<K extends string> = string extends K
  * suffix resolves to a registered asset type and becomes
  * {@link UnrecognisedAssetSuffix} when it does not. Non-literal strings pass
  * through untouched, so a path that only exists at runtime is still accepted.
- * A descriptor or config of a type without a catalog leaf becomes
- * {@link LeaflessCatalogEntry}.
+ * A descriptor is checked against its type's options (see
+ * {@link ValidatedAssetDescriptor}), and one whose type has no catalog leaf
+ * becomes {@link LeaflessCatalogEntry}.
  */
 export type ValidatedCatalogEntry<E extends CatalogEntry> = E extends string
   ? string extends E
@@ -294,43 +300,19 @@ export type ValidatedCatalogEntry<E extends CatalogEntry> = E extends string
     : [KindByPath<E>] extends [never]
       ? UnrecognisedAssetSuffix<E>
       : E
-  : E extends LeaflessAsset<unknown>
-    ? LeaflessCatalogEntry<string>
-    : E extends { type: infer K extends LeaflessAssetKind }
-      ? LeaflessCatalogEntry<K>
-      : E;
+  : ValidatedLeafDescriptor<E>;
 
 /** {@link ValidatedCatalogEntry} applied to every field of a catalog literal. */
 export type ValidatedCatalog<M extends Record<string, CatalogEntry>> = { readonly [K in keyof M]: ValidatedCatalogEntry<M[K]> };
 
 /**
- * The leaf type a {@link CatalogEntry} materializes as - always BRANDED (see
+ * The leaf type a {@link CatalogEntry} materializes as - always branded (see
  * {@link CatalogLeafForKind}), because every one of these is produced by
- * `createLeaf` and therefore carries the runtime `_assetMeta` stamp.
- *
- * A descriptor is classified by the leaf policy its type declares, which its
- * brand carries: {@link ValueAsset} yields `AssetRef<T>`, {@link ResourceAsset}
- * the resource itself, {@link LeaflessAsset} nothing. A descriptor whose brand
- * was widened away (a plain `Asset<T>` annotation) could be either, and is
- * typed as either.
+ * `createLeaf` and therefore carries the runtime `_assetMeta` stamp. A bare
+ * path is classified by its file suffix, a descriptor by the leaf its type
+ * declares (see {@link AssetDescriptorLeaf}).
  */
-export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
-  ? CatalogLeafForPath<E>
-  : E extends ValueAsset<infer V>
-    ? CatalogValueLeaf<V>
-    : E extends ResourceAsset<infer T>
-      ? CatalogResourceLeaf<T>
-      : E extends LeaflessAsset<unknown>
-        ? never
-        : E extends Asset<infer T>
-          ? CatalogResourceLeaf<T> | CatalogValueLeaf<T>
-          : E extends { type: infer K extends keyof AssetDefinitions }
-            ? E extends { parse: (raw: never) => infer R }
-              ? K extends ValueAssetKind
-                ? CatalogValueLeaf<R>
-                : CatalogResourceLeaf<AssetDefinitions[K]['resource']>
-              : CatalogLeafForKind<K>
-            : never;
+export type InferCatalogLeaf<E extends CatalogEntry> = E extends string ? CatalogLeafForPath<E> : AssetDescriptorLeaf<E>;
 
 /**
  * The LOADED payload a {@link CatalogEntry} resolves to - what a
@@ -340,16 +322,13 @@ export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
  * A bare path string is classified by its file suffix exactly as
  * {@link LeafForPath} does, but resolves to the raw resource for every type: a
  * value type's LOAD result is its decoded value (`unknown` for `json`), not the
- * `AssetRef` wrapper its catalog property holds. Descriptors and explicit
- * configs delegate to {@link InferAssetResource} unchanged.
+ * `AssetRef` wrapper its catalog property holds.
  */
 export type InferLoadedEntry<E extends CatalogEntry> = E extends string
   ? [KindByPath<E>] extends [never]
     ? unknown
     : ResourceForKind<KindByPath<E>>
-  : E extends AssetInput
-    ? InferAssetResource<E>
-    : never;
+  : AssetDescriptorResource<E>;
 
 // Compile-time guard: every ExtensionKindMap value is a real AssetDefinitions type.
 type AssertKindMapValid = ExtensionKindMap[keyof ExtensionKindMap] extends keyof AssetDefinitions ? true : never;

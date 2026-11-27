@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import type { AssetDependencyScope } from '#assets/AssetFactory';
 import type { AudioSpriteClip } from '#audio/Sound';
@@ -35,7 +34,7 @@ const fail = (source: string, detail: string): never => {
  * @internal
  */
 export const loadSoundSpriteSheet = async (source: string, scope: AssetDependencyScope): Promise<SoundSpriteSheet> => {
-  const data: unknown = await scope.load(Asset.type('json', source));
+  const data: unknown = await scope.load({ type: 'json', source });
 
   if (data === null || typeof data !== 'object' || Array.isArray(data)) {
     fail(source, 'expected an object mapping sprite names to clips');

@@ -12,6 +12,7 @@ import { createCanvas, createCheckerCanvas } from '#rendering/utils';
 import type { CompressedTexturePayload } from './compressedPayload';
 import { validateCompressedPayload } from './compressedPayload';
 import type { CompressedTextureFormat } from './CompressedTextureFormat';
+import type { FrameSource } from './FrameSource';
 import type { Rgba8TexturePayload } from './pixelPayload';
 import { validateRgba8Payload } from './pixelPayload';
 import { resolveTextureFormat } from './textureFormatInfo';
@@ -149,6 +150,12 @@ export class Texture {
 
   private _version = 0;
   private _source: TextureSource = null;
+  private _frameProvider: FrameSource | null = null;
+  private _ownsFrameProvider = false;
+  private _seenFrameRevision = Number.NaN;
+  private readonly _onProviderFrame = (): void => {
+    this._syncFrameProvider();
+  };
   private _assetBitmap: ImageBitmap | null = null;
   private _sourceMetadata: DecodedImageMetadata | null = null;
   private _pixels: Rgba8TexturePayload | null = null;
@@ -408,13 +415,15 @@ export class Texture {
    * backends resolve sampling state separately, so changing it costs no upload.
    */
   public get version(): number {
+    this._syncFrameProvider();
+
     return this._version;
   }
 
   /**
    * Load lifecycle of this texture. Directly constructed textures are
    * `'ready'`; deferred handles returned by `loader.get('hero.png')` /
-   * `loader.get(Asset.type('texture', src))` start `'loading'` and become `'ready'` once
+   * `loader.get({ type: 'texture', source: src })` start `'loading'` and become `'ready'` once
    * the payload fills in, or `'failed'` (showing the {@link Texture.missing}
    * checker) when the load errors.
    */
@@ -546,7 +555,76 @@ export class Texture {
    * sRGB, straight-alpha interpretation.
    */
   public setSource(source: TextureSource): this {
+    this._detachFrameProvider();
+
     return this._setSource(source, browserImageMetadata);
+  }
+
+  /** A frame provider makes the existing Texture a live image without another GPU texture type. @internal */
+  public _attachFrameSource(source: FrameSource | null, ownsSource = false): this {
+    if (source === this._frameProvider) {
+      return this;
+    }
+
+    this._detachFrameProvider();
+    this._frameProvider = source;
+    this._ownsFrameProvider = ownsSource;
+    this._seenFrameRevision = Number.NaN;
+
+    if (source !== null) {
+      const provider = source as FrameSource & { onFrame?: Signal };
+
+      provider.onFrame?.add(this._onProviderFrame);
+      this._syncFrameProvider();
+    }
+
+    return this;
+  }
+
+  /** The attached source, if this Texture is receiving changing frames. @internal */
+  public _getFrameSource(): FrameSource | null {
+    return this._frameProvider;
+  }
+
+  private _detachFrameProvider(): void {
+    const source = this._frameProvider;
+
+    if (source === null) {
+      return;
+    }
+
+    (source as FrameSource & { onFrame?: Signal }).onFrame?.remove(this._onProviderFrame);
+    this._frameProvider = null;
+    this._seenFrameRevision = Number.NaN;
+
+    if (this._ownsFrameProvider) {
+      source.destroy();
+    }
+
+    this._ownsFrameProvider = false;
+  }
+
+  private _syncFrameProvider(): void {
+    const source = this._frameProvider;
+
+    if (source === null || this._isDestroyed) {
+      return;
+    }
+
+    const revision = source.revision;
+
+    if (revision === this._seenFrameRevision) {
+      return;
+    }
+
+    this._seenFrameRevision = revision;
+    const image = source.image;
+
+    if (image !== this._source) {
+      this._setSource(image, browserImageMetadata);
+    } else if (image !== null) {
+      this.updateSource();
+    }
   }
 
   /** Installs a factory-decoded source whose conversion and alpha behavior were selected before decoding. @internal */
@@ -563,6 +641,10 @@ export class Texture {
 
   /** Copies only payload data and source interpretation. Handle-local options remain unchanged. @internal */
   public _copyPayloadFrom(donor: Texture): this {
+    // Borrow the residency-owned decoder from the shared donor. Only its
+    // factory closes it after the last claim is released; handles never do.
+    this._attachFrameSource(donor._getFrameSource());
+
     if (donor.pixels !== null) {
       return this.setPixels(donor.pixels);
     }
@@ -653,6 +735,7 @@ export class Texture {
       this._releaseListeners.clear();
       this._updates?.destroy();
       this._updates = null;
+      this._detachFrameProvider();
       this._size.destroy();
       this._source = null;
       this._assetBitmap = null;

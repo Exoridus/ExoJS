@@ -7,9 +7,10 @@ import { PreviewConsole } from '../lib/preview-console';
 import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry } from '../lib/types';
 import { buildPublicUrl } from '../lib/url-builder';
+import { buildExampleHref } from '../lib/url-state';
 import { type DiagnosticJumpEvent, DiagnosticsStrip } from './DiagnosticsStrip';
 import styles from './Editor.module.scss';
-import type { EditorCodeHandle, EditorCodeProps, EditorDiagnostic, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
+import type { EditorCodeHandle, EditorCodeProps, EditorDiagnostic, EditorRunStatus, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
 import { type CanvasSizeEvent, EditorPreview, type EditorPreviewHandle } from './EditorPreview';
 import { OutputPanel } from './OutputPanel';
 import { SidebarToggle } from './PlaygroundButtons';
@@ -43,22 +44,36 @@ const SPLIT_STORAGE_KEY = 'exo-playground-split';
 
 export interface EditorProps {
   activeExample: Example | null;
+  nextExample?: Example | null;
+  compact?: boolean;
   catalogLoadError: string | null;
+  selectionError?: string | null;
+  onRetryCatalog?(): void;
+  onRecoverCurrent?(): void;
+  onSelectStartingExample?(): void;
   selectedVersionId: string;
   showSidebarToggle: boolean;
   sidebarOpen: boolean;
   sidebarToggleRef: Ref<HTMLButtonElement>;
   onToggleSidebar(): void;
+  onSelectExample?(path: string): void;
 }
 
 export const Editor = ({
   activeExample,
+  nextExample,
+  compact = false,
   catalogLoadError,
+  selectionError,
+  onRetryCatalog,
+  onRecoverCurrent,
+  onSelectStartingExample,
   selectedVersionId,
   showSidebarToggle,
   sidebarOpen,
   sidebarToggleRef,
   onToggleSidebar,
+  onSelectExample,
 }: EditorProps): JSX.Element => {
   const [rendererStatus, setRendererStatus] = useState<ExampleRendererStatus | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -67,6 +82,7 @@ export const Editor = ({
   const [executionCode, setExecutionCode] = useState<string | null>(null);
   const [executionModules, setExecutionModules] = useState<Record<string, string>>({});
   const [originalExecutionCode, setOriginalExecutionCode] = useState<string | null>(null);
+  const [sourceRetry, setSourceRetry] = useState(0);
   const [sourceLoadError, setSourceLoadError] = useState<PreviewErrorEntry | null>(null);
   const [output] = useState(() => new PreviewConsole());
   // Counts explicit runs, so running unchanged code still restarts the preview.
@@ -76,35 +92,31 @@ export const Editor = ({
   const [previewZoom, setPreviewZoom] = useState(1);
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [runStatus, setRunStatus] = useState<EditorRunStatus>('idle');
   const [diagnostics, setDiagnostics] = useState<ReadonlyArray<EditorDiagnostic>>([]);
   const [layout, setLayout] = useState<EditorLayout>('stacked');
   const [order, setOrder] = useState<EditorOrder>('preview-first');
   const [splitPercent, setSplitPercent] = useState(55);
   const [activeView, setActiveView] = useState<'demo' | 'code'>('demo');
+  const [codeContextOpen, setCodeContextOpen] = useState(false);
   const [toolbarTarget, setToolbarTarget] = useState<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLElement | null>(null);
   const codeEditorRef = useRef<EditorCodeHandle | null>(null);
+  const codeFrameRef = useRef<HTMLElement | null>(null);
   const [assetSources, setAssetSources] = useState<readonly string[] | null>(null);
   const previewRef = useRef<EditorPreviewHandle | null>(null);
   const previewFrameRef = useRef<HTMLElement | null>(null);
-  const loadKeyRef = useRef<string | null>(null);
+  const examplePath = activeExample?.path;
+  const exampleLanguage = activeExample?.language;
 
   useEffect(() => {
-    const path = activeExample?.path ?? null;
-    const loadKey = path && selectedVersionId ? `${selectedVersionId}::${path}` : null;
-
-    if (loadKey === loadKeyRef.current) {
-      return;
-    }
-
-    loadKeyRef.current = loadKey;
-
     // Reset the editor for the newly-selected example before loading its source
     // asynchronously below. This is a prop-change reset (not a render-derived
     // value); the React-idiomatic alternative - a `key` remount - would re-init
     // Monaco on every example switch, so we suppress the heuristic here instead.
-    /* eslint-disable @eslint-react/set-state-in-effect */
+    /* eslint-disable @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect */
     setRendererStatus(null);
+    setRunStatus('idle');
     setSourceCode(null);
     setOriginalSourceCode(null);
     setExecutionCode(null);
@@ -112,9 +124,9 @@ export const Editor = ({
     setOriginalExecutionCode(null);
     setSourceLoadError(null);
     setDiagnostics([]);
-    /* eslint-enable @eslint-react/set-state-in-effect */
+    /* eslint-enable @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect */
 
-    if (!activeExample || !selectedVersionId) {
+    if (!examplePath || !selectedVersionId) {
       return;
     }
 
@@ -122,11 +134,11 @@ export const Editor = ({
 
     const load = async (): Promise<void> => {
       try {
-        if (activeExample.language === 'typescript') {
-          const tsPath = activeExample.path.replace(/\.js$/, '.ts');
+        if (exampleLanguage === 'typescript') {
+          const tsPath = examplePath.replace(/\.js$/, '.ts');
           const [tsSource, jsSource] = await Promise.all([
             loadExampleSource(selectedVersionId, tsPath),
-            loadExampleSource(selectedVersionId, activeExample.path),
+            loadExampleSource(selectedVersionId, examplePath),
           ]);
 
           if (cancelled) {
@@ -141,7 +153,7 @@ export const Editor = ({
           return;
         }
 
-        const nextSource = await loadExampleSource(selectedVersionId, activeExample.path);
+        const nextSource = await loadExampleSource(selectedVersionId, examplePath);
 
         if (cancelled) {
           return;
@@ -168,9 +180,19 @@ export const Editor = ({
     return () => {
       cancelled = true;
     };
-  }, [activeExample, selectedVersionId]);
+  }, [exampleLanguage, examplePath, selectedVersionId, sourceRetry]);
 
   useEffect(() => () => output.dispose(), [output]);
+
+  useEffect(
+    () =>
+      output.subscribe(() => {
+        if (output.getSnapshot().exceptions > 0) {
+          setRunStatus('error');
+        }
+      }),
+    [output],
+  );
 
   // Runs once the first client render has matched the server's output, which is
   // the point from which the editor can differ from it safely.
@@ -294,6 +316,7 @@ export const Editor = ({
     setSourceCode(originalSourceCode);
     setExecutionCode(originalExecutionCode);
     setExecutionModules({});
+    setRunId(id => id + 1);
   };
 
   const onCanvasSize = useCallback((event: CanvasSizeEvent): void => {
@@ -301,6 +324,49 @@ export const Editor = ({
     setCanvasHeight(event.height);
     setPreviewZoom(event.zoom);
   }, []);
+
+  const onRendererStatus = useCallback((status: ExampleRendererStatus | null): void => {
+    setRendererStatus(status);
+  }, []);
+
+  const onExecutionStatus = useCallback(
+    (status: 'updated' | 'error'): void => {
+      if (status === 'error' || output.getSnapshot().exceptions > 0) {
+        setRunStatus('error');
+
+        return;
+      }
+
+      setRunStatus(current => (current === 'running' ? 'updated' : current));
+    },
+    [output],
+  );
+
+  const showCode = (): void => {
+    setActiveView('code');
+
+    if (window.matchMedia('(min-width: 1120px)').matches && layout === 'stacked') {
+      toggleLayout();
+    }
+
+    requestAnimationFrame(() => {
+      (window.matchMedia('(min-width: 1120px)').matches ? rootRef : codeFrameRef).current?.scrollIntoView({ block: 'start' });
+      codeFrameRef.current?.focus({ preventScroll: true });
+    });
+  };
+
+  const showDemo = (): void => {
+    setActiveView('demo');
+    requestAnimationFrame(() => {
+      rootRef.current?.scrollIntoView({ block: 'start' });
+
+      if (compact) {
+        rootRef.current?.querySelector<HTMLButtonElement>('#demo-view-tab')?.focus({ preventScroll: true });
+      } else {
+        previewRef.current?.focusPreviewSurface();
+      }
+    });
+  };
 
   const onDiagnosticJump = (event: DiagnosticJumpEvent): void => {
     setActiveView('code');
@@ -310,15 +376,49 @@ export const Editor = ({
   const combinedErrors = [
     ...(catalogLoadError ? [{ summary: 'Failed to load examples catalog', details: catalogLoadError }] : []),
     ...(sourceLoadError ? [sourceLoadError] : []),
+    ...(selectionError ? [{ summary: 'Example unavailable', details: selectionError }] : []),
   ];
 
   if (!activeExample && combinedErrors.length > 0) {
-    return <section className={css(styles, 'root')}>{renderErrors(combinedErrors)}</section>;
+    return (
+      <section className={css(styles, 'root')}>
+        {renderErrors(combinedErrors)}
+        {catalogLoadError && (
+          <button type="button" onClick={onRetryCatalog}>
+            Retry examples catalog
+          </button>
+        )}
+        {selectionError && selectedVersionId && (
+          <button type="button" onClick={onSelectStartingExample}>
+            Open starting example
+          </button>
+        )}
+        <button type="button" onClick={onRecoverCurrent}>
+          Open current Playground
+        </button>
+      </section>
+    );
   }
 
   const availability = getExampleAvailability(activeExample);
   const editorLanguage = activeExample?.language === 'typescript' ? 'typescript' : 'javascript';
   const displayPath = getDisplayPath(activeExample);
+  const { status: feedbackStatus, message: runMessage } = getRunFeedback(runStatus, dirty, rendererStatus, sourceLoadError);
+  const contextCollapsible = compact && activeView === 'code';
+  const nextExampleLink = nextExample && onSelectExample && (
+    <a
+      className={css(styles, 'next-example')}
+      href={buildExampleHref(nextExample.path, selectedVersionId)}
+      onClick={event => {
+        if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+          event.preventDefault();
+          onSelectExample(nextExample.path);
+        }
+      }}
+    >
+      <span>Next experiment</span> {nextExample.title} <span aria-hidden="true">→</span>
+    </a>
+  );
 
   const sidebarToggle =
     showSidebarToggle && !sidebarOpen ? <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} /> : null;
@@ -332,27 +432,74 @@ export const Editor = ({
       data-active-view={activeView}
       style={{ '--split-percent': `${splitPercent}%` } as CSSProperties}
     >
+      {selectedVersionId && selectedVersionId !== 'current' && (
+        <p role="status">
+          Historical source and core runtime: {selectedVersionId}. Shared support and extensions come from this deployment. Version-specific
+          editor types may be unavailable.{' '}
+          <button type="button" onClick={onRecoverCurrent}>
+            Open current Playground
+          </button>
+        </p>
+      )}
       {activeExample && (
         <header className={css(styles, 'example-header')} data-example-header>
           <div className={css(styles, 'example-heading')} data-header-row="primary">
             {sidebarToggle}
             <h1 title={activeExample.title}>{activeExample.title}</h1>
+            <button type="button" className={css(styles, 'code-link')} onClick={showCode}>
+              View code
+            </button>
             <div className={css(styles, 'toolbar-slot')}>
               <PreviewToolbar actionsRef={setToolbarTarget} />
             </div>
           </div>
-          <div className={css(styles, 'example-context')} data-header-row="context">
-            <p className={css(styles, 'example-description')} title={activeExample.description}>
-              {activeExample.description}
-            </p>
-            {renderLearningLinks(activeExample, 1)}
-            <div className={css(styles, 'view-tabs')} role="tablist" aria-label="Example view">
+          <details className={css(styles, 'example-details')} data-example-context open={!contextCollapsible || codeContextOpen}>
+            <summary
+              className={css(styles, 'context-summary')}
+              hidden={!contextCollapsible}
+              onClick={event => {
+                event.preventDefault();
+                setCodeContextOpen(open => !open);
+              }}
+            >
+              Example context
+            </summary>
+            <div className={css(styles, 'example-context')} data-header-row="context">
+              <p className={css(styles, 'example-description')} title={activeExample.description}>
+                {activeExample.description}
+              </p>
+              {renderLearningLinks(activeExample, 1)}
+            </div>
+            {contextCollapsible && nextExampleLink && <div className={css(styles, 'context-next')}>{nextExampleLink}</div>}
+          </details>
+          <div className={css(styles, 'example-actions')}>
+            <div
+              className={css(styles, 'view-tabs')}
+              role="tablist"
+              aria-label="Example view"
+              onKeyDown={event => {
+                if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                  event.preventDefault();
+                  let next: 'demo' | 'code' = activeView === 'demo' ? 'code' : 'demo';
+
+                  if (event.key === 'Home') {
+                    next = 'demo';
+                  } else if (event.key === 'End') {
+                    next = 'code';
+                  }
+
+                  setActiveView(next);
+                  event.currentTarget.querySelector<HTMLButtonElement>(`#${next}-view-tab`)?.focus();
+                }
+              }}
+            >
               <button
                 id="demo-view-tab"
                 type="button"
                 role="tab"
                 aria-selected={activeView === 'demo'}
                 aria-controls="playground-demo"
+                tabIndex={activeView === 'demo' ? 0 : -1}
                 onClick={() => setActiveView('demo')}
               >
                 Demo
@@ -363,11 +510,23 @@ export const Editor = ({
                 role="tab"
                 aria-selected={activeView === 'code'}
                 aria-controls="playground-code"
+                tabIndex={activeView === 'code' ? 0 : -1}
                 onClick={() => setActiveView('code')}
               >
                 Code
               </button>
             </div>
+            {!contextCollapsible && nextExampleLink}
+          </div>
+          <div className={css(styles, 'run-feedback')} data-run-status={feedbackStatus}>
+            <p role="status" aria-live="polite">
+              {runMessage}
+            </p>
+            {activeView === 'code' && (feedbackStatus === 'updated' || feedbackStatus === 'running') && (
+              <button type="button" onClick={showDemo}>
+                Show demo
+              </button>
+            )}
           </div>
         </header>
       )}
@@ -376,21 +535,40 @@ export const Editor = ({
         ref={previewFrameRef}
         className={cx(css(styles, 'preview-frame'), expandedActive && css(styles, 'preview-frame--expanded'))}
         aria-label="Example preview"
+        role={compact ? 'tabpanel' : undefined}
+        aria-labelledby={compact ? 'demo-view-tab' : undefined}
+        tabIndex={compact ? 0 : undefined}
       >
         <div className={css(styles, 'preview-surface')} data-preview-surface>
           <div className={css(styles, 'preview-component')}>
-            <EditorPreview
-              ref={previewRef}
-              sourceCode={executionCode ?? sourceCode}
-              executionModules={executionModules}
-              runId={runId}
-              exampleMeta={activeExample}
-              selectedVersionId={selectedVersionId}
-              output={output}
-              onCanvasSize={onCanvasSize}
-              onRendererStatus={setRendererStatus}
-              onAssets={setAssetSources}
-            />
+            {sourceLoadError ? (
+              <div role="alert">
+                <p>{sourceLoadError.summary}</p>
+                <p>{sourceLoadError.details}</p>
+                <button type="button" onClick={() => setSourceRetry(value => value + 1)}>
+                  Retry source
+                </button>
+                {selectedVersionId !== 'current' && (
+                  <button type="button" onClick={onRecoverCurrent}>
+                    Open current Playground
+                  </button>
+                )}
+              </div>
+            ) : (
+              <EditorPreview
+                ref={previewRef}
+                sourceCode={executionCode ?? sourceCode}
+                executionModules={executionModules}
+                runId={runId}
+                exampleMeta={activeExample}
+                selectedVersionId={selectedVersionId}
+                output={output}
+                onCanvasSize={onCanvasSize}
+                onRendererStatus={onRendererStatus}
+                onExecutionStatus={onExecutionStatus}
+                onAssets={setAssetSources}
+              />
+            )}
           </div>
           {!availability.available && (
             <div className={css(styles, 'unavailable-overlay')}>
@@ -441,7 +619,15 @@ export const Editor = ({
       <div className={css(styles, 'output-slot')}>
         <OutputPanel output={output} systemErrors={combinedErrors} />
       </div>
-      <section id="playground-code" className={css(styles, 'editor-frame')} aria-label="Source editor">
+      <section
+        id="playground-code"
+        ref={codeFrameRef}
+        tabIndex={compact ? 0 : -1}
+        className={css(styles, 'editor-frame')}
+        aria-label="Source editor"
+        role={compact ? 'tabpanel' : undefined}
+        aria-labelledby={compact ? 'code-view-tab' : undefined}
+      >
         <UsedAssets sources={assetSources} />
         {/*
           Held back until after hydration. The lazy loader resolves to an empty
@@ -507,10 +693,11 @@ export const Editor = ({
                 </details>
               }
               sourceCode={sourceCode}
+              originalSourceCode={originalSourceCode}
               sourcePath={displayPath}
               language={editorLanguage}
               compiledCode={executionCode}
-              canReset={Boolean(originalSourceCode && (dirty || sourceCode !== originalSourceCode))}
+              canReset={originalSourceCode !== null && (dirty || sourceCode !== originalSourceCode)}
               exampleTitle={activeExample?.title ?? 'Loading...'}
               selectedVersionId={selectedVersionId}
               onUpdateCode={onUpdateCode}
@@ -518,12 +705,45 @@ export const Editor = ({
               onCursorChange={() => undefined}
               onDiagnostic={setDiagnostics}
               onDirty={setDirty}
+              onRunStatus={setRunStatus}
             />
           )}
         </Suspense>
       </section>
     </section>
   );
+};
+
+const getRunFeedback = (
+  runStatus: EditorRunStatus,
+  dirty: boolean,
+  rendererStatus: ExampleRendererStatus | null,
+  sourceLoadError: PreviewErrorEntry | null,
+): { status: EditorRunStatus; message: string } => {
+  // Source and renderer recovery never overwrite the stored compile/module outcome.
+  const status = sourceLoadError || (rendererStatus?.phase === 'failed' && runStatus !== 'compiling') ? 'error' : runStatus;
+
+  return {
+    status,
+    message: sourceLoadError ? 'Example source could not be loaded.' : getRunMessage(status, dirty, Boolean(rendererStatus?.actual)),
+  };
+};
+
+const getRunMessage = (status: EditorRunStatus, dirty: boolean, ready: boolean): string => {
+  if (status === 'idle') {
+    if (dirty) {
+      return 'Changed — Run to update the demo';
+    }
+
+    return ready ? 'Ready to play' : 'Loading demo…';
+  }
+
+  return {
+    compiling: 'Compiling changes…',
+    running: 'Running code…',
+    updated: 'Demo updated',
+    error: 'Run failed. Check the editor and Output.',
+  }[status];
 };
 
 const renderLearningLinks = (example: Example, apiLimit = 3): JSX.Element | null => {
@@ -572,7 +792,7 @@ const renderErrors = (errors: PreviewErrorEntry[]): JSX.Element | null => {
   }
 
   return (
-    <details className={css(styles, 'error-panel')}>
+    <details open className={css(styles, 'error-panel')}>
       <summary className={css(styles, 'error-summary')}>
         <span className={css(styles, 'error-summary-label')}>Errors</span>
         <span className={css(styles, 'error-summary-count')}>{errors.length}</span>

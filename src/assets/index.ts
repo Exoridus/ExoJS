@@ -1,25 +1,42 @@
-export type { AssetForKind, LeaflessAsset, ResourceAsset, ValueAsset } from './Asset';
-export { Asset } from './Asset';
+export type { AssetOwner } from './ApplicationAssets';
+export { ApplicationAssets } from './ApplicationAssets';
 export type { AssetConstructor } from './AssetConstructor';
 export type { AssetDecodeErrorOptions } from './AssetDecodeError';
 export { AssetDecodeError } from './AssetDecodeError';
 export type {
   AnyAssetConfig,
   AssetDefinitions,
-  AssetInput,
   AssetTypeName,
   CatalogEntry,
   CoreValueAssetKind,
   ExtensionKindMap,
-  InferAssetResource,
   InferLoadedEntry,
   KindByPath,
   LeaflessAssetKind,
   LeaflessCatalogEntry,
   ValueAssetKind,
 } from './AssetDefinitions';
+export type {
+  AssetDescriptor,
+  AssetDescriptorLeaf,
+  AssetDescriptorLeafPolicy,
+  AssetDescriptorResource,
+  AssetTypeReference,
+  KindForResource,
+  LocatorAssetDescriptor,
+  ValidatedAssetDescriptor,
+  ValidatedLeafDescriptor,
+} from './AssetDescriptor';
 export type { AssetDependencyScope, AssetFactory, AssetFactoryContext } from './AssetFactory';
-export type { AssetLoadGroup, AssetLoadHandle, LoadedAssetGroup } from './assetLoadGroup';
+export type {
+  AssetLoadEntry,
+  AssetLoadHandle,
+  AssetLoadInput,
+  LoadedAssetEntry,
+  LoadedAssets,
+  UnclaimedAssetPath,
+  ValidatedAssetLoadInput,
+} from './assetLoadGroup';
 export type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 export type { AssetNetworkErrorOptions } from './AssetNetworkError';
 export { AssetNetworkError } from './AssetNetworkError';
@@ -29,11 +46,19 @@ export type { AssetInspection, AssetOwnerInspection, AssetSizeStats, AssetStats,
 export type { AnyAssets, InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
 export type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';
-export { binarySourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSourceCodec';
+export { binarySourceCodec, blobSourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSourceCodec';
 export type { AssetStatus } from './AssetStatus';
-export type { AnyAssetType, AssetDescriptor, AssetLeaf, AssetOptionsArgument, AssetRequest } from './AssetType';
+export type { AnyAssetType, AssetLeaf, AssetRequest } from './AssetType';
 export { AssetType } from './AssetType';
-export type { AssetTypeDefinition, AssetTypeDefinitionEntry, DocumentAssetTypeDefinition } from './AssetTypes';
+export type {
+  AssetDecode,
+  AssetFactorySpec,
+  AssetReadKinds,
+  AssetTypeDefinition,
+  AssetTypeDefinitionEntry,
+  DocumentAssetTypeDefinition,
+  ReadAssetTypeDefinition,
+} from './AssetTypes';
 export { AssetTypes } from './AssetTypes';
 export type { AssetVariant, AssetVariantProfile } from './AssetVariantSet';
 export { AssetVariantSet } from './AssetVariantSet';
@@ -87,7 +112,7 @@ export { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
 export type { FontAssetOptions } from '#assets/factories/FontFactory';
 export type { DecodedImage, ImageAssetOptions } from '#assets/factories/ImageFactory';
 export type { MediaAssetOptions, MediaAssetSource } from '#assets/factories/mediaSource';
-export type { MusicAssetOptions } from '#assets/factories/MusicFactory';
+export type { AudioStreamAssetOptions, MusicAssetOptions } from '#assets/factories/MusicFactory';
 export type { CsvAssetOptions } from '#assets/factories/parseCsv';
 export type { SubtitleFormat } from '#assets/factories/parseSubtitles';
 export type { SoundAssetOptions } from '#assets/factories/SoundFactory';
@@ -124,5 +149,5 @@ export type { BmFontAssetOptions } from '#assets/types/font';
 export { BmFontAssetType, bmFontType, FontAssetType, fontType } from '#assets/types/font';
 export { ImageAssetType, imageType, SvgAssetType, svgType } from '#assets/types/image';
 export { TextureAssetType, textureType } from '#assets/types/image';
-export { MusicAssetType, musicType, VideoAssetType, videoType } from '#assets/types/media';
+export { AudioStreamAssetType, audioStreamType, MusicAssetType, musicType, VideoAssetType, videoType } from '#assets/types/media';
 export { SoundAssetType, soundType } from '#assets/types/media';

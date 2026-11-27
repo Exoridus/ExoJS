@@ -1,6 +1,6 @@
 ---
 title: 'Audio basics'
-description: 'Play sounds and music with reliable runtime controls.'
+description: 'Play sounds, music tracks and live streams with reliable runtime controls.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
@@ -10,23 +10,25 @@ import Callout from '../../../components/Callout.astro';
 
 # Audio basics
 
-ExoJS audio splits cleanly into two halves: **assets** are pure data descriptors — [`Sound`](/ExoJS/en/api/sound/) for short, pooled, decoded-buffer clips and [`AudioStream`](/ExoJS/en/api/audio-stream/) for long, streamed, seekable tracks — and a **`Voice`** is the live, controllable playback instance you get back when you play one. You never call playback methods on the asset itself. Instead you call `app.audio.play(asset, options)`, which returns a `Voice`, and all live control (volume, fade, seek, loop, rate, pause) lives on that `Voice`.
+ExoJS audio splits cleanly into two halves: **assets** are pure data descriptors — [`Sound`](/ExoJS/en/api/sound/) for short, pooled, decoded-buffer clips, [`Music`](/ExoJS/en/api/music/) for long, streamed, seekable tracks, and [`AudioStream`](/ExoJS/en/api/audio-stream/) for live or unbounded sources such as internet radio — and a **`Voice`** is the live, controllable playback instance you get back when you play one. You never call playback methods on the asset itself. Instead you call `app.audio.play(asset, options)`, which returns a `Voice`, and all live control (volume, fade, seek, loop, rate, pause) lives on that `Voice`.
 
-## Sound vs. AudioStream
+## Sound, Music and AudioStream
 
-| | Sound | AudioStream |
-|---|---|---|
-| Backing | Decoded `AudioBuffer` | `HTMLAudioElement` (streamed) |
-| Best for | Short SFX, UI sounds, footstep pools | Background tracks, ambient loops, radio, long audio |
-| Seekable voice | Yes for a live `SoundVoice`; narrow the possibly ended result with `'seek' in voice`. | Yes: `voice.seek(t)` / `voice.time`. |
-| Concurrent voices | Yes — `poolSize` controls the pool | No — one playhead, one active voice |
-| Default bus | `app.audio.sound` | `app.audio.music` |
+| | Sound | Music | AudioStream |
+|---|---|---|---|
+| Backing | Decoded `AudioBuffer` | `HTMLAudioElement` (streamed) | `HTMLAudioElement` (streamed) |
+| Best for | Short SFX, UI sounds, footstep pools | Background tracks, ambient loops, long audio | Internet radio, live or generated sources |
+| Duration | Known after decoding | Known once metadata loads | Often `Infinity` |
+| Seekable voice | Yes for a live `SoundVoice`; narrow the possibly ended result with `'seek' in voice`. | Yes: `voice.seek(t)` / `voice.time`. | Only while the source reports a seekable range; otherwise `seek` is ignored. |
+| Connection | Not applicable | Not applicable | `connection` state, reconnect with backoff |
+| Concurrent voices | Yes — `poolSize` controls the pool | No — one playhead, one active voice | No — one playhead, one active voice |
+| Default bus | `app.audio.sound` | `app.audio.music` | `app.audio.music` |
 
-Use `Sound` when you need many overlapping instances of the same short clip. Use `AudioStream` for long, seekable content that you want the browser to stream rather than decode entirely into memory. (A third descriptor, [`AudioGenerator`](/ExoJS/en/api/audio-generator/), synthesises tones from an oscillator — covered in the [Audio effects](/ExoJS/en/guide/audio/audio-effects/) chapter.)
+Use `Sound` when you need many overlapping instances of the same short clip. Use `Music` for a finite track that the browser should stream rather than decode entirely into memory. Use `AudioStream` for a source that may never end. (A fourth descriptor, [`AudioGenerator`](/ExoJS/en/api/audio-generator/), synthesises tones from an oscillator — covered in the [Audio effects](/ExoJS/en/guide/audio/audio-effects/) chapter.)
 
 ## Loading and playing
 
-Preload both sources through the scene loader, then start scene-owned playback through `this.audio`. A path-backed `Sound` still needs an explicit load: neither `app.audio.play` nor `scene.audio.play` acquires its payload. Asset readiness and browser audio unlock are separate prerequisites:
+Preload both sources with `this.assets.load()`, then start scene-owned playback through `this.audio`. A `.ogg` path alone loads as a `Sound`; name a track `{ type: Music, source }` to stream it instead. Music and streams are ready at `canplay`: playback can start before the whole file has arrived. A path-backed `Sound` still needs an explicit load: neither `app.audio.play` nor `scene.audio.play` acquires its payload. Asset readiness and browser audio unlock are separate prerequisites:
 
 <SourceSnippet
   source="examples/guides/audio-basics/audio-scene.ts"
@@ -35,7 +37,20 @@ Preload both sources through the scene loader, then start scene-owned playback t
   title="examples/guides/audio-basics/audio-scene.ts"
 />
 
-A `Sound` is a data descriptor that holds a decoded buffer; each `app.audio.play(sound)` creates an independent pooled `Voice`, so overlapping concurrent playback is just multiple voices. An `AudioStream` has one `HTMLAudioElement` and therefore one playhead — playing it again stops the previous voice and returns a fresh one.
+A `Sound` is a data descriptor that holds a decoded buffer; each `app.audio.play(sound)` creates an independent pooled `Voice`, so overlapping concurrent playback is just multiple voices. A `Music` track has one `HTMLAudioElement` and therefore one playhead — playing it again stops the previous voice and returns a fresh one. Loading the same track twice returns the same `Music`.
+
+## Live streams
+
+An `AudioStream` is ready as soon as it can play; a live source never finishes downloading. Its `connection` reports `'connected'`, `'buffering'`, `'reconnecting'` or `'disconnected'` separately from playback. When a URL-backed stream loses its connection, through a network error or the server ending a live response, it reopens the URL with exponential backoff and resumes a voice that was playing. After the configured attempts it reports `'disconnected'` and dispatches `onError`; `reconnect()` starts a new round. Pass `reconnect: false` to disable it. A stream is never cached: with the network disallowed its load fails.
+
+<SourceSnippet
+  source="examples/guides/audio-basics/live-stream.ts"
+  region="live-stream"
+  language="ts"
+  title="examples/guides/audio-basics/live-stream.ts"
+/>
+
+HLS playlists and WebRTC sources are not `AudioStream` sources; use a dedicated player for them and route its element or `MediaStream` through Web Audio.
 
 ## AudioContext auto-unlock
 
@@ -45,7 +60,7 @@ Browsers require a user gesture before Web Audio starts. ExoJS handles this auto
 
 | Asset | Played while locked |
 | --- | --- |
-| `AudioStream` | **Deferred.** The media element owns its own playhead, so it is simply told to play on the unlock gesture. Call `play()` in `init` and keep the voice. |
+| `Music`, `AudioStream` | **Deferred.** The media element owns its own playhead, so it is simply told to play on the unlock gesture. Call `play()` in `init` and keep the voice. |
 | `Sound` | **Skipped.** Returns an already-ended voice; nothing is heard. |
 | `AudioGenerator` | **Skipped.** Same. |
 
@@ -102,18 +117,18 @@ voice.stop();                          // stop now and release the voice
 voice.stop(Time.seconds(0.8));         // fade out over 0.8s, then stop
 ```
 
-Every `Voice` carries `volume` (get/set), `fade(to, duration)`, `stop(fade?)`, an `ended` flag, an `onEnd` signal, the bus it routes through (`voice.bus`), and an `output` hook for native routing or analysis. A pending scene voice has no output node yet; see [Scene-owned deferred playback](#scene-owned-deferred-playback) below. Beyond that base, a voice mixes in only the capabilities its backing node actually supports, and the type `play()` returns says which. An `AudioStream` voice always carries them. A `Sound` voice carries the same set, but a skipped play call (audio locked, sound not loaded) returns an already-ended voice without them, so narrow it with an `'x' in voice` check. An `AudioGenerator` voice is pausable and rate-pitched, never seekable:
+Every `Voice` carries `volume` (get/set), `fade(to, duration)`, `stop(fade?)`, an `ended` flag, an `onEnd` signal, the bus it routes through (`voice.bus`), and an `output` hook for native routing or analysis. A pending scene voice has no output node yet; see [Scene-owned deferred playback](#scene-owned-deferred-playback) below. Beyond that base, a voice mixes in only the capabilities its backing node actually supports, and the type `play()` returns says which. A `Music` or `AudioStream` voice always carries them. A `Sound` voice carries the same set, but a skipped play call (audio locked, sound not loaded) returns an already-ended voice without them, so narrow it with an `'x' in voice` check. An `AudioGenerator` voice is pausable and rate-pitched, never seekable:
 
 ```ts
-import { type Application, AudioStream, Sound } from '@codexo/exojs';
+import { type Application, Music, Sound } from '@codexo/exojs';
 
 declare const application: Application;
-declare const stream: AudioStream;
+declare const track: Music;
 declare const sound: Sound;
 
-// Both a SoundVoice and an AudioStreamVoice are
+// Both a SoundVoice and a Music voice are
 // Seekable + Pausable + Loopable + RatePitched + Spatializable.
-const streamVoice = application.audio.play(stream, { loop: true });
+const streamVoice = application.audio.play(track, { loop: true });
 
 streamVoice.seek(10);        // Seekable: jump to 10s
 streamVoice.time;            // current position in seconds
@@ -133,7 +148,7 @@ if ('seek' in soundVoice) {
 ```
 
 <Callout type="note" title="Pausing a Sound is a restart, not a freeze">
-A `Sound` plays through an `AudioBufferSourceNode`, which can be neither repositioned nor halted in place. `pause()` therefore reads the playhead and throws the source away; `resume()` starts a fresh one at exactly that offset. The offset is sample-exact, but the restart is not phase-continuous — on sustained tonal material (a held pad, a synth drone) the seam can be audible as a small click. Percussive and ambient material hides it. An `AudioStream` has no such caveat: the media element really does freeze.
+A `Sound` plays through an `AudioBufferSourceNode`, which can be neither repositioned nor halted in place. `pause()` therefore reads the playhead and throws the source away; `resume()` starts a fresh one at exactly that offset. The offset is sample-exact, but the restart is not phase-continuous — on sustained tonal material (a held pad, a synth drone) the seam can be audible as a small click. Percussive and ambient material hides it. `Music` and `AudioStream` have no such caveat: the media element really does freeze.
 </Callout>
 
 Because `SoundVoice` is `Pausable`, `scene.audio` freezes buffer sounds along with everything else: a voice registered with `when: SceneAvailability.Active` is silent while the scene is paused, one registered with `when: SceneAvailability.Paused` only while it is, and scene retention silences every tracked voice until the scene is restored. The policy applies from the moment the voice starts, and the scene holds a voice rather than pausing it: `voice.paused` keeps reporting your own `pause()`/`resume()` calls, so a voice you paused yourself stays paused when the scene lets it play again. A voice that cannot pause keeps playing whatever its policy, and a development build warns when you give it one.
@@ -146,7 +161,7 @@ For "one voice at a time" scenarios like voice-over lines, `Sound`'s play option
 
 Sends supplied through the play options already appear in `voice.sends`, and `addSend()` returns an `AudioSend` handle immediately. Pending level changes and removals are preserved; surviving sends keep their identity when attached to the real voice. A saved reference to `voice.sends` remains a live view through that handoff and later changes. Cancellation destroys the voice's sends before `onEnd` fires. Effects keep their insertion order and remain caller-owned: the voice never destroys them. Ensure an effect's `ready` promise has resolved before it is replayed onto the real voice.
 
-Activation while audio is locked still skips a pending `Sound` or `AudioGenerator` and ends its handle. A pending `AudioStream` keeps waiting for unlock. It then creates the real voice with buffered controls and the scene's current availability policy applied before media playback begins. Suspending the scene before unlock keeps the stream pending until restoration; cancellation or permanent teardown prevents that deferred start. These scene gates apply to pending scene playback; direct `app.audio.play()` retains the unlock behavior described above.
+Activation while audio is locked still skips a pending `Sound` or `AudioGenerator` and ends its handle. A pending `Music` or `AudioStream` voice keeps waiting for unlock. It then creates the real voice with buffered controls and the scene's current availability policy applied before media playback begins. Suspending the scene before unlock keeps it pending until restoration; cancellation or permanent teardown prevents that deferred start. These scene gates apply to pending scene playback; direct `app.audio.play()` retains the unlock behavior described above.
 
 <Callout type="warning" title="Breaking change: pending voice output">
 Reading `voice.output` on a pending scene voice now throws until a real voice has been created. This includes an unlocked but still-dormant scene, and a cancelled voice that never created real playback. An early read never creates a context or placeholder node. After successful materialization, the getter returns the real voice's stable output node.
@@ -219,7 +234,7 @@ application.audio.play(sound, { playbackRate: Math.pow(2, cents / 1200) });
 
 ## Buses
 
-The audio system exposes three built-in buses: `app.audio.master`, `app.audio.music`, and `app.audio.sound`. Each play routes to a default bus (`music` for `AudioStream`, `sound` for `Sound` and `AudioGenerator`). Buses form a tree — `music` and `sound` are children of `master`, and `master` connects to the audio destination.
+The audio system exposes three built-in buses: `app.audio.master`, `app.audio.music`, and `app.audio.sound`. Each play routes to a default bus (`music` for `Music` and `AudioStream`, `sound` for `Sound` and `AudioGenerator`). Buses form a tree — `music` and `sound` are children of `master`, and `master` connects to the audio destination.
 
 Route a play through a specific bus with the `bus` option, or reassign a live voice's `bus`:
 
@@ -294,11 +309,11 @@ Four loaded `Sound` pads, played from on-screen buttons or the keys 1-4, routed 
 <a id="crossfade-tracks"></a>
 <ExamplePreview chapter="audio-basics" slug="crossfade-tracks" />
 
-Two looping `AudioStream` tracks crossfading back and forth with `crossFade()`.
+Two looping `Music` tracks crossfading back and forth with `crossFade()`.
 
 <TryIt
   examples={['audio-basics/play-sound', 'audio-basics/crossfade-tracks']}
-  api={['sound', 'audio-stream', 'audio-system']}
+  api={['sound', 'music', 'audio-stream', 'audio-system']}
 />
 
 ## Where to go next

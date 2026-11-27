@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
@@ -222,7 +221,7 @@ await startExample(app, async () => {
   manifest = (await app.loader.load(assets.pixelfxTransitionsManifest)) as Manifest;
   const textures = await Promise.all(
     [assets.pixelfxBurnAway, assets.pixelfxPixelDissolve, assets.pixelfxStarIris].map(atlas =>
-      app.loader.load(Asset.type('texture', atlas.source, { textureOptions: { scaleMode: ScaleModes.Nearest, generateMipMap: false } })),
+      app.loader.load({ type: 'texture', source: atlas.source, textureOptions: { scaleMode: ScaleModes.Nearest, generateMipMap: false } }),
     ),
   );
   transitions = manifest.effects.map((effect, index) => new AtlasTransition(manifest, effect, textures[index]!));

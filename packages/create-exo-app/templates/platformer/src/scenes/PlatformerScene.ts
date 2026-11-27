@@ -1,7 +1,6 @@
 import type { RenderingContext, Seconds, SpritesheetData } from '@codexo/exojs';
 import {
   ActionMap,
-  Asset,
   AxisAction,
   ButtonAction,
   Container,
@@ -112,8 +111,8 @@ export class PlatformerScene extends Scene {
   }
 
   public override async load(): Promise<void> {
-    this._tileData = (await this.loader.load(Asset.type('json', 'platformer-tiles.json'))) as SpritesheetData;
-    this._characterData = (await this.loader.load(Asset.type('json', 'platformer-characters.json'))) as SpritesheetData;
+    this._tileData = (await this.loader.load({ type: 'json', source: 'platformer-tiles.json' })) as SpritesheetData;
+    this._characterData = (await this.loader.load({ type: 'json', source: 'platformer-characters.json' })) as SpritesheetData;
 
     await this.assets.load([this._tilesTexture, this._charactersTexture]);
   }

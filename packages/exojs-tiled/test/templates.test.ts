@@ -175,7 +175,7 @@ describe('object templates', () => {
     const loaded = await map;
 
     expect(objectsIn(loaded, 'Objects 3')[0]).toMatchObject({ name: 'exit', type: 'Spawn', point: true });
-    expect(load.mock.calls.filter(([asset]) => (asset as { _config: { type: string } })._config.type === 'text')).toHaveLength(1);
+    expect(load.mock.calls.filter(([asset]) => (asset as { type: string }).type === 'text')).toHaveLength(1);
   });
 
   it("rejects a template in Tiled's XML format by name", async () => {

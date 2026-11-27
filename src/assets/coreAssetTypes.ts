@@ -3,7 +3,7 @@ import { subtitleType } from '#assets/types/data';
 import { bmFontType, fontType } from '#assets/types/font';
 import { imageType, svgType } from '#assets/types/image';
 import { textureType } from '#assets/types/image';
-import { musicType, videoType } from '#assets/types/media';
+import { audioStreamType, musicType, videoType } from '#assets/types/media';
 import { soundType } from '#assets/types/media';
 
 import type { AssetTypeName } from './AssetDefinitions';
@@ -28,6 +28,7 @@ export const coreAssetTypes: readonly AnyAssetType[] = Object.freeze([
   textureType,
   soundType,
   musicType,
+  audioStreamType,
   videoType,
   jsonType,
   textType,
@@ -81,6 +82,11 @@ export const builtinTypeForPath = (path: string): AssetTypeName | undefined => {
 
   return undefined;
 };
+
+const byToken = new Map<unknown, AnyAssetType>(coreAssetTypes.flatMap(type => (type._token === undefined ? [] : [[type._token, type]])));
+
+/** The built-in type dispatching on `token` (`Texture`, `Music`, ...), or `undefined`. @internal */
+export const builtinTypeForToken = (token: unknown): AnyAssetType | undefined => byToken.get(token);
 
 /** What a built-in type hands out as a catalog leaf, or `undefined` for a name no built-in claims. @internal */
 export const builtinLeaf = (type: string): AssetLeaf<unknown> | undefined => byId.get(type)?.leaf as AssetLeaf<unknown> | undefined;

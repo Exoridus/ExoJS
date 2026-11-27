@@ -1,5 +1,5 @@
 import type { AssetFactory, AssetSourceCodec, Texture } from '@codexo/exojs';
-import { Asset, AssetType, jsonSourceCodec } from '@codexo/exojs';
+import { AssetType, jsonSourceCodec } from '@codexo/exojs';
 
 /** The JSON codec, narrowed to the two acquisition halves this type reuses verbatim. */
 const jsonStringCodec = jsonSourceCodec as Required<AssetSourceCodec<unknown, string>>;
@@ -258,9 +258,10 @@ export class AsepriteAssetType extends AssetType<AsepriteData, AsepriteSheet, un
   public createFactory(): AssetFactory<AsepriteData, AsepriteSheet> {
     return {
       async create(source, context) {
-        const texture: Texture = await context.dependencies.load(
-          Asset.type('texture', resolveAsepriteUrl(source.meta.image, context.source)),
-        );
+        const texture: Texture = await context.dependencies.load({
+          type: 'texture',
+          source: resolveAsepriteUrl(source.meta.image, context.source),
+        });
 
         return AsepriteSheet.parse(source, texture);
       },

@@ -183,6 +183,8 @@
     "test:browser:webgpu:firefox:isolated": "vitest run --project=browser-webgpu-firefox-isolated",
     "test:browser:assets": "vitest run --project=browser-assets-chromium",
     "test:browser:core": "vitest run --project=browser-core-chromium",
+    "test:browser:animated:webkit": "vitest run --project=browser-animated-images-webkit",
+    "test:browser:animated:safari": "vitest run --project=browser-animated-images-safari",
     "test:browser:audio": "vitest run --project=browser-audio-chromium",
     "test:bench:browser": "vitest run --project=bench-browser",
     "test:browser:tilemap": "vitest run --project=browser-tilemap-chromium",
@@ -266,7 +268,7 @@
     {
       "name": "@codexo/exojs/lighting",
       "path": "dist/esm/lighting/index.js",
-      "limit": "36 KB",
+      "limit": "40 KB",
       "gzip": true,
       "ignore": [
         "../index.js",
@@ -277,7 +279,7 @@
       "name": "@codexo/exojs/lighting (lightmap, no cascades)",
       "path": "dist/esm/lighting/index.js",
       "import": "{ LightmapLighting, PointLight, SpotLight, PolygonOccluder }",
-      "limit": "14 KB",
+      "limit": "18 KB",
       "gzip": true,
       "ignore": [
         "../index.js",

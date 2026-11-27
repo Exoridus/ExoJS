@@ -1,8 +1,8 @@
 import {
   Application,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
+  type Music,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -18,7 +18,7 @@ import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const PULSE = 0.28;
 
 class BeatSyncPulseScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private detector!: BeatDetector;
   private sprite!: Sprite;
   private pulse = 0;
@@ -31,7 +31,7 @@ class BeatSyncPulseScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    // AudioStream has no seamless adapter - await it explicitly.
+    // Music has no seamless adapter - await it explicitly.
     const track = await this.loader.load(assets.musicDrumLoop);
     this.music = track;
     this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);

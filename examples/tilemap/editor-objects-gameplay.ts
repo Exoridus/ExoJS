@@ -1,7 +1,6 @@
 import {
   ActionMap,
   Application,
-  Asset,
   ButtonAction,
   Color,
   Container,
@@ -47,7 +46,7 @@ class EditorObjectsScene extends Scene {
   private collected = false;
 
   override async load(): Promise<void> {
-    const source = await this.loader.load(Asset.type('tiledSource', assets.harborPlazaMap.source));
+    const source = await this.loader.load({ type: 'tiledSource', source: assets.harborPlazaMap.source });
     const map = source.toTileMap();
     this.mapNode = new TileMapNode(map);
 

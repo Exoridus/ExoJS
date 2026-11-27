@@ -1,13 +1,12 @@
 import {
   Application,
-  Asset,
   type AudioEffect,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
   HighpassFilter,
   LowpassFilter,
+  type Music,
   type RenderingContext,
   Scene,
   type Sound,
@@ -70,7 +69,7 @@ const CHAINS: Chain[] = [
 ];
 
 class EffectChainsScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private impact!: Sound;
   private musicVoice!: Voice;
   private analyser!: AudioAnalyser;
@@ -85,7 +84,7 @@ class EffectChainsScene extends Scene {
   private panel!: DemoPanel<{ chain: ChoiceSpec<string>; bypass: ToggleSpec }>;
 
   override async load(): Promise<void> {
-    this.music = await this.loader.load(Asset.type('music', assets.voiceCongratulations.source));
+    this.music = await this.loader.load({ type: 'music', source: assets.voiceCongratulations.source });
     this.impact = this.loader.get(assets.soundImpactLight);
   }
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { getNextPlaygroundHighlight, getPlaygroundDefault } from '../lib/curation-catalog';
 import {
   getExampleByPath,
   getExamplesList,
@@ -9,8 +10,9 @@ import {
   loadExamples,
   onExamplesLoaded,
 } from '../lib/example-store';
+import { activateModalFocus } from '../lib/modal-focus';
+import { playgroundDrafts } from '../lib/playground-drafts';
 import { detectRuntimeSupport, onRuntimeDetected } from '../lib/runtime-support';
-import { showToast } from '../lib/toast-store';
 import type { Example, ExamplesMap } from '../lib/types';
 import { configureUrlsFromLocation } from '../lib/url-builder';
 import { loadStoredVersion, readUrlState, storeSelectedVersion, writeUrlState } from '../lib/url-state';
@@ -44,20 +46,34 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
   const [selectedVersion, setSelectedVersion] = useState<VersionInfo | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [versionLoadError, setVersionLoadError] = useState<string | null>(null);
+  const [searchRequest, setSearchRequest] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isCompactMobile, setIsCompactMobile] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
   const [examplesSheetOpen, setExamplesSheetOpen] = useState(false);
   const [examplesSheetOpener, setExamplesSheetOpener] = useState<HTMLElement | null>(null);
+  const rootRef = useRef<HTMLElement | null>(null);
+  const navigationRef = useRef<HTMLElement | null>(null);
+  const sheetNavigationRef = useRef<HTMLDivElement | null>(null);
   const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
   const mobileExamplesButtonRef = useRef<HTMLButtonElement | null>(null);
-  const previousVersionIdRef = useRef<string | null>(null);
-  const missingExampleToastEnabledRef = useRef(false);
   const selectedVersionRef = useRef<VersionInfo | null>(null);
   const activeExampleRef = useRef<Example | null>(null);
-  const bodyOverflowBeforeDrawerOpenRef = useRef<string | null>(null);
-  // Late-bound to break the showMissingExampleToast <-> ensureExamplesLoaded cycle
-  // (the toast action calls it, but it is declared after the toast helper).
-  const ensureExamplesLoadedRef = useRef<(versionId: string) => Promise<void>>(() => Promise.resolve());
+  const breakpointRef = useRef<{ desktop: boolean; compact: boolean } | null>(null);
+
+  useEffect(() => {
+    const warnUnsaved = (event: BeforeUnloadEvent): void => {
+      if (playgroundDrafts.hasUnpersistedChanges()) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('beforeunload', warnUnsaved);
+
+    return () => window.removeEventListener('beforeunload', warnUnsaved);
+  }, []);
 
   useEffect(() => {
     selectedVersionRef.current = selectedVersion;
@@ -67,16 +83,24 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     activeExampleRef.current = activeExample;
   }, [activeExample]);
 
-  const unlockBodyScroll = useCallback((): void => {
-    if (bodyOverflowBeforeDrawerOpenRef.current !== null) {
-      document.body.style.overflow = bodyOverflowBeforeDrawerOpenRef.current;
-      bodyOverflowBeforeDrawerOpenRef.current = null;
-    }
-  }, []);
+  useEffect(() => {
+    const root = rootRef.current;
+    const header = document.querySelector('[data-app-header]');
 
-  const lockBodyScroll = useCallback((): void => {
-    bodyOverflowBeforeDrawerOpenRef.current ??= document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (!root || !header) {
+      return;
+    }
+
+    const measureHeader = (): void => {
+      root.style.setProperty('--playground-header-height', `${header.getBoundingClientRect().height}px`);
+    };
+
+    const observer = new ResizeObserver(measureHeader);
+
+    observer.observe(header);
+    measureHeader();
+
+    return () => observer.disconnect();
   }, []);
 
   const resolveSelectedVersion = useCallback((): VersionInfo | null => {
@@ -112,67 +136,40 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     return getVersions()[0] ?? null;
   }, []);
 
-  const showMissingExampleToast = useCallback((missingPath: string, currentVersionId: string): void => {
-    const previousId = previousVersionIdRef.current;
-    const action =
-      previousId && previousId !== currentVersionId
-        ? {
-            label: `Back to v${previousId}`,
-            onClick: () => {
-              const next = getVersionById(previousId);
+  const resolveActiveExample = useCallback((options: { canonicaliseUrl: boolean }): void => {
+    const selected = selectedVersionRef.current;
+    const requestedState = readUrlState();
 
-              if (!next) {
-                return;
-              }
+    if (!selected || (requestedState.version && requestedState.version !== selected.id) || !hasExamplesFor(selected.id)) {
+      return;
+    }
 
-              previousVersionIdRef.current = selectedVersionRef.current?.id ?? null;
-              missingExampleToastEnabledRef.current = true;
-              setSelectedVersion(next);
-              storeSelectedVersion(previousId);
-              writeUrlState({ version: previousId });
-              void ensureExamplesLoadedRef.current(previousId);
-            },
-          }
-        : undefined;
-    showToast(`"${missingPath}" isn't available in @codexo/exojs@${currentVersionId}`, action ? { action } : undefined);
+    const versionId = selected.id;
+    const requestedPath = requestedState.example;
+    const requested = requestedPath ? getExampleByPath(versionId, requestedPath) : null;
+
+    if (requestedPath && !requested) {
+      setActiveExample(null);
+      setSelectionError(
+        `The example "${requestedPath.replace(/\.js$/, '')}" is not available in ${versionId}. Choose an example from the list or open the starting example.`,
+      );
+
+      return;
+    }
+
+    const example = requested ?? getPlaygroundDefault(getExamplesList(versionId));
+    setSelectionError(example ? null : 'This version has no examples. Open the current Playground to continue.');
+    setActiveExample(example);
+
+    if (options.canonicaliseUrl) {
+      const nextExample = example?.path ?? null;
+      const current = readUrlState();
+
+      if (current.example !== nextExample || current.version !== versionId) {
+        writeUrlState({ example: nextExample, version: versionId }, { replace: true });
+      }
+    }
   }, []);
-
-  const resolveActiveExample = useCallback(
-    (options: { canonicaliseUrl: boolean }): void => {
-      const selected = selectedVersionRef.current;
-
-      if (!selected || !hasExamplesFor(selected.id)) {
-        return;
-      }
-
-      const versionId = selected.id;
-      const requestedPath = readUrlState().example ?? null;
-
-      const requested = requestedPath ? getExampleByPath(versionId, requestedPath) : null;
-      const fellBack = requestedPath !== null && requested === null;
-      const example = requested ?? getExamplesList(versionId)[0] ?? null;
-
-      setActiveExample(example);
-
-      if (options.canonicaliseUrl) {
-        const nextExample = example?.path ?? null;
-        const current = readUrlState();
-
-        if (current.example !== nextExample || current.version !== versionId) {
-          writeUrlState({ example: nextExample, version: versionId }, { replace: true });
-        }
-      }
-
-      if (missingExampleToastEnabledRef.current) {
-        missingExampleToastEnabledRef.current = false;
-
-        if (fellBack && requestedPath) {
-          showMissingExampleToast(requestedPath, versionId);
-        }
-      }
-    },
-    [showMissingExampleToast],
-  );
 
   const syncExampleState = useCallback((): void => {
     const selected = selectedVersionRef.current;
@@ -200,11 +197,22 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     [syncExampleState],
   );
 
-  useEffect(() => {
-    ensureExamplesLoadedRef.current = ensureExamplesLoaded;
-  }, [ensureExamplesLoaded]);
-
   const syncVersionState = useCallback((): void => {
+    const requestedVersion = readUrlState().version;
+
+    if (requestedVersion && !getVersionById(requestedVersion)) {
+      selectedVersionRef.current = null;
+      activeExampleRef.current = null;
+      setSelectedVersion(null);
+      setExamples(new Map());
+      setLoaded(false);
+      setLoadError(null);
+      setSelectionError(`The requested version "${requestedVersion}" is not recognized. Open the current Playground to continue.`);
+      setActiveExample(null);
+
+      return;
+    }
+
     const nextSelected = resolveSelectedVersion();
     setSelectedVersion(nextSelected);
     selectedVersionRef.current = nextSelected;
@@ -217,11 +225,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       }
     }
 
-    const versionError = getVersionLoadError();
-
-    if (versionError) {
-      setLoadError(versionError);
-    }
+    setVersionLoadError(getVersionLoadError());
 
     if (nextSelected) {
       void ensureExamplesLoaded(nextSelected.id);
@@ -250,23 +254,31 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       unsubscribeExamples();
       unsubscribeVersions();
       unsubscribeRuntime();
-      unlockBodyScroll();
     };
-  }, [baseUrl, syncExampleState, syncVersionState, unlockBodyScroll]);
+  }, [baseUrl, syncExampleState, syncVersionState]);
 
   useEffect(() => {
     const desktopMediaQuery = window.matchMedia('(min-width: 1120px)');
     const compactMobileMediaQuery = window.matchMedia('(max-width: 760px)');
 
     const syncBreakpoints = (): void => {
+      const desktop = desktopMediaQuery.matches;
+      const compact = compactMobileMediaQuery.matches;
+
+      if (breakpointRef.current?.desktop === desktop && breakpointRef.current.compact === compact) {
+        return;
+      }
+
+      breakpointRef.current = { desktop, compact };
       // Mirror viewport media-query state into React - the canonical
       // "subscribe to an external system, setState on change" effect use.
       // The synchronous initial call is the SSR-safe form of that pattern.
       /* eslint-disable @eslint-react/set-state-in-effect */
-      setIsCompactMobile(compactMobileMediaQuery.matches);
-      setSidebarOpen(desktopMediaQuery.matches && !compactMobileMediaQuery.matches);
+      setIsCompactMobile(compact);
+      setIsDesktop(desktop);
+      setSidebarOpen(desktop && !compact);
 
-      if (!compactMobileMediaQuery.matches) {
+      if (!compact) {
         setExamplesSheetOpen(false);
       }
       /* eslint-enable @eslint-react/set-state-in-effect */
@@ -287,6 +299,19 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       const versionId = readUrlState().version;
       const next = getVersionById(versionId);
 
+      if (versionId && !next) {
+        selectedVersionRef.current = null;
+        activeExampleRef.current = null;
+        setSelectedVersion(null);
+        setExamples(new Map());
+        setLoaded(false);
+        setLoadError(null);
+        setSelectionError(`The requested version "${versionId}" is not recognized. Open the current Playground to continue.`);
+        setActiveExample(null);
+
+        return;
+      }
+
       if (next && selectedVersionRef.current?.id !== next.id) {
         setSelectedVersion(next);
         selectedVersionRef.current = next;
@@ -297,6 +322,11 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
           setExamples(getNestedExamples(next.id));
           resolveActiveExample({ canonicaliseUrl: false });
         } else {
+          setActiveExample(null);
+          setLoaded(false);
+          setLoadError(null);
+          setSelectionError(null);
+          setExamples(new Map());
           void loadExamples(next.id);
         }
 
@@ -311,33 +341,69 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     return () => window.removeEventListener('popstate', onPopState);
   }, [resolveActiveExample]);
 
-  useEffect(() => {
-    if (sidebarOpen && !window.matchMedia('(min-width: 1120px)').matches && !isCompactMobile) {
-      lockBodyScroll();
+  const drawerOpen = sidebarOpen && !isDesktop && !isCompactMobile;
 
+  useEffect(() => {
+    if (!drawerOpen || !navigationRef.current) {
       return;
     }
 
-    unlockBodyScroll();
-  }, [isCompactMobile, lockBodyScroll, sidebarOpen, unlockBodyScroll]);
+    return activateModalFocus(
+      navigationRef.current,
+      () => setSidebarOpen(false),
+      () => sidebarToggleRef.current,
+    );
+  }, [drawerOpen]);
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (!sidebarOpen || window.matchMedia('(min-width: 1120px)').matches) {
-        return;
-      }
+    const focusFilter = (event: KeyboardEvent): void => {
+      const target = event.target as HTMLElement | null;
 
-      if (event.key === 'Escape') {
+      if (
+        event.key === '/' &&
+        !event.defaultPrevented &&
+        !event.isComposing &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !target?.closest?.(
+          'input, textarea, select, [role="textbox"], [role="searchbox"], [contenteditable]:not([contenteditable="false"]), .monaco-editor',
+        )
+      ) {
+        const modal = target?.closest?.('dialog[open], [aria-modal="true"]');
+
+        if (modal && modal !== navigationRef.current && !modal.contains(sheetNavigationRef.current)) {
+          return;
+        }
+
         event.preventDefault();
-        setSidebarOpen(false);
-        window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
+        setSearchRequest(request => request + 1);
+
+        if (modal) {
+          return;
+        }
+
+        const compact = window.matchMedia('(max-width: 760px)').matches;
+        // A queued media-query event must not close the navigation immediately
+        // after this shortcut opens it for the live viewport.
+        const desktop = window.matchMedia('(min-width: 1120px)').matches;
+        breakpointRef.current = { compact, desktop };
+        setIsCompactMobile(compact);
+        setIsDesktop(desktop);
+
+        if (compact) {
+          setExamplesSheetOpener(document.activeElement as HTMLElement | null);
+          setExamplesSheetOpen(true);
+        } else {
+          setSidebarOpen(true);
+        }
       }
     };
 
-    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keydown', focusFilter);
 
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [sidebarOpen]);
+    return () => document.removeEventListener('keydown', focusFilter);
+  }, []);
 
   const selectExample = (path: string): void => {
     const selected = selectedVersionRef.current;
@@ -352,6 +418,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       return;
     }
 
+    setSelectionError(null);
     setActiveExample(example);
     writeUrlState({ version: selected.id, example: example.path });
 
@@ -362,24 +429,53 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     }
   };
 
+  const openCurrent = (): void => {
+    const current = getVersionById(CURRENT_VERSION_ID)!;
+    const requestedPath = readUrlState().example;
+    const path =
+      requestedPath && (selectedVersionRef.current?.id !== CURRENT_VERSION_ID || getExampleByPath(CURRENT_VERSION_ID, requestedPath))
+        ? requestedPath
+        : null;
+    writeUrlState({ version: CURRENT_VERSION_ID, example: path });
+    storeSelectedVersion(CURRENT_VERSION_ID);
+    setSelectionError(null);
+    setSelectedVersion(current);
+    selectedVersionRef.current = current;
+    void ensureExamplesLoaded(CURRENT_VERSION_ID);
+  };
+
+  const selectStartingExample = (): void => {
+    writeUrlState({ example: null });
+    resolveActiveExample({ canonicaliseUrl: true });
+  };
+
   const toggleSidebar = (): void => {
     setSidebarOpen(value => !value);
-    window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
+
+    if (isDesktop) {
+      window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
+    }
   };
 
   return (
     // The grid has a column for the navigation only while the navigation is
     // actually rendered: a `display: none` sidebar leaves its track behind, and
     // the preview then folds itself into the 280px meant for the list.
-    <section className={css(styles, 'root')} data-sidebar={!isCompactMobile && sidebarOpen ? 'open' : 'closed'}>
+    <section ref={rootRef} className={css(styles, 'root')} data-sidebar={!isCompactMobile && sidebarOpen ? 'open' : 'closed'}>
       {!isCompactMobile && (
         <aside
           id="playground-navigation"
+          ref={navigationRef}
+          role={drawerOpen ? 'dialog' : undefined}
+          aria-modal={drawerOpen ? true : undefined}
+          aria-label="Examples"
+          tabIndex={-1}
           className={css(styles, 'side-content')}
           data-open={sidebarOpen ? 'true' : undefined}
           aria-hidden={!sidebarOpen}
         >
           <Navigation
+            focusSearchRequest={searchRequest}
             locale={locale}
             headerAction={sidebarOpen ? <SidebarToggle open toggleRef={sidebarToggleRef} onToggle={toggleSidebar} /> : undefined}
             examples={examples}
@@ -393,8 +489,23 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       )}
       <div className={css(styles, 'right-column')}>
         <div className={css(styles, 'main-content')}>
+          {versionLoadError && (
+            <p className={css(styles, 'release-notice')} role="status" data-release-notice>
+              <span>Release list unavailable. Current Playground is available.</span>
+              <button type="button" aria-label="Retry release list" onClick={() => void loadVersionCatalog()}>
+                Retry
+              </button>
+            </p>
+          )}
           <Editor
+            selectionError={selectionError}
+            onSelectStartingExample={selectStartingExample}
+            onRecoverCurrent={openCurrent}
+            onRetryCatalog={() => selectedVersion && void loadExamples(selectedVersion.id)}
             activeExample={activeExample}
+            nextExample={getNextPlaygroundHighlight(Array.from(examples.values()).flat(), activeExample?.path ?? '')}
+            compact={isCompactMobile}
+            onSelectExample={selectExample}
             catalogLoadError={loadError}
             selectedVersionId={selectedVersion?.id ?? ''}
             showSidebarToggle={!isCompactMobile}
@@ -421,11 +532,22 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
           </nav>
         )}
       </div>
-      {!isCompactMobile && sidebarOpen && <div className={css(styles, 'backdrop')} onClick={() => setSidebarOpen(false)} />}
+      {!isCompactMobile && sidebarOpen && (
+        <button
+          className={css(styles, 'backdrop')}
+          data-modal-backdrop
+          type="button"
+          tabIndex={-1}
+          aria-label="Close examples"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {isCompactMobile && (
         <BottomSheet open={examplesSheetOpen} title="Examples" opener={examplesSheetOpener} onOpenChange={setExamplesSheetOpen}>
-          <div className={css(styles, 'sheet-navigation')}>
+          <div ref={sheetNavigationRef} className={css(styles, 'sheet-navigation')}>
             <Navigation
+              focusSearchRequest={searchRequest}
+              locale={locale}
               examples={examples}
               activeExample={activeExample}
               selectedVersion={selectedVersion}

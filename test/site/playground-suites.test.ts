@@ -17,6 +17,7 @@ import {
 
 const full = [
   'file-tabs',
+  'reliability',
   'header',
   'native-controls',
   'responsive-preview',
@@ -48,7 +49,7 @@ describe('Playground CI suites', () => {
   });
 
   it.each([
-    ['shell', ['file-tabs', 'header', 'native-controls', 'responsive-preview', 'new-tab', 'console', 'widget-lab']],
+    ['shell', ['file-tabs', 'reliability', 'header', 'native-controls', 'responsive-preview', 'new-tab', 'console', 'widget-lab']],
     ['rendering', ['crt', 'mask', 'worker']],
     ['lifecycle', ['audio-bus', 'example-lifecycle']],
     ['assets', ['assets']],

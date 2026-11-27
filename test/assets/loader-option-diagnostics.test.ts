@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
@@ -20,7 +19,7 @@ type Route = 'bare-get' | 'descriptor-get' | 'descriptor-load' | 'catalog-get' |
 const routes: Route[] = ['bare-get', 'descriptor-get', 'descriptor-load', 'catalog-get', 'catalog-load', 'leaf-get', 'leaf-load'];
 
 const acquire = (owner: Loader | LoaderScope, route: Route, poolSize: number): Promise<Sound> => {
-  const asset = Asset.type('sound', 'diagnostic.wav', { poolSize });
+  const asset = { type: 'sound', source: 'diagnostic.wav', poolSize } as const;
 
   switch (route) {
     case 'bare-get':
@@ -137,8 +136,8 @@ test('equal reordered options and omitted options do not warn', async () => {
   release();
 
   try {
-    await loader.load(Asset.type('sound', 'equal.wav', { poolSize: 2, playbackOptions: { volume: 0.5, loop: true } }));
-    await loader.load(Asset.type('sound', './equal.wav', { playbackOptions: { loop: true, volume: 0.5 }, poolSize: 2 }));
+    await loader.load({ type: 'sound', source: 'equal.wav', poolSize: 2, playbackOptions: { volume: 0.5, loop: true } });
+    await loader.load({ type: 'sound', source: './equal.wav', playbackOptions: { loop: true, volume: 0.5 }, poolSize: 2 });
     loader.get('equal.wav');
 
     expect(warnings).toEqual([]);
@@ -151,9 +150,9 @@ test('equal reordered options and omitted options do not warn', async () => {
 test('a queued first acquisition keeps its options when a descriptor load boosts it', async () => {
   const { loader, release } = fixture();
   loader.setConcurrency(0);
-  const catalog = Assets.from({ sound: Asset.type('sound', 'queued.wav', { poolSize: 2 }) });
+  const catalog = Assets.from({ sound: { type: 'sound', source: 'queued.wav', poolSize: 2 } });
   const background = loader.load(catalog, { priority: LoadPriority.Background });
-  const foreground = loader.load(Asset.type('sound', 'queued.wav', { poolSize: 5 }));
+  const foreground = loader.load({ type: 'sound', source: 'queued.wav', poolSize: 5 });
   release();
 
   try {
@@ -182,8 +181,8 @@ test.each(['resource', 'source'])('options in %s identity create distinct acquis
   materializeAssetTypes(loader, [type]);
 
   try {
-    const a = Asset.type('text', 'identity.txt', { variant: 'a' } as never);
-    const b = Asset.type('text', 'identity.txt', { variant: 'b' } as never);
+    const a = { type: 'text', source: 'identity.txt', variant: 'a' } as never;
+    const b = { type: 'text', source: 'identity.txt', variant: 'b' } as never;
 
     expect(loader.identify(a).resourceKey).not.toBe(loader.identify(b).resourceKey);
     expect(await loader.load(a)).toBe('a');

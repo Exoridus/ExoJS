@@ -1,17 +1,17 @@
 {
   "title": "AudioStream",
-  "description": "Streaming long-form audio backed by an `HTMLAudioElement` - background tracks, voice-over, **and internet radio** (same mechanism, low CPU/RAM). Decoded lazily via the browser's media pipeline, so memory cost scales with the decode buffer rather than total duration. `AudioStream` is a **data descriptor**: it holds the media element and default playback parameters but does not play itself. Playback is driven by `AudioSystem.play(stream, options)`, which returns an AudioStreamVoice for fine-grained control (pause/resume, seek, loop, rate, volume, spatial). Because an `HTMLAudioElement` has a single playhead, a stream has **one active voice at a time** - playing again stops the previous voice. Routes through the system's `music` bus by default (override via PlayOptions.bus). Use Sound for short, frequently-triggered clips that benefit from pre-decoded `AudioBuffer` storage and pooled overlapping playback.",
+  "description": "A live or unbounded audio source, such as internet radio. Readiness means playback can start: a live source never finishes downloading. Its duration may be `Infinity`, seeking is only available when the source reports a seekable range, and the connection can break and recover while the stream exists. connection and onConnectionChange report that health separately from playback. When the connection breaks - a network error, or the server ending the response of a live source - a URL-backed stream reopens the URL with exponential backoff, and a voice that was playing resumes once data arrives. After the configured attempts it reports `'disconnected'` and dispatches onError. reconnect starts a new round manually. Load it with `assets.load({ type: AudioStream, source: 'https://radio.example/stream' })`. Use Music for a finite track.",
   "symbol": "AudioStream",
   "kind": "class",
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 11,
+  "memberCount": 17,
   "counts": {
     "constructors": 1,
-    "methods": 2,
-    "properties": 7,
-    "events": 1
+    "methods": 4,
+    "properties": 10,
+    "events": 2
   },
   "sections": [
     {
@@ -19,10 +19,10 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Streaming long-form audio backed by an `HTMLAudioElement` - background tracks, voice-over, **and internet radio** (same mechanism, low CPU/RAM). Decoded lazily via the browser's media pipeline, so memory cost scales with the decode buffer rather than total duration.",
-        "`AudioStream` is a **data descriptor**: it holds the media element and default playback parameters but does not play itself. Playback is driven by `AudioSystem.play(stream, options)`, which returns an AudioStreamVoice for fine-grained control (pause/resume, seek, loop, rate, volume, spatial).",
-        "Because an `HTMLAudioElement` has a single playhead, a stream has **one active voice at a time** - playing again stops the previous voice. Routes through the system's `music` bus by default (override via PlayOptions.bus).",
-        "Use Sound for short, frequently-triggered clips that benefit from pre-decoded `AudioBuffer` storage and pooled overlapping playback."
+        "A live or unbounded audio source, such as internet radio.",
+        "Readiness means playback can start: a live source never finishes downloading. Its duration may be `Infinity`, seeking is only available when the source reports a seekable range, and the connection can break and recover while the stream exists. connection and onConnectionChange report that health separately from playback.",
+        "When the connection breaks - a network error, or the server ending the response of a live source - a URL-backed stream reopens the URL with exponential backoff, and a voice that was playing resumes once data arrives. After the configured attempts it reports `'disconnected'` and dispatches onError. reconnect starts a new round manually.",
+        "Load it with `assets.load({ type: AudioStream, source: 'https://radio.example/stream' })`. Use Music for a finite track."
       ],
       "importLine": "import { AudioStream } from '@codexo/exojs'",
       "sourceLink": null
@@ -33,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>): AudioStream",
+          "signature": "new(audioElement: HTMLAudioElement, options?: AudioStreamOptions): AudioStream",
           "signatureTokens": [
             {
               "text": "new",
@@ -72,20 +72,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Partial",
+              "text": "AudioStreamOptions",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PlaybackOptions",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -108,7 +96,7 @@
             },
             {
               "name": "options",
-              "type": "Partial<PlaybackOptions>",
+              "type": "AudioStreamOptions",
               "optional": true
             }
           ],
@@ -124,6 +112,53 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "_onMediaError",
+          "signature": "_onMediaError(error: Error): void",
+          "signatureTokens": [
+            {
+              "text": "_onMediaError",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "error",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Error",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "error",
+              "type": "Error",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Reports a media failure after the asset became usable."
+        },
         {
           "name": "createVoice",
           "signature": "createVoice(system: AudioSystem, options: PlayOptions): Voice",
@@ -219,7 +254,36 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Stop the active voice and release the media graph. Terminal: the stream cannot be played again afterwards (see AudioStream.destroyed)."
+          "description": "Stop the active voice and release the media graph. Terminal: the instance cannot be played again afterwards (see destroyed)."
+        },
+        {
+          "name": "reconnect",
+          "signature": "reconnect(): void",
+          "signatureTokens": [
+            {
+              "text": "reconnect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Reopens the source now and restarts the attempt count. A voice that was playing resumes once data arrives. Does nothing for a stream built from local data or after destroy."
         }
       ],
       "paragraphs": [],
@@ -336,6 +400,27 @@
           "description": "The backing HTMLAudioElement."
         },
         {
+          "name": "connection",
+          "signature": "connection: AudioStreamConnection",
+          "signatureTokens": [
+            {
+              "text": "connection",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioStreamConnection",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The current connection health."
+        },
+        {
           "name": "destroyed",
           "signature": "destroyed: boolean",
           "signatureTokens": [
@@ -354,7 +439,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true once AudioStream.destroy has run. A destroyed stream is not reusable - playing it throws. Load the asset again to get a fresh stream."
+          "description": "true once destroy has run. A destroyed instance is not reusable - playing it throws. Load the asset again to get a fresh one."
         },
         {
           "name": "duration",
@@ -375,7 +460,49 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Total media duration in seconds (NaN until metadata has loaded)."
+          "description": "Media duration in seconds: NaN until metadata has loaded, Infinity for a live source."
+        },
+        {
+          "name": "live",
+          "signature": "live: boolean",
+          "signatureTokens": [
+            {
+              "text": "live",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when the source reports no finite duration."
+        },
+        {
+          "name": "seekable",
+          "signature": "seekable: boolean",
+          "signatureTokens": [
+            {
+              "text": "seekable",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true only while the source reports a finite seekable range."
         }
       ],
       "paragraphs": [],
@@ -386,6 +513,47 @@
       "id": "events",
       "title": "Events",
       "members": [
+        {
+          "name": "onConnectionChange",
+          "signature": "onConnectionChange: Signal<[connection]>",
+          "signatureTokens": [
+            {
+              "text": "onConnectionChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "connection",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched whenever connection changes."
+        },
         {
           "name": "onError",
           "signature": "onError: Signal<[error]>",

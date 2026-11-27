@@ -74,6 +74,13 @@ export interface CanonicalAsset {
   readonly variantResolution?: number;
   /** The option bag of the request, as the caller passed it. */
   readonly options?: unknown;
+  /**
+   * The factory source of a descriptor without a string source, handed over
+   * without fetching, decoding or caching. Present - possibly `undefined` - for
+   * every such descriptor, whose `source` and `locator` are then a `direct:`
+   * claim name rather than a URL.
+   */
+  readonly directSource?: unknown;
 }
 
 /** Sources that already carry their own absolute, opaque identity and must never be joined onto a base path or normalized. */

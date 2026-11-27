@@ -10,6 +10,8 @@ export interface LocalLaneOptions {
   testsOnly: boolean;
   all: boolean;
   base: string;
+  /** Exact commit being pushed; only set by the pre-push hook. */
+  head?: string;
   only?: string[];
 }
 
@@ -55,7 +57,14 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
       options.testsOnly = true;
     } else if (arg === '--all') {
       options.all = true;
-    } else if (arg === '--base' || arg.startsWith('--base=') || arg === '--only' || arg.startsWith('--only=')) {
+    } else if (
+      arg === '--base' ||
+      arg.startsWith('--base=') ||
+      arg === '--head' ||
+      arg.startsWith('--head=') ||
+      arg === '--only' ||
+      arg.startsWith('--only=')
+    ) {
       const flag = arg.split('=')[0]!;
       const value = arg.includes('=') ? arg.slice(arg.indexOf('=') + 1) : argv[++i];
 
@@ -65,6 +74,12 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
 
       if (flag === '--base') {
         options.base = value;
+      } else if (flag === '--head') {
+        if (!/^[a-f\d]{40}$|^[a-f\d]{64}$/i.test(value)) {
+          throw new Error('--head requires an exact 40- or 64-digit commit SHA.');
+        }
+
+        options.head = value;
       } else {
         const names = value.split(',');
         const known = new Set(available().map(lane => lane.id));
@@ -78,7 +93,9 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
         options.only = [...new Set(names)];
       }
     } else {
-      throw new Error(`Unknown option '${arg}'. Use --run, --base <ref>, --only <id[,id]>, --quick, --pre-push, --tests-only or --all.`);
+      throw new Error(
+        `Unknown option '${arg}'. Use --run, --base <ref>, --head <sha>, --only <id[,id]>, --quick, --pre-push, --tests-only or --all.`,
+      );
     }
   }
 
@@ -88,6 +105,10 @@ export const parseLocalLaneOptions = (argv: readonly string[]): LocalLaneOptions
 
   if (options.prePush && (options.only || options.quick)) {
     throw new Error('--pre-push cannot combine with --only or --quick.');
+  }
+
+  if (options.head !== undefined && !options.prePush) {
+    throw new Error('--head is only valid with --pre-push.');
   }
 
   return options;
@@ -120,7 +141,13 @@ export const planLocalLanes = (effective: EffectiveLanes, options: LocalLaneOpti
     : policy.nodeTests
       ? { ...effective, unit: true } // `.husky/` is outside every CI area, yet `test/ci` reads the hooks
       : effective;
-  const base = resolveRelatedBase(options.base);
+  // The hook passes a verified previous remote SHA (or nearest integration
+  // merge base). Do not re-merge-base it against checkout HEAD: that could
+  // reintroduce older unrelated commits into the selected test graph.
+  const base =
+    options.prePush && options.head !== undefined && /^[a-f\d]{40}$|^[a-f\d]{64}$/i.test(options.base)
+      ? { ref: options.base, full: false }
+      : resolveRelatedBase(options.base);
   const full = policy.fullUnit || !policy.relatedTests;
   const unitProjects = policy.fullUnit ? ['exojs*', 'rendering-perf'] : policy.unitProjects;
   const unitCommand = [
@@ -128,7 +155,13 @@ export const planLocalLanes = (effective: EffectiveLanes, options: LocalLaneOpti
     unitProjects.length
       ? policy.unitFilter
         ? `pnpm exec vitest run ${unitProjects.map(project => `--project=${project}`).join(' ')} ${policy.unitFilter}`
-        : affectedTestCommand({ base, projects: unitProjects, name: 'unit', full })
+        : affectedTestCommand({
+            base,
+            projects: unitProjects,
+            name: 'unit',
+            full,
+            committed: options.prePush && options.head !== undefined,
+          })
       : '',
     policy.allocation ? 'pnpm test:alloc' : '',
     policy.physicsPerf ? 'pnpm test:physics-perf' : '',
@@ -164,6 +197,7 @@ export const planLocalLanes = (effective: EffectiveLanes, options: LocalLaneOpti
                 name: `${lane.id}-${index}`,
                 full,
                 serial: lane.id === 'webgpu' && index === 0,
+                committed: options.prePush && options.head !== undefined,
               }),
             )
             .join(' && '),

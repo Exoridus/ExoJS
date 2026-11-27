@@ -18,7 +18,7 @@
  * in an otherwise empty block is still seen.
  *
  * The gate is line-scoped by default. It diffs against the merge base with the
- * default branch, including staged, unstaged and untracked work, and reports
+ * validation base, including staged, unstaged and untracked work, and reports
  * only comments that touch a changed line. Scoping by file would be unusable:
  * the tree predates the policy, most files carry some legacy violation, and a
  * one-line edit in a grown file would block on decades of comment history the
@@ -28,9 +28,10 @@
  * changed and is therefore checked in full.
  *
  * Pass `--all` to scan every comment in the tree (reporting mode, for scoping
- * the cleanup), `--base` to compare against another ref, or explicit paths to
- * check those files end to end. Every run prints the scope it used, so a
- * line-scoped run cannot be mistaken for full coverage.
+ * the cleanup), or explicit paths to check those files end to end. Use
+ * `--base` or `EXOJS_SOURCE_HYGIENE_BASE` to select the validation base.
+ * Ad hoc runs use the remote default branch when available. Every run prints
+ * the scope it used.
  *
  * `--json` writes the findings as one machine-readable array instead of the
  * human report, and `--fix-safe` applies the transformations that are provably
@@ -577,11 +578,19 @@ const defaultBaseRef = (): string => {
  * its line numbers describe the file as it sits on disk. Untracked files have
  * no diff to read and are scanned whole.
  */
-const changedScope = (baseRef: string): Scope => {
-  const mergeBase = gitLines(['merge-base', 'HEAD', baseRef])[0] ?? baseRef;
+const changedScope = (base?: string): Scope => {
+  const baseRef = base ?? defaultBaseRef();
+  const commit = gitLines(['rev-parse', '--verify', '--end-of-options', `${baseRef}^{commit}`])[0];
+
+  if (base !== undefined && !commit) {
+    fail(`lint:source-hygiene: cannot resolve base ${JSON.stringify(baseRef)} to a commit.`);
+  }
+
+  const mergeBase = commit && (gitLines(['merge-base', 'HEAD', commit])[0] ?? commit);
+  const diff = mergeBase ? tryGit(['diff', '--unified=0', '--diff-filter=ACMR', mergeBase]) : '';
   const files = new Map<string, LineRange[] | null>();
 
-  for (const [path, ranges] of parseChangedRanges(tryGit(['diff', '--unified=0', '--diff-filter=ACMR', mergeBase]))) {
+  for (const [path, ranges] of parseChangedRanges(diff)) {
     files.set(path, ranges);
   }
 
@@ -591,7 +600,7 @@ const changedScope = (baseRef: string): Scope => {
 
   return {
     description:
-      `lines changed vs merge base with ${baseRef} (${mergeBase.slice(0, 12)}), including staged, unstaged and untracked work ` +
+      `lines changed vs merge base with ${baseRef} (${mergeBase?.slice(0, 12) ?? 'unresolved'}), including staged, unstaged and untracked work ` +
       '(line-scoped: only comments touching a changed line)',
     files,
   };
@@ -663,7 +672,8 @@ if (fixSafe && json) {
   fail('lint:source-hygiene: --fix-safe and --json are mutually exclusive.');
 }
 
-const scope = paths.length > 0 ? explicitScope(paths) : all ? allScope() : changedScope(base ?? defaultBaseRef());
+const validationBase = base ?? (process.env.EXOJS_SOURCE_HYGIENE_BASE || undefined);
+const scope = paths.length > 0 ? explicitScope(paths) : all ? allScope() : changedScope(validationBase);
 
 const scanned: string[] = [];
 const violations: Violation[] = [];

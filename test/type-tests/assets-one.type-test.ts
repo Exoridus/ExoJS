@@ -2,7 +2,7 @@
 // descriptor-set inference as a catalog field. Compiled by
 // `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
 
-import { Asset, AssetRef, Assets, type Texture } from '@codexo/exojs';
+import { AssetRef, Assets, type Texture } from '@codexo/exojs';
 
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-leaf';
 
@@ -18,7 +18,7 @@ const level = Assets.one('level.json');
 type _LevelIsRef = Expect<Equal<typeof level, CatalogValueLeaf<unknown>>>;
 
 // resource-kind descriptor → the resource leaf
-const tex = Assets.one(Asset.type('texture', 'x.png'));
+const tex = Assets.one({ type: 'texture', source: 'x.png' });
 type _TexIsTexture = Expect<Equal<typeof tex, CatalogResourceLeaf<Texture>>>;
 
 export type { _LevelIsRef, _ShipIsTexture, _TexIsTexture };

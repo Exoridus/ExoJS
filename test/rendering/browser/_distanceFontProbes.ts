@@ -1,6 +1,5 @@
 import { describe, expect, onTestFinished, test } from 'vitest';
 
-import { Asset } from '#assets/Asset';
 import { Loader } from '#assets/Loader';
 import { bmFontType } from '#assets/types/font';
 import { textureType } from '#assets/types/image';
@@ -46,7 +45,7 @@ ${declaration}`;
   const source = URL.createObjectURL(new File([descriptor], 'probe.fnt', { type: 'text/plain' }));
 
   try {
-    return await loader.load(Asset.type('bmFont', source, distanceField === undefined ? {} : { distanceField }));
+    return await loader.load({ type: 'bmFont', source, ...(distanceField === undefined ? {} : { distanceField }) });
   } finally {
     URL.revokeObjectURL(source);
   }
@@ -228,7 +227,7 @@ export const defineDistanceFontProbes = (title: string, open: OpenColorProbeHarn
       const { h, loader } = probe;
       const distance = await loadFont(loader, sentinelPage, 1, 'distanceField fieldType=mtsdf distanceRange=4');
       const bitmap = await loadFont(loader, sentinelPage, 1);
-      const color = await loader.load(Asset.type('texture', sentinelPage));
+      const color = await loader.load({ type: 'texture', source: sentinelPage });
       const raw = new RenderTexture(2, 2, { format: TextureFormat.Rgba8 });
 
       try {

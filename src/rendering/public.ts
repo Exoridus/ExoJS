@@ -173,6 +173,8 @@ export type {
   TextSize,
   TextTransform,
 } from '#rendering/text/types';
+export { AnimatedTexture } from '#rendering/texture/AnimatedTexture';
+export { CanvasFrameSource } from '#rendering/texture/CanvasFrameSource';
 export type { CompressedTextureLevel, CompressedTexturePayload } from '#rendering/texture/compressedPayload';
 export type { CompressedTextureOptions } from '#rendering/texture/CompressedTexture';
 export { CompressedTexture } from '#rendering/texture/CompressedTexture';
@@ -190,6 +192,8 @@ export {
 export type { DataTextureBuffer, DataTextureDirtyRegion, DataTextureFormat, DataTextureOptions } from '#rendering/texture/DataTexture';
 export { DataTexture } from '#rendering/texture/DataTexture';
 export { DepthTexture } from '#rendering/texture/DepthTexture';
+export type { FrameSource } from '#rendering/texture/FrameSource';
+export { FrameTexture } from '#rendering/texture/FrameTexture';
 export type { Rgba8TextureLevel, Rgba8TexturePayload } from '#rendering/texture/pixelPayload';
 export type { PixelReaderOptions } from '#rendering/texture/PixelReader';
 export { PixelRead, PixelReader } from '#rendering/texture/PixelReader';
@@ -201,6 +205,7 @@ export { Texture } from '#rendering/texture/Texture';
 export type { SamplerOptions, TextureOptions, TextureUploadOptions } from '#rendering/texture/TextureOptions';
 export type { TextureRegionInsets, TextureRegionOptions } from '#rendering/texture/TextureRegion';
 export { TextureRegion } from '#rendering/texture/TextureRegion';
+export { VideoFrameSource } from '#rendering/texture/VideoFrameSource';
 export type {
   UniformAccessorFor,
   UniformArrayAccessor,
@@ -243,3 +248,4 @@ export type {
 export type { UniformBlockDataRecord, UniformBlockInitialValues, UniformSchemaOptions } from '#rendering/uniforms/uniformSchema';
 export { UniformType } from '#rendering/uniforms/UniformType';
 export { Video } from '#rendering/video/Video';
+export { VideoTexture } from '#rendering/video/VideoTexture';

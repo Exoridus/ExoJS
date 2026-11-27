@@ -37,7 +37,7 @@ const createLoader = (seamless = false, onAbort?: () => void) => {
         });
       }
 
-      await context.dependencies.load(dependency.asset('dependency.dat'));
+      await context.dependencies.load({ type: dependency, source: 'dependency.dat' });
 
       if (!seamless) {
         return 'ready';
@@ -112,7 +112,7 @@ describe('immediate asset reclaim', () => {
       dispose,
       create: async (_source, context) => {
         const attempt = ++attempts;
-        await context.dependencies.load(dependency.asset('dependency.dat'));
+        await context.dependencies.load({ type: dependency, source: 'dependency.dat' });
 
         if (attempt === 1) {
           enter();
@@ -127,14 +127,14 @@ describe('immediate asset reclaim', () => {
     loader.onError.add(onError);
 
     try {
-      const initial = first.load(type.asset('asset.txt'));
+      const initial = first.load({ type, source: 'asset.txt' });
       const cancelled = initial.catch((error: unknown) => error);
       await entered;
       first.destroy();
       expect(loader.inspect().some(row => row.locator.endsWith('dependency.dat'))).toBe(false);
       onLoaded.mockClear();
-      const a = method === 'get' ? next.get('asset.txt').loaded : next.load(type.asset('asset.txt'));
-      const b = other.load(type.asset('asset.txt'));
+      const a = method === 'get' ? next.get('asset.txt').loaded : next.load({ type, source: 'asset.txt' });
+      const b = other.load({ type, source: 'asset.txt' });
       expect(attempts).toBe(1);
       finish();
 
@@ -160,7 +160,7 @@ describe('immediate asset reclaim', () => {
     const { loader, type, options, attempts, seenOptions, onError } = createLoader();
     const first = loader.createScope();
     const next = loader.createScope();
-    const asset = type.asset('asset.dat', options);
+    const asset = { type, source: 'asset.dat', ...options };
 
     try {
       const initial = first.load(asset);
@@ -187,7 +187,7 @@ describe('immediate asset reclaim', () => {
     const first = loader.createScope();
     const next = loader.createScope();
     const other = loader.createScope();
-    const asset = type.asset('asset.dat', options);
+    const asset = { type, source: 'asset.dat', ...options };
 
     try {
       const initial = first.load(asset);
@@ -276,7 +276,7 @@ describe('immediate asset reclaim', () => {
     const first = loader.createScope();
     const next = loader.createScope();
     const other = loader.createScope();
-    const asset = type.asset('asset.dat', options);
+    const asset = { type, source: 'asset.dat', ...options };
     const original = Assets.from({ item: asset });
     const sibling = Assets.from({ item: asset });
 

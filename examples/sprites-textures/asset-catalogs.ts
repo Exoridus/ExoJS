@@ -1,11 +1,10 @@
 import {
   Application,
-  Asset,
   Assets,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Keyboard,
+  type Music,
   type RenderingContext,
   Scene,
   Sprite,
@@ -18,7 +17,7 @@ import { mountControls } from '@examples/runtime';
 // #region guide:catalog-declare
 // A catalog is a named, typed group of assets. Its entries are descriptors -
 // here from the demo catalog; in your own project usually a bare path, whose
-// file extension infers the type, or an explicit `Asset.type(...)`.
+// file extension infers the type, or an explicit a `{ type, source }` descriptor.
 const SharedAssets = Assets.from({
   logo: assets.uvGrid256,
   click: assets.soundUiClick,
@@ -57,7 +56,7 @@ class AssetCatalogsScene extends Scene {
 
   private dayGround!: Texture;
   private nightGround!: Texture;
-  private theme!: AudioStream;
+  private theme!: Music;
 
   private frameCount = 0;
   private loadError = '';
@@ -153,8 +152,8 @@ class AssetCatalogsScene extends Scene {
     const app = this.app;
 
     // A URL chosen at runtime has no literal file extension to infer the type
-    // from - name it with `Asset.type(...)`.
-    const texture = await app.loader.load(Asset.type('texture', url));
+    // from - name it with a `{ type, source }` descriptor.
+    const texture = await app.loader.load({ type: 'texture', source: url });
 
     this.ground.setTexture(texture);
   }

@@ -470,7 +470,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Default immutable LDtk extension descriptor. Installs two asset types: - ldtkMapType - loader.load(ldtkMapType.asset('world.ldtk')) reads the .ldtk document, loads all referenced tileset images, and returns a fully assembled LdtkMap with one runtime import('@codexo/exojs-tilemap').TileMap per level. - ldtkProjectType - loader.load(ldtkProjectType.asset('world.ldtk')) returns the world layout and tileset atlases only, for games that load levels on demand. Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the LDtk adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
+          "description": "Default immutable LDtk extension descriptor. Installs two asset types: - ldtkMapType - loader.load({ type: ldtkMapType, source: 'world.ldtk' }) reads the .ldtk document, loads all referenced tileset images, and returns a fully assembled LdtkMap with one runtime import('@codexo/exojs-tilemap').TileMap per level. - ldtkProjectType - loader.load({ type: ldtkProjectType, source: 'world.ldtk' }) returns the world layout and tileset atlases only, for games that load levels on demand. Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the LDtk adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
         },
         {
           "name": "ldtkIntGridCsvProperty",

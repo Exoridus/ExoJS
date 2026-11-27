@@ -84,3 +84,13 @@ export const jsonSourceCodec: AssetSourceCodec<unknown, string> = {
   fromBytes: bytes => Promise.resolve(new TextDecoder().decode(bytes)),
   decode: stored => Promise.resolve(JSON.parse(stored)),
 };
+
+/**
+ * A `Blob`, kept and handed on unchanged. The browser may hold its data out of
+ * the JavaScript heap, which suits media and other large payloads.
+ */
+export const blobSourceCodec: AssetSourceCodec<Blob> = {
+  fromResponse: response => response.blob(),
+  fromBytes: bytes => Promise.resolve(new Blob([bytes])),
+  decode: stored => Promise.resolve(stored),
+};

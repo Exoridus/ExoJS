@@ -1,0 +1,107 @@
+{
+  "title": "ValidatedAssetLoadInput",
+  "description": "AssetLoadInput with every literal path and descriptor checked against what its type accepts.",
+  "symbol": "ValidatedAssetLoadInput",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "AssetLoadInput with every literal path and descriptor checked against what its type accepts."
+      ],
+      "importLine": "import { ValidatedAssetLoadInput } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ValidatedAssetLoadInput",
+          "signature": "Input extends AssetLoadEntry ? ValidatedEntry<Input> : mapped",
+          "signatureTokens": [
+            {
+              "text": "Input",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetLoadEntry",
+              "kind": "type"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ValidatedEntry",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Input",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mapped",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/assetLoadGroup.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/assetLoadGroup.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
+}

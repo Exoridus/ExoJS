@@ -150,7 +150,7 @@ const resolveTaggedFrames = (frameArray: AsepriteFrameData[], indices: number[])
  *
  * @example
  * ```ts
- * const sheet = await loader.load(Asset.type('asepriteSheet', 'hero.aseprite.json'));
+ * const sheet = await loader.load({ type: 'asepriteSheet', source: 'hero.aseprite.json' });
  * const sprite = sheet.createAnimatedSprite();
  * sprite.play('run');
  * scene.addChild(sprite);

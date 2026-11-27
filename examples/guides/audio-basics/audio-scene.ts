@@ -1,19 +1,19 @@
-import { Asset, type AudioStream, Button, Keyboard, Scene, SceneAvailability, type Sound } from '@codexo/exojs';
+import { Button, Keyboard, Music, Scene, SceneAvailability, type Sound } from '@codexo/exojs';
 
 // #region guide:audio-scene
 class AudioScene extends Scene {
   private laser!: Sound;
-  private theme!: AudioStream;
+  private theme!: Music;
 
   override async load(): Promise<void> {
-    [this.laser, this.theme] = await Promise.all([
-      this.loader.load('audio/laser.ogg'),
-      this.loader.load(Asset.type('music', 'audio/theme.ogg')),
-    ]);
+    const { laser, theme } = await this.assets.load({ laser: 'audio/laser.ogg', theme: { type: Music, source: 'audio/theme.ogg' } });
+
+    this.laser = laser;
+    this.theme = theme;
   }
 
   override init(): void {
-    // Scene playback waits for activation; streams additionally wait for unlock.
+    // Scene playback waits for activation; music additionally waits for unlock.
     this.audio.play(this.theme, { loop: true, volume: 0.6, when: SceneAvailability.Active });
 
     const fire = (): void => {

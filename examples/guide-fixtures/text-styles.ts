@@ -1,11 +1,11 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class TextStylesScene extends Scene {
   private readonly labels: Text[] = [];
 
   override async load(): Promise<void> {
-    await this.loader.load(Asset.type('font', assets.fontKenneyFuture.source, { family: 'Kenney Future' }));
+    await this.loader.load({ type: 'font', source: assets.fontKenneyFuture.source, family: 'Kenney Future' });
   }
 
   override init(): void {

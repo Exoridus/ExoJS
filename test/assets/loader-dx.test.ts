@@ -1,4 +1,3 @@
-import { Asset } from '#assets/Asset';
 import { AssetRef } from '#assets/AssetRef';
 import type { AssetInspection } from '#assets/AssetResidency';
 import { Assets } from '#assets/Assets';
@@ -13,7 +12,7 @@ import { testAssetType } from './test-asset-type';
 
 // A test-only asset type with no catalog leaf - the exact shape
 // `LoaderScope.release()` calls out (a resource loaded with
-// `load(Asset.type('bmFont', ...))`): it never goes through `createLeaf`,
+// `load({ type: 'bmFont', source })`): it never goes through `createLeaf`,
 // so it carries no `_assetMeta` stamp and is never adopted/registered in the
 // handle→key map either.
 declare module '#assets/AssetDefinitions' {
@@ -92,7 +91,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
     ]);
 
     const scope = loader.createScope();
-    const asset = new Asset({ type: 'dxNonLeafAsset', source: 'thing.dat' });
+    const asset = { type: 'dxNonLeafAsset', source: 'thing.dat' } as const;
     const resource = await scope.load(asset);
 
     expect(loader.inspect()).toHaveLength(1);
@@ -137,7 +136,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
     const hasRow = (source: string): boolean => loader.inspect().some(row => row.aliases.includes(source));
 
     // 1. Asset descriptor.
-    const asset = new Asset({ type: 'texture', source: 'a.png' });
+    const asset = { type: 'texture', source: 'a.png' } as const;
     await scope.load(asset);
     expect(hasRow('a.png')).toBe(true);
     scope.release(asset);
@@ -150,10 +149,10 @@ describe('LoaderScope.release() fail-loud contract', () => {
     scope.release(catalog);
     expect(hasRow('b.png')).toBe(false);
 
-    // 3. (type, source) pair.
-    await scope.load(Asset.type('texture', 'c.png'));
+    // 3. Descriptor.
+    await scope.load({ type: 'texture', source: 'c.png' });
     expect(hasRow('c.png')).toBe(true);
-    scope.release(Texture, 'c.png');
+    scope.release({ type: Texture, source: 'c.png' });
     expect(hasRow('c.png')).toBe(false);
 
     // 4. An adopted seamless handle.

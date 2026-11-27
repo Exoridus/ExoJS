@@ -1,7 +1,6 @@
 import type { PointLike, RenderingContext, Seconds, SpritesheetData } from '@codexo/exojs';
 import {
   ActionMap,
-  Asset,
   BehaviorComponent,
   ButtonAction,
   Color,
@@ -168,7 +167,7 @@ export abstract class TopDownScene extends Scene {
   }
 
   public override async load(): Promise<void> {
-    this._characterData = (await this.loader.load(Asset.type('json', 'characters.json'))) as SpritesheetData;
+    this._characterData = (await this.loader.load({ type: 'json', source: 'characters.json' })) as SpritesheetData;
 
     await this.assets.load(this._charactersTexture);
     this._map = await this.loadMap();

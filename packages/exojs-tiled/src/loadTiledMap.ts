@@ -1,5 +1,4 @@
 import type { AssetFactoryContext, Texture } from '@codexo/exojs';
-import { Asset } from '@codexo/exojs';
 
 import type { TiledLayerData, TiledMapData, TiledTilesetData, TiledTilesetRefData } from './data';
 import { resolveTiledTemplates } from './templates';
@@ -34,7 +33,7 @@ const loadTiledTilesetResources = async (
 
   if (data.image !== undefined) {
     imageUrl = resolveTiledUrl(data.image, baseUrl);
-    texturePending = Promise.resolve(context.dependencies.load(Asset.type('texture', imageUrl)));
+    texturePending = Promise.resolve(context.dependencies.load({ type: 'texture', source: imageUrl }));
   }
 
   // Every image is requested before any is awaited, so a tileset of per-tile
@@ -43,7 +42,10 @@ const loadTiledTilesetResources = async (
 
   for (const tile of data.tiles ?? []) {
     if (tile.image !== undefined) {
-      tileEntries.push([tile.id, Promise.resolve(context.dependencies.load(Asset.type('texture', resolveTiledUrl(tile.image, baseUrl))))]);
+      tileEntries.push([
+        tile.id,
+        Promise.resolve(context.dependencies.load({ type: 'texture', source: resolveTiledUrl(tile.image, baseUrl) })),
+      ]);
     }
   }
 
@@ -65,7 +67,7 @@ const loadTiledTileset = async (ref: TiledTilesetRefData, mapSource: string, con
     // An external tileset is an ordinary JSON asset: acquiring it through the
     // dependency scope gives it its own identity and cache record, and shares
     // one download between every map that references it.
-    const raw = await context.dependencies.load(Asset.type('json', tsjUrl));
+    const raw = await context.dependencies.load({ type: 'json', source: tsjUrl });
     const data = validateTiledTilesetFileData(raw, tsjUrl);
     const resources = await loadTiledTilesetResources(data, tsjUrl, context, tsjUrl);
 
@@ -95,7 +97,7 @@ const loadImageLayerTextures = async (
       const imageUrl = resolveTiledUrl(layer.image, mapSource);
 
       pending.push(
-        Promise.resolve(context.dependencies.load(Asset.type('texture', imageUrl))).then(texture => new Map([[layer.id, texture]])),
+        Promise.resolve(context.dependencies.load({ type: 'texture', source: imageUrl })).then(texture => new Map([[layer.id, texture]])),
       );
     } else if (layer.type === 'group') {
       pending.push(loadImageLayerTextures(layer.layers, mapSource, context));

@@ -1,12 +1,12 @@
-import { Application, Asset } from '@codexo/exojs';
+import { Application } from '@codexo/exojs';
 
 const app = new Application();
 
 // #region guide:warm-sources
-await app.loader.cacheSource(Asset.type('json', 'levels/01.json'));
-await app.loader.cacheSource(Asset.type('json', 'text/dialogue.json'));
+await app.loader.cacheSource({ type: 'json', source: 'levels/01.json' });
+await app.loader.cacheSource({ type: 'json', source: 'text/dialogue.json' });
 // #endregion guide:warm-sources
 
 // #region guide:warm-media
-await app.loader.cacheSource(Asset.type('music', 'theme.mp3'));
+await app.loader.cacheSource({ type: 'music', source: 'theme.mp3' });
 // #endregion guide:warm-media

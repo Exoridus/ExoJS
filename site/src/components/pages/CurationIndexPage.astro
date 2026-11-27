@@ -1,96 +1,65 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { CURATED_SECTIONS, getCuratedExamples, getPlaygroundNavigation } from '../../lib/curation-catalog';
+import { CURATED_SECTIONS, getCuratedExamples } from '../../lib/curation-catalog';
 import { buildPlaygroundLaunchHref } from '../../lib/playground-nav';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 
 interface Props {
   locale: 'en' | 'de';
-  kind: 'curriculum' | 'tools';
 }
-const { locale, kind } = Astro.props;
+const { locale } = Astro.props;
 const base = import.meta.env.BASE_URL;
 const targets = getCuratedExamples();
-const title = kind === 'tools' ? 'Examples and tools' : 'Learning path';
 const run = (path: string) => buildPlaygroundLaunchHref(path, locale, base);
-const groups = [...getPlaygroundNavigation()];
 ---
 
-<Layout title={`${title} - ExoJS`}>
+<Layout title="Learning path - ExoJS">
   <div class="curation-index">
     {locale === 'de' && <EnglishFallbackNotice />}
     <nav aria-label="Playground resources">
       <a href={`${base + locale}/playground/`}>Playground</a>
-      <a href={`${base + locale}/playground/curriculum/`}>Learning path</a>
-      <a href={`${base + locale}/playground/tools/`}>Examples and tools</a>
     </nav>
-    <h1>{title}</h1>
-    {kind === 'curriculum' ? (
-      <>
-        <p>Follow a focused path through scenes, interaction, rendering, sound and worlds.</p>
-        {CURATED_SECTIONS.map(section => (
-          <section aria-labelledby={`section-${section.key}`}>
-            <h2 id={`section-${section.key}`}>{`${section.key}. ${section.title}`}</h2>
-            <ol class="entries">
-              {targets
-                .filter(entry => entry.section === section.slug)
-                .map(entry => (
-                  <li data-curated-number={entry.number}>
-                    <h3>
-                      <a href={run(entry.path)}>{`${entry.number}. ${entry.title}`}</a>
-                    </h3>
-                    {entry.optional && <p class="label">Optional advanced branch</p>}
-                    {entry.role === 'capstone' && <p class="label">Capstone</p>}
-                    <p>{entry.description}</p>
-                    {entry.prerequisites.length > 0 && (
-                      <p class="related">
-                        Before this:{' '}
-                        {entry.prerequisites.map(id => {
-                          const target = targets.find(candidate => candidate.number === id)!;
+    <h1>Learning path</h1>
+    <p>Follow a focused path through scenes, interaction, rendering, sound and worlds.</p>
+    {CURATED_SECTIONS.map(section => (
+      <section aria-labelledby={`section-${section.key}`}>
+        <h2 id={`section-${section.key}`}>{`${section.key}. ${section.title}`}</h2>
+        <ol class="entries">
+          {targets
+            .filter(entry => entry.section === section.slug)
+            .map(entry => (
+              <li data-curated-number={entry.number}>
+                <h3>
+                  <a href={run(entry.path)}>{`${entry.number}. ${entry.title}`}</a>
+                </h3>
+                {entry.optional && <p class="label">Optional advanced branch</p>}
+                {entry.role === 'capstone' && <p class="label">Capstone</p>}
+                <p>{entry.description}</p>
+                {entry.prerequisites.length > 0 && (
+                  <p class="related">
+                    Before this:{' '}
+                    {entry.prerequisites.map(id => {
+                      const target = targets.find(candidate => candidate.number === id)!;
 
-                          return <a href={run(target.path)}>{target.title}</a>;
-                        })}
-                      </p>
-                    )}
-                    {entry.next.length > 0 && (
-                      <p class="related">
-                        Next:{' '}
-                        {entry.next.map(id => {
-                          const target = targets.find(candidate => candidate.number === id)!;
+                      return <a href={run(target.path)}>{target.title}</a>;
+                    })}
+                  </p>
+                )}
+                {entry.next.length > 0 && (
+                  <p class="related">
+                    Next:{' '}
+                    {entry.next.map(id => {
+                      const target = targets.find(candidate => candidate.number === id)!;
 
-                          return <a href={run(target.path)}>{target.title}</a>;
-                        })}
-                      </p>
-                    )}
-                  </li>
-                ))}
-            </ol>
-          </section>
-        ))}
-      </>
-    ) : (
-      <>
-        <p>Explore runnable examples and inspect assets. Open any title to launch it.</p>
-        {groups.map(([category, entries], index) => (
-          <section aria-labelledby={`group-${index}`}>
-            <h2 id={`group-${index}`}>{category}</h2>
-            <ul class="entries">
-              {entries.map(entry => (
-                <li data-example-path={entry.path}>
-                  <h3>
-                    <a href={run(entry.path)}>{entry.title}</a>
-                  </h3>
-                  <p>{entry.description}</p>
-                  <a class="run" href={`${base}examples/${entry.path.replace(/\.js$/, '.ts')}`}>
-                    TypeScript
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </>
-    )}
+                      return <a href={run(target.path)}>{target.title}</a>;
+                    })}
+                  </p>
+                )}
+              </li>
+            ))}
+        </ol>
+      </section>
+    ))}
   </div>
 </Layout>
 <style>
@@ -101,19 +70,11 @@ const groups = [...getPlaygroundNavigation()];
     color: var(--fg);
   }
 
-  nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--s-4);
-  }
-
-  nav a,
-  .run {
+  nav a {
     display: inline-flex;
     align-items: center;
     min-height: 32px;
     font-size: 0.875rem;
-    margin-right: var(--s-3);
   }
 
   h1 {

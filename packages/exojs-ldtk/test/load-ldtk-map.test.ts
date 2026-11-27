@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { Asset, type AssetFactoryContext, logger, type Texture } from '@codexo/exojs';
+import { type AssetFactoryContext, logger, type Texture } from '@codexo/exojs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { LdtkData } from '../src/LdtkData';
@@ -48,7 +48,7 @@ const makeContext = (fixtures: Record<string, unknown>) => {
   });
 
   const load = vi.fn(async (asset: unknown): Promise<unknown> => {
-    const { type, source } = (asset as { _config: { type: string; source: string } })._config;
+    const { type, source } = asset as { type: string; source: string };
 
     return type === 'json' ? jsonLoad(source) : textureLoad(asset);
   });
@@ -93,7 +93,7 @@ describe('loadLdtkMap — happy path (absolute source)', () => {
     const { contextFor, loaderLoad } = context();
     await loadLdtkMap(contextFor(ABS_SOURCE));
     // resolveLdtkUrl('tiles.png', 'https://example.com/maps/world.ldtk')
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://example.com/maps/tiles.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'https://example.com/maps/tiles.png' });
   });
 
   it('populates the Tiles layer with the gridTiles once the tileset is available', async () => {
@@ -550,7 +550,7 @@ describe('loadLdtkMap — atlas too small for any tile', () => {
     await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(LdtkFormatError);
 
     // The texture load happens before the geometry check, so it IS requested.
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://example.com/maps/tiny.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'https://example.com/maps/tiny.png' });
   });
 
   it('names the offending tileset and its geometry in the message', async () => {
@@ -589,7 +589,7 @@ describe('loadLdtkMap — relative-source URL resolution', () => {
     await expect(loadLdtkMap(contextFor('maps/world.ldtk'))).resolves.toBeDefined();
 
     // The texture is requested at the source-relative path, still relative.
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'maps/tiles.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'maps/tiles.png' });
   });
 
   it('collapses ../ segments in a relPath against a relative source', async () => {
@@ -597,7 +597,7 @@ describe('loadLdtkMap — relative-source URL resolution', () => {
 
     await loadLdtkMap(contextFor('maps/world.ldtk'));
 
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'art/tiles.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'art/tiles.png' });
   });
 
   it('still resolves against an absolute source (unchanged behaviour)', async () => {
@@ -605,7 +605,7 @@ describe('loadLdtkMap — relative-source URL resolution', () => {
 
     await loadLdtkMap(contextFor('https://example.com/maps/world.ldtk'));
 
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://example.com/maps/tiles.png'));
+    expect(loaderLoad).toHaveBeenCalledWith({ type: 'texture', source: 'https://example.com/maps/tiles.png' });
   });
 });
 

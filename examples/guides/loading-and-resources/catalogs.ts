@@ -1,5 +1,5 @@
 // #region guide:catalog-definition
-import { Asset, Assets } from '@codexo/exojs';
+import { Assets } from '@codexo/exojs';
 
 interface Settings {
   startLevel: string;
@@ -7,7 +7,7 @@ interface Settings {
 
 export const SharedAssets = Assets.from({
   logo: 'image/logo.png',
-  settings: Asset.type<Settings>('json', 'data/settings.json'),
+  settings: { type: 'json', source: 'data/settings.json', parse: (raw: unknown) => raw as Settings },
 });
 // #endregion guide:catalog-definition
 

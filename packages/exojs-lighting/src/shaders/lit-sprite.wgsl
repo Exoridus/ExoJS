@@ -1,4 +1,4 @@
-// Forward lighting for one sprite fragment: point and cone lights. The engine prepends its
+// Forward lighting for one sprite fragment: point, cone and segment lights. The engine prepends its
 // sprite-material prologue, which declares `VertexOutput`, the group(0)
 // projection, the group(1) base-texture slot table and `sampleBase()`.
 //
@@ -36,19 +36,28 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         let light = textureLoad(u_lights, vec2<i32>(index + 1, 0), 0);
         let tint = textureLoad(u_lights, vec2<i32>(index + 1, 1), 0);
         let cone = textureLoad(u_lights, vec2<i32>(index + 1, 2), 0);
-        let toLight = light.xy - input.worldPosition;
+        var toLight = light.xy - input.worldPosition;
+        var coneTerm = 1.0;
+
+        // A line uses cone.z == -2 as a shape marker, cone.xy as its world
+        // axis and cone.w as its half-length. Find the closest segment point;
+        // the falloff radius and 3D normal direction both use that point.
+        if (cone.z < -1.0) {
+            let along = clamp(dot(input.worldPosition - light.xy, cone.xy), -cone.w, cone.w);
+            toLight = light.xy + along * cone.xy - input.worldPosition;
+        } else {
+            // A point writes both cone cosines as -1, which no direction fails.
+            let fromLight = normalize(-toLight);
+            let alignment = dot(fromLight, cone.xy);
+            coneTerm = smoothstep(cone.z, cone.w, alignment);
+
+            if (cone.z == cone.w) {
+                coneTerm = step(cone.z, alignment);
+            }
+        }
+
         let falloff = clamp(1.0 - length(toLight) / light.z, 0.0, 1.0);
         let direction = normalize(vec3<f32>(toLight, tint.w));
-
-        // A point light writes both cone cosines as -1, which no direction can
-        // fail, so the cone term is 1 for it and the loop never branches.
-        let fromLight = normalize(-toLight);
-        let alignment = dot(fromLight, cone.xy);
-        var coneTerm = smoothstep(cone.z, cone.w, alignment);
-
-        if (cone.z == cone.w) {
-            coneTerm = step(cone.z, alignment);
-        }
 
         lit = lit + tint.rgb * (max(dot(normal, direction), 0.0) * falloff * falloff * light.w * coneTerm);
     }

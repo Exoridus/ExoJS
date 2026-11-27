@@ -217,11 +217,11 @@ From here, add real bindings: subclass an abstract SDK renderer for your `Drawab
 
 ## Custom asset types
 
-An application, or an extension through its descriptor, defines an asset type with a class, a stable `type` string and a factory. Pass `assetTypes` to the `Application` or call `app.assets.define()`:
+An application, or an extension through its descriptor, defines an asset type with a class, a stable `type` string and a `decode` function. Pass `assetTypes` to the `Application` or call `app.assets.define()`:
 
 <SourceSnippet source="examples/guides/model-b-plus/custom-type.ts" region="custom-type" language="ts" title="Define an asset type" />
 
-Built-in types use the same definition shape. A type id belongs to one class and a class has one active definition. Give each application its own factory instance, because the application that owns it destroys it. A format with versions adds a `parser` (runtime validation of untrusted data) and, optionally, `version`, `minVersion` and `migrations`; a migration receives an older document body and returns the next version, and a document newer than the runtime reads is rejected before any migration runs. Persisted references use the type id, so renaming it breaks saved data.
+`decode` receives the fetched data, read as bytes, text, JSON or a `Blob` according to `read`, and returns the resource synchronously or as a promise. A type that needs per-application state, such as a worker or a compiled module, supplies a `loader` factory instead; give each application its own factory instance, because the application that owns it destroys it. A type id belongs to one class and a class has one active definition. A format with versions adds a `parser` (runtime validation of untrusted data) and, optionally, `version`, `minVersion` and `migrations`; a migration receives an older document body and returns the next version, and a document newer than the runtime reads is rejected before any migration runs. Persisted references use the type id, so renaming it breaks saved data.
 
 ## Where to go next
 

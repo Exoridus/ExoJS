@@ -1,8 +1,8 @@
 import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import { AudioGenerator } from '#audio/AudioGenerator';
-import { AudioStream } from '#audio/AudioStream';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Envelope } from '#audio/Envelope';
+import { Music } from '#audio/Music';
 import type { Loopable, Pausable, Playable, RatePitched, Seekable, Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
@@ -879,10 +879,10 @@ describe('SceneAudio — deferred voice surface', () => {
     });
   });
 
-  describe('AudioStream', () => {
+  describe('Music', () => {
     test('bus resolves to the default music bus from the moment play() returns', () => {
       const { system, app } = createRealApp();
-      const stream = new AudioStream(createAudioElementStub());
+      const stream = new Music(createAudioElementStub());
       const audio = new SceneAudio(app, () => SceneState.Preparing);
 
       const voice = audio.play(stream);
@@ -900,7 +900,7 @@ describe('SceneAudio — deferred voice surface', () => {
     test('the returned handle carries the stream capabilities before and after the flush', () => {
       const { system, app } = createRealApp();
       const el = createAudioElementStub();
-      const stream = new AudioStream(el);
+      const stream = new Music(el);
       const audio = new SceneAudio(app, () => SceneState.Preparing);
 
       const voice = asFull(audio.play(stream));
@@ -926,7 +926,7 @@ describe('SceneAudio — deferred voice surface', () => {
     test('pause() before the flush leaves the stream paused at activation', () => {
       const { system, app } = createRealApp();
       const el = createAudioElementStub();
-      const stream = new AudioStream(el);
+      const stream = new Music(el);
       const audio = new SceneAudio(app, () => SceneState.Preparing);
 
       const voice = asFull(audio.play(stream));
@@ -948,7 +948,7 @@ describe('SceneAudio — deferred voice surface', () => {
     test('stop() before the flush prevents the late start', () => {
       const { system, app } = createRealApp();
       const el = createAudioElementStub();
-      const stream = new AudioStream(el);
+      const stream = new Music(el);
       const audio = new SceneAudio(app, () => SceneState.Preparing);
 
       const voice = audio.play(stream);
@@ -1048,7 +1048,7 @@ describe('SceneAudio — deferred voice surface', () => {
     test('a pending stream paused before activation stays paused through the unlock', () => {
       const { system, app } = createRealApp();
       const el = createAudioElementStub();
-      const stream = new AudioStream(el);
+      const stream = new Music(el);
       let state = SceneState.Preparing;
       const audio = new SceneAudio(app, () => state);
 

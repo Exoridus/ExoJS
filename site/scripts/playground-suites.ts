@@ -6,6 +6,7 @@ export type PlaygroundSuite = (typeof PLAYGROUND_SUITES)[number];
 // Preserve the original full-run order, including the asset/snippet dependency.
 const GROUPS = [
   { name: 'file-tabs', suite: 'shell' },
+  { name: 'reliability', suite: 'shell' },
   { name: 'header', suite: 'shell' },
   { name: 'native-controls', suite: 'shell' },
   { name: 'responsive-preview', suite: 'shell' },

@@ -9,7 +9,7 @@ import { PointLight } from '../src/lights/PointLight';
 import { SunLight } from '../src/lights/SunLight';
 
 interface ShadowMaps {
-  readonly _shadowMap: DataTexture<TextureFormat.R32F>;
+  readonly _shadowMap: DataTexture<TextureFormat.Rgba32F>;
   readonly _sunShadowMap: DataTexture<TextureFormat.R32F>;
   readonly shadowRowsRebuilt: number;
   readonly shadowBytesUploaded: number;
@@ -39,6 +39,10 @@ const fakeApp = (): LightingHost => {
   } as unknown as LightingHost;
 };
 
+/** One light's whole polar row: four floats per texel. */
+const polarRow = (map: DataTexture<TextureFormat.Rgba32F>, row: number): Float32Array =>
+  map.buffer.subarray(row * map.width * 4, (row + 1) * map.width * 4);
+
 const mapsOf = (lighting: Lighting): ShadowMaps => lighting.backend as FrameLightingBackend as unknown as ShadowMaps;
 
 const addWall = (lighting: Lighting, x: () => number = () => 40): void => {
@@ -61,7 +65,7 @@ describe('lightmap shadow row cache', () => {
     addWall(lighting);
     lighting.update();
 
-    const row = mapsOf(lighting)._shadowMap.buffer.subarray(0, mapsOf(lighting)._shadowMap.width);
+    const row = polarRow(mapsOf(lighting)._shadowMap, 0);
     const cookie = Texture.fromColor(Color.white, 1);
     const commit = vi.spyOn(DataTexture.prototype, 'commit');
     const commitRect = vi.spyOn(DataTexture.prototype, 'commitRect');
@@ -93,8 +97,8 @@ describe('lightmap shadow row cache', () => {
     lighting.update();
 
     const shadowMap = mapsOf(lighting)._shadowMap;
-    const firstRow = shadowMap.buffer.subarray(0, shadowMap.width);
-    const secondRow = shadowMap.buffer.subarray(shadowMap.width, shadowMap.width * 2);
+    const firstRow = polarRow(shadowMap, 0);
+    const secondRow = polarRow(shadowMap, 1);
     const commit = vi.spyOn(DataTexture.prototype, 'commit');
     const commitRect = vi.spyOn(DataTexture.prototype, 'commitRect');
 
@@ -122,7 +126,7 @@ describe('lightmap shadow row cache', () => {
       expect(commit).not.toHaveBeenCalled();
       expect(commitRect).toHaveBeenCalledExactlyOnceWith(0, 0, shadowMap.width, 1);
       expect(mapsOf(lighting).shadowRowsRebuilt).toBe(1);
-      expect(mapsOf(lighting).shadowBytesUploaded).toBe(shadowMap.width * Float32Array.BYTES_PER_ELEMENT);
+      expect(mapsOf(lighting).shadowBytesUploaded).toBe(shadowMap.width * 4 * Float32Array.BYTES_PER_ELEMENT);
     }
 
     lighting.destroy();
@@ -137,7 +141,7 @@ describe('lightmap shadow row cache', () => {
     lighting.update();
 
     const shadowMap = mapsOf(lighting)._shadowMap;
-    const row = shadowMap.buffer.subarray(0, shadowMap.width);
+    const row = polarRow(shadowMap, 0);
     const commitRect = vi.spyOn(DataTexture.prototype, 'commitRect');
 
     row.fill(-7);
@@ -159,7 +163,7 @@ describe('lightmap shadow row cache', () => {
     lighting.update();
 
     const shadowMap = mapsOf(lighting)._shadowMap;
-    const firstRow = shadowMap.buffer.subarray(0, shadowMap.width);
+    const firstRow = polarRow(shadowMap, 0);
     const commitRect = vi.spyOn(DataTexture.prototype, 'commitRect');
 
     firstRow.fill(-7);

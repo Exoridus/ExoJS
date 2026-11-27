@@ -72,7 +72,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The source string as the caller wrote it, before base-path resolution."
+          "description": "The source string as the caller wrote it, before base-path resolution; empty for a descriptor without a string source."
         }
       ],
       "paragraphs": [],

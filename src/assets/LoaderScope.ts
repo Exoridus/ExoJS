@@ -2,14 +2,13 @@ import type { ManifestPack } from '#assets/container/AssetManifest';
 import { Signal } from '#core/Signal';
 import type { Destroyable } from '#core/types';
 
-import type { Asset, ResourceAsset, ValueAsset } from './Asset';
-import type { AssetConstructor } from './AssetConstructor';
-import type { CatalogEntry, KindByPath, LeafForPath, ResourceForKind } from './AssetDefinitions';
-import type { AssetLoadGroup, LoadedAssetGroup } from './assetLoadGroup';
+import type { CatalogEntry, KindByPath, LeafForPath } from './AssetDefinitions';
+import type { AssetDescriptorLeaf, LocatorAssetDescriptor, ValidatedLeafDescriptor } from './AssetDescriptor';
+import type { AssetLoadInput, LoadedAssets, ValidatedAssetLoadInput } from './assetLoadGroup';
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 import type { Assets, InferAssetsProperties } from './Assets';
 import { LoadBatch } from './LoadBatch';
-import { type InferLoadedMap, type LoadContainerOptions, type Loader, type LoadOptions, LoadPriority } from './Loader';
+import type { InferLoadedMap, LoadContainerOptions, Loader, LoadOptions } from './Loader';
 import type { LoadingQueue } from './LoadingQueue';
 
 /**
@@ -54,7 +53,7 @@ let nextScopeId = 1;
  * destroyed.
  *
  * A scope describes a lifetime, never a set of assets: what to acquire comes
- * from an {@link Assets} catalog or an {@link Asset} descriptor passed to
+ * from an {@link Assets} catalog or an {@link AssetDescriptor} passed to
  * {@link get} / {@link load}, and typed access stays on that catalog.
  *
  * @example
@@ -167,9 +166,8 @@ export class LoaderScope implements Destroyable {
    *   form.
    */
   public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
-  // A value-kind descriptor (or a materialized value leaf) resolves to a value leaf.
-  public get<T>(asset: ValueAsset<T> | CatalogValueLeaf<T>): CatalogValueLeaf<T>;
-  public get<T>(asset: ResourceAsset<T>): CatalogResourceLeaf<T>;
+  public get<const D extends LocatorAssetDescriptor>(descriptor: D & ValidatedLeafDescriptor<D>): AssetDescriptorLeaf<D>;
+  public get<T>(leaf: CatalogValueLeaf<T>): CatalogValueLeaf<T>;
   public get<M extends Record<string, CatalogEntry>>(catalog: Assets<M>): InferAssetsProperties<M>;
   // Brand-matched: only a materialized catalog leaf, never a raw resource.
   public get<T extends object>(leaf: CatalogResourceLeaf<T>): CatalogResourceLeaf<T>;
@@ -191,33 +189,43 @@ export class LoaderScope implements Destroyable {
   }
 
   /**
-   * Claims assets for this scope and returns an awaitable loading queue.
+   * Loads into this scope and returns an awaitable queue with progress and
+   * cancellation.
    *
-   * A catalog resolves to a new map of finished values, while the catalog's own
-   * leaves also become ready in place; the returned map is not the catalog
-   * object. Fetch and decode failures reject the queue, and the claim still
-   * belongs to this scope. Background priority is available on the catalog and
-   * catalog-leaf overloads.
+   * Accepts a path whose suffix names its type, a handle (`new Texture(path)`,
+   * a catalog leaf), an asset descriptor (`{ type: Video, source: 'intro.mp4' }`,
+   * `{ type: paletteType, source: 'sunset.json' }`), or an array, tuple or named
+   * object of those. A group resolves to the same shape with every entry
+   * replaced by its loaded value, and handles heal in place as well. Named
+   * groups reserve `type` for descriptors. An {@link Assets} catalog resolves
+   * to a new map of its finished values.
    *
-   * @throws If this scope is destroyed.
+   * The claims belong to this scope, also when a fetch or decode fails and
+   * rejects the queue. Cancelling the queue withdraws only this load's pending
+   * stakes. Invalid input throws before any claim is made.
+   *
+   * With `priority: LoadPriority.Background` the fetches use the background
+   * queue and a later foreground request promotes them; types without a
+   * placeholder, such as streamed media, cannot load at background priority.
+   *
+   * @throws If this scope is destroyed, or an entry cannot be resolved to an
+   *   installed asset type.
+   *
+   * @example
+   * ```ts
+   * const hero = await scope.load('hero.png');
+   * const { tiles, music } = await scope.load({ tiles: 'tiles.png', music: { type: Music, source: 'theme.ogg' } });
+   * ```
    */
-  public load<T>(asset: Asset<T>): LoadingQueue<T>;
   public load<M extends Record<string, CatalogEntry>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
-  public load<T>(leaf: CatalogValueLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
-  public load<T extends object>(leaf: CatalogResourceLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
-  public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>;
-  public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
+  public load<const Input extends AssetLoadInput>(
+    input: Input & ValidatedAssetLoadInput<Input>,
+    options?: LoadOptions,
+  ): LoadingQueue<LoadedAssets<Input>>;
+  public load(input: unknown, options?: LoadOptions): LoadingQueue<unknown> {
     this._assertLive('load');
 
-    return this._loader._loadClaimed(this, arg0, arg1);
-  }
-
-  /** Loads path-backed handles into this scope and preserves array, tuple, and object shape. */
-  public loadGroup<const Input extends AssetLoadGroup>(input: Input, options?: LoadOptions): LoadingQueue<LoadedAssetGroup<Input>>;
-  public loadGroup(input: unknown, options?: LoadOptions): LoadingQueue<unknown> {
-    this._assertLive('loadGroup');
-
-    return this._loader._loadHandleGroup(input, this, options?.priority === LoadPriority.Background);
+    return this._loader._loadClaimed(this, input, options);
   }
 
   /**
@@ -242,21 +250,24 @@ export class LoaderScope implements Destroyable {
    * Drops this scope's claim on one asset. The payload is freed only when no
    * other scope still holds it; a scope can never release another owner's claim.
    *
-   * Accepts the handle or value-ref returned by {@link get}, an {@link Asset}
-   * descriptor, a whole {@link Assets} catalog, a catalog leaf, or a
-   * `(type, source)` pair. Releasing something this scope never claimed is a
-   * no-op, and releasing twice is idempotent.
+   * Accepts anything {@link load} accepts - a path, a handle, a descriptor, or a
+   * group of those - plus a whole {@link Assets} catalog, and a resource built
+   * from a descriptor without a string source. Releasing something this scope
+   * never claimed is a no-op, and releasing twice is idempotent. A resource
+   * loaded from a direct source can be released by its descriptor or by the
+   * returned object or function. Releasing the returned resource drops this
+   * scope's claims on every direct key that produced it. Use a descriptor to
+   * release a particular key. A source-free request with no custom resource
+   * identity requires the original descriptor when releasing by descriptor.
    *
    * Throws only for an object that has no claim identity at all - a resolved
-   * non-leaf resource, or an object this loader has never issued. Release such a
-   * resource through its descriptor or its `(type, source)` pair instead.
+   * resource loaded from a path, or an object this loader has never issued.
+   * Release such a resource through its path or descriptor instead.
    */
-  public release(handle: object): void;
-  public release<T>(asset: Asset<T>): void;
+  public release(input: AssetLoadInput | object): void;
   public release<M extends Record<string, CatalogEntry>>(assets: Assets<M>): void;
-  public release(type: AssetConstructor, source: string): void;
-  public release(handleOrType: object | AssetConstructor, source?: string): void {
-    this._loader._releaseFrom(this, handleOrType, source);
+  public release(input: unknown): void {
+    this._loader._releaseFrom(this, input);
   }
 
   /**

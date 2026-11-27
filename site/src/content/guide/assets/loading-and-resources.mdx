@@ -19,7 +19,7 @@ A `Sprite` constructed from a path needs no explicit loader call when it joins a
 
 This program expects `public/assets/hero.png`; it mounts its canvas and makes it reachable with Tab. Click or tab to the canvas before using keyboard controls in later recipes.
 
-A `Texture(path)` or `Sound(path)` alone names a resource; construction does not fetch it. In particular, `audio.play(sound)` does not load a sound. Await `this.assets.load({ hero, sound })` for scene-owned prerequisites or `app.load({ hero, sound })` for application-owned ones. Both return an awaitable `LoadingQueue` with progress and cancellation. [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/) shows the before and after, ownership rules and custom asset types. The rest of this page covers the loader and scope APIs underneath, which stay available for streamed media, shared lifetimes, per-asset options and caching.
+A `Texture(path)` or `Sound(path)` alone names a resource; construction does not fetch it. In particular, `audio.play(sound)` does not load a sound. Await `this.assets.load({ hero: 'hero.png', theme: 'theme.ogg' })` for scene-owned prerequisites or `app.assets.load(...)` for application-owned ones. Both return an awaitable `LoadingQueue` with progress and cancellation. [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/) shows the before and after, ownership rules and custom asset types. The rest of this page covers the loader and scope APIs underneath, which stay available for streamed media, shared lifetimes, per-asset options and caching.
 
 ## Operation, owner, and readiness
 
@@ -27,8 +27,8 @@ A `Texture(path)` or `Sound(path)` alone names a resource; construction does not
 | --- | --- | --- |
 | `new Sprite(path)` attached to `scene.root` or `scene.ui` | The node's scene claim starts loading and follows attachment; detach or texture replacement releases that claim. | Empty until its texture is ready; await the texture's `loaded` promise when dimensions matter. |
 | `new Texture(path)` / `new Sound(path)` | An idle handle until explicitly acquired, or used by a consumer with its own acquisition contract. | Construction is not readiness. |
-| `await scene.assets.load({ hero, sound })` | Scene-owned claims, released by permanent scene teardown. | The returned values are ready; a failed or cancelled queue rejects. |
-| `await app.load({ hero, sound })` | Application-owned claims, independent of scene changes. | Ready after the queue resolves; release at the application boundary. |
+| `await scene.assets.load({ hero: 'hero.png', sound })` | Scene-owned claims, released by permanent scene teardown. | The returned values are ready; a failed or cancelled queue rejects. |
+| `await app.assets.load({ hero: 'hero.png', sound })` | Application-owned claims, independent of scene changes. | Ready after the queue resolves; release at the application boundary. |
 | `scope.get(...)` / `scope.load(...)` | Claims belong to that loader scope; `get` starts loading too. | `get` returns a placeholder/ref; `load` is awaitable. |
 | `context.render(node)` / `scene.track(node)` | Rendering submits work; tracking arranges destruction. Neither creates asset claims for a detached render root. | Acquire required textures explicitly before rendering. |
 | `scene.audio.play(sound)` | Owns the returned voice, not a sound asset claim. | Preload the sound and wait for audio unlock; unavailable playback may return an ended voice. |
@@ -48,26 +48,47 @@ Load a resource before activating a scene when layout or gameplay needs its real
 
 Place an image at `public/assets/image/hero.png` and configure `loader.basePath: 'assets/'` when starting this scene. `public` is a project directory, not part of the requested URL. Resolve deployment base paths as described in [Deployment](/ExoJS/en/guide/shipping/deployment/).
 
-A registered literal suffix such as `.png` supplies the asset type. For a computed path, ambiguous file name, or type without a placeholder, use an explicit descriptor:
+A registered literal suffix such as `.png` supplies the asset type. For a computed path, an ambiguous file name, or a type without a placeholder, name the type with a descriptor:
 
 ```ts
-import { Asset, type LoaderScope } from '@codexo/exojs';
+import { type AssetOwner, Texture } from '@codexo/exojs';
 
-export const loadPortrait = (scope: LoaderScope, name: string) =>
-  scope.load(Asset.type('texture', `portraits/${name}.png`));
+export const loadPortrait = (assets: AssetOwner, name: string) => assets.load({ type: Texture, source: `portraits/${name}.png` });
 ```
 
-`Asset.type(...)` describes an asset; constructing it does not fetch anything. Per-asset options belong in that descriptor. Streamed music, video, bitmap fonts, and browser fonts require explicit descriptors and awaited loading rather than pretending that every resource supports placeholder access.
+A descriptor is a plain object that describes an asset; writing it fetches nothing. Per-asset options are further properties on it. Streamed music and video, bitmap fonts and browser fonts load the same way and are awaited rather than handed out as placeholders.
 
 One per-asset option changes what the bytes mean. A texture is sRGB colour by default; an image that carries numbers rather than colour, such as a normal map, a displacement map or a lookup table, is loaded with `textureOptions: { colorSpace: 'none' }` so it is decoded without colour conversion and never treated as colour:
 
 ```ts
-import { Asset } from '@codexo/exojs';
+import { type AssetOwner, Texture } from '@codexo/exojs';
 
-export const heightMap = Asset.type('texture', 'terrain/height.png', { textureOptions: { colorSpace: 'none' } });
+export const loadHeightMap = (assets: AssetOwner) => assets.load({ type: Texture, source: 'terrain/height.png', textureOptions: { colorSpace: 'none' } });
 ```
 
 The [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/) chapter explains colour, data and alpha.
+
+## Name a type, and sources that are not paths
+
+`type` names the asset type by its id (`'texture'`), by the class it produces (`Texture`, `Music`, `Video`) or by the `AssetType` instance itself. All three are checked against the options that type accepts. Write a descriptor inline where it is used, or add `as const` when you keep a string-id descriptor in a variable, so the id is not widened to `string`.
+
+A string `source` is always a locator: it goes through the base path, variant rules, the cache and the network. A custom type can also take a `source` that is already its factory input, such as data generated in memory, or no source at all and build from the descriptor's other properties alone:
+
+```ts
+import type { AssetOwner } from '@codexo/exojs';
+
+class Noise {
+  public constructor(
+    public readonly seed: number,
+    public readonly size: number,
+  ) {}
+}
+
+// Registered once: app.assets.define(Noise, { type: 'noise', decode: (_source, { options }) => ... })
+export const loadNoise = (assets: AssetOwner, seed: number) => assets.load({ type: Noise, seed, size: 64 });
+```
+
+The factory receives such a source unfetched and uncached, and every other property as its options. Descriptors that share the same source object, or the same primitive value, share one resource. A source-free descriptor is one resource per descriptor object unless its type declares a `resourceIdentity`; keep the descriptor to release it, or release the loaded resource itself. Without a locator there is no placeholder and nothing to reload from, so such an asset cannot be held by a catalog, handed out by `get()`, loaded at background priority or saved as a reference in a scene document.
 
 ## Use a placeholder deliberately
 
@@ -75,7 +96,7 @@ The [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/) chapter explain
 
 Use a placeholder for optional decoration or progressive content whose layout does not depend on the final result. Observe the handle's readiness and error state, or await its `loaded` promise when a later operation needs completion. Do not assume an immediate `get()` has finished a network request.
 
-A bare-path `get` reuses the source-keyed handle. Repeated `get(Asset.type(...))` calls instead construct distinct leaves that share the underlying payload. Capture a descriptor-based handle once, not once per frame.
+A bare-path `get` reuses the source-keyed handle. Repeated `get({ type, source })` calls instead construct distinct leaves that share the underlying payload. Capture a descriptor-based handle once, not once per frame.
 
 Use the loader's `peek` API to inspect residency without acquiring or starting work. Choose it for diagnostics, not for retaining a resource that gameplay is about to use.
 
@@ -84,11 +105,11 @@ Use the loader's `peek` API to inspect residency without acquiring or starting w
 Invalid input or a missing installed asset type can throw synchronously. Fetching or decoding can fail later. `load()` rejects its awaitable queue; a placeholder reports failure through its state, error, and `loaded` promise. The loader also reports asynchronous failures through `onError`.
 
 ```ts
-import { Asset, type LoaderScope, type Texture } from '@codexo/exojs';
+import { type AssetOwner, Texture } from '@codexo/exojs';
 
-export const tryPortrait = async (scope: LoaderScope, path: string): Promise<Texture | null> => {
+export const tryPortrait = async (assets: AssetOwner, path: string): Promise<Texture | null> => {
   try {
-    return await scope.load(Asset.type('texture', path));
+    return await assets.load({ type: Texture, source: path });
   } catch (error) {
     console.error('Portrait unavailable', error);
     return null;
@@ -157,7 +178,7 @@ A resident texture is a live runtime resource. A persistent cache holds source r
 
 Use [Offline and caching](/ExoJS/en/guide/assets/offline/) for persistence and connectivity, [Device variants](/ExoJS/en/guide/assets/device-variants/) for choosing a source before loading, and [Worlds and level streaming](/ExoJS/en/guide/assets/worlds-and-spawning/) for level-owned scopes. Custom asset-type authors should continue with [Authoring extensions](/ExoJS/en/guide/debugging/authoring-extensions/), not add application-specific decoders to ordinary scene code.
 
-<TryIt examples={['application-scenes/loading-screen', 'tilemap/level-loading-and-ownership', 'debug-layer/asset-browser']} api={['loader', 'loader-scope', 'asset', 'assets', 'asset-ref', 'loading-queue']} />
+<TryIt examples={['application-scenes/loading-screen', 'tilemap/level-loading-and-ownership', 'debug-layer/asset-browser']} api={['loader', 'loader-scope', 'asset-descriptor', 'assets', 'asset-ref', 'loading-queue']} />
 
 ## Application-level progress and warm navigation
 

@@ -38,5 +38,4 @@ declare const __EXOJS_SITE_BUILD__: {
   readonly assetProfile: string;
   readonly createdAt: string;
   readonly localTest: boolean;
-  readonly counterpartBase: string | null;
 };

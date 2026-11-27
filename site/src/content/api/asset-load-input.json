@@ -1,0 +1,123 @@
+{
+  "title": "AssetLoadInput",
+  "description": "A single entry, or an array, tuple or named object of entries whose shape a load preserves. Named groups reserve `type` for descriptors.",
+  "symbol": "AssetLoadInput",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A single entry, or an array, tuple or named object of entries whose shape a load preserves. Named groups reserve `type` for descriptors."
+      ],
+      "importLine": "import { AssetLoadInput } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AssetLoadInput",
+          "signature": "AssetLoadEntry | Readonly<Record<string, AssetLoadEntry>> | readonly AssetLoadEntry[]",
+          "signatureTokens": [
+            {
+              "text": "AssetLoadEntry",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetLoadEntry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetLoadEntry",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/assetLoadGroup.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/assetLoadGroup.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
+}

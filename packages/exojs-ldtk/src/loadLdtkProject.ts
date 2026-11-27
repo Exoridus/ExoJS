@@ -1,5 +1,4 @@
 import type { AssetFactoryContext } from '@codexo/exojs';
-import { Asset } from '@codexo/exojs';
 import type { TileSet } from '@codexo/exojs/tilemap';
 
 import { LdtkProject } from './LdtkProject';
@@ -21,7 +20,7 @@ import { validateLdtkData } from './validate';
  */
 export const loadLdtkProject = async (context: AssetFactoryContext): Promise<LdtkProject> => {
   const source = context.source;
-  const data = validateLdtkData(await context.dependencies.load(Asset.type('json', source)), source);
+  const data = validateLdtkData(await context.dependencies.load({ type: 'json', source }), source);
 
   const tilesetEntries = await Promise.all(
     data.defs.tilesets.map(async def => [def.uid, await loadLdtkTileset(def, source, context)] as const),

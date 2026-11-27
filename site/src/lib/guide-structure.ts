@@ -254,7 +254,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
         prerequisites: ['assets/loading-and-resources'],
         examples: ['sprites-textures/asset-catalogs'],
-        apiLinks: ['assets', 'asset', 'loader-scope', 'asset-ref'],
+        apiLinks: ['assets', 'asset-descriptor', 'loader-scope', 'asset-ref'],
       },
       {
         path: 'assets/device-variants',
@@ -384,7 +384,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'Distinguish layout, ink bounds, wrapping, and shaping constraints',
         ],
         prerequisites: ['assets/loading-and-resources', 'runtime/scene-graph'],
-        examples: ['text-fonts/typographic-styling', 'text-fonts/multiline-and-wrap'],
+        examples: ['text-fonts/typographic-styling', 'text-fonts/multiline-and-wrap', 'text-fonts/bitmap-text-basic'],
         apiLinks: ['text', 'bitmap-text', 'text-style'],
       },
       {
@@ -629,7 +629,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'Choose exactly one clock and preserve rotation and interpolation conventions',
         ],
         prerequisites: ['runtime/scenes-and-lifecycle'],
-        examples: [],
+        examples: ['physics/sprite-follows-body'],
         apiLinks: ['physics-world', 'physics-body', 'collider', 'box-shape', 'circle-shape', 'physics-binding'],
       },
       {

@@ -17,7 +17,7 @@ describe('PendingVoice without an eager audio graph', () => {
     scene: typeof import('#core/scene/SceneAudio');
     system: typeof import('#audio/AudioSystem');
     sound: typeof import('#audio/Sound');
-    stream: typeof import('#audio/AudioStream');
+    stream: typeof import('#audio/Music');
     effect: typeof import('#audio/AudioEffect');
     context: typeof import('#audio/audioContext');
   };
@@ -94,7 +94,7 @@ describe('PendingVoice without an eager audio graph', () => {
       scene: await import('#core/scene/SceneAudio'),
       system: await import('#audio/AudioSystem'),
       sound: await import('#audio/Sound'),
-      stream: await import('#audio/AudioStream'),
+      stream: await import('#audio/Music'),
       effect: await import('#audio/AudioEffect'),
       context: await import('#audio/audioContext'),
     };
@@ -169,7 +169,7 @@ describe('PendingVoice without an eager audio graph', () => {
     vi.spyOn(element, 'pause').mockImplementation(() => {
       mutable(element).paused = true;
     });
-    const asset = new api.stream.AudioStream(element);
+    const asset = new api.stream.Music(element);
     dispose.push(() => asset.destroy());
 
     return { asset, element };

@@ -1,4 +1,4 @@
-import { Asset, Assets, type AudioStream, LoadPriority, Scene, type Sound, Sprite, type Texture } from '@codexo/exojs';
+import { Assets, LoadPriority, type Music, Scene, type Sound, Sprite, type Texture } from '@codexo/exojs';
 
 import { Level1Assets, Level2Assets, MenuAssets } from './level-catalogs';
 import { TitleAssets } from './title-catalog';
@@ -43,7 +43,7 @@ class ParallelScene extends Scene {
 class MixedTypeScene extends Scene {
   private skyTexture!: Texture;
   private sky!: Sprite;
-  private ambient!: AudioStream;
+  private ambient!: Music;
   private coin!: Sound;
   private jump!: Sound;
   private levels!: unknown;
@@ -52,7 +52,7 @@ class MixedTypeScene extends Scene {
   async load() {
     [this.skyTexture, this.ambient, this.coin, this.jump, this.levels] = await Promise.all([
       this.loader.load('image/sky.png'),
-      this.loader.load(Asset.type('music', 'audio/ambient.ogg')),
+      this.loader.load({ type: 'music', source: 'audio/ambient.ogg' }),
       this.loader.load('audio/coin.wav'),
       this.loader.load('audio/jump.wav'),
       this.loader.load('data/levels.json'),
@@ -148,7 +148,7 @@ class SeamlessHandleScene extends Scene {
 class ValueAssetScene extends Scene {
   // #region guide:value-asset
   async load() {
-    const config = this.loader.get(Asset.type<{ startLevel: string }>('json', 'data/config.json'));
+    const config = this.loader.get({ type: 'json', source: 'data/config.json', parse: (raw: unknown) => raw as { startLevel: string } });
 
     await config.loaded;
     console.log(config.value.startLevel);
@@ -207,14 +207,14 @@ class ReleaseScene extends Scene {
 class MediaScene extends Scene {
   // #region guide:media-load
   async load() {
-    const intro = await this.loader.load(Asset.type('video', 'video/intro.mp4'));
-    const theme = await this.loader.load(Asset.type('music', 'audio/theme.ogg'));
+    const intro = await this.loader.load({ type: 'video', source: 'video/intro.mp4' });
+    const theme = await this.loader.load({ type: 'music', source: 'audio/theme.ogg' });
   }
   // #endregion guide:media-load
 
   private async precache(): Promise<void> {
     // #region guide:cache-source
-    await this.app.loader.cacheSource(Asset.type('video', 'video/intro.mp4'));
+    await this.app.loader.cacheSource({ type: 'video', source: 'video/intro.mp4' });
     // #endregion guide:cache-source
   }
 }
