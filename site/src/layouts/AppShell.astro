@@ -6,7 +6,6 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
 import '../styles/global.scss';
 
-import ChannelBanner from '../components/ChannelBanner.astro';
 import ChannelHead from '../components/ChannelHead.astro';
 import { ExoHeader } from '../components/ExoHeader';
 
@@ -53,7 +52,6 @@ const currentLocale = Astro.currentLocale === 'de' ? 'de' : 'en';
     <a class="skip-link" href="#main-content">
       Skip to main content
     </a>
-    <ChannelBanner locale={currentLocale} />
     <div class="app-shell">
       <ExoHeader client:load baseUrl={import.meta.env.BASE_URL} currentPath={currentPath} locale={currentLocale} />
       <main id="main-content" tabindex="-1" class="app-shell__main">

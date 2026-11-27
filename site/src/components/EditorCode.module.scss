@@ -150,7 +150,7 @@
   &[data-action='refresh'] {
     background: var(--accent-soft);
     border-color: var(--accent-line);
-    color: var(--accent);
+    color: var(--fg);
   }
 
   &:disabled {
@@ -237,6 +237,11 @@
 .menu-item:focus-visible {
   background: color-mix(in oklab, var(--bg-input), transparent 8%);
   outline: none;
+}
+
+.menu-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .menu-item:disabled {

@@ -37,6 +37,8 @@ const CAPABILITY_LABELS: Record<Capability, string> = {
 };
 
 const PREVIEW_SCROLL_KEYS = new Set([' ', 'PageUp', 'PageDown', 'End', 'Home', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown']);
+const PREVIEW_COMPLETE_EVENT = 'exo-preview-complete';
+const PREVIEW_COMPLETE_MODULE = `data:text/javascript,${encodeURIComponent(`window.dispatchEvent(new Event('${PREVIEW_COMPLETE_EVENT}'));`)}`;
 
 export interface CanvasSizeEvent {
   height: number;
@@ -64,6 +66,7 @@ export interface EditorPreviewProps {
   runId?: number;
   onCanvasSize?(event: CanvasSizeEvent): void;
   onRendererStatus?(status: ExampleRendererStatus | null): void;
+  onExecutionStatus?(status: 'updated' | 'error'): void;
   onAssets?(sources: readonly string[] | null): void;
 }
 
@@ -72,6 +75,7 @@ export const EditorPreview = ({
   executionModules,
   onCanvasSize,
   onRendererStatus,
+  onExecutionStatus,
   onAssets,
   output,
   ref,
@@ -87,10 +91,12 @@ export const EditorPreview = ({
   }>({ id: 0, modules: null, error: null });
   const requestRef = useRef(previewRequest);
   const rendererStatusRef = useRef(onRendererStatus);
+  const executionStatusRef = useRef(onExecutionStatus);
   const assetsRef = useRef(onAssets);
   const rendererCleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     rendererStatusRef.current = onRendererStatus;
+    executionStatusRef.current = onExecutionStatus;
     assetsRef.current = onAssets;
   });
   useEffect(() => () => rendererCleanupRef.current?.(), []);
@@ -102,6 +108,9 @@ export const EditorPreview = ({
   const outputRef = useRef<PreviewConsole | undefined>(output);
   const canvasMutationObserverRef = useRef<MutationObserver | null>(null);
   const canvasAttributeObserverRef = useRef<MutationObserver | null>(null);
+  const canvasMeasureRef = useRef<(() => void) | null>(null);
+  const canvasMeasureFrameRef = useRef(0);
+  const stageSizeRef = useRef({ width: STAGE_WIDTH, height: STAGE_HEIGHT });
   const currentCanvasRef = useRef({ width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 });
 
   // Latest-value refs for the callbacks below - the iframe load handler and
@@ -142,15 +151,22 @@ export const EditorPreview = ({
     rendererStatusRef.current?.(null);
     assetsRef.current?.(null);
     outputRef.current?.detach();
+
+    if (error) {
+      executionStatusRef.current?.('error');
+    }
+
     disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
+    cancelAnimationFrame(canvasMeasureFrameRef.current);
+    canvasMeasureRef.current = null;
     currentCanvasRef.current = { width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 };
-    // Before the example reports its canvas, the frame already takes the
-    // stage's size scaled to the surface, so the iframe never sits at a
-    // different size or position from the one it settles on: the transform
-    // leaves the iframe's inner viewport alone, so this can be set early.
-    const zoom = measureFillZoom(rootRef.current, STAGE_WIDTH, STAGE_HEIGHT);
-    rootRef.current?.style.setProperty('--canvas-w', `${STAGE_WIDTH}px`);
-    rootRef.current?.style.setProperty('--canvas-h', `${STAGE_HEIGHT}px`);
+    // Give responsive phone scenes a useful portrait host. A fixed-world
+    // sizing policy reports its fitted canvas below and keeps its own aspect.
+    const stage = measureStageSize(rootRef.current);
+    stageSizeRef.current = stage;
+    const zoom = measureFillZoom(rootRef.current, stage.width, stage.height);
+    rootRef.current?.style.setProperty('--canvas-w', `${stage.width}px`);
+    rootRef.current?.style.setProperty('--canvas-h', `${stage.height}px`);
     rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
     onCanvasSize?.({ width: 0, height: 0, zoom: 1 });
 
@@ -166,11 +182,43 @@ export const EditorPreview = ({
   }, [onCanvasSize, sourceCode, executionModules, runId, selectedVersionId, exampleMeta?.path]);
 
   useEffect(() => {
+    let settleFrame = 0;
+    let resizeFrame = 0;
+    let wasVisible = false;
+
     const recalculateZoom = (): void => {
+      if (!rootRef.current?.getClientRects().length) {
+        wasVisible = false;
+
+        return;
+      }
+
+      const becameVisible = !wasVisible;
+      wasVisible = true;
+      const stage = measureStageSize(rootRef.current);
+
+      if (becameVisible || stage.width !== stageSizeRef.current.width || stage.height !== stageSizeRef.current.height) {
+        stageSizeRef.current = stage;
+        const zoom = measureFillZoom(rootRef.current, stage.width, stage.height);
+        currentCanvasRef.current = { ...currentCanvasRef.current, ...stage, zoom };
+        rootRef.current?.style.setProperty('--canvas-w', `${stage.width}px`);
+        rootRef.current?.style.setProperty('--canvas-h', `${stage.height}px`);
+        rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
+        // A Run can finish while the Demo tab is hidden. Restore its intended
+        // host on reveal, then let the sizing policy settle before adopting
+        // the canvas, including fixed canvases whose attributes stay equal.
+        cancelAnimationFrame(settleFrame);
+        settleFrame = requestAnimationFrame(() => {
+          settleFrame = requestAnimationFrame(() => canvasMeasureRef.current?.());
+        });
+
+        return;
+      }
+
       const { width, height, resolutionWidth, resolutionHeight } = currentCanvasRef.current;
 
       if (!width) {
-        rootRef.current?.style.setProperty('--preview-zoom', String(measureFillZoom(rootRef.current, STAGE_WIDTH, STAGE_HEIGHT)));
+        rootRef.current?.style.setProperty('--preview-zoom', String(measureFillZoom(rootRef.current, stage.width, stage.height)));
 
         return;
       }
@@ -179,6 +227,11 @@ export const EditorPreview = ({
       currentCanvasRef.current = { width, height, zoom, resolutionWidth, resolutionHeight };
       rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
       onCanvasSize?.({ width: resolutionWidth, height: resolutionHeight, zoom });
+    };
+
+    const scheduleZoom = (): void => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(recalculateZoom);
     };
 
     const preventScroll = (event: KeyboardEvent): void => {
@@ -193,20 +246,24 @@ export const EditorPreview = ({
 
     // Responsive layout can settle after window.resize has measured an intermediate width.
     const surface = rootRef.current?.closest<HTMLElement>('[data-preview-surface]');
-    const surfaceObserver = new ResizeObserver(recalculateZoom);
+    const surfaceObserver = new ResizeObserver(scheduleZoom);
 
     if (surface) {
       surfaceObserver.observe(surface);
     }
 
-    window.addEventListener('resize', recalculateZoom);
+    window.addEventListener('resize', scheduleZoom);
     window.addEventListener('keydown', preventScroll);
 
     return () => {
+      cancelAnimationFrame(settleFrame);
+      cancelAnimationFrame(resizeFrame);
+      cancelAnimationFrame(canvasMeasureFrameRef.current);
       surfaceObserver.disconnect();
-      window.removeEventListener('resize', recalculateZoom);
+      window.removeEventListener('resize', scheduleZoom);
       window.removeEventListener('keydown', preventScroll);
       disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
+      canvasMeasureRef.current = null;
       outputRef.current?.detach();
     };
   }, [onCanvasSize]);
@@ -277,11 +334,27 @@ export const EditorPreview = ({
     // device pixel ratio would feed back into an example that sizes its canvas
     // to that window, doubling it on every resize.
     const measure = (): void => {
-      applyCanvasSize(canvas.clientWidth || canvas.width, canvas.clientHeight || canvas.height, canvas.width, canvas.height);
+      if (!rootRef.current?.getClientRects().length || !canvas.isConnected || canvas.ownerDocument !== iframeRef.current?.contentDocument) {
+        return;
+      }
+
+      // A hidden Demo tab has no CSS box. Its backing store can still carry
+      // the initial resolution and DPR; it must never become the host size.
+      applyCanvasSize(canvas.clientWidth, canvas.clientHeight, canvas.width, canvas.height);
     };
 
-    measure();
-    canvasAttributeObserverRef.current = new MutationObserver(measure);
+    // A sizing policy writes canvas styles from its host ResizeObserver.
+    // Changing that host synchronously from a canvas mutation feeds back into
+    // the same observer delivery and browsers report a resize loop. Adopt the
+    // settled canvas on the next frame, and never measure a detached surface.
+    const scheduleMeasure = (): void => {
+      cancelAnimationFrame(canvasMeasureFrameRef.current);
+      canvasMeasureFrameRef.current = requestAnimationFrame(measure);
+    };
+
+    canvasMeasureRef.current = scheduleMeasure;
+    scheduleMeasure();
+    canvasAttributeObserverRef.current = new MutationObserver(scheduleMeasure);
     canvasAttributeObserverRef.current.observe(canvas, {
       attributes: true,
       attributeFilter: ['width', 'height', 'style'],
@@ -342,12 +415,20 @@ export const EditorPreview = ({
       const report = (event: Event): void => {
         const status = readRendererStatus((event as CustomEvent<unknown>).detail);
 
-        if (status) {
+        if (status && loadedId === String(requestRef.current.id)) {
           rendererStatusRef.current?.(status);
         }
       };
 
       iframeWindow.addEventListener('exo-renderer-status', report);
+
+      const complete = (): void => {
+        if (loadedId === String(requestRef.current.id)) {
+          executionStatusRef.current?.('updated');
+        }
+      };
+
+      iframeWindow.addEventListener(PREVIEW_COMPLETE_EVENT, complete, { once: true });
 
       const forwardShortcut = (event: KeyboardEvent): void => {
         const target = event.target as HTMLElement | null;
@@ -383,6 +464,7 @@ export const EditorPreview = ({
       rendererCleanupRef.current = () => {
         window.clearInterval(assetTimer);
         iframeWindow.removeEventListener('exo-renderer-status', report);
+        iframeWindow.removeEventListener(PREVIEW_COMPLETE_EVENT, complete);
         iframeWindow.removeEventListener('keydown', forwardShortcut);
       };
 
@@ -393,21 +475,41 @@ export const EditorPreview = ({
 
       iframeWindow.__EXAMPLE_META__ = exampleRef.current;
       installPreviewErrorHandlers(iframeWindow, iframeBody, error => {
-        sink?.writeException(generation, error.summary, error.details ?? null);
+        if (loadedId === String(requestRef.current.id)) {
+          sink?.writeException(generation, error.summary, error.details ?? null);
+          executionStatusRef.current?.('error');
+        }
       });
 
       const modulesError = iframeBody.ownerDocument.documentElement.dataset.previewModulesError;
 
       if (modulesError) {
         sink?.writeException(generation, modulesError, null);
+        executionStatusRef.current?.('error');
         renderExecutionError(iframeBody);
 
         return;
       }
     }
 
+    const reportExecutionFailure = (error?: PreviewErrorEntry): void => {
+      if (loadedId !== String(requestRef.current.id)) {
+        return;
+      }
+
+      if (error) {
+        const sink = outputRef.current;
+        sink?.writeException(sink.generation, error.summary, error.details ?? null);
+        renderExecutionError(iframeBody);
+      }
+
+      executionStatusRef.current?.('error');
+    };
+
     iframeBody.tabIndex = -1;
-    void executePreviewSource(iframeBody, source, exampleRef.current);
+    void executePreviewSource(iframeBody, source, exampleRef.current, reportExecutionFailure).catch(error => {
+      reportExecutionFailure(createPreviewErrorEntry(error));
+    });
     watchForCanvas(iframeBody);
 
     if (document.activeElement === document.body || document.activeElement === iframe) {
@@ -442,6 +544,7 @@ export const EditorPreview = ({
           const sink = outputRef.current;
 
           sink?.writeException(sink.generation, 'The preview iframe failed to load.', null);
+          executionStatusRef.current?.('error');
         }}
         onPointerDown={() => focusPreviewSurface(iframeRef.current)}
         onKeyDown={(event: ReactKeyboardEvent<HTMLIFrameElement>) => {
@@ -457,26 +560,39 @@ export const EditorPreview = ({
   );
 };
 
-/** The stage preview.html lays every example out on; the frame takes this size until the canvas reports its own. */
+/** Desktop's starting stage; each canvas can report its own size. */
 const STAGE_WIDTH = 1280;
 const STAGE_HEIGHT = 720;
 
+const measureSurfaceWidth = (root: HTMLElement | null): number => {
+  const width = root?.closest<HTMLElement>('[data-preview-surface]')?.clientWidth ?? 0;
+
+  return width > 0 ? width : window.innerWidth;
+};
+
+const measureStageSize = (root: HTMLElement | null): { width: number; height: number } => {
+  if (!window.matchMedia('(max-width: 760px)').matches) {
+    return { width: STAGE_WIDTH, height: STAGE_HEIGHT };
+  }
+
+  return {
+    width: measureSurfaceWidth(root),
+    height: Math.min(440, Math.floor(window.innerHeight * 0.65)),
+  };
+};
+
 // Scale the canvas to fill the available preview-panel width rather than
 // sitting at native size with empty gutters. The iframe itself is a fixed
-// 1280x720 stage that uniformly transform-scales its content (see
-// public/preview.html), so scaling the outer container up is crop-free and
-// keeps DOM overlays aligned - unlike engine-level `fill`, which would resize
-// the backing store and crop fixed coordinates. We measure the surrounding
-// `.preview-surface` (a layout-driven width, not the shrink-to-fit wrapper)
-// and allow upscaling past 1, capping height at ~72vh so a small native canvas
-// never overflows the viewport.
+// stage reported by the canvas. Uniform transform scaling keeps DOM overlays
+// aligned without changing the example's sizing policy or fixed coordinates.
+// Measure the layout-driven surface, not the shrink-to-fit wrapper, and cap
+// the preview at 65vh so a small native canvas never overflows the viewport.
 const measureFillZoom = (root: HTMLElement | null, width: number, height: number): number => {
   if (!width || !height) {
     return 1;
   }
 
-  const surface = root?.closest<HTMLElement>('[data-preview-surface]');
-  const availableWidth = surface?.clientWidth ?? window.innerWidth;
+  const availableWidth = measureSurfaceWidth(root);
   const widthZoom = availableWidth / width;
   const heightZoom = (window.innerHeight * 0.65) / height;
 
@@ -502,9 +618,9 @@ const buildPreviewUrl = (options: { noCache: number; sourceKey?: string; modules
 };
 
 const focusPreviewSurface = (iframe: HTMLIFrameElement | null): void => {
-  iframe?.focus();
+  iframe?.focus({ preventScroll: true });
   iframe?.contentWindow?.focus();
-  iframe?.contentDocument?.body?.focus();
+  iframe?.contentDocument?.body?.focus({ preventScroll: true });
 };
 
 const installPreviewErrorHandlers = (
@@ -516,6 +632,7 @@ const installPreviewErrorHandlers = (
 
   iframeWindow.onerror = (message, _source, _lineno, _colno, error) => {
     const previewError = createPreviewErrorEntry(error, message);
+    reportError(previewError);
 
     if (isRecoverablePreviewError(previewError.summary)) {
       blankPreviewSurface(iframeBody);
@@ -523,7 +640,6 @@ const installPreviewErrorHandlers = (
       return true;
     }
 
-    reportError(previewError);
     renderExecutionError(iframeBody);
 
     return true;
@@ -531,6 +647,7 @@ const installPreviewErrorHandlers = (
 
   iframeWindow.onunhandledrejection = (event: PromiseRejectionEvent) => {
     const previewError = createPreviewErrorEntry(event.reason);
+    reportError(previewError);
 
     if (isRecoverablePreviewError(previewError.summary)) {
       event.preventDefault();
@@ -540,12 +657,16 @@ const installPreviewErrorHandlers = (
     }
 
     event.preventDefault();
-    reportError(previewError);
     renderExecutionError(iframeBody);
   };
 };
 
-const executePreviewSource = async (iframeBody: HTMLBodyElement, sourceCode: string, exampleMeta: Example | null): Promise<void> => {
+const executePreviewSource = async (
+  iframeBody: HTMLBodyElement,
+  sourceCode: string,
+  exampleMeta: Example | null,
+  onFailure: (error?: PreviewErrorEntry) => void,
+): Promise<void> => {
   const required = exampleMeta?.capabilities ?? [];
 
   if (required.length > 0) {
@@ -558,6 +679,7 @@ const executePreviewSource = async (iframeBody: HTMLBodyElement, sourceCode: str
 
     if (missing && missing.length > 0) {
       renderCapabilityOverlay(iframeBody, required, missing);
+      onFailure();
 
       return;
     }
@@ -567,7 +689,16 @@ const executePreviewSource = async (iframeBody: HTMLBodyElement, sourceCode: str
 
   const script = iframeBody.ownerDocument.createElement('script');
   script.type = 'module';
-  script.textContent = `${sourceCode}\n`;
+  // Inline modules have no load event. A separate, constant module signals
+  // completion after the user's last statement and top-level awaits. Keeping
+  // the entry inline preserves its relative imports and import.meta.url;
+  // the notifier has its own scope and cannot collide with user bindings.
+  script.textContent = `${sourceCode}\n;await import(${JSON.stringify(PREVIEW_COMPLETE_MODULE)});\n`;
+  script.addEventListener(
+    'error',
+    () => onFailure({ summary: 'The preview module could not load. Check its imports and the browser console.' }),
+    { once: true },
+  );
   iframeBody.appendChild(script);
 };
 
@@ -579,10 +710,9 @@ const executePreviewSource = async (iframeBody: HTMLBodyElement, sourceCode: str
  * module graph is per realm, so a signal imported here would be a different
  * object from the one the sample's engine dispatches on.
  *
- * Kept out of the sample's own module for the reason the gate exists at all:
- * the editor shows the visitor's code, and what runs must be exactly that.
- * Which also rules out reading the sample's variables - a visitor names their
- * application whatever they like, or builds none.
+ * Kept in its own module scope so it cannot collide with the sample's
+ * bindings. The gate never reads the sample's variables: a visitor names
+ * their application whatever they like, or builds none.
  *
  * The gesture needs no handling of its own. The engine resumes a suspended
  * context on a pointer or key event anywhere in the realm, so clicking the

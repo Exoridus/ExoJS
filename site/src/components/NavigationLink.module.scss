@@ -86,7 +86,7 @@
 
 .badge--advanced {
   border-color: color-mix(in oklab, var(--violet), transparent 55%);
-  color: var(--violet);
+  color: var(--fg);
 }
 
 @media (width <= 1119px) {

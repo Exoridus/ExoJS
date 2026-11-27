@@ -183,6 +183,8 @@
     "test:browser:webgpu:firefox:isolated": "vitest run --project=browser-webgpu-firefox-isolated",
     "test:browser:assets": "vitest run --project=browser-assets-chromium",
     "test:browser:core": "vitest run --project=browser-core-chromium",
+    "test:browser:animated:webkit": "vitest run --project=browser-animated-images-webkit",
+    "test:browser:animated:safari": "vitest run --project=browser-animated-images-safari",
     "test:browser:audio": "vitest run --project=browser-audio-chromium",
     "test:bench:browser": "vitest run --project=bench-browser",
     "test:browser:tilemap": "vitest run --project=browser-tilemap-chromium",

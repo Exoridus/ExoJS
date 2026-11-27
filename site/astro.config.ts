@@ -49,6 +49,10 @@ export default defineConfig({
   ],
   output: 'static',
   base: siteBuild.basePath,
+  redirects: {
+    '/en/playground/tools': `${siteBuild.basePath}en/playground/`,
+    '/de/playground/tools': `${siteBuild.basePath}de/playground/`,
+  },
   i18n: {
     locales: ['en', 'de'],
     defaultLocale: 'en',

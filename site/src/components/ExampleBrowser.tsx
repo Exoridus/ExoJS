@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { getNextPlaygroundHighlight, getPlaygroundDefault } from '../lib/curation-catalog';
 import {
   getExampleByPath,
   getExamplesList,
@@ -9,6 +10,7 @@ import {
   loadExamples,
   onExamplesLoaded,
 } from '../lib/example-store';
+import { activateModalFocus } from '../lib/modal-focus';
 import { playgroundDrafts } from '../lib/playground-drafts';
 import { detectRuntimeSupport, onRuntimeDetected } from '../lib/runtime-support';
 import type { Example, ExamplesMap } from '../lib/types';
@@ -49,13 +51,16 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
   const [searchRequest, setSearchRequest] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isCompactMobile, setIsCompactMobile] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
   const [examplesSheetOpen, setExamplesSheetOpen] = useState(false);
   const [examplesSheetOpener, setExamplesSheetOpener] = useState<HTMLElement | null>(null);
+  const rootRef = useRef<HTMLElement | null>(null);
+  const navigationRef = useRef<HTMLElement | null>(null);
+  const sheetNavigationRef = useRef<HTMLDivElement | null>(null);
   const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
   const mobileExamplesButtonRef = useRef<HTMLButtonElement | null>(null);
   const selectedVersionRef = useRef<VersionInfo | null>(null);
   const activeExampleRef = useRef<Example | null>(null);
-  const bodyOverflowBeforeDrawerOpenRef = useRef<string | null>(null);
   const breakpointRef = useRef<{ desktop: boolean; compact: boolean } | null>(null);
 
   useEffect(() => {
@@ -78,16 +83,24 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     activeExampleRef.current = activeExample;
   }, [activeExample]);
 
-  const unlockBodyScroll = useCallback((): void => {
-    if (bodyOverflowBeforeDrawerOpenRef.current !== null) {
-      document.body.style.overflow = bodyOverflowBeforeDrawerOpenRef.current;
-      bodyOverflowBeforeDrawerOpenRef.current = null;
-    }
-  }, []);
+  useEffect(() => {
+    const root = rootRef.current;
+    const header = document.querySelector('[data-app-header]');
 
-  const lockBodyScroll = useCallback((): void => {
-    bodyOverflowBeforeDrawerOpenRef.current ??= document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (!root || !header) {
+      return;
+    }
+
+    const measureHeader = (): void => {
+      root.style.setProperty('--playground-header-height', `${header.getBoundingClientRect().height}px`);
+    };
+
+    const observer = new ResizeObserver(measureHeader);
+
+    observer.observe(header);
+    measureHeader();
+
+    return () => observer.disconnect();
   }, []);
 
   const resolveSelectedVersion = useCallback((): VersionInfo | null => {
@@ -144,7 +157,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       return;
     }
 
-    const example = requested ?? getExamplesList(versionId)[0] ?? null;
+    const example = requested ?? getPlaygroundDefault(getExamplesList(versionId));
     setSelectionError(example ? null : 'This version has no examples. Open the current Playground to continue.');
     setActiveExample(example);
 
@@ -241,9 +254,8 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       unsubscribeExamples();
       unsubscribeVersions();
       unsubscribeRuntime();
-      unlockBodyScroll();
     };
-  }, [baseUrl, syncExampleState, syncVersionState, unlockBodyScroll]);
+  }, [baseUrl, syncExampleState, syncVersionState]);
 
   useEffect(() => {
     const desktopMediaQuery = window.matchMedia('(min-width: 1120px)');
@@ -263,6 +275,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       // The synchronous initial call is the SSR-safe form of that pattern.
       /* eslint-disable @eslint-react/set-state-in-effect */
       setIsCompactMobile(compact);
+      setIsDesktop(desktop);
       setSidebarOpen(desktop && !compact);
 
       if (!compact) {
@@ -328,15 +341,19 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     return () => window.removeEventListener('popstate', onPopState);
   }, [resolveActiveExample]);
 
-  useEffect(() => {
-    if (sidebarOpen && !window.matchMedia('(min-width: 1120px)').matches && !isCompactMobile) {
-      lockBodyScroll();
+  const drawerOpen = sidebarOpen && !isDesktop && !isCompactMobile;
 
+  useEffect(() => {
+    if (!drawerOpen || !navigationRef.current) {
       return;
     }
 
-    unlockBodyScroll();
-  }, [isCompactMobile, lockBodyScroll, sidebarOpen, unlockBodyScroll]);
+    return activateModalFocus(
+      navigationRef.current,
+      () => setSidebarOpen(false),
+      () => sidebarToggleRef.current,
+    );
+  }, [drawerOpen]);
 
   useEffect(() => {
     const focusFilter = (event: KeyboardEvent): void => {
@@ -353,12 +370,26 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
           'input, textarea, select, [role="textbox"], [role="searchbox"], [contenteditable]:not([contenteditable="false"]), .monaco-editor',
         )
       ) {
+        const modal = target?.closest?.('dialog[open], [aria-modal="true"]');
+
+        if (modal && modal !== navigationRef.current && !modal.contains(sheetNavigationRef.current)) {
+          return;
+        }
+
         event.preventDefault();
+        setSearchRequest(request => request + 1);
+
+        if (modal) {
+          return;
+        }
+
         const compact = window.matchMedia('(max-width: 760px)').matches;
         // A queued media-query event must not close the navigation immediately
         // after this shortcut opens it for the live viewport.
-        breakpointRef.current = { compact, desktop: window.matchMedia('(min-width: 1120px)').matches };
+        const desktop = window.matchMedia('(min-width: 1120px)').matches;
+        breakpointRef.current = { compact, desktop };
         setIsCompactMobile(compact);
+        setIsDesktop(desktop);
 
         if (compact) {
           setExamplesSheetOpener(document.activeElement as HTMLElement | null);
@@ -366,8 +397,6 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
         } else {
           setSidebarOpen(true);
         }
-
-        setSearchRequest(request => request + 1);
       }
     };
 
@@ -375,24 +404,6 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
 
     return () => document.removeEventListener('keydown', focusFilter);
   }, []);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (!sidebarOpen || window.matchMedia('(min-width: 1120px)').matches) {
-        return;
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setSidebarOpen(false);
-        window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
-      }
-    };
-
-    document.addEventListener('keydown', onKeyDown);
-
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [sidebarOpen]);
 
   const selectExample = (path: string): void => {
     const selected = selectedVersionRef.current;
@@ -440,17 +451,25 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
 
   const toggleSidebar = (): void => {
     setSidebarOpen(value => !value);
-    window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
+
+    if (isDesktop) {
+      window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
+    }
   };
 
   return (
     // The grid has a column for the navigation only while the navigation is
     // actually rendered: a `display: none` sidebar leaves its track behind, and
     // the preview then folds itself into the 280px meant for the list.
-    <section className={css(styles, 'root')} data-sidebar={!isCompactMobile && sidebarOpen ? 'open' : 'closed'}>
+    <section ref={rootRef} className={css(styles, 'root')} data-sidebar={!isCompactMobile && sidebarOpen ? 'open' : 'closed'}>
       {!isCompactMobile && (
         <aside
           id="playground-navigation"
+          ref={navigationRef}
+          role={drawerOpen ? 'dialog' : undefined}
+          aria-modal={drawerOpen ? true : undefined}
+          aria-label="Examples"
+          tabIndex={-1}
           className={css(styles, 'side-content')}
           data-open={sidebarOpen ? 'true' : undefined}
           aria-hidden={!sidebarOpen}
@@ -484,6 +503,9 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
             onRecoverCurrent={openCurrent}
             onRetryCatalog={() => selectedVersion && void loadExamples(selectedVersion.id)}
             activeExample={activeExample}
+            nextExample={getNextPlaygroundHighlight(Array.from(examples.values()).flat(), activeExample?.path ?? '')}
+            compact={isCompactMobile}
+            onSelectExample={selectExample}
             catalogLoadError={loadError}
             selectedVersionId={selectedVersion?.id ?? ''}
             showSidebarToggle={!isCompactMobile}
@@ -510,12 +532,22 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
           </nav>
         )}
       </div>
-      {!isCompactMobile && sidebarOpen && <div className={css(styles, 'backdrop')} onClick={() => setSidebarOpen(false)} />}
+      {!isCompactMobile && sidebarOpen && (
+        <button
+          className={css(styles, 'backdrop')}
+          data-modal-backdrop
+          type="button"
+          tabIndex={-1}
+          aria-label="Close examples"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {isCompactMobile && (
         <BottomSheet open={examplesSheetOpen} title="Examples" opener={examplesSheetOpener} onOpenChange={setExamplesSheetOpen}>
-          <div className={css(styles, 'sheet-navigation')}>
+          <div ref={sheetNavigationRef} className={css(styles, 'sheet-navigation')}>
             <Navigation
               focusSearchRequest={searchRequest}
+              locale={locale}
               examples={examples}
               activeExample={activeExample}
               selectedVersion={selectedVersion}
