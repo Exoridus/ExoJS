@@ -12,10 +12,11 @@
  */
 
 import { type Light, LightmapLighting, LineLight, PointLight, PolygonOccluder, SpotLight } from '@codexo/exojs/lighting';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { page, server } from 'vitest/browser';
 
 import { Color } from '#core/Color';
+import { TextureFormat } from '#rendering/types';
 import { View } from '#rendering/View';
 
 import type { LightmapBackend } from '../../../packages/exojs-lighting/src/backends/LightmapBackend';
@@ -577,10 +578,25 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
       }
     });
 
-    test.for((['cpu', 'gpu'] as const).map(filler => ({ filler })))(
-      'finite LineLight softness widens the distant edge ($filler filler)',
-      async ({ filler }) => {
+    const softnessCases = [
+      { name: 'CPU filler', filler: 'cpu', withoutFloatTarget: false },
+      { name: 'GPU filler', filler: 'gpu', withoutFloatTarget: false },
+      ...(backend === 'webgl2' ? ([{ name: 'CPU fallback', filler: 'gpu', withoutFloatTarget: true }] as const) : []),
+    ] as const;
+
+    test.for(softnessCases)(
+      'finite LineLight softness widens the distant shadow edge and keeps contact narrow ($name)',
+      async ({ filler, withoutFloatTarget }) => {
         const host = await createContactHost(backend);
+
+        if (withoutFloatTarget) {
+          const supportsColorFormat = host.context.supportsColorFormat.bind(host.context);
+
+          vi.spyOn(host.context, 'supportsColorFormat').mockImplementation(
+            format => format !== TextureFormat.Rgba16F && supportsColorFormat(format),
+          );
+        }
+
         const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
         const frameBackend = lighting.backend as LightmapBackend;
         // All four emitters lie on the same horizontal edge ray: geometric
@@ -613,9 +629,10 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
             throw new Error('Finite LineLight softness readback unavailable');
           }
 
-          expect(frameBackend.shadowFiller).toBe(filler);
+          const expectedFiller = filler === 'gpu' && !host.context.supportsColorFormat(TextureFormat.Rgba16F) ? 'cpu' : filler;
+          expect(frameBackend.shadowFiller).toBe(expectedFiller);
 
-          if (__EXOJS_CAPTURE_LIGHTMAP_REFERENCES__) {
+          if (__EXOJS_CAPTURE_LIGHTMAP_REFERENCES__ && expectedFiller === filler) {
             await captureLineSource(backend, '0-penumbra-hard', filler, open, hard);
             await captureLineSource(backend, '0-penumbra-soft', filler, open, soft);
           }
@@ -637,7 +654,7 @@ export const describeLightmapReference = (backend: ContactBackend): void => {
           const softNear = framePenumbraWidth(soft, 110);
           const softFar = framePenumbraWidth(soft, 230);
 
-          console.info('finite line penumbra width', { backend, filler, hardFar, softNear, softFar });
+          console.info('finite line penumbra width', { backend, filler: expectedFiller, hardFar, softNear, softFar });
 
           expect(hardFar).toBeGreaterThanOrEqual(0);
           expect(hardFar).toBeLessThanOrEqual(8);
