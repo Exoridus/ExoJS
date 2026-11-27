@@ -1,16 +1,14 @@
 {
   "stamps": {
     "chromium": {
-      "measuredAt": "2026-10-07",
-      "commit": "8697b8604",
-      "platform": "win32",
-      "release": "0.19.1"
+      "measuredAt": "2026-11-27",
+      "commit": "67fc46ff1",
+      "platform": "win32"
     },
     "firefox": {
-      "measuredAt": "2026-10-07",
-      "commit": "8697b8604",
-      "platform": "win32",
-      "release": "0.19.1"
+      "measuredAt": "2026-11-27",
+      "commit": "67fc46ff1",
+      "platform": "win32"
     },
     "webkit": {
       "measuredAt": "2026-09-22",
@@ -272,6 +270,48 @@
       "delta": 0
     },
     {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "cross-backend-parity",
+      "feature": "CrtFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "oracle-agreement",
+      "feature": "CrtFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "renders-something",
+      "feature": "CrtFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "3808/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "repeat-render-determinism",
+      "feature": "CrtFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "filter/drop-shadow-hard-offset",
       "property": "cross-backend-parity",
       "feature": "DropShadowFilter",
@@ -1532,6 +1572,48 @@
       "delta": 0
     },
     {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "cross-backend-parity",
+      "feature": "CrtFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "oracle-agreement",
+      "feature": "CrtFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "renders-something",
+      "feature": "CrtFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "3808/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "repeat-render-determinism",
+      "feature": "CrtFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "filter/drop-shadow-hard-offset",
       "property": "cross-backend-parity",
       "feature": "DropShadowFilter",
@@ -2785,6 +2867,48 @@
       "scene": "filter/color-matrix-channel-swap",
       "property": "repeat-render-determinism",
       "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "cross-backend-parity",
+      "feature": "CrtFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "oracle-agreement",
+      "feature": "CrtFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "renders-something",
+      "feature": "CrtFilter",
+      "browser": "firefox",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "3808/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "repeat-render-determinism",
+      "feature": "CrtFilter",
       "browser": "firefox",
       "backend": "webgl2",
       "support": "supported",
@@ -4045,6 +4169,48 @@
       "scene": "filter/color-matrix-channel-swap",
       "property": "repeat-render-determinism",
       "feature": "ColorMatrixFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "cross-backend-parity",
+      "feature": "CrtFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "oracle-agreement",
+      "feature": "CrtFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "renders-something",
+      "feature": "CrtFilter",
+      "browser": "firefox",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "3808/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/crt-frozen-asymmetric",
+      "property": "repeat-render-determinism",
+      "feature": "CrtFilter",
       "browser": "firefox",
       "backend": "webgpu",
       "support": "supported",
