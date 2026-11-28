@@ -139,11 +139,12 @@ class BossIntroSequenceScene extends Scene {
     this.view.reset(320, height / 2, width, height);
     this.dialogue.layout = { maxWidth: width - 300 };
     this.world.fillColor = new Color(9, 15, 30);
-    this.world.drawRectangle(0, 0, worldWidth, height);
+    // Wider than the playfield, so the camera following the player never shows past its edge.
+    this.world.drawRectangle(-width, 0, worldWidth + width * 2, height);
 
-    for (let i = 0; i < 260; i++) {
+    for (let i = 0; i < 360; i++) {
       this.world.fillColor = new Color(170, 195, 230, 0.25 + (i % 4) * 0.15);
-      this.world.drawCircle((i * 137) % worldWidth, (i * 193) % height, 1 + (i % 2));
+      this.world.drawCircle(((i * 137) % (worldWidth + width * 2)) - width, (i * 193) % height, 1 + (i % 2));
     }
 
     this.player.fillColor = new Color(240, 217, 138);
