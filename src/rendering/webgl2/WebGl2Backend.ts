@@ -306,6 +306,8 @@ interface RetainedCaptureFrame {
    * finalizes - context loss - leaves them unstamped and the set invalid).
    */
   readonly instructions: RetainedBatchInstruction[];
+  /** Set by {@link WebGl2Backend._poisonRetainedCaptures}: the set can never validate, so capture end skips the finalize. */
+  poisoned: boolean;
 }
 
 // Scratch texture unit used to sync a RenderTexture target's color texture
@@ -2491,7 +2493,7 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     bundle._beginCapture();
-    this._retainedCaptures.push({ set, bundle, payloads: [], instructions: [] });
+    this._retainedCaptures.push({ set, bundle, payloads: [], instructions: [], poisoned: false });
   }
 
   /**
@@ -2520,7 +2522,9 @@ export class WebGl2Backend implements RenderBackend {
     // In-bounds: found above.
     const frame = this._retainedCaptures.splice(index, 1)[0]!;
 
-    if (frame.payloads.length === 0) {
+    // A poisoned set never validates and re-records on its next frame, so
+    // uploading its instance bytes would be pure waste (WebGPU parity).
+    if (frame.payloads.length === 0 || frame.poisoned) {
       return;
     }
 
@@ -2689,6 +2693,7 @@ export class WebGl2Backend implements RenderBackend {
    */
   public _poisonRetainedCaptures(): void {
     for (const frame of this._retainedCaptures) {
+      frame.poisoned = true;
       frame.set.append(this._createPoisonInstruction(frame.bundle));
     }
   }

@@ -30,6 +30,7 @@ import { RetainedContainer } from '#rendering/RetainedContainer';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { Text } from '#rendering/text/Text';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
+import { WebGl2RetainedGroupResources } from '#rendering/webgl2/WebGl2RetainedGroupResources';
 import { WebGl2TextRenderer } from '#rendering/webgl2/WebGl2TextRenderer';
 
 import { readWebGl2Pixel } from './_backendSetup';
@@ -308,6 +309,14 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       }
 
       expect(fragmentOf(scene.group).instructions?.hasRecording).toBe(true);
+
+      // A poisoned set still reports a recording; only an actual replay proves
+      // the re-record took.
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
+
+      render(backend, scene.root);
+      expect(replaySpy).toHaveBeenCalled();
+      replaySpy.mockRestore();
       expect(totalInk(readCanvas(backend))).toBeGreaterThan(0);
     } finally {
       scene.root.destroy();
@@ -417,6 +426,38 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     } finally {
       WebGl2TextRenderer.prototype.configureRetainedVao = original;
       scene.root.destroy();
+      backend.destroy();
+    }
+  });
+  test('cell 9 — a window poisoned by a second Text flush uploads no instance bytes on its re-record frames', async () => {
+    const backend = await createBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const nested = new RetainedContainer();
+    const outer = new Text('MW', { fillColor: Color.white, fontSize: 20 });
+    const inner = new Text('MW', { fillColor: Color.white, fontSize: 20 });
+
+    // The nested group switches the group transform mid-window, splitting the
+    // outer window's Text into two flushes: the second one poisons it.
+    nested.setPosition(0, 40);
+    nested.addChild(inner);
+    group.addChild(outer, nested);
+    root.addChild(group);
+
+    const poisonSpy = vi.spyOn(backend, '_poisonRetainedCaptures');
+    const uploadSpy = vi.spyOn(WebGl2RetainedGroupResources.prototype, '_uploadInstances');
+
+    try {
+      for (let f = 0; f < 4; f++) {
+        render(backend, root);
+      }
+
+      expect(poisonSpy).toHaveBeenCalled();
+      expect(uploadSpy).not.toHaveBeenCalled();
+      expect(totalInk(readCanvas(backend))).toBeGreaterThan(0);
+    } finally {
+      uploadSpy.mockRestore();
+      root.destroy();
       backend.destroy();
     }
   });
