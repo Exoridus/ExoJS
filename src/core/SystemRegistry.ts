@@ -367,14 +367,28 @@ export class SystemRegistry implements Destroyable {
       // registration's order and phase membership are fixed at insertion.
       this._dropPendingRemoval(existing);
       this._finalizeRemoval(existing);
+
+      // An onRemove listener may have registered it again.
+      if (this._claims(system)) {
+        return system;
+      }
     }
 
     const owner = systemOwners.get(system);
 
-    if (owner !== undefined && owner !== this && !owner._release(system)) {
-      throw new Error(
-        'SystemRegistry.add(): this system already belongs to another system registry. A system has one owner at a time: remove() it from the other registry first to move it.',
-      );
+    if (owner !== undefined && owner !== this) {
+      const released = owner._release(system);
+
+      // The old owner's onRemove listeners ran inside _release and may have placed it anywhere.
+      if (this._claims(system)) {
+        return system;
+      }
+
+      if (!released || systemOwners.has(system)) {
+        throw new Error(
+          'SystemRegistry.add(): this system already belongs to another system registry. A system has one owner at a time: remove() it from the other registry first to move it.',
+        );
+      }
     }
 
     if (!this._frameActive) {
@@ -945,6 +959,11 @@ export class SystemRegistry implements Destroyable {
       registration.announced = true;
       this.onAdd.dispatch(system);
     }
+  }
+
+  /** Whether `system` is registered here, buffered for registration, or inside its `onAttach` here. */
+  private _claims(system: System): boolean {
+    return this._pendingAdds.has(system) || this._attaching.has(system) || this._registrations.get(system)?.active === true;
   }
 
   /** Registered systems and buffered adds, in registration order. */

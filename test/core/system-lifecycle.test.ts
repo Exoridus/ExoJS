@@ -698,3 +698,45 @@ describe('SystemRegistry reentrant removal', () => {
     expect(probe.log).not.toContain('destroy');
   });
 });
+
+describe('SystemRegistry add() after a finalize that runs listeners', () => {
+  test('an onRemove listener re-adding the system while add() finalizes its removal yields one registration', () => {
+    const registry = new SystemRegistry();
+    const probe = registry.add(new Probe());
+    let reentered = false;
+
+    registry.onRemove.add(system => {
+      if (!reentered) {
+        reentered = true;
+        registry.add(system);
+      }
+    });
+
+    frame(registry, () => {
+      registry.remove(probe);
+      registry.add(probe);
+    });
+
+    expect(registry.size).toBe(1);
+    expect(registry.findAll(Probe)).toEqual([probe]);
+    probe.log.length = 0;
+    frame(registry);
+    expect(probe.log).toEqual(['update']);
+  });
+
+  test("a listener of the old owner taking the system back makes the new owner's add() throw", () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+    const probe = first.add(new Probe());
+
+    first.onRemove.add(system => first.add(system));
+
+    frame(first, () => {
+      first.remove(probe);
+      expect(() => second.add(probe)).toThrow('already belongs to another system registry');
+    });
+
+    expect(first.has(probe)).toBe(true);
+    expect(second.has(probe)).toBe(false);
+  });
+});
