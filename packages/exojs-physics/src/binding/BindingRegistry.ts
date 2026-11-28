@@ -14,19 +14,12 @@ export class BindingRegistry {
 
   /** Link a live node with a supported transform to the body. */
   public bind(body: PhysicsBody, node: SceneNode): PhysicsBinding {
-    if (node.destroyed) {
-      throw new Error('PhysicsBinding: cannot bind a destroyed node — its pooled transform has already been released.');
-    }
-
-    const existing = this._boundNodes.get(node);
-
-    if (existing !== undefined && existing.body !== body) {
-      throw new Error('PhysicsBinding: this node is already bound to a different body in this world.');
-    }
-
+    this._assertBindable(body, node);
     const binding = new PhysicsBinding(body, node);
 
     binding.sync();
+    // An overridden transform setter can publish another binding during sync.
+    this._assertBindable(body, node);
     const previous = this._bindings.get(body);
 
     if (previous !== undefined) {
@@ -37,6 +30,18 @@ export class BindingRegistry {
     this._boundNodes.set(node, binding);
 
     return binding;
+  }
+
+  private _assertBindable(body: PhysicsBody, node: SceneNode): void {
+    if (node.destroyed) {
+      throw new Error('PhysicsBinding: cannot bind a destroyed node — its pooled transform has already been released.');
+    }
+
+    const existing = this._boundNodes.get(node);
+
+    if (existing !== undefined && existing.body !== body) {
+      throw new Error('PhysicsBinding: this node is already bound to a different body in this world.');
+    }
   }
 
   /** Remove the link for `body`, if any. */
@@ -104,6 +109,18 @@ export class BindingRegistry {
 
       if (ancestor !== undefined && !parent.destroyed) {
         this._syncBinding(ancestor, alpha, stamp);
+
+        // The ancestor's transform setter can unlink or destroy the child.
+        if (this._bindings.get(binding.body) !== binding) {
+          return;
+        }
+
+        if (binding.node.destroyed) {
+          this.unbind(binding.body);
+
+          return;
+        }
+
         break;
       }
     }

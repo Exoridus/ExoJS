@@ -167,6 +167,57 @@ describe('SceneNode binding: parent transforms', () => {
     world.destroy();
     parent.destroy();
   });
+
+  it.each(['destroy', 'unbind'] as const)('skips a child invalidated by its ancestor setter (%s)', action => {
+    const registry = new BindingRegistry();
+    const parent = new Container();
+    const child = new Drawable();
+    const childBody = makeBody();
+    parent.addChild(child);
+    registry.bind(childBody, child);
+    registry.bind(makeBody(), parent);
+
+    const writeChild = vi.spyOn(child, 'setPosition');
+    const setParentPosition = parent.setPosition.bind(parent);
+    vi.spyOn(parent, 'setPosition').mockImplementationOnce((x, y) => {
+      setParentPosition(x, y);
+
+      if (action === 'destroy') {
+        parent.destroy();
+      } else {
+        registry.unbind(childBody);
+      }
+
+      return parent;
+    });
+
+    registry.sync();
+
+    expect(writeChild).not.toHaveBeenCalled();
+    expect(registry.size).toBe(action === 'destroy' ? 0 : 1);
+    parent.destroy();
+  });
+
+  it('preserves the binding published by a reentrant setter', () => {
+    const registry = new BindingRegistry();
+    const node = new Drawable();
+    const outer = makeBody();
+    const inner = makeBody();
+    const setPosition = node.setPosition.bind(node);
+    vi.spyOn(node, 'setPosition').mockImplementationOnce((x, y) => {
+      setPosition(x, y);
+      registry.bind(inner, node);
+
+      return node;
+    });
+
+    expect(() => registry.bind(outer, node)).toThrow(/already bound/);
+    expect(registry.size).toBe(1);
+    inner.setTransform({ x: 25, y: 30 });
+    registry.sync();
+    expect([node.x, node.y]).toEqual([25, 30]);
+    node.destroy();
+  });
 });
 
 describe('BindingRegistry', () => {
