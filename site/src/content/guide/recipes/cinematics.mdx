@@ -102,6 +102,27 @@ The return timer and skip input call the same guarded method. `stopAndSnap()` st
   title="examples/guides/cinematics/cutscene-flow.ts"
 />
 
+## Orchestrating beats with a `Sequencer`
+
+When beats depend on each other - wait for a sound, then for the player, then hand control back - write them as one generator function and play it on a `Sequencer`. The sequencer is a system: add it to `this.systems` and its sequences advance in the scene's update phase on the scene's own delta. `yield* context.wait(0.3)` waits scene time, not wall-clock time, and every sequence freezes while the scene is paused or retained. A sequence's code runs only inside that phase, synchronously, never in a promise continuation, and `play` never runs it at once: it starts on the sequencer's next tick, so a sequence played while the scene is still loading, paused or retained takes nothing over until the scene runs.
+
+<SourceSnippet
+  source="examples/showcase/boss-intro-sequence.ts"
+  region="boss-intro-sequence"
+  language="ts"
+  title="examples/showcase/boss-intro-sequence.ts"
+/>
+
+- Every wait is delegated with `yield*`, and its result is the value of the expression: `const [winner] = yield* context.waitFor(roundEnded)`, `const delta = yield* context.nextFrame()`.
+- `context.waitFor` takes a `Signal`, a condition, a handle, a promise or an operation. A condition is first checked on the tick after the wait began, so `() => confirm.pressed` waits for a fresh press of the action - a key already held, or one the player rebinds away from, does not count.
+- `context.all([...])` runs branches side by side until every one completes; `context.race([...])` stops at the first and cancels the losers it started. A branch is a generator function of its own context, or a handle. `context.start(branch)` starts one in the background and returns a handle to join later with `yield* context.waitFor(handle)`; it is cancelled if it is still running when its owner ends, and its failure is thrown into its owner.
+- Calling another generator with `yield* step(context)` nests it in the same flow.
+- Native actions plug in through the `SequenceOperation` contract: `tweenOperation(tween)` starts a tween, completes the wait when the tween completes and stops the tween if the step lets go first.
+
+`sequencer.play(...)` returns a handle. `handle.cancel()` is the skip: every branch stops at once, `finally` blocks run synchronously, innermost first, and owned operations such as the pan tween are stopped. Cancellation is cooperative - it closes the generator where it waits - so a promise the sequence handed to other code keeps running; pass `context.signal` to APIs that accept an `AbortSignal`. Ending the scene cancels its sequences the same way, and each `play` is an independent run, so replaying is playing again. `await handle.done` resolves with how the run ended - completed, cancelled or failed - without changing when anything runs.
+
+The sequencer coordinates, it does not own the camera, input or audio for you. Give back what a sequence takes in its `finally`: the input scope it pushed, the camera follow it cleared. A voice started while audio is still locked never starts and never ends, so wait for its `onEnd` in a race against a bound.
+
 ## When not to build a cinematic system
 
 For a single boss intro, one scene with delayed tweens is sufficient. For sequential beats, use `this.tweens.createSequencer()` to obtain a scene-owned `TweenSequencer`: `then(tween)` adds a stage, `then([a, b])` runs tweens together, and `wait(seconds)` inserts a pause. Build a separate cutscene authoring layer only when your content needs more than these timing primitives.
@@ -112,6 +133,11 @@ For a single boss intro, one scene with delayed tweens is sufficient. For sequen
 <ExamplePreview chapter="showcase" slug="boss-intro-cinematic" />
 
 A boss-intro cutscene: shutter bars open, camera pans, boss scales up, title reveals character-by-character, music swells. All driven by parallel tweens with staggered delays.
+
+<a id="boss-intro-sequence"></a>
+<ExamplePreview chapter="showcase" slug="boss-intro-sequence" />
+
+An in-game boss introduction written as one sequence: it takes over input and camera while the world keeps moving, pans to the boss, plays a spatial roar with a shake, waits for a confirming press and hands control back. Skip, pause, replay and scene replacement each leave nothing behind.
 
 ## Where to go next
 

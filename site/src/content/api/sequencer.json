@@ -1,0 +1,269 @@
+{
+  "title": "Sequencer",
+  "description": "Runs Sequences: generator functions that orchestrate work over many frames - wait for time, for signals, conditions, handles and operations, run branches side by side - as plain sequential code. A sequencer is a System. Register it where its sequences should live, and they advance in that registry's `update` phase, synchronously, on its delta: ```ts class Arena extends Scene { private readonly sequencer = new Sequencer(); override init(): void { this.systems.add(this.sequencer); this.sequencer.play(function* (context) { yield* context.wait(0.5); const [winner] = yield* context.waitFor(round.onEnd); banner.text = `${winner} wins`; }); } } ``` In `scene.systems` that means while the scene is active and not paused: a paused, retained or still preparing scene freezes its sequences, which continue where they were when it runs again. In `app.systems` they run on every frame. Calling Sequencer.update directly drives a sequencer that is not registered anywhere. Sequence code runs only inside Sequencer.update, never in a promise continuation, and Sequencer.play never runs it at once: a sequence starts on the sequencer's next tick. When the sequencer leaves its registry - removed, or the scene ends - every sequence is cancelled.",
+  "symbol": "Sequencer",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 1,
+    "methods": 4,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Runs Sequences: generator functions that orchestrate work over many frames - wait for time, for signals, conditions, handles and operations, run branches side by side - as plain sequential code.",
+        "A sequencer is a System. Register it where its sequences should live, and they advance in that registry's `update` phase, synchronously, on its delta:",
+        "```ts class Arena extends Scene { private readonly sequencer = new Sequencer();",
+        "override init(): void { this.systems.add(this.sequencer); this.sequencer.play(function* (context) { yield* context.wait(0.5); const [winner] = yield* context.waitFor(round.onEnd); banner.text = `${winner} wins`; }); } } ```",
+        "In `scene.systems` that means while the scene is active and not paused: a paused, retained or still preparing scene freezes its sequences, which continue where they were when it runs again. In `app.systems` they run on every frame. Calling Sequencer.update directly drives a sequencer that is not registered anywhere.",
+        "Sequence code runs only inside Sequencer.update, never in a promise continuation, and Sequencer.play never runs it at once: a sequence starts on the sequencer's next tick. When the sequencer leaves its registry - removed, or the scene ends - every sequence is cancelled."
+      ],
+      "importLine": "import { Sequencer } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): Sequencer",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sequencer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Sequencer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "cancelAll",
+          "signature": "cancelAll(): void",
+          "signatureTokens": [
+            {
+              "text": "cancelAll",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Cancel every running sequence, as SequenceHandle.cancel does."
+        },
+        {
+          "name": "onDetach",
+          "signature": "onDetach(): void",
+          "signatureTokens": [
+            {
+              "text": "onDetach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Cancels every sequence: a sequencer leaving its registry takes its sequences with it."
+        },
+        {
+          "name": "play",
+          "signature": "play(sequence: Sequence<T>): SequenceHandle<T>",
+          "signatureTokens": [
+            {
+              "text": "play",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "sequence",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sequence",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceHandle",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "sequence",
+              "type": "Sequence<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "SequenceHandle<T>",
+          "description": "Start sequence and return its handle. The sequence's code first runs on the next tick of this sequencer, so nothing it does happens while the owner cannot run it. Each call is an independent run. A root sequence that fails is logged unless its SequenceHandle.done was asked for."
+        },
+        {
+          "name": "update",
+          "signature": "update(delta: Seconds): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Seconds",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Advance the clock by delta and run every step that is due, ordered by its point on the clock. A registry calls this in its update phase. A negative or non-finite delta advances nothing but still delivers what arrived since the last tick."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sequence/Sequencer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequencer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sequence/Sequencer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequencer.ts"
+}

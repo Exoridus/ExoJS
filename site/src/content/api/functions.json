@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 93,
+  "memberCount": 94,
   "counts": {
     "constructors": 0,
-    "methods": 55,
+    "methods": 56,
     "properties": 38,
     "events": 0
   },
@@ -3523,6 +3523,65 @@
           ],
           "returnType": "number",
           "description": "Normalise a rotation in degrees to the range [0, 360). Negative values are wrapped into the positive range."
+        },
+        {
+          "name": "tweenOperation",
+          "signature": "tweenOperation(tween: Tween<T>): SequenceOperation",
+          "signatureTokens": [
+            {
+              "text": "tweenOperation",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tween",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tween",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceOperation",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "tween",
+              "type": "Tween<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "SequenceOperation",
+          "description": "Adapt tween for a sequence to wait on and own: yield* context.waitFor(tweenOperation(tween)). Starts the tween if it is idle. The wait completes when the tween completes and throws a SequenceCancelledError when something else stops it; a step that stops waiting first - cancelled, a lost race, the sequencer's teardown - stops the tween where it is. A tween that repeats forever never completes, so race it against a bound."
         }
       ],
       "paragraphs": [],

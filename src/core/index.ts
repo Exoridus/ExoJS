@@ -35,6 +35,19 @@ export {
 } from './Observable';
 export { Perf } from './Perf';
 export { SceneNode } from './SceneNode';
+export { SequenceCancelledError } from './sequence/SequenceCancelledError';
+export type {
+  Sequence,
+  SequenceBranch,
+  SequenceBranchResult,
+  SequenceContext,
+  SequenceGenerator,
+  SequenceYield,
+} from './sequence/SequenceContext';
+export type { SequenceStatus } from './sequence/SequenceHandle';
+export { SequenceHandle } from './sequence/SequenceHandle';
+export type { SequenceOperation, SequenceSettlement } from './sequence/SequenceOperation';
+export { Sequencer } from './sequence/Sequencer';
 export { Signal } from './Signal';
 export type { System, SystemContext, SystemLifecycle, SystemMethods } from './System';
 export { SystemOrder } from './SystemOrder';

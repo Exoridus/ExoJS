@@ -1,0 +1,225 @@
+{
+  "title": "SequenceHandle",
+  "description": "A running sequence or branch, returned by Sequencer.play and SequenceContext.start. Frame code reads its state and cancels it; another step joins it with `yield* context.waitFor(handle)`, SequenceContext.all or SequenceContext.race.",
+  "symbol": "SequenceHandle",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A running sequence or branch, returned by Sequencer.play and SequenceContext.start. Frame code reads its state and cancels it; another step joins it with `yield* context.waitFor(handle)`, SequenceContext.all or SequenceContext.race."
+      ],
+      "importLine": "import { SequenceHandle } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "cancel",
+          "signature": "cancel(): void",
+          "signatureTokens": [
+            {
+              "text": "cancel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Stop the step and every branch it started, now. Their finally blocks run synchronously, innermost first, while this call is still on the stack, and owned operations are cancelled; a step that cancels itself is closed when it reaches its next yield. A step that already ended is unaffected. Cancellation is cooperative: it closes the step's generator at the yield where it waits. A finally block that waits again is not resumed, and work the step handed to code outside the sequencer, such as a promise, keeps running; pass SequenceContext.signal to APIs that accept an AbortSignal to stop it."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "done",
+          "signature": "done: Promise<SequenceSettlement<T>>",
+          "signatureTokens": [
+            {
+              "text": "done",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceSettlement",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolves once the step ends, with how it ended. It never rejects, and awaiting it changes nothing about when the step runs: steps advance on the sequencer's ticks whether or not anything awaits them. Asking for it also marks a failure as observed, so a failed root sequence is not logged."
+        },
+        {
+          "name": "error",
+          "signature": "error: unknown",
+          "signatureTokens": [
+            {
+              "text": "error",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What the step failed with once failed, otherwise undefined."
+        },
+        {
+          "name": "result",
+          "signature": "result: T | undefined",
+          "signatureTokens": [
+            {
+              "text": "result",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The result once completed, otherwise undefined."
+        },
+        {
+          "name": "settled",
+          "signature": "settled: boolean",
+          "signatureTokens": [
+            {
+              "text": "settled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the step has ended, in any way."
+        },
+        {
+          "name": "status",
+          "signature": "status: SequenceStatus",
+          "signatureTokens": [
+            {
+              "text": "status",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceStatus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sequence/SequenceHandle.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceHandle.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sequence/SequenceHandle.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceHandle.ts"
+}

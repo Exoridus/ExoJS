@@ -1,0 +1,153 @@
+{
+  "title": "SequenceOperation",
+  "description": "Structural contract for work a sequence step can wait on and own: anything with a `poll` method, waited on with `yield* context.waitFor(operation)`. Adapting a native action takes a function that returns such an object, not a class; tweenOperation is the adapter for a Tween. ```ts const voiceEnded = (voice: Voice): SequenceOperation => { let ended = false; const onEnd = (): void => { ended = true; }; voice.onEnd.add(onEnd); return { poll: () => (ended ? { status: 'completed', value: undefined } : undefined), cancel: () => { voice.onEnd.remove(onEnd); voice.stop(); }, }; }; ```",
+  "symbol": "SequenceOperation",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Structural contract for work a sequence step can wait on and own: anything with a `poll` method, waited on with `yield* context.waitFor(operation)`. Adapting a native action takes a function that returns such an object, not a class; tweenOperation is the adapter for a Tween.",
+        "```ts const voiceEnded = (voice: Voice): SequenceOperation => { let ended = false; const onEnd = (): void => { ended = true; };",
+        "voice.onEnd.add(onEnd);",
+        "return { poll: () => (ended ? { status: 'completed', value: undefined } : undefined), cancel: () => { voice.onEnd.remove(onEnd); voice.stop(); }, }; }; ```"
+      ],
+      "importLine": "import { SequenceOperation } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "cancel",
+          "signature": "cancel?(): void",
+          "signatureTokens": [
+            {
+              "text": "cancel",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Stop the work. Called at most once, synchronously, when the waiting step stops waiting before poll reported a settlement: the step was cancelled, lost a race, failed through one of its branches, or its sequencer was torn down. Never called after a settlement."
+        },
+        {
+          "name": "poll",
+          "signature": "poll(delta: Seconds): SequenceSettlement<T> | undefined",
+          "signatureTokens": [
+            {
+              "text": "poll",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceSettlement",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Seconds",
+              "optional": false
+            }
+          ],
+          "returnType": "SequenceSettlement<T> | undefined",
+          "description": "Report whether the work has ended. Called once per tick of the sequencer while a step waits, first on the tick after the wait began, with that tick's delta. Return undefined while the work is still running. A cancelled settlement throws a SequenceCancelledError into the waiting step, a failed one throws its error, and a throwing poll counts as failed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sequence/SequenceOperation.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceOperation.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sequence/SequenceOperation.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceOperation.ts"
+}
