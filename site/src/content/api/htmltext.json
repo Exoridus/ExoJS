@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 110,
+  "memberCount": 111,
   "counts": {
     "constructors": 1,
-    "methods": 52,
+    "methods": 53,
     "properties": 43,
     "events": 14
   },
@@ -837,6 +837,234 @@
           "params": [],
           "returnType": "void",
           "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change. Idempotent: a second call is a no-op."
+        },
+        {
+          "name": "find",
+          "signature": "find(type: (args: never[]) => T, options?: FindNodeOptions<T>): T | null",
+          "signatureTokens": [
+            {
+              "text": "find",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FindNodeOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "(args: never[]) => T",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "FindNodeOptions<T>",
+              "optional": true
+            }
+          ],
+          "returnType": "T | null",
+          "description": "The first descendant that is an instance of type (subclasses included) and matches options, or null. The search walks the subtree depth-first in child-list order, visiting a node before its children, and never matches this container itself; paint order and zIndex play no part. Names need not be unique: the first match in that order wins. The walk reads the hierarchy live and keeps no index, so it costs one visit per descendant. A where callback must not add or remove nodes. ts const player = scene.root.find(Sprite, { name: 'player' }); "
+        },
+        {
+          "name": "findAll",
+          "signature": "findAll(type: (args: never[]) => T, options?: FindNodeOptions<T>): T[]",
+          "signatureTokens": [
+            {
+              "text": "findAll",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FindNodeOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "(args: never[]) => T",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "FindNodeOptions<T>",
+              "optional": true
+            }
+          ],
+          "returnType": "T[]",
+          "description": "Every descendant that is an instance of type (subclasses included) and matches options, in the order find visits them. Returns a new array each call; an empty one when nothing matches. ts const enemies = scene.root.findAll(Sprite, { name: 'enemy', where: sprite => sprite.hasComponent(Health) }); "
         },
         {
           "name": "focus",
@@ -2707,150 +2935,6 @@
           "params": [],
           "returnType": "this",
           "description": ""
-        },
-        {
-          "name": "[jsxConstruct]",
-          "signature": "[jsxConstruct](this: (html: string, options?: HTMLTextOptions) => HTMLText, props: JsxAdapterProps<HTMLTextOptions & { html: string }>): HTMLText",
-          "signatureTokens": [
-            {
-              "text": "[jsxConstruct]",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "html",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "HTMLTextOptions",
-              "kind": "type"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "HTMLText",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "props",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "JsxAdapterProps",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "HTMLTextOptions",
-              "kind": "type"
-            },
-            {
-              "text": " & ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "html",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "HTMLText",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "this",
-              "type": "(html: string, options?: HTMLTextOptions) => HTMLText",
-              "optional": false
-            },
-            {
-              "name": "props",
-              "type": "JsxAdapterProps<HTMLTextOptions & { html: string }>",
-              "optional": false
-            }
-          ],
-          "returnType": "HTMLText",
-          "description": "Constructs an HTML text node from JSX: <HTMLText html=\"<b>Paused</b>\" width={320} />."
         }
       ],
       "paragraphs": [],

@@ -195,12 +195,13 @@ export class WebGl2TextRenderer
 
   // Retained-batch state: the renderer-owned, grow-only quad-index buffer (the
   // standard `0,1,2, 0,2,3` glyph pattern shared by every recorded batch) and
-  // which capture windows have already recorded a Text batch
-  // (nesting-safe - one entry per capture-open call).
+  // which capture windows have already recorded a Text batch. A group reuses
+  // its bundle for every re-record, so a window is the bundle at the
+  // generation its capture-open bumped it to, not the bundle alone.
   private _retainedQuadIndexBuffer: WebGl2RenderBuffer | null = null;
   private _retainedQuadCapacity = 0;
   private readonly _retainedNodeDataUnitScratch = new Int32Array([textAtlasTextureSlots]);
-  private readonly _recordedCaptures = new WeakSet<WebGl2RetainedGroupResources>();
+  private readonly _recordedCaptures = new WeakMap<WebGl2RetainedGroupResources, number>();
 
   private _nodeDataArray: Float32Array = new Float32Array(initialNodeCapacity * nodeFloats);
   private _nodeCapacity = initialNodeCapacity;
@@ -676,7 +677,7 @@ export class WebGl2TextRenderer
       return;
     }
 
-    if (batchCount !== 1 || atlases.length === 0 || this._recordedCaptures.has(bundle)) {
+    if (batchCount !== 1 || atlases.length === 0 || this._recordedCaptures.get(bundle) === bundle.generation) {
       backend._poisonRetainedCaptures();
 
       return;
@@ -705,7 +706,7 @@ export class WebGl2TextRenderer
       this._nodeCount,
     );
 
-    this._recordedCaptures.add(bundle);
+    this._recordedCaptures.set(bundle, bundle.generation);
   }
 
   private _shaderFor(type: ShaderType): WebGl2Shader {
