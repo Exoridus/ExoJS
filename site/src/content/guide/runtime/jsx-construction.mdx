@@ -1,0 +1,83 @@
+---
+title: 'JSX construction'
+description: 'Build scene graphs and UI with TSX. JSX constructs ordinary ExoJS objects once, through their own constructors, and then gets out of the way.'
+---
+
+import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+
+# JSX construction
+
+JSX is another way to write the constructors you already use. `<Button label="Continue" onClick={resume} />` calls `new Button({ label: 'Continue' })` and adds `resume` to `button.onClick`. The tag returns that button. Nothing else is involved: there is no virtual DOM, no reconciliation, no re-rendering, no hooks, and no per-frame work. After construction, a node built with JSX is indistinguishable from one built with `new`. The renderer, layout, input, lifecycle and ownership rules stay exactly as they are.
+
+## Setup
+
+JSX is optional. The compiler pulls in the runtime only for files that use it, so code without `.tsx` files ships none of it. Point TypeScript's automatic JSX transform at ExoJS:
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@codexo/exojs"
+  }
+}
+```
+
+Projects scaffolded by `create-exo-app` already have these two options. Vite reads them from `tsconfig.json` and needs no plugin. The compiler imports `@codexo/exojs/jsx-runtime` (`@codexo/exojs/jsx-dev-runtime` in development builds). Type-only helpers for your own element functions and classes come from `@codexo/exojs/jsx`.
+
+## A menu
+
+<SourceSnippet source="examples/guides/jsx/pause-menu.tsx" region="pause-menu" language="tsx" title="examples/guides/jsx/pause-menu.tsx" />
+
+Each tag maps to one constructor call:
+
+- **Constructor options.** Props that are not node properties or handlers go to the constructor as its options object: `width`, `label` and `spacing` above. Classes whose constructor takes positional arguments ship an adapter: `<Sprite texture>`, `<Text text>`, `<Label text style>`, `<NineSliceSprite texture>`, `<RepeatingSprite texture>`, `<AnimatedSprite texture clips>`, `<BitmapText text font>` and `<HTMLText html>`.
+- **Node properties.** `name`, `x`, `y`, `rotation`, `scale`, `origin`, `skewX`, `skewY`, `visible`, `zIndex`, `interactive`, `draggable`, `cursor`, `focusable`, `tabIndex`, `hitArea`, `filters`, `mask` and `cullable` are assigned through the node's own setters after construction. Drawables also accept `tint`, `blendMode` and `anchor`. `scale`, `origin` and `anchor` take one number for both axes or an `{ x, y }` pair.
+- **Signal handlers.** An `on*` prop adds the function to the signal of that name, so `onClick` goes to `button.onClick` and `onPointerDown` to `node.onPointerDown`. The handler is typed with that signal's arguments.
+- **Children.** Children are added with `addChild` in the order written. Only containers take children: `<Sprite>` with children is a compile error, because a sprite is not a container.
+- **`ref`.** An optional callback that receives the finished instance, with its concrete type. Use it for calls that are not properties, such as `anchorIn` above.
+
+Destroying the menu destroys its buttons. The handlers go with them, exactly as with `new`.
+
+## Existing instances
+
+Put a node you already hold into the tree with braces. JSX adopts that instance: it is not cloned and not constructed a second time, and it keeps the handlers and state it already had.
+
+<SourceSnippet source="examples/guides/jsx/scene-composition.tsx" region="scene-composition" language="tsx" title="examples/guides/jsx/scene-composition.tsx" />
+
+Arrays (`{items.map(...)}`), `null`, `undefined` and booleans (`{open && <Panel />}`) are valid children. Strings and numbers are not, so pass text through a prop. A child that already has a parent is rejected rather than moved. Remove it from its parent first if moving it is what you mean.
+
+A fragment, `<>...</>`, groups children without adding a level: the element that receives it adopts the fragment's children directly. A fragment written at the top level, outside any element, stays a plain `Container` holding its children.
+
+## Your own building blocks
+
+Any function that takes props and returns a node can be a tag. Any scene-node class whose constructor takes nothing or one options object works as a tag without changes. A class with positional constructor arguments declares a small static adapter:
+
+<SourceSnippet source="examples/guides/jsx/reusable-widgets.tsx" region="element-function" language="tsx" title="examples/guides/jsx/reusable-widgets.tsx" />
+
+<SourceSnippet source="examples/guides/jsx/reusable-widgets.tsx" region="custom-class" language="tsx" title="examples/guides/jsx/reusable-widgets.tsx" />
+
+<SourceSnippet source="examples/guides/jsx/reusable-widgets.tsx" region="compose" language="tsx" title="examples/guides/jsx/reusable-widgets.tsx" />
+
+TypeScript checks all of it. It rejects unknown props, wrong option types, handlers whose parameters do not match the signal, children on non-containers, and classes that need an adapter. It also rejects a `Sprite` subclass whose constructor no longer takes a texture first until that subclass declares its own adapter.
+
+<Callout type="info" title="Every JSX expression is a RenderNode">
+TypeScript gives all JSX expressions one common type, `JSX.Element`, which ExoJS defines as `RenderNode`. `<Panel />` can go straight into `addChild`, but it is not typed as `Panel`. When the concrete type matters, construct the node with `new` and pass it in as an existing instance, or take it from a typed `ref`.
+</Callout>
+
+## Components
+
+Attach components in a `ref`: `ref={sprite => sprite.addComponent(new Health(100))}`. This keeps `addComponent`'s compile-time check that the component accepts this kind of node. JSX has no separate `components` prop for a type-level reason: a JSX attribute cannot run that check for each element of an array.
+
+## When construction fails
+
+Construction is transactional for each element. When a constructor throws, a child is invalid, or a handler, child attachment or `ref` throws, the element destroys the nodes it constructed, together with any JSX-built children no other element had adopted yet. Instances you passed in are detached and never destroyed. One limit comes from how JSX evaluates: sibling elements already built before a failing sibling are never handed to their parent, so nothing can destroy them. They were never attached to a scene, and the garbage collector reclaims them.
+
+## Serialization
+
+JSX builds the same nodes as `new`, so `Prefab.from` and the scene serializers capture a JSX tree exactly like an imperative one. As always, they capture structure and data, not behaviour: signal handlers and `ref` callbacks are code, and are not serialized. Re-attach behaviour after `instantiate`, as with any prefab. See [Serialization & prefabs](/ExoJS/en/guide/runtime/serialization-and-prefabs/).
+
+## Where to go next
+
+- [UI & widgets](/ExoJS/en/guide/runtime/ui-and-widgets/) covers layout, focus and themes for the widgets used above.
+- [Scene graph](/ExoJS/en/guide/runtime/scene-graph/) explains the hierarchy JSX builds into.

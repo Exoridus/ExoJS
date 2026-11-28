@@ -132,7 +132,9 @@ const collect = (children: unknown, out: RenderNode[]): void => {
   }
 
   if (!(children instanceof RenderNode)) {
-    throw new TypeError(`JSX: ${describe(children)} is not a valid child. Pass scene nodes, arrays of them, or null, undefined or a boolean.`);
+    throw new TypeError(
+      `JSX: ${describe(children)} is not a valid child. Pass scene nodes, arrays of them, or null, undefined or a boolean.`,
+    );
   }
 
   if (children.destroyed) {
@@ -158,30 +160,28 @@ const setVector = (vector: ObservableVector, value: JsxVectorInput): void => {
   }
 };
 
-const applyNodeProps = (node: RenderNode, props: Props, drawable: boolean): void => {
-  for (const key of Object.keys(props)) {
-    const value = props[key];
-    const setter = value === undefined ? undefined : setterFor(key, drawable);
+const applyProp = (node: RenderNode, key: string, value: unknown, drawable: boolean, type: JsxNodeClass): void => {
+  const setter = setterFor(key, drawable);
 
-    setter?.(node, value as never);
-  }
-};
-
-const attachHandlers = (node: RenderNode, props: Props, type: JsxNodeClass): void => {
-  for (const key of Object.keys(props)) {
-    const handler = props[key];
-
-    if (typeof handler !== 'function' || !isSignalKey(key)) {
-      continue;
-    }
-
+  if (setter !== undefined) {
+    setter(node, value as never);
+  } else if (typeof value === 'function' && isSignalKey(key)) {
     const signal = (node as unknown as Readonly<Record<string, unknown>>)[key];
 
     if (!(signal instanceof Signal)) {
       throw new TypeError(`JSX: ${tagOf(type)} has no signal named "${key}".`);
     }
 
-    (signal as Signal<unknown[]>).add(handler as (...args: unknown[]) => void);
+    (signal as Signal<unknown[]>).add(value as (...args: unknown[]) => void);
+  }
+};
+
+/** Assigns the node properties and adds the signal handlers among `props`, after construction. */
+const applyProps = (node: RenderNode, props: Props, drawable: boolean, type: JsxNodeClass): void => {
+  for (const key in props) {
+    if (Object.hasOwn(props, key) && props[key] !== undefined) {
+      applyProp(node, key, props[key], drawable, type);
+    }
   }
 };
 
@@ -209,20 +209,25 @@ const attachChildren = (node: RenderNode, children: readonly RenderNode[], type:
 };
 
 const construct = (type: JsxNodeClass, props: Props): RenderNode => {
-  const { children, ref, ...rest } = props;
+  const { children, ref } = props;
   const nodes: RenderNode[] = [];
   const drawable = type.prototype instanceof Drawable;
   const options: Record<string, unknown> = {};
+  let assigns = false;
   let node: RenderNode;
 
   try {
     collect(children, nodes);
 
-    for (const key of Object.keys(rest)) {
-      const value = rest[key];
+    for (const key in props) {
+      if (Object.hasOwn(props, key) && key !== 'children' && key !== 'ref') {
+        const value = props[key];
 
-      if (setterFor(key, drawable) === undefined && !(typeof value === 'function' && isSignalKey(key))) {
-        options[key] = value;
+        if (setterFor(key, drawable) !== undefined || (typeof value === 'function' && isSignalKey(key))) {
+          assigns = true;
+        } else {
+          options[key] = value;
+        }
       }
     }
 
@@ -234,8 +239,10 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
   }
 
   try {
-    applyNodeProps(node, rest, drawable);
-    attachHandlers(node, rest, type);
+    if (assigns) {
+      applyProps(node, props, drawable, type);
+    }
+
     attachChildren(node, nodes, type);
 
     if (ref !== undefined) {

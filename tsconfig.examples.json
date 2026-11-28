@@ -53,10 +53,6 @@
   "extends": "@codexo/exojs-config/typescript/consumer.json",
   "compilerOptions": {
     "customConditions": ["@codexo/exojs-source", "@codexo/exojs-particles-source"],
-    // The configuration a consumer writing TSX uses: the automatic transform,
-    // resolving `@codexo/exojs/jsx-runtime`.
-    "jsx": "react-jsx",
-    "jsxImportSource": "@codexo/exojs",
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
       "@codexo/exojs/extensions": ["./src/extensions/index.ts"],
@@ -82,6 +78,6 @@
       "@examples/gallery-transitions": ["./examples/shared/gallery-transitions.ts"]
     }
   },
-  "include": ["examples/**/*.ts", "examples/tilemap/worker-streamed-terrain.js", "src/typings.d.ts"],
+  "include": ["examples/**/*.ts", "examples/**/*.tsx", "examples/tilemap/worker-streamed-terrain.js", "src/typings.d.ts"],
   "exclude": ["examples/shared/editor-support.d.ts", "examples/**/*.worker.ts"]
 }

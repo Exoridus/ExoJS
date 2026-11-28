@@ -216,6 +216,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         examples: ['ui/hud-and-widgets', 'ui/settings-menu', 'ui/text-entry-and-scrolling'],
         apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'interaction-system'],
       },
+      {
+        path: 'runtime/jsx-construction',
+        level: 'intermediate',
+        learningGoals: [
+          'Configure TypeScript and Vite for the ExoJS JSX runtime',
+          'Compose menus and scene graphs from constructors, existing instances and typed element functions',
+        ],
+        prerequisites: ['runtime/scene-graph', 'runtime/ui-and-widgets'],
+        examples: [],
+        apiLinks: ['container', 'sprite', 'panel', 'button', 'prefab'],
+      },
     ],
   },
   {

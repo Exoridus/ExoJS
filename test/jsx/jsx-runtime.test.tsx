@@ -155,7 +155,9 @@ describe('JSX construction', () => {
 
   test('assigns node properties through the existing setters', () => {
     const tint = new Color(255, 128, 0);
-    const sprite = <Sprite name="torch" x={10} y={20} rotation={45} scale={2} anchor={{ x: 0.5, y: 1 }} tint={tint} visible={false} zIndex={3} />;
+    const sprite = (
+      <Sprite name="torch" x={10} y={20} rotation={45} scale={2} anchor={{ x: 0.5, y: 1 }} tint={tint} visible={false} zIndex={3} />
+    );
 
     expect(sprite).toBeInstanceOf(Sprite);
     expect(sprite.name).toBe('torch');
@@ -212,7 +214,11 @@ describe('JSX construction', () => {
   test('calls element functions with their props and children', () => {
     const onStart = vi.fn();
     const extra = new Label('extra');
-    const menu = <MainMenu title="Paused" onStart={onStart}>{extra}</MainMenu>;
+    const menu = (
+      <MainMenu title="Paused" onStart={onStart}>
+        {extra}
+      </MainMenu>
+    );
     const stack = childrenOf(menu).find(child => child instanceof Stack)!;
 
     expect((stack.children[0] as Label).text).toBe('Paused');

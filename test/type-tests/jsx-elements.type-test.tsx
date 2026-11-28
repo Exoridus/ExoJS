@@ -1,5 +1,18 @@
 /** @jsxImportSource @codexo/exojs */
-import { AnimatedSprite, Button, Container, Graphics, Label, Panel, type RenderNode, Sprite, Stack, Text, type Texture, Video } from '@codexo/exojs';
+import {
+  AnimatedSprite,
+  Button,
+  Container,
+  Graphics,
+  Label,
+  Panel,
+  type RenderNode,
+  Sprite,
+  Stack,
+  Text,
+  type Texture,
+  Video,
+} from '@codexo/exojs';
 import type { JSX, JsxAdapterProps, JsxChildren } from '@codexo/exojs/jsx';
 import { jsxConstruct } from '@codexo/exojs/jsx';
 import { PointLight } from '@codexo/exojs/lighting';
@@ -55,8 +68,9 @@ export const badHandler = <Button onClick={(count: number) => void count} />;
 export const noSignal = <Button onHover={onAny} />;
 
 // Unsupported children are rejected.
+const caption = <Label text="x" />;
 // @ts-expect-error a Sprite is not a container
-export const spriteChild = <Sprite texture={texture}><Label text="x" /></Sprite>;
+export const spriteChild = <Sprite texture={texture}>{caption}</Sprite>;
 // @ts-expect-error text is not a scene node
 export const textChild = <Container>Pause</Container>;
 // @ts-expect-error numbers are not scene nodes
@@ -116,7 +130,11 @@ const MainMenu = (options: MainMenuOptions): JSX.Element => (
     {options.children}
   </Panel>
 );
-export const main = <MainMenu title="Paused" onStart={onAny}><Graphics /></MainMenu>;
+export const main = (
+  <MainMenu title="Paused" onStart={onAny}>
+    <Graphics />
+  </MainMenu>
+);
 // @ts-expect-error title is required
 export const untitled = <MainMenu onStart={onAny} />;
 const Caption = (): string => 'caption';
