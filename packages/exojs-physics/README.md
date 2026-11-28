@@ -51,16 +51,19 @@ The scene registry drives and destroys this world: it steps once per application
 
 ```ts
 import { Graphics } from '@codexo/exojs';
-import { CircleShape, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs/physics';
+import { CircleShape, PhysicsBodyComponent } from '@codexo/exojs/physics';
 
-const world = new PhysicsWorld({ gravity: { x: 0, y: 980 } });
 const ball = new Graphics();
-const physics = ball.addComponent(new PhysicsBodyComponent(world, { colliders: [{ shape: new CircleShape(12) }] }));
+const physics = ball.addComponent(new PhysicsBodyComponent({ colliders: [{ shape: new CircleShape(12) }] }));
 
 physics.body.applyImpulse(0, -300);
 ```
 
-Component-managed bodies do not support joints yet. `world.remove(body)` takes any body out of the simulation without destroying it; `world.add(body)` puts it back.
+Register the scene's `PhysicsWorld` with its fixed-step phase before the node activates. An options-only component chooses the sole live registered world, or reports an activation error for zero or several. The explicit `new PhysicsBodyComponent(world, options)` overload also supports manually stepped or app-owned worlds. The body is available from construction. Read `activeWorld` for current membership. The `world` getter throws before the first successful automatic resolution.
+
+An inferred body keeps its selected world across inactivity. Removing the world system disables its inferred components. Register the same world and re-enable them to resume, or replace the body component to select a different world. For a dependency that is absent or invalid on activation, fix the composition and disable/re-enable the dependent component to retry. A valid dependency can wait while disabled. Movement clears its pending commands and the velocity it controls when its body leaves simulation.
+
+Component-managed bodies cannot participate in joints. Use manually managed bodies for jointed objects. `world.remove(body)` takes any body out of the simulation without destroying it; `world.add(body)` puts it back.
 
 ## Collision-aware movement
 
@@ -84,8 +87,8 @@ export class RoomScene extends Scene {
   override init(): void {
     const world = new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep });
     const hero = new Container();
-    const physics = hero.addComponent(new PhysicsBodyComponent(world, { type: 'kinematic', colliders: [{ shape: new CircleShape(16) }] }));
-    const movement = hero.addComponent(new KinematicMovementComponent(physics, { maxSpeed: 240 }));
+    hero.addComponent(new PhysicsBodyComponent({ type: 'kinematic', colliders: [{ shape: new CircleShape(16) }] }));
+    const movement = hero.addComponent(new KinematicMovementComponent({ maxSpeed: 240 }));
 
     this.systems.add(world, { order: SystemOrder.Physics });
     hero.addComponent(new Drift(movement));
@@ -94,7 +97,7 @@ export class RoomScene extends Scene {
 }
 ```
 
-The movement resolves each command with `world.shapeCast`, an exact translation-only sweep that is also public: it returns the first collider a shape meets along a displacement, its distance and surface normal, and reports a starting overlap explicitly instead of as a hit.
+Use `moveVelocity(velocity, distance?)` to issue a command in world units per second independent of `maxSpeed`. The same collision and distance constraints apply. Movement uses the same exact translation-only sweep as `world.shapeCast`, which returns the first collider, its distance and surface normal and reports an initial overlap separately.
 
 ## Character movement
 
@@ -134,11 +137,9 @@ export class LevelScene extends Scene {
   override init(): void {
     const world = new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep });
     const hero = new Container();
-    const physics = hero.addComponent(
-      new PhysicsBodyComponent(world, { type: 'kinematic', colliders: [{ shape: new CapsuleShape(0, -12, 0, 12, 8) }] }),
-    );
-    const movement = hero.addComponent(new KinematicMovementComponent(physics, { maxSpeed: 240 }));
-    const character = hero.addComponent(new CharacterMovementComponent(movement, { gravity: 1600, maxStepHeight: 8 }));
+    hero.addComponent(new PhysicsBodyComponent({ type: 'kinematic', colliders: [{ shape: new CapsuleShape(0, -12, 0, 12, 8) }] }));
+    hero.addComponent(new KinematicMovementComponent({ maxSpeed: 240 }));
+    const character = hero.addComponent(new CharacterMovementComponent({ gravity: 1600, maxStepHeight: 8 }));
 
     this.systems.add(world, { order: SystemOrder.Physics });
     this.inputs.attach(controls);
@@ -147,6 +148,12 @@ export class LevelScene extends Scene {
   }
 }
 ```
+
+## Collider placement
+
+`Collider.boxFromBounds(node)` snapshots local geometry and positive local scale into a box relative to the node's pivot. A circle needs an explicit radius and optional body-local offset. Supply several colliders to build compound geometry. If art, scale or origin changes later, update physics by replacing the affected collider explicitly.
+
+Bindings compensate for translated and rotated parents, including retained groups. They require a rigid parent world transform and a node with zero skew and positive finite visual scale. If those conditions are violated at runtime, presentation pauses with a diagnostic until the transform is repaired. Keep physics-driven ancestors in the same world for parent-first synchronization.
 
 ## Important boundaries
 

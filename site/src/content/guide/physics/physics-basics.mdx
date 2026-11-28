@@ -38,7 +38,7 @@ Install `@codexo/exojs-demo-assets` for the media, click or tab to the canvas, a
 
 For an ordinary ExoJS scene, register the world as a scene system with `SystemOrder.Physics` and build it with `fixedDelta: this.app.fixedTimeStep`. The world then steps exactly once per application fixed step, after the scene's `fixedUpdate` and its behaviours, so a command they issue in a step is applied by that step. A registered world simulates its own `fixedDelta` on every host step, so the two must agree: a world whose `fixedDelta` differs from the host step throws on its first step, before anything moves, instead of running too fast or too slow. Read discrete input for such commands through an action's `tick` view, which hands each press to exactly one fixed step.
 
-A world can instead be driven manually with `world.step(frameDeltaSeconds)`. That API owns an accumulator and advances its configured fixed steps, at any rate, up to its `maxSubSteps` per call. It is useful outside a scene or when a host deliberately manages the world itself. Do not combine manual stepping with system registration, and register a world with one registry only; development builds report either mix.
+A world can instead be driven manually with `world.step(frameDeltaSeconds)`. That API owns an accumulator and advances its configured fixed steps, at any rate, up to its `maxSubSteps` per call. It is useful outside a scene or when a host deliberately manages the world itself. Choose one stepping clock. Development builds report mixing hosted and manual steps. A world can have one system registry at a time. Remove it from its current registry before registering it elsewhere.
 
 A world registered in `app.systems` instead of the scene's is an advanced setup with different scheduling: it steps before any scene code in each fixed step, so a scene command reaches it one step later, and it keeps stepping while the scene is paused.
 
@@ -64,7 +64,11 @@ Keep the visual node's origin aligned with the collider's intended origin. The e
 
 <SourceSnippet source="examples/guides/physics-basics/body-component.ts" region="body-component" language="ts" title="Bodies owned by their nodes" />
 
-Pass the world explicitly; the component never looks one up. Without a `position`, the body starts at the node's world position pivot: its origin transformed by the full world matrix. An anchor therefore does not shift the body to the image's top-left corner. An explicit body position takes precedence. `scene.query(PhysicsBodyComponent)` lists every node that carries one, including disabled components whose bodies are out of the world, and `node.getComponent(PhysicsBodyComponent)?.body` reaches the body from gameplay code.
+The options-only constructor selects the scene's sole live `PhysicsWorld` on first activation. Register it before activation and include the fixed-step phase. A missing or ambiguous world is reported through the scene's error handler. Pass `new PhysicsBodyComponent(world, options)` to select a particular world or use an app-owned or manually stepped world. The component keeps its first world across reactivation. Removing an inferred world from the registry disables its automatically bound components at the detach boundary. To activate again, register that same world and enable the component. To use a different world, replace the component and explicitly initialize the destination body.
+
+Without a `position`, the body starts at the node's world position pivot: its origin transformed by the full world matrix. An anchor therefore does not shift the body to the image's top-left corner. An explicit body position takes precedence. `scene.query(PhysicsBodyComponent)` lists every node that carries one, including disabled components whose bodies are out of the world, and `node.getComponent(PhysicsBodyComponent)?.body` reaches the body from gameplay code.
+
+Destroying a world destroys its attached bodies, releases movement controllers and clears their components' `activeWorld`. Replace a component whose body was destroyed to resume simulation.
 
 A component-managed body cannot take part in a joint yet, mouse joints included. Use `world.add` and `world.bind` for bodies that need joints. `world.attach`, `world.add` and `world.bind` remain available whenever you want to manage a body's lifetime yourself, and `world.remove(body)` takes a body out of the simulation without destroying it.
 
@@ -72,7 +76,7 @@ A component-managed body cannot take part in a joint yet, mouse joints included.
 | --- | --- | --- |
 | `world.attach(node, definition)` | Creates a world-owned body and collider, and a body-to-node binding. | The link is removed; the body stays in the world until explicitly removed/destroyed or the world ends. |
 | `world.add(body)` then `world.bind(body, node)` | The caller constructs the body; the world owns its simulation membership and binding. | Ending the binding does not destroy the body. This is the path for jointed bodies. |
-| `node.addComponent(new PhysicsBodyComponent(world, options))` | The component owns the body and couples membership to enable/disable. | Destroying the node/component destroys the body; disable preserves it for reactivation. |
+| `node.addComponent(new PhysicsBodyComponent(options))` | The component owns the body and couples membership to enable/disable. | Destroying the node/component destroys the body; disable preserves it for reactivation. |
 
 Choose one binding path per node. `world.remove(body)` removes membership without destroying a manually managed body. Component-managed membership belongs to the component, so do not separately add/remove that body.
 
@@ -82,7 +86,9 @@ The world uses the coordinate units you choose. In a pixel-based scene, velocity
 
 Positions use the scene's y-down convention, but rotation interfaces differ: physics angles are **radians**, with positive rotation clockwise on screen; scene-node rotation is **degrees**, with positive rotation counterclockwise on screen. The built-in node binding converts both the unit and sign. A manual binding needs the same conversion, not just multiplication by `180 / Math.PI`.
 
-The normal workflow is to use `bind` or `attach` instead of copying transforms yourself. Keep bound nodes world-space-rooted: the binding writes the body's world pose into the node's local position/rotation. A translated, rotated, or scaled parent is not compensated, and retained-group and transformed-parent limits remain. Own-node skew is unsupported. The initial world-pivot calculation does not expand those ongoing binding limits. Put visual offsets and decoration on an unbound child when needed.
+Use a component, `bind`, or `attach` to let the body drive the node's displayed position and rotation. Translated and rotated parents, including retained groups, are supported. A parent whose composed world transform contains scale, reflection or shear, or a node with skew or nonpositive scale, is rejected on bind. If an unsupported transform is introduced later, the world keeps simulating and the binding logs a diagnostic and skips pose writes until the transform is repaired. Bind a node to one body and keep physics-driven ancestors in the same world so their display poses are updated first.
+
+`Collider.boxFromBounds(node)` takes one snapshot of local bounds, local scale and origin. It produces a box centered relative to the node's pivot. The helper needs nonempty local bounds. For `Graphics`, declare the bounds with `setLocalBounds()` as shown above, or supply an explicit `BoxShape`. For a circle, specify the radius with `new CircleShape(radius)` and supply a body-local `offset` when the shape is off-center. Use explicit geometry for padded or irregular art. Several colliders can share one body; all offsets use the same body-local coordinates. Build a new collider when bounds, anchor or scale changes should affect physics.
 
 ## Smooth presentation without changing simulation
 

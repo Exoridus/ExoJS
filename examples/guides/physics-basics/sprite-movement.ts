@@ -27,17 +27,17 @@ class SpriteMovementScene extends Scene {
   }
 
   override init(): void {
-    const world = this.systems.add(new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep }), { order: SystemOrder.Physics });
+    this.systems.add(new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep }), { order: SystemOrder.Physics });
     const ball = new Sprite(this.texture).setAnchor(0.5).setPosition(200, 220);
     const radius = this.texture.width / 2;
-    const physics = ball.addComponent(
-      new PhysicsBodyComponent(world, {
+    ball.addComponent(
+      new PhysicsBodyComponent({
         type: 'kinematic',
         colliders: [{ shape: new CircleShape(radius) }],
       }),
     );
 
-    this.movement = ball.addComponent(new KinematicMovementComponent(physics, { maxSpeed: 220 }));
+    this.movement = ball.addComponent(new KinematicMovementComponent({ maxSpeed: 220 }));
     this.inputs.attach(this.controls);
     this.root.addChild(ball);
 
@@ -46,7 +46,7 @@ class SpriteMovementScene extends Scene {
     obstacle.fillColor = new Color(90, 130, 165);
     obstacle.drawCircle(0, 0, 72);
     obstacle.setPosition(460, 220);
-    obstacle.addComponent(new PhysicsBodyComponent(world, { type: 'static', colliders: [{ shape: new CircleShape(72) }] }));
+    obstacle.addComponent(new PhysicsBodyComponent({ type: 'static', colliders: [{ shape: new CircleShape(72) }] }));
     this.root.addChild(obstacle);
     this.ui.addChild(new Text('Click the canvas, then move with WASD.', { fontSize: 20 }).setPosition(24, 24));
   }

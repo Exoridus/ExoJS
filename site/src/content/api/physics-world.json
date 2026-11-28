@@ -6,11 +6,11 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs/physics",
   "tier": "stable",
-  "memberCount": 41,
+  "memberCount": 44,
   "counts": {
     "constructors": 1,
-    "methods": 20,
-    "properties": 16,
+    "methods": 22,
+    "properties": 17,
     "events": 4
   },
   "sections": [
@@ -314,7 +314,7 @@
             }
           ],
           "returnType": "PhysicsBinding",
-          "description": "Link a body to a scene node; the node tracks the body after each step. Destroying the node is enough to end the link - the next step drops it rather than writing into the node's released transform, so an explicit unbind is only needed to stop tracking a node that stays alive."
+          "description": "Link a body to a scene node; the node tracks the body after each step. Destroying the node is enough to end the link - the next step drops it rather than writing into the node's released transform, so an explicit unbind is only needed to stop tracking a node that stays alive. Translated and rotated parents are supported. See PhysicsBinding for the transform contract."
         },
         {
           "name": "destroy",
@@ -343,7 +343,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release every body, collider, binding and backend resource. Changes queued from an event callback are applied first; if one of them throws, the world is still fully released and the first such error is rethrown afterwards."
+          "description": "Release every body, collider, binding and backend resource. Changes queued from an event callback are applied first; if one of them throws, the world is still fully released and the first such error is rethrown afterwards. If registered as a system, the destroyed world is removed from its registry."
         },
         {
           "name": "destroyBody",
@@ -662,6 +662,82 @@
           ],
           "returnType": "void",
           "description": "Invoke callback for each collider whose AABB overlaps bounds. Allocation-free."
+        },
+        {
+          "name": "onAttach",
+          "signature": "onAttach(context: SystemContext): void",
+          "signatureTokens": [
+            {
+              "text": "onAttach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "SystemContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Records the registry that owns this world's stepping and teardown."
+        },
+        {
+          "name": "onDetach",
+          "signature": "onDetach(): void",
+          "signatureTokens": [
+            {
+              "text": "onDetach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Releases automatically resolved bodies when the registry lets go of this world."
         },
         {
           "name": "overlapShape",
@@ -2384,6 +2460,27 @@
           "params": [],
           "returnType": null,
           "description": "Live colliders (read-only view)."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether this world has released its simulation resources."
         },
         {
           "name": "joints",

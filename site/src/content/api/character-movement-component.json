@@ -6,9 +6,9 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs/physics",
   "tier": "stable",
-  "memberCount": 31,
+  "memberCount": 32,
   "counts": {
-    "constructors": 1,
+    "constructors": 2,
     "methods": 9,
     "properties": 21,
     "events": 0
@@ -34,7 +34,58 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(movement: KinematicMovementComponent, options: CharacterMovementOptions): CharacterMovementComponent",
+          "signature": "new(options?: CharacterMovementOptions): CharacterMovementComponent",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CharacterMovementOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CharacterMovementComponent",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "CharacterMovementOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "CharacterMovementComponent",
+          "description": ""
+        },
+        {
+          "name": "new",
+          "signature": "new(movement: KinematicMovementComponent, options?: CharacterMovementOptions): CharacterMovementComponent",
           "signatureTokens": [
             {
               "text": "new",
@@ -63,6 +114,10 @@
             {
               "text": "options",
               "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -94,7 +149,7 @@
             {
               "name": "options",
               "type": "CharacterMovementOptions",
-              "optional": false
+              "optional": true
             }
           ],
           "returnType": "CharacterMovementComponent",
@@ -449,27 +504,6 @@
           "description": "Type-only carrier of the accepted host type, read by ComponentHostCheck. Never present at runtime."
         },
         {
-          "name": "movement",
-          "signature": "movement: KinematicMovementComponent",
-          "signatureTokens": [
-            {
-              "text": "movement",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "KinematicMovementComponent",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The movement this component drives."
-        },
-        {
           "name": "active",
           "signature": "active: boolean",
           "signatureTokens": [
@@ -572,7 +606,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Downward acceleration. Until assigned, reads the selected world's gravity along -up, or zero before a world is selected."
         },
         {
           "name": "groundBody",
@@ -748,6 +782,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "movement",
+          "signature": "movement: KinematicMovementComponent",
+          "signatureTokens": [
+            {
+              "text": "movement",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KinematicMovementComponent",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The explicit or active same-node movement dependency. Throws if it has yet to resolve."
         },
         {
           "name": "node",

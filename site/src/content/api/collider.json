@@ -6,10 +6,10 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs/physics",
   "tier": "stable",
-  "memberCount": 20,
+  "memberCount": 21,
   "counts": {
     "constructors": 1,
-    "methods": 1,
+    "methods": 2,
     "properties": 18,
     "events": 0
   },
@@ -131,6 +131,110 @@
           ],
           "returnType": "void",
           "description": "Recompute the cached world geometry from the body's transform. Called by the body on setTransform, on collider creation, and by the world before each detection pass."
+        },
+        {
+          "name": "boxFromBounds",
+          "signature": "boxFromBounds(node: SceneNode, options: Omit<ColliderOptions, \"offset\" | \"rotation\" | \"shape\">): Collider",
+          "signatureTokens": [
+            {
+              "text": "boxFromBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Omit",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColliderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"offset\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rotation\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"shape\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "SceneNode",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Omit<ColliderOptions, \"offset\" | \"rotation\" | \"shape\">",
+              "optional": false
+            }
+          ],
+          "returnType": "Collider",
+          "description": "Snapshot a node's local bounds as a box for a body bound to that node. The center is relative to the node's origin. Dimensions and center include the current positive local scale; rebuild the collider after geometry, scale or origin changes. For compound shapes, append other colliders in the same body-local coordinate space."
         }
       ],
       "paragraphs": [],

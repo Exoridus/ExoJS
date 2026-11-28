@@ -1,8 +1,9 @@
-import { Component, type PointLike, Vector } from '@codexo/exojs';
+import { Component, type PointLike, type SceneNode, Vector } from '@codexo/exojs';
 
 import type { Collider } from './Collider';
 import type { PhysicsBody } from './PhysicsBody';
-import type { PhysicsBodyComponent } from './PhysicsBodyComponent';
+import { PhysicsBodyComponent } from './PhysicsBodyComponent';
+import type { PhysicsWorld } from './PhysicsWorld';
 import { type CastState, createCastState } from './query/QueryEngine';
 
 /**
@@ -12,10 +13,13 @@ import { type CastState, createCastState } from './query/QueryEngine';
  * @internal
  */
 export interface MovementDriver {
+  _canDrive(movement: KinematicMovementComponent): boolean;
   /** Resolves the step about to run, ending in exactly one {@link KinematicMovementComponent._commit}. */
   _driveStep(fixedDelta: number): void;
   /** Runs once the step has moved every body. */
   _afterStep(): void;
+  /** Drops commands and contact state when movement stops participating in physics. */
+  _reset(): void;
 }
 
 /**
@@ -121,8 +125,8 @@ export const minApproach = 0.1;
  * ```
  */
 export class KinematicMovementComponent extends Component {
-  /** The physics component whose body this component moves. */
-  public readonly physics: PhysicsBodyComponent;
+  private readonly _explicitPhysics: PhysicsBodyComponent | null;
+  private _physics: PhysicsBodyComponent | null = null;
 
   /** @internal - the component that resolves this movement's steps instead of {@link move}, if any. */
   public _driver: MovementDriver | null = null;
@@ -131,6 +135,7 @@ export class KinematicMovementComponent extends Component {
   private _directionX = 0;
   private _directionY = 0;
   private _commandEpoch = -1;
+  private _commandSpeed: number | null = null;
   private _budget = 0;
   private _blocked = false;
   private readonly _contactNormal = new Vector();
@@ -138,23 +143,61 @@ export class KinematicMovementComponent extends Component {
   private readonly _best: CastState = createCastState();
   private readonly _slideNormal = new Vector();
   private readonly _ownResult: SlideResult = createSlideResult();
-  private _registered = false;
+  private _registeredWorld: PhysicsWorld | null = null;
 
   /**
    * @throws TypeError when the physics component's body is not kinematic.
    * @throws RangeError when `maxSpeed` is negative or not finite.
    */
-  public constructor(physics: PhysicsBodyComponent, options: KinematicMovementOptions) {
+  public constructor(options: KinematicMovementOptions);
+  public constructor(physics: PhysicsBodyComponent, options: KinematicMovementOptions);
+  public constructor(physicsOrOptions: PhysicsBodyComponent | KinematicMovementOptions, options?: KinematicMovementOptions) {
     super();
 
-    if (physics.body.type !== 'kinematic') {
+    if (physicsOrOptions instanceof PhysicsBodyComponent) {
+      this._explicitPhysics = physicsOrOptions;
+      this._validateBody(physicsOrOptions.body);
+      this.maxSpeed = options!.maxSpeed;
+    } else {
+      this._explicitPhysics = null;
+      this.maxSpeed = physicsOrOptions.maxSpeed;
+    }
+  }
+
+  private _validateBody(body: PhysicsBody): void {
+    if (body.type !== 'kinematic') {
       throw new TypeError(
-        `KinematicMovementComponent: the body is '${physics.body.type}', but only a kinematic body takes its motion from the movement. Create the PhysicsBodyComponent with type 'kinematic'.`,
+        `KinematicMovementComponent: the body is '${body.type}', but only a kinematic body takes its motion from the movement. Create the PhysicsBodyComponent with type 'kinematic'.`,
       );
     }
+  }
 
-    this.physics = physics;
-    this.maxSpeed = options.maxSpeed;
+  /** The explicit or active same-node physics dependency. Throws if it has yet to resolve. */
+  public get physics(): PhysicsBodyComponent {
+    const physics = this._physics ?? this._explicitPhysics;
+
+    if (physics === null) {
+      throw new Error('KinematicMovementComponent: requires a PhysicsBodyComponent on the same node.');
+    }
+
+    return physics;
+  }
+
+  /** @internal */
+  public get _selectedWorld(): PhysicsWorld | null {
+    return (this._physics ?? this._explicitPhysics)?._selectedWorld ?? null;
+  }
+
+  /** @internal */
+  public get _commandWorld(): PhysicsWorld | null {
+    if (this.attached) {
+      return this._registeredWorld;
+    }
+
+    const physics = this._explicitPhysics;
+    const world = physics?._selectedWorld;
+
+    return world && !physics.body.destroyed && physics.body._isMemberOf(world) ? world : null;
   }
 
   /** The moved body. */
@@ -214,30 +257,53 @@ export class KinematicMovementComponent extends Component {
    * @throws Error while a `CharacterMovementComponent` drives this movement.
    */
   public move(direction: Readonly<PointLike>, distance = Infinity): void {
-    const x = direction.x;
-    const y = direction.y;
+    this._queueMove(direction, distance, false);
+  }
+
+  /**
+   * Requests a velocity in world units per second for the next advance.
+   * The requested speed is independent of {@link maxSpeed}. Collisions and the
+   * optional distance cap constrain the result just as with {@link move}.
+   *
+   * @throws RangeError for a non-finite speed or an invalid distance.
+   * @throws Error while a character drives this movement.
+   */
+  public moveVelocity(velocity: Readonly<PointLike>, distance = Infinity): void {
+    this._queueMove(velocity, distance, true);
+  }
+
+  private _queueMove(input: Readonly<PointLike>, distance: number, velocity: boolean): void {
+    const { x, y } = input;
 
     if (this._driver !== null) {
       throw new Error(
-        'KinematicMovementComponent.move: a CharacterMovementComponent drives this movement. Command the character instead, or disable it first.',
+        'KinematicMovementComponent: a CharacterMovementComponent drives this movement. Command the character instead, or disable it first.',
       );
     }
 
-    if (!Number.isFinite(x) || !Number.isFinite(y)) {
-      throw new RangeError(`KinematicMovementComponent.move: direction must be finite, received (${x}, ${y}).`);
+    const length = Math.hypot(x, y);
+
+    if (!Number.isFinite(length)) {
+      throw new RangeError(`KinematicMovementComponent: movement input must have a finite length, received (${x}, ${y}).`);
     }
 
     if (!(distance >= 0)) {
-      throw new RangeError(`KinematicMovementComponent.move: distance must be non-negative, received ${distance}.`);
+      throw new RangeError(`KinematicMovementComponent: distance must be non-negative, received ${distance}.`);
     }
 
-    const length = Math.hypot(x, y);
-    const scale = length > 1 ? 1 / length : 1;
+    const world = this._commandWorld;
 
-    this._directionX = x * scale;
-    this._directionY = y * scale;
+    if (world === null) {
+      return;
+    }
+
+    const divisor = velocity ? length || 1 : Math.max(1, length);
+
+    this._directionX = x / divisor;
+    this._directionY = y / divisor;
+    this._commandSpeed = velocity ? length : null;
     this._budget = distance;
-    this._commandEpoch = this.physics.world._stepEpoch;
+    this._commandEpoch = world._stepEpoch;
   }
 
   /** Cancels a pending command and halts the body at once. */
@@ -249,7 +315,15 @@ export class KinematicMovementComponent extends Component {
   }
 
   protected override onEnable(): void {
-    const body = this.physics.body;
+    const physics = this._explicitPhysics ?? this.node.getComponent(PhysicsBodyComponent);
+
+    if (physics === null || !physics.attached || (physics.node !== this.node && physics.scene !== this.scene) || physics.body.destroyed) {
+      throw new Error('KinematicMovementComponent: requires a PhysicsBodyComponent with a live body in the same scene.');
+    }
+
+    const body = physics.body;
+
+    this._validateBody(body);
 
     if (body._movement !== null && body._movement !== this) {
       throw new Error(
@@ -257,34 +331,67 @@ export class KinematicMovementComponent extends Component {
       );
     }
 
+    const world = physics.activeWorld;
+
+    if (world !== null) {
+      world._addStepController(this);
+      this._registeredWorld = world;
+    }
+
+    this._physics = physics;
     body._movement = this;
-    this.physics.world._addStepController(this);
-    this._registered = true;
+
+    if (this._driver !== null && !this._driver._canDrive(this)) {
+      this._driver = null;
+    }
   }
 
   protected override onDisable(): void {
     const body = this.physics.body;
 
+    this._leaveWorld();
+
     if (body._movement === this) {
       body._movement = null;
     }
 
-    if (this._registered) {
-      this._registered = false;
-      this.physics.world._removeStepController(this);
-    }
+    this._physics = null;
+  }
 
-    this._commandEpoch = -1;
-    this._halt();
+  /** @internal */
+  public _canMoveNode(node: SceneNode): boolean {
+    return this._explicitPhysics !== null || (this.attached && this.node === node);
+  }
+
+  /** @internal */
+  public _joinWorld(world: PhysicsWorld): void {
+    const physics = this.physics;
+
+    if (this.scene === physics.scene) {
+      world._addStepController(this);
+      this._registeredWorld = world;
+    }
+  }
+
+  /** @internal */
+  public _leaveWorld(): void {
+    if (this._registeredWorld !== null) {
+      this._registeredWorld._removeStepController(this);
+      this.stop();
+      this._registeredWorld = null;
+      this._driver?._reset();
+    }
   }
 
   /** @internal - resolves the pending command into the body's velocity for the step about to run. */
   public _beforeStep(fixedDelta: number): void {
-    const body = this.physics.body;
+    const world = this._commandWorld;
 
-    if (!body.attached || body.destroyed) {
+    if (world === null) {
       return;
     }
+
+    const body = this.physics.body;
 
     if (this._driver !== null) {
       this._driver._driveStep(fixedDelta);
@@ -292,12 +399,9 @@ export class KinematicMovementComponent extends Component {
       return;
     }
 
-    if (
-      this._commandEpoch !== this.physics.world._stepEpoch ||
-      (this._directionX === 0 && this._directionY === 0) ||
-      this._maxSpeed === 0 ||
-      this._budget <= 0
-    ) {
+    const speed = this._commandSpeed ?? this._maxSpeed;
+
+    if (this._commandEpoch !== world._stepEpoch || (this._directionX === 0 && this._directionY === 0) || speed === 0 || this._budget <= 0) {
       body.linearVelocityX = 0;
       body.linearVelocityY = 0;
       this._blocked = false;
@@ -307,7 +411,7 @@ export class KinematicMovementComponent extends Component {
     }
 
     const length = Math.hypot(this._directionX, this._directionY);
-    const distance = Math.min(this._maxSpeed * fixedDelta * length, this._budget);
+    const distance = Math.min(speed * fixedDelta * length, this._budget);
     const scale = distance / length;
     const result = this._ownResult;
 
@@ -318,9 +422,7 @@ export class KinematicMovementComponent extends Component {
 
   /** @internal - forwards the end of a step to the driver. */
   public _afterStep(): void {
-    const body = this.physics.body;
-
-    if (this._driver !== null && body.attached && !body.destroyed) {
+    if (this._driver !== null && this._commandWorld !== null) {
       this._driver._afterStep();
     }
   }
@@ -461,12 +563,16 @@ export class KinematicMovementComponent extends Component {
   }
 
   private _halt(): void {
-    const body = this.physics.body;
+    const body = (this._physics ?? this._explicitPhysics)?.body;
 
     this._blocked = false;
     this._contactNormal.set(0, 0);
 
-    if (!body.destroyed) {
+    if (
+      body &&
+      !body.destroyed &&
+      (this._registeredWorld !== null || (!this.attached && body._movement === null && this._commandWorld !== null))
+    ) {
       body.linearVelocityX = 0;
       body.linearVelocityY = 0;
     }
@@ -481,7 +587,7 @@ export class KinematicMovementComponent extends Component {
     dy: number,
     exclude: ReadonlyArray<PhysicsBody | Collider> | null,
   ): boolean {
-    const queries = this.physics.world._queries;
+    const queries = this._commandWorld!._queries;
     const cast = this._cast;
     const best = this._best;
 

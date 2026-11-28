@@ -1,53 +1,7 @@
-import { logger, type SceneNode } from '@codexo/exojs';
+import type { SceneNode } from '@codexo/exojs';
 
 import type { PhysicsBody } from '../PhysicsBody';
 import { PhysicsBinding } from './PhysicsBinding';
-
-/** `true` when `ancestor` contributes anything beyond identity to a descendant's world transform. */
-const hasNonIdentityTransform = (ancestor: SceneNode): boolean =>
-  ancestor.x !== 0 ||
-  ancestor.y !== 0 ||
-  ancestor.rotation !== 0 ||
-  ancestor.skewX !== 0 ||
-  ancestor.skewY !== 0 ||
-  ancestor.scale.x !== 1 ||
-  ancestor.scale.y !== 1 ||
-  ancestor.origin.x !== 0 ||
-  ancestor.origin.y !== 0;
-
-/**
- * Dev-only bind-time guard (F16): {@link PhysicsBinding.sync} writes the
- * body's WORLD transform into the node's LOCAL position/rotation, which is
- * only correct when local space == world space. Walk the parent chain and
- * warn when an ancestor either carries a non-identity transform or is a
- * transform-group boundary (RetainedContainer) - in both cases the ancestor
- * contribution is applied ON TOP of the world-space values sync() writes,
- * double-transforming the node on screen.
- */
-const warnUnlessWorldSpaceRooted = (node: SceneNode): void => {
-  // Duck-typed test doubles may omit `parent`; treat that as world-space-rooted.
-  let ancestor: SceneNode | null = node.parent ?? null;
-
-  while (ancestor !== null) {
-    if (ancestor._isTransformGroupBoundary || hasNonIdentityTransform(ancestor)) {
-      const nodeName = node.name !== null && node.name !== '' ? ` '${node.name}'` : '';
-      const ancestorName = ancestor.name !== null && ancestor.name !== '' ? ` '${ancestor.name}'` : '';
-
-      logger.warn(
-        `PhysicsBinding: the bound node${nodeName} is not world-space-rooted — ancestor${ancestorName} ${
-          ancestor._isTransformGroupBoundary ? 'is a transform-group boundary (RetainedContainer)' : 'has a non-identity transform'
-        }. sync() writes the body's WORLD transform into the node's LOCAL position/rotation, so nesting it under a ` +
-          'moved/rotated/scaled container (or a transform group) will double-transform it on screen. Re-parent the node ' +
-          'to a world-space-rooted container.',
-        { source: 'physics' },
-      );
-
-      return;
-    }
-
-    ancestor = ancestor.parent ?? null;
-  }
-};
 
 /**
  * Owns the body ↔ node links and writes bound node transforms after each step.
@@ -55,37 +9,71 @@ const warnUnlessWorldSpaceRooted = (node: SceneNode): void => {
  */
 export class BindingRegistry {
   private readonly _bindings = new Map<PhysicsBody, PhysicsBinding>();
+  private readonly _boundNodes = new Map<SceneNode, PhysicsBinding>();
+  private _syncStamp = 0;
 
-  /**
-   * Link `body` to `node`. Rejects destroyed nodes and nodes with non-zero
-   * skew; runtime scale is ignored. In dev builds, warns when the node is not
-   * world-space-rooted (moved ancestor or transform-group boundary above it) -
-   * see {@link PhysicsBinding} for the local==world contract.
-   */
+  /** Link a live node with a supported transform to the body. */
   public bind(body: PhysicsBody, node: SceneNode): PhysicsBinding {
-    if (node.destroyed) {
-      throw new Error('PhysicsBinding: cannot bind a destroyed node — its pooled transform has already been released.');
-    }
-
-    if (node.skewX !== 0 || node.skewY !== 0) {
-      throw new Error(`PhysicsBinding: the bound node has non-zero skew (${node.skewX}°, ${node.skewY}°); skewed nodes are not supported.`);
-    }
-
-    if (__DEV__) {
-      warnUnlessWorldSpaceRooted(node);
-    }
-
+    this._assertBindable(body, node);
     const binding = new PhysicsBinding(body, node);
+    this._assertBindable(body, node);
+    const previous = this._bindings.get(body);
 
-    this._bindings.set(body, binding);
-    binding.sync();
+    if (previous !== undefined) {
+      previous._invalidatePose();
+      this._boundNodes.delete(previous.node);
+    }
+
+    // Publish before calling node setters so reentrant unbind or teardown can cancel it.
+    this._setBinding(binding);
+
+    try {
+      binding.sync();
+    } catch (error) {
+      if (this._bindings.get(body) === binding) {
+        this.unbind(body);
+
+        if (previous !== undefined && !previous.node.destroyed && !this._boundNodes.has(previous.node)) {
+          this._setBinding(previous);
+        }
+      }
+
+      throw error;
+    }
+
+    if (node.destroyed && this._bindings.get(body) === binding) {
+      this.unbind(body);
+    }
 
     return binding;
   }
 
+  private _setBinding(binding: PhysicsBinding): void {
+    this._bindings.set(binding.body, binding);
+    this._boundNodes.set(binding.node, binding);
+  }
+
+  private _assertBindable(body: PhysicsBody, node: SceneNode): void {
+    if (node.destroyed) {
+      throw new Error('PhysicsBinding: cannot bind a destroyed node — its pooled transform has already been released.');
+    }
+
+    const existing = this._boundNodes.get(node);
+
+    if (existing !== undefined && existing.body !== body) {
+      throw new Error('PhysicsBinding: this node is already bound to a different body in this world.');
+    }
+  }
+
   /** Remove the link for `body`, if any. */
   public unbind(body: PhysicsBody): void {
-    this._bindings.delete(body);
+    const binding = this._bindings.get(body);
+
+    if (binding !== undefined) {
+      binding._invalidatePose();
+      this._bindings.delete(body);
+      this._boundNodes.delete(binding.node);
+    }
   }
 
   /**
@@ -106,14 +94,7 @@ export class BindingRegistry {
    * {@link unbind} first) when the node it was driving is destroyed.
    */
   public sync(): void {
-    for (const [body, binding] of this._bindings) {
-      if (binding.node.destroyed) {
-        this._bindings.delete(body);
-        continue;
-      }
-
-      binding.sync();
-    }
+    this._syncAll(undefined);
   }
 
   /**
@@ -122,12 +103,53 @@ export class BindingRegistry {
    * {@link PhysicsBinding.syncInterpolated}. Same destroyed-node pruning.
    */
   public syncInterpolated(alpha: number): void {
-    for (const [body, binding] of this._bindings) {
-      if (binding.node.destroyed) {
-        this._bindings.delete(body);
-        continue;
-      }
+    this._syncAll(alpha);
+  }
 
+  private _syncAll(alpha: number | undefined): void {
+    const stamp = ++this._syncStamp;
+
+    for (const binding of this._bindings.values()) {
+      if (binding.node.destroyed) {
+        this.unbind(binding.body);
+      } else {
+        this._syncBinding(binding, alpha, stamp);
+      }
+    }
+  }
+
+  private _syncBinding(binding: PhysicsBinding, alpha: number | undefined, stamp: number): void {
+    if (binding._syncStamp === stamp) {
+      return;
+    }
+
+    binding._syncStamp = stamp;
+
+    // A descendant must invert the ancestor's pose for this presentation pass.
+    for (let parent = binding.node.parent; parent; parent = parent.parent) {
+      const ancestor = this._boundNodes.get(parent);
+
+      if (ancestor !== undefined && !parent.destroyed) {
+        this._syncBinding(ancestor, alpha, stamp);
+
+        // The ancestor's transform setter can unlink or destroy the child.
+        if (this._bindings.get(binding.body) !== binding) {
+          return;
+        }
+
+        if (binding.node.destroyed) {
+          this.unbind(binding.body);
+
+          return;
+        }
+
+        break;
+      }
+    }
+
+    if (alpha === undefined) {
+      binding.sync();
+    } else {
       binding.syncInterpolated(alpha);
     }
   }
@@ -139,6 +161,11 @@ export class BindingRegistry {
 
   /** Drop all links. */
   public clear(): void {
+    for (const binding of this._bindings.values()) {
+      binding._invalidatePose();
+    }
+
     this._bindings.clear();
+    this._boundNodes.clear();
   }
 }

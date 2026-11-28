@@ -2,6 +2,7 @@ import type { PointLike } from '@codexo/exojs';
 import { Vector } from '@codexo/exojs';
 
 import { Collider, type ColliderOptions } from './Collider';
+import type { KinematicMovementComponent } from './KinematicMovementComponent';
 import type { Transform } from './math';
 import { applyTransform, createTransform, setTransform } from './math';
 import type { ShapeMassProperties } from './shapes/Shape';
@@ -109,7 +110,7 @@ export class PhysicsBody {
   /** @internal - set by `PhysicsBodyComponent`; such a body may not be constrained by a joint. */
   public _componentManaged = false;
   /** @internal - the movement component currently driving this body, so a second one is refused. */
-  public _movement: object | null = null;
+  public _movement: KinematicMovementComponent | null = null;
 
   /**
    * @internal - whether the body left a world through `remove` and has not
@@ -672,6 +673,7 @@ export class PhysicsBody {
   /** @internal - mark destroyed (called by the world). */
   public _markDestroyed(): void {
     this._destroyed = true;
+    this._movement?._leaveWorld();
   }
 
   /** @internal - end a body that belongs to no world: mark it and its colliders destroyed. */
@@ -711,6 +713,7 @@ export class PhysicsBody {
    * already taken the colliders out of detection.
    */
   public _detachFromWorld(): void {
+    this._movement?._leaveWorld();
     this._owner = null;
     this._id = -1;
     this._attached = false;
