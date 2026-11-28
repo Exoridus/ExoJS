@@ -150,6 +150,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['component', 'behavior-component', 'component-query'],
       },
       {
+        path: 'runtime/observable-values',
+        level: 'intermediate',
+        learningGoals: [
+          'Hold game and UI state in observable values and derive read-only values from them',
+          'Observe vectors and sizes and build live text without per-frame polling',
+        ],
+        prerequisites: ['runtime/scene-graph'],
+        examples: [],
+        apiLinks: ['observable', 'observable-object', 'readonly-observable', 'observable-vector', 'observable-size'],
+      },
+      {
         path: 'runtime/coordinates-and-views',
         level: 'intermediate',
         learningGoals: [

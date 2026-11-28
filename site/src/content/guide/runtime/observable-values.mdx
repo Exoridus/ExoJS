@@ -1,0 +1,143 @@
+---
+title: 'Observable values'
+description: 'Hold state in values that report their own changes, derive read-only values from them, and observe vectors and sizes without polling every frame.'
+---
+
+# Observable values
+
+Game state changes at specific moments: a hit lowers health, a pickup adds ammo, a node moves. An observable value reports those moments to whoever subscribed, so nothing has to poll every frame. ExoJS has three kinds:
+
+- `Observable<T>` holds one value of any type.
+- `ObservableObject<T>` turns a fixed plain object into one whose properties report their changes.
+- `ObservableVector` and `ObservableSize`, which nodes already use for `position`, `scale` and similar properties, can be observed too.
+
+All of them share one small contract, `ReadonlyObservable<T>`: a `value`, a `subscribe` method, and `map` for derived values. There is no proxy, no hidden dependency tracking and no per-frame work.
+
+## Observable
+
+```ts
+import { Observable } from '@codexo/exojs';
+
+const health = new Observable(100);
+const name = new Observable('Hero');
+
+const stop = health.subscribe(value => console.log(`health is now ${value}`));
+
+health.value -= 10; // logs "health is now 90"
+health.value = 90; // equal value: nothing happens
+name.value = 'Knight';
+
+stop();
+```
+
+The type is inferred from the initial value, or given explicitly: `new Observable<Enemy | null>(null)`. Assigning `value` notifies only when the new value differs (`Object.is`), so repeated equal assignments are a cheap comparison. Assigning a number or string allocates nothing.
+
+An object changed in place keeps its identity, so assigning it again notifies nothing. Say so explicitly:
+
+```ts
+import { Observable } from '@codexo/exojs';
+
+const inventory = new Observable<string[]>([]);
+
+inventory.mutate(items => items.push('sword')); // changes and notifies once
+inventory.value.push('shield');
+inventory.markChanged(); // notifies after a change made elsewhere
+```
+
+`subscribe` returns the function that ends the subscription; calling it twice is harmless. `destroy()` removes every subscriber at once.
+
+## Derived values
+
+`map` derives a read-only value:
+
+```ts
+import { Observable } from '@codexo/exojs';
+
+const health = new Observable(100);
+const status = health.map(hp => (hp > 50 ? 'Healthy' : 'Wounded'));
+
+status.subscribe(text => console.log(text));
+
+health.value = 90; // status is still 'Healthy': nothing is logged
+health.value = 40; // logs 'Wounded'
+```
+
+A derived value is lazy. It subscribes to its source only while it has subscribers itself, so a derived value nobody observes costs nothing and is garbage-collected normally. Reading its `value` always computes the current result. It notifies only when the result changes, except for objects, which may have changed in place and therefore always notify.
+
+## Observable objects
+
+`ObservableObject` gives a fixed set of properties native getters and setters:
+
+```ts
+import { ObservableObject } from '@codexo/exojs';
+
+interface PlayerStats {
+  health: number;
+  ammo: number;
+  level: number;
+}
+
+const stats = new ObservableObject<PlayerStats>({ health: 100, ammo: 30, level: 1 });
+
+stats.health -= 10;
+stats.ammo--;
+stats.level++;
+
+const summary = ObservableObject.map(stats, s => `${s.health} HP | ${s.ammo} Ammo`);
+const stop = ObservableObject.subscribe(stats, s => console.log(s.level));
+
+stop();
+```
+
+The constructor copies the properties of the object you pass in; your object is left alone. Every property name is free for your data, which is why `map`, `subscribe` and `markChanged` are static methods rather than methods of the instance. The shape is fixed: the object is sealed, so adding or deleting a property is an error. Observation is shallow. A nested object or array can be a property value, but changes inside it are not reported; assign a new value or call `ObservableObject.markChanged(stats)`. Spreading, `Object.keys` and `JSON.stringify` see the current values.
+
+## Observing vectors and sizes
+
+A node's `position`, `scale` and other observable vectors implement the same contract. The value is the vector itself, which keeps its identity while it moves, so each change notifies:
+
+```ts
+import { Sprite } from '@codexo/exojs';
+
+const player = new Sprite(null);
+const readout = player.position.map(p => `${p.x.toFixed(1)} | ${p.y.toFixed(1)}`);
+const stop = readout.subscribe(text => console.log(text));
+
+player.position.x += 10;
+player.position.set(100, 200);
+
+stop();
+```
+
+Observation costs nothing until the first subscription: an unobserved vector has no extra field, closure or allocation, and its owner is notified exactly as before. Subscribers run after the owner, so a node's transform is already invalidated when they see the change.
+
+## Live text
+
+The `live` tagged template builds text from observable values:
+
+```ts
+import { live, Observable, Sprite } from '@codexo/exojs';
+
+const health = new Observable(100);
+const ammo = new Observable(30);
+const player = new Sprite(null);
+
+const title = live`Health: ${health}`;
+const ammunition = live`Ammo: ${ammo} / 30`;
+const position = live`Position: ${player.position}`; // "Position: 0, 0"
+
+title.subscribe(text => console.log(text));
+health.value = 75; // logs "Health: 75"
+```
+
+Observable substitutions are read each time the text is computed. Every other substitution is converted once, like in an ordinary template literal, and a template without observable substitutions returns a plain `string`. Functions and promises are rejected, because they would never be read again. An ordinary template literal, or a plain property read such as `player.x`, is always a snapshot.
+
+Vectors print as `120, 80`, sizes as `1920 × 1080` and rectangles as `10, 20, 200, 100`, without rounding. Format numbers yourself in `map`, as in the readout above.
+
+## Order and reentrancy
+
+Subscribers run in the order they subscribed. A subscriber that changes the value it is observing does not interrupt the notification in progress: the remaining subscribers receive the value of that round first, then every subscriber receives the new value. Subscribers therefore never see values out of order, and the last value each one receives is the current one. A cycle that keeps changing the value is stopped with an error after 100 rounds. A subscriber that throws stops the remaining subscribers of that notification, and the error reaches the code that made the change.
+
+## Where to go next
+
+- [Scene graph](/ExoJS/en/guide/runtime/scene-graph/) explains the nodes whose vectors you can observe.
+- [UI & widgets](/ExoJS/en/guide/runtime/ui-and-widgets/) covers the labels and widgets that display state.
