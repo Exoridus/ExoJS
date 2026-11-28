@@ -367,6 +367,7 @@ class DerivedObservable<T> extends ObservableBase<T> {
   private _cached: T | undefined = undefined;
   private _changes = 0;
   private _delivered = 0;
+  private _unversioned = false;
 
   public constructor(sources: ReadonlyArray<ReadonlyObservable<unknown>>, compute: () => T) {
     super();
@@ -393,7 +394,8 @@ class DerivedObservable<T> extends ObservableBase<T> {
   public override _version(): number {
     this._validate();
 
-    return this._changes;
+    // Derived from a source that cannot tell, an object result is new on every read, so its count says nothing.
+    return this._unversioned ? Number.NaN : this._changes;
   }
 
   public get value(): T {
@@ -403,7 +405,8 @@ class DerivedObservable<T> extends ObservableBase<T> {
   }
 
   protected override _connect(): void {
-    this._delivered = this._version();
+    this._validate();
+    this._delivered = this._changes;
 
     for (const source of this._sources) {
       this._unsubscribers.push(source.subscribe(this._onSourceChange));
@@ -424,13 +427,13 @@ class DerivedObservable<T> extends ObservableBase<T> {
   }
 
   protected override _refresh(): boolean {
-    const changes = this._version();
+    this._validate();
 
-    if (changes === this._delivered) {
+    if (this._changes === this._delivered) {
       return false;
     }
 
-    this._delivered = changes;
+    this._delivered = this._changes;
 
     return true;
   }
@@ -441,6 +444,7 @@ class DerivedObservable<T> extends ObservableBase<T> {
     const seen = this._seen;
 
     let current = this._computed;
+    let unversioned = false;
 
     // Versions are recorded before computing: a source changed by the computation itself only causes another recomputation later.
     for (let index = 0; index < sources.length; index++) {
@@ -449,8 +453,11 @@ class DerivedObservable<T> extends ObservableBase<T> {
       if (seen[index] !== version) {
         seen[index] = version;
         current = false;
+        unversioned ||= Number.isNaN(version);
       }
     }
+
+    this._unversioned = unversioned;
 
     if (current) {
       return;
