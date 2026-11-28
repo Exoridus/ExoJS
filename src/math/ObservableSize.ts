@@ -1,4 +1,44 @@
+import { derive, ObservableBase, type ObservableListener, type ReadonlyObservable } from '#core/Observable';
+
 import { Size } from './Size';
+
+/**
+ * Subscribers of one size. While it has subscribers, the size's callback is
+ * replaced by one that runs the original callback first and then notifies, so
+ * an unobserved size carries no extra field, closure or allocation.
+ */
+class SizeObservation extends ObservableBase<ObservableSize> {
+  public readonly relay = (): void => {
+    this.inner?.();
+    this._notify();
+  };
+
+  public constructor(
+    private readonly _size: ObservableSize,
+    public readonly inner: (() => void) | null,
+    private readonly _swapCallback: (callback: (() => void) | null, observation: SizeObservation | null) => void,
+  ) {
+    super();
+  }
+
+  public get value(): ObservableSize {
+    return this._size;
+  }
+
+  public end(): void {
+    this._end();
+  }
+
+  protected override _connect(): void {
+    this._swapCallback(this.relay, this);
+  }
+
+  protected override _disconnect(): void {
+    this._swapCallback(this.inner, null);
+  }
+}
+
+const observations = new WeakMap<ObservableSize, SizeObservation>();
 
 /**
  * A {@link Size} subclass that fires a callback whenever `width` or `height`
@@ -6,6 +46,10 @@ import { Size } from './Size';
  * on dimension mutations.
  *
  * Batch mutations via `set()` fire at most one callback per call.
+ *
+ * It also implements {@link ReadonlyObservable} for optional observation by
+ * application code: its {@link value} is the size itself, and subscribers run
+ * after the callback. Observation costs nothing until the first subscription.
  */
 export class ObservableSize extends Size {
   private _callback: (() => void) | null;
@@ -82,7 +126,38 @@ export class ObservableSize extends Size {
     return new Size(this._width, this._height);
   }
 
+  /** This size, which keeps its identity while its dimensions change. */
+  public get value(): this {
+    return this;
+  }
+
+  /**
+   * Calls `listener` with this size after each change until the returned
+   * function is called. See {@link ReadonlyObservable.subscribe}.
+   */
+  public subscribe(listener: ObservableListener<this>): () => void {
+    const observation =
+      observations.get(this) ??
+      new SizeObservation(this, this._callback, (callback, current) => {
+        this._callback = callback;
+
+        if (current === null) {
+          observations.delete(this);
+        } else {
+          observations.set(this, current);
+        }
+      });
+
+    return observation.subscribe(listener as ObservableListener<ObservableSize>);
+  }
+
+  /** A read-only value computed from this size; see {@link ReadonlyObservable.map}. */
+  public map<U>(project: (value: this) => U): ReadonlyObservable<U> {
+    return derive([this], () => project(this));
+  }
+
   public override destroy(): void {
+    observations.get(this)?.end();
     this._callback = null;
   }
 }

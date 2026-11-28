@@ -1,16 +1,16 @@
 {
   "title": "ObservableSize",
-  "description": "A Size subclass that fires a callback whenever `width` or `height` changes. Used internally by layout-aware types to invalidate cached geometry on dimension mutations. Batch mutations via `set()` fire at most one callback per call.",
+  "description": "A Size subclass that fires a callback whenever `width` or `height` changes. Used internally by layout-aware types to invalidate cached geometry on dimension mutations. Batch mutations via `set()` fire at most one callback per call. It also implements ReadonlyObservable for optional observation by application code: its value is the size itself, and subscribers run after the callback. Observation costs nothing until the first subscription.",
   "symbol": "ObservableSize",
   "kind": "class",
   "subsystem": "math",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 14,
+  "memberCount": 18,
   "counts": {
     "constructors": 1,
-    "methods": 9,
-    "properties": 4,
+    "methods": 12,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -20,7 +20,8 @@
       "members": [],
       "paragraphs": [
         "A Size subclass that fires a callback whenever `width` or `height` changes. Used internally by layout-aware types to invalidate cached geometry on dimension mutations.",
-        "Batch mutations via `set()` fire at most one callback per call."
+        "Batch mutations via `set()` fire at most one callback per call.",
+        "It also implements ReadonlyObservable for optional observation by application code: its value is the size itself, and subscribers run after the callback. Observation costs nothing until the first subscription."
       ],
       "importLine": "import { ObservableSize } from '@codexo/exojs'",
       "sourceLink": null
@@ -436,6 +437,85 @@
           "description": ""
         },
         {
+          "name": "map",
+          "signature": "map(project: (value: this) => U): ReadonlyObservable<U>",
+          "signatureTokens": [
+            {
+              "text": "map",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "project",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "U",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyObservable",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "U",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "project",
+              "type": "(value: this) => U",
+              "optional": false
+            }
+          ],
+          "returnType": "ReadonlyObservable<U>",
+          "description": "A read-only value computed from this size; see ReadonlyObservable.map."
+        },
+        {
           "name": "scale",
           "signature": "scale(x: number, y: number): this",
           "signatureTokens": [
@@ -576,6 +656,73 @@
           "description": ""
         },
         {
+          "name": "subscribe",
+          "signature": "subscribe(listener: ObservableListener<ObservableSize>): () => void",
+          "signatureTokens": [
+            {
+              "text": "subscribe",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableListener",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableSize",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "ObservableListener<ObservableSize>",
+              "optional": false
+            }
+          ],
+          "returnType": "() => void",
+          "description": "Calls listener with this size after each change until the returned function is called. See ReadonlyObservable.subscribe."
+        },
+        {
           "name": "subtract",
           "signature": "subtract(x: number, y: number): this",
           "signatureTokens": [
@@ -642,6 +789,35 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "toString",
+          "signature": "toString(): string",
+          "signatureTokens": [
+            {
+              "text": "toString",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "string",
+          "description": "The dimensions as \"width × height\", for example \"1920 × 1080\", without rounding."
         }
       ],
       "paragraphs": [],
@@ -693,6 +869,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "value",
+          "signature": "value: this",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "This size, which keeps its identity while its dimensions change."
         },
         {
           "name": "width",

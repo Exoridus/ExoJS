@@ -6,10 +6,10 @@
   "subsystem": "math",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 23,
+  "memberCount": 24,
   "counts": {
     "constructors": 0,
-    "methods": 18,
+    "methods": 19,
     "properties": 5,
     "events": 0
   },
@@ -792,6 +792,35 @@
           ],
           "returnType": "this",
           "description": "Subtract (x, y) from this vector. When y is omitted it defaults to x. Mutates in place and returns this for chaining."
+        },
+        {
+          "name": "toString",
+          "signature": "toString(): string",
+          "signatureTokens": [
+            {
+              "text": "toString",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "string",
+          "description": "The components as \"x, y\", for example \"120, 80\", without rounding."
         },
         {
           "name": "transform",

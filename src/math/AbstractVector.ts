@@ -216,5 +216,10 @@ export abstract class AbstractVector {
     return getDistance(this.x, this.y, vector.x, vector.y);
   }
 
+  /** The components as `"x, y"`, for example `"120, 80"`, without rounding. */
+  public toString(): string {
+    return `${this.x}, ${this.y}`;
+  }
+
   public abstract destroy(): void;
 }

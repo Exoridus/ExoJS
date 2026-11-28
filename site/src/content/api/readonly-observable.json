@@ -1,0 +1,227 @@
+{
+  "title": "ReadonlyObservable",
+  "description": "The shared observation contract: a current value, change notifications through subscribe, and read-only derivation through map. Implemented by Observable, the values map and live derive, ObservableVector and ObservableSize. A notification means the value may have changed: observed objects that are mutated in place notify with the same object identity.",
+  "symbol": "ReadonlyObservable",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The shared observation contract: a current value, change notifications through subscribe, and read-only derivation through map. Implemented by Observable, the values map and live derive, ObservableVector and ObservableSize.",
+        "A notification means the value may have changed: observed objects that are mutated in place notify with the same object identity."
+      ],
+      "importLine": "import { ReadonlyObservable } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "map",
+          "signature": "map(project: (value: T) => U): ReadonlyObservable<U>",
+          "signatureTokens": [
+            {
+              "text": "map",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "project",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "U",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyObservable",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "U",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "project",
+              "type": "(value: T) => U",
+              "optional": false
+            }
+          ],
+          "returnType": "ReadonlyObservable<U>",
+          "description": "A read-only value computed from this one by project. It subscribes to this value only while it has subscribers itself, computes on every read of its value, and notifies only when the result differs from the last one it notified (Object.is), or when the result is an object, which may have been mutated in place."
+        },
+        {
+          "name": "subscribe",
+          "signature": "subscribe(listener: ObservableListener<T>): () => void",
+          "signatureTokens": [
+            {
+              "text": "subscribe",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableListener",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "ObservableListener<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "() => void",
+          "description": "Calls listener after every change until the returned function is called. Listeners run in subscription order. Subscribing the same function again has no effect, and calling the returned function more than once is safe."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "value",
+          "signature": "value: T",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The current value."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Observable.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Observable.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Observable.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Observable.ts"
+}

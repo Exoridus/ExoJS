@@ -1,3 +1,5 @@
+import { derive, ObservableBase, type ObservableListener, type ReadonlyObservable } from '#core/Observable';
+
 import { AbstractVector } from './AbstractVector';
 
 /**
@@ -10,6 +12,42 @@ import { AbstractVector } from './AbstractVector';
  */
 export interface ObservableVectorOwner {
   _onObservableChange(channel: number): void;
+}
+
+/**
+ * Subscribers of one vector. It takes the vector's owner slot only while it has
+ * subscribers and forwards every change to the original owner first, so an
+ * unobserved vector carries no extra field, closure or allocation.
+ */
+class VectorObservation extends ObservableBase<ObservableVector> implements ObservableVectorOwner {
+  public constructor(
+    private readonly _vector: ObservableVector,
+    public readonly inner: ObservableVectorOwner | null,
+    private readonly _swapOwner: (owner: ObservableVectorOwner | null) => void,
+  ) {
+    super();
+  }
+
+  public get value(): ObservableVector {
+    return this._vector;
+  }
+
+  public _onObservableChange(channel: number): void {
+    this.inner?._onObservableChange(channel);
+    this._notify();
+  }
+
+  public end(): void {
+    this._end();
+  }
+
+  protected override _connect(): void {
+    this._swapOwner(this);
+  }
+
+  protected override _disconnect(): void {
+    this._swapOwner(this.inner);
+  }
 }
 
 /**
@@ -26,6 +64,11 @@ export interface ObservableVectorOwner {
  *
  * Setting individual components (`x`, `y`) notifies only when the value
  * actually changes. Batch mutations via `set()` notify at most once per call.
+ *
+ * It also implements {@link ReadonlyObservable} for optional observation by
+ * application code, such as `` live`Position: ${node.position}` ``: its
+ * {@link value} is the vector itself, and subscribers run after the owner was
+ * notified. Observation costs nothing until the first subscription.
  *
  * Deliberately has no `clone()`. A clone is a value, not a second notification
  * channel into this vector's owner, so it would have to hand back a plain
@@ -132,7 +175,37 @@ export class ObservableVector extends AbstractVector {
     return this.set(vector.x, vector.y);
   }
 
+  /** This vector, which keeps its identity while its components change. */
+  public get value(): this {
+    return this;
+  }
+
+  /**
+   * Calls `listener` with this vector after each change until the returned
+   * function is called. See {@link ReadonlyObservable.subscribe}.
+   */
+  public subscribe(listener: ObservableListener<this>): () => void {
+    const owner = this._owner;
+    const observation =
+      owner instanceof VectorObservation
+        ? owner
+        : new VectorObservation(this, owner, next => {
+            this._owner = next;
+          });
+
+    return observation.subscribe(listener as ObservableListener<ObservableVector>);
+  }
+
+  /** A read-only value computed from this vector; see {@link ReadonlyObservable.map}. */
+  public map<U>(project: (value: this) => U): ReadonlyObservable<U> {
+    return derive([this], () => project(this));
+  }
+
   public destroy(): void {
+    if (this._owner instanceof VectorObservation) {
+      this._owner.end();
+    }
+
     // Drop the owner reference to prevent leaks if this vector is retained by
     // an external scope after the owning object is destroyed.
     this._owner = null;

@@ -91,6 +91,11 @@ export class Size implements Cloneable<Size> {
     return (width === undefined || this.width === width) && (height === undefined || this.height === height);
   }
 
+  /** The dimensions as `"width × height"`, for example `"1920 × 1080"`, without rounding. */
+  public toString(): string {
+    return `${this.width} × ${this.height}`;
+  }
+
   public destroy(): void {
     // no-op - pure value class, kept for Destroyable interface conformance
   }
