@@ -270,9 +270,12 @@ const call = (fn: (props: Props) => unknown, props: Props): RenderNode => {
  * then receives its node properties, signal handlers and children in that
  * order, and finally its `ref`. An element owns only the instance it
  * constructs. When a step after construction throws, the element detaches the
- * children it attached and destroys its own instance; children are never
- * destroyed, whether they were built with JSX or with `new`. Use
- * {@link jsxTransaction} to destroy every node of a failed tree.
+ * children it attached as JSX children and destroys its own instance; those
+ * children are never destroyed, whether they were built with JSX or with
+ * `new`. Destroying the instance destroys whatever else is attached to it at
+ * that moment, such as a node a `ref` or a {@link jsxConstruct} adapter added
+ * with `addChild`. Use {@link jsxTransaction} to destroy every node of a
+ * failed tree.
  */
 export const jsx = (type: unknown, props: Props): RenderNode => {
   if (typeof type !== 'function') {
@@ -325,10 +328,19 @@ const abort = ({ constructed, attached }: Transaction): void => {
 
 /**
  * Runs `build` and returns its result. When `build` throws, every node JSX
- * constructed during the call is destroyed before the error propagates, and
- * nodes created outside the call, or with `new`, are detached from those
- * nodes first and never destroyed. Without a transaction, a failing element
- * destroys only its own instance, and children built for it stay alive.
+ * constructed during the call is destroyed before the error propagates.
+ * Without a transaction, a failing element destroys only its own instance, and
+ * children built for it stay alive.
+ *
+ * The transaction knows only what JSX did. A node passed as a JSX child that
+ * JSX did not construct in this transaction is detached first and never
+ * destroyed. Everything else attached to a constructed node when `build`
+ * throws is destroyed with it, as destroying a container destroys its
+ * subtree, whoever created it: a node a `ref`, an element function or a
+ * {@link jsxConstruct} adapter attached with `addChild` is not detached.
+ * Attach such caller-owned nodes after the transaction returns, or detach
+ * them yourself before rethrowing. Nodes created with `new` and never
+ * attached to a constructed node are not touched.
  *
  * Use it where a failed tree must not keep resources, handlers or bindings
  * alive. Transactions nest: an inner transaction that completes hands its

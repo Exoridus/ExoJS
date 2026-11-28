@@ -542,6 +542,43 @@ describe('jsxTransaction', () => {
     ui.destroy();
   });
 
+  test('destroys a caller-owned node that a ref attached imperatively, unless the caller detaches it', () => {
+    const attachedInRef = new Label('mine');
+    const rescued = new Label('rescued');
+    let host: Probe | null = null;
+
+    const build = (child: Label): JSX.Element => (
+      <Container>
+        <Probe
+          ref={probe => {
+            host = probe;
+            probe.addChild(child);
+          }}
+        />
+        {'text' as unknown as JSX.Element}
+      </Container>
+    );
+
+    expect(() => jsxTransaction(() => build(attachedInRef))).toThrow(TypeError);
+    expect(attachedInRef.destroyed).toBe(true);
+
+    expect(() =>
+      jsxTransaction(() => {
+        try {
+          return build(rescued);
+        } catch (error) {
+          host!.removeChild(rescued);
+
+          throw error;
+        }
+      }),
+    ).toThrow(TypeError);
+    expect(rescued.destroyed).toBe(false);
+    expect(rescued.parent).toBeNull();
+
+    rescued.destroy();
+  });
+
   test('hands the nodes of a completed inner transaction to the enclosing one', () => {
     let rescued: JSX.Element | null = null;
 

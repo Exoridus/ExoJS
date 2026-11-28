@@ -71,13 +71,15 @@ Attach components in a `ref`: `ref={sprite => sprite.addComponent(new Health(100
 
 ## When construction fails
 
-An element owns exactly one node: the instance it constructs. When a handler, a child attachment or the `ref` throws after construction, the element detaches the children it attached and destroys its own instance. It never destroys a child, because JSX cannot tell whether a child is still yours: the compiler evaluates child expressions before their parent, so `<Button />` written inline and a button you built earlier, with JSX or with `new`, reach the parent the same way. When a constructor throws or a child is invalid, nothing has been attached yet and every child stays as it was.
+An element owns exactly one node: the instance it constructs. When a handler, a child attachment or the `ref` throws after construction, the element detaches the children it attached and destroys its own instance. It never destroys a JSX child, because JSX cannot tell whether a child is still yours: the compiler evaluates child expressions before their parent, so `<Button />` written inline and a button you built earlier, with JSX or with `new`, reach the parent the same way. When a constructor throws or a child is invalid, nothing has been attached yet and every child stays as it was.
 
 Children left behind by a failure are detached but alive. Garbage collection reclaims unreachable objects, but it does not call `destroy()`, so it releases no asset claims, signal handlers or other resources a node holds. Where a failed tree must not leave such nodes behind, build it inside `jsxTransaction`:
 
 <SourceSnippet source="examples/guides/jsx/scene-composition.tsx" region="failed-tree" language="tsx" title="examples/guides/jsx/scene-composition.tsx" />
 
-When the callback throws, every node JSX constructed during the call is destroyed, including siblings built before the failing one. Nodes created outside the call, or with `new`, are detached first and never destroyed. Transactions nest, and construction inside them must be synchronous. A teardown that throws during cleanup is logged, and the original error is the one that reaches you.
+When the callback throws, every node JSX constructed during the call is destroyed, including siblings built before the failing one. A node passed as a JSX child that JSX did not construct in the transaction is detached first and never destroyed.
+
+The transaction only knows what JSX attached. A node you attach yourself with `addChild`, in a `ref`, an element function or a `jsxConstruct` adapter, is part of the constructed node's subtree and is destroyed with it, like any child of a destroyed container. Attach nodes you keep after the transaction returns, or detach them in your own `catch` before rethrowing. Nodes created with `new` and never attached to a constructed node are left alone. Transactions nest, and construction inside them must be synchronous. A teardown that throws during cleanup is logged, and the original error is the one that reaches you.
 
 ## Serialization
 
