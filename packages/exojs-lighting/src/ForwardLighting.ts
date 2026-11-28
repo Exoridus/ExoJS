@@ -2,7 +2,7 @@ import type { Filter } from '@codexo/exojs';
 
 import { ForwardBackend } from './backends/ForwardBackend';
 import { Lighting, type LightingOptions } from './Lighting';
-import type { LightingHost } from './LightingHost';
+import { isLightingHost, type LightingHost } from './LightingHost';
 
 /** What {@link ForwardLighting} takes whether or not it was given a host. */
 export interface ForwardLightingOptions extends LightingOptions {
@@ -19,22 +19,16 @@ export interface ForwardLightingOptions extends LightingOptions {
 }
 
 /**
- * The same, for a system built without a host - which has no frame slot for a
- * filter chain to run in.
+ * The same, for a system built without a host. A `post` chain is a frame pass,
+ * so a system built with one gets its renderer only once it is added to a
+ * registry, which supplies the application whose frame slot runs it.
  */
 export interface StandaloneForwardLightingOptions extends LightingOptions {
   /** Lights the renderer's texture is sized for; lights beyond it are skipped. Defaults to `64`. */
   readonly maxLights?: number;
-  /** Filters need a frame slot, and a system without a host has none. */
-  readonly post?: never;
+  /** Filters applied to the shaded frame; see {@link ForwardLightingOptions.post}. */
+  readonly post?: readonly Filter[];
 }
-
-/**
- * A plain options record must not be mistaken for a host, so the test is for
- * the members a host is defined by rather than for "an object".
- */
-const isHost = (value: ForwardLightingOptions | LightingHost | undefined): value is LightingHost =>
-  value !== undefined && 'framePasses' in value && 'frameTexture' in value && 'rendering' in value;
 
 /**
  * Lighting shaded inside the sprite fragment stage, against one packed light
@@ -42,9 +36,7 @@ const isHost = (value: ForwardLightingOptions | LightingHost | undefined): value
  *
  * ```ts
  * // In Scene.init():
- * const lighting = new ForwardLighting(this.app, { maxLights: 16, ambient: new Color(20, 20, 24), scene: this });
- *
- * this.systems.add(lighting);
+ * const lighting = this.systems.add(new ForwardLighting({ maxLights: 16, ambient: new Color(20, 20, 24) }));
  * ```
  *
  * Without a `post` chain it adds no draw of its own and no extra render
@@ -62,25 +54,28 @@ const isHost = (value: ForwardLightingOptions | LightingHost | undefined): value
  * const lighting = new ForwardLighting({ maxLights: 16 });
  * ```
  *
- * A filter chain is a frame pass, so `post` needs the host - and, for a
- * system built for one scene, {@link LightingOptions.scene}, which keeps the
- * chain out of the frame while that scene is not the one on screen.
+ * Without a `post` chain its renderer exists from construction, so a
+ * {@link LitMaterial} can bind to it before the system is registered. A filter
+ * chain is a frame pass and needs an application: built from options alone, the
+ * renderer is then created when the system is added to a registry.
  */
 export class ForwardLighting extends Lighting {
   public constructor(options?: StandaloneForwardLightingOptions);
   public constructor(host: LightingHost, options?: ForwardLightingOptions);
   public constructor(hostOrOptions?: LightingHost | ForwardLightingOptions, maybeOptions?: ForwardLightingOptions) {
-    const host = isHost(hostOrOptions) ? hostOrOptions : null;
-    const options = (isHost(hostOrOptions) ? maybeOptions : hostOrOptions) ?? {};
+    const host = isLightingHost(hostOrOptions) ? hostOrOptions : null;
+    const options = (host === null ? (hostOrOptions as ForwardLightingOptions | undefined) : maybeOptions) ?? {};
     const post = options.post ?? [];
+    const maxLights = options.maxLights ?? 64;
 
-    // A filter chain is a frame pass, and a frame pass needs the slot to
-    // install itself in. Refusing it is the only honest answer; degrading to
-    // "the option was ignored" is what this option did for its first release.
-    if (post.length > 0 && host === null) {
-      throw new Error('new ForwardLighting({ post }) needs the host whose frame the filters run on: pass it as the first argument.');
+    // A filter chain is a frame pass and needs the slot to install itself in,
+    // so without a host the renderer waits for the registry's application.
+    if (host === null && post.length > 0) {
+      super((target: LightingHost) => new ForwardBackend({ maxLights, post, app: target }), null, options);
+
+      return;
     }
 
-    super(new ForwardBackend({ maxLights: options.maxLights ?? 64, post, app: host }), host, options);
+    super(new ForwardBackend({ maxLights, post, app: host }), host, options);
   }
 }

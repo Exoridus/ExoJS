@@ -1,0 +1,172 @@
+{
+  "title": "OccluderShape",
+  "description": "Where an OccluderComponent takes its outline from: - `'bounds'`: the node's local bounds placed by its transform, re-read every frame. A node without an extent of its own - a container or a `Graphics` - uses the world-space box around its content instead. - `'alpha'`: the node's own texture alpha, as AlphaOccluder traces it. The node must be a drawable with a texture, such as a `Sprite`. - `{ points, closed? }`: an outline of your own in the node's local space, as PolygonOccluder reads it. - `{ body }`: the colliders of a physics body, sensors excluded. - any OccluderSource, used as it is.",
+  "symbol": "OccluderShape",
+  "kind": "type",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs/lighting",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Where an OccluderComponent takes its outline from:",
+        "- `'bounds'`: the node's local bounds placed by its transform, re-read every frame. A node without an extent of its own - a container or a `Graphics` - uses the world-space box around its content instead. - `'alpha'`: the node's own texture alpha, as AlphaOccluder traces it. The node must be a drawable with a texture, such as a `Sprite`. - `{ points, closed? }`: an outline of your own in the node's local space, as PolygonOccluder reads it. - `{ body }`: the colliders of a physics body, sensors excluded. - any OccluderSource, used as it is."
+      ],
+      "importLine": "import { OccluderShape } from '@codexo/exojs/lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "OccluderShape",
+          "signature": "\"alpha\" | \"bounds\" | OccluderSource | { body: OccluderBody } | { closed?: boolean; points: ReadonlyArray<Readonly<PointLike>> }",
+          "signatureTokens": [
+            {
+              "text": "\"alpha\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"bounds\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderSource",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "body",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderBody",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "closed",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "points",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyArray",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/occluders/OccluderComponent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/OccluderComponent.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/occluders/OccluderComponent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/OccluderComponent.ts"
+}

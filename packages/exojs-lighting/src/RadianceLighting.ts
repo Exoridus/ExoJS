@@ -1,7 +1,7 @@
 import { RadianceBackend } from './backends/RadianceBackend';
 import { frameBackendOptions, type FrameLightingOptions } from './frameLighting';
 import { Lighting } from './Lighting';
-import type { LightingHost } from './LightingHost';
+import { isLightingHost, type LightingHost } from './LightingHost';
 
 /** Construction options for {@link RadianceLighting}. */
 export interface RadianceLightingOptions extends FrameLightingOptions {
@@ -42,9 +42,8 @@ export interface RadianceLightingOptions extends FrameLightingOptions {
  *
  * ```ts
  * // In Scene.init():
- * const lighting = new RadianceLighting(this.app, { probeSpacing: 2, interval: 1, bounce: 0.5, scene: this });
+ * const lighting = this.systems.add(new RadianceLighting({ probeSpacing: 2, interval: 1, bounce: 0.5 }));
  *
- * this.systems.add(lighting);
  * lighting.occludeFrom(new PhysicsOccluder(world));
  * ```
  *
@@ -65,15 +64,22 @@ export interface RadianceLightingOptions extends FrameLightingOptions {
  * gather shades the display; this requires an extra target and reconstruction
  * only when both bounce and normal surfaces are active.
  *
- * The host is required and is the first argument, and the scene the system
+ * Built from options alone, it takes its application and scene from the
+ * registry it is added to (see {@link Lighting}); given a host as the first
+ * argument, it is built against that host at once, and the scene the system
  * belongs to goes in {@link LightingOptions.scene}. Float render targets are
  * required too - a field of radiance has no ceiling to clamp at - and a device
  * without them is refused at construction rather than shaded differently under
  * the same name.
  */
 export class RadianceLighting extends Lighting {
-  public constructor(host: LightingHost, options: RadianceLightingOptions = {}) {
-    super(
+  public constructor(options?: RadianceLightingOptions);
+  public constructor(host: LightingHost, options?: RadianceLightingOptions);
+  public constructor(hostOrOptions?: LightingHost | RadianceLightingOptions, maybeOptions?: RadianceLightingOptions) {
+    const host = isLightingHost(hostOrOptions) ? hostOrOptions : null;
+    const options = (host === null ? (hostOrOptions as RadianceLightingOptions | undefined) : maybeOptions) ?? {};
+    const settings = frameBackendOptions(options, 1);
+    const create = (target: LightingHost): RadianceBackend =>
       new RadianceBackend({
         // The cascades SAMPLE the light field rather than painting into it, so
         // it is rasterised at full density by default: a coarse field
@@ -81,16 +87,15 @@ export class RadianceLighting extends Lighting {
         // by less than a texel makes the whole picture jump. Measured on a
         // moving lamp, a quarter-probe step changed the light arriving at a
         // fixed point by 25 percent at half resolution and by 2 percent at full.
-        ...frameBackendOptions(host, options, 1),
+        ...settings(target),
         field: {
           probeSpacing: Math.max(1, Math.round(options.probeSpacing ?? 2)),
           cascades: options.cascades ?? null,
           interval: Math.max(0.25, options.interval ?? 1),
           bounce: Math.min(0.95, Math.max(0, options.bounce ?? 0.5)),
         },
-      }),
-      host,
-      options,
-    );
+      });
+
+    super(host === null ? create : create(host), host, options);
   }
 }

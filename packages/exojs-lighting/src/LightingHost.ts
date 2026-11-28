@@ -14,6 +14,13 @@ import type { Application, Scene } from '@codexo/exojs';
 export type LightingHost = Pick<Application, 'rendering' | 'frameTexture' | 'framePasses' | 'width' | 'height' | 'onResize'>;
 
 /**
+ * A plain options record must not be mistaken for a host, so the test is for
+ * the members a host is defined by rather than for "an object". @internal
+ */
+export const isLightingHost = (value: object | undefined): value is LightingHost =>
+  value !== undefined && 'framePasses' in value && 'frameTexture' in value && 'rendering' in value;
+
+/**
  * What a lighting system needs of the scene it belongs to: its state, and the
  * lifecycle signals that move it into and out of the host's frame. A
  * {@link Scene} satisfies this structurally. See {@link LightingOptions.scene}.

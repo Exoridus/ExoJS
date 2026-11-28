@@ -32,6 +32,8 @@ export { AlphaOccluder } from './occluders/AlphaOccluder';
 export type { AlphaOccluderDrawable, AlphaOccluderOptions } from './occluders/alphaTrace';
 export type { MeshOccluderOptions, OccluderMesh } from './occluders/MeshOccluder';
 export { MeshOccluder } from './occluders/MeshOccluder';
+export type { OccluderBody, OccluderComponentOptions, OccluderShape } from './occluders/OccluderComponent';
+export { OccluderComponent } from './occluders/OccluderComponent';
 export type { OccluderPlacement } from './occluders/OccluderPlacement';
 export type { OccluderDrawable, OccluderSink, OccluderSource } from './occluders/OccluderSource';
 export type {

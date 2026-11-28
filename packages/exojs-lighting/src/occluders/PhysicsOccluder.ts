@@ -121,12 +121,18 @@ export class PhysicsOccluder implements OccluderSource {
         return;
       }
 
-      emit(collider, this._circleSegments, this._reserve, out);
+      emitCollider(collider, this._circleSegments, this._reserve, out);
     });
   }
 }
 
-const emit = (collider: OccluderCollider, circleSegments: number, reserve: (floats: number) => Float32Array, out: OccluderSink): void => {
+/** Write one collider's outline. @internal */
+export const emitCollider = (
+  collider: OccluderCollider,
+  circleSegments: number,
+  reserve: (floats: number) => Float32Array,
+  out: OccluderSink,
+): void => {
   const shape = collider.shape;
   const transform = collider.worldTransform;
 

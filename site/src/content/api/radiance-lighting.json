@@ -1,15 +1,15 @@
 {
   "title": "RadianceLighting",
-  "description": "Lighting as radiance that propagates, filled by a chain of cascades traced over this frame's geometry. ```ts // In Scene.init(): const lighting = new RadianceLighting(this.app, { probeSpacing: 2, interval: 1, bounce: 0.5, scene: this }); this.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ``` Light propagates from what emits rather than falling off inside each light's radius, so a lamp fills the room it stands in, a wall between two rooms leaves the second one dark, a source with a size casts a penumbra that widens with distance, and a lit surface gives part of that light off again in its own colour (see RadianceLightingOptions.bounce). A `SpotLight` emits across its cone and a `SunLight` is the sky every unblocked ray ends in. It does NOT make a scene look the way LightmapLighting makes it look, and it is the only renderer whose cost is per probe rather than per light. Registered normal surfaces are shaded against: the gather weights the finest cascade's four directions by what each surface takes of them (see Lighting.normalsFrom). Without a registered surface the gather is the unweighted mean and nothing about the frame changes. With bounce enabled, a separate unweighted gather supplies the feedback history while the normal gather shades the display; this requires an extra target and reconstruction only when both bounce and normal surfaces are active. The host is required and is the first argument, and the scene the system belongs to goes in LightingOptions.scene. Float render targets are required too - a field of radiance has no ceiling to clamp at - and a device without them is refused at construction rather than shaded differently under the same name.",
+  "description": "Lighting as radiance that propagates, filled by a chain of cascades traced over this frame's geometry. ```ts // In Scene.init(): const lighting = this.systems.add(new RadianceLighting({ probeSpacing: 2, interval: 1, bounce: 0.5 })); lighting.occludeFrom(new PhysicsOccluder(world)); ``` Light propagates from what emits rather than falling off inside each light's radius, so a lamp fills the room it stands in, a wall between two rooms leaves the second one dark, a source with a size casts a penumbra that widens with distance, and a lit surface gives part of that light off again in its own colour (see RadianceLightingOptions.bounce). A `SpotLight` emits across its cone and a `SunLight` is the sky every unblocked ray ends in. It does NOT make a scene look the way LightmapLighting makes it look, and it is the only renderer whose cost is per probe rather than per light. Registered normal surfaces are shaded against: the gather weights the finest cascade's four directions by what each surface takes of them (see Lighting.normalsFrom). Without a registered surface the gather is the unweighted mean and nothing about the frame changes. With bounce enabled, a separate unweighted gather supplies the feedback history while the normal gather shades the display; this requires an extra target and reconstruction only when both bounce and normal surfaces are active. Built from options alone, it takes its application and scene from the registry it is added to (see Lighting); given a host as the first argument, it is built against that host at once, and the scene the system belongs to goes in LightingOptions.scene. Float render targets are required too - a field of radiance has no ceiling to clamp at - and a device without them is refused at construction rather than shaded differently under the same name.",
   "symbol": "RadianceLighting",
   "kind": "class",
   "subsystem": "lighting",
   "importPath": "@codexo/exojs/lighting",
   "tier": "stable",
-  "memberCount": 23,
+  "memberCount": 28,
   "counts": {
-    "constructors": 1,
-    "methods": 11,
+    "constructors": 2,
+    "methods": 15,
     "properties": 11,
     "events": 0
   },
@@ -20,11 +20,11 @@
       "members": [],
       "paragraphs": [
         "Lighting as radiance that propagates, filled by a chain of cascades traced over this frame's geometry.",
-        "```ts // In Scene.init(): const lighting = new RadianceLighting(this.app, { probeSpacing: 2, interval: 1, bounce: 0.5, scene: this });",
-        "this.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ```",
+        "```ts // In Scene.init(): const lighting = this.systems.add(new RadianceLighting({ probeSpacing: 2, interval: 1, bounce: 0.5 }));",
+        "lighting.occludeFrom(new PhysicsOccluder(world)); ```",
         "Light propagates from what emits rather than falling off inside each light's radius, so a lamp fills the room it stands in, a wall between two rooms leaves the second one dark, a source with a size casts a penumbra that widens with distance, and a lit surface gives part of that light off again in its own colour (see RadianceLightingOptions.bounce). A `SpotLight` emits across its cone and a `SunLight` is the sky every unblocked ray ends in.",
         "It does NOT make a scene look the way LightmapLighting makes it look, and it is the only renderer whose cost is per probe rather than per light. Registered normal surfaces are shaded against: the gather weights the finest cascade's four directions by what each surface takes of them (see Lighting.normalsFrom). Without a registered surface the gather is the unweighted mean and nothing about the frame changes. With bounce enabled, a separate unweighted gather supplies the feedback history while the normal gather shades the display; this requires an extra target and reconstruction only when both bounce and normal surfaces are active.",
-        "The host is required and is the first argument, and the scene the system belongs to goes in LightingOptions.scene. Float render targets are required too - a field of radiance has no ceiling to clamp at - and a device without them is refused at construction rather than shaded differently under the same name."
+        "Built from options alone, it takes its application and scene from the registry it is added to (see Lighting); given a host as the first argument, it is built against that host at once, and the scene the system belongs to goes in LightingOptions.scene. Float render targets are required too - a field of radiance has no ceiling to clamp at - and a device without them is refused at construction rather than shaded differently under the same name."
       ],
       "importLine": "import { RadianceLighting } from '@codexo/exojs/lighting'",
       "sourceLink": null
@@ -35,7 +35,58 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(host: LightingHost, options: RadianceLightingOptions): RadianceLighting",
+          "signature": "new(options?: RadianceLightingOptions): RadianceLighting",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RadianceLightingOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RadianceLighting",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "RadianceLightingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "RadianceLighting",
+          "description": ""
+        },
+        {
+          "name": "new",
+          "signature": "new(host: LightingHost, options?: RadianceLightingOptions): RadianceLighting",
           "signatureTokens": [
             {
               "text": "new",
@@ -64,6 +115,10 @@
             {
               "text": "options",
               "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -95,7 +150,7 @@
             {
               "name": "options",
               "type": "RadianceLightingOptions",
-              "optional": false
+              "optional": true
             }
           ],
           "returnType": "RadianceLighting",
@@ -389,6 +444,140 @@
           "description": "Register something that blocks light, and return it so it can be built and registered in one expression. Only a renderer with shadows reads them - forward has no light field to darken, and skips collecting entirely. ts lighting.occludeFrom(new PhysicsOccluder(world));  The source is asked, once per frame, for the edges in the region the visible lights jointly reach. It is the caller's; the system only reads it. Registering the same source twice would collect it twice, so the second registration is ignored instead."
         },
         {
+          "name": "onAttach",
+          "signature": "onAttach(context: SystemContext): void",
+          "signatureTokens": [
+            {
+              "text": "onAttach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "SystemContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "System hook: a system built from options alone creates its renderer here, with the registry's application, and from now on is in the frame exactly while the registry runs it - for app.systems from now until it is removed, for a scene's systems while that scene is active."
+        },
+        {
+          "name": "onDetach",
+          "signature": "onDetach(): void",
+          "signatureTokens": [
+            {
+              "text": "onDetach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "System hook: let go of what scene membership registered - explicit registrations stay - and hand those members to the lighting system that now applies, if any. A system built from options alone also releases the renderer it built for this registration."
+        },
+        {
+          "name": "onDisable",
+          "signature": "onDisable(): void",
+          "signatureTokens": [
+            {
+              "text": "onDisable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "System hook: leave the frame when following the registry."
+        },
+        {
+          "name": "onEnable",
+          "signature": "onEnable(): void",
+          "signatureTokens": [
+            {
+              "text": "onEnable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "System hook: enter the frame when following the registry, and re-resolve which members join on their own."
+        },
+        {
           "name": "remove",
           "signature": "remove(light: Light): boolean",
           "signatureTokens": [
@@ -433,7 +622,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Unregister a light. Returns false when it was not registered here."
+          "description": "Unregister a light. Returns false when it was not registered here. A light in an active scene joins a lighting system again on its own when scene membership is re-resolved - after its scene activates or a lighting system is added or removed. Register it with another system to keep it elsewhere."
         },
         {
           "name": "stopNormals",

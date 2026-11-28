@@ -9,6 +9,7 @@ import {
   RenderTexture,
   Signal,
   Sprite,
+  SystemRegistry,
   Texture,
   TextureFormat,
 } from '@codexo/exojs';
@@ -537,10 +538,16 @@ describe('Lighting', () => {
     expect((lighting.backend as ForwardBackend).maxLights).toBe(7);
   });
 
-  test('a filter chain with no application to run in is refused rather than ignored', () => {
+  test('a filter chain without a host gets its renderer from the registry it is added to', () => {
     const post: readonly Filter[] = [new ColorMatrixFilter()];
+    const lighting = new ForwardLighting({ post });
+    const app = fakeApp();
 
-    expect(() => new ForwardLighting({ post } as never)).toThrow(/post/);
+    expect(() => lighting.backend).toThrow(/not registered with app\.systems/);
+
+    new SystemRegistry({ app, scene: null, reportError: () => {} } as never).add(lighting);
+
+    expect(app.framePasses.size).toBe(1);
   });
 
   test('a filter chain installs one pass, in either renderer, and takes it out again', () => {
