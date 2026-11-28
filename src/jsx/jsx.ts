@@ -1,4 +1,5 @@
 import type { Color } from '#core/Color';
+import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
 import type { ObservableVector } from '#math/ObservableVector';
 import { Container } from '#rendering/Container';
@@ -36,6 +37,9 @@ type PropSetter<N> = (node: N, value: never) => void;
  * node's own property or setter. Only these keys are assigned; every other prop
  * goes to the constructor.
  */
+/** Fragments an element already took the children of; placing one again would silently add nothing. */
+const consumedFragments = new WeakSet<JsxFragment>();
+
 const nodeSetters: Readonly<Record<string, PropSetter<RenderNode>>> = {
   name: (node, value: string | null) => (node.name = value),
   x: (node, value: number) => (node.x = value),
@@ -146,6 +150,13 @@ const collect = (children: unknown, out: RenderNode[]): void => {
   }
 
   if (children instanceof JsxFragment) {
+    if (consumedFragments.has(children)) {
+      throw new TypeError(
+        'JSX: this fragment was already placed in an element, which took its children. Build a new fragment for each place.',
+      );
+    }
+
+    consumedFragments.add(children);
     out.push(...children.children);
   } else {
     out.push(children);
@@ -200,11 +211,35 @@ const attachChildren = (node: RenderNode, children: readonly RenderNode[], type:
     }
 
     // A fragment's children already carry their ownership from when the fragment adopted them.
-    if (!unadopted.delete(child) && child.parent === null) {
-      borrowed.add(child);
-    }
+    const fromFragment = child.parent !== null;
 
     node.addChild(child);
+
+    // Ownership moves only once the child is attached, so a rejected child is still discarded as unadopted.
+    if (!unadopted.delete(child) && !fromFragment) {
+      borrowed.add(child);
+    }
+  }
+};
+
+/**
+ * Undoes a failed element. Every step runs even when an earlier one throws, and
+ * a teardown error is logged rather than replacing the failure that caused the
+ * rollback.
+ */
+const rollBack = (node: RenderNode | null, children: unknown): void => {
+  try {
+    if (node !== null) {
+      release(node);
+    }
+  } catch (error) {
+    logger.error(`JSX: destroying a failed element threw: ${String(error)}`);
+  }
+
+  try {
+    discard(children);
+  } catch (error) {
+    logger.error(`JSX: destroying the children of a failed element threw: ${String(error)}`);
   }
 };
 
@@ -233,7 +268,7 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
 
     node = jsxConstruct in type ? (type as unknown as AdaptedClass)[jsxConstruct](options) : new type(options as never);
   } catch (error) {
-    discard(children);
+    rollBack(null, children);
 
     throw error;
   }
@@ -249,8 +284,7 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
       (ref as (instance: RenderNode) => void)(node);
     }
   } catch (error) {
-    release(node);
-    discard(children);
+    rollBack(node, children);
 
     throw error;
   }
@@ -266,13 +300,13 @@ const call = (fn: (props: Props) => unknown, props: Props): RenderNode => {
   try {
     result = fn(props);
   } catch (error) {
-    discard(props.children);
+    rollBack(null, props.children);
 
     throw error;
   }
 
   if (!(result instanceof RenderNode)) {
-    discard(props.children);
+    rollBack(null, props.children);
 
     throw new TypeError(`JSX: ${tagOf(fn)} returned ${describe(result)}; an element function must return a scene node.`);
   }

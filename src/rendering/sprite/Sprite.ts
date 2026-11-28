@@ -97,12 +97,6 @@ export class Sprite extends Drawable {
   private _verticesBuiltAtVersion = -1;
   private _normalsBuiltAtVersion = -1;
 
-  /**
-   * Create a sprite for `texture` or an asset path, or an empty one when the argument is omitted
-   * or `null` - a textureless sprite draws nothing until {@link setTexture} is
-   * called, which is the intended way to build a sprite whose texture is still
-   * loading.
-   */
   /** Constructs a sprite from JSX: `<Sprite texture={texture} />`. */
   public static [jsxConstruct](
     this: new (texture?: Texture | RenderTexture | string | null) => Sprite,
@@ -111,6 +105,12 @@ export class Sprite extends Drawable {
     return new this(props.texture ?? null);
   }
 
+  /**
+   * Create a sprite for `texture` or an asset path, or an empty one when the argument is omitted
+   * or `null` - a textureless sprite draws nothing until {@link setTexture} is
+   * called, which is the intended way to build a sprite whose texture is still
+   * loading.
+   */
   public constructor(texture: Texture | RenderTexture | string | null = null) {
     super();
 

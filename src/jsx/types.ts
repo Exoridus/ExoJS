@@ -112,6 +112,23 @@ type OptionsProps<C> = C extends new (...args: infer A) => unknown
  */
 export type JsxConstructionProps<C> = typeof jsxConstruct extends keyof C ? AdapterProps<C> : OptionsProps<C>;
 
+type ReservedName<C extends JsxNodeClass> = Extract<
+  keyof JsxConstructionProps<C>,
+  keyof JsxNodeProps | (InstanceType<C> extends Drawable ? keyof JsxDrawableProps : never) | `on${Capitalize<string>}`
+>;
+
+/**
+ * Reported in place of the construction props when a class's options use a
+ * name JSX reserves: a node property, which JSX assigns through its setter, or
+ * an `on*` name, which JSX treats as a signal handler. Either way the
+ * constructor would never receive the value. Give the option another prop name
+ * in a {@link jsxConstruct} adapter.
+ */
+export interface JsxReservedOptionName<Names> {
+  // eslint-disable-next-line @typescript-eslint/naming-convention -- the name is the diagnostic a compiler prints
+  readonly 'option names reserved by JSX for node properties and signal handlers': Names;
+}
+
 /** The `children` prop: containers take {@link JsxChildren}, every other node none. */
 export type JsxChildrenProp<I> = I extends Container ? { readonly children?: JsxChildren } : { readonly children?: never };
 
@@ -120,7 +137,9 @@ export type JsxChildrenProp<I> = I extends Container ? { readonly children?: Jsx
  * shared node properties, its signal handlers, children when it is a container,
  * and an optional `ref` called with the finished instance.
  */
-export type JsxElementProps<C extends JsxNodeClass> = JsxConstructionProps<C> &
+export type JsxElementProps<C extends JsxNodeClass> = ([ReservedName<C>] extends [never]
+  ? JsxConstructionProps<C>
+  : JsxReservedOptionName<ReservedName<C>>) &
   JsxNodeProps &
   (InstanceType<C> extends Drawable ? JsxDrawableProps : Record<never, never>) &
   Omit<JsxSignalProps<InstanceType<C>>, keyof JsxConstructionProps<C>> &

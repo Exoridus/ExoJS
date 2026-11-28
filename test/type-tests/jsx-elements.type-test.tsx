@@ -138,6 +138,15 @@ class Positioned extends Container {
 }
 // @ts-expect-error the guard reports an option named like a node property
 export type GuardReports = NoneShared<Shared<typeof Positioned>>;
+// @ts-expect-error a user class whose option shares a node property's name is rejected at the element
+export const positioned = <Positioned x={1} />;
+class Reporting extends Container {
+  public constructor(public readonly options: { readonly onReady?: () => void } = {}) {
+    super();
+  }
+}
+// @ts-expect-error on* names are signal handlers, so a callback option of that name never reaches the constructor
+export const reporting = <Reporting onReady={onAny} />;
 
 // Lowercase intrinsic elements do not exist.
 // @ts-expect-error no intrinsic elements

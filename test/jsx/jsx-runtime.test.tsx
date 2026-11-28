@@ -328,6 +328,54 @@ describe('JSX construction failures', () => {
     owner.destroy();
   });
 
+  test('destroys a constructed child the parent rejected while attaching', () => {
+    const constructed: JSX.Element[] = [];
+
+    expect(() => (
+      <Graphics>
+        <Sprite ref={sprite => constructed.push(sprite)} />
+        <Sprite ref={sprite => constructed.push(sprite)} />
+      </Graphics>
+    )).toThrow();
+
+    expect(constructed).toHaveLength(2);
+    expect(constructed.every(node => node.destroyed)).toBe(true);
+  });
+
+  test('keeps the original error and finishes cleanup when a teardown throws', () => {
+    class Fragile extends Container {
+      public override destroy(): void {
+        super.destroy();
+
+        throw new Error('teardown failed');
+      }
+    }
+
+    const loose: JSX.Element[] = [];
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    expect(() => jsx(Fragile, { onMissing: () => undefined, children: jsx(Probe, { ref: (probe: Probe) => loose.push(probe) }) })).toThrow(
+      /no signal named "onMissing"/,
+    );
+    expect(Probe.created[0]!.destroyed).toBe(true);
+    error.mockRestore();
+  });
+
+  test('rejects a fragment placed a second time', () => {
+    const pair = (
+      <>
+        <Label text="a" />
+        <Label text="b" />
+      </>
+    );
+    const first = <Container>{pair}</Container>;
+
+    expect(childrenOf(first)).toHaveLength(2);
+    expect(() => <Container>{pair}</Container>).toThrow(/already placed/);
+
+    first.destroy();
+  });
+
   test('rejects children on a node that is not a container', () => {
     expect(() => jsx(Sprite, { children: new Label('x') })).toThrow(/not a Container/);
   });

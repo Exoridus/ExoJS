@@ -17,6 +17,7 @@ export type {
   JsxFunction,
   JsxNodeClass,
   JsxNodeProps,
+  JsxReservedOptionName,
   JsxSignalProps,
   JsxVectorInput,
 } from './types';
