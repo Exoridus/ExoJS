@@ -59,9 +59,9 @@ const physics = ball.addComponent(new PhysicsBodyComponent({ colliders: [{ shape
 physics.body.applyImpulse(0, -300);
 ```
 
-Register the scene's `PhysicsWorld` before the node activates. An options-only component chooses the sole live registered world, or reports an activation error for zero or several. The explicit `new PhysicsBodyComponent(world, options)` overload also supports manually stepped or app-owned worlds. The body is available from construction; `activeWorld` reports current membership. `world` reads the selected world and throws before the first successful automatic resolution.
+Register the scene's `PhysicsWorld` with its fixed-step phase before the node activates. An options-only component chooses the sole live registered world, or reports an activation error for zero or several. The explicit `new PhysicsBodyComponent(world, options)` overload also supports manually stepped or app-owned worlds. The body is available from construction. Read `activeWorld` for current membership. The `world` getter throws before the first successful automatic resolution.
 
-An inferred body keeps its selected world across inactivity. Removing the world system disables its inferred components. Register the same world and re-enable them to resume, or replace the body component to select a different world. For a dependency that is absent or invalid on activation, fix the composition and disable/re-enable the dependent component to retry. A valid dependency can wait while disabled. Movement commands issued without a participating body are discarded.
+An inferred body keeps its selected world across inactivity. Removing the world system disables its inferred components. Register the same world and re-enable them to resume, or replace the body component to select a different world. For a dependency that is absent or invalid on activation, fix the composition and disable/re-enable the dependent component to retry. A valid dependency can wait while disabled. Movement clears its pending commands and the velocity it controls when its body leaves simulation.
 
 Component-managed bodies cannot participate in joints. Use manually managed bodies for jointed objects. `world.remove(body)` takes any body out of the simulation without destroying it; `world.add(body)` puts it back.
 
