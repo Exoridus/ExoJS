@@ -8,6 +8,7 @@ import { Color } from '#core/Color';
 import { logger } from '#core/Logger';
 import { pickLayoutOptions } from '#core/serialization/serializerHelpers';
 import { Signal } from '#core/Signal';
+import { jsxConstruct } from '#jsx/jsxConstruct';
 import { Drawable } from '#rendering/Drawable';
 import { BmFont } from '#rendering/text/BmFont';
 import * as canvasTextState from '#rendering/text/canvasTextState';
@@ -66,6 +67,7 @@ describe.each([false, true])('layout option validation (__DEV__=%s)', dev => {
     '#core/Logger': { logger },
     '#core/serialization/serializerHelpers': { pickLayoutOptions },
     '#core/Signal': { Signal },
+    '#jsx/jsxConstruct': { jsxConstruct },
     '#rendering/Drawable': { Drawable },
     './canvasTextState': canvasTextState,
     './GlyphAtlas': { SDF_RADIUS },
