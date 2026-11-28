@@ -302,6 +302,30 @@ describe('derived values', () => {
 
     position.x = 5;
     expect(x.value).toBe(5);
+
+    const seen: number[] = [];
+
+    x.subscribe(value => seen.push(value));
+    computes = 0;
+    position.x = 6;
+
+    expect(seen).toEqual([6]);
+    expect(computes).toBe(1);
+  });
+
+  test('recompute after a mutation that threw partway', () => {
+    const items = new Observable([1]);
+    const count = items.map(list => list.length);
+
+    expect(count.value).toBe(1);
+    expect(() =>
+      items.mutate(list => {
+        list.push(2);
+
+        throw new Error('mutation failed');
+      }),
+    ).toThrow('mutation failed');
+    expect(count.value).toBe(2);
   });
 
   test('keep their own subscribers when a source is destroyed', () => {

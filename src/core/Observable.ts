@@ -343,7 +343,13 @@ const flush = (): void => {
 const isSettled = (previous: unknown, next: unknown): boolean =>
   Object.is(previous, next) && (typeof next !== 'object' || next === null) && typeof next !== 'function';
 
-const versionOf = (source: ReadonlyObservable<unknown>): number => (source instanceof ObservableBase ? source._version() : Number.NaN);
+/**
+ * A number that changes whenever `source` may have changed, or `NaN`, never
+ * equal to itself, for a source that cannot tell.
+ * @internal
+ */
+export const versionOf = (source: ReadonlyObservable<unknown>): number =>
+  source instanceof ObservableBase ? source._version() : Number.NaN;
 
 /**
  * A read-only value computed from other observables. It caches its result
@@ -412,6 +418,11 @@ class DerivedObservable<T> extends ObservableBase<T> {
     this._unsubscribers.length = 0;
   }
 
+  protected override _current(): T {
+    // Every delivery follows a _refresh, so the cache is current; reading value would recompute again over unversioned sources.
+    return this._cached as T;
+  }
+
   protected override _refresh(): boolean {
     const changes = this._version();
 
@@ -429,26 +440,26 @@ class DerivedObservable<T> extends ObservableBase<T> {
     const sources = this._sources;
     const seen = this._seen;
 
-    if (this._computed) {
-      let index = 0;
+    let current = this._computed;
 
-      while (index < sources.length && seen[index] === versionOf(sources[index]!)) {
-        index++;
-      }
+    // Versions are recorded before computing: a source changed by the computation itself only causes another recomputation later.
+    for (let index = 0; index < sources.length; index++) {
+      const version = versionOf(sources[index]!);
 
-      if (index === sources.length) {
-        return;
+      if (seen[index] !== version) {
+        seen[index] = version;
+        current = false;
       }
+    }
+
+    if (current) {
+      return;
     }
 
     // Cleared first so that a throwing computation is retried on the next read.
     this._computed = false;
 
     const next = this._compute();
-
-    for (let index = 0; index < sources.length; index++) {
-      seen[index] = versionOf(sources[index]!);
-    }
 
     if (this._changes === 0 || !isSettled(this._cached, next)) {
       this._changes++;
@@ -531,10 +542,18 @@ export class Observable<T> extends ObservableBase<T> {
     this._notify();
   }
 
-  /** Calls `mutate` with the current value, then notifies subscribers once. */
+  /**
+   * Calls `mutate` with the current value, then notifies subscribers once.
+   * When `mutate` throws, derived values still recompute on their next read,
+   * as the value may have been changed partway, but nothing is notified.
+   */
   public mutate(mutate: (value: T) => void): void {
-    mutate(this._value);
-    this._changes++;
+    try {
+      mutate(this._value);
+    } finally {
+      this._changes++;
+    }
+
     this._notify();
   }
 

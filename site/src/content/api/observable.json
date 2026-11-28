@@ -504,7 +504,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Calls mutate with the current value, then notifies subscribers once."
+          "description": "Calls mutate with the current value, then notifies subscribers once. When mutate throws, derived values still recompute on their next read, as the value may have been changed partway, but nothing is notified."
         },
         {
           "name": "subscribe",
