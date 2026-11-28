@@ -9,9 +9,10 @@ class ArenaScene extends Scene {
     });
 
     const floor = new Graphics();
+    const [x, y, width, height] = [-350, -16, 700, 32] as const;
 
     floor.fillColor = new Color(90, 110, 140);
-    floor.drawRectangle(-350, -16, 700, 32);
+    floor.drawRectangle(x, y, width, height).setLocalBounds(x, y, width, height);
     floor.setPosition(400, 560);
     floor.addComponent(new PhysicsBodyComponent({ type: 'static', colliders: [Collider.boxFromBounds(floor)] }));
 
