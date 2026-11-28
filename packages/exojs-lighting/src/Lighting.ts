@@ -8,10 +8,10 @@ import { lightRadius } from './lights/reach';
 import { SunLight } from './lights/SunLight';
 import type { NormalSource } from './normals/NormalSource';
 import type { NormalSurface, NormalSurfaceDrawable } from './normals/NormalSurface';
-import { OccluderComponent } from './occluders/OccluderComponent';
+import type { OccluderComponent } from './occluders/OccluderComponent';
 import { OccluderField } from './occluders/OccluderField';
 import type { OccluderSource } from './occluders/OccluderSource';
-import { lightingBrand, sceneLighting } from './sceneLighting';
+import { lightingBrand, sceneLighting, sceneOccluderComponent } from './sceneLighting';
 
 /**
  * Which renderer shades the scene, as {@link Lighting.quality} reports it.
@@ -211,9 +211,7 @@ export abstract class Lighting {
   /** The renderer; throws for a system built from options alone that has not been added to a registry yet. */
   protected get _backend(): LightingBackend {
     if (this._renderer === null) {
-      throw new Error(
-        `${this.constructor.name} was built from options alone and has no renderer until it is added to app.systems or a scene's systems. Add it first: const lighting = this.systems.add(new ${this.constructor.name}({ ... })).`,
-      );
+      throw new Error(`${this.constructor.name} has no renderer before it is added to app.systems or a scene's systems.`);
     }
 
     return this._renderer;
@@ -559,8 +557,15 @@ export abstract class Lighting {
           this._adoptLight(registration.node);
         }
       });
+
+    const occluders = sceneOccluderComponent();
+
+    if (occluders === null) {
+      return;
+    }
+
     scene
-      .query(OccluderComponent)
+      .query(occluders)
       .active()
       .forEach((_node, component) => {
         if (component._lighting === null && sceneLighting(component) === this) {

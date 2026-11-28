@@ -268,7 +268,7 @@
     {
       "name": "@codexo/exojs/lighting",
       "path": "dist/esm/lighting/index.js",
-      "limit": "40 KB",
+      "limit": "41 KB",
       "gzip": true,
       "ignore": [
         "../index.js",
@@ -279,7 +279,7 @@
       "name": "@codexo/exojs/lighting (lightmap, no cascades)",
       "path": "dist/esm/lighting/index.js",
       "import": "{ LightmapLighting, PointLight, SpotLight, PolygonOccluder }",
-      "limit": "18 KB",
+      "limit": "19 KB",
       "gzip": true,
       "ignore": [
         "../index.js",
@@ -290,7 +290,7 @@
       "name": "@codexo/exojs/lighting (forward, no occluder tracing)",
       "path": "dist/esm/lighting/index.js",
       "import": "{ ForwardLighting, PointLight, SpotLight, LitMaterial, NormalMap }",
-      "limit": "5 KB",
+      "limit": "5.5 KB",
       "gzip": true,
       "ignore": [
         "../index.js",

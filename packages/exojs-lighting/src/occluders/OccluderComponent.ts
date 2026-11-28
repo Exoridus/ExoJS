@@ -1,7 +1,7 @@
 import { Component, type PointLike, type ReadonlyRectangle, type SceneNode } from '@codexo/exojs';
 
 import type { Lighting } from '../Lighting';
-import { sceneLighting } from '../sceneLighting';
+import { provideOccluderComponent, sceneLighting } from '../sceneLighting';
 import { AlphaOccluder } from './AlphaOccluder';
 import type { AlphaOccluderDrawable, AlphaOccluderOptions } from './alphaTrace';
 import type { OccluderSink, OccluderSource } from './OccluderSource';
@@ -207,3 +207,5 @@ class BodyOccluder implements OccluderSource {
     }
   }
 }
+
+provideOccluderComponent(OccluderComponent);
