@@ -158,7 +158,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
         prerequisites: ['runtime/scene-graph'],
         examples: [],
-        apiLinks: ['observable', 'observable-object', 'readonly-observable', 'observable-vector', 'observable-size'],
+        apiLinks: ['observable', 'observable-struct', 'readonly-observable', 'observable-vector', 'observable-size'],
       },
       {
         path: 'runtime/coordinates-and-views',
