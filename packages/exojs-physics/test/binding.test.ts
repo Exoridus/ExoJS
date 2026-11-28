@@ -235,6 +235,39 @@ describe('SceneNode binding: parent transforms', () => {
     node.destroy();
   });
 
+  it.each([false, true])('preserves a replacement pose from an observable position listener (during initial bind: %s)', initial => {
+    const registry = new BindingRegistry();
+    const node = new Drawable();
+    const outer = makeBody();
+    const inner = makeBody();
+    inner.setTransform({ x: 14, y: 18 }, Math.PI / 2);
+
+    if (!initial) {
+      registry.bind(outer, node);
+      outer.setTransform({ x: 21, y: 27 }, Math.PI);
+    }
+
+    const setRotation = vi.spyOn(node, 'setRotation');
+    const unsubscribe = node.position.subscribe(() => {
+      unsubscribe();
+      registry.unbind(outer);
+      registry.bind(inner, node);
+    });
+
+    if (initial) {
+      registry.bind(outer, node);
+    } else {
+      registry.sync();
+    }
+
+    expect(registry.size).toBe(1);
+    expect([node.x, node.y]).toEqual([14, 18]);
+    expect((node.rotation + 360) % 360).toBe(270);
+    expect(setRotation).toHaveBeenCalledWith(-90);
+    expect(setRotation.mock.calls.every(([degrees]) => degrees === -90)).toBe(true);
+    node.destroy();
+  });
+
   it('keeps the previous link when writing the new node pose throws', () => {
     const registry = new BindingRegistry();
     const body = makeBody();

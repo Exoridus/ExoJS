@@ -20,6 +20,7 @@ export class BindingRegistry {
     const previous = this._bindings.get(body);
 
     if (previous !== undefined) {
+      previous._invalidatePose();
       this._boundNodes.delete(previous.node);
     }
 
@@ -69,6 +70,7 @@ export class BindingRegistry {
     const binding = this._bindings.get(body);
 
     if (binding !== undefined) {
+      binding._invalidatePose();
       this._bindings.delete(body);
       this._boundNodes.delete(binding.node);
     }
@@ -159,6 +161,10 @@ export class BindingRegistry {
 
   /** Drop all links. */
   public clear(): void {
+    for (const binding of this._bindings.values()) {
+      binding._invalidatePose();
+    }
+
     this._bindings.clear();
     this._boundNodes.clear();
   }

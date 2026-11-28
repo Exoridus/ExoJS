@@ -56,6 +56,7 @@ export class PhysicsBinding {
   public _syncStamp = 0;
 
   private _reportedTransform = false;
+  private _poseVersion = 0;
 
   public constructor(
     public readonly body: PhysicsBody,
@@ -94,9 +95,19 @@ export class PhysicsBinding {
     );
   }
 
+  /** @internal - cancel a pose write that is already in progress. */
+  public _invalidatePose(): void {
+    ++this._poseVersion;
+  }
+
   private _writePose(x: number, y: number, angle: number): void {
+    const version = this._poseVersion;
     const node = this.node;
     const parent = node.parent?.getWorldTransform();
+
+    if (version !== this._poseVersion || this.node.destroyed) {
+      return;
+    }
 
     if (!supportedTransform(node, parent)) {
       if (!this._reportedTransform) {
@@ -122,7 +133,8 @@ export class PhysicsBinding {
       node.setPosition(x, y);
     }
 
-    if (!node.destroyed) {
+    // A position listener can replace or remove this binding synchronously.
+    if (version === this._poseVersion && !node.destroyed) {
       node.setRotation(-radiansToDegrees(angle));
     }
   }
