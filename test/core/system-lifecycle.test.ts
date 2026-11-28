@@ -740,3 +740,56 @@ describe('SystemRegistry add() after a finalize that runs listeners', () => {
     expect(second.has(probe)).toBe(false);
   });
 });
+
+describe('SystemRegistry frame-boundary drain under reentrant listeners', () => {
+  test('a listener cancelling a later buffered add at the boundary keeps it out of the registry', () => {
+    const registry = new SystemRegistry();
+    const other = new SystemRegistry();
+    const removed = registry.add(new Probe('removed'));
+    const late = new Probe('late');
+
+    registry.onRemove.add(system => {
+      if (system === removed) {
+        registry.remove(late);
+      }
+    });
+
+    frame(registry, () => {
+      registry.remove(removed);
+      registry.add(late);
+    });
+
+    expect(registry.has(late)).toBe(false);
+    expect(registry.size).toBe(0);
+    expect(late.log).toEqual(['attach', 'detach']);
+    other.add(late);
+    late.log.length = 0;
+    frame(registry);
+    expect(late.log).toEqual([]);
+  });
+
+  test('a removal finalized early by another registry is not finalized again at the boundary', () => {
+    const registry = new SystemRegistry();
+    const other = new SystemRegistry();
+    const first = registry.add(new Probe('first'));
+    const second = registry.add(new Probe('second'));
+    const removals: string[] = [];
+
+    registry.onRemove.add(system => {
+      removals.push((system as Probe).name);
+
+      if (system === first) {
+        other.add(second);
+      }
+    });
+
+    frame(registry, () => {
+      registry.remove(first);
+      registry.remove(second);
+    });
+
+    expect(removals).toEqual(['first', 'second']);
+    expect(other.has(second)).toBe(true);
+    expect(second.log.filter(entry => entry === 'detach')).toEqual(['detach']);
+  });
+});

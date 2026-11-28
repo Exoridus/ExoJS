@@ -59,6 +59,8 @@ interface SystemRegistration {
   attached: boolean;
   /** {@link SystemRegistry.onAdd} was dispatched for it, so its removal dispatches {@link SystemRegistry.onRemove}. */
   announced: boolean;
+  /** Its removal was finalized; a second finalize is a no-op. */
+  finalized: boolean;
 }
 
 /** What a {@link SystemRegistry} knows of its owner. @internal */
@@ -574,14 +576,16 @@ export class SystemRegistry implements Destroyable {
       return;
     }
 
-    // Taken off the queue before anything is applied: an onAdd/onRemove
-    // listener that throws must neither leave the rest of the frame's
-    // mutations unapplied nor have the next boundary apply them a second time.
-    const pending = this._pending.splice(0);
+    // Taken off the queue one at a time, each before it is applied: an
+    // onAdd/onRemove listener that throws must neither leave the rest of the
+    // frame's mutations unapplied nor have them applied twice, and a listener
+    // that cancels or finalizes a later mutation must find it still queued.
     let failed = false;
     let failure: unknown;
 
-    for (const mutation of pending) {
+    while (this._pending.length > 0) {
+      const mutation = this._pending.shift()!;
+
       try {
         if (isPendingAdd(mutation)) {
           this._pendingAdds.delete(mutation.system);
@@ -916,6 +920,7 @@ export class SystemRegistry implements Destroyable {
       runnable: true,
       attached: true,
       announced: false,
+      finalized: false,
     };
   }
 
@@ -1131,6 +1136,12 @@ export class SystemRegistry implements Destroyable {
    * elsewhere, and one that throws cannot skip the detach.
    */
   private _finalizeRemoval(registration: SystemRegistration): void {
+    if (registration.finalized) {
+      return;
+    }
+
+    registration.finalized = true;
+
     if (this._registrations.get(registration.system) === registration) {
       this._registrations.delete(registration.system);
     }
