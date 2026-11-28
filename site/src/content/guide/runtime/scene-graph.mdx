@@ -126,6 +126,22 @@ Removing a child doesn't destroy it — you can keep the reference and re-add it
 
 The reverse direction needs no bookkeeping: `destroy()` unlinks the node from its parent for you, so `child.destroy()` on its own leaves no dangling entry in the child list. A destroyed node is permanently spent, though — re-adding one throws rather than silently rendering nothing.
 
+## Finding nodes
+
+Keep a reference to the nodes your code drives — that is the cheapest lookup there is. For a subtree you did not build yourself, such as an instantiated prefab, `find` returns the first descendant of a class and `findAll` returns every one:
+
+```ts
+import { Container, Sprite } from '@codexo/exojs';
+
+declare const level: Container;
+declare const isAwake: (sprite: Sprite) => boolean;
+
+const player = level.find(Sprite, { name: 'player' });   // Sprite | null
+const sleepers = level.findAll(Sprite, { name: 'enemy', where: sprite => !isAwake(sprite) });
+```
+
+Both walk the subtree depth-first in child-list order, visiting a node before its children, and never match the container they are called on. A subclass counts as its base class, names match exactly and need not be unique, and the first match in walk order wins. There is no index behind them: each call visits every descendant, so call them when the scene is set up rather than every frame. For per-frame work over many entities, use a [component query](/ExoJS/en/guide/runtime/components/) instead — it is index-driven.
+
 ## Why this stays composable
 
 Because transforms cascade and children render in order, large scenes are built by nesting smaller scenes. A `Player` container groups body, weapon, hat, and effects. A `World` container groups player, enemies, and tiles. A `Game` scene groups world and HUD.

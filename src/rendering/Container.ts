@@ -12,6 +12,18 @@ import { blendModeNeedsBackdrop } from '#rendering/types';
 
 import { type AssetScopeValidation, RenderNode } from './RenderNode';
 
+/** Narrows {@link Container.find} and {@link Container.findAll} beyond the node type. */
+export interface FindNodeOptions<T extends RenderNode> {
+  /** Matches only nodes whose {@link SceneNode.name} equals this exactly. */
+  readonly name?: string;
+  /** Matches only nodes for which this returns `true`; called after the type and name checks passed. */
+  readonly where?: (node: T) => boolean;
+}
+
+const matchesFindOptions = <T extends RenderNode>(node: T, options: FindNodeOptions<T> | undefined): boolean =>
+  options === undefined ||
+  ((options.name === undefined || node.name === options.name) && (options.where === undefined || options.where(node)));
+
 /**
  * Scene-graph node that owns child {@link RenderNode}s. Renders its
  * subtree in document order with local `zIndex` ordering resolved inside
@@ -436,6 +448,71 @@ export class Container extends RenderNode {
    */
   protected _onChildListChanged(): void {
     // Overridden by containers that derive state from their child list.
+  }
+
+  /**
+   * The first descendant that is an instance of `type` (subclasses included)
+   * and matches `options`, or `null`. The search walks the subtree depth-first
+   * in child-list order, visiting a node before its children, and never matches
+   * this container itself; paint order and `zIndex` play no part. Names need
+   * not be unique: the first match in that order wins.
+   *
+   * The walk reads the hierarchy live and keeps no index, so it costs one visit
+   * per descendant. A `where` callback must not add or remove nodes.
+   *
+   * ```ts
+   * const player = scene.root.find(Sprite, { name: 'player' });
+   * ```
+   */
+  public find<T extends RenderNode>(type: abstract new (...args: never[]) => T, options?: FindNodeOptions<T>): T | null {
+    for (const child of this._childList) {
+      if (child instanceof type && matchesFindOptions(child, options)) {
+        return child;
+      }
+
+      if (child instanceof Container) {
+        const found = child.find(type, options);
+
+        if (found !== null) {
+          return found;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Every descendant that is an instance of `type` (subclasses included) and
+   * matches `options`, in the order {@link find} visits them. Returns a new
+   * array each call; an empty one when nothing matches.
+   *
+   * ```ts
+   * const enemies = scene.root.findAll(Sprite, { name: 'enemy', where: sprite => sprite.hasComponent(Health) });
+   * ```
+   */
+  public findAll<T extends RenderNode>(type: abstract new (...args: never[]) => T, options?: FindNodeOptions<T>): T[] {
+    const found: T[] = [];
+
+    this._collectMatches(type, options, found);
+
+    return found;
+  }
+
+  private _collectMatches<T extends RenderNode>(
+    type: abstract new (...args: never[]) => T,
+    options: FindNodeOptions<T> | undefined,
+    found: T[],
+  ): void {
+    for (const child of this._childList) {
+      if (child instanceof type && matchesFindOptions(child, options)) {
+        found.push(child);
+      }
+
+      if (child instanceof Container) {
+        child._collectMatches(type, options, found);
+      }
+    }
   }
 
   /** Clamp an insert position against the CURRENT list length; `null` appends. */
