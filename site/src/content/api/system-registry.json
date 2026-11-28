@@ -1,15 +1,15 @@
 {
   "title": "SystemRegistry",
-  "description": "Phase-dispatching registry of Systems, shared by `Scene` (as `scene.systems`) and `Application` (as `app.systems`). Each system participates only in the scheduler phases it implements (`preFrame`/`fixedUpdate`/`update`/`draw`/`postFrame`); within a phase, systems run in ascending `order` (ties keep registration order) and are destroyed in reverse registration order when the registry is destroyed. SystemRegistrationOptions.before/SystemRegistrationOptions.after layer a dependency graph on top of `order`, additive rather than a replacement: `order`/registration sequence still decide ties among registrations the graph doesn't relate to each other. A `before`/`after` reference to a system outside the current phase - a different phase, or never registered - is silently a no-op there, not an error. A cycle among `before`/`after` constraints makes `add()` throw and leaves the registry unchanged; for an add buffered during a frame it throws at the frame boundary. Structural mutations are frame-scoped: a system added during a frame - whether from outside or from another system's own callback - does not participate in any phase until the *next* frame, in any phase. Removing a system during a callback marks it inactive immediately, so it is skipped by every later phase and every later fixed step in the *same* frame; the structural delete and the single SystemRegistry.onRemove dispatch are finalized at the frame boundary, or at once if the same system is added again before that boundary. Outside a frame - before the first SystemRegistry._beginFrame or after its matching SystemRegistry._endFrame - `add()`/`remove()` apply immediately.",
+  "description": "Phase-dispatching registry of Systems, shared by `Scene` (as `scene.systems`) and `Application` (as `app.systems`). Each system participates only in the scheduler phases it implements (`preFrame`/`fixedUpdate`/`update`/`draw`/`postFrame`); within a phase, systems run in ascending `order` (ties keep registration order) and are destroyed in reverse registration order when the registry is destroyed. SystemRegistrationOptions.before/SystemRegistrationOptions.after layer a dependency graph on top of `order`, additive rather than a replacement: `order`/registration sequence still decide ties among registrations the graph doesn't relate to each other. A `before`/`after` reference to a system outside the current phase - a different phase, or never registered - is silently a no-op there, not an error. A cycle among `before`/`after` constraints makes `add()` throw and leaves the registry unchanged; for an add buffered during a frame it throws at the frame boundary. Structural mutations are frame-scoped: a system added during a frame - whether from outside or from another system's own callback - does not participate in any phase until the *next* frame, in any phase. Removing a system during a callback marks it inactive immediately, so it is skipped by every later phase and every later fixed step in the *same* frame; the structural delete and the single SystemRegistry.onRemove dispatch are finalized at the frame boundary, or at once if the same system is added again before that boundary. Outside a frame - before the first SystemRegistry._beginFrame or after its matching SystemRegistry._endFrame - `add()`/`remove()` apply immediately. Systems with SystemLifecycle hooks are told when they are attached, enabled, disabled and detached; see that interface for the exact points.",
   "symbol": "SystemRegistry",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 10,
   "counts": {
     "constructors": 1,
-    "methods": 4,
+    "methods": 6,
     "properties": 1,
     "events": 2
   },
@@ -21,7 +21,8 @@
       "paragraphs": [
         "Phase-dispatching registry of Systems, shared by `Scene` (as `scene.systems`) and `Application` (as `app.systems`). Each system participates only in the scheduler phases it implements (`preFrame`/`fixedUpdate`/`update`/`draw`/`postFrame`); within a phase, systems run in ascending `order` (ties keep registration order) and are destroyed in reverse registration order when the registry is destroyed.",
         "SystemRegistrationOptions.before/SystemRegistrationOptions.after layer a dependency graph on top of `order`, additive rather than a replacement: `order`/registration sequence still decide ties among registrations the graph doesn't relate to each other. A `before`/`after` reference to a system outside the current phase - a different phase, or never registered - is silently a no-op there, not an error. A cycle among `before`/`after` constraints makes `add()` throw and leaves the registry unchanged; for an add buffered during a frame it throws at the frame boundary.",
-        "Structural mutations are frame-scoped: a system added during a frame - whether from outside or from another system's own callback - does not participate in any phase until the *next* frame, in any phase. Removing a system during a callback marks it inactive immediately, so it is skipped by every later phase and every later fixed step in the *same* frame; the structural delete and the single SystemRegistry.onRemove dispatch are finalized at the frame boundary, or at once if the same system is added again before that boundary. Outside a frame - before the first SystemRegistry._beginFrame or after its matching SystemRegistry._endFrame - `add()`/`remove()` apply immediately."
+        "Structural mutations are frame-scoped: a system added during a frame - whether from outside or from another system's own callback - does not participate in any phase until the *next* frame, in any phase. Removing a system during a callback marks it inactive immediately, so it is skipped by every later phase and every later fixed step in the *same* frame; the structural delete and the single SystemRegistry.onRemove dispatch are finalized at the frame boundary, or at once if the same system is added again before that boundary. Outside a frame - before the first SystemRegistry._beginFrame or after its matching SystemRegistry._endFrame - `add()`/`remove()` apply immediately.",
+        "Systems with SystemLifecycle hooks are told when they are attached, enabled, disabled and detached; see that interface for the exact points."
       ],
       "importLine": "import { SystemRegistry } from '@codexo/exojs'",
       "sourceLink": null
@@ -32,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): SystemRegistry",
+          "signature": "new(owner?: SystemRegistryOwner): SystemRegistry",
           "signatureTokens": [
             {
               "text": "new",
@@ -41,6 +42,22 @@
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "owner",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemRegistryOwner",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -55,9 +72,15 @@
               "kind": "type"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "owner",
+              "type": "SystemRegistryOwner",
+              "optional": true
+            }
+          ],
           "returnType": "SystemRegistry",
-          "description": ""
+          "description": "Registries are created by Application and Scene; one constructed directly belongs to no application and is enabled from the start."
         }
       ],
       "paragraphs": [],
@@ -168,6 +191,136 @@
           "params": [],
           "returnType": "void",
           "description": "Destroy every remaining registered system exactly once, in reverse registration order, then clear the registry. A system already removed via SystemRegistry.remove - even if not yet structurally finalized - is not destroyed: remove() never destroys. Each system is destroyed under its own guard and the clear-and-reset tail always runs, so one throwing system can neither skip the systems after it nor leave the registry live. Systems are the extension seam, which makes a throwing destroy() the case to expect rather than a remote one. Failures are logged, never propagated - including in development, where DestroyScope.destroy rethrows an AggregateError instead. The difference is the caller: Application._disposeManagedResources invokes this method unguarded, part-way through an ordered teardown, so a throw here would strand the rendering context, audio, input, backend, platform and clocks that come after it - reinstating the very leak this guard closes."
+        },
+        {
+          "name": "find",
+          "signature": "find(type: SystemClass<T>): T | null",
+          "signatureTokens": [
+            {
+              "text": "find",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemClass",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "SystemClass<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "T | null",
+          "description": "The one registered system that is an instance of type, or null when there is none. Buffered adds count, removed systems do not."
+        },
+        {
+          "name": "findAll",
+          "signature": "findAll(type: SystemClass<T>): T[]",
+          "signatureTokens": [
+            {
+              "text": "findAll",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemClass",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "SystemClass<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "T[]",
+          "description": "Every registered system that is an instance of type, in registration order. Buffered adds count."
         },
         {
           "name": "has",

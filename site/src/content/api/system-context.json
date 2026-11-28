@@ -1,0 +1,153 @@
+{
+  "title": "SystemContext",
+  "description": "Where a System was registered, handed to SystemLifecycle.onAttach. The same object for every system of one registry, valid until SystemLifecycle.onDetach.",
+  "symbol": "SystemContext",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Where a System was registered, handed to SystemLifecycle.onAttach. The same object for every system of one registry, valid until SystemLifecycle.onDetach."
+      ],
+      "importLine": "import { SystemContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "app",
+          "signature": "app: Application",
+          "signatureTokens": [
+            {
+              "text": "app",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The application the registry belongs to."
+        },
+        {
+          "name": "scene",
+          "signature": "scene: Scene<void, Application<object>> | null",
+          "signatureTokens": [
+            {
+              "text": "scene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The scene whose systems the system was added to, or null for app.systems."
+        },
+        {
+          "name": "systems",
+          "signature": "systems: SystemRegistry",
+          "signatureTokens": [
+            {
+              "text": "systems",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemRegistry",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The registry the system was added to - the place to find the systems it works with."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/System.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/System.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/System.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/System.ts"
+}

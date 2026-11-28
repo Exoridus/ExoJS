@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 16,
+  "memberCount": 17,
   "counts": {
     "constructors": 1,
-    "methods": 8,
+    "methods": 9,
     "properties": 7,
     "events": 0
   },
@@ -158,6 +158,35 @@
           ],
           "returnType": "Synchronous",
           "description": "Advance by one fixed-timestep step, after the scene's own Scene.fixedUpdate and before its systems. Must be synchronous."
+        },
+        {
+          "name": "markChanged",
+          "signature": "markChanged(): void",
+          "signatureTokens": [
+            {
+              "text": "markChanged",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Report that this component's state changed, so every change observer (ComponentQuery.changed) over a query that matches it lists its node once in its next pass. Nothing is tracked automatically: call it after the writes other code should react to. Cheap and idempotent within a pass: it stores one number, whatever the number of observers. A component outside any scene has nothing to report to; joining a scene counts as a change on its own."
         },
         {
           "name": "onAttach",
