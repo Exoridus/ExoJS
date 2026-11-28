@@ -1,4 +1,4 @@
-import { derive, ObservableBase, type ObservableListener, type ReadonlyObservable } from '#core/Observable';
+import { derive, nextChangeStamp, ObservableBase, type ObservableListener, type ReadonlyObservable } from '#core/Observable';
 
 import { Size } from './Size';
 
@@ -8,10 +8,18 @@ import { Size } from './Size';
  * an unobserved size carries no extra field, closure or allocation.
  */
 class SizeObservation extends ObservableBase<ObservableSize> {
+  private _stamp = nextChangeStamp();
+
   public readonly relay = (): void => {
+    this._stamp = nextChangeStamp();
     this.inner?.();
     this._notify();
   };
+
+  /** @internal Moves on every change, also while delivery waits for a batch to end. */
+  public override _version(): number {
+    return this._stamp;
+  }
 
   public constructor(
     private readonly _size: ObservableSize,
@@ -156,6 +164,11 @@ export class ObservableSize extends Size {
       });
 
     return observation.subscribe(listener as ObservableListener<ObservableSize>);
+  }
+
+  /** @internal A change count while observed; `NaN` while not, as changes are then not counted. */
+  public _version(): number {
+    return observations.get(this)?._version() ?? Number.NaN;
   }
 
   /** A read-only value computed from this size; see {@link ReadonlyObservable.map}. */

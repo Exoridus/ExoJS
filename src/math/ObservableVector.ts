@@ -1,4 +1,4 @@
-import { derive, ObservableBase, type ObservableListener, type ReadonlyObservable } from '#core/Observable';
+import { derive, nextChangeStamp, ObservableBase, type ObservableListener, type ReadonlyObservable } from '#core/Observable';
 
 import { AbstractVector } from './AbstractVector';
 
@@ -35,7 +35,15 @@ class VectorObservation extends ObservableBase<ObservableVector> implements Obse
     return this._vector;
   }
 
+  private _stamp = nextChangeStamp();
+
+  /** @internal Moves on every change, also while delivery waits for a batch to end. */
+  public override _version(): number {
+    return this._stamp;
+  }
+
   public _onObservableChange(channel: number): void {
+    this._stamp = nextChangeStamp();
     this.inner?._onObservableChange(channel);
     this._notify();
   }
@@ -202,6 +210,11 @@ export class ObservableVector extends AbstractVector {
           });
 
     return observation.subscribe(listener as ObservableListener<ObservableVector>);
+  }
+
+  /** @internal A change count while observed; `NaN` while not, as changes are then not counted. */
+  public _version(): number {
+    return this._owner instanceof VectorObservation ? this._owner._version() : Number.NaN;
   }
 
   /** A read-only value computed from this vector; see {@link ReadonlyObservable.map}. */

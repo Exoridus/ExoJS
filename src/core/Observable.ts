@@ -38,8 +38,8 @@ export interface ReadonlyObservable<T> {
    * most once, also across chains and shared dependencies, and never from a
    * mix of old and new values. Vectors, sizes and observables implemented
    * outside the engine cannot report changes while unobserved: a value
-   * derived from one recomputes on every read while it has no subscribers,
-   * and once per change while it has.
+   * derived from one recomputes on every read while nothing observes the
+   * source.
    */
   map<U>(project: (value: T) => U): ReadonlyObservable<U>;
 }
@@ -349,8 +349,24 @@ const isSettled = (previous: unknown, next: unknown): boolean =>
  * equal to itself, for a source that cannot tell.
  * @internal
  */
-export const versionOf = (source: ReadonlyObservable<unknown>): number =>
-  source instanceof ObservableBase ? source._version() : Number.NaN;
+export const versionOf = (source: ReadonlyObservable<unknown>): number => (isVersioned(source) ? source._version() : Number.NaN);
+
+const isVersioned = (source: object): source is VersionedSource => typeof (source as Partial<VersionedSource>)._version === 'function';
+
+/** An engine observable that can report a change count; vectors and sizes report one only while observed. @internal */
+export interface VersionedSource {
+  _version(): number;
+}
+
+let changeStamp = 0;
+
+/**
+ * A process-wide increasing number for an observable that counts its changes
+ * only while observed: a later observation never repeats a number an earlier
+ * one reported, so a cached version cannot match by accident.
+ * @internal
+ */
+export const nextChangeStamp = (): number => ++changeStamp;
 
 /**
  * A read-only value computed from other observables. It caches its result
@@ -369,8 +385,6 @@ class DerivedObservable<T> extends ObservableBase<T> {
   private _changes = 0;
   private _delivered = 0;
   private _unversioned = false;
-  /** A source notified a change since the last computation. */
-  private _sourceChanged = true;
 
   public constructor(sources: ReadonlyArray<ReadonlyObservable<unknown>>, compute: () => T) {
     super();
@@ -397,8 +411,8 @@ class DerivedObservable<T> extends ObservableBase<T> {
   public override _version(): number {
     this._validate();
 
-    // Derived from a source that cannot tell and not subscribed to it, every read recomputes, so its count says nothing.
-    return this._unversioned && !this._subscribedToSources() ? Number.NaN : this._changes;
+    // Derived from a source that cannot tell, an object result is new on every read, so its count says nothing.
+    return this._unversioned ? Number.NaN : this._changes;
   }
 
   public get value(): T {
@@ -453,16 +467,10 @@ class DerivedObservable<T> extends ObservableBase<T> {
     for (let index = 0; index < sources.length; index++) {
       const version = versionOf(sources[index]!);
 
-      if (Number.isNaN(version)) {
-        unversioned = true;
-
-        // A subscribed source that cannot tell its version still notifies every change.
-        if (this._sourceChanged || !this._subscribedToSources()) {
-          current = false;
-        }
-      } else if (seen[index] !== version) {
+      if (seen[index] !== version) {
         seen[index] = version;
         current = false;
+        unversioned ||= Number.isNaN(version);
       }
     }
 
@@ -471,8 +479,6 @@ class DerivedObservable<T> extends ObservableBase<T> {
     if (current) {
       return;
     }
-
-    this._sourceChanged = false;
 
     // Cleared first so that a throwing computation is retried on the next read.
     this._computed = false;
@@ -487,13 +493,7 @@ class DerivedObservable<T> extends ObservableBase<T> {
     this._computed = true;
   }
 
-  private _subscribedToSources(): boolean {
-    return this._unsubscribers.length > 0;
-  }
-
   private readonly _onSourceChange = (): void => {
-    this._sourceChanged = true;
-
     // While notifications are being batched, a derived value recomputes once
     // after all of its changed sources delivered, never once per source.
     if (batchDepth > 0 || flushing) {

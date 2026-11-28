@@ -908,3 +908,52 @@ describe('derived values over sources without a version', () => {
     expect(doubled.value).toBe(8);
   });
 });
+
+describe('derived values over observed vectors', () => {
+  test('a read inside a batch sees the new vector value', () => {
+    const vector = new ObservableVector(null, 2, 0, 2);
+    const x = vector.map(v => v.x);
+
+    x.subscribe(() => {});
+    Observable.batch(() => {
+      vector.x = 7;
+      expect(x.value).toBe(7);
+    });
+    expect(x.value).toBe(7);
+  });
+
+  test('a diamond over a vector never delivers a mixed state', () => {
+    const vector = new ObservableVector(null, 2, 0, 0);
+    const doubled = vector.map(v => v.x * 2);
+    const text = live`${vector}|${doubled}` as ReturnType<typeof vector.map<string>>;
+    const seen: string[] = [];
+
+    text.subscribe(value => seen.push(value));
+    vector.x = 3;
+    expect(seen).toEqual(['3, 0|6']);
+  });
+
+  test('a listener reading a sibling derived value sees the current result in either subscription order', () => {
+    for (const reversed of [false, true]) {
+      const vector = new ObservableVector(null, 1, 0, 0);
+      const first = vector.map(v => v.x);
+      const second = vector.map(v => v.x * 10);
+      let read = 0;
+
+      if (reversed) {
+        second.subscribe(() => {});
+      }
+
+      first.subscribe(() => {
+        read = second.value;
+      });
+
+      if (!reversed) {
+        second.subscribe(() => {});
+      }
+
+      vector.x = 5;
+      expect(read).toBe(50);
+    }
+  });
+});
