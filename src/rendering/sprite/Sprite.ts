@@ -1,5 +1,7 @@
 import type { LoaderScope } from '#assets/LoaderScope';
 import { invariant } from '#core/dev';
+import { jsxConstruct } from '#jsx/jsxConstruct';
+import type { JsxAdapterProps } from '#jsx/types';
 import { Interval } from '#math/Interval';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
@@ -101,6 +103,14 @@ export class Sprite extends Drawable {
    * called, which is the intended way to build a sprite whose texture is still
    * loading.
    */
+  /** Constructs a sprite from JSX: `<Sprite texture={texture} />`. */
+  public static [jsxConstruct](
+    this: new (texture?: Texture | RenderTexture | string | null) => Sprite,
+    props: JsxAdapterProps<{ readonly texture?: Texture | RenderTexture | string | null }>,
+  ): Sprite {
+    return new this(props.texture ?? null);
+  }
+
   public constructor(texture: Texture | RenderTexture | string | null = null) {
     super();
 

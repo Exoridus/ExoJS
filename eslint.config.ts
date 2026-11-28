@@ -31,7 +31,7 @@ const deprecatedApi = collectDeprecatedExports(
 const STYLE_FILES = [
   'src/**/*.{ts,mts}',
   'test/**/*.{ts,tsx}',
-  'examples/**/*.ts',
+  'examples/**/*.{ts,tsx}',
   'scripts/**/*.{ts,mts,cts,mjs}',
   '*.config.ts',
   'packages/*/src/**/*.{ts,tsx}',
@@ -411,7 +411,7 @@ export default defineConfig([
   // Document migrations are opt-in per file by syntax, so the rules can cover
   // every TypeScript file that may declare a versioned document.
   {
-    files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts', 'test/**/*.ts'],
+    files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts', 'test/**/*.{ts,tsx}'],
     plugins: { exojs: exoPlugin },
     rules: {
       'exojs/migration-step': 'error',
@@ -981,7 +981,7 @@ export default defineConfig([
   // enabled different options, and a type-aware autofix could silently turn the
   // gate red.
   {
-    files: ['test/**/*.ts'],
+    files: ['test/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -1056,7 +1056,7 @@ export default defineConfig([
     },
   },
   // Vitest test-quality rules, over both the root suite and every package's.
-  ...vitestConfig({ files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.{ts,tsx}', 'packages/eslint-plugin-exojs/test/**/*.ts'] }),
+  ...vitestConfig({ files: ['test/**/*.{ts,tsx}', 'packages/exojs-*/test/**/*.{ts,tsx}', 'packages/eslint-plugin-exojs/test/**/*.ts'] }),
   // Node's built-in test runner, not Vitest: these tests launch real child
   // processes and must not run inside Vitest's worker/sandbox model. The
   // vitest plugin's import and disabled-test rules do not apply here.
@@ -1222,11 +1222,11 @@ export default defineConfig([
   // `array-type` and the `no-unsafe-*` family, on code whose job is to be
   // read and copied.
   {
-    files: ['examples/**/*.ts'],
+    files: ['examples/**/*.{ts,tsx}'],
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    files: ['examples/**/*.ts'],
+    files: ['examples/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -1299,7 +1299,7 @@ export default defineConfig([
   // including its program and its one type-aware rule, and add the two
   // relaxations a listing needs.
   {
-    files: ['examples/guides/**/*.ts'],
+    files: ['examples/guides/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',

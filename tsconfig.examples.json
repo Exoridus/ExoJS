@@ -53,11 +53,18 @@
   "extends": "@codexo/exojs-config/typescript/consumer.json",
   "compilerOptions": {
     "customConditions": ["@codexo/exojs-source", "@codexo/exojs-particles-source"],
+    // The configuration a consumer writing TSX uses: the automatic transform,
+    // resolving `@codexo/exojs/jsx-runtime`.
+    "jsx": "react-jsx",
+    "jsxImportSource": "@codexo/exojs",
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
       "@codexo/exojs/extensions": ["./src/extensions/index.ts"],
       "@codexo/exojs/renderer-sdk": ["./src/renderer-sdk.ts"],
       "@codexo/exojs/debug": ["./src/debug/index.ts"],
+      "@codexo/exojs/jsx": ["./src/jsx/index.ts"],
+      "@codexo/exojs/jsx-runtime": ["./src/jsx/runtime.ts"],
+      "@codexo/exojs/jsx-dev-runtime": ["./src/jsx/devRuntime.ts"],
       "@codexo/exojs-demo-assets": ["./packages/exojs-demo-assets/src/index.ts"],
       "@codexo/exojs-demo-assets/extended": ["./packages/exojs-demo-assets/src/extended.ts"],
       "@codexo/exojs/particles": ["./packages/exojs-particles/src/index.ts"],

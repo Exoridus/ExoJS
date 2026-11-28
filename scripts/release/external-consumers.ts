@@ -57,7 +57,14 @@ export interface ConsumerCheck {
 }
 
 /** The Core subpaths a consumer can import, beyond the root entry. */
-export const CORE_SUBPATHS: readonly string[] = [...RUNTIME_MODULES.map(module => module.subpath), 'debug', 'renderer-sdk'];
+export const CORE_SUBPATHS: readonly string[] = [
+  ...RUNTIME_MODULES.map(module => module.subpath),
+  'debug',
+  'renderer-sdk',
+  'jsx',
+  'jsx-runtime',
+  'jsx-dev-runtime',
+];
 
 export const run = (command: string, args: string[], cwd: string): { code: number; output: string } => {
   try {
@@ -455,6 +462,134 @@ export const legacyShimConsumerSource = (shims: readonly LegacyShim[]): string =
   return lines.join('\n');
 };
 
+const JSX_ELEMENTS = `import { Container } from '@codexo/exojs';
+import type { JSX } from '@codexo/exojs/jsx';
+
+export class Tile extends Container {
+  public readonly size: number;
+
+  public constructor(options: { readonly size?: number } = {}) {
+    super();
+    this.size = options.size ?? 16;
+  }
+}
+
+interface RowProps {
+  readonly count: number;
+  readonly children?: JSX.Element;
+}
+
+export function Row(props: RowProps): JSX.Element {
+  return (
+    <Container name="row">
+      {Array.from({ length: props.count }, (_, index) => <Tile size={index} x={index * 16} />)}
+      {props.children}
+    </Container>
+  );
+}
+`;
+
+/** Element misuse a consumer compiler must reject, on top of {@link JSX_ELEMENTS}. */
+const JSX_TYPE_SOURCE = `${JSX_ELEMENTS}
+export const valid: JSX.Element = <Row count={2}><Tile onPointerDown={event => void event.target} /></Row>;
+// @ts-expect-error no such prop
+export const unknownProp = <Tile sizee={1} />;
+// @ts-expect-error text is not a scene node child
+export const textChild = <Container>text</Container>;
+// @ts-expect-error the handler does not match the signal's arguments
+export const badHandler = <Tile onPointerDown={(value: number) => value} />;
+`;
+
+/** A program that builds a tree through the compiled runtime and checks its shape in Node. */
+const JSX_RUN_SOURCE = `${JSX_ELEMENTS}
+const existing = new Tile({ size: 99 });
+let pressed = 0;
+const tree = (
+  <Container name="root">
+    <Row count={3}>{existing}</Row>
+    <>
+      <Tile onPointerDown={() => (pressed += 1)} />
+    </>
+  </Container>
+) as Container;
+
+const row = tree.children[0] as Container;
+const tile = tree.children[1] as Tile;
+tile.onPointerDown.dispatch(null as never);
+
+const problems = [
+  row.name === 'row' || 'row name',
+  row.children.length === 4 || 'row children',
+  row.children[3] === existing || 'existing instance adopted',
+  (row.children[2] as Tile).size === 2 || 'constructor options',
+  row.children[1]!.x === 16 || 'node props',
+  tree.children.length === 2 || 'fragment flattened',
+  pressed === 1 || 'signal handler',
+].filter(result => result !== true);
+
+console.log(problems.length === 0 ? 'JSX_RUN_OK' : 'JSX_RUN_BAD ' + problems.join(','));
+`;
+
+const jsxTsconfig = (resolution: ConsumerResolution, jsx: 'react-jsx' | 'react-jsxdev', file: string, outDir: string | null): string =>
+  JSON.stringify(
+    {
+      compilerOptions: {
+        module: resolution === 'bundler' ? 'esnext' : 'nodenext',
+        moduleResolution: resolution,
+        target: 'es2022',
+        lib: ['es2022', 'dom', 'dom.iterable'],
+        strict: true,
+        skipLibCheck: false,
+        types: [],
+        jsx,
+        jsxImportSource: '@codexo/exojs',
+        ...(outDir === null ? { noEmit: true } : { outDir }),
+      },
+      include: [file],
+    },
+    null,
+    2,
+  );
+
+/**
+ * The JSX contract as a consumer meets it: the automatic transform resolves
+ * \`@codexo/exojs/jsx-runtime\` (and the dev variant) through the package
+ * manifest, the shipped declarations accept valid elements and reject misuse,
+ * and the compiled output builds a working tree in Node.
+ */
+export const jsxConsumerChecks = (consumerDir: string): ConsumerCheck[] => {
+  const checks: ConsumerCheck[] = [];
+  writeFileSync(join(consumerDir, 'jsx-types.tsx'), JSX_TYPE_SOURCE);
+  writeFileSync(join(consumerDir, 'jsx-run.tsx'), JSX_RUN_SOURCE);
+
+  for (const resolution of ['bundler', 'nodenext'] as const) {
+    const config = `tsconfig.jsx-types-${resolution}.json`;
+    writeFileSync(join(consumerDir, config), jsxTsconfig(resolution, 'react-jsx', 'jsx-types.tsx', null));
+    const tsc = run('node', [consumerTscBin, '-p', config], consumerDir);
+    checks.push({ name: `TypeScript JSX elements (${resolution}) type-check`, ok: tsc.code === 0, ...(tsc.code === 0 ? {} : { detail: lastLines(tsc.output, 5) }) });
+  }
+
+  for (const jsx of ['react-jsx', 'react-jsxdev'] as const) {
+    const outDir = `jsx-out-${jsx}`;
+    const config = `tsconfig.${outDir}.json`;
+    writeFileSync(join(consumerDir, config), jsxTsconfig('bundler', jsx, 'jsx-run.tsx', outDir));
+    const tsc = run('node', [consumerTscBin, '-p', config], consumerDir);
+
+    if (tsc.code !== 0) {
+      checks.push({ name: `JSX (${jsx}) compiles and builds a tree in Node`, ok: false, detail: lastLines(tsc.output, 5) });
+      continue;
+    }
+
+    // The emitted file sits beside node_modules' parent, so its bare specifiers resolve through the installed manifest.
+    writeFileSync(join(consumerDir, outDir, 'package.json'), JSON.stringify({ type: 'module' }));
+    const node = run('node', [join(outDir, 'jsx-run.js')], consumerDir);
+    const ok = node.code === 0 && node.output.includes('JSX_RUN_OK');
+    checks.push({ name: `JSX (${jsx}) compiles and builds a tree in Node`, ok, ...(ok ? {} : { detail: lastLines(node.output, 5) }) });
+  }
+
+  return checks;
+};
+
 /** The legacy shims among the installed packages of a consumer project. */
 const installedShims = (consumerDir: string): LegacyShim[] =>
   LEGACY_SHIMS.filter(shim => existsSync(join(consumerDir, 'node_modules', ...shim.name.split('/'), 'package.json')));
@@ -529,6 +664,7 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
       }
     }
 
+    checks.push(...jsxConsumerChecks(consumerDir));
     checks.push(...legacyShimChecks(consumerDir));
 
     return { ok: checks.every(c => c.ok), consumerDir, checks };

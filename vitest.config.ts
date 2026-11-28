@@ -24,6 +24,9 @@ const aliasConfig = [
   { find: '@codexo/exojs/extensions', replacement: fileURLToPath(new URL('./src/extensions/index.ts', import.meta.url)) },
   { find: '@codexo/exojs/renderer-sdk', replacement: fileURLToPath(new URL('./src/renderer-sdk.ts', import.meta.url)) },
   { find: '@codexo/exojs/debug', replacement: fileURLToPath(new URL('./src/debug/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs/jsx-runtime', replacement: fileURLToPath(new URL('./src/jsx/runtime.ts', import.meta.url)) },
+  { find: '@codexo/exojs/jsx-dev-runtime', replacement: fileURLToPath(new URL('./src/jsx/devRuntime.ts', import.meta.url)) },
+  { find: '@codexo/exojs/jsx', replacement: fileURLToPath(new URL('./src/jsx/index.ts', import.meta.url)) },
   // The demo-assets package is data plus factories; alias it to source like the
   // other content packages. The subpath must come before the root alias.
   {
@@ -321,7 +324,7 @@ export default defineConfig({
       // structural check instead.
       createJsdomTestProject({
         name: 'exojs',
-        include: ['test/**/*.test.ts'],
+        include: ['test/**/*.test.ts', 'test/**/*.test.tsx'],
         // The parity matrix runs in `browser-webgpu`: its runner imports the
         // browser context module, which throws on import under jsdom. The
         // WebGPU allocation cell is the same story one project further down
