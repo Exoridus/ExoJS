@@ -1,6 +1,6 @@
 import type { Tween } from '#animation/Tween';
 import type { TweenSequencer } from '#animation/TweenSequencer';
-import { TweenSystem } from '#animation/TweenSystem';
+import { type Ticker, TweenSystem } from '#animation/TweenSystem';
 import type { Application } from '#core/Application';
 import { SceneAvailability, sceneAvailabilityAllows } from '#core/scene/SceneAvailability';
 import type { SceneState } from '#core/scene/SceneState';
@@ -110,6 +110,22 @@ export class SceneTweens implements Destroyable {
    */
   public createSequencer(options?: SceneTweenOptions): TweenSequencer {
     return this._lane(options?.when).system.createSequencer();
+  }
+
+  /**
+   * Drive `ticker` with this scene's time under the `when` policy, exactly as
+   * the policy's tweens are driven, until the returned function is called or
+   * the scene ends.
+   * @internal
+   */
+  public _addTicker(ticker: Ticker, when?: SceneAvailability): () => void {
+    const lane = this._lane(when);
+
+    lane.system.addTicker(ticker);
+
+    return () => {
+      lane.system.removeTicker(ticker);
+    };
   }
 
   /**

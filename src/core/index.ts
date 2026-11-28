@@ -24,6 +24,8 @@ export type { LogEntry, LogOptions, LogSink } from './Logger';
 export { Logger, logger, LogSeverity } from './Logger';
 export { Perf } from './Perf';
 export { SceneNode } from './SceneNode';
+export type { SequenceContext, SequenceInput, SequenceOptions, SequenceResult, SequenceStatus, SequenceStep } from './sequence/Sequence';
+export { isSequenceCancellation, Sequence, SequenceHandle } from './sequence/Sequence';
 export { Signal } from './Signal';
 export type { System, SystemMethods } from './System';
 export { SystemOrder } from './SystemOrder';
