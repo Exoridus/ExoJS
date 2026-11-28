@@ -309,6 +309,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "bezierCurveTo",
   "binarySourceCodec",
   "binaryType",
+  "bindProperty",
   "blobSourceCodec",
   "bmFontType",
   "browserNetworkHints",

@@ -136,6 +136,18 @@ describe('bindProperty', () => {
     expect(label.text).toBe('HP 100');
   });
 
+  test('skips a node destroyed by an earlier listener of the same change', () => {
+    const x = new Observable(1);
+    const sprite = new Sprite(null);
+
+    x.subscribe(() => sprite.destroy());
+    bindProperty(sprite, 'x', x);
+    x.value = 7;
+
+    expect(sprite.x).toBe(1);
+    expect(x.subscriberCount).toBe(1);
+  });
+
   test('leaves nothing subscribed for a destroyed node or a failed initial write', () => {
     const level = new Observable(1);
     const sprite = new Sprite(null);

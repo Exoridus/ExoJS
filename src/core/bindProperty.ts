@@ -69,8 +69,17 @@ export const bindWith = (
     write(source.value);
   }
 
-  const unsubscribe = source.subscribe(write);
   const node = target instanceof SceneNode ? target : null;
+  // A listener notified earlier in the same delivery may have destroyed the node; its unbind only takes effect afterwards.
+  const unsubscribe = source.subscribe(
+    node === null
+      ? write
+      : value => {
+          if (!node.destroyed) {
+            write(value);
+          }
+        },
+  );
 
   const unbind = (): void => {
     unsubscribe();
