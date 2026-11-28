@@ -15,21 +15,24 @@ const LightingSystem = {
  * with its scene's systems, or else the only one in the application's. `null`
  * when there is none, and when there are several - choosing between them is
  * the caller's decision, made with `Lighting.add` or `Lighting.occludeFrom`.
+ * `excluded` does not count, for a system that is leaving its registry.
  * @internal
  */
-export const sceneLighting = (member: Component): Lighting | null => {
+export const sceneLighting = (member: Component, excluded: Lighting | null = null): Lighting | null => {
   const scene = member.scene;
 
   if (scene === null) {
     return null;
   }
 
-  const local = scene.systems.findAll(LightingSystem);
-
-  const candidates = local.length > 0 ? local : scene.app.systems.findAll(LightingSystem);
+  const local = without(scene.systems.findAll(LightingSystem), excluded);
+  const candidates = local.length > 0 ? local : without(scene.app.systems.findAll(LightingSystem), excluded);
 
   return candidates.length === 1 ? (candidates[0] ?? null) : null;
 };
+
+const without = (systems: Lighting[], excluded: Lighting | null): Lighting[] =>
+  excluded === null ? systems : systems.filter(system => system !== excluded);
 
 let occluderComponentClass: ComponentClass<OccluderComponent> | null = null;
 

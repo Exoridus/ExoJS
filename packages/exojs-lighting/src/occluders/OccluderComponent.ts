@@ -79,10 +79,11 @@ export class OccluderComponent extends Component {
   }
 
   /**
-   * The occluder source this component registers, built from its shape when
-   * the component is attached.
+   * The occluder source this component registers, built from its shape for the
+   * node it is attached to - again for each node it is attached to. A source
+   * passed as the shape is used as it is.
    *
-   * @throws Before the component is attached to a node.
+   * @throws While the component is not attached to a node.
    */
   public get source(): OccluderSource {
     if (this._source === null) {
@@ -95,19 +96,51 @@ export class OccluderComponent extends Component {
   }
 
   protected override onAttach(): void {
-    this._source ??= this._build(this.node);
+    this._source = this._build(this.node);
+  }
+
+  protected override onDetach(): void {
+    this._source = null;
   }
 
   protected override onEnable(): void {
-    const lighting = this._options.lighting ?? sceneLighting(this);
-
-    if (lighting !== null) {
-      this._joinLighting(lighting);
+    if (this._options.lighting === undefined) {
+      this._reconcile(null);
+    } else {
+      this._joinLighting(this._options.lighting);
     }
   }
 
   protected override onDisable(): void {
     this._leaveLighting();
+  }
+
+  /** Whether the lighting system was named in the options rather than chosen by scene membership. @internal */
+  public _isExplicit(): boolean {
+    return this._options.lighting !== undefined;
+  }
+
+  /**
+   * Join the lighting system scene membership selects now, leaving the one it
+   * selected before; an explicit `lighting` option is never overridden.
+   * `excluded` does not count as a candidate. @internal
+   */
+  public _reconcile(excluded: Lighting | null): void {
+    if (this._isExplicit()) {
+      return;
+    }
+
+    const target = sceneLighting(this, excluded);
+
+    if (this._lighting === target) {
+      return;
+    }
+
+    this._leaveLighting();
+
+    if (target !== null) {
+      this._joinLighting(target);
+    }
   }
 
   /** @internal */

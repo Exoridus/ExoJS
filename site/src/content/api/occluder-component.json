@@ -225,7 +225,7 @@
         },
         {
           "name": "onDetach",
-          "signature": "onDetach(): Synchronous",
+          "signature": "onDetach(): void",
           "signatureTokens": [
             {
               "text": "onDetach",
@@ -244,12 +244,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "Synchronous",
-              "kind": "type"
+              "text": "void",
+              "kind": "keyword"
             }
           ],
           "params": [],
-          "returnType": "Synchronous",
+          "returnType": "void",
           "description": "Called after the component was removed from its node; node is no longer readable."
         },
         {
@@ -525,7 +525,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The occluder source this component registers, built from its shape when the component is attached."
+          "description": "The occluder source this component registers, built from its shape for the node it is attached to - again for each node it is attached to. A source passed as the shape is used as it is."
         }
       ],
       "paragraphs": [],

@@ -488,7 +488,7 @@
             }
           ],
           "returnType": "void",
-          "description": "System hook: a system built from options alone creates its renderer here, with the registry's application, and lights the registry's scene - or the whole application for app.systems."
+          "description": "System hook: a system built from options alone creates its renderer here, with the registry's application, and from now on is in the frame exactly while the registry runs it - for app.systems from now until it is removed, for a scene's systems while that scene is active."
         },
         {
           "name": "onDetach",
@@ -517,7 +517,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "System hook: let go of what scene membership registered; explicit registrations stay."
+          "description": "System hook: let go of what scene membership registered - explicit registrations stay - and hand those members to the lighting system that now applies, if any. A system built from options alone also releases the renderer it built for this registration."
         },
         {
           "name": "onDisable",
@@ -575,7 +575,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "System hook: enter the frame when following the registry, and take in the scene's members that wait for a lighting system."
+          "description": "System hook: enter the frame when following the registry, and re-resolve which members join on their own."
         },
         {
           "name": "remove",
