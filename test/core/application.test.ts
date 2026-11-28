@@ -137,8 +137,9 @@ const loadApplicationHarness = async (
   const LoaderMock = vi.fn(function () {
     return loader;
   });
+  // A fresh object per instance: a system belongs to one registry, and some tests construct two applications.
   const InputSystemMock = vi.fn(function () {
-    return inputSystem;
+    return { ...inputSystem };
   });
 
   vi.resetModules();

@@ -70,7 +70,7 @@ export class SceneScope<Data = unknown> {
     this._app = app;
     this._onStateChange = onStateChange;
     this.scene = scene;
-    this.systems = new SystemRegistry();
+    this.systems = new SystemRegistry({ app, scene: scene as Scene, reportError: error => this._reportError(error) });
     this.loader = new SceneLoader(app);
     this.inputs = new SceneInputs(
       app,
@@ -222,6 +222,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.coroutines._sync());
     this._guard(errors, () => this.audio._flushPending());
     this._guard(errors, () => this.audio._sync());
+    this._guard(errors, () => this.systems._setLive(true));
     this._guard(errors, () => this._components?.setLive(true));
     this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
 
@@ -310,6 +311,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.inputs.suspend());
     this._guard(errors, () => this.interaction.suspend());
     this._guard(errors, () => this._components?.setLive(false));
+    this._guard(errors, () => this.systems._setLive(false));
     this._guard(errors, () => this._closeComponentFrame());
     this._guard(errors, () => {
       if (this._rootsAttached) {
@@ -353,6 +355,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.coroutines._sync());
     this._guard(errors, () => this.audio._flushPending());
     this._guard(errors, () => this.audio._sync());
+    this._guard(errors, () => this.systems._setLive(true));
     this._guard(errors, () => this._components?.setLive(true));
     this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
 
@@ -592,6 +595,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.inputs.suspend());
     this._guard(errors, () => this.interaction.suspend());
     this._guard(errors, () => this._components?.setLive(false));
+    this._guard(errors, () => this.systems._setLive(false));
 
     if (!this._unloadCalled) {
       this._unloadCalled = true;

@@ -25,9 +25,9 @@ export { Logger, logger, LogSeverity } from './Logger';
 export { Perf } from './Perf';
 export { SceneNode } from './SceneNode';
 export { Signal } from './Signal';
-export type { System, SystemMethods } from './System';
+export type { System, SystemContext, SystemLifecycle, SystemMethods } from './System';
 export { SystemOrder } from './SystemOrder';
-export type { SystemPhase, SystemRegistrationOptions } from './SystemRegistry';
+export type { SystemClass, SystemPhase, SystemRegistrationOptions } from './SystemRegistry';
 export { SystemRegistry } from './SystemRegistry';
 export { Timer } from './Timer';
 export type {

@@ -11,6 +11,8 @@ import {
   type SceneNode,
   type Seconds,
   type Sprite,
+  type SystemContext,
+  type SystemRegistry,
 } from '@codexo/exojs';
 
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
@@ -118,7 +120,52 @@ class QueryScene extends Scene {
 
     // @ts-expect-error - only component classes can be queried.
     this.query(Health, Container);
+
+    // Derived queries keep the row type.
+    const narrowed = this.movers
+      .active()
+      .enabled()
+      .without(Tint)
+      .where((_owner, health, armor) => health.current > armor.value);
+    type _Narrowed = Expect<Equal<typeof narrowed, ComponentQuery<readonly [typeof Health, typeof Armor]>>>;
+
+    // @ts-expect-error - a where() predicate answers with a boolean.
+    this.movers.where(() => 'yes');
+
+    this.movers.changed(Health);
+
+    // @ts-expect-error - changed() narrows to classes the query has.
+    this.movers.changed(Tint);
   }
 }
+
+class SystemOnly {
+  public update(): void {}
+}
+
+declare const registry: SystemRegistry;
+
+const one = registry.find(SystemOnly);
+type _One = Expect<Equal<typeof one, SystemOnly | null>>;
+
+const many = registry.findAll(SystemOnly);
+type _Many = Expect<Equal<typeof many, SystemOnly[]>>;
+
+registry.add({
+  update(): void {},
+  onAttach(context: SystemContext): void {
+    const scene: Scene | null = context.scene;
+    const systems: SystemRegistry = context.systems;
+
+    void scene;
+    void systems;
+  },
+});
+
+registry.add({
+  update(): void {},
+  // @ts-expect-error - system lifecycle hooks must be synchronous.
+  async onEnable(): Promise<void> {},
+});
 
 export { all, AsyncEnable, AsyncUpdate, present, QueryScene };
