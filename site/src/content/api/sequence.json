@@ -1,0 +1,235 @@
+{
+  "title": "Sequence",
+  "description": "Orchestration written as an async function, run on a scene's clock. ```ts const intro = new Sequence(async context => { await context.run(panToBoss); await context.all([roar, shake]); await context.wait(0.3); await context.waitUntil(() => confirm.pressed); }); const run = intro.start(this); // in a scene run.cancel(); // skip ``` A sequence is a reusable description; each start is an independent run with its own clock, steps and cleanups, and leaves nothing behind once it ends. Frame hooks stay synchronous: an `await` suspends only the sequence, and a body continues after the frame in which what it awaited completed, never inside a frame hook. Every wait completes on a tick of the run's clock, which is the scene's own time under the SequenceOptions.when policy - never wall-clock time. The scene owns its runs: ending the scene cancels them. Cancelling a run cancels every step in it, runs their cleanups, and rejects their pending waits with an `AbortError`, so `finally` blocks and SequenceContext.defer restore whatever the sequence took over. A completion that arrives after a step ended is ignored.",
+  "symbol": "Sequence",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Orchestration written as an async function, run on a scene's clock.",
+        "```ts const intro = new Sequence(async context => { await context.run(panToBoss); await context.all([roar, shake]); await context.wait(0.3); await context.waitUntil(() => confirm.pressed); });",
+        "const run = intro.start(this); // in a scene run.cancel(); // skip ```",
+        "A sequence is a reusable description; each start is an independent run with its own clock, steps and cleanups, and leaves nothing behind once it ends. Frame hooks stay synchronous: an `await` suspends only the sequence, and a body continues after the frame in which what it awaited completed, never inside a frame hook. Every wait completes on a tick of the run's clock, which is the scene's own time under the SequenceOptions.when policy - never wall-clock time.",
+        "The scene owns its runs: ending the scene cancels them. Cancelling a run cancels every step in it, runs their cleanups, and rejects their pending waits with an `AbortError`, so `finally` blocks and SequenceContext.defer restore whatever the sequence took over. A completion that arrives after a step ended is ignored."
+      ],
+      "importLine": "import { Sequence } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(body: SequenceStep<T>, options: SequenceOptions): Sequence<T>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "body",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceStep",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sequence",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "body",
+              "type": "SequenceStep<T>",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "SequenceOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Sequence<T>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "start",
+          "signature": "start(scene: Scene, options: SequenceOptions): SequenceHandle<T>",
+          "signatureTokens": [
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "scene",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceHandle",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "scene",
+              "type": "Scene",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "SequenceOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "SequenceHandle<T>",
+          "description": "Start a run in scene, which must be attached to an application. A scene that is still being prepared holds the run's clock until it activates; one whose teardown has begun gets a run that is already cancelled."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sequence/Sequence.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sequence/Sequence.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+}

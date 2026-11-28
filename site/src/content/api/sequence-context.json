@@ -1,0 +1,737 @@
+{
+  "title": "SequenceContext",
+  "description": "What a running step can do: start other steps, wait on the scene's clock, and register cleanup. Each step has its own context, owned by the step that started it.",
+  "symbol": "SequenceContext",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 0,
+    "methods": 9,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a running step can do: start other steps, wait on the scene's clock, and register cleanup. Each step has its own context, owned by the step that started it."
+      ],
+      "importLine": "import { SequenceContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "all",
+          "signature": "all(steps: S): Promise<mapped>",
+          "signatureTokens": [
+            {
+              "text": "all",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "steps",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mapped",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "steps",
+              "type": "S",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<mapped>",
+          "description": "Run steps side by side and return all their results, in order, once every one has completed. When one fails, the steps this call started are cancelled and the failure propagates."
+        },
+        {
+          "name": "defer",
+          "signature": "defer(cleanup: () => void): void",
+          "signatureTokens": [
+            {
+              "text": "defer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cleanup",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "cleanup",
+              "type": "() => void",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Run cleanup when this step ends, however it ends - completed, failed or cancelled. Cleanups run last-in first-out, synchronously at the moment the step ends, before anything awaiting it continues."
+        },
+        {
+          "name": "race",
+          "signature": "race(steps: S): Promise<SequenceResult<S[number]>>",
+          "signatureTokens": [
+            {
+              "text": "race",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "steps",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "steps",
+              "type": "S",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<SequenceResult<S[number]>>",
+          "description": "Run steps side by side until the first one settles, and return its result or failure. The losers this call started are cancelled; handles passed in were started elsewhere and keep running - start a step with SequenceContext.start and pass its handle to keep it going."
+        },
+        {
+          "name": "run",
+          "signature": "run(step: S): Promise<SequenceResult<S>>",
+          "signatureTokens": [
+            {
+              "text": "run",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "step",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "step",
+              "type": "S",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<SequenceResult<S>>",
+          "description": "Run a step to its end and return its result."
+        },
+        {
+          "name": "start",
+          "signature": "start(step: S): SequenceHandle<SequenceResult<S>>",
+          "signatureTokens": [
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "step",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceHandle",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "step",
+              "type": "S",
+              "optional": false
+            }
+          ],
+          "returnType": "SequenceHandle<SequenceResult<S>>",
+          "description": "Start a step without waiting for it, owned by this one: it runs alongside, can be awaited through the returned handle, and is cancelled if it is still running when this step ends. A failure nobody awaits fails this step."
+        },
+        {
+          "name": "wait",
+          "signature": "wait(duration: Seconds | number): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "wait",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "duration",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "duration",
+              "type": "Seconds | number",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Wait duration seconds of the sequence's clock."
+        },
+        {
+          "name": "waitFor",
+          "signature": "waitFor(signal: Signal<Args>): Promise<Args>",
+          "signatureTokens": [
+            {
+              "text": "waitFor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "signal",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Args",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Args",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "signal",
+              "type": "Signal<Args>",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Args>",
+          "description": "Wait for the next dispatch of signal and return its arguments, or for a promise or handle to settle. The result is delivered on the next tick of the sequence's clock, so it pauses with the sequence like every other wait."
+        },
+        {
+          "name": "waitFor",
+          "signature": "waitFor(promise: PromiseLike<T>): Promise<T>",
+          "signatureTokens": [
+            {
+              "text": "waitFor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "promise",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PromiseLike",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "promise",
+              "type": "PromiseLike<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<T>",
+          "description": ""
+        },
+        {
+          "name": "waitUntil",
+          "signature": "waitUntil(condition: () => boolean): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "waitUntil",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "condition",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "condition",
+              "type": "() => boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Wait until condition returns true, checked once per tick of the sequence's clock. A frame-edge flag such as an input action's pressed makes this wait for a fresh press: the check first runs on the tick after the wait began."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "scene",
+          "signature": "scene: Scene",
+          "signatureTokens": [
+            {
+              "text": "scene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The scene the sequence runs in."
+        },
+        {
+          "name": "signal",
+          "signature": "signal: AbortSignal",
+          "signatureTokens": [
+            {
+              "text": "signal",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Aborted when this step is cancelled - for handing to APIs that take an AbortSignal."
+        },
+        {
+          "name": "time",
+          "signature": "time: Seconds",
+          "signatureTokens": [
+            {
+              "text": "time",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Seconds the sequence's clock has advanced since it started."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sequence/Sequence.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sequence/Sequence.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+}

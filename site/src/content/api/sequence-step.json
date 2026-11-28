@@ -1,0 +1,128 @@
+{
+  "title": "SequenceStep",
+  "description": "A unit of work a sequence can run: an async function of a SequenceContext, or an object with such a `run` method. Whatever it returns, or resolves to, is its result. A step that waits should wait through its context - `wait`, `waitUntil`, `waitFor` or a nested step - so that pausing, cancelling and ending the scene reach it. Awaiting an unrelated promise directly is allowed, but neither pauses nor cancels with the sequence.",
+  "symbol": "SequenceStep",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A unit of work a sequence can run: an async function of a SequenceContext, or an object with such a `run` method. Whatever it returns, or resolves to, is its result.",
+        "A step that waits should wait through its context - `wait`, `waitUntil`, `waitFor` or a nested step - so that pausing, cancelling and ending the scene reach it. Awaiting an unrelated promise directly is allowed, but neither pauses nor cancels with the sequence."
+      ],
+      "importLine": "import { SequenceStep } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SequenceStep",
+          "signature": "(context: SequenceContext) => PromiseLike<T> | T | { run: unknown }",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceContext",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PromiseLike",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "run",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sequence/Sequence.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sequence/Sequence.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+}
