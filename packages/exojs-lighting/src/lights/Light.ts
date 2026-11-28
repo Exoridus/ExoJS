@@ -1,6 +1,7 @@
 import { Color, RenderNode, type Texture } from '@codexo/exojs';
 
 import type { Lighting } from '../Lighting';
+import { LightRegistration } from './LightRegistration';
 
 /** Options every light shares. Each field is also mutable afterwards. */
 export interface LightOptions {
@@ -79,9 +80,14 @@ export interface LightOptions {
  * batched or captured; what it costs is one row in the lighting system's data
  * for as long as it is registered.
  *
- * Registration is explicit ({@link Lighting.add}), because a package has no
- * business scanning a scene tree it does not own. Destroying a registered light
- * unregisters it.
+ * A light in a scene registers itself: while it is in an active scene, it
+ * joins that scene's lighting system - the only {@link Lighting} in
+ * `scene.systems`, or else the only one in `app.systems` - and leaves it when
+ * it leaves the scene. That is done by a component every light carries, so it
+ * follows the scene's own rules for membership, retention and teardown. With
+ * several lighting systems to choose from it joins none on its own; register
+ * it with {@link Lighting.add}, which is never undone by scene membership.
+ * Destroying a registered light unregisters it.
  */
 export abstract class Light extends RenderNode {
   /** Light colour. Mutated in place or replaced; read once per frame. */
@@ -97,6 +103,8 @@ export abstract class Light extends RenderNode {
 
   /** The system this light is registered with, or `null`. @internal */
   public _lighting: Lighting | null = null;
+  /** Whether {@link _lighting} was chosen by scene membership rather than by {@link Lighting.add}. @internal */
+  public _autoRegistered = false;
 
   protected constructor(options: LightOptions = {}) {
     super();
@@ -106,6 +114,7 @@ export abstract class Light extends RenderNode {
     this.softness = options.softness ?? 0.25;
     this.cookie = options.cookie ?? null;
     this.enabled = options.enabled ?? true;
+    (this as Light).addComponent(new LightRegistration());
   }
 
   /**

@@ -58,8 +58,15 @@ export interface FrameLightingOptions extends LightingOptions {
 
 const maxShadowResolution = 4096;
 
-/** The backend options a frame-composing renderer is built from. @internal */
-export const frameBackendOptions = (host: LightingHost, options: FrameLightingOptions, resolution: number): FrameLightingBackendOptions => {
+/**
+ * The backend options a frame-composing renderer is built from, validated now
+ * and bound to a host later - at construction, or when a system built from
+ * options alone is added to a registry. @internal
+ */
+export const frameBackendOptions = (
+  options: FrameLightingOptions,
+  resolution: number,
+): ((host: LightingHost) => FrameLightingBackendOptions) => {
   const lightResolution = options.lightResolution ?? resolution;
   const shadowResolution = options.shadowResolution ?? 256;
 
@@ -71,11 +78,12 @@ export const frameBackendOptions = (host: LightingHost, options: FrameLightingOp
     throw new RangeError(`shadowResolution must be a finite number, got ${shadowResolution}.`);
   }
 
-  return {
-    app: host,
+  const settings = {
     post: options.post ?? [],
     resolution: lightResolution,
     shadowResolution: Math.min(maxShadowResolution, Math.max(8, Math.round(shadowResolution))),
     fieldMargin: Math.min(1, Math.max(0, options.fieldMargin ?? 0.25)),
   };
+
+  return host => ({ app: host, ...settings });
 };

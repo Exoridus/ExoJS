@@ -4,16 +4,15 @@ import { LightmapLighting, PointLight } from '@codexo/exojs/lighting';
 
 class LightingScene extends Scene {
   override init(): void {
-    const lighting = new LightmapLighting(this.app, { ambient: new Color(25, 25, 35), scene: this });
     const floor = new Graphics();
     const lamp = new PointLight({ radius: 360, color: new Color(255, 190, 100) });
 
-    this.systems.add(lighting);
+    // Takes its application and scene from the registry; the lamp joins it on its own.
+    this.systems.add(new LightmapLighting({ ambient: new Color(25, 25, 35) }));
     floor.fillColor = new Color(180, 190, 210);
     floor.drawRectangle(0, 0, this.app.width, this.app.height);
     lamp.setPosition(this.app.width / 2, this.app.height / 2);
     this.root.addChild(floor, lamp);
-    lighting.add(lamp);
   }
 }
 

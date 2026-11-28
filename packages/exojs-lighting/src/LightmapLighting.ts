@@ -1,7 +1,7 @@
 import { LightmapBackend } from './backends/LightmapBackend';
 import { frameBackendOptions, type FrameLightingOptions } from './frameLighting';
 import { Lighting } from './Lighting';
-import type { LightingHost } from './LightingHost';
+import { isLightingHost, type LightingHost } from './LightingHost';
 
 /** Construction options for {@link LightmapLighting}. */
 export type LightmapLightingOptions = FrameLightingOptions;
@@ -11,9 +11,8 @@ export type LightmapLightingOptions = FrameLightingOptions;
  *
  * ```ts
  * // In Scene.init():
- * const lighting = new LightmapLighting(this.app, { lightResolution: 0.5, shadowResolution: 256, scene: this });
+ * const lighting = this.systems.add(new LightmapLighting({ lightResolution: 0.5, shadowResolution: 256 }));
  *
- * this.systems.add(lighting);
  * lighting.occludeFrom(new PhysicsOccluder(world));
  * ```
  *
@@ -23,16 +22,25 @@ export type LightmapLightingOptions = FrameLightingOptions;
  * occluder sources. Normals come from a prepass over the surfaces registered
  * with {@link Lighting.normalsFrom} rather than from a material.
  *
- * The host is required and is the first argument: this renderer lights the
- * frame that host drew, installs its passes in that host's frame slot, and
- * follows its surface when it resizes. It is read, never owned. Pass the
- * scene the system belongs to as {@link LightingOptions.scene}, so its passes
- * are in that frame slot only while the scene is the one on screen.
+ * This renderer lights the frame an application drew, installs its passes in
+ * that application's frame slot, and follows its surface when it resizes. Built
+ * from options alone, it takes that application from the registry it is added
+ * to (see {@link Lighting}). Given a host as the first argument, it is built at
+ * once against that host, which is read and never owned; pass the scene the
+ * system belongs to as {@link LightingOptions.scene} then, so its passes are in
+ * that frame slot only while the scene is the one on screen.
  */
 export class LightmapLighting extends Lighting {
-  public constructor(host: LightingHost, options: LightmapLightingOptions = {}) {
+  public constructor(options?: LightmapLightingOptions);
+  public constructor(host: LightingHost, options?: LightmapLightingOptions);
+  public constructor(hostOrOptions?: LightingHost | LightmapLightingOptions, maybeOptions?: LightmapLightingOptions) {
+    const host = isLightingHost(hostOrOptions) ? hostOrOptions : null;
+    const options = (host === null ? (hostOrOptions as LightmapLightingOptions | undefined) : maybeOptions) ?? {};
     // Half resolution is the right default for the quads, which PAINT the
     // light field: a falloff is low-frequency and halving the fill is free.
-    super(new LightmapBackend(frameBackendOptions(host, options, 0.5)), host, options);
+    const settings = frameBackendOptions(options, 0.5);
+    const create = (target: LightingHost): LightmapBackend => new LightmapBackend(settings(target));
+
+    super(host === null ? create : create(host), host, options);
   }
 }

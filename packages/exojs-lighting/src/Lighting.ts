@@ -1,14 +1,17 @@
-import { Color, type Filter, Rectangle, SceneState } from '@codexo/exojs';
+import { Color, type Filter, Rectangle, SceneState, type SystemContext } from '@codexo/exojs';
 
 import type { LightingBackend } from './backends/LightingBackend';
 import type { LightingHost, LightingScene } from './LightingHost';
 import type { Light } from './lights/Light';
+import { LightRegistration } from './lights/LightRegistration';
 import { lightRadius } from './lights/reach';
 import { SunLight } from './lights/SunLight';
 import type { NormalSource } from './normals/NormalSource';
 import type { NormalSurface, NormalSurfaceDrawable } from './normals/NormalSurface';
+import { OccluderComponent } from './occluders/OccluderComponent';
 import { OccluderField } from './occluders/OccluderField';
 import type { OccluderSource } from './occluders/OccluderSource';
+import { lightingBrand, sceneLighting } from './sceneLighting';
 
 /**
  * Which renderer shades the scene, as {@link Lighting.quality} reports it.
@@ -68,8 +71,12 @@ export interface LightingOptions {
   /** Filters over the shaded frame, in order. Each concrete system documents what they read. */
   readonly post?: readonly Filter[];
   /**
-   * The scene this system lights. Pass it whenever the system is built for one
-   * scene - in its `init()` - and registered in that scene's `systems`.
+   * The scene this system lights, for a system built with a host. A system
+   * built from options alone takes its scene from the registry it is added to
+   * and needs none of this.
+   *
+   * Pass it whenever a host-built system is built for one scene - in its
+   * `init()` - and registered in that scene's `systems`.
    *
    * The host's frame slot is application-wide, so a bound system installs its
    * passes only while its scene is {@link SceneState.Active} (paused or not):
@@ -99,13 +106,28 @@ const scratchPosition = { x: 0, y: 0 };
  * renderer turns them into pixels.
  *
  * ```ts
- * // In Scene.init(), where the scene's application is attached:
- * const lighting = new LightmapLighting(this.app, { ambient: new Color(11, 16, 32), scene: this });
+ * // In Scene.init():
+ * const lighting = this.systems.add(new LightmapLighting({ ambient: new Color(11, 16, 32) }));
  *
- * this.systems.add(lighting);
- * lighting.add(player.addChild(new PointLight({ radius: 260 })));
+ * player.addChild(new PointLight({ radius: 260 })); // joins the scene's lighting on its own
+ * wall.addComponent(new OccluderComponent());       // so does this wall's outline
  * lighting.occludeFrom(new PhysicsOccluder(world));
  * ```
+ *
+ * # Scene-owned systems
+ *
+ * Built from options alone, a system takes its application and scene from the
+ * registry it is added to: its renderer is created when it is added, it is in
+ * the frame while that scene is active, and it leaves it when the scene is
+ * retained or torn down. Everything that reads the renderer - {@link quality},
+ * {@link hdr}, {@link debug} and the rest - is available from that point on and
+ * throws before it. A system built with a host keeps the host-driven behaviour
+ * described under {@link LightingOptions.scene}.
+ *
+ * Lights and {@link OccluderComponent}s in an active scene join that scene's
+ * lighting system on their own when it is the only one, in `scene.systems` or
+ * else in `app.systems`. With several, none is guessed: register explicitly.
+ * Explicit registrations are never undone by scene membership.
  *
  * Construct one of {@link ForwardLighting}, {@link LightmapLighting} or
  * {@link RadianceLighting}. They are alternative lighting models rather than
@@ -141,10 +163,17 @@ export abstract class Lighting {
   /** Baseline colour applied to every lit fragment. Mutable; re-read every frame. */
   public ambient: Color;
 
-  protected readonly _backend: LightingBackend;
+  /** @internal */
+  public readonly [lightingBrand] = true;
 
-  private readonly _host: LightingHost | null;
-  private readonly _scene: LightingScene | null;
+  private _renderer: LightingBackend | null;
+  private _createRenderer: ((host: LightingHost) => LightingBackend) | null;
+  private _host: LightingHost | null;
+  private _scene: LightingScene | null;
+  /** In the frame between `onEnable` and `onDisable` rather than by host or scene signals. */
+  private _followsRegistry = false;
+  private _context: SystemContext | null = null;
+  private readonly _occluderComponents = new Set<OccluderComponent>();
   private readonly _post: readonly Filter[];
   private readonly _lights: Light[] = [];
   private readonly _occluders: OccluderSource[] = [];
@@ -154,18 +183,51 @@ export abstract class Lighting {
 
   /**
    * `backend` is built by the concrete system and belongs to this one from
-   * here on; `host` is the caller's and is never destroyed.
+   * here on, or is a factory run with the registry's application when the
+   * system is added; `host` is the caller's and is never destroyed.
    */
-  protected constructor(backend: LightingBackend, host: LightingHost | null, options: LightingOptions) {
+  protected constructor(
+    backend: LightingBackend | ((host: LightingHost) => LightingBackend),
+    host: LightingHost | null,
+    options: LightingOptions,
+  ) {
     this.ambient = options.ambient ?? new Color(28, 28, 38);
     this._host = host;
     this._post = options.post ?? [];
-    this._backend = backend;
+    this._scene = options.scene ?? null;
+
+    if (typeof backend === 'function') {
+      this._renderer = null;
+      this._createRenderer = backend;
+
+      return;
+    }
+
+    this._renderer = backend;
+    this._createRenderer = null;
+    this._start();
+  }
+
+  /** The renderer; throws for a system built from options alone that has not been added to a registry yet. */
+  protected get _backend(): LightingBackend {
+    if (this._renderer === null) {
+      throw new Error(
+        `${this.constructor.name} was built from options alone and has no renderer until it is added to app.systems or a scene's systems. Add it first: const lighting = this.systems.add(new ${this.constructor.name}({ ... })).`,
+      );
+    }
+
+    return this._renderer;
+  }
+
+  private _start(): void {
     // Publish once up front: a renderer that has never been told the ambient
     // term shades an untouched scene black, and "black until the first tick"
     // is not a state the vocabulary admits.
     this._backend.publish(this._lights, this.ambient, this._field, this._surfaces);
-    this._scene = options.scene ?? null;
+
+    if (this._followsRegistry) {
+      return;
+    }
 
     if (this._scene === null) {
       this._backend.attach();
@@ -275,6 +337,8 @@ export abstract class Lighting {
    * registration is ignored instead.
    */
   public add<T extends Light>(light: T): T {
+    light._autoRegistered = false;
+
     if (light._lighting === this) {
       return light;
     }
@@ -284,6 +348,27 @@ export abstract class Lighting {
     this._lights.push(light);
 
     return light;
+  }
+
+  /** Register a light on behalf of its scene membership; an explicit registration elsewhere wins. @internal */
+  public _adoptLight(light: Light): void {
+    if (light._lighting === null) {
+      this.add(light);
+      light._autoRegistered = true;
+    }
+  }
+
+  /** Register an occluder component on behalf of its scene membership. @internal */
+  public _adoptOccluder(component: OccluderComponent): void {
+    this._occluderComponents.add(component);
+    this.occludeFrom(component.source);
+  }
+
+  /** Undo {@link _adoptOccluder}. @internal */
+  public _releaseOccluder(component: OccluderComponent): void {
+    if (this._occluderComponents.delete(component)) {
+      this.stopOccluding(component.source);
+    }
   }
 
   /** Unregister a light. Returns `false` when it was not registered here. */
@@ -296,6 +381,7 @@ export abstract class Lighting {
 
     this._lights.splice(index, 1);
     light._lighting = null;
+    light._autoRegistered = false;
 
     return true;
   }
@@ -304,6 +390,7 @@ export abstract class Lighting {
   public clear(): this {
     for (const light of this._lights) {
       light._lighting = null;
+      light._autoRegistered = false;
     }
 
     this._lights.length = 0;
@@ -353,6 +440,11 @@ export abstract class Lighting {
 
   /** Unregister every occluder source. */
   public clearOccluders(): this {
+    for (const component of this._occluderComponents) {
+      component._lighting = null;
+    }
+
+    this._occluderComponents.clear();
     this._occluders.length = 0;
 
     return this;
@@ -427,6 +519,79 @@ export abstract class Lighting {
   }
 
   /**
+   * `System` hook: a system built from options alone creates its renderer here,
+   * with the registry's application, and lights the registry's scene - or the
+   * whole application for `app.systems`.
+   */
+  public onAttach(context: SystemContext): void {
+    this._context = context;
+
+    if (this._createRenderer === null) {
+      return;
+    }
+
+    const host = context.app;
+
+    this._renderer = this._createRenderer(host);
+    this._createRenderer = null;
+    this._host = host;
+    this._followsRegistry = this._scene === null && context.scene !== null;
+    this._start();
+  }
+
+  /** `System` hook: enter the frame when following the registry, and take in the scene's members that wait for a lighting system. */
+  public onEnable(): void {
+    if (this._followsRegistry) {
+      this._backend.attach();
+    }
+
+    const scene = this._context?.scene;
+
+    if (scene === null || scene === undefined) {
+      return;
+    }
+
+    scene
+      .query(LightRegistration)
+      .active()
+      .forEach((_node, registration) => {
+        if (sceneLighting(registration) === this) {
+          this._adoptLight(registration.node);
+        }
+      });
+    scene
+      .query(OccluderComponent)
+      .active()
+      .forEach((_node, component) => {
+        if (component._lighting === null && sceneLighting(component) === this) {
+          component._joinLighting(this);
+        }
+      });
+  }
+
+  /** `System` hook: leave the frame when following the registry. */
+  public onDisable(): void {
+    if (this._followsRegistry) {
+      this._backend.detach();
+    }
+  }
+
+  /** `System` hook: let go of what scene membership registered; explicit registrations stay. */
+  public onDetach(): void {
+    for (const light of [...this._lights]) {
+      if (light._autoRegistered) {
+        this.remove(light);
+      }
+    }
+
+    for (const component of [...this._occluderComponents]) {
+      component._leaveLighting();
+    }
+
+    this._context = null;
+  }
+
+  /**
    * Leave the host's frame slot and release the renderer's resources.
    * Registered lights and sources are unregistered, not destroyed.
    */
@@ -436,7 +601,9 @@ export abstract class Lighting {
     this.clearOccluders();
     this.clearSurfaces();
     this._field.clear();
-    this._backend.destroy();
+    this._renderer?.destroy();
+    this._renderer = null;
+    this._createRenderer = null;
   }
 
   private readonly _onSceneActivate = (): void => {
