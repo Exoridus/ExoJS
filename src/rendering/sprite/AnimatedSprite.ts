@@ -2,6 +2,8 @@ import type { AnimationSystem } from '#animation/AnimationSystem';
 import { Signal } from '#core/Signal';
 import type { Stage } from '#core/Stage';
 import { type Seconds, seconds } from '#core/units';
+import { jsxConstruct } from '#jsx/jsxConstruct';
+import type { JsxAdapterProps } from '#jsx/types';
 import type { Rectangle } from '#math/Rectangle';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -133,6 +135,16 @@ export class AnimatedSprite extends Sprite {
 
   public readonly onComplete = new Signal<[clip: string]>();
   public readonly onFrame = new Signal<[clip: string, frame: number]>();
+
+  /** Constructs an animated sprite from JSX: `<AnimatedSprite texture={sheet} clips={clips} />`. */
+  public static override [jsxConstruct](
+    props: JsxAdapterProps<{
+      readonly texture?: Texture | RenderTexture | null;
+      readonly clips?: Readonly<Record<string, AnimatedSpriteClipDefinition>>;
+    }>,
+  ): AnimatedSprite {
+    return new this(props.texture ?? null, props.clips);
+  }
 
   public constructor(texture: Texture | RenderTexture | null, clips?: Readonly<Record<string, AnimatedSpriteClipDefinition>>) {
     super(texture);

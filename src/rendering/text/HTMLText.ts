@@ -1,4 +1,6 @@
 import { logger } from '#core/Logger';
+import { jsxConstruct } from '#jsx/jsxConstruct';
+import type { JsxAdapterProps } from '#jsx/types';
 import { Container } from '#rendering/Container';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Texture } from '#rendering/texture/Texture';
@@ -84,6 +86,16 @@ export class HTMLText extends Container {
   private _activeRender: Promise<void> | null = null;
 
   private readonly _fonts: Array<{ family: string; dataUri: string }> = [];
+
+  /** Constructs an HTML text node from JSX: `<HTMLText html="<b>Paused</b>" width={320} />`. */
+  public static [jsxConstruct](
+    this: new (html: string, options?: HTMLTextOptions) => HTMLText,
+    props: JsxAdapterProps<HTMLTextOptions & { readonly html: string }>,
+  ): HTMLText {
+    const { html, ...options } = props;
+
+    return new this(html, options);
+  }
 
   public constructor(html: string, options: HTMLTextOptions = {}) {
     super();

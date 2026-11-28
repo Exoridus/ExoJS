@@ -1,5 +1,7 @@
 import type { LoaderScope } from '#assets/LoaderScope';
 import { invariant } from '#core/dev';
+import { jsxConstruct } from '#jsx/jsxConstruct';
+import type { JsxAdapterProps } from '#jsx/types';
 import { Interval } from '#math/Interval';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
@@ -94,6 +96,14 @@ export class Sprite extends Drawable {
   // SceneNode.getBounds()'s _boundsBuiltAtVersion.
   private _verticesBuiltAtVersion = -1;
   private _normalsBuiltAtVersion = -1;
+
+  /** Constructs a sprite from JSX: `<Sprite texture={texture} />`. */
+  public static [jsxConstruct](
+    this: new (texture?: Texture | RenderTexture | string | null) => Sprite,
+    props: JsxAdapterProps<{ readonly texture?: Texture | RenderTexture | string | null }>,
+  ): Sprite {
+    return new this(props.texture ?? null);
+  }
 
   /**
    * Create a sprite for `texture` or an asset path, or an empty one when the argument is omitted

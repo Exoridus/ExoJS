@@ -1,3 +1,5 @@
+import { jsxConstruct } from '#jsx/jsxConstruct';
+import type { JsxAdapterProps } from '#jsx/types';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 import { invalidateOnTextureLoad } from '#rendering/texture/deferredTexture';
@@ -43,6 +45,16 @@ export class RepeatingSprite extends Drawable {
   private _geometryDirty = true;
   /** Texture version the cached quads were built against; -1 before the first build. */
   private _builtTextureVersion = -1;
+
+  /** Constructs a repeating sprite from JSX: `<RepeatingSprite texture={tile} />`. */
+  public static [jsxConstruct](
+    this: new (source: Texture | TextureRegion, options?: RepeatingSpriteOptions) => RepeatingSprite,
+    props: JsxAdapterProps<RepeatingSpriteOptions & { readonly texture: Texture | TextureRegion }>,
+  ): RepeatingSprite {
+    const { texture, ...options } = props;
+
+    return new this(texture, options);
+  }
 
   public constructor(source: Texture | TextureRegion, options?: RepeatingSpriteOptions) {
     super();

@@ -52,7 +52,7 @@ interface Profile {
   readonly config: object;
 }
 
-const SUITE = ['test/type-tests/**/*.ts', 'src/typings.d.ts'];
+const SUITE = ['test/type-tests/**/*.ts', 'test/type-tests/**/*.tsx', 'src/typings.d.ts'];
 
 const PROFILES: readonly Profile[] = [
   {

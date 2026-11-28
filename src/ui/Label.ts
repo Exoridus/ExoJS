@@ -1,3 +1,5 @@
+import { jsxConstruct } from '#jsx/jsxConstruct';
+import type { JsxAdapterProps } from '#jsx/types';
 import { Text } from '#rendering/text/Text';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
@@ -17,6 +19,14 @@ export class Label extends Widget {
   private _textStyle: Readonly<TextStyleOptions> | null;
   /** The skin text object last pushed into the text node, for a cheap identity check per layout. */
   private _appliedText: TextStyleOptions;
+
+  /** Constructs a label from JSX: `<Label text="Paused" style={{ fontSize: 32 }} />`. */
+  public static [jsxConstruct](
+    this: new (text?: string, style?: TextStyleOptions) => Label,
+    props: JsxAdapterProps<{ readonly text?: string; readonly style?: TextStyleOptions }>,
+  ): Label {
+    return new this(props.text, props.style);
+  }
 
   public constructor(text = '', style: TextStyleOptions = {}) {
     super();
