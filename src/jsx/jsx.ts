@@ -1,5 +1,7 @@
+import { bindWith } from '#core/bindProperty';
 import type { Color } from '#core/Color';
 import { logger } from '#core/Logger';
+import { isObservable, type ReadonlyObservable } from '#core/Observable';
 import { Signal } from '#core/Signal';
 import type { ObservableVector } from '#math/ObservableVector';
 import { Container } from '#rendering/Container';
@@ -160,11 +162,20 @@ const setVector = (vector: ObservableVector, value: JsxVectorInput): void => {
   }
 };
 
+/** Text properties whose observable numbers JSX converts with `String`; see {@link JsxTextKey}. */
+const textKeys: ReadonlySet<string> = new Set(['text', 'label']);
+
+const toOption = (key: string, value: unknown): unknown => (textKeys.has(key) && typeof value === 'number' ? String(value) : value);
+
 const applyProp = (node: RenderNode, key: string, value: unknown, drawable: boolean, type: JsxNodeClass): void => {
   const setter = setterFor(key, drawable);
 
   if (setter !== undefined) {
-    setter(node, value as never);
+    if (isObservable(value)) {
+      bindWith(node, value, true, current => setter(node, current as never));
+    } else {
+      setter(node, value as never);
+    }
   } else if (typeof value === 'function' && isSignalKey(key)) {
     const signal = (node as unknown as Readonly<Record<string, unknown>>)[key];
 
@@ -210,6 +221,7 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
   const nodes: RenderNode[] = [];
   const drawable = type.prototype instanceof Drawable;
   const options: Record<string, unknown> = {};
+  const bound: Array<[key: string, source: ReadonlyObservable<unknown>]> = [];
   let assigns = false;
 
   // The compiler passes a literal key separately; one arriving in the props came through a spread and would reach the constructor.
@@ -228,6 +240,9 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
 
       if (setterFor(key, drawable) !== undefined || (typeof value === 'function' && isSignalKey(key))) {
         assigns = true;
+      } else if (isObservable(value)) {
+        options[key] = toOption(key, value.value);
+        bound.push([key, value]);
       } else {
         options[key] = value;
       }
@@ -238,6 +253,14 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
   const attached: RenderNode[] = [];
 
   try {
+    for (const [key, source] of bound) {
+      const record = node as unknown as Record<string, unknown>;
+
+      bindWith(node, source, false, current => {
+        record[key] = toOption(key, current);
+      });
+    }
+
     if (assigns) {
       applyProps(node, props, drawable, type);
     }
@@ -275,7 +298,9 @@ const call = (fn: (props: Props) => unknown, props: Props): RenderNode => {
  *
  * A class element is constructed from its props (see {@link jsxConstruct}),
  * then receives its node properties, signal handlers and children in that
- * order, and finally its `ref`. An element owns only the instance it
+ * order, and finally its `ref`. A prop holding an observable is bound: the
+ * property receives the current value and every later change until the node
+ * is destroyed. An element owns only the instance it
  * constructs. When a step after construction throws, the element detaches the
  * children it attached as JSX children and destroys its own instance; those
  * children are never destroyed, whether they were built with JSX or with

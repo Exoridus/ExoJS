@@ -1,5 +1,6 @@
 export { Application, type ApplicationDestroyOutcome, type ApplicationDestroyStatus, ApplicationState } from './Application';
 export { BehaviorComponent } from './BehaviorComponent';
+export { type BindableSource, bindProperty, type WritableKeys } from './bindProperty';
 export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';
 export { Capabilities, type HostRealm } from './Capabilities';

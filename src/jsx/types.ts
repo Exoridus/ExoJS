@@ -1,4 +1,6 @@
+import type { WritableKeys } from '#core/bindProperty';
 import type { Color } from '#core/Color';
+import type { ReadonlyObservable } from '#core/Observable';
 import type { Signal } from '#core/Signal';
 import type { Container } from '#rendering/Container';
 import type { Drawable } from '#rendering/Drawable';
@@ -24,37 +26,61 @@ export type JsxFunction<P = never> = (props: P) => RenderNode;
 export type JsxVectorInput = number | { readonly x: number; readonly y: number };
 
 /**
+ * A prop value, or an observable whose value JSX assigns to the property now
+ * and after every change, until the node is destroyed.
+ */
+export type JsxBindable<T> = T | ReadonlyObservable<T>;
+
+/**
+ * Construction props that name a writable property of the same type on the
+ * instance. Such a prop also accepts an observable: the constructor receives
+ * its current value, and the property is assigned after every change. A
+ * `text` or `label` string property also accepts an observable number,
+ * converted with `String`.
+ */
+export type JsxBindableOptions<P, I> = {
+  [K in keyof P]: K extends WritableKeys<I>
+    ? Exclude<P[K], undefined> extends I[K]
+      ? P[K] | ReadonlyObservable<I[K]> | (K extends JsxTextKey ? ([I[K]] extends [string] ? ReadonlyObservable<number> : never) : never)
+      : P[K]
+    : P[K];
+};
+
+/** Text properties that accept observable numbers, converted with `String`. */
+export type JsxTextKey = 'text' | 'label';
+
+/**
  * Scene-graph properties every element accepts. JSX assigns each one through
  * the node's own property or setter after the constructor ran.
  */
 export interface JsxNodeProps {
-  readonly name?: string | null;
-  readonly x?: number;
-  readonly y?: number;
+  readonly name?: JsxBindable<string | null>;
+  readonly x?: JsxBindable<number>;
+  readonly y?: JsxBindable<number>;
   /** In degrees, like {@link SceneNode.rotation}. */
-  readonly rotation?: number;
-  readonly scale?: JsxVectorInput;
-  readonly origin?: JsxVectorInput;
-  readonly skewX?: number;
-  readonly skewY?: number;
-  readonly visible?: boolean;
-  readonly zIndex?: number;
-  readonly interactive?: boolean;
-  readonly draggable?: boolean;
-  readonly cursor?: string | null;
-  readonly focusable?: boolean;
-  readonly tabIndex?: number;
-  readonly hitArea?: RenderNode['hitArea'];
-  readonly filters?: RenderNode['filters'];
-  readonly mask?: RenderNode['mask'];
-  readonly cullable?: boolean;
+  readonly rotation?: JsxBindable<number>;
+  readonly scale?: JsxBindable<JsxVectorInput>;
+  readonly origin?: JsxBindable<JsxVectorInput>;
+  readonly skewX?: JsxBindable<number>;
+  readonly skewY?: JsxBindable<number>;
+  readonly visible?: JsxBindable<boolean>;
+  readonly zIndex?: JsxBindable<number>;
+  readonly interactive?: JsxBindable<boolean>;
+  readonly draggable?: JsxBindable<boolean>;
+  readonly cursor?: JsxBindable<string | null>;
+  readonly focusable?: JsxBindable<boolean>;
+  readonly tabIndex?: JsxBindable<number>;
+  readonly hitArea?: JsxBindable<RenderNode['hitArea']>;
+  readonly filters?: JsxBindable<RenderNode['filters']>;
+  readonly mask?: JsxBindable<RenderNode['mask']>;
+  readonly cullable?: JsxBindable<boolean>;
 }
 
 /** Properties a {@link Drawable} element accepts in addition to {@link JsxNodeProps}. */
 export interface JsxDrawableProps {
-  readonly tint?: Color;
-  readonly blendMode?: BlendModes;
-  readonly anchor?: JsxVectorInput;
+  readonly tint?: JsxBindable<Color>;
+  readonly blendMode?: JsxBindable<BlendModes>;
+  readonly anchor?: JsxBindable<JsxVectorInput>;
 }
 
 type SignalArgs<S> = S extends Signal<infer Args> ? Args : never;
@@ -151,7 +177,7 @@ export type JsxChildrenProp<I> = I extends Container ? { readonly children?: Jsx
  * and an optional `ref` called with the finished instance.
  */
 export type JsxElementProps<C extends JsxNodeClass> = ([ReservedName<C>] extends [never]
-  ? JsxConstructionProps<C>
+  ? JsxBindableOptions<JsxConstructionProps<C>, InstanceType<C>>
   : JsxReservedOptionName<ReservedName<C>>) &
   JsxNodeProps &
   (InstanceType<C> extends Drawable ? JsxDrawableProps : Record<never, never>) &
