@@ -475,7 +475,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched when a system structurally leaves the registry (immediately, or at the frame boundary for a buffered remove)."
+          "description": "Dispatched when a system structurally leaves the registry (immediately, or at the frame boundary for a buffered remove), after its onDetach. Only for a system whose SystemRegistry.onAdd was dispatched."
         }
       ],
       "paragraphs": [],

@@ -590,3 +590,111 @@ describe('SystemRegistry ownership and reentrancy', () => {
     expect(other.has(b)).toBe(true);
   });
 });
+
+describe('SystemRegistry reentrant removal', () => {
+  test('onDisable re-adding its own system during remove() leaves exactly one live registration', () => {
+    for (const inFrame of [false, true]) {
+      const registry = new SystemRegistry();
+      const other = new SystemRegistry();
+      const probe = registry.add(new Probe());
+      let readded = false;
+
+      probe.onDisable = () => {
+        probe.log.push('disable');
+
+        if (!readded) {
+          readded = true;
+          registry.add(probe);
+        }
+      };
+
+      if (inFrame) {
+        frame(registry, () => registry.remove(probe));
+      } else {
+        registry.remove(probe);
+      }
+
+      expect(registry.has(probe)).toBe(true);
+      expect(registry.size).toBe(1);
+      expect(() => other.add(probe)).toThrow('already belongs to another system registry');
+
+      probe.log.length = 0;
+      frame(registry);
+      expect(probe.log).toEqual(['update']);
+
+      expect(registry.remove(probe)).toBe(true);
+      expect(registry.size).toBe(0);
+      other.add(probe);
+      expect(other.has(probe)).toBe(true);
+    }
+  });
+
+  test('an onRemove listener may register the system again, here or in another registry', () => {
+    const registry = new SystemRegistry();
+    const other = new SystemRegistry();
+    const third = new SystemRegistry();
+    const probe = registry.add(new Probe());
+
+    registry.onRemove.add(system => {
+      if (!registry.has(system)) {
+        registry.add(system);
+      }
+    });
+    registry.remove(probe);
+    expect(probe.log).toEqual(['attach', 'enable', 'disable', 'detach', 'attach', 'enable']);
+    expect(registry.has(probe)).toBe(true);
+    expect(() => other.add(probe)).toThrow('already belongs to another system registry');
+
+    registry.onRemove.clear();
+    registry.onRemove.add(system => third.add(system));
+    registry.remove(probe);
+    expect(third.has(probe)).toBe(true);
+    expect(registry.has(probe)).toBe(false);
+  });
+
+  test('a system that removes itself in onEnable is announced by neither onAdd nor onRemove', () => {
+    const registry = new SystemRegistry();
+    const signals: string[] = [];
+    const probe = new Probe();
+
+    registry.onAdd.add(() => signals.push('add'));
+    registry.onRemove.add(() => signals.push('remove'));
+
+    probe.onEnable = () => {
+      registry.remove(probe);
+    };
+
+    registry.add(probe);
+    expect(signals).toEqual([]);
+  });
+
+  test('destroying the registry from onAttach detaches the system being attached', () => {
+    const registry = new SystemRegistry();
+    const probe = new Probe();
+
+    probe.onAttach = () => {
+      probe.log.push('attach');
+      registry.destroy();
+    };
+
+    registry.add(probe);
+    expect(registry.has(probe)).toBe(false);
+    expect(probe.log).toEqual(['attach', 'detach']);
+    new SystemRegistry().add(probe);
+  });
+
+  test('a system its onDetach hands to another registry during destruction is not destroyed by the old one', () => {
+    const registry = new SystemRegistry();
+    const other = new SystemRegistry();
+    const probe = registry.add(new Probe());
+
+    probe.onDetach = () => {
+      probe.log.push('detach');
+      other.add(probe);
+    };
+
+    registry.destroy();
+    expect(other.has(probe)).toBe(true);
+    expect(probe.log).not.toContain('destroy');
+  });
+});

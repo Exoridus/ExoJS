@@ -57,6 +57,8 @@ interface SystemRegistration {
   runnable: boolean;
   /** Between `onAttach` and `onDetach`. */
   attached: boolean;
+  /** {@link SystemRegistry.onAdd} was dispatched for it, so its removal dispatches {@link SystemRegistry.onRemove}. */
+  announced: boolean;
 }
 
 /** What a {@link SystemRegistry} knows of its owner. @internal */
@@ -291,7 +293,11 @@ export class SystemRegistry implements Destroyable {
 
   /** Dispatched when a system structurally enters the registry (immediately, or at the frame boundary for a buffered add). */
   public readonly onAdd = new Signal<[system: System]>();
-  /** Dispatched when a system structurally leaves the registry (immediately, or at the frame boundary for a buffered remove). */
+  /**
+   * Dispatched when a system structurally leaves the registry (immediately, or
+   * at the frame boundary for a buffered remove), after its `onDetach`. Only
+   * for a system whose {@link SystemRegistry.onAdd} was dispatched.
+   */
   public readonly onRemove = new Signal<[system: System]>();
 
   /**
@@ -507,6 +513,11 @@ export class SystemRegistry implements Destroyable {
     registration.runnable = false;
     this._activeCount--;
     this._disable(registration);
+
+    // onDisable re-added the system, which finalized this registration already.
+    if (this._registrations.get(system) !== registration) {
+      return true;
+    }
 
     if (this._frameActive) {
       this._pending.push({ add: false, registration });
@@ -807,6 +818,11 @@ export class SystemRegistry implements Destroyable {
    * failures through its own error pipeline.
    */
   public _destroy(onFailure: (error: unknown) => void): void {
+    // A system whose onAttach destroys its registry is detached once that hook returns.
+    for (const system of this._attaching) {
+      this._cancelledAttach.add(system);
+    }
+
     const remaining = [...this._registrations.values()].filter(registration => registration.active).sort((a, b) => b.sequence - a.sequence);
     const failures: unknown[] = [];
 
@@ -822,6 +838,11 @@ export class SystemRegistry implements Destroyable {
 
       this._disable(registration, report);
       this._detach(registration, report);
+
+      // An onDetach that handed the system to another registry gave it a new owner to destroy it.
+      if (systemOwners.has(registration.system)) {
+        continue;
+      }
 
       try {
         registration.system.destroy?.();
@@ -880,6 +901,7 @@ export class SystemRegistry implements Destroyable {
       enabled: false,
       runnable: true,
       attached: true,
+      announced: false,
     };
   }
 
@@ -918,8 +940,9 @@ export class SystemRegistry implements Destroyable {
 
     this._enable(registration);
 
-    // onEnable may have removed the system again; its onRemove has then been dispatched already.
+    // onEnable may have removed the system again, unannounced, so no onRemove was dispatched either.
     if (registration.active) {
+      registration.announced = true;
       this.onAdd.dispatch(system);
     }
   }
@@ -1083,9 +1106,15 @@ export class SystemRegistry implements Destroyable {
     }
   }
 
-  /** Structural delete, `onRemove`, then detach - which happens even when an `onRemove` listener throws. */
+  /**
+   * Structural delete and detach, then `onRemove`: the system is released
+   * before any listener runs, so a listener may register it again, here or
+   * elsewhere, and one that throws cannot skip the detach.
+   */
   private _finalizeRemoval(registration: SystemRegistration): void {
-    this._registrations.delete(registration.system);
+    if (this._registrations.get(registration.system) === registration) {
+      this._registrations.delete(registration.system);
+    }
 
     if (this._frameActive) {
       // A phase may be iterating these lists right now; splicing would skip the
@@ -1099,10 +1128,10 @@ export class SystemRegistry implements Destroyable {
       removeRegistration(this._postFrameList, registration);
     }
 
-    try {
+    this._detach(registration);
+
+    if (registration.announced) {
       this.onRemove.dispatch(registration.system);
-    } finally {
-      this._detach(registration);
     }
   }
 }
