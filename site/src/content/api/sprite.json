@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 102,
+  "memberCount": 103,
   "counts": {
     "constructors": 1,
-    "methods": 44,
+    "methods": 45,
     "properties": 43,
     "events": 14
   },
@@ -99,7 +99,7 @@
             }
           ],
           "returnType": "Sprite",
-          "description": "Create a sprite for texture or an asset path, or an empty one when the argument is omitted or null - a textureless sprite draws nothing until setTexture is called, which is the intended way to build a sprite whose texture is still loading."
+          "description": ""
         }
       ],
       "paragraphs": [],
@@ -2256,6 +2256,178 @@
           "params": [],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "[jsxConstruct]",
+          "signature": "[jsxConstruct](this: (texture?: RenderTexture | Texture | null | string) => Sprite, props: JsxAdapterProps<{ texture?: RenderTexture | Texture | null | string }>): Sprite",
+          "signatureTokens": [
+            {
+              "text": "[jsxConstruct]",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sprite",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "props",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "JsxAdapterProps",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sprite",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "this",
+              "type": "(texture?: RenderTexture | Texture | null | string) => Sprite",
+              "optional": false
+            },
+            {
+              "name": "props",
+              "type": "JsxAdapterProps<{ texture?: RenderTexture | Texture | null | string }>",
+              "optional": false
+            }
+          ],
+          "returnType": "Sprite",
+          "description": "Constructs a sprite from JSX: <Sprite texture={texture} />."
         }
       ],
       "paragraphs": [],

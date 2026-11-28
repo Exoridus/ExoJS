@@ -203,7 +203,10 @@ export class Text extends AbstractText {
   private _surfaceMaxTextureSize: number | undefined;
 
   /** Constructs a text node from JSX: `<Text text="Score" fontSize={24} />`. */
-  public static [jsxConstruct](this: new (text: string, options?: TextOptions) => Text, props: JsxAdapterProps<TextOptions & { readonly text: string }>): Text {
+  public static [jsxConstruct](
+    this: new (text: string, options?: TextOptions) => Text,
+    props: JsxAdapterProps<TextOptions & { readonly text: string }>,
+  ): Text {
     const { text, ...options } = props;
 
     return new this(text, options);

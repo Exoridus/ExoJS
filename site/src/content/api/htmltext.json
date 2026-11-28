@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 109,
+  "memberCount": 110,
   "counts": {
     "constructors": 1,
-    "methods": 51,
+    "methods": 52,
     "properties": 43,
     "events": 14
   },
@@ -2707,6 +2707,150 @@
           "params": [],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "[jsxConstruct]",
+          "signature": "[jsxConstruct](this: (html: string, options?: HTMLTextOptions) => HTMLText, props: JsxAdapterProps<HTMLTextOptions & { html: string }>): HTMLText",
+          "signatureTokens": [
+            {
+              "text": "[jsxConstruct]",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "html",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLTextOptions",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLText",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "props",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "JsxAdapterProps",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLTextOptions",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "html",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLText",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "this",
+              "type": "(html: string, options?: HTMLTextOptions) => HTMLText",
+              "optional": false
+            },
+            {
+              "name": "props",
+              "type": "JsxAdapterProps<HTMLTextOptions & { html: string }>",
+              "optional": false
+            }
+          ],
+          "returnType": "HTMLText",
+          "description": "Constructs an HTML text node from JSX: <HTMLText html=\"<b>Paused</b>\" width={320} />."
         }
       ],
       "paragraphs": [],

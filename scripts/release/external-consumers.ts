@@ -566,7 +566,11 @@ export const jsxConsumerChecks = (consumerDir: string): ConsumerCheck[] => {
     const config = `tsconfig.jsx-types-${resolution}.json`;
     writeFileSync(join(consumerDir, config), jsxTsconfig(resolution, 'react-jsx', 'jsx-types.tsx', null));
     const tsc = run('node', [consumerTscBin, '-p', config], consumerDir);
-    checks.push({ name: `TypeScript JSX elements (${resolution}) type-check`, ok: tsc.code === 0, ...(tsc.code === 0 ? {} : { detail: lastLines(tsc.output, 5) }) });
+    checks.push({
+      name: `TypeScript JSX elements (${resolution}) type-check`,
+      ok: tsc.code === 0,
+      ...(tsc.code === 0 ? {} : { detail: lastLines(tsc.output, 5) }),
+    });
   }
 
   for (const jsx of ['react-jsx', 'react-jsxdev'] as const) {

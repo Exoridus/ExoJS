@@ -183,14 +183,19 @@ export class BitmapText extends AbstractText {
   private _effectCapability: TextEffectCapability;
   protected readonly _effectContext = 'BitmapText';
 
-  /** Constructs a bitmap text node from JSX: `<BitmapText text="Score" font={font} />`. */
+  /**
+   * Constructs a bitmap text node from JSX: `<BitmapText text="Score" font={font} fontScale={2} />`.
+   * The font's `scale` option is the `fontScale` prop, because `scale` is the node's transform scale on every element.
+   */
   public static [jsxConstruct](
     this: new (text: string, font: BmFont, options?: BitmapTextOptions) => BitmapText,
-    props: JsxAdapterProps<BitmapTextOptions & { readonly text: string; readonly font: BmFont }>,
+    props: JsxAdapterProps<
+      Omit<BitmapTextOptions, 'scale'> & { readonly text: string; readonly font: BmFont; readonly fontScale?: number }
+    >,
   ): BitmapText {
-    const { text, font, ...options } = props;
+    const { text, font, fontScale, ...options } = props;
 
-    return new this(text, font, options);
+    return new this(text, font, fontScale === undefined ? options : { ...options, scale: fontScale });
   }
 
   public constructor(text: string, font: BmFont, options: BitmapTextOptions = {}) {

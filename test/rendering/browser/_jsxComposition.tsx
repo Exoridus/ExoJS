@@ -88,7 +88,7 @@ const nextFrames = async (count: number): Promise<void> => {
 };
 
 export interface JsxCompositionMeasure {
-  readonly pixels: Uint8Array;
+  readonly pixels: Uint8ClampedArray;
   readonly drawCalls: number;
   readonly nodes: number;
 }

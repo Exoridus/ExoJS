@@ -1,21 +1,43 @@
 /** @jsxImportSource @codexo/exojs */
 import {
   AnimatedSprite,
+  type BitmapText,
   Button,
+  type Checkbox,
   Container,
+  type DockContainer,
+  type Dropdown,
   Graphics,
+  type HTMLText,
   Label,
+  type Mesh,
+  type NineSliceSprite,
   Panel,
+  type ProgressBar,
   type RenderNode,
+  type RepeatingSprite,
+  type ScrollContainer,
+  type Slider,
   Sprite,
   Stack,
   Text,
+  type TextArea,
+  type TextInput,
   type Texture,
+  type Toggle,
   Video,
 } from '@codexo/exojs';
-import type { JSX, JsxAdapterProps, JsxChildren } from '@codexo/exojs/jsx';
+import type {
+  JSX,
+  JsxAdapterProps,
+  JsxChildren,
+  JsxConstructionProps,
+  JsxDrawableProps,
+  JsxNodeClass,
+  JsxNodeProps,
+} from '@codexo/exojs/jsx';
 import { jsxConstruct } from '@codexo/exojs/jsx';
-import { PointLight } from '@codexo/exojs/lighting';
+import { type LineLight, PointLight, type SpotLight, type SunLight } from '@codexo/exojs/lighting';
 
 declare const texture: Texture;
 declare const onAny: () => void;
@@ -75,6 +97,47 @@ export const spriteChild = <Sprite texture={texture}>{caption}</Sprite>;
 export const textChild = <Container>Pause</Container>;
 // @ts-expect-error numbers are not scene nodes
 export const numberChild = <Container>{42}</Container>;
+
+// No construction prop of a core class shares a name with a node property: the
+// runtime assigns node properties through setters, so a shared name would never
+// reach the constructor.
+type Shared<C extends JsxNodeClass> = keyof JsxConstructionProps<C> & (keyof JsxNodeProps | keyof JsxDrawableProps);
+type NoneShared<Names extends never> = Names;
+export type CoreClassesShareNoNames = [
+  NoneShared<Shared<typeof Sprite>>,
+  NoneShared<Shared<typeof AnimatedSprite>>,
+  NoneShared<Shared<typeof NineSliceSprite>>,
+  NoneShared<Shared<typeof RepeatingSprite>>,
+  NoneShared<Shared<typeof Text>>,
+  NoneShared<Shared<typeof BitmapText>>,
+  NoneShared<Shared<typeof HTMLText>>,
+  NoneShared<Shared<typeof Graphics>>,
+  NoneShared<Shared<typeof Mesh>>,
+  NoneShared<Shared<typeof Label>>,
+  NoneShared<Shared<typeof Button>>,
+  NoneShared<Shared<typeof Panel>>,
+  NoneShared<Shared<typeof Stack>>,
+  NoneShared<Shared<typeof Slider>>,
+  NoneShared<Shared<typeof Toggle>>,
+  NoneShared<Shared<typeof Checkbox>>,
+  NoneShared<Shared<typeof ProgressBar>>,
+  NoneShared<Shared<typeof TextInput>>,
+  NoneShared<Shared<typeof TextArea>>,
+  NoneShared<Shared<typeof ScrollContainer>>,
+  NoneShared<Shared<typeof DockContainer>>,
+  NoneShared<Shared<typeof Dropdown>>,
+  NoneShared<Shared<typeof PointLight>>,
+  NoneShared<Shared<typeof SpotLight>>,
+  NoneShared<Shared<typeof LineLight>>,
+  NoneShared<Shared<typeof SunLight>>,
+];
+class Positioned extends Container {
+  public constructor(public readonly options: { readonly x?: number } = {}) {
+    super();
+  }
+}
+// @ts-expect-error the guard reports an option named like a node property
+export type GuardReports = NoneShared<Shared<typeof Positioned>>;
 
 // Lowercase intrinsic elements do not exist.
 // @ts-expect-error no intrinsic elements

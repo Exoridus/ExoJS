@@ -6,7 +6,8 @@
  *
  * JSX calls `Class[jsxConstruct](props)` with every prop except `children`,
  * `ref`, the shared node properties and the signal handlers, and expects a new
- * instance back. Type the parameter with {@link JsxAdapterProps} and construct
+ * instance back. The node property names are reserved, so an option that shares
+ * one needs a different prop name, as `BitmapText`'s `fontScale` does. Type the parameter with {@link JsxAdapterProps} and construct
  * with `new this(...)`, so a subclass that keeps the constructor signature
  * inherits the adapter:
  *

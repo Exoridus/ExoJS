@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 102,
+  "memberCount": 103,
   "counts": {
     "constructors": 1,
-    "methods": 44,
+    "methods": 45,
     "properties": 43,
     "events": 14
   },
@@ -2319,6 +2319,162 @@
           "params": [],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "[jsxConstruct]",
+          "signature": "[jsxConstruct](this: (texture: Texture | TextureRegion, options: NineSliceOptions) => NineSliceSprite, props: JsxAdapterProps<NineSliceOptions & { texture: Texture | TextureRegion }>): NineSliceSprite",
+          "signatureTokens": [
+            {
+              "text": "[jsxConstruct]",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureRegion",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceOptions",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceSprite",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "props",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "JsxAdapterProps",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceOptions",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureRegion",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceSprite",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "this",
+              "type": "(texture: Texture | TextureRegion, options: NineSliceOptions) => NineSliceSprite",
+              "optional": false
+            },
+            {
+              "name": "props",
+              "type": "JsxAdapterProps<NineSliceOptions & { texture: Texture | TextureRegion }>",
+              "optional": false
+            }
+          ],
+          "returnType": "NineSliceSprite",
+          "description": "Constructs a nine-slice sprite from JSX: <NineSliceSprite texture={frame} left={12} right={12} top={12} bottom={12} />."
         }
       ],
       "paragraphs": [],
