@@ -1,16 +1,16 @@
 {
   "title": "SequenceContext",
-  "description": "What a running step can do: start other steps, wait on the scene's clock, and register cleanup. Each step has its own context, owned by the step that started it.",
+  "description": "What a running step can do: wait on the sequencer's clock, wait for signals, conditions, handles and operations, and start branches. Each step has its own context. Every wait is a generator, used with `yield*`; its result is the value of the `yield*` expression. A step that waits resumes inside a later tick of the sequencer, in the frame phase the sequencer runs in, never in a promise continuation.",
   "symbol": "SequenceContext",
   "kind": "interface",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 12,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
-    "methods": 9,
-    "properties": 3,
+    "methods": 8,
+    "properties": 2,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "What a running step can do: start other steps, wait on the scene's clock, and register cleanup. Each step has its own context, owned by the step that started it."
+        "What a running step can do: wait on the sequencer's clock, wait for signals, conditions, handles and operations, and start branches. Each step has its own context.",
+        "Every wait is a generator, used with `yield*`; its result is the value of the `yield*` expression. A step that waits resumes inside a later tick of the sequencer, in the frame phase the sequencer runs in, never in a promise continuation."
       ],
       "importLine": "import { SequenceContext } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +31,7 @@
       "members": [
         {
           "name": "all",
-          "signature": "all(steps: S): Promise<mapped>",
+          "signature": "all(branches: B): SequenceGenerator<mapped>",
           "signatureTokens": [
             {
               "text": "all",
@@ -41,7 +42,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "steps",
+              "text": "branches",
               "kind": "param"
             },
             {
@@ -49,7 +50,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "S",
+              "text": "B",
               "kind": "type"
             },
             {
@@ -61,7 +62,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Promise",
+              "text": "SequenceGenerator",
               "kind": "type"
             },
             {
@@ -79,45 +80,25 @@
           ],
           "params": [
             {
-              "name": "steps",
-              "type": "S",
+              "name": "branches",
+              "type": "B",
               "optional": false
             }
           ],
-          "returnType": "Promise<mapped>",
-          "description": "Run steps side by side and return all their results, in order, once every one has completed. When one fails, the steps this call started are cancelled and the failure propagates."
+          "returnType": "SequenceGenerator<mapped>",
+          "description": "Run branches side by side and return all their results, in order, once every one has completed. The step continues at the point on the clock where the last branch ended. When a branch fails or is cancelled, the branches this call started are cancelled and the failure, or a SequenceCancelledError, is thrown here. Handles passed in keep running."
         },
         {
-          "name": "defer",
-          "signature": "defer(cleanup: () => void): void",
+          "name": "nextFrame",
+          "signature": "nextFrame(): SequenceGenerator<Seconds>",
           "signatureTokens": [
             {
-              "text": "defer",
+              "text": "nextFrame",
               "kind": "name"
             },
             {
               "text": "(",
               "kind": "punctuation"
-            },
-            {
-              "text": "cleanup",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
             },
             {
               "text": ")",
@@ -128,23 +109,29 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
+              "text": "SequenceGenerator",
+              "kind": "type"
+            },
             {
-              "name": "cleanup",
-              "type": "() => void",
-              "optional": false
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
-          "returnType": "void",
-          "description": "Run cleanup when this step ends, however it ends - completed, failed or cancelled. Cleanups run last-in first-out, synchronously at the moment the step ends, before anything awaiting it continues."
+          "params": [],
+          "returnType": "SequenceGenerator<Seconds>",
+          "description": "Wait for the next tick of the sequencer and return its delta."
         },
         {
           "name": "race",
-          "signature": "race(steps: S): Promise<SequenceResult<S[number]>>",
+          "signature": "race(branches: B): SequenceGenerator<SequenceBranchResult<B[number]>>",
           "signatureTokens": [
             {
               "text": "race",
@@ -155,7 +142,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "steps",
+              "text": "branches",
               "kind": "param"
             },
             {
@@ -163,7 +150,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "S",
+              "text": "B",
               "kind": "type"
             },
             {
@@ -175,7 +162,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Promise",
+              "text": "SequenceGenerator",
               "kind": "type"
             },
             {
@@ -183,7 +170,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SequenceResult",
+              "text": "SequenceBranchResult",
               "kind": "type"
             },
             {
@@ -191,7 +178,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "S",
+              "text": "B",
               "kind": "type"
             },
             {
@@ -217,88 +204,17 @@
           ],
           "params": [
             {
-              "name": "steps",
-              "type": "S",
+              "name": "branches",
+              "type": "B",
               "optional": false
             }
           ],
-          "returnType": "Promise<SequenceResult<S[number]>>",
-          "description": "Run steps side by side until the first one settles, and return its result or failure. The losers this call started are cancelled; handles passed in were started elsewhere and keep running - start a step with SequenceContext.start and pass its handle to keep it going."
-        },
-        {
-          "name": "run",
-          "signature": "run(step: S): Promise<SequenceResult<S>>",
-          "signatureTokens": [
-            {
-              "text": "run",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "step",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Promise",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SequenceResult",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "step",
-              "type": "S",
-              "optional": false
-            }
-          ],
-          "returnType": "Promise<SequenceResult<S>>",
-          "description": "Run a step to its end and return its result."
+          "returnType": "SequenceGenerator<SequenceBranchResult<B[number]>>",
+          "description": "Run branches side by side until the first one ends, and return its result or throw its failure. Branches ending in the same tick are ordered by their point on the clock. The losers this call started are cancelled; handles passed in were started elsewhere and keep running."
         },
         {
           "name": "start",
-          "signature": "start(step: S): SequenceHandle<SequenceResult<S>>",
+          "signature": "start(sequence: Sequence<T>): SequenceHandle<T>",
           "signatureTokens": [
             {
               "text": "start",
@@ -309,7 +225,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "step",
+              "text": "sequence",
               "kind": "param"
             },
             {
@@ -317,8 +233,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "S",
+              "text": "Sequence",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -337,20 +265,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "SequenceResult",
+              "text": "T",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -359,17 +275,17 @@
           ],
           "params": [
             {
-              "name": "step",
-              "type": "S",
+              "name": "sequence",
+              "type": "Sequence<T>",
               "optional": false
             }
           ],
-          "returnType": "SequenceHandle<SequenceResult<S>>",
-          "description": "Start a step without waiting for it, owned by this one: it runs alongside, can be awaited through the returned handle, and is cancelled if it is still running when this step ends. A failure nobody awaits fails this step."
+          "returnType": "SequenceHandle<T>",
+          "description": "Start sequence as a branch owned by this step and return its handle without waiting. The branch starts later in the same tick, at this step's point on the clock, and runs alongside. It is cancelled if it is still running when this step ends. Its failure is thrown into this step at the yield where the step waits."
         },
         {
           "name": "wait",
-          "signature": "wait(duration: Seconds | number): Promise<void>",
+          "signature": "wait(duration: Seconds | number): SequenceGenerator",
           "signatureTokens": [
             {
               "text": "wait",
@@ -408,20 +324,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Promise",
+              "text": "SequenceGenerator",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [
@@ -431,12 +335,12 @@
               "optional": false
             }
           ],
-          "returnType": "Promise<void>",
-          "description": "Wait duration seconds of the sequence's clock."
+          "returnType": "SequenceGenerator",
+          "description": "Wait duration seconds of the sequencer's clock, counted from this step's point on the clock. A step whose deadline falls inside the tick that is running continues within that tick, so back-to-back waits never drift. Zero and negative durations continue without waiting."
         },
         {
           "name": "waitFor",
-          "signature": "waitFor(signal: Signal<Args>): Promise<Args>",
+          "signature": "waitFor(signal: Signal<Args>): SequenceGenerator<Args>",
           "signatureTokens": [
             {
               "text": "waitFor",
@@ -479,7 +383,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Promise",
+              "text": "SequenceGenerator",
               "kind": "type"
             },
             {
@@ -502,12 +406,12 @@
               "optional": false
             }
           ],
-          "returnType": "Promise<Args>",
-          "description": "Wait for the next dispatch of signal and return its arguments, or for a promise or handle to settle. The result is delivered on the next tick of the sequence's clock, so it pauses with the sequence like every other wait."
+          "returnType": "SequenceGenerator<Args>",
+          "description": "Wait for the next dispatch of signal and return its arguments. The listener is registered at the yield* and removed as soon as it fires or the step stops waiting; the arguments are delivered on the next tick."
         },
         {
           "name": "waitFor",
-          "signature": "waitFor(promise: PromiseLike<T>): Promise<T>",
+          "signature": "waitFor(source: PromiseLike<T> | SequenceHandle<T> | SequenceOperation<T>): SequenceGenerator<T>",
           "signatureTokens": [
             {
               "text": "waitFor",
@@ -518,7 +422,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "promise",
+              "text": "source",
               "kind": "param"
             },
             {
@@ -542,6 +446,46 @@
               "kind": "punctuation"
             },
             {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceHandle",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceOperation",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -550,7 +494,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Promise",
+              "text": "SequenceGenerator",
               "kind": "type"
             },
             {
@@ -568,20 +512,20 @@
           ],
           "params": [
             {
-              "name": "promise",
-              "type": "PromiseLike<T>",
+              "name": "source",
+              "type": "PromiseLike<T> | SequenceHandle<T> | SequenceOperation<T>",
               "optional": false
             }
           ],
-          "returnType": "Promise<T>",
-          "description": ""
+          "returnType": "SequenceGenerator<T>",
+          "description": "Wait until source ends and return its value; its failure is thrown here, and its cancellation as a SequenceCancelledError. - A SequenceHandle: the step continues at the point on the clock where the handle's step ended, if this sequencer ran it. - A SequenceOperation: polled once per tick; cancelled if the step stops waiting first. - A promise: its value is delivered on the next tick after it settles. A promise cannot be cancelled, so a step that stops waiting only stops listening."
         },
         {
-          "name": "waitUntil",
-          "signature": "waitUntil(condition: () => boolean): Promise<void>",
+          "name": "waitFor",
+          "signature": "waitFor(condition: () => boolean): SequenceGenerator",
           "signatureTokens": [
             {
-              "text": "waitUntil",
+              "text": "waitFor",
               "kind": "name"
             },
             {
@@ -617,20 +561,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Promise",
+              "text": "SequenceGenerator",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [
@@ -640,8 +572,8 @@
               "optional": false
             }
           ],
-          "returnType": "Promise<void>",
-          "description": "Wait until condition returns true, checked once per tick of the sequence's clock. A frame-edge flag such as an input action's pressed makes this wait for a fresh press: the check first runs on the tick after the wait began."
+          "returnType": "SequenceGenerator",
+          "description": "Wait until condition returns true, checked once per tick, first on the tick after the wait began. A frame-edge flag such as an input action's pressed therefore waits for a fresh press: a button already held when the wait began does not count."
         }
       ],
       "paragraphs": [],
@@ -652,27 +584,6 @@
       "id": "properties",
       "title": "Properties",
       "members": [
-        {
-          "name": "scene",
-          "signature": "scene: Scene",
-          "signatureTokens": [
-            {
-              "text": "scene",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Scene",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The scene the sequence runs in."
-        },
         {
           "name": "signal",
           "signature": "signal: AbortSignal",
@@ -692,7 +603,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Aborted when this step is cancelled - for handing to APIs that take an AbortSignal."
+          "description": "Aborted when this step ends, however it ends - for handing to APIs that take an AbortSignal, such as fetch. The abort reason is a SequenceCancelledError."
         },
         {
           "name": "time",
@@ -713,7 +624,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Seconds the sequence's clock has advanced since it started."
+          "description": "Seconds of the sequencer's clock between the start of this step's sequence and this point of the step. A timed wait resumes the step at its deadline rather than at the frame boundary that passed it, so this stays exact however the frames fall."
         }
       ],
       "paragraphs": [],
@@ -727,11 +638,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/sequence/Sequence.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+        "label": "src/core/sequence/SequenceContext.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceContext.ts"
       }
     }
   ],
-  "sourcePath": "src/core/sequence/Sequence.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+  "sourcePath": "src/core/sequence/SequenceContext.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceContext.ts"
 }

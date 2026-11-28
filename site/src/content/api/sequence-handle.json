@@ -1,6 +1,6 @@
 {
   "title": "SequenceHandle",
-  "description": "A running step: awaitable for its result, cancellable, and readable from frame code. Returned by Sequence.start for a whole run and by SequenceContext.start for a step within one. Awaiting a cancelled handle rejects with an `AbortError`.",
+  "description": "A running sequence or branch, returned by Sequencer.play and SequenceContext.start. Frame code reads its state and cancels it; another step joins it with `yield* context.waitFor(handle)`, SequenceContext.all or SequenceContext.race.",
   "symbol": "SequenceHandle",
   "kind": "class",
   "subsystem": "core",
@@ -9,8 +9,8 @@
   "memberCount": 6,
   "counts": {
     "constructors": 0,
-    "methods": 2,
-    "properties": 4,
+    "methods": 1,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -19,8 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A running step: awaitable for its result, cancellable, and readable from frame code. Returned by Sequence.start for a whole run and by SequenceContext.start for a step within one.",
-        "Awaiting a cancelled handle rejects with an `AbortError`."
+        "A running sequence or branch, returned by Sequencer.play and SequenceContext.start. Frame code reads its state and cancels it; another step joins it with `yield* context.waitFor(handle)`, SequenceContext.all or SequenceContext.race."
       ],
       "importLine": "import { SequenceHandle } from '@codexo/exojs'",
       "sourceLink": null
@@ -56,155 +55,24 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Stop the step and every step it owns, now: their pending waits reject with an AbortError, their cleanups run, and nothing they would have done after this point takes effect. A step that already ended is unaffected."
-        },
+          "description": "Stop the step and every branch it started, now. Their finally blocks run synchronously, innermost first, while this call is still on the stack, and owned operations are cancelled; a step that cancels itself is closed when it reaches its next yield. A step that already ended is unaffected. Cancellation is cooperative: it closes the step's generator at the yield where it waits. A finally block that waits again is not resumed, and work the step handed to code outside the sequencer, such as a promise, keeps running; pass SequenceContext.signal to APIs that accept an AbortSignal to stop it."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
         {
-          "name": "then",
-          "signature": "then(onFulfilled?: (value: T) => PromiseLike<R1> | R1 | null, onRejected?: (reason: unknown) => PromiseLike<R2> | R2 | null): Promise<R1 | R2>",
+          "name": "done",
+          "signature": "done: Promise<SequenceSettlement<T>>",
           "signatureTokens": [
             {
-              "text": "then",
+              "text": "done",
               "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "onFulfilled",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "value",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PromiseLike",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "R1",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "R1",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "onRejected",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "reason",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "unknown",
-              "kind": "keyword"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PromiseLike",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "R2",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "R2",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -219,46 +87,30 @@
               "kind": "punctuation"
             },
             {
-              "text": "R1",
+              "text": "SequenceSettlement",
               "kind": "type"
             },
             {
-              "text": " | ",
+              "text": "<",
               "kind": "punctuation"
             },
             {
-              "text": "R2",
+              "text": "T",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ">",
               "kind": "punctuation"
             }
           ],
-          "params": [
-            {
-              "name": "onFulfilled",
-              "type": "(value: T) => PromiseLike<R1> | R1 | null",
-              "optional": true
-            },
-            {
-              "name": "onRejected",
-              "type": "(reason: unknown) => PromiseLike<R2> | R2 | null",
-              "optional": true
-            }
-          ],
-          "returnType": "Promise<R1 | R2>",
-          "description": "Attaches callbacks for the resolution and/or rejection of the Promise."
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
-      "sourceLink": null
-    },
-    {
-      "id": "properties",
-      "title": "Properties",
-      "members": [
+          "params": [],
+          "returnType": null,
+          "description": "Resolves once the step ends, with how it ended. It never rejects, and awaiting it changes nothing about when the step runs: steps advance on the sequencer's ticks whether or not anything awaits them. Asking for it also marks a failure as observed, so a failed root sequence is not logged."
+        },
         {
           "name": "error",
           "signature": "error: unknown",
@@ -363,11 +215,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/sequence/Sequence.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+        "label": "src/core/sequence/SequenceHandle.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceHandle.ts"
       }
     }
   ],
-  "sourcePath": "src/core/sequence/Sequence.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+  "sourcePath": "src/core/sequence/SequenceHandle.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceHandle.ts"
 }

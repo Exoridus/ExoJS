@@ -77,11 +77,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/sequence/Sequence.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+        "label": "src/core/sequence/SequenceHandle.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceHandle.ts"
       }
     }
   ],
-  "sourcePath": "src/core/sequence/Sequence.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+  "sourcePath": "src/core/sequence/SequenceHandle.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceHandle.ts"
 }

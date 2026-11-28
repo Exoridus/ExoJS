@@ -1,7 +1,7 @@
 {
-  "title": "SequenceResult",
-  "description": "What a SequenceInput produces.",
-  "symbol": "SequenceResult",
+  "title": "SequenceBranchResult",
+  "description": "What a SequenceBranch produces.",
+  "symbol": "SequenceBranchResult",
   "kind": "type",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "What a SequenceInput produces."
+        "What a SequenceBranch produces."
       ],
-      "importLine": "import { SequenceResult } from '@codexo/exojs'",
+      "importLine": "import { SequenceBranchResult } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "SequenceResult",
-          "signature": "S extends SequenceHandle<T> ? T : S extends (context: SequenceContext) => R ? Awaited<R> : S extends { run: unknown } ? Awaited<R> : never",
+          "name": "SequenceBranchResult",
+          "signature": "B extends SequenceHandle<T> ? T : B extends Sequence<T> ? T : never",
           "signatureTokens": [
             {
-              "text": "S",
+              "text": "B",
               "kind": "type"
             },
             {
@@ -77,7 +77,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "S",
+              "text": "B",
               "kind": "type"
             },
             {
@@ -93,35 +93,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "context",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SequenceContext",
-              "kind": "type"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "R",
-              "kind": "type"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Awaited",
+              "text": "Sequence",
               "kind": "type"
             },
             {
@@ -129,51 +101,11 @@
               "kind": "punctuation"
             },
             {
-              "text": "R",
+              "text": "T",
               "kind": "type"
             },
             {
               "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "run",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "unknown",
-              "kind": "keyword"
-            },
-            {
-              "text": " }",
               "kind": "punctuation"
             },
             {
@@ -181,20 +113,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Awaited",
+              "text": "T",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "R",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": " : ",
@@ -221,11 +141,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/sequence/Sequence.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+        "label": "src/core/sequence/SequenceContext.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceContext.ts"
       }
     }
   ],
-  "sourcePath": "src/core/sequence/Sequence.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+  "sourcePath": "src/core/sequence/SequenceContext.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceContext.ts"
 }

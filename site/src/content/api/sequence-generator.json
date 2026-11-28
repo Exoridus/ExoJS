@@ -1,7 +1,7 @@
 {
-  "title": "SequenceInput",
-  "description": "A step to start, or a handle to one already running.",
-  "symbol": "SequenceInput",
+  "title": "SequenceGenerator",
+  "description": "The generator a Sequence returns; `T` is what it returns.",
+  "symbol": "SequenceGenerator",
   "kind": "type",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A step to start, or a handle to one already running."
+        "The generator a Sequence returns; `T` is what it returns."
       ],
-      "importLine": "import { SequenceInput } from '@codexo/exojs'",
+      "importLine": "import { SequenceGenerator } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "SequenceInput",
-          "signature": "SequenceHandle<T> | SequenceStep<T>",
+          "name": "SequenceGenerator",
+          "signature": "Generator<SequenceYield, T, unknown>",
           "signatureTokens": [
             {
-              "text": "SequenceHandle",
+              "text": "Generator",
               "kind": "type"
             },
             {
@@ -41,28 +41,24 @@
               "kind": "punctuation"
             },
             {
-              "text": "T",
+              "text": "SequenceYield",
               "kind": "type"
             },
             {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SequenceStep",
-              "kind": "type"
-            },
-            {
-              "text": "<",
+              "text": ", ",
               "kind": "punctuation"
             },
             {
               "text": "T",
               "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
             },
             {
               "text": ">",
@@ -85,11 +81,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/sequence/Sequence.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+        "label": "src/core/sequence/SequenceContext.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceContext.ts"
       }
     }
   ],
-  "sourcePath": "src/core/sequence/Sequence.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/Sequence.ts"
+  "sourcePath": "src/core/sequence/SequenceContext.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceContext.ts"
 }

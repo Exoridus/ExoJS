@@ -1,0 +1,71 @@
+{
+  "title": "SequenceYield",
+  "description": "What a sequence generator yields. Opaque: every wait is written as `yield* context.wait(...)`, never as a bare `yield`, and a step that yields anything else fails with a `TypeError`.",
+  "symbol": "SequenceYield",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a sequence generator yields. Opaque: every wait is written as `yield* context.wait(...)`, never as a bare `yield`, and a step that yields anything else fails with a `TypeError`."
+      ],
+      "importLine": "import { SequenceYield } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "[sequenceYieldBrand]",
+          "signature": "[sequenceYieldBrand]: true",
+          "signatureTokens": [
+            {
+              "text": "[sequenceYieldBrand]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "true",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sequence/SequenceContext.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceContext.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sequence/SequenceContext.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sequence/SequenceContext.ts"
+}
