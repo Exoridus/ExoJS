@@ -1,6 +1,6 @@
 {
   "title": "OccluderShape",
-  "description": "Where an OccluderComponent takes its outline from: - `'bounds'`: the node's local bounds, re-read every frame. - `'alpha'`: the node's own texture alpha, as AlphaOccluder traces it. The node must be a drawable with a texture, such as a `Sprite`. - `{ points, closed? }`: an outline of your own in the node's local space, as PolygonOccluder reads it. - `{ body }`: the colliders of a physics body, sensors excluded. - any OccluderSource, used as it is.",
+  "description": "Where an OccluderComponent takes its outline from: - `'bounds'`: the node's local bounds placed by its transform, re-read every frame. A node without an extent of its own - a container or a `Graphics` - uses the world-space box around its content instead. - `'alpha'`: the node's own texture alpha, as AlphaOccluder traces it. The node must be a drawable with a texture, such as a `Sprite`. - `{ points, closed? }`: an outline of your own in the node's local space, as PolygonOccluder reads it. - `{ body }`: the colliders of a physics body, sensors excluded. - any OccluderSource, used as it is.",
   "symbol": "OccluderShape",
   "kind": "type",
   "subsystem": "lighting",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Where an OccluderComponent takes its outline from:",
-        "- `'bounds'`: the node's local bounds, re-read every frame. - `'alpha'`: the node's own texture alpha, as AlphaOccluder traces it. The node must be a drawable with a texture, such as a `Sprite`. - `{ points, closed? }`: an outline of your own in the node's local space, as PolygonOccluder reads it. - `{ body }`: the colliders of a physics body, sensors excluded. - any OccluderSource, used as it is."
+        "- `'bounds'`: the node's local bounds placed by its transform, re-read every frame. A node without an extent of its own - a container or a `Graphics` - uses the world-space box around its content instead. - `'alpha'`: the node's own texture alpha, as AlphaOccluder traces it. The node must be a drawable with a texture, such as a `Sprite`. - `{ points, closed? }`: an outline of your own in the node's local space, as PolygonOccluder reads it. - `{ body }`: the colliders of a physics body, sensors excluded. - any OccluderSource, used as it is."
       ],
       "importLine": "import { OccluderShape } from '@codexo/exojs/lighting'",
       "sourceLink": null
