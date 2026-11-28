@@ -1,13 +1,14 @@
-import type { AabbLike, PointLike, SceneNode, Seconds } from '@codexo/exojs';
+import type { AabbLike, PointLike, SceneNode, Seconds, SystemContext } from '@codexo/exojs';
 import { logger, Signal, Vector } from '@codexo/exojs';
 
 import { aabbOverlap, createAabb } from './Aabb';
 import { NativePhysicsBackend } from './backend/NativePhysicsBackend';
 import type { PhysicsBackend } from './backend/PhysicsBackend';
 import { BindingRegistry } from './binding/BindingRegistry';
-import { nodeWorldAngle, nodeWorldPosition } from './binding/nodeWorldTransform';
+import { createBodyForNode } from './binding/createBodyForNode';
 import type { PhysicsBinding } from './binding/PhysicsBinding';
-import { authoredCollider, Collider } from './Collider';
+import { SceneWorldMembership } from './binding/SceneWorldMembership';
+import { authoredCollider, type Collider } from './Collider';
 import type { SweepHit } from './collision/sweep';
 import { canSweep, sweepProxies } from './collision/sweep';
 import { bodyPairKey, type ContactRecord } from './ContactGraph';
@@ -16,7 +17,7 @@ import { dispatchContactEvents } from './dispatchContactEvents';
 import type { CollisionEvent, SensorEvent } from './events';
 import { type Joint, softConstraint } from './joints/Joint';
 import type { BodyOwner } from './PhysicsBody';
-import { PhysicsBody } from './PhysicsBody';
+import { type PhysicsBody } from './PhysicsBody';
 import type { QueryFilter, RayHit, ShapeCastHit, ShapeCastOptions } from './query/QueryEngine';
 import { QueryEngine } from './query/QueryEngine';
 import type { AnyShape } from './shapes/AnyShape';
@@ -450,6 +451,8 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _query: QueryEngine;
   private readonly _commands: Array<() => void> = [];
   private readonly _stepControllers: StepController[] = [];
+  /** @internal */
+  public _sceneMembership: SceneWorldMembership | null = null;
   /** Colliders with a deferred removal queued but not yet applied; see {@link assertBodyKeepsItsMass}. */
   private readonly _pendingColliderRemovals = new Set<Collider>();
   /**
@@ -537,6 +540,11 @@ export class PhysicsWorld implements BodyOwner {
     return this._bodies;
   }
 
+  /** Whether this world has released its simulation resources. */
+  public get destroyed(): boolean {
+    return this._destroyed;
+  }
+
   /** Live colliders (read-only view). */
   public get colliders(): readonly Collider[] {
     return this._colliders;
@@ -606,25 +614,7 @@ export class PhysicsWorld implements BodyOwner {
    * to the origin on the next step. Pass `position`/`angle` explicitly to override.
    */
   public attach(node: SceneNode, options: AttachOptions): PhysicsBody {
-    const body = new PhysicsBody({
-      ...(options.type !== undefined && { type: options.type }),
-      position: options.position ?? nodeWorldPosition(node),
-      angle: options.angle ?? nodeWorldAngle(node),
-      ...(options.gravityScale !== undefined && { gravityScale: options.gravityScale }),
-      ...(options.fixedRotation !== undefined && { fixedRotation: options.fixedRotation }),
-      colliders: [
-        new Collider({
-          shape: options.shape,
-          ...(options.offset !== undefined && { offset: options.offset }),
-          ...(options.rotation !== undefined && { rotation: options.rotation }),
-          ...(options.density !== undefined && { density: options.density }),
-          ...(options.friction !== undefined && { friction: options.friction }),
-          ...(options.restitution !== undefined && { restitution: options.restitution }),
-          ...(options.isSensor !== undefined && { isSensor: options.isSensor }),
-          ...(options.filter !== undefined && { filter: options.filter }),
-        }),
-      ],
-    });
+    const body = createBodyForNode(node, options);
 
     this.add(body);
 
@@ -1124,8 +1114,11 @@ export class PhysicsWorld implements BodyOwner {
    * Destroying the node is enough to end the link - the next step drops it
    * rather than writing into the node's released transform, so an explicit
    * {@link unbind} is only needed to stop tracking a node that stays alive.
+   * Translated and rotated parents are supported. See {@link PhysicsBinding}
+   * for the transform contract.
    *
-   * @throws if `node` is already destroyed.
+   * @throws If the node is destroyed, has an unsupported transform, or is
+   * already bound to another body in this world.
    */
   public bind(body: PhysicsBody, node: SceneNode): PhysicsBinding {
     return this._bindings.bind(body, node);
@@ -1239,10 +1232,24 @@ export class PhysicsWorld implements BodyOwner {
     }
   }
 
+  /** Records the registry that owns this world's stepping and teardown. */
+  public onAttach(context: SystemContext): void {
+    this._assertAlive();
+    this._sceneMembership = new SceneWorldMembership(context, this);
+  }
+
+  /** Releases automatically resolved bodies when the registry lets go of this world. */
+  public onDetach(): void {
+    const membership = this._sceneMembership;
+    this._sceneMembership = null;
+    membership?.detach();
+  }
+
   /**
    * Release every body, collider, binding and backend resource. Changes queued
    * from an event callback are applied first; if one of them throws, the world
    * is still fully released and the first such error is rethrown afterwards.
+   * If registered as a system, the destroyed world is removed from its registry.
    */
   public destroy(): void {
     if (this._destroyed) {
@@ -1296,6 +1303,14 @@ export class PhysicsWorld implements BodyOwner {
     this.onCollisionEnd.destroy();
     this.onSensorEnter.destroy();
     this.onSensorExit.destroy();
+
+    try {
+      this._sceneMembership?.removeWorld();
+    } catch (error) {
+      if (!drainFailed) {
+        throw error;
+      }
+    }
 
     if (drainFailed) {
       throw drainFailure;

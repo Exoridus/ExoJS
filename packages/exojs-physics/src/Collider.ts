@@ -1,10 +1,11 @@
-import type { AabbLike, PointLike } from '@codexo/exojs';
+import type { AabbLike, PointLike, SceneNode } from '@codexo/exojs';
 
 import { createAabb } from './Aabb';
 import type { Transform } from './math';
 import { applyRotation, applyTransform, composeTransforms, createTransform } from './math';
 import type { PhysicsBody } from './PhysicsBody';
 import type { AnyShape } from './shapes/AnyShape';
+import { BoxShape } from './shapes/BoxShape';
 import type { ChainShape } from './shapes/ChainShape';
 import type { CollisionFilter } from './types';
 import { resolveFilter } from './types';
@@ -69,6 +70,37 @@ export interface ColliderOptions {
  * immutable (rebuild the collider to change geometry).
  */
 export class Collider {
+  /**
+   * Snapshot a node's local bounds as a box for a body bound to that node.
+   * The center is relative to the node's origin. Dimensions and center include
+   * the current positive local scale; rebuild the collider after geometry,
+   * scale or origin changes. For compound shapes, append other colliders in
+   * the same body-local coordinate space.
+   */
+  public static boxFromBounds(node: SceneNode, options: Omit<ColliderOptions, 'shape' | 'offset' | 'rotation'> = {}): Collider {
+    const scale = node.scale;
+    const bounds = node.getLocalBounds();
+    const origin = node.origin;
+
+    if (!(scale.x > 0 && scale.y > 0) || node.skewX !== 0 || node.skewY !== 0) {
+      throw new Error('Collider.boxFromBounds: expected positive scale and zero skew.');
+    }
+
+    const x = (bounds.x + bounds.width / 2 - origin.x) * scale.x;
+    const y = (bounds.y + bounds.height / 2 - origin.y) * scale.y;
+
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      throw new RangeError('Collider.boxFromBounds: expected a finite center relative to the node origin.');
+    }
+
+    return new Collider({
+      ...options,
+      shape: new BoxShape(bounds.width * scale.x, bounds.height * scale.y),
+      offset: { x, y },
+      rotation: 0,
+    });
+  }
+
   /** The collision geometry. */
   public readonly shape: AnyShape;
   public readonly offsetX: number;

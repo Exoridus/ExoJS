@@ -1,4 +1,4 @@
-import { Container, logger, RetainedContainer, Scene, SceneDirector, Sprite, Texture } from '@codexo/exojs';
+import { Container, RetainedContainer, Scene, SceneDirector, Sprite, Texture } from '@codexo/exojs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { BoxShape, type PhysicsBody, PhysicsBodyComponent, PhysicsWorld } from '../src/index';
@@ -113,27 +113,25 @@ describe.each(['attach', 'component'] as const)('automatic world pivot via %s', 
   it.each([
     { name: 'Container', create: () => new Container() },
     { name: 'RetainedContainer', create: () => new RetainedContainer() },
-  ])('reads the pivot through a transformed $name and retains the parent guard', async ({ create }) => {
+  ])('reads the pivot through a transformed $name and preserves local presentation', async ({ create }) => {
     const node = sprite();
     const parent = create();
 
     owned.push(parent);
     parent.setPosition(300, 400);
     parent.setRotation(90);
-    parent.setScale(2, 3);
     parent.setOrigin(5, 7);
     node.setPosition(10, 20);
     node.anchor.set(0.5, 0.5);
     parent.addChild(node);
 
-    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const body = await bind(node);
 
-    // Parent maps the position pivot (10,20) to (300 + 3*(20-7), 400 - 2*(10-5)).
-    expect(body.x).toBeCloseTo(339);
-    expect(body.y).toBeCloseTo(390);
-    expect(warn.mock.calls.some(call => String(call[0]).includes('world-space-rooted'))).toBe(true);
-    // Binding still writes world pose into local state; transformed parents remain unsupported.
-    expect([node.x, node.y]).toEqual([body.x, body.y]);
+    // Parent maps the position pivot (10,20) to (300 + (20-7), 400 - (10-5)).
+    expect(body.x).toBeCloseTo(313);
+    expect(body.y).toBeCloseTo(395);
+    expect(node.x).toBeCloseTo(10);
+    expect(node.y).toBeCloseTo(20);
+    expect(node.rotation).toBeCloseTo(0);
   });
 });

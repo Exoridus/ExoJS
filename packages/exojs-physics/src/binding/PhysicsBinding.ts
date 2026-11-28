@@ -1,12 +1,45 @@
-import { radiansToDegrees, type SceneNode } from '@codexo/exojs';
+import { logger, type Matrix, radiansToDegrees, type SceneNode } from '@codexo/exojs';
 
 import type { PhysicsBody } from '../PhysicsBody';
+
+const supportedTransform = (node: SceneNode, parent: Matrix | undefined): boolean => {
+  const scale = (node as Partial<SceneNode>).scale;
+
+  if (
+    node.skewX !== 0 ||
+    node.skewY !== 0 ||
+    (scale !== undefined && (!(scale.x > 0 && scale.y > 0) || !Number.isFinite(scale.x + scale.y)))
+  ) {
+    return false;
+  }
+
+  if (parent === undefined) {
+    return true;
+  }
+
+  // A rotation has orthonormal columns and positive determinant.
+  const { a, b, c, d, x, y } = parent;
+  const epsilon = 1e-6;
+
+  return (
+    Number.isFinite(x) &&
+    Number.isFinite(y) &&
+    Math.abs(a * a + c * c - 1) <= epsilon &&
+    Math.abs(a - d) <= epsilon &&
+    Math.abs(b + c) <= epsilon
+  );
+};
+
+const transformError =
+  'PhysicsBinding: expected a node with positive finite scale and zero skew, under a rigid (translated or rotated) parent.';
 
 /**
  * A link between a {@link PhysicsBody} and a {@link SceneNode}. The body's world
  * position **and rotation** are written onto the node, so the node renders
- * exactly where the body's colliders are. The node must be world-space-rooted;
- * runtime scale is ignored and non-zero skew is rejected at bind time.
+ * at the simulation pose. Translated and rotated parents are supported.
+ * Node scale is visual. Skew, reflection and non-rigid parent transforms
+ * are rejected on bind. If introduced later, sync reports the problem
+ * once and skips presentation until the transform is supported again.
  *
  * The two angles have opposite signs: a body angle turns clockwise on the Y-down
  * screen, a `SceneNode.rotation` counter-clockwise, so a body at `+30°` (in
@@ -19,15 +52,23 @@ import type { PhysicsBody } from '../PhysicsBody';
  * onto the node is read back into the simulation.
  */
 export class PhysicsBinding {
+  /** @internal - the last registry presentation pass that visited this binding. */
+  public _syncStamp = 0;
+
+  private _reportedTransform = false;
+
   public constructor(
     public readonly body: PhysicsBody,
     public readonly node: SceneNode,
-  ) {}
+  ) {
+    if (!supportedTransform(node, node.parent?.getWorldTransform())) {
+      throw new Error(transformError);
+    }
+  }
 
   /** Write the body's current transform (position + rotation) onto the bound node. */
   public sync(): void {
-    this.node.setPosition(this.body.x, this.body.y);
-    this.node.setRotation(-radiansToDegrees(this.body.angle));
+    this._writePose(this.body.x, this.body.y, this.body.angle);
   }
 
   /**
@@ -46,7 +87,43 @@ export class PhysicsBinding {
     const previousY = body.previousY;
     const previousAngle = body.previousAngle;
 
-    this.node.setPosition(previousX + (body.x - previousX) * alpha, previousY + (body.y - previousY) * alpha);
-    this.node.setRotation(-radiansToDegrees(previousAngle + (body.angle - previousAngle) * alpha));
+    this._writePose(
+      previousX + (body.x - previousX) * alpha,
+      previousY + (body.y - previousY) * alpha,
+      previousAngle + (body.angle - previousAngle) * alpha,
+    );
+  }
+
+  private _writePose(x: number, y: number, angle: number): void {
+    const node = this.node;
+    const parent = node.parent?.getWorldTransform();
+
+    if (!supportedTransform(node, parent)) {
+      if (!this._reportedTransform) {
+        this._reportedTransform = true;
+        logger.warn(transformError, { source: 'physics' });
+      }
+
+      return;
+    }
+
+    this._reportedTransform = false;
+
+    if (parent !== undefined) {
+      const dx = x - parent.x;
+      const dy = y - parent.y;
+
+      node.setPosition(parent.a * dx + parent.c * dy, parent.b * dx + parent.d * dy);
+
+      if (parent.c !== 0 || parent.a !== 1) {
+        angle -= Math.atan2(parent.c, parent.a);
+      }
+    } else {
+      node.setPosition(x, y);
+    }
+
+    if (!node.destroyed) {
+      node.setRotation(-radiansToDegrees(angle));
+    }
   }
 }

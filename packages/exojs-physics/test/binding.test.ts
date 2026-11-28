@@ -1,4 +1,4 @@
-import { Container, Drawable, logger, RetainedContainer, type SceneNode, Vector } from '@codexo/exojs';
+import { Container, Drawable, logger, type SceneNode, Vector } from '@codexo/exojs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { NativePhysicsBackend } from '../src/backend/NativePhysicsBackend';
@@ -110,84 +110,61 @@ describe('SceneNode binding', () => {
   });
 });
 
-describe('SceneNode binding: world-space-rooted guard (F16)', () => {
+describe('SceneNode binding: parent transforms', () => {
   const makeBody = (): PhysicsBody =>
-    new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] });
+    new PhysicsBody({ type: 'kinematic', position: { x: 7, y: 9 }, colliders: [{ shape: new BoxShape(10, 10) }] });
 
-  it('warns in dev when an ancestor carries a non-identity transform', () => {
+  it('rejects a non-rigid parent without installing a binding', () => {
     const registry = new BindingRegistry();
     const parent = new Container();
     const node = new Drawable();
-
-    parent.setPosition(100, 50);
+    parent.setScale(2, 1);
     parent.addChild(node);
 
-    const warnSpy = vi.spyOn(logger, 'warn');
-
-    registry.bind(makeBody(), node);
-
-    const guardWarnings = warnSpy.mock.calls.filter(call => String(call[0]).includes('world-space-rooted'));
-
-    expect(guardWarnings).toHaveLength(1);
-    expect(String(guardWarnings[0]?.[0])).toContain('double-transform');
-
-    warnSpy.mockRestore();
+    expect(() => registry.bind(makeBody(), node)).toThrow(/rigid/);
+    expect(registry.size).toBe(0);
     parent.destroy();
   });
 
-  it('warns in dev when an ancestor is an engaged transform-group boundary, even at identity', () => {
-    const registry = new BindingRegistry();
-    const group = new RetainedContainer();
-    const node = new Drawable();
-
-    group.addChild(node);
-
-    const warnSpy = vi.spyOn(logger, 'warn');
-
-    registry.bind(makeBody(), node);
-
-    expect(warnSpy.mock.calls.filter(call => String(call[0]).includes('world-space-rooted'))).toHaveLength(1);
-
-    warnSpy.mockRestore();
-    group.destroy();
-  });
-
-  it('does not warn for a node whose ancestor chain is identity-transformed', () => {
-    const registry = new BindingRegistry();
-    const root = new Container();
-    const mid = new Container();
-    const node = new Drawable();
-
-    root.addChild(mid);
-    mid.addChild(node);
-
-    const warnSpy = vi.spyOn(logger, 'warn');
-
-    registry.bind(makeBody(), node);
-
-    expect(warnSpy.mock.calls.filter(call => String(call[0]).includes('world-space-rooted'))).toHaveLength(0);
-
-    warnSpy.mockRestore();
-    root.destroy();
-  });
-
-  it('the guard does not change sync() semantics: local position is still written verbatim', () => {
+  it('skips presentation while the parent transform is unsupported and recovers when it is repaired', () => {
     const registry = new BindingRegistry();
     const parent = new Container();
     const node = new Drawable();
-
-    parent.setPosition(100, 50);
     parent.addChild(node);
-
-    const warnSpy = vi.spyOn(logger, 'warn');
-    const body = new PhysicsBody({ type: 'kinematic', position: { x: 7, y: 9 }, colliders: [{ shape: new BoxShape(10, 10) }] });
-
+    const body = makeBody();
     registry.bind(body, node);
 
-    expect(node.x).toBe(7);
-    expect(node.y).toBe(9);
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    parent.setScale(-1, 1);
+    body.setTransform({ x: 20, y: 30 });
+    registry.sync();
+    registry.sync();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect([node.x, node.y]).toEqual([7, 9]);
+    parent.setScale(1);
+    registry.sync();
+    expect([node.x, node.y]).toEqual([20, 30]);
+    warn.mockRestore();
+    parent.destroy();
+  });
 
-    warnSpy.mockRestore();
+  it.each([false, true])('syncs a bound ancestor first (interpolation: %s)', interpolation => {
+    const world = new PhysicsWorld({ interpolation, frameAlphaSource: () => 0.5 });
+    const parent = new Container();
+    const middle = new Container();
+    const child = new Drawable();
+    parent.addChild(middle);
+    middle.addChild(child);
+    const childBody = world.attach(child, { type: 'kinematic', shape: new BoxShape(10, 10), position: { x: 100, y: 0 } });
+    const parentBody = world.attach(parent, { type: 'kinematic', shape: new BoxShape(10, 10) });
+    parentBody.linearVelocityX = 600;
+
+    world.step(1 / 60);
+    expect(parent.x).toBeCloseTo(interpolation ? 5 : 10);
+    expect(child.getWorldTransform().x).toBeCloseTo(100);
+    expect(() => world.bind(parentBody, child)).toThrow(/already bound/);
+    expect(childBody.x).toBeCloseTo(100);
+    world.destroy();
     parent.destroy();
   });
 });

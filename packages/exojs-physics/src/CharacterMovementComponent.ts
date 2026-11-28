@@ -1,13 +1,7 @@
 import { Component, type PointLike, Vector } from '@codexo/exojs';
 
 import type { Collider } from './Collider';
-import {
-  contactOffset,
-  createSlideResult,
-  isCastable,
-  type KinematicMovementComponent,
-  type SlideResult,
-} from './KinematicMovementComponent';
+import { contactOffset, createSlideResult, isCastable, KinematicMovementComponent, type SlideResult } from './KinematicMovementComponent';
 import type { PhysicsBody } from './PhysicsBody';
 
 /** Construction options for {@link CharacterMovementComponent}. */
@@ -16,8 +10,8 @@ export interface CharacterMovementOptions {
   readonly up?: Readonly<PointLike>;
   /**
    * Downward acceleration along `-up` in world units per second squared.
-   * Defaults to the world's gravity projected onto `-up` when the component is
-   * constructed, or `0` when that points up.
+   * Defaults to the selected world's gravity projected onto `-up`, clamped to
+   * zero when gravity points up or no world has been selected.
    */
   readonly gravity?: number;
   /** Steepest surface, in radians from `up`, the character stands on. In `[0, π/2)`. Default `π/4`. */
@@ -102,11 +96,11 @@ const negligible = 1e-6;
  * ```
  */
 export class CharacterMovementComponent extends Component {
-  /** The movement this component drives. */
-  public readonly movement: KinematicMovementComponent;
+  private readonly _explicitMovement: KinematicMovementComponent | null;
+  private _movement: KinematicMovementComponent | null = null;
 
   private readonly _up = new Vector(0, -1);
-  private _gravity = 0;
+  private _gravity: number | null = null;
   private _maxSlopeAngle = Math.PI / 4;
   private _minWalkableCos = Math.cos(Math.PI / 4);
   private _maxStepHeight = 0;
@@ -149,21 +143,40 @@ export class CharacterMovementComponent extends Component {
   /**
    * @throws RangeError for an invalid option; see the matching property.
    */
-  public constructor(movement: KinematicMovementComponent, options: CharacterMovementOptions = {}) {
+  public constructor(options?: CharacterMovementOptions);
+  public constructor(movement: KinematicMovementComponent, options?: CharacterMovementOptions);
+  public constructor(movementOrOptions?: KinematicMovementComponent | CharacterMovementOptions, options: CharacterMovementOptions = {}) {
     super();
 
-    this.movement = movement;
+    if (movementOrOptions instanceof KinematicMovementComponent) {
+      this._explicitMovement = movementOrOptions;
+    } else {
+      this._explicitMovement = null;
+      options = movementOrOptions ?? options;
+    }
 
     if (options.up !== undefined) {
       this.up = options.up;
     }
 
-    const gravity = movement.physics.world.gravity;
+    if (options.gravity !== undefined) {
+      this.gravity = options.gravity;
+    }
 
-    this.gravity = options.gravity ?? Math.max(0, -(gravity.x * this._up.x + gravity.y * this._up.y));
     this.maxSlopeAngle = options.maxSlopeAngle ?? Math.PI / 4;
     this.maxStepHeight = options.maxStepHeight ?? 0;
     this.maxFallSpeed = options.maxFallSpeed ?? Infinity;
+  }
+
+  /** The explicit or active same-node movement dependency. Throws if it has yet to resolve. */
+  public get movement(): KinematicMovementComponent {
+    const movement = this._movement ?? this._explicitMovement;
+
+    if (movement === null) {
+      throw new Error('CharacterMovementComponent: requires a KinematicMovementComponent on the same node.');
+    }
+
+    return movement;
   }
 
   /**
@@ -187,9 +200,19 @@ export class CharacterMovementComponent extends Component {
     this._probed = false;
   }
 
-  /** @throws RangeError when negative or not finite. */
+  /**
+   * Downward acceleration. Until assigned, reads the selected world's gravity
+   * along `-up`, or zero before a world is selected.
+   * @throws RangeError when negative or not finite.
+   */
   public get gravity(): number {
-    return this._gravity;
+    if (this._gravity !== null) {
+      return this._gravity;
+    }
+
+    const gravity = (this._movement ?? this._explicitMovement)?._selectedWorld?.gravity;
+
+    return gravity === undefined ? 0 : Math.max(0, -(gravity.x * this._up.x + gravity.y * this._up.y));
   }
 
   public set gravity(value: number) {
@@ -306,8 +329,13 @@ export class CharacterMovementComponent extends Component {
       throw new RangeError(`CharacterMovementComponent.move: input must be finite, received ${input}.`);
     }
 
-    this._input = Math.min(1, Math.max(-1, input));
-    this._inputEpoch = this.movement.physics.world._stepEpoch;
+    const movement = this._movement ?? this._explicitMovement;
+    const world = movement?._commandWorld;
+
+    if (world && movement._driver === this) {
+      this._input = Math.min(1, Math.max(-1, input));
+      this._inputEpoch = world._stepEpoch;
+    }
   }
 
   /**
@@ -329,13 +357,23 @@ export class CharacterMovementComponent extends Component {
       throw new RangeError(`CharacterMovementComponent.launch: velocity must be finite, received (${velocity.x}, ${velocity.y}).`);
     }
 
+    const movement = this._movement ?? this._explicitMovement;
+
+    if (!movement?._commandWorld || movement._driver !== this) {
+      return;
+    }
+
     this._launchPending = true;
     this._launchX = velocity.x;
     this._launchY = velocity.y;
   }
 
   protected override onEnable(): void {
-    const movement = this.movement;
+    const movement = this._explicitMovement ?? this.node.getComponent(KinematicMovementComponent);
+
+    if (movement === null || !movement.attached || (movement.node !== this.node && movement.scene !== this.scene)) {
+      throw new Error('CharacterMovementComponent: requires a KinematicMovementComponent in the same scene.');
+    }
 
     if (movement._driver !== null && movement._driver !== this) {
       throw new Error(
@@ -346,24 +384,33 @@ export class CharacterMovementComponent extends Component {
     // A command issued to the movement before the takeover is not the
     // character's and must not run once the movement is handed back.
     movement.stop();
+    this._movement = movement;
     movement._driver = this;
     this._reset();
   }
 
   protected override onDisable(): void {
-    if (this.movement._driver === this) {
-      this.movement._driver = null;
+    const movement = this.movement;
+
+    if (movement._driver === this) {
+      movement._driver = null;
+      movement.stop();
     }
 
     this._reset();
-    this.movement.stop();
+    this._movement = null;
+  }
+
+  /** @internal */
+  public _canDrive(movement: KinematicMovementComponent): boolean {
+    return this.attached && this.scene === movement.scene && (this._explicitMovement !== null || this.node === movement.node);
   }
 
   /** @internal */
   public _driveStep(fixedDelta: number): void {
     const upX = this._up.x;
     const upY = this._up.y;
-    const world = this.movement.physics.world;
+    const world = this.movement._commandWorld!;
 
     if (!this._probed || this.movement.body._teleported) {
       this._probe();
@@ -406,8 +453,10 @@ export class CharacterMovementComponent extends Component {
         this._freeY = this._launchY + carryY;
       }
 
-      this._freeX -= upX * this._gravity * fixedDelta;
-      this._freeY -= upY * this._gravity * fixedDelta;
+      const gravityDelta = this.gravity * fixedDelta;
+
+      this._freeX -= upX * gravityDelta;
+      this._freeY -= upY * gravityDelta;
 
       const fall = -(this._freeX * upX + this._freeY * upY);
 
@@ -708,7 +757,8 @@ export class CharacterMovementComponent extends Component {
     this._groundOverlap = 0;
   }
 
-  private _reset(): void {
+  /** @internal */
+  public _reset(): void {
     this._clearSupport();
     this._probed = false;
     this._input = 0;
