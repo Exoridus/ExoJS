@@ -70,6 +70,23 @@ describe('scene physics composition', () => {
     expect(explicit.activeWorld).toBe(selected);
   });
 
+  it('resolves a world registered in the same frame as the node is added', async () => {
+    const { director, scene, errors } = await setup();
+    const node = new Container();
+    const physics = node.addComponent(new PhysicsBodyComponent(options));
+    const world = new PhysicsWorld();
+
+    director._beginFrame();
+    scene.systems.add(world);
+    scene.addChild(node);
+    expect(physics.activeWorld).toBeNull();
+    director._endFrame();
+
+    expect(physics.activeWorld).toBe(world);
+    expect(world.bodies).toEqual([physics.body]);
+    expect(errors).toEqual([]);
+  });
+
   it('unregisters movement when its body is disabled and restores it without stale commands', async () => {
     const { scene, errors } = await setup();
     const world = scene.systems.add(new PhysicsWorld());
