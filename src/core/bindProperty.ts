@@ -1,5 +1,5 @@
 import { addNodeTeardown, removeNodeTeardown } from './nodeTeardown';
-import type { ReadonlyObservable } from './Observable';
+import { type ReadonlyObservable, versionOf } from './Observable';
 import { SceneNode } from './SceneNode';
 
 type IfEqual<X, Y, Then, Else> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? Then : Else;
@@ -61,26 +61,44 @@ export const bindProperty = <T extends object, K extends WritableKeys<T>>(
 };
 
 /**
+ * Whether `source` changed since it held `written` at `version`. A source
+ * without versions recomputes object results as new objects on every read, so
+ * only its primitive values can be compared.
+ */
+const changedSince = (source: ReadonlyObservable<unknown>, written: unknown, version: number): boolean => {
+  if (!Number.isNaN(version)) {
+    return versionOf(source) !== version;
+  }
+
+  const latest = source.value;
+
+  return (typeof latest !== 'object' || latest === null) && typeof latest !== 'function' && !Object.is(latest, written);
+};
+
+/**
  * Calls `write` with the current value of `source` and with every change,
  * until the returned function is called or `target` is destroyed when it is a
  * {@link SceneNode}. Pass `applied` when the target already received
- * `applied.value`, for example through its constructor; it is then written
- * again only if the source changed meanwhile.
+ * `applied.value`, read when the source had `applied.version` (see
+ * {@link versionOf}), for example through its constructor; it is then
+ * written again only if the source changed meanwhile.
  * @internal
  */
 export const bindWith = (
   target: object,
   source: ReadonlyObservable<unknown>,
   write: (value: unknown) => void,
-  applied?: { readonly value: unknown },
+  applied?: { readonly value: unknown; readonly version: number },
 ): (() => void) => {
   let written: unknown;
+  let version: number;
 
   if (applied === undefined) {
     written = source.value;
+    version = versionOf(source);
     write(written);
   } else {
-    written = applied.value;
+    ({ value: written, version } = applied);
   }
 
   const node = target instanceof SceneNode ? target : null;
@@ -114,11 +132,9 @@ export const bindWith = (
   }
 
   // A write or constructor that changed the source before the subscription existed produced no notification.
-  const latest = source.value;
-
-  if (!Object.is(latest, written)) {
+  if (changedSince(source, written, version)) {
     try {
-      write(latest);
+      write(source.value);
     } catch (error) {
       unbind();
 

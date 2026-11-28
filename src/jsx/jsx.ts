@@ -1,7 +1,7 @@
 import { bindWith } from '#core/bindProperty';
 import type { Color } from '#core/Color';
 import { logger } from '#core/Logger';
-import { isObservable, type ReadonlyObservable } from '#core/Observable';
+import { isObservable, type ReadonlyObservable, versionOf } from '#core/Observable';
 import { Signal } from '#core/Signal';
 import type { ObservableVector } from '#math/ObservableVector';
 import { Container } from '#rendering/Container';
@@ -240,7 +240,8 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
   const nodes: RenderNode[] = [];
   const drawable = type.prototype instanceof Drawable;
   const options: Record<string, unknown> = {};
-  const bound: Array<[key: string, source: ReadonlyObservable<unknown>, applied: { readonly value: unknown }]> = [];
+  const bound: Array<[key: string, source: ReadonlyObservable<unknown>, applied: { readonly value: unknown; readonly version: number }]> =
+    [];
   let assigns = false;
 
   // The compiler passes a literal key separately; one arriving in the props came through a spread and would reach the constructor.
@@ -260,7 +261,7 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
       if (setterFor(key, drawable) !== undefined || (typeof value === 'function' && isSignalKey(key))) {
         assigns = true;
       } else if (isObservable(value) && hasSetter(type, key)) {
-        const applied = { value: value.value };
+        const applied = { value: value.value, version: versionOf(value) };
 
         options[key] = toOption(key, applied.value);
         bound.push([key, value, applied]);

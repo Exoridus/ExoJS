@@ -168,6 +168,21 @@ describe('bindProperty', () => {
     expect(raised.writes).toEqual([2, 10]);
   });
 
+  test('writes an object result over a vector once at bind time', () => {
+    const gauge = new Gauge();
+    const point = new ObservableVector(null, 0, 1, 2);
+
+    bindProperty(
+      gauge,
+      'point',
+      point.map(p => ({ x: p.x, y: p.y })),
+    );
+    expect(gauge.writes).toEqual(['1,2']);
+
+    point.set(3, 4);
+    expect(gauge.writes).toEqual(['1,2', '3,4']);
+  });
+
   test('ends when the node, or an ancestor, is destroyed', () => {
     const health = new Observable(100);
     const parent = new Container();
