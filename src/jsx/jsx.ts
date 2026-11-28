@@ -18,28 +18,26 @@ interface AdaptedClass {
 }
 
 /**
- * Nodes an element constructed that no element has adopted yet. Only these are
- * destroyed when an element they were passed to fails; everything else a
- * failing element was given belongs to the caller.
+ * The open {@link jsxTransaction}: every node JSX constructed inside it and every
+ * caller-owned child JSX attached inside it, so a failure can tell the two apart.
  */
-const unadopted = new WeakSet<RenderNode>();
+interface Transaction {
+  readonly constructed: RenderNode[];
+  readonly attached: RenderNode[];
+}
 
-/**
- * Caller-owned nodes an element attached. Rolling back a constructed tree
- * detaches them first, so destroying the tree never destroys them.
- */
-const borrowed = new WeakSet<RenderNode>();
+let transaction: Transaction | null = null;
 
 type PropSetter<N> = (node: N, value: never) => void;
+
+/** Fragments an element already took the children of; placing one again would silently add nothing. */
+const consumedFragments = new WeakSet<JsxFragment>();
 
 /**
  * The scene-graph properties every element accepts, each assigned through the
  * node's own property or setter. Only these keys are assigned; every other prop
  * goes to the constructor.
  */
-/** Fragments an element already took the children of; placing one again would silently add nothing. */
-const consumedFragments = new WeakSet<JsxFragment>();
-
 const nodeSetters: Readonly<Record<string, PropSetter<RenderNode>>> = {
   name: (node, value: string | null) => (node.name = value),
   x: (node, value: number) => (node.x = value),
@@ -90,35 +88,26 @@ const describe = (value: unknown): string => {
 
 const tagOf = (type: { readonly name: string }): string => `<${type.name || 'anonymous'}>`;
 
-const detachBorrowed = (container: Container): void => {
-  for (const child of [...container.children]) {
-    if (borrowed.has(child)) {
-      container.removeChild(child);
-    } else if (child instanceof Container) {
-      detachBorrowed(child);
-    }
-  }
+const logTeardownError = (what: string, error: unknown): void => {
+  logger.error(`JSX: destroying ${what} threw: ${String(error)}`);
 };
 
-/** Destroys a node an element constructed, sparing every caller-owned node inside it. */
-const release = (node: RenderNode): void => {
-  unadopted.delete(node);
-
-  if (node instanceof Container) {
-    detachBorrowed(node);
+/** Detaches the children an element attached, then destroys the node the element constructed. */
+const release = (node: RenderNode, attached: readonly RenderNode[]): void => {
+  for (const child of attached) {
+    if (child.parent === node) {
+      try {
+        (node as Container).removeChild(child);
+      } catch (error) {
+        logTeardownError('a failed element', error);
+      }
+    }
   }
 
-  node.destroy();
-};
-
-/** Releases every node in `children` that an element constructed and nothing adopted. */
-const discard = (children: unknown): void => {
-  if (Array.isArray(children)) {
-    for (const child of children) {
-      discard(child);
-    }
-  } else if (children instanceof RenderNode && unadopted.has(children) && children.parent === null) {
-    release(children);
+  try {
+    node.destroy();
+  } catch (error) {
+    logTeardownError('a failed element', error);
   }
 };
 
@@ -196,7 +185,7 @@ const applyProps = (node: RenderNode, props: Props, drawable: boolean, type: Jsx
   }
 };
 
-const attachChildren = (node: RenderNode, children: readonly RenderNode[], type: JsxNodeClass): void => {
+const attachChildren = (node: RenderNode, children: readonly RenderNode[], attached: RenderNode[], type: JsxNodeClass): void => {
   if (children.length === 0) {
     return;
   }
@@ -210,36 +199,9 @@ const attachChildren = (node: RenderNode, children: readonly RenderNode[], type:
       throw new TypeError(`JSX: ${describe(child)} appears more than once among the children of ${tagOf(type)}.`);
     }
 
-    // A fragment's children already carry their ownership from when the fragment adopted them.
-    const fromFragment = child.parent !== null;
-
     node.addChild(child);
-
-    // Ownership moves only once the child is attached, so a rejected child is still discarded as unadopted.
-    if (!unadopted.delete(child) && !fromFragment) {
-      borrowed.add(child);
-    }
-  }
-};
-
-/**
- * Undoes a failed element. Every step runs even when an earlier one throws, and
- * a teardown error is logged rather than replacing the failure that caused the
- * rollback.
- */
-const rollBack = (node: RenderNode | null, children: unknown): void => {
-  try {
-    if (node !== null) {
-      release(node);
-    }
-  } catch (error) {
-    logger.error(`JSX: destroying a failed element threw: ${String(error)}`);
-  }
-
-  try {
-    discard(children);
-  } catch (error) {
-    logger.error(`JSX: destroying the children of a failed element threw: ${String(error)}`);
+    attached.push(child);
+    transaction?.attached.push(child);
   }
 };
 
@@ -249,65 +211,50 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
   const drawable = type.prototype instanceof Drawable;
   const options: Record<string, unknown> = {};
   let assigns = false;
-  let node: RenderNode;
 
-  try {
-    collect(children, nodes);
+  // Children are attached only after construction, so a failure up to here leaves every child untouched.
+  collect(children, nodes);
 
-    for (const key in props) {
-      if (Object.hasOwn(props, key) && key !== 'children' && key !== 'ref') {
-        const value = props[key];
+  for (const key in props) {
+    if (Object.hasOwn(props, key) && key !== 'children' && key !== 'ref') {
+      const value = props[key];
 
-        if (setterFor(key, drawable) !== undefined || (typeof value === 'function' && isSignalKey(key))) {
-          assigns = true;
-        } else {
-          options[key] = value;
-        }
+      if (setterFor(key, drawable) !== undefined || (typeof value === 'function' && isSignalKey(key))) {
+        assigns = true;
+      } else {
+        options[key] = value;
       }
     }
-
-    node = jsxConstruct in type ? (type as unknown as AdaptedClass)[jsxConstruct](options) : new type(options as never);
-  } catch (error) {
-    rollBack(null, children);
-
-    throw error;
   }
+
+  const node = jsxConstruct in type ? (type as unknown as AdaptedClass)[jsxConstruct](options) : new type(options as never);
+  const attached: RenderNode[] = [];
 
   try {
     if (assigns) {
       applyProps(node, props, drawable, type);
     }
 
-    attachChildren(node, nodes, type);
+    attachChildren(node, nodes, attached, type);
 
     if (ref !== undefined) {
       (ref as (instance: RenderNode) => void)(node);
     }
   } catch (error) {
-    rollBack(node, children);
+    release(node, attached);
 
     throw error;
   }
 
-  unadopted.add(node);
+  transaction?.constructed.push(node);
 
   return node;
 };
 
 const call = (fn: (props: Props) => unknown, props: Props): RenderNode => {
-  let result: unknown;
-
-  try {
-    result = fn(props);
-  } catch (error) {
-    rollBack(null, props.children);
-
-    throw error;
-  }
+  const result = fn(props);
 
   if (!(result instanceof RenderNode)) {
-    rollBack(null, props.children);
-
     throw new TypeError(`JSX: ${tagOf(fn)} returned ${describe(result)}; an element function must return a scene node.`);
   }
 
@@ -321,9 +268,11 @@ const call = (fn: (props: Props) => unknown, props: Props): RenderNode => {
  *
  * A class element is constructed from its props (see {@link jsxConstruct}),
  * then receives its node properties, signal handlers and children in that
- * order, and finally its `ref`. When any step throws, the element destroys
- * what it constructed together with the unadopted JSX nodes it was given, and
- * detaches but never destroys nodes the caller constructed.
+ * order, and finally its `ref`. An element owns only the instance it
+ * constructs. When a step after construction throws, the element detaches the
+ * children it attached and destroys its own instance; children are never
+ * destroyed, whether they were built with JSX or with `new`. Use
+ * {@link jsxTransaction} to destroy every node of a failed tree.
  */
 export const jsx = (type: unknown, props: Props): RenderNode => {
   if (typeof type !== 'function') {
@@ -345,3 +294,72 @@ export const jsxs = jsx;
  * {@link JsxFragment} for what a fragment becomes outside an element.
  */
 export const Fragment = (props: { readonly children?: JsxChildren }): RenderNode => construct(JsxFragment, props);
+
+/** Destroys a failed transaction's nodes after detaching every caller-owned child JSX attached to them. */
+const abort = ({ constructed, attached }: Transaction): void => {
+  const owned = new Set(constructed);
+
+  for (const child of attached) {
+    const parent = child.parent;
+
+    if (!owned.has(child) && parent !== null && owned.has(parent)) {
+      try {
+        parent.removeChild(child);
+      } catch (error) {
+        logTeardownError('a failed tree', error);
+      }
+    }
+  }
+
+  // Reverse construction order reaches parents before their children; a destroyed container already took its subtree.
+  for (const node of [...constructed].reverse()) {
+    if (!node.destroyed) {
+      try {
+        node.destroy();
+      } catch (error) {
+        logTeardownError('a failed tree', error);
+      }
+    }
+  }
+};
+
+/**
+ * Runs `build` and returns its result. When `build` throws, every node JSX
+ * constructed during the call is destroyed before the error propagates, and
+ * nodes created outside the call, or with `new`, are detached from those
+ * nodes first and never destroyed. Without a transaction, a failing element
+ * destroys only its own instance, and children built for it stay alive.
+ *
+ * Use it where a failed tree must not keep resources, handlers or bindings
+ * alive. Transactions nest: an inner transaction that completes hands its
+ * nodes to the enclosing one. Construction must be synchronous; nodes built
+ * after `build` returns are not covered.
+ */
+export const jsxTransaction = <T>(build: () => T): T => {
+  const outer = transaction;
+  const current: Transaction = { constructed: [], attached: [] };
+
+  transaction = current;
+
+  try {
+    const result = build();
+
+    if (outer !== null) {
+      for (const node of current.constructed) {
+        outer.constructed.push(node);
+      }
+
+      for (const node of current.attached) {
+        outer.attached.push(node);
+      }
+    }
+
+    return result;
+  } catch (error) {
+    abort(current);
+
+    throw error;
+  } finally {
+    transaction = outer;
+  }
+};

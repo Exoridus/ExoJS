@@ -114,14 +114,20 @@ export type JsxConstructionProps<C> = typeof jsxConstruct extends keyof C ? Adap
 
 type ReservedName<C extends JsxNodeClass> = Extract<
   keyof JsxConstructionProps<C>,
-  keyof JsxNodeProps | (InstanceType<C> extends Drawable ? keyof JsxDrawableProps : never) | `on${Capitalize<string>}`
+  | keyof JsxNodeProps
+  | (InstanceType<C> extends Drawable ? keyof JsxDrawableProps : never)
+  | `on${Capitalize<string>}`
+  | 'children'
+  | 'ref'
+  | 'key'
 >;
 
 /**
  * Reported in place of the construction props when a class's options use a
- * name JSX reserves: a node property, which JSX assigns through its setter, or
- * an `on*` name, which JSX treats as a signal handler. Either way the
- * constructor would never receive the value. Give the option another prop name
+ * name JSX reserves: a node property, which JSX assigns through its setter, an
+ * `on*` name, which JSX treats as a signal handler, or `children`, `ref` or
+ * `key`, which the compiler and JSX consume. Either way the constructor would
+ * never receive the value. Give the option another prop name
  * in a {@link jsxConstruct} adapter.
  */
 export interface JsxReservedOptionName<Names> {
@@ -146,8 +152,9 @@ export type JsxElementProps<C extends JsxNodeClass> = ([ReservedName<C>] extends
   JsxChildrenProp<InstanceType<C>> & {
     /**
      * Called once with the instance after it and its children were built and
-     * attached. A later failure in an enclosing element destroys that instance
-     * again, so keep only references the enclosing expression also owns.
+     * attached. A later failure in an enclosing element detaches the instance
+     * but does not destroy it, unless the tree is built in a
+     * {@link jsxTransaction}.
      */
     readonly ref?: (instance: InstanceType<C>) => void;
   };

@@ -1,7 +1,7 @@
 /** @jsxImportSource @codexo/exojs */
 import { Button, Color, Container, Graphics, Label, Panel, Prefab, Sprite, Stack, Text } from '@codexo/exojs';
 import type { JSX, JsxAdapterProps } from '@codexo/exojs/jsx';
-import { Fragment, jsxConstruct, JsxFragment } from '@codexo/exojs/jsx';
+import { Fragment, jsxConstruct, JsxFragment, jsxTransaction } from '@codexo/exojs/jsx';
 import { jsx } from '@codexo/exojs/jsx-runtime';
 
 import { useMockGlyphAtlas } from '../support/mock-glyph-atlas';
@@ -251,7 +251,7 @@ describe('JSX construction', () => {
 });
 
 describe('JSX construction failures', () => {
-  test('rejects an unsupported child, destroying constructed siblings but not caller nodes', () => {
+  test('rejects an unsupported child without destroying the children it was given', () => {
     const borrowed = new Label('mine');
     let created: JSX.Element | null = null;
 
@@ -263,13 +263,15 @@ describe('JSX construction failures', () => {
       </Container>
     )).toThrow(TypeError);
 
-    expect(created).not.toBeNull();
-    expect(created!.destroyed).toBe(true);
+    expect(created!.destroyed).toBe(false);
+    expect(created!.parent).toBeNull();
     expect(borrowed.destroyed).toBe(false);
     expect(borrowed.parent).toBeNull();
+
+    created!.destroy();
   });
 
-  test('rolls back when a constructor throws', () => {
+  test('leaves the children untouched when a constructor throws', () => {
     const borrowed = new Label('mine');
 
     expect(() => (
@@ -280,12 +282,14 @@ describe('JSX construction failures', () => {
     )).toThrow('probe failed');
 
     expect(Probe.created).toHaveLength(1);
-    expect(Probe.created[0]!.destroyed).toBe(true);
+    expect(Probe.created[0]!.destroyed).toBe(false);
+    expect(Probe.created[0]!.parent).toBeNull();
     expect(borrowed.destroyed).toBe(false);
-    expect(borrowed.parent).toBeNull();
+
+    Probe.created[0]!.destroy();
   });
 
-  test('rolls back an attached tree when a later step throws, detaching nested caller nodes first', () => {
+  test('destroys only the failing element and detaches every child it attached', () => {
     const borrowed = new Label('mine');
     const onClick = vi.fn();
 
@@ -302,10 +306,58 @@ describe('JSX construction failures', () => {
       </Probe>
     )).toThrow('ref failed');
 
-    expect(Probe.created).toHaveLength(2);
-    expect(Probe.created.every(probe => probe.destroyed)).toBe(true);
-    expect(borrowed.destroyed).toBe(false);
-    expect(borrowed.parent).toBeNull();
+    const [inner, outer] = Probe.created;
+
+    expect(outer!.destroyed).toBe(true);
+    expect(inner!.destroyed).toBe(false);
+    expect(inner!.parent).toBeNull();
+    expect(inner!.children).toHaveLength(2);
+    expect(borrowed.parent).toBe(inner);
+
+    inner!.destroy();
+  });
+
+  test('treats a JSX-built instance created earlier exactly like one created with new', () => {
+    const existing = <Button label="Continue" />;
+    const imperative = new Button({ label: 'Continue' });
+    const elsewhere = new Container();
+
+    elsewhere.addChild(existing);
+    elsewhere.removeChild(existing);
+
+    expect(() => (
+      <Panel
+        ref={() => {
+          throw new Error('ref failed');
+        }}
+      >
+        {existing}
+        {imperative}
+      </Panel>
+    )).toThrow('ref failed');
+
+    expect(() => (
+      <Probe fail>
+        {existing}
+        {imperative}
+      </Probe>
+    )).toThrow('probe failed');
+
+    for (const node of [existing, imperative]) {
+      expect(node.destroyed).toBe(false);
+      expect(node.parent).toBeNull();
+    }
+
+    const panel = (
+      <Panel>
+        {existing}
+        {imperative}
+      </Panel>
+    );
+
+    expect(existing.parent).toBe(panel);
+    panel.destroy();
+    elsewhere.destroy();
   });
 
   test('rejects children that already have a parent or appear twice', () => {
@@ -326,9 +378,10 @@ describe('JSX construction failures', () => {
     expect(loose.parent).toBeNull();
 
     owner.destroy();
+    loose.destroy();
   });
 
-  test('destroys a constructed child the parent rejected while attaching', () => {
+  test('detaches a child the parent rejected while attaching', () => {
     const constructed: JSX.Element[] = [];
 
     expect(() => (
@@ -339,7 +392,9 @@ describe('JSX construction failures', () => {
     )).toThrow();
 
     expect(constructed).toHaveLength(2);
-    expect(constructed.every(node => node.destroyed)).toBe(true);
+    expect(constructed.every(node => !node.destroyed && node.parent === null)).toBe(true);
+
+    constructed.forEach(node => node.destroy());
   });
 
   test('keeps the original error and finishes cleanup when a teardown throws', () => {
@@ -351,14 +406,14 @@ describe('JSX construction failures', () => {
       }
     }
 
-    const loose: JSX.Element[] = [];
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    expect(() => jsx(Fragile, { onMissing: () => undefined, children: jsx(Probe, { ref: (probe: Probe) => loose.push(probe) }) })).toThrow(
-      /no signal named "onMissing"/,
-    );
-    expect(Probe.created[0]!.destroyed).toBe(true);
+    expect(() => jsx(Fragile, { onMissing: () => undefined, children: jsx(Probe, {}) })).toThrow(/no signal named "onMissing"/);
+    expect(Probe.created[0]!.parent).toBeNull();
+    expect(error).toHaveBeenCalled();
+
     error.mockRestore();
+    Probe.created[0]!.destroy();
   });
 
   test('rejects a fragment placed a second time', () => {
@@ -374,22 +429,156 @@ describe('JSX construction failures', () => {
     expect(() => <Container>{pair}</Container>).toThrow(/already placed/);
 
     first.destroy();
+    pair.destroy();
   });
 
   test('rejects children on a node that is not a container', () => {
-    expect(() => jsx(Sprite, { children: new Label('x') })).toThrow(/not a Container/);
+    const label = new Label('x');
+
+    expect(() => jsx(Sprite, { children: label })).toThrow(/not a Container/);
+    expect(label.destroyed).toBe(false);
+
+    label.destroy();
   });
 
   test('rejects an element function that returns no node and an unknown signal', () => {
-    const constructed: JSX.Element[] = [];
     const Broken = (_props: { readonly children?: JSX.Element }): JSX.Element => null as unknown as JSX.Element;
 
     expect(() => (
       <Broken>
-        <Probe ref={probe => constructed.push(probe)} />
+        <Probe />
       </Broken>
     )).toThrow(/must return a scene node/);
-    expect(constructed[0]!.destroyed).toBe(true);
+    expect(Probe.created[0]!.destroyed).toBe(false);
     expect(() => jsx(Container, { onMissing: () => undefined })).toThrow(/no signal named "onMissing"/);
+
+    Probe.created[0]!.destroy();
+  });
+});
+
+describe('jsxTransaction', () => {
+  test('returns the result and destroys nothing when construction succeeds', () => {
+    const tree = jsxTransaction(() => (
+      <Probe>
+        <Probe />
+      </Probe>
+    ));
+
+    expect(Probe.created.every(probe => !probe.destroyed)).toBe(true);
+    expect(childrenOf(tree)).toHaveLength(1);
+
+    tree.destroy();
+  });
+
+  test('destroys every node JSX built inside a failed tree and only detaches caller nodes', () => {
+    const borrowed = new Label('mine');
+    const existing = <Button label="kept" />;
+    const button: Button[] = [];
+
+    expect(() =>
+      jsxTransaction(() => (
+        <Probe
+          ref={() => {
+            throw new Error('ref failed');
+          }}
+        >
+          <Probe>
+            <Button label="x" ref={instance => button.push(instance)} />
+            {borrowed}
+            {existing}
+          </Probe>
+        </Probe>
+      )),
+    ).toThrow('ref failed');
+
+    expect(Probe.created.every(probe => probe.destroyed)).toBe(true);
+    expect(button[0]!.destroyed).toBe(true);
+
+    for (const node of [borrowed, existing]) {
+      expect(node.destroyed).toBe(false);
+      expect(node.parent).toBeNull();
+    }
+
+    borrowed.destroy();
+    existing.destroy();
+  });
+
+  test('destroys siblings built before a failing sibling and children of a failed constructor', () => {
+    expect(() =>
+      jsxTransaction(() => (
+        <Container>
+          <Probe />
+          <Probe fail />
+        </Container>
+      )),
+    ).toThrow('probe failed');
+    expect(() =>
+      jsxTransaction(() => (
+        <Probe fail>
+          <Probe />
+        </Probe>
+      )),
+    ).toThrow('probe failed');
+
+    expect(Probe.created).toHaveLength(2);
+    expect(Probe.created.every(probe => probe.destroyed)).toBe(true);
+  });
+
+  test('removes a constructed node that a ref attached to a caller-owned container', () => {
+    const ui = new Container();
+
+    expect(() =>
+      jsxTransaction(() => (
+        <Container>
+          <Probe ref={probe => ui.addChild(probe)} />
+          {'text' as unknown as JSX.Element}
+        </Container>
+      )),
+    ).toThrow(TypeError);
+
+    expect(Probe.created[0]!.destroyed).toBe(true);
+    expect(ui.children).toHaveLength(0);
+
+    ui.destroy();
+  });
+
+  test('hands the nodes of a completed inner transaction to the enclosing one', () => {
+    let rescued: JSX.Element | null = null;
+
+    expect(() =>
+      jsxTransaction(() => {
+        const inner = jsxTransaction(() => <Probe />);
+
+        try {
+          jsxTransaction(() => <Probe fail />);
+        } catch {
+          rescued = inner;
+        }
+
+        throw new Error('outer failed');
+      }),
+    ).toThrow('outer failed');
+
+    expect(rescued).not.toBeNull();
+    expect(rescued!.destroyed).toBe(true);
+  });
+
+  test('covers element functions and nested fragments', () => {
+    const Row = (props: { readonly children?: JSX.Element | readonly JSX.Element[] }): JSX.Element => <Probe>{props.children}</Probe>;
+
+    expect(() =>
+      jsxTransaction(() => (
+        <Probe fail>
+          <Row>
+            <>
+              <Probe />
+            </>
+          </Row>
+        </Probe>
+      )),
+    ).toThrow('probe failed');
+
+    expect(Probe.created).toHaveLength(2);
+    expect(Probe.created.every(probe => probe.destroyed)).toBe(true);
   });
 });

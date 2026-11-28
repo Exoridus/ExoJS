@@ -2,7 +2,7 @@
 // symbol custom classes implement and the prop and child types for writing
 // typed element functions. The compiler imports `@codexo/exojs/jsx-runtime`.
 
-export { Fragment } from './jsx';
+export { Fragment, jsxTransaction } from './jsx';
 export { jsxConstruct } from './jsxConstruct';
 export { JsxFragment } from './JsxFragment';
 export type {

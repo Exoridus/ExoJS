@@ -1,4 +1,5 @@
-import { Color, Container, Graphics, Scene, Sprite, Text, type Texture } from '@codexo/exojs';
+import { Color, Container, Graphics, Label, Panel, Scene, Sprite, Text, type Texture } from '@codexo/exojs';
+import { jsxTransaction } from '@codexo/exojs/jsx';
 import { LightmapLighting, PointLight } from '@codexo/exojs/lighting';
 
 declare const torchTexture: Texture;
@@ -40,4 +41,23 @@ class CampScene extends Scene {
 }
 // #endregion guide:scene-composition
 
-export { CampScene };
+// #region guide:failed-tree
+// Builds the score panel as one unit: if any part of it throws, every node JSX
+// built for it is destroyed. The caller's meter is detached and stays alive.
+const buildScorePanel = (scoreMeter: Panel): Panel => {
+  const panel = new Panel({ width: 240, height: 80 });
+
+  panel.addChild(
+    jsxTransaction(() => (
+      <Container>
+        <Label text="Score" />
+        {scoreMeter}
+      </Container>
+    )),
+  );
+
+  return panel;
+};
+// #endregion guide:failed-tree
+
+export { buildScorePanel, CampScene };

@@ -37,7 +37,7 @@ Each tag maps to one constructor call:
 - **Children.** Children are added with `addChild` in the order written. Only containers take children: `<Sprite>` with children is a compile error, because a sprite is not a container. A container that restricts its children, such as `Graphics`, which takes only meshes, rejects the rest when the element is built.
 - **`ref`.** An optional callback that receives the finished instance, with its concrete type. Use it for calls that are not properties, such as `anchorIn` above.
 
-Destroying the menu destroys its buttons. The handlers go with them, exactly as with `new`.
+Destroying the menu destroys its buttons, exactly as with `new`.
 
 ## Existing instances
 
@@ -71,7 +71,13 @@ Attach components in a `ref`: `ref={sprite => sprite.addComponent(new Health(100
 
 ## When construction fails
 
-Construction is transactional for each element. When a constructor throws, a child is invalid, or a handler, child attachment or `ref` throws, the element destroys the nodes it constructed, together with any JSX-built children no other element had adopted yet. Instances you passed in are detached and never destroyed. One limit comes from how JSX evaluates: sibling elements already built before a failing sibling are never handed to their parent, so nothing can destroy them. They were never attached to a scene, and the garbage collector reclaims them. A teardown that throws during a rollback is logged, and the original error is the one that reaches you.
+An element owns exactly one node: the instance it constructs. When a handler, a child attachment or the `ref` throws after construction, the element detaches the children it attached and destroys its own instance. It never destroys a child, because JSX cannot tell whether a child is still yours: the compiler evaluates child expressions before their parent, so `<Button />` written inline and a button you built earlier, with JSX or with `new`, reach the parent the same way. When a constructor throws or a child is invalid, nothing has been attached yet and every child stays as it was.
+
+Children left behind by a failure are detached but alive. Garbage collection reclaims unreachable objects, but it does not call `destroy()`, so it releases no asset claims, signal handlers or other resources a node holds. Where a failed tree must not leave such nodes behind, build it inside `jsxTransaction`:
+
+<SourceSnippet source="examples/guides/jsx/scene-composition.tsx" region="failed-tree" language="tsx" title="examples/guides/jsx/scene-composition.tsx" />
+
+When the callback throws, every node JSX constructed during the call is destroyed, including siblings built before the failing one. Nodes created outside the call, or with `new`, are detached first and never destroyed. Transactions nest, and construction inside them must be synchronous. A teardown that throws during cleanup is logged, and the original error is the one that reaches you.
 
 ## Serialization
 

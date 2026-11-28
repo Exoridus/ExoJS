@@ -98,10 +98,12 @@ export const textChild = <Container>Pause</Container>;
 // @ts-expect-error numbers are not scene nodes
 export const numberChild = <Container>{42}</Container>;
 
-// No construction prop of a core class shares a name with a node property: the
-// runtime assigns node properties through setters, so a shared name would never
+// No construction prop of a core class shares a name with a node property or a
+// name the compiler and runtime consume: the runtime assigns node properties
+// through setters and keeps children, ref and key, so a shared name would never
 // reach the constructor.
-type Shared<C extends JsxNodeClass> = keyof JsxConstructionProps<C> & (keyof JsxNodeProps | keyof JsxDrawableProps);
+type Shared<C extends JsxNodeClass> = keyof JsxConstructionProps<C> &
+  (keyof JsxNodeProps | keyof JsxDrawableProps | 'children' | 'ref' | 'key');
 type NoneShared<Names extends never> = Names;
 export type CoreClassesShareNoNames = [
   NoneShared<Shared<typeof Sprite>>,
@@ -147,6 +149,20 @@ class Reporting extends Container {
 }
 // @ts-expect-error on* names are signal handlers, so a callback option of that name never reaches the constructor
 export const reporting = <Reporting onReady={onAny} />;
+class Referencing extends Container {
+  public constructor(public readonly options: { readonly ref?: string; readonly key?: string } = {}) {
+    super();
+  }
+}
+// @ts-expect-error ref and key are consumed by JSX and the compiler, so options of those names never reach the constructor
+export const referencing = <Referencing />;
+class Listing extends Container {
+  public constructor(public readonly options: { readonly children?: readonly string[] } = {}) {
+    super();
+  }
+}
+// @ts-expect-error children is the JSX children prop, so an option of that name never reaches the constructor
+export const listing = <Listing />;
 
 // Lowercase intrinsic elements do not exist.
 // @ts-expect-error no intrinsic elements
