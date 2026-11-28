@@ -102,6 +102,24 @@ The return timer and skip input call the same guarded method. `stopAndSnap()` st
   title="examples/guides/cinematics/cutscene-flow.ts"
 />
 
+## Orchestrating beats with `Sequence`
+
+When beats depend on each other - wait for a sound, then for the player, then hand control back - write them as one async function. A `Sequence` runs it on the scene's own clock: `await context.wait(0.3)` waits scene time, not wall-clock time, and the whole run freezes while the scene is paused or retained. Frame hooks stay synchronous; an `await` suspends only the sequence, which continues after the frame in which what it waited for completed.
+
+<SourceSnippet
+  source="examples/showcase/boss-intro-sequence.ts"
+  region="boss-intro-sequence"
+  language="ts"
+  title="examples/showcase/boss-intro-sequence.ts"
+/>
+
+- `context.run(step)` runs a step to its end; `context.all([...])` runs steps side by side until every one completes; `context.race([...])` stops at the first and cancels the losers it started.
+- `context.start(step)` starts a step in the background and returns a handle to await later. It is cancelled if it is still running when its owner ends; pass its handle to `race` to keep it running past the race.
+- `context.waitUntil(() => confirm.pressed)` waits for a fresh press: the condition is first checked on the tick after the wait began.
+- `context.defer(cleanup)` and `finally` blocks run however the run ends, so give back input scopes and camera follow there.
+
+`intro.start(this)` returns a handle. `handle.cancel()` is the skip: every step stops at once, pending waits reject with an `AbortError` (`isSequenceCancellation(error)` tells it apart), cleanups run, and nothing the sequence would have done afterwards takes effect. Ending the scene cancels its runs the same way, and each `start` is an independent run, so replaying is starting again.
+
 ## When not to build a cinematic system
 
 For a single boss intro, one scene with delayed tweens is sufficient. For sequential beats, use `this.tweens.createSequencer()` to obtain a scene-owned `TweenSequencer`: `then(tween)` adds a stage, `then([a, b])` runs tweens together, and `wait(seconds)` inserts a pause. Build a separate cutscene authoring layer only when your content needs more than these timing primitives.
@@ -112,6 +130,11 @@ For a single boss intro, one scene with delayed tweens is sufficient. For sequen
 <ExamplePreview chapter="showcase" slug="boss-intro-cinematic" />
 
 A boss-intro cutscene: shutter bars open, camera pans, boss scales up, title reveals character-by-character, music swells. All driven by parallel tweens with staggered delays.
+
+<a id="boss-intro-sequence"></a>
+<ExamplePreview chapter="showcase" slug="boss-intro-sequence" />
+
+An in-game boss introduction written as one `Sequence`: it takes over input and camera while the world keeps moving, pans to the boss, plays a spatial roar with a shake, waits for a confirming press and hands control back. Skip, pause, replay and scene replacement each leave nothing behind.
 
 ## Where to go next
 
