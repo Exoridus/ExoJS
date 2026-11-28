@@ -599,7 +599,7 @@ const REACT_COEXISTENCE_EXO = `import { Container, live, Observable } from '@cod
 export const health = new Observable(100);
 export const buildHud = (): Container => (<Container name={live\`HP \${health}\`} x={health} />) as Container;
 // @ts-expect-error ExoJS has no intrinsic elements; React's are not visible in this file
-export const intrinsic = <div />;
+export const intrinsic = (): unknown => <div />;
 `;
 
 const REACT_COEXISTENCE_REACT = `/** @jsxImportSource react */
@@ -681,8 +681,9 @@ export const reactCoexistenceChecks = (consumerDir: string): ConsumerCheck[] => 
   writeFileSync(join(consumerDir, outDir, 'package.json'), JSON.stringify({ type: 'module' }));
   const node = run('node', [join(outDir, 'react-coexistence.js')], consumerDir);
   const ok = node.code === 0 && node.output.includes('REACT_COEXISTENCE_OK');
+  const firstError = node.output.split('\n').find(line => /Error|BAD/.test(line)) ?? lastLines(node.output, 5);
 
-  return [{ name, ok, ...(ok ? {} : { detail: lastLines(node.output, 5) }) }];
+  return [{ name, ok, ...(ok ? {} : { detail: firstError.trim() }) }];
 };
 
 /** The legacy shims among the installed packages of a consumer project. */
