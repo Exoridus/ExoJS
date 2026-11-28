@@ -22,7 +22,7 @@ class DebugInspectorScene extends Scene {
   override init(): void {
     const { width, height } = this.app;
     const { ship } = this;
-    const inspector = new Panel({ width: 360, height: 168 });
+    const inspector = new Panel({ width: 440, height: 140 });
     const rows = new Stack({ spacing: 8 });
     const raw = new Label('', { fontSize: 15 });
     const position = new Label('', { fontSize: 15 });
