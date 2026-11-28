@@ -235,3 +235,73 @@ describe('ComponentQuery.changed', () => {
     expect(nodesOf(changes)).toEqual([]);
   });
 });
+
+describe('ComponentQuery change observers under filters', () => {
+  test('a change made while a filter excludes the match is consumed; re-entering the selection needs markChanged', async () => {
+    const scope = await activeScope();
+    const health = new Health();
+    const node = holding(health);
+
+    scope.scene.addChild(node);
+
+    const changes = scope.scene.query(Health).changed().enabled();
+
+    expect(nodesOf(changes)).toEqual([node]);
+
+    health.enabled = false;
+    health.markChanged();
+    expect(nodesOf(changes)).toEqual([]);
+
+    health.enabled = true;
+    expect(nodesOf(changes)).toEqual([]);
+
+    health.markChanged();
+    expect(nodesOf(changes)).toEqual([node]);
+  });
+
+  test('a node entering a where() selection is not reported until it is marked', async () => {
+    const scope = await activeScope();
+    const health = new Health();
+    const node = holding(health);
+
+    scope.scene.addChild(node);
+
+    const wounded = scope.scene
+      .query(Health)
+      .changed()
+      .where((_node, h) => h.current < 50);
+
+    expect(nodesOf(wounded)).toEqual([]);
+
+    health.current = 10;
+    expect(nodesOf(wounded)).toEqual([]);
+
+    health.markChanged();
+    expect(nodesOf(wounded)).toEqual([node]);
+  });
+
+  test('a nested pass on the same observer is not undone when the outer pass completes', async () => {
+    const scope = await activeScope();
+    const a = holding(new Health());
+    const b = holding(new Health());
+
+    scope.scene.root.addChild(a, b);
+
+    const changes = scope.scene.query(Health).changed();
+
+    nodesOf(changes);
+    a.getComponent(Health)!.markChanged();
+
+    let inner: unknown[] = [];
+
+    changes.forEach(() => {
+      if (inner.length === 0) {
+        b.getComponent(Health)!.markChanged();
+        inner = nodesOf(changes);
+      }
+    });
+
+    expect(inner).toEqual([a, b]);
+    expect(nodesOf(changes)).toEqual([]);
+  });
+});

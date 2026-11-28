@@ -207,12 +207,26 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
 };
 
 /**
- * Development builds only: the registry each system last entered, so a system
- * entering a second registry while the first still runs it is reported. Both
- * keys and values are weak so a detached system cannot retain its old registry.
- * Diagnostic only - it decides nothing about dispatch or ownership.
+ * The registry that owns each system, from the start of its `onAttach` until
+ * its detach. Keys are weak so a released system is not retained.
  */
-const devLastRegistry: WeakMap<System, WeakRef<SystemRegistry>> | null = __DEV__ ? new WeakMap() : null;
+const systemOwners = new WeakMap<System, SystemRegistry>();
+
+const wantsPhase = (options: SystemRegistrationOptions | undefined, phase: SystemPhase): boolean =>
+  options?.phases === undefined || options.phases.includes(phase);
+
+/** Drop entries a removal finalized while a phase list could still be iterating. */
+const sweepRegistrations = (list: SystemRegistration[]): void => {
+  let kept = 0;
+
+  for (const registration of list) {
+    if (registration.active) {
+      list[kept++] = registration;
+    }
+  }
+
+  list.length = kept;
+};
 
 /**
  * Phase-dispatching registry of {@link System}s, shared by `Scene` (as
@@ -258,6 +272,10 @@ export class SystemRegistry implements Destroyable {
   private readonly _postFrameList: SystemRegistration[] = [];
   private readonly _pendingAdds = new Set<System>();
   private readonly _pending: PendingMutation[] = [];
+  /** Systems inside their `onAttach`, and those of them removed from it. */
+  private readonly _attaching = new Set<System>();
+  private readonly _cancelledAttach = new Set<System>();
+  private _sweepPending = false;
   private _sequence = 0;
   private _activeCount = 0;
   private _frameActive = false;
@@ -305,6 +323,12 @@ export class SystemRegistry implements Destroyable {
    * Adding the same object twice is a no-op. See the class docs for buffering
    * timing.
    *
+   * A system belongs to one registry at a time, from its `onAttach` until its
+   * `onDetach`. Adding a system another registry still owns throws without
+   * calling any hook; a system that registry removed earlier in its current
+   * frame is released there first, so it is detached before it is attached here.
+   * Distinct instances of one class can be registered anywhere.
+   *
    * Takes ownership: the registry calls `system.destroy?.()` when it is
    * removed by the registry's own {@link SystemRegistry.destroy}, in reverse
    * registration order. `remove()` does not destroy - see its own docs - so
@@ -319,7 +343,7 @@ export class SystemRegistry implements Destroyable {
    * other, so the system runs again from the next frame on.
    */
   public add<T extends System>(system: T, options?: SystemRegistrationOptions): T {
-    if (this._pendingAdds.has(system)) {
+    if (this._pendingAdds.has(system) || this._attaching.has(system)) {
       return system;
     }
 
@@ -339,15 +363,62 @@ export class SystemRegistry implements Destroyable {
       this._finalizeRemoval(existing);
     }
 
+    const owner = systemOwners.get(system);
+
+    if (owner !== undefined && owner !== this && !owner._release(system)) {
+      throw new Error(
+        'SystemRegistry.add(): this system already belongs to another system registry. A system has one owner at a time: remove() it from the other registry first to move it.',
+      );
+    }
+
+    if (!this._frameActive) {
+      this._assertInsertable(system, options);
+    }
+
+    // Owned from here, before onAttach runs, so the hook cannot hand the system
+    // to a second registry; onAttach itself may add or remove it reentrantly.
+    systemOwners.set(system, this);
+    this._attaching.add(system);
+
+    try {
+      this._attachHook(system);
+    } catch (error) {
+      this._attaching.delete(system);
+      this._cancelledAttach.delete(system);
+      this._disown(system);
+
+      throw error;
+    }
+
+    this._attaching.delete(system);
+
+    if (this._cancelledAttach.delete(system)) {
+      this._detachSystem(system);
+
+      return system;
+    }
+
     if (this._frameActive) {
       // Attached now rather than at the boundary, so the system can reach its
       // context straight after add() even though it first runs next frame.
-      this._attachHook(system);
       this._pendingAdds.add(system);
       this._pending.push({ add: true, system, options });
-    } else {
-      this._insert(system, options, false);
+
+      return system;
     }
+
+    // onAttach may have registered other systems that now close a cycle.
+    if (system.onAttach !== undefined) {
+      try {
+        this._assertInsertable(system, options);
+      } catch (error) {
+        this._detachSystem(system);
+
+        throw error;
+      }
+    }
+
+    this._insert(system, options);
 
     return system;
   }
@@ -399,6 +470,12 @@ export class SystemRegistry implements Destroyable {
    * {@link SystemRegistry.onRemove}.
    */
   public remove(system: System): boolean {
+    if (this._attaching.has(system)) {
+      this._cancelledAttach.add(system);
+
+      return false;
+    }
+
     if (__DEV__ && this._coreSystems.has(system)) {
       logger.warn(
         "SystemRegistry.remove(): removing one of the engine's own core systems stops that part of the engine for good — input, interaction, audio, tweens, animations or rendering will no longer run. This is allowed on purpose, but it is almost never what you want; to reorder around one, use `before`/`after` against it instead.",
@@ -415,7 +492,7 @@ export class SystemRegistry implements Destroyable {
         this._pending.splice(index, 1);
       }
 
-      this._runHook(system, 'onDetach');
+      this._detachSystem(system);
 
       return false;
     }
@@ -459,6 +536,15 @@ export class SystemRegistry implements Destroyable {
   public _endFrame(): void {
     this._frameActive = false;
 
+    if (this._sweepPending) {
+      this._sweepPending = false;
+      sweepRegistrations(this._preFrameList);
+      sweepRegistrations(this._fixedList);
+      sweepRegistrations(this._updateList);
+      sweepRegistrations(this._drawList);
+      sweepRegistrations(this._postFrameList);
+    }
+
     if (this._pending.length === 0) {
       return;
     }
@@ -476,12 +562,14 @@ export class SystemRegistry implements Destroyable {
           this._pendingAdds.delete(mutation.system);
 
           try {
-            this._insert(mutation.system, mutation.options, true);
+            this._assertInsertable(mutation.system, mutation.options);
           } catch (error) {
-            this._runHook(mutation.system, 'onDetach');
+            this._detachSystem(mutation.system);
 
             throw error;
           }
+
+          this._insert(mutation.system, mutation.options);
         } else {
           this._finalizeRemoval(mutation.registration);
         }
@@ -748,7 +836,7 @@ export class SystemRegistry implements Destroyable {
     }
 
     for (const system of this._pendingAdds) {
-      this._runHook(system, 'onDetach', report);
+      this._detachSystem(system, report);
     }
 
     this._registrations.clear();
@@ -768,10 +856,23 @@ export class SystemRegistry implements Destroyable {
     }
   }
 
-  private _insert(system: System, options: SystemRegistrationOptions | undefined, attached: boolean): void {
-    const registration: SystemRegistration = {
+  /** Throws, registering nothing, when `system` would close a before/after cycle. */
+  private _assertInsertable(system: System, options: SystemRegistrationOptions | undefined): void {
+    const registration = this._createRegistration(system, options);
+
+    this._registrations.set(system, registration);
+
+    try {
+      this._assertAcyclic(registration, options);
+    } finally {
+      this._registrations.delete(system);
+    }
+  }
+
+  private _createRegistration(system: System, options: SystemRegistrationOptions | undefined): SystemRegistration {
+    return {
       system,
-      sequence: this._sequence++,
+      sequence: this._sequence,
       order: options?.order ?? system.order ?? 0,
       before: options?.before ?? [],
       after: options?.after ?? [],
@@ -780,68 +881,47 @@ export class SystemRegistry implements Destroyable {
       runnable: true,
       attached: true,
     };
+  }
 
-    if (__DEV__) {
-      const previous = devLastRegistry!.get(system)?.deref();
+  /** Structurally register an attached system that passed {@link _assertInsertable}. */
+  private _insert(system: System, options: SystemRegistrationOptions | undefined): void {
+    const registration = this._createRegistration(system, options);
 
-      if (previous !== undefined && previous !== this && previous.has(system)) {
-        logger.warn(
-          'SystemRegistry.add(): this system is already registered with another system registry. Both dispatch the phases it takes part in, so a phase both include runs twice per frame or fixed step, and both destroy it. Register it with one registry; `remove()` it from the other first to move it.',
-          { source: 'SystemRegistry' },
-        );
-      }
-
-      devLastRegistry!.set(system, new WeakRef(this));
-    }
-
-    const wants = (phase: SystemPhase): boolean => options?.phases === undefined || options.phases.includes(phase);
-
-    // Rejected before anything is registered, so a contradictory before/after
-    // set can neither leave a half-added system nor poison every later sort of
-    // the phase list it would have joined.
+    this._sequence++;
     this._registrations.set(system, registration);
-
-    try {
-      this._assertAcyclic(registration, wants);
-
-      if (!attached) {
-        this._attachHook(system);
-      }
-    } catch (error) {
-      this._registrations.delete(system);
-
-      throw error;
-    }
-
     this._activeCount++;
 
-    if (system.preFrame !== undefined && wants('preFrame')) {
+    if (system.preFrame !== undefined && wantsPhase(options, 'preFrame')) {
       this._preFrameList.push(registration);
       this._preFrameDirty = true;
     }
 
-    if (system.fixedUpdate !== undefined && wants('fixedUpdate')) {
+    if (system.fixedUpdate !== undefined && wantsPhase(options, 'fixedUpdate')) {
       this._fixedList.push(registration);
       this._fixedDirty = true;
     }
 
-    if (system.update !== undefined && wants('update')) {
+    if (system.update !== undefined && wantsPhase(options, 'update')) {
       this._updateList.push(registration);
       this._updateDirty = true;
     }
 
-    if (system.draw !== undefined && wants('draw')) {
+    if (system.draw !== undefined && wantsPhase(options, 'draw')) {
       this._drawList.push(registration);
       this._drawDirty = true;
     }
 
-    if (system.postFrame !== undefined && wants('postFrame')) {
+    if (system.postFrame !== undefined && wantsPhase(options, 'postFrame')) {
       this._postFrameList.push(registration);
       this._postFrameDirty = true;
     }
 
     this._enable(registration);
-    this.onAdd.dispatch(system);
+
+    // onEnable may have removed the system again; its onRemove has then been dispatched already.
+    if (registration.active) {
+      this.onAdd.dispatch(system);
+    }
   }
 
   /** Registered systems and buffered adds, in registration order. */
@@ -877,10 +957,13 @@ export class SystemRegistry implements Destroyable {
     registration.runnable = true;
 
     // A failed onEnable leaves the system registered and silent rather than
-    // running phases whose setup never happened.
-    if (!this._runHook(registration.system, 'onEnable')) {
+    // running phases whose setup never happened, and gets onDisable so it can
+    // release whatever it acquired before throwing. A hook that removed its own
+    // system has been disabled by that removal already.
+    if (!this._runHook(registration.system, 'onEnable') && registration.enabled) {
       registration.enabled = false;
       registration.runnable = false;
+      this._runHook(registration.system, 'onDisable');
     }
   }
 
@@ -899,7 +982,45 @@ export class SystemRegistry implements Destroyable {
     }
 
     registration.attached = false;
-    this._runHook(registration.system, 'onDetach', report);
+    this._detachSystem(registration.system, report);
+  }
+
+  /**
+   * Release ownership, then run `onDetach`: released first so the hook can hand
+   * the system to another registry, or add it here again.
+   */
+  private _detachSystem(system: System, report?: (error: unknown) => void): void {
+    this._disown(system);
+    this._runHook(system, 'onDetach', report);
+  }
+
+  private _disown(system: System): void {
+    if (systemOwners.get(system) === this) {
+      systemOwners.delete(system);
+    }
+  }
+
+  /**
+   * Let another registry take `system`: possible only while it is removed but
+   * not yet finalized, which then happens at once. Returns whether the system
+   * is free now. @internal
+   */
+  public _release(system: System): boolean {
+    const registration = this._registrations.get(system);
+
+    if (registration === undefined || registration.active) {
+      return false;
+    }
+
+    this._dropPendingRemoval(registration);
+
+    try {
+      this._finalizeRemoval(registration);
+    } catch (error) {
+      this._report(error);
+    }
+
+    return true;
   }
 
   /** Run a lifecycle hook other than `onAttach`, reporting a failure instead of throwing. Returns whether it succeeded. */
@@ -933,7 +1054,7 @@ export class SystemRegistry implements Destroyable {
     logger.error('A system lifecycle hook threw.', { source: 'SystemRegistry', ...(error instanceof Error && { error }) });
   };
 
-  private _assertAcyclic(registration: SystemRegistration, wants: (phase: SystemPhase) => boolean): void {
+  private _assertAcyclic(registration: SystemRegistration, options: SystemRegistrationOptions | undefined): void {
     const { system } = registration;
     const phases: Array<[SystemPhase, SystemRegistration[], boolean]> = [
       ['preFrame', this._preFrameList, system.preFrame !== undefined],
@@ -944,7 +1065,7 @@ export class SystemRegistry implements Destroyable {
     ];
 
     for (const [phase, list, implemented] of phases) {
-      if (implemented && wants(phase)) {
+      if (implemented && wantsPhase(options, phase)) {
         const active = list.filter(entry => entry.active);
 
         active.push(registration);
@@ -962,14 +1083,26 @@ export class SystemRegistry implements Destroyable {
     }
   }
 
+  /** Structural delete, `onRemove`, then detach - which happens even when an `onRemove` listener throws. */
   private _finalizeRemoval(registration: SystemRegistration): void {
     this._registrations.delete(registration.system);
-    removeRegistration(this._preFrameList, registration);
-    removeRegistration(this._fixedList, registration);
-    removeRegistration(this._updateList, registration);
-    removeRegistration(this._drawList, registration);
-    removeRegistration(this._postFrameList, registration);
-    this.onRemove.dispatch(registration.system);
-    this._detach(registration);
+
+    if (this._frameActive) {
+      // A phase may be iterating these lists right now; splicing would skip the
+      // entry after this one. The inactive entry is skipped until the sweep.
+      this._sweepPending = true;
+    } else {
+      removeRegistration(this._preFrameList, registration);
+      removeRegistration(this._fixedList, registration);
+      removeRegistration(this._updateList, registration);
+      removeRegistration(this._drawList, registration);
+      removeRegistration(this._postFrameList, registration);
+    }
+
+    try {
+      this.onRemove.dispatch(registration.system);
+    } finally {
+      this._detach(registration);
+    }
   }
 }

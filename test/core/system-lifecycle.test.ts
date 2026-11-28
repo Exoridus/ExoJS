@@ -189,7 +189,7 @@ describe('SystemRegistry lifecycle', () => {
     expect(registry.size).toBe(0);
   });
 
-  test('a throwing onEnable is reported and leaves the system registered but silent', () => {
+  test('a throwing onEnable is reported, gets onDisable, and leaves the system registered but silent', () => {
     const registry = new SystemRegistry();
     const probe = new Probe();
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -202,7 +202,7 @@ describe('SystemRegistry lifecycle', () => {
     frame(registry);
 
     expect(registry.has(probe)).toBe(true);
-    expect(probe.log).toEqual(['attach']);
+    expect(probe.log).toEqual(['attach', 'disable']);
     expect(error).toHaveBeenCalled();
     error.mockRestore();
   });
@@ -327,5 +327,266 @@ describe('scene system lifecycle', () => {
     await app!.scenes.change(Next);
 
     expect(trace).toEqual(['disable', 'unload', 'detach', 'destroy']);
+  });
+});
+
+describe('SystemRegistry ownership and reentrancy', () => {
+  test('a system belongs to one registry: a second add throws before any hook and leaves the owner running', () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+    const probe = first.add(new Probe());
+
+    probe.log.length = 0;
+    expect(() => second.add(probe)).toThrow('already belongs to another system registry');
+    expect(second.has(probe)).toBe(false);
+    expect(second.size).toBe(0);
+    frame(second);
+    frame(first);
+    expect(probe.log).toEqual(['update']);
+    expect(probe.context?.systems).toBe(first);
+  });
+
+  test('two applications cannot share one system instance', async () => {
+    const first = new Application({ backend: { type: 'webgl2' } });
+    const second = new Application({ backend: { type: 'webgl2' } });
+    const probe = first.systems.add(new Probe());
+
+    expect(() => second.systems.add(probe)).toThrow('already belongs to another system registry');
+    await first.destroy();
+    expect(probe.log.filter(entry => entry === 'destroy')).toEqual(['destroy']);
+    await second.destroy();
+    expect(probe.log.filter(entry => entry === 'destroy')).toEqual(['destroy']);
+  });
+
+  test('distinct instances of one class register with different registries', () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+
+    first.add(new Probe());
+    second.add(new Probe());
+    expect(first.size).toBe(1);
+    expect(second.size).toBe(1);
+  });
+
+  test('a buffered add already owns the system', () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+    const probe = new Probe();
+
+    frame(first, () => {
+      first.add(probe);
+      expect(() => second.add(probe)).toThrow('already belongs to another system registry');
+    });
+    expect(first.has(probe)).toBe(true);
+  });
+
+  test('removal releases ownership at detach, so the system can move', () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+    const probe = first.add(new Probe());
+
+    first.remove(probe);
+    second.add(probe);
+    expect(probe.log).toEqual(['attach', 'enable', 'disable', 'detach', 'attach', 'enable']);
+    expect(probe.context?.systems).toBe(second);
+  });
+
+  test("a system removed during the old owner's frame is detached there before the new owner attaches it", () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+    const probe = first.add(new Probe());
+
+    probe.log.length = 0;
+    frame(first, () => {
+      first.remove(probe);
+      second.add(probe);
+      expect(probe.log).toEqual(['update', 'disable', 'detach', 'attach', 'enable']);
+    });
+    frame(first);
+    frame(second);
+    expect(probe.log).toEqual(['update', 'disable', 'detach', 'attach', 'enable', 'update']);
+  });
+
+  test('a throwing onRemove listener still detaches exactly once and releases ownership', () => {
+    const registry = new SystemRegistry();
+    const other = new SystemRegistry();
+    const probe = registry.add(new Probe());
+
+    registry.onRemove.add(() => {
+      throw new Error('listener failed');
+    });
+
+    expect(() => registry.remove(probe)).toThrow('listener failed');
+    expect(probe.log).toEqual(['attach', 'enable', 'disable', 'detach']);
+    expect(registry.has(probe)).toBe(false);
+
+    other.add(probe);
+    expect(other.has(probe)).toBe(true);
+    expect(probe.log.filter(entry => entry === 'detach')).toEqual(['detach']);
+  });
+
+  test('a throwing onRemove listener at the frame boundary still detaches and allows a later registration', () => {
+    const registry = new SystemRegistry();
+    const probe = registry.add(new Probe());
+
+    registry.onRemove.add(() => {
+      throw new Error('listener failed');
+    });
+    probe.log.length = 0;
+
+    expect(() =>
+      frame(registry, () => {
+        registry.remove(probe);
+      }),
+    ).toThrow('listener failed');
+    expect(probe.log).toEqual(['update', 'disable', 'detach']);
+
+    registry.onRemove.clear();
+    registry.add(probe);
+    frame(registry);
+    expect(probe.log).toEqual(['update', 'disable', 'detach', 'attach', 'enable', 'update']);
+  });
+
+  test('onAttach removing its own system cancels the registration cleanly', () => {
+    const registry = new SystemRegistry();
+    const added = vi.fn();
+    const probe = new Probe();
+
+    registry.onAdd.add(added);
+
+    probe.onAttach = () => {
+      probe.log.push('attach');
+      registry.remove(probe);
+    };
+
+    expect(registry.add(probe)).toBe(probe);
+    frame(registry);
+    expect(probe.log).toEqual(['attach', 'detach']);
+    expect(registry.size).toBe(0);
+    expect(added).not.toHaveBeenCalled();
+
+    probe.onAttach = () => probe.log.push('attach');
+    new SystemRegistry().add(probe);
+    expect(probe.log).toEqual(['attach', 'detach', 'attach', 'enable']);
+  });
+
+  test('onAttach removing its own buffered system cancels it before the boundary', () => {
+    const registry = new SystemRegistry();
+    const probe = new Probe();
+
+    probe.onAttach = () => {
+      probe.log.push('attach');
+      registry.remove(probe);
+    };
+
+    frame(registry, () => registry.add(probe));
+    frame(registry);
+    expect(probe.log).toEqual(['attach', 'detach']);
+    expect(registry.size).toBe(0);
+  });
+
+  test('onAttach adding its own system again is the duplicate no-op, immediate or buffered', () => {
+    for (const buffered of [false, true]) {
+      const registry = new SystemRegistry();
+      const probe = new Probe();
+
+      probe.onAttach = () => {
+        probe.log.push('attach');
+        registry.add(probe);
+      };
+
+      if (buffered) {
+        frame(registry, () => registry.add(probe));
+      } else {
+        registry.add(probe);
+      }
+
+      frame(registry);
+      expect(probe.log).toEqual(['attach', 'enable', 'update']);
+      expect(registry.size).toBe(1);
+    }
+  });
+
+  test('onAttach may add and remove other systems', () => {
+    const registry = new SystemRegistry();
+    const victim = registry.add(new Probe('victim'));
+    const helper = new OtherProbe('helper');
+    const probe = new Probe();
+
+    probe.onAttach = () => {
+      registry.add(helper);
+      registry.remove(victim);
+    };
+
+    registry.add(probe);
+    frame(registry);
+    expect(registry.size).toBe(2);
+    expect(registry.has(helper)).toBe(true);
+    expect(registry.has(victim)).toBe(false);
+    expect(helper.log).toEqual(['attach', 'enable', 'update']);
+    expect(victim.log).toEqual(['attach', 'enable', 'disable', 'detach']);
+  });
+
+  test('onEnable removing its own system leaves no phase entry, count or onAdd behind', () => {
+    const registry = new SystemRegistry();
+    const added = vi.fn();
+    const probe = new Probe();
+
+    registry.onAdd.add(added);
+
+    probe.onEnable = () => {
+      probe.log.push('enable');
+      registry.remove(probe);
+    };
+
+    registry.add(probe);
+    frame(registry);
+    expect(probe.log).toEqual(['attach', 'enable', 'disable', 'detach']);
+    expect(registry.size).toBe(0);
+    expect(added).not.toHaveBeenCalled();
+  });
+
+  test('a system removing and re-adding itself during a phase does not skip the systems after it', () => {
+    const registry = new SystemRegistry();
+    const a = registry.add(new Probe('a'));
+    const b = registry.add(new Probe('b'));
+    const c = registry.add(new Probe('c'));
+    let moved = false;
+
+    a.update = () => {
+      a.log.push('update');
+
+      if (!moved) {
+        moved = true;
+        registry.remove(a);
+        registry.add(a, { order: 10 });
+      }
+    };
+
+    frame(registry);
+    expect(b.log.at(-1)).toBe('update');
+    expect(c.log.at(-1)).toBe('update');
+
+    const order: string[] = [];
+
+    for (const probe of [a, b, c]) {
+      probe.update = () => order.push(probe.name);
+    }
+
+    frame(registry);
+    expect(order).toEqual(['b', 'c', 'a']);
+  });
+
+  test('a buffered add rejected for a cycle at the boundary is detached and released', () => {
+    const registry = new SystemRegistry();
+    const other = new SystemRegistry();
+    const a = registry.add(new Probe('a'));
+    const b = new Probe('b');
+
+    expect(() => frame(registry, () => registry.add(b, { before: [a], after: [a] }))).toThrow('cycle detected');
+    expect(b.log).toEqual(['attach', 'detach']);
+    expect(registry.has(b)).toBe(false);
+    other.add(b);
+    expect(other.has(b)).toBe(true);
   });
 });

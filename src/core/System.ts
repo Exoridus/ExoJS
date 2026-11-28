@@ -90,8 +90,9 @@ export interface SystemContext {
  *   registry is destroyed - in which case `destroy()` follows.
  *
  * A throwing `onAttach` cancels the registration and propagates out of
- * `add()`. A throwing `onEnable` is reported and leaves the system
- * registered but disabled, so its phases do not run. Failures of the other
+ * `add()`. A throwing `onEnable` is reported and followed by
+ * `onDisable`, so the system can release what it acquired before the throw;
+ * it stays registered but its phases do not run. Failures of the other
  * hooks are reported and never stop the teardown they belong to.
  */
 export interface SystemLifecycle {

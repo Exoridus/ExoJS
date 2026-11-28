@@ -370,18 +370,16 @@ describe('SystemRegistry - one registry per system', () => {
     return reported;
   };
 
-  test('warns when a system enters a second registry that both run', () => {
+  test('rejects a system entering a second registry while the first still owns it', () => {
     const first = new SystemRegistry();
     const second = new SystemRegistry();
     const system = makeSystem([], 'shared');
 
-    const reported = warnings(() => {
-      first.add(system);
-      second.add(system);
-    });
+    first.add(system);
 
-    expect(reported).toHaveLength(1);
-    expect(reported[0]).toMatch(/another system registry/);
+    expect(() => second.add(system)).toThrow(/another system registry/);
+    expect(first.has(system)).toBe(true);
+    expect(second.has(system)).toBe(false);
   });
 
   test('stays quiet when a system is moved: removed from one registry, then added to another', () => {
@@ -398,5 +396,7 @@ describe('SystemRegistry - one registry per system', () => {
     });
 
     expect(reported).toEqual([]);
+    expect(first.has(system)).toBe(false);
+    expect(second.has(system)).toBe(true);
   });
 });

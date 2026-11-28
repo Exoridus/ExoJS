@@ -203,7 +203,14 @@ export class ComponentQuery<T extends readonly ComponentClass[]> implements Iter
    * ran to its end. A `for...of` left early with `break` consumes nothing, so
    * its next pass lists those matches again. A change reported while a pass
    * runs is listed by the next pass, whether or not this one already visited
-   * the component.
+   * the component. Nested passes of one observer cannot move it backwards: the
+   * later-started pass decides how far it has seen.
+   *
+   * The other filters select which matches a pass lists, but a completed pass
+   * consumes the changes of every candidate. A match the filters left out - a
+   * disabled component, a node `where` rejected - is not news to a later pass
+   * just because the filters accept it now; call {@link Component.markChanged}
+   * when entering the selection should count as a change.
    */
   public changed(...types: Array<T[number]>): ComponentQuery<T> {
     const watch = types.length === 0 ? null : types.map(type => this._types.indexOf(type)).filter(index => index !== -1);
@@ -379,7 +386,7 @@ export class ComponentQuery<T extends readonly ComponentClass[]> implements Iter
   private _consume(stamp: number): void {
     const observer = this._filter?.observer;
 
-    if (observer != null) {
+    if (observer != null && stamp > observer.seen) {
       observer.seen = stamp;
     }
   }
