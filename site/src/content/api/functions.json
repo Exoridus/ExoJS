@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 92,
+  "memberCount": 93,
   "counts": {
     "constructors": 0,
-    "methods": 54,
+    "methods": 55,
     "properties": 38,
     "events": 0
   },
@@ -2214,6 +2214,53 @@
           "description": "Whether surface is a canvas element in a document, and so carries the DOM affordances (style, layout box, event target, parent element) that an OffscreenCanvas does not. A canvas from another frame's document qualifies; in a worker the answer is always false."
         },
         {
+          "name": "isObservable",
+          "signature": "isObservable(value: unknown): value",
+          "signatureTokens": [
+            {
+              "text": "isObservable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "value",
+          "description": "Whether value implements the ReadonlyObservable contract. Functions, promises, structs and plain objects without subscribe and map methods are not observable."
+        },
+        {
           "name": "isPowerOfTwo",
           "signature": "isPowerOfTwo(value: number): boolean",
           "signatureTokens": [
@@ -2403,6 +2450,86 @@
           ],
           "returnType": "number",
           "description": "Linear interpolation between startValue and endValue at normalized ratio ∈ [0, 1]."
+        },
+        {
+          "name": "live",
+          "signature": "live(strings: TemplateStringsArray, values: Values): LiveResult<Values>",
+          "signatureTokens": [
+            {
+              "text": "live",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "strings",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TemplateStringsArray",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "values",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Values",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LiveResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Values",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "strings",
+              "type": "TemplateStringsArray",
+              "optional": false
+            },
+            {
+              "name": "values",
+              "type": "Values",
+              "optional": false
+            }
+          ],
+          "returnType": "LiveResult<Values>",
+          "description": "Tagged template that keeps observable substitutions live: ts const title = liveHealth: ${health}; // ReadonlyObservable<string> const position = livePosition: ${node.position}; // \"120, 80\", updated on every move  Observable substitutions are read through value and converted with String each time the text is computed; a source used several times is subscribed once. Every other substitution is converted once, when the template is evaluated, exactly like an ordinary template literal. Without observable substitutions the result is a plain string and nothing is subscribed. The derived string subscribes to its sources only while it has subscribers itself."
         },
         {
           "name": "meshIndexBytes",
@@ -3396,65 +3523,6 @@
           ],
           "returnType": "number",
           "description": "Normalise a rotation in degrees to the range [0, 360). Negative values are wrapped into the positive range."
-        },
-        {
-          "name": "tweenOperation",
-          "signature": "tweenOperation(tween: Tween<T>): SequenceOperation",
-          "signatureTokens": [
-            {
-              "text": "tweenOperation",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "tween",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Tween",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SequenceOperation",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "tween",
-              "type": "Tween<T>",
-              "optional": false
-            }
-          ],
-          "returnType": "SequenceOperation",
-          "description": "Adapt tween for a sequence to wait on and own: yield* context.waitFor(tweenOperation(tween)). Starts the tween if it is idle. The wait completes when the tween completes and throws a SequenceCancelledError when something else stops it; a step that stops waiting first - cancelled, a lost race, the sequencer's teardown - stops the tween where it is. A tween that repeats forever never completes, so race it against a bound."
         }
       ],
       "paragraphs": [],

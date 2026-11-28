@@ -55,6 +55,21 @@
       "import": "./dist/esm/renderer-sdk.js",
       "default": "./dist/esm/renderer-sdk.js"
     },
+    "./jsx": {
+      "types": "./dist/esm/jsx/index.d.ts",
+      "import": "./dist/esm/jsx/index.js",
+      "default": "./dist/esm/jsx/index.js"
+    },
+    "./jsx-runtime": {
+      "types": "./dist/esm/jsx/runtime.d.ts",
+      "import": "./dist/esm/jsx/runtime.js",
+      "default": "./dist/esm/jsx/runtime.js"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./dist/esm/jsx/devRuntime.d.ts",
+      "import": "./dist/esm/jsx/devRuntime.js",
+      "default": "./dist/esm/jsx/devRuntime.js"
+    },
     "./debug": {
       "types": "./dist/esm/debug/index.d.ts",
       "import": "./dist/esm/debug/index.js",

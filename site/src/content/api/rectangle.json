@@ -6,10 +6,10 @@
   "subsystem": "math",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 28,
+  "memberCount": 29,
   "counts": {
     "constructors": 1,
-    "methods": 15,
+    "methods": 16,
     "properties": 12,
     "events": 0
   },
@@ -965,6 +965,35 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "toString",
+          "signature": "toString(): string",
+          "signatureTokens": [
+            {
+              "text": "toString",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "string",
+          "description": "The rectangle as \"x, y, width, height\", for example \"10, 20, 200, 100\", without rounding."
         },
         {
           "name": "transform",

@@ -1,3 +1,6 @@
+import { jsxConstruct } from '#jsx/jsxConstruct';
+import type { JsxAdapterProps } from '#jsx/types';
+
 import { AbstractText } from './AbstractText';
 import type { AtlasMode, AtlasPage } from './GlyphAtlas';
 import type { GlyphAtlas } from './GlyphAtlas';
@@ -198,6 +201,16 @@ export class Text extends AbstractText {
    */
   private _surfacePixelRatio = 1;
   private _surfaceMaxTextureSize: number | undefined;
+
+  /** Constructs a text node from JSX: `<Text text="Score" fontSize={24} />`. */
+  public static [jsxConstruct](
+    this: new (text: string, options?: TextOptions) => Text,
+    props: JsxAdapterProps<TextOptions & { readonly text: string }>,
+  ): Text {
+    const { text, ...options } = props;
+
+    return new this(text, options);
+  }
 
   public constructor(text: string, options: TextOptions = {}) {
     super(text, new TextStyle(options), options);

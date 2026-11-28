@@ -58,6 +58,9 @@
       "@codexo/exojs/extensions": ["./src/extensions/index.ts"],
       "@codexo/exojs/renderer-sdk": ["./src/renderer-sdk.ts"],
       "@codexo/exojs/debug": ["./src/debug/index.ts"],
+      "@codexo/exojs/jsx": ["./src/jsx/index.ts"],
+      "@codexo/exojs/jsx-runtime": ["./src/jsx/runtime.ts"],
+      "@codexo/exojs/jsx-dev-runtime": ["./src/jsx/devRuntime.ts"],
       "@codexo/exojs-demo-assets": ["./packages/exojs-demo-assets/src/index.ts"],
       "@codexo/exojs-demo-assets/extended": ["./packages/exojs-demo-assets/src/extended.ts"],
       "@codexo/exojs/particles": ["./packages/exojs-particles/src/index.ts"],
@@ -75,6 +78,6 @@
       "@examples/gallery-transitions": ["./examples/shared/gallery-transitions.ts"]
     }
   },
-  "include": ["examples/**/*.ts", "examples/tilemap/worker-streamed-terrain.js", "src/typings.d.ts"],
+  "include": ["examples/**/*.ts", "examples/**/*.tsx", "examples/tilemap/worker-streamed-terrain.js", "src/typings.d.ts"],
   "exclude": ["examples/shared/editor-support.d.ts", "examples/**/*.worker.ts"]
 }

@@ -1,0 +1,71 @@
+{
+  "title": "ObservableStructTag",
+  "description": "Type-only marker that tells an ObservableStruct apart from an ordinary object value.",
+  "symbol": "ObservableStructTag",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Type-only marker that tells an ObservableStruct apart from an ordinary object value."
+      ],
+      "importLine": "import { ObservableStructTag } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "[structTag]",
+          "signature": "[structTag]: true",
+          "signatureTokens": [
+            {
+              "text": "[structTag]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "true",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Observable.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Observable.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Observable.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Observable.ts"
+}

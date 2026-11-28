@@ -47,6 +47,7 @@ const SUBPATHS = ['tilemap', 'particles', 'audio-fx', 'physics', 'tilemap-physic
 const importMap = Object.fromEntries([
   ['@codexo/exojs', '/esm/index.js'],
   ['@codexo/exojs/debug', '/esm/debug/index.js'],
+  ['@codexo/exojs/jsx-runtime', '/esm/jsx/runtime.js'],
   ...SUBPATHS.map(subpath => [`@codexo/exojs/${subpath}`, `/esm/${subpath}/index.js`]),
 ]);
 
@@ -66,6 +67,11 @@ const probeScript = `
     report.identity.physicsDebugDraw = debug.PhysicsDebugDraw.prototype instanceof debug.DebugLayer;
     report.identity.tilemapNode = subpaths.tilemap.TileMapNode.prototype instanceof core.Container;
     report.identity.particles = subpaths.particles.ParticleSystem.prototype instanceof core.Drawable;
+
+    // Compiled JSX imports the runtime by its own specifier; the nodes it builds
+    // must be the root entry's classes.
+    const jsxRuntime = await import('@codexo/exojs/jsx-runtime');
+    report.identity.jsxRuntime = jsxRuntime.jsx(core.Container, { children: jsxRuntime.jsx(core.Sprite, {}) }).children[0] instanceof core.Sprite;
 
     // The engine derives the KTX2/Basis worker from import.meta.url; the files
     // must be at those derived URLs with a served MIME type.

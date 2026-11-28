@@ -1,16 +1,16 @@
 {
   "title": "ObservableVector",
-  "description": "An AbstractVector subclass that notifies an owner whenever its components change. Used internally by Rectangle, `SceneNode`, View and other types to invalidate cached state (normals, transforms) on mutation. Instead of a per-instance callback closure, the vector holds a reference to its `owner` plus a numeric `channel` and calls `owner._onObservableChange(channel)` on change. This keeps hot per-node vectors closure-free - a `SceneNode` carries four of these, so dropping the bound closures saves four allocations per node. Pass `owner = null` for a plain, non-reactive vector. Setting individual components (`x`, `y`) notifies only when the value actually changes. Batch mutations via `set()` notify at most once per call. Deliberately has no `clone()`. A clone is a value, not a second notification channel into this vector's owner, so it would have to hand back a plain `Vector` - and importing `Vector` here closes a module-evaluation cycle (`Vector` imports `Rectangle`, which constructs at module scope). Copy explicitly instead: `new Vector(v.x, v.y)`.",
+  "description": "An AbstractVector subclass that notifies an owner whenever its components change. Used internally by Rectangle, `SceneNode`, View and other types to invalidate cached state (normals, transforms) on mutation. Instead of a per-instance callback closure, the vector holds a reference to its `owner` plus a numeric `channel` and calls `owner._onObservableChange(channel)` on change. This keeps hot per-node vectors closure-free - a `SceneNode` carries four of these, so dropping the bound closures saves four allocations per node. Pass `owner = null` for a plain, non-reactive vector. Setting individual components (`x`, `y`) notifies only when the value actually changes. Batch mutations via `set()` notify at most once per call. It also implements ReadonlyObservable for optional observation by application code, such as `` live`Position: ${node.position}` ``: its value is the vector itself, and subscribers run after the owner was notified. Observation costs nothing until the first subscription. Deliberately has no `clone()`. A clone is a value, not a second notification channel into this vector's owner, so it would have to hand back a plain `Vector` - and importing `Vector` here closes a module-evaluation cycle (`Vector` imports `Rectangle`, which constructs at module scope). Copy explicitly instead: `new Vector(v.x, v.y)`.",
   "symbol": "ObservableVector",
   "kind": "class",
   "subsystem": "math",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 25,
+  "memberCount": 29,
   "counts": {
     "constructors": 0,
-    "methods": 20,
-    "properties": 5,
+    "methods": 23,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -22,6 +22,7 @@
         "An AbstractVector subclass that notifies an owner whenever its components change. Used internally by Rectangle, `SceneNode`, View and other types to invalidate cached state (normals, transforms) on mutation.",
         "Instead of a per-instance callback closure, the vector holds a reference to its `owner` plus a numeric `channel` and calls `owner._onObservableChange(channel)` on change. This keeps hot per-node vectors closure-free - a `SceneNode` carries four of these, so dropping the bound closures saves four allocations per node. Pass `owner = null` for a plain, non-reactive vector.",
         "Setting individual components (`x`, `y`) notifies only when the value actually changes. Batch mutations via `set()` notify at most once per call.",
+        "It also implements ReadonlyObservable for optional observation by application code, such as `` live`Position: ${node.position}` ``: its value is the vector itself, and subscribers run after the owner was notified. Observation costs nothing until the first subscription.",
         "Deliberately has no `clone()`. A clone is a value, not a second notification channel into this vector's owner, so it would have to hand back a plain `Vector` - and importing `Vector` here closes a module-evaluation cycle (`Vector` imports `Rectangle`, which constructs at module scope). Copy explicitly instead: `new Vector(v.x, v.y)`."
       ],
       "importLine": "import { ObservableVector } from '@codexo/exojs'",
@@ -494,6 +495,85 @@
           "description": "Negate both components. Mutates in place and returns this for chaining."
         },
         {
+          "name": "map",
+          "signature": "map(project: (value: this) => U): ReadonlyObservable<U>",
+          "signatureTokens": [
+            {
+              "text": "map",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "project",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "U",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyObservable",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "U",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "project",
+              "type": "(value: this) => U",
+              "optional": false
+            }
+          ],
+          "returnType": "ReadonlyObservable<U>",
+          "description": "A read-only value computed from this vector; see ReadonlyObservable.map."
+        },
+        {
           "name": "max",
           "signature": "max(): number",
           "signatureTokens": [
@@ -843,6 +923,73 @@
           "description": "Set both components. When y is omitted it defaults to x (uniform assignment). Mutates in place and returns this for chaining."
         },
         {
+          "name": "subscribe",
+          "signature": "subscribe(listener: ObservableListener<ObservableVector>): () => void",
+          "signatureTokens": [
+            {
+              "text": "subscribe",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableListener",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableVector",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "ObservableListener<ObservableVector>",
+              "optional": false
+            }
+          ],
+          "returnType": "() => void",
+          "description": "Calls listener with this vector after each change until the returned function is called. See ReadonlyObservable.subscribe."
+        },
+        {
           "name": "subtract",
           "signature": "subtract(x: number, y: number): this",
           "signatureTokens": [
@@ -909,6 +1056,35 @@
           ],
           "returnType": "this",
           "description": "Subtract (x, y) from this vector. When y is omitted it defaults to x. Mutates in place and returns this for chaining."
+        },
+        {
+          "name": "toString",
+          "signature": "toString(): string",
+          "signatureTokens": [
+            {
+              "text": "toString",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "string",
+          "description": "The components as \"x, y\", for example \"120, 80\", without rounding."
         },
         {
           "name": "transform",
@@ -1075,6 +1251,27 @@
           "params": [],
           "returnType": null,
           "description": "Squared Euclidean magnitude. Avoids the sqrt - prefer this over length when only relative comparisons are needed."
+        },
+        {
+          "name": "value",
+          "signature": "value: this",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "This vector, which keeps its identity while its components change."
         },
         {
           "name": "x",

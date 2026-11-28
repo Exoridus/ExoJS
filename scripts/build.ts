@@ -238,7 +238,7 @@ const modules = (): RolldownOptions => ({
   // types, so bundling it produced an empty chunk. Its declaration still comes
   // from the separate `tsc --emitDeclarationOnly` pass, which is all the
   // `./extensions` subpath resolves to.
-  input: ['src/index.ts', 'src/debug/index.ts', 'src/renderer-sdk.ts'],
+  input: ['src/index.ts', 'src/debug/index.ts', 'src/renderer-sdk.ts', 'src/jsx/index.ts', 'src/jsx/runtime.ts', 'src/jsx/devRuntime.ts'],
   resolve: { conditionNames: sourceConditions, mainFields: ['module', 'browser', 'main'] },
   plugins: [runtimeModuleBoundary, basisWorkerUrls(), ...shaderAndWorkletPlugins(false), ...codecovBundlePlugin('exo-esm-modules')],
   output: {

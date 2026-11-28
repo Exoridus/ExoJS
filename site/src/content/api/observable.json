@@ -1,0 +1,760 @@
+{
+  "title": "Observable",
+  "description": "A mutable value that notifies its subscribers when it changes. ```ts const health = new Observable(100); const status = health.map(hp => (hp > 50 ? 'Healthy' : 'Wounded')); health.value -= 60; // status subscribers receive 'Wounded' ``` Assigning value notifies only when the new value differs by `Object.is`, so repeated equal assignments cost a comparison and nothing else. An object mutated in place keeps its identity and therefore needs markChanged or mutate to notify and to make derived values recompute. Primitive assignments allocate nothing; outside a batch, a listener throwing aborts the remaining listeners of that notification and propagates to the assignment.",
+  "symbol": "Observable",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 17,
+  "counts": {
+    "constructors": 1,
+    "methods": 14,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A mutable value that notifies its subscribers when it changes.",
+        "```ts const health = new Observable(100); const status = health.map(hp => (hp > 50 ? 'Healthy' : 'Wounded'));",
+        "health.value -= 60; // status subscribers receive 'Wounded' ```",
+        "Assigning value notifies only when the new value differs by `Object.is`, so repeated equal assignments cost a comparison and nothing else. An object mutated in place keeps its identity and therefore needs markChanged or mutate to notify and to make derived values recompute. Primitive assignments allocate nothing; outside a batch, a listener throwing aborts the remaining listeners of that notification and propagates to the assignment."
+      ],
+      "importLine": "import { Observable } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(value: T): Observable<T>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Observable",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "Observable<T>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_connect",
+          "signature": "_connect(): void",
+          "signatureTokens": [
+            {
+              "text": "_connect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Starts observing upstream sources; called when the first listener subscribes."
+        },
+        {
+          "name": "_current",
+          "signature": "_current(): T",
+          "signatureTokens": [
+            {
+              "text": "_current",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "T",
+          "description": "The value delivered to listeners."
+        },
+        {
+          "name": "_disconnect",
+          "signature": "_disconnect(): void",
+          "signatureTokens": [
+            {
+              "text": "_disconnect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Stops observing upstream sources; called after the last listener unsubscribed."
+        },
+        {
+          "name": "_end",
+          "signature": "_end(): void",
+          "signatureTokens": [
+            {
+              "text": "_end",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Removes every listener and stops observing upstream sources. Later subscriptions are ignored."
+        },
+        {
+          "name": "_enqueue",
+          "signature": "_enqueue(): void",
+          "signatureTokens": [
+            {
+              "text": "_enqueue",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "_notify",
+          "signature": "_notify(): void",
+          "signatureTokens": [
+            {
+              "text": "_notify",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Delivers now, or queues the delivery while a batch is open or being delivered."
+        },
+        {
+          "name": "_refresh",
+          "signature": "_refresh(): boolean",
+          "signatureTokens": [
+            {
+              "text": "_refresh",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "boolean",
+          "description": "Recomputes before a queued delivery; returns false when there is nothing to deliver."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Removes every subscriber. The value stays readable and assignable, but nothing is notified any more and later subscriptions are ignored. Values derived from it keep their own subscribers and stop receiving changes."
+        },
+        {
+          "name": "map",
+          "signature": "map(project: (value: T) => U): ReadonlyObservable<U>",
+          "signatureTokens": [
+            {
+              "text": "map",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "project",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "U",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyObservable",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "U",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "project",
+              "type": "(value: T) => U",
+              "optional": false
+            }
+          ],
+          "returnType": "ReadonlyObservable<U>",
+          "description": "A read-only value computed from this one by project, which must depend on its argument only. It subscribes to this value only while it has subscribers itself, and notifies only when the result differs from the last one it notified (Object.is), or when the result is a newly computed object, which may have been mutated in place. The result is computed lazily and reused while nothing it depends on changed, whether or not it has subscribers. Derived from writable Observables, each change computes every affected derived value at most once, also across chains and shared dependencies, and never from a mix of old and new values. Vectors, sizes and observables implemented outside the engine cannot report changes while unobserved: a value derived from one recomputes on every read while nothing observes the source."
+        },
+        {
+          "name": "markChanged",
+          "signature": "markChanged(): void",
+          "signatureTokens": [
+            {
+              "text": "markChanged",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Notifies subscribers without assigning, for an object value that was changed in place. Derived values recompute on their next read."
+        },
+        {
+          "name": "mutate",
+          "signature": "mutate(mutate: (value: T) => void): void",
+          "signatureTokens": [
+            {
+              "text": "mutate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mutate",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "mutate",
+              "type": "(value: T) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Calls mutate with the current value, then notifies subscribers once. When mutate throws, derived values still recompute on their next read, as the value may have been changed partway, but nothing is notified."
+        },
+        {
+          "name": "subscribe",
+          "signature": "subscribe(listener: ObservableListener<T>): () => void",
+          "signatureTokens": [
+            {
+              "text": "subscribe",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableListener",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "ObservableListener<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "() => void",
+          "description": "Calls listener after every change until the returned function is called. Listeners run in subscription order. Subscribing the same function again has no effect, and calling the returned function more than once is safe."
+        },
+        {
+          "name": "batch",
+          "signature": "batch(update: () => Synchronous): void",
+          "signatureTokens": [
+            {
+              "text": "batch",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "update",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "update",
+              "type": "() => Synchronous",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Runs update with notifications deferred: every write takes effect immediately, and subscribers are notified once, after the outermost batch completes, with the final values. ts Observable.batch(() => { player.health.value = 100; player.stats.ammo.value = 30; player.stats.level.value++; });  - Reads inside the batch see the written values; derived values compute from the current sources. - Values are delivered in the order they first changed, and each derived value after everything it depends on. A derived value recomputes once and notifies only if its result changed, so a text built from several changed values is computed and applied once. - Batches nest; only the outermost one delivers. Changes made by listeners during the delivery are delivered in the same pass. - There is no rollback. When update throws, the writes made so far stay, their notifications are delivered, and the error is rethrown. A throwing listener stops the remaining listeners of that value, as outside a batch, but every other queued value is still delivered; the first error is rethrown afterwards. - Owner notifications of vectors and sizes, such as transform invalidation, are never deferred; only their subscribers are."
+        },
+        {
+          "name": "struct",
+          "signature": "struct(members: T): ObservableStruct<T>",
+          "signatureTokens": [
+            {
+              "text": "struct",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "members",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObservableStruct",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "members",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "ObservableStruct<T>",
+          "description": "Builds a frozen record with one observable per member of members: ts const player = Observable.struct({ name: 'Hero', health: 100, stats: Observable.struct({ ammo: 30, level: 1 }), }); player.health.value -= 10; player.stats.ammo.value--;  Each own enumerable member, string or symbol keyed, becomes an Observable holding that value; special names such as __proto__ are ordinary members. Members that already are observables (including derived values, vectors and sizes) or structs are kept as they are, by identity, so several structs can share them. Nothing is traversed: a nested object or array is stored as the value of one observable; nest structs explicitly instead. members itself is not modified. A struct owns nothing and has no teardown. The observables it created belong to whoever holds the struct and need no cleanup beyond dropping it; shared observables stay owned by their creator, and destroying one affects every struct that holds it."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "subscriberCount",
+          "signature": "subscriberCount: number",
+          "signatureTokens": [
+            {
+              "text": "subscriberCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of listeners currently subscribed."
+        },
+        {
+          "name": "value",
+          "signature": "value: T",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Observable.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Observable.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Observable.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Observable.ts"
+}

@@ -19,9 +19,20 @@ export { Coroutine, CoroutineSystem } from './CoroutineSystem';
 export { DestroyScope } from './DestroyScope';
 export type { FrameBudget } from './FrameBudget';
 export { InlineWorker, type InlineWorkerOptions } from './InlineWorker';
+export { live, type LiveResult } from './live';
 export type { LoadStateValue } from './LoadState';
 export type { LogEntry, LogOptions, LogSink } from './Logger';
 export { Logger, logger, LogSeverity } from './Logger';
+export {
+  isObservable,
+  Observable,
+  type ObservableListener,
+  type ObservableStruct,
+  type ObservableStructMember,
+  type ObservableStructTag,
+  type ObservedValue,
+  type ReadonlyObservable,
+} from './Observable';
 export { Perf } from './Perf';
 export { SceneNode } from './SceneNode';
 export { SequenceCancelledError } from './sequence/SequenceCancelledError';

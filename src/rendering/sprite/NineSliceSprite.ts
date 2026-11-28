@@ -1,3 +1,5 @@
+import { jsxConstruct } from '#jsx/jsxConstruct';
+import type { JsxAdapterProps } from '#jsx/types';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 import { invalidateOnTextureLoad } from '#rendering/texture/deferredTexture';
@@ -38,6 +40,16 @@ export class NineSliceSprite extends Drawable {
   private _geometryDirty = true;
   /** Texture version the cached quads were built against; -1 before the first build. */
   private _builtTextureVersion = -1;
+
+  /** Constructs a nine-slice sprite from JSX: `<NineSliceSprite texture={frame} left={12} right={12} top={12} bottom={12} />`. */
+  public static [jsxConstruct](
+    this: new (texture: Texture | TextureRegion, options: NineSliceOptions) => NineSliceSprite,
+    props: JsxAdapterProps<NineSliceOptions & { readonly texture: Texture | TextureRegion }>,
+  ): NineSliceSprite {
+    const { texture, ...options } = props;
+
+    return new this(texture, options);
+  }
 
   public constructor(texture: Texture | TextureRegion, options: NineSliceOptions) {
     super();

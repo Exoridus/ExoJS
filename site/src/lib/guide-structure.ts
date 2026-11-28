@@ -150,6 +150,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['component', 'behavior-component', 'component-query'],
       },
       {
+        path: 'runtime/observable-values',
+        level: 'intermediate',
+        learningGoals: [
+          'Hold game and UI state in observable values and derive read-only values from them',
+          'Observe vectors and sizes and build live text without per-frame polling',
+        ],
+        prerequisites: ['runtime/scene-graph'],
+        examples: [],
+        apiLinks: ['observable', 'observable-struct', 'readonly-observable', 'observable-vector', 'observable-size'],
+      },
+      {
         path: 'runtime/coordinates-and-views',
         level: 'intermediate',
         learningGoals: [
@@ -215,6 +226,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         prerequisites: ['runtime/scenes-and-lifecycle', 'input/keyboard-and-actions'],
         examples: ['ui/hud-and-widgets', 'ui/settings-menu', 'ui/text-entry-and-scrolling'],
         apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'interaction-system'],
+      },
+      {
+        path: 'runtime/jsx-construction',
+        level: 'intermediate',
+        learningGoals: [
+          'Configure TypeScript and Vite for the ExoJS JSX runtime',
+          'Compose menus and scene graphs from constructors, existing instances and typed element functions',
+        ],
+        prerequisites: ['runtime/scene-graph', 'runtime/ui-and-widgets'],
+        examples: [],
+        apiLinks: ['container', 'sprite', 'panel', 'button', 'prefab'],
       },
     ],
   },
