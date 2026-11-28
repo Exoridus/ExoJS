@@ -10,7 +10,7 @@
 export type { BackendRenderPass } from './BackendRenderPass';
 export type { CallbackRenderPassOptions } from './CallbackRenderPass';
 export { CallbackRenderPass } from './CallbackRenderPass';
-export { Container } from './Container';
+export { Container, type FindNodeOptions } from './Container';
 export { Drawable } from './Drawable';
 export type { DrawContext, RenderToOptions } from './DrawContext';
 export type { FilterPassOptions } from './FilterPass';

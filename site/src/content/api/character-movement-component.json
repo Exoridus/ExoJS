@@ -6,10 +6,10 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs/physics",
   "tier": "stable",
-  "memberCount": 30,
+  "memberCount": 31,
   "counts": {
     "constructors": 1,
-    "methods": 8,
+    "methods": 9,
     "properties": 21,
     "events": 0
   },
@@ -196,6 +196,35 @@
           ],
           "returnType": "void",
           "description": "Replaces the character's airborne velocity with velocity, in world units per second, at the start of the next fixed step, and lets it leave the ground. Launching from a moving support adds the support's velocity. Gravity then acts on it until the character lands, hits a ceiling or wall that absorbs it, or is launched again. Walking input adds on top and is not part of it. Applies once, however many fixed steps the next advance runs, and works whether or not the character is grounded. Launching with zero velocity cancels the airborne velocity."
+        },
+        {
+          "name": "markChanged",
+          "signature": "markChanged(): void",
+          "signatureTokens": [
+            {
+              "text": "markChanged",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Report that this component's state changed, so every change observer (ComponentQuery.changed) over a query that matches it lists its node once in its next pass. Nothing is tracked automatically: call it after the writes other code should react to. Cheap and idempotent within a pass: it stores one number, whatever the number of observers. A component outside any scene has nothing to report to; joining a scene counts as a change on its own."
         },
         {
           "name": "move",

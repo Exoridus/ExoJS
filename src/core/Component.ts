@@ -106,6 +106,8 @@ export abstract class Component<N extends SceneNode = SceneNode> {
   public _member = false;
   /** Monotonic stamp of the publication; iterations started earlier skip it. @internal */
   public _joinStamp = 0;
+  /** Stamp of the last {@link markChanged} in {@link _runtime}'s clock, or `0`. @internal */
+  public _changeStamp = 0;
   /** Whether a frame dispatch list may call this component this frame. @internal */
   public _ticking = false;
   /**
@@ -178,6 +180,20 @@ export abstract class Component<N extends SceneNode = SceneNode> {
    */
   public get scene(): Scene | null {
     return this._runtime?.scene ?? null;
+  }
+
+  /**
+   * Report that this component's state changed, so every change observer
+   * ({@link ComponentQuery.changed}) over a query that matches it lists its
+   * node once in its next pass. Nothing is tracked automatically: call it after
+   * the writes other code should react to.
+   *
+   * Cheap and idempotent within a pass: it stores one number, whatever the
+   * number of observers. A component outside any scene has nothing to report
+   * to; joining a scene counts as a change on its own.
+   */
+  public markChanged(): void {
+    this._runtime?.markChanged(this);
   }
 
   /**

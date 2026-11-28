@@ -99,6 +99,13 @@ export class ComponentRuntime {
     return this._index.get(type);
   }
 
+  /** Stamp a change on `component`, in the same clock as publication. */
+  public markChanged(component: Component): void {
+    if (component._runtime === this && !this._disposed) {
+      component._changeStamp = ++this._stamp;
+    }
+  }
+
   /** Whether `component` is a member here, published no later than `stamp`. */
   public isVisible(component: Component | undefined, stamp: number): boolean {
     return component !== undefined && component._runtime === this && component._member && component._joinStamp <= stamp;
@@ -185,6 +192,8 @@ export class ComponentRuntime {
 
     component._member = true;
     component._joinStamp = ++this._stamp;
+    // A stamp from another runtime's clock means nothing here; joining is itself the change.
+    component._changeStamp = 0;
     this._members.add(component);
 
     const type = component.constructor as ComponentClass;

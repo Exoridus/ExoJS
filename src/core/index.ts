@@ -27,9 +27,9 @@ export { SceneNode } from './SceneNode';
 export type { SequenceContext, SequenceInput, SequenceOptions, SequenceResult, SequenceStatus, SequenceStep } from './sequence/Sequence';
 export { isSequenceCancellation, Sequence, SequenceHandle } from './sequence/Sequence';
 export { Signal } from './Signal';
-export type { System, SystemMethods } from './System';
+export type { System, SystemContext, SystemLifecycle, SystemMethods } from './System';
 export { SystemOrder } from './SystemOrder';
-export type { SystemPhase, SystemRegistrationOptions } from './SystemRegistry';
+export type { SystemClass, SystemPhase, SystemRegistrationOptions } from './SystemRegistry';
 export { SystemRegistry } from './SystemRegistry';
 export { Timer } from './Timer';
 export type {
