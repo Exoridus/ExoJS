@@ -1,6 +1,6 @@
 {
   "title": "Observable",
-  "description": "A mutable value that notifies its subscribers when it changes. ```ts const health = new Observable(100); const status = health.map(hp => (hp > 50 ? 'Healthy' : 'Wounded')); health.value -= 60; // status subscribers receive 'Wounded' ``` Assigning value notifies only when the new value differs by `Object.is`, so repeated equal assignments cost a comparison and nothing else. An object mutated in place keeps its identity and therefore needs markChanged or mutate to notify. Primitive assignments allocate nothing; outside a batch, a listener throwing aborts the remaining listeners of that notification and propagates to the assignment.",
+  "description": "A mutable value that notifies its subscribers when it changes. ```ts const health = new Observable(100); const status = health.map(hp => (hp > 50 ? 'Healthy' : 'Wounded')); health.value -= 60; // status subscribers receive 'Wounded' ``` Assigning value notifies only when the new value differs by `Object.is`, so repeated equal assignments cost a comparison and nothing else. An object mutated in place keeps its identity and therefore needs markChanged or mutate to notify and to make derived values recompute. Primitive assignments allocate nothing; outside a batch, a listener throwing aborts the remaining listeners of that notification and propagates to the assignment.",
   "symbol": "Observable",
   "kind": "class",
   "subsystem": "core",
@@ -22,7 +22,7 @@
         "A mutable value that notifies its subscribers when it changes.",
         "```ts const health = new Observable(100); const status = health.map(hp => (hp > 50 ? 'Healthy' : 'Wounded'));",
         "health.value -= 60; // status subscribers receive 'Wounded' ```",
-        "Assigning value notifies only when the new value differs by `Object.is`, so repeated equal assignments cost a comparison and nothing else. An object mutated in place keeps its identity and therefore needs markChanged or mutate to notify. Primitive assignments allocate nothing; outside a batch, a listener throwing aborts the remaining listeners of that notification and propagates to the assignment."
+        "Assigning value notifies only when the new value differs by `Object.is`, so repeated equal assignments cost a comparison and nothing else. An object mutated in place keeps its identity and therefore needs markChanged or mutate to notify and to make derived values recompute. Primitive assignments allocate nothing; outside a batch, a listener throwing aborts the remaining listeners of that notification and propagates to the assignment."
       ],
       "importLine": "import { Observable } from '@codexo/exojs'",
       "sourceLink": null
@@ -408,7 +408,7 @@
             }
           ],
           "returnType": "ReadonlyObservable<U>",
-          "description": "A read-only value computed from this one by project. It subscribes to this value only while it has subscribers itself, computes on every read of its value, and notifies only when the result differs from the last one it notified (Object.is), or when the result is an object, which may have been mutated in place."
+          "description": "A read-only value computed from this one by project, which must depend on its argument only. It subscribes to this value only while it has subscribers itself, and notifies only when the result differs from the last one it notified (Object.is), or when the result is a newly computed object, which may have been mutated in place. The result is computed lazily and reused while nothing it depends on changed, whether or not it has subscribers. Derived from writable Observables, each change computes every affected derived value at most once, also across chains and shared dependencies, and never from a mix of old and new values. Vectors, sizes and observables implemented outside the engine cannot report changes while unobserved: a value derived from one recomputes on every read."
         },
         {
           "name": "markChanged",
@@ -437,7 +437,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Notifies subscribers without assigning, for an object value that was changed in place."
+          "description": "Notifies subscribers without assigning, for an object value that was changed in place. Derived values recompute on their next read."
         },
         {
           "name": "mutate",
@@ -685,7 +685,7 @@
             }
           ],
           "returnType": "ObservableStruct<T>",
-          "description": "Builds a frozen record with one observable per member of members: ts const player = Observable.struct({ name: 'Hero', health: 100, stats: Observable.struct({ ammo: 30, level: 1 }), }); player.health.value -= 10; player.stats.ammo.value--;  Each own enumerable member becomes an Observable holding that value. Members that already are observables (including derived values, vectors and sizes) or structs are kept as they are, by identity, so several structs can share them. Nothing is traversed: a nested object or array is stored as the value of one observable; nest structs explicitly instead. members itself is not modified. A struct owns nothing and has no teardown. The observables it created belong to whoever holds the struct and need no cleanup beyond dropping it; shared observables stay owned by their creator, and destroying one affects every struct that holds it."
+          "description": "Builds a frozen record with one observable per member of members: ts const player = Observable.struct({ name: 'Hero', health: 100, stats: Observable.struct({ ammo: 30, level: 1 }), }); player.health.value -= 10; player.stats.ammo.value--;  Each own enumerable member, string or symbol keyed, becomes an Observable holding that value; special names such as __proto__ are ordinary members. Members that already are observables (including derived values, vectors and sizes) or structs are kept as they are, by identity, so several structs can share them. Nothing is traversed: a nested object or array is stored as the value of one observable; nest structs explicitly instead. members itself is not modified. A struct owns nothing and has no teardown. The observables it created belong to whoever holds the struct and need no cleanup beyond dropping it; shared observables stay owned by their creator, and destroying one affects every struct that holds it."
         }
       ],
       "paragraphs": [],

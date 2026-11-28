@@ -26,11 +26,19 @@ export interface ReadonlyObservable<T> {
   subscribe(listener: ObservableListener<T>): () => void;
 
   /**
-   * A read-only value computed from this one by `project`. It subscribes to
-   * this value only while it has subscribers itself, computes on every read of
-   * its `value`, and notifies only when the result differs from the last one it
-   * notified (`Object.is`), or when the result is an object, which may have
-   * been mutated in place.
+   * A read-only value computed from this one by `project`, which must depend
+   * on its argument only. It subscribes to this value only while it has
+   * subscribers itself, and notifies only when the result differs from the
+   * last one it notified (`Object.is`), or when the result is a newly computed
+   * object, which may have been mutated in place.
+   *
+   * The result is computed lazily and reused while nothing it depends on
+   * changed, whether or not it has subscribers. Derived from writable
+   * {@link Observable}s, each change computes every affected derived value at
+   * most once, also across chains and shared dependencies, and never from a
+   * mix of old and new values. Vectors, sizes and observables implemented
+   * outside the engine cannot report changes while unobserved: a value
+   * derived from one recomputes on every read.
    */
   map<U>(project: (value: T) => U): ReadonlyObservable<U>;
 }
@@ -175,6 +183,11 @@ export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
   /** @internal Distance from the writable sources: queued deliveries run in ascending rank, so a derived value follows everything it depends on. */
   public _rank(): number {
     return 0;
+  }
+
+  /** @internal Changes whenever the value may have changed; `NaN`, never equal to itself, for an observable that cannot tell. */
+  public _version(): number {
+    return Number.NaN;
   }
 
   /** Recomputes before a queued delivery; returns `false` when there is nothing to deliver. */
@@ -330,19 +343,31 @@ const flush = (): void => {
 const isSettled = (previous: unknown, next: unknown): boolean =>
   Object.is(previous, next) && (typeof next !== 'object' || next === null) && typeof next !== 'function';
 
-/** A read-only value computed from other observables. */
+const versionOf = (source: ReadonlyObservable<unknown>): number => (source instanceof ObservableBase ? source._version() : Number.NaN);
+
+/**
+ * A read-only value computed from other observables. It caches its result
+ * together with the versions of its sources and recomputes only when a source
+ * version changed, so reading it, and reading values derived from it, costs a
+ * version comparison per source while nothing changed.
+ */
 class DerivedObservable<T> extends ObservableBase<T> {
   private readonly _sources: ReadonlyArray<ReadonlyObservable<unknown>>;
   private readonly _compute: () => T;
   private readonly _unsubscribers: Array<() => void> = [];
   private readonly _depth: number;
-  private _last: T | undefined = undefined;
+  private readonly _seen: number[];
+  private _computed = false;
+  private _cached: T | undefined = undefined;
+  private _changes = 0;
+  private _delivered = 0;
 
   public constructor(sources: ReadonlyArray<ReadonlyObservable<unknown>>, compute: () => T) {
     super();
 
     this._sources = sources;
     this._compute = compute;
+    this._seen = sources.map(() => Number.NaN);
 
     let depth = 0;
 
@@ -359,12 +384,20 @@ class DerivedObservable<T> extends ObservableBase<T> {
     return this._depth;
   }
 
+  public override _version(): number {
+    this._validate();
+
+    return this._changes;
+  }
+
   public get value(): T {
-    return this._compute();
+    this._validate();
+
+    return this._cached as T;
   }
 
   protected override _connect(): void {
-    this._last = this._compute();
+    this._delivered = this._version();
 
     for (const source of this._sources) {
       this._unsubscribers.push(source.subscribe(this._onSourceChange));
@@ -377,23 +410,52 @@ class DerivedObservable<T> extends ObservableBase<T> {
     }
 
     this._unsubscribers.length = 0;
-    this._last = undefined;
-  }
-
-  protected override _current(): T {
-    return this._last as T;
   }
 
   protected override _refresh(): boolean {
-    const next = this._compute();
+    const changes = this._version();
 
-    if (isSettled(this._last, next)) {
+    if (changes === this._delivered) {
       return false;
     }
 
-    this._last = next;
+    this._delivered = changes;
 
     return true;
+  }
+
+  /** Recomputes unless every source still has the version seen by the last computation. */
+  private _validate(): void {
+    const sources = this._sources;
+    const seen = this._seen;
+
+    if (this._computed) {
+      let index = 0;
+
+      while (index < sources.length && seen[index] === versionOf(sources[index]!)) {
+        index++;
+      }
+
+      if (index === sources.length) {
+        return;
+      }
+    }
+
+    // Cleared first so that a throwing computation is retried on the next read.
+    this._computed = false;
+
+    const next = this._compute();
+
+    for (let index = 0; index < sources.length; index++) {
+      seen[index] = versionOf(sources[index]!);
+    }
+
+    if (this._changes === 0 || !isSettled(this._cached, next)) {
+      this._changes++;
+    }
+
+    this._cached = next;
+    this._computed = true;
   }
 
   private readonly _onSourceChange = (): void => {
@@ -428,12 +490,14 @@ export const derive = <T>(sources: ReadonlyArray<ReadonlyObservable<unknown>>, c
  * Assigning {@link value} notifies only when the new value differs by
  * `Object.is`, so repeated equal assignments cost a comparison and nothing else.
  * An object mutated in place keeps its identity and therefore needs
- * {@link markChanged} or {@link mutate} to notify. Primitive assignments
+ * {@link markChanged} or {@link mutate} to notify and to make derived values
+ * recompute. Primitive assignments
  * allocate nothing; outside a batch, a listener throwing aborts the remaining
  * listeners of that notification and propagates to the assignment.
  */
 export class Observable<T> extends ObservableBase<T> {
   private _value: T;
+  private _changes = 0;
 
   public constructor(value: T) {
     super();
@@ -448,18 +512,29 @@ export class Observable<T> extends ObservableBase<T> {
   public set value(value: T) {
     if (!Object.is(this._value, value)) {
       this._value = value;
+      this._changes++;
       this._notify();
     }
   }
 
-  /** Notifies subscribers without assigning, for an object value that was changed in place. */
+  /** @internal */
+  public override _version(): number {
+    return this._changes;
+  }
+
+  /**
+   * Notifies subscribers without assigning, for an object value that was
+   * changed in place. Derived values recompute on their next read.
+   */
   public markChanged(): void {
+    this._changes++;
     this._notify();
   }
 
   /** Calls `mutate` with the current value, then notifies subscribers once. */
   public mutate(mutate: (value: T) => void): void {
     mutate(this._value);
+    this._changes++;
     this._notify();
   }
 
@@ -486,8 +561,9 @@ export class Observable<T> extends ObservableBase<T> {
    * player.stats.ammo.value--;
    * ```
    *
-   * Each own enumerable member becomes an {@link Observable} holding that
-   * value. Members that already are observables (including derived values,
+   * Each own enumerable member, string or symbol keyed, becomes an
+   * {@link Observable} holding that value; special names such as `__proto__`
+   * are ordinary members. Members that already are observables (including derived values,
    * vectors and sizes) or structs are kept as they are, by identity, so several
    * structs can share them. Nothing is traversed: a nested object or array is
    * stored as the value of one observable; nest structs explicitly instead.
@@ -505,15 +581,24 @@ export class Observable<T> extends ObservableBase<T> {
       throw new TypeError('Observable.struct(): the members must be a plain object.');
     }
 
-    const struct: Record<string, unknown> = {};
+    const struct = {};
 
-    for (const key of Object.keys(members)) {
-      const member = members[key];
+    for (const key of Reflect.ownKeys(members)) {
+      // The tag of a spread struct copy is set below, not wrapped as a member.
+      if (key === structTag || !Object.prototype.propertyIsEnumerable.call(members, key)) {
+        continue;
+      }
 
-      struct[key] = isObservable(member) || isStruct(member) ? member : new Observable(member);
+      const member = (members as Record<PropertyKey, unknown>)[key];
+
+      // Defined rather than assigned: assigning `__proto__` would replace the prototype instead of adding a member.
+      Object.defineProperty(struct, key, {
+        value: isObservable(member) || isStruct(member) ? member : new Observable(member),
+        enumerable: true,
+      });
     }
 
-    (struct as Record<PropertyKey, unknown>)[structTag] = true;
+    Object.defineProperty(struct, structTag, { value: true, enumerable: true });
 
     return Object.freeze(struct) as ObservableStruct<T>;
   }

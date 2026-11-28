@@ -61,7 +61,7 @@ health.value = 90; // status is still 'Healthy': nothing is logged
 health.value = 40; // logs 'Wounded'
 ```
 
-A derived value is lazy. It subscribes to its source only while it has subscribers itself, so a derived value nobody observes costs nothing and is garbage-collected normally. Reading its `value` always computes the current result. It notifies only when the result changes, except for objects, which may have changed in place and therefore always notify.
+A derived value is lazy. It subscribes to its source only while it has subscribers itself, so a derived value nobody observes costs nothing and is garbage-collected normally. Reading its `value` always returns the current result: it is computed on demand and reused until something it depends on changes. Over writable observables, a change computes each affected derived value at most once, also along chains and when several derived values share a source, and never from a mix of old and new values. Vectors, sizes and observables from outside the engine cannot report changes while nobody observes them, so a value derived from one is recomputed on every read. A projection must therefore depend only on its sources, never on other state. A derived value notifies only when the result changes, except for newly computed objects, which may have changed in place and therefore always notify.
 
 ## Structs
 

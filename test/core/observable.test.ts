@@ -225,6 +225,85 @@ describe('derived values', () => {
     expect(listener).toHaveBeenCalledWith(10);
   });
 
+  test('compute each projection of a chain once per change and reuse results on reads', () => {
+    const value = new Observable(1);
+    const counts = { a: 0, b: 0, c: 0 };
+    const a = value.map(n => (counts.a++, n + 1));
+    const b = a.map(n => (counts.b++, n * 2));
+    const c = b.map(n => (counts.c++, `${n} pts`));
+    const seen: string[] = [];
+
+    c.subscribe(next => seen.push(next));
+    expect(counts).toEqual({ a: 1, b: 1, c: 1 });
+
+    value.value = 2;
+    expect(counts).toEqual({ a: 2, b: 2, c: 2 });
+
+    Observable.batch(() => {
+      value.value = 3;
+    });
+    expect(counts).toEqual({ a: 3, b: 3, c: 3 });
+
+    expect([a.value, b.value, c.value, c.value]).toEqual([4, 8, '8 pts', '8 pts']);
+    expect(counts).toEqual({ a: 3, b: 3, c: 3 });
+    expect(seen).toEqual(['6 pts', '8 pts']);
+  });
+
+  test('compute each value of a diamond once per change, from consistent sources', () => {
+    const base = new Observable(1);
+    const counts = { left: 0, right: 0, joined: 0 };
+    const left = base.map(n => (counts.left++, n * 2));
+    const right = base.map(n => (counts.right++, n * 3));
+    const joined = live`${left}+${right}`.map(text => (counts.joined++, { text }));
+    const seen: string[] = [];
+
+    joined.subscribe(next => seen.push(next.text));
+    left.subscribe(() => undefined);
+    right.subscribe(() => undefined);
+    counts.left = counts.right = counts.joined = 0;
+
+    base.value = 2;
+    expect(counts).toEqual({ left: 1, right: 1, joined: 1 });
+
+    Observable.batch(() => {
+      base.value = 3;
+      base.value = 4;
+    });
+    expect(counts).toEqual({ left: 2, right: 2, joined: 2 });
+
+    // An object result notifies once per recomputation, not once per changed source.
+    expect(seen).toEqual(['4+6', '8+12']);
+  });
+
+  test('reuse the result while unobserved until a source changes or is marked changed', () => {
+    const items = new Observable(['a']);
+    let computes = 0;
+    const count = items.map(list => (computes++, list.length));
+
+    expect([count.value, count.value]).toEqual([1, 1]);
+    expect(computes).toBe(1);
+
+    items.value[0] = 'b';
+    expect(count.value).toBe(1);
+    expect(computes).toBe(1);
+
+    items.mutate(list => list.push('c'));
+    expect(count.value).toBe(2);
+    expect(computes).toBe(2);
+  });
+
+  test('recompute on every read when a source cannot report changes while unobserved', () => {
+    const position = new ObservableVector(null, 0, 1, 2);
+    let computes = 0;
+    const x = position.map(p => (computes++, p.x));
+
+    expect([x.value, x.value]).toEqual([1, 1]);
+    expect(computes).toBe(2);
+
+    position.x = 5;
+    expect(x.value).toBe(5);
+  });
+
   test('keep their own subscribers when a source is destroyed', () => {
     const value = new Observable(1);
     const mapped = value.map(n => n + 1);
@@ -298,6 +377,28 @@ describe('Observable.struct', () => {
     expect(odd.value.value).toBe(1);
     expect(odd.map.value).toBe('world');
     expect(isObservable(odd)).toBe(false);
+  });
+
+  test('keeps symbol keys and __proto__ as ordinary members', () => {
+    const id = Symbol('id');
+    const hidden = Symbol('hidden');
+    const members = { [id]: 7, ['__proto__']: 'proto' } as { [id]: number; __proto__: string };
+
+    Object.defineProperty(members, hidden, { value: 1, enumerable: false });
+
+    const struct = Observable.struct(members);
+
+    expect(struct[id].value).toBe(7);
+    expect(Object.getPrototypeOf(struct)).toBe(Object.prototype);
+    expect(Object.hasOwn(struct, '__proto__')).toBe(true);
+    expect((Object.getOwnPropertyDescriptor(struct, '__proto__')!.value as Observable<string>).value).toBe('proto');
+    expect(Object.getOwnPropertySymbols(struct)).not.toContain(hidden);
+    expect(Object.isFrozen(struct)).toBe(true);
+
+    const parsed = Observable.struct(JSON.parse('{"__proto__": 1}') as object);
+
+    expect(Object.keys(parsed)).toEqual(['__proto__']);
+    expect(Object.getPrototypeOf(parsed)).toBe(Object.prototype);
   });
 
   test('shares one observable between structs', () => {
