@@ -9,7 +9,7 @@ export type { DecompressFormat } from './Codec';
 export { Codec } from './Codec';
 export type { ColorInput } from './Color';
 export { Color } from './Color';
-export type { ComponentClass, ComponentHost, ComponentHostCheck } from './Component';
+export type { ComponentClass, ComponentFor, ComponentHost, ComponentHostCheck } from './Component';
 export { Component } from './Component';
 export type { ComponentQueryComponents, ComponentQueryRow } from './ComponentQuery';
 export { ComponentQuery } from './ComponentQuery';

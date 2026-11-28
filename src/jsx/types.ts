@@ -1,5 +1,6 @@
 import type { BindableSource, WritableKeys } from '#core/bindProperty';
 import type { Color } from '#core/Color';
+import type { ComponentFor } from '#core/Component';
 import type { ReadonlyObservable } from '#core/Observable';
 import type { Signal } from '#core/Signal';
 import type { Container } from '#rendering/Container';
@@ -150,6 +151,7 @@ type ReservedLiteral<C extends JsxNodeClass> =
   | (InstanceType<C> extends Drawable ? keyof JsxDrawableProps : never)
   | `on${Capitalize<string>}`
   | 'children'
+  | 'components'
   | 'ref'
   | 'key';
 
@@ -165,8 +167,8 @@ type ReservedName<C extends JsxNodeClass> =
 /**
  * Reported in place of the construction props when a class's options use a
  * name JSX reserves: a node property, which JSX assigns through its setter, an
- * `on*` name, which JSX treats as a signal handler, or `children`, `ref` or
- * `key`, which the compiler and JSX consume. Either way the constructor would
+ * `on*` name, which JSX treats as a signal handler, or `children`,
+ * `components`, `ref` or `key`, which the compiler and JSX consume. Either way the constructor would
  * never receive the value. Give the option another prop name
  * in a {@link jsxConstruct} adapter.
  */
@@ -181,7 +183,8 @@ export type JsxChildrenProp<I> = I extends Container ? { readonly children?: Jsx
 /**
  * Everything an element of class `C` accepts: its construction props, the
  * shared node properties, its signal handlers, children when it is a container,
- * and an optional `ref` called with the finished instance.
+ * components for its instance, and an optional `ref` called with the finished
+ * instance.
  */
 export type JsxElementProps<C extends JsxNodeClass> = ([ReservedName<C>] extends [never]
   ? JsxBindableOptions<JsxConstructionProps<C>, InstanceType<C>>
@@ -190,6 +193,14 @@ export type JsxElementProps<C extends JsxNodeClass> = ([ReservedName<C>] extends
   (InstanceType<C> extends Drawable ? JsxDrawableProps : Record<never, never>) &
   Omit<JsxSignalProps<InstanceType<C>>, keyof JsxConstructionProps<C>> &
   JsxChildrenProp<InstanceType<C>> & {
+    /**
+     * Components attached to the instance with {@link SceneNode.addComponent},
+     * in list order, after its children and before its `ref`. Each must accept
+     * the instance as its host, as `addComponent` requires. The components
+     * stay the caller's: when the element or an enclosing
+     * {@link jsxTransaction} fails, they are detached, never destroyed.
+     */
+    readonly components?: ReadonlyArray<ComponentFor<InstanceType<C>>>;
     /**
      * Called once with the instance after it and its children were built and
      * attached. A later failure in an enclosing element detaches the instance

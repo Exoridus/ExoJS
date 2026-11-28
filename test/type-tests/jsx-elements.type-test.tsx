@@ -103,7 +103,7 @@ export const numberChild = <Container>{42}</Container>;
 // through setters and keeps children, ref and key, so a shared name would never
 // reach the constructor.
 type Shared<C extends JsxNodeClass> = keyof JsxConstructionProps<C> &
-  (keyof JsxNodeProps | keyof JsxDrawableProps | 'children' | 'ref' | 'key');
+  (keyof JsxNodeProps | keyof JsxDrawableProps | 'children' | 'components' | 'ref' | 'key');
 type NoneShared<Names extends never> = Names;
 export type CoreClassesShareNoNames = [
   NoneShared<Shared<typeof Sprite>>,

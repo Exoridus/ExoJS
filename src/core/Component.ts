@@ -42,6 +42,25 @@ export type ComponentHostCheck<H, C extends Component> = H extends C[typeof comp
   ? unknown
   : ComponentHost<C[typeof componentHost]>;
 
+/**
+ * Any component a node of type `H` accepts: one whose declared host type is
+ * `H` or a supertype of it, the rule {@link SceneNode.addComponent} applies.
+ * Types a list of components for one kind of node, such as the JSX
+ * `components` prop, where each element is checked on its own. The check
+ * also holds for consumers that compile without `strictFunctionTypes`.
+ *
+ * It has the public members of {@link Component} but no declared host type,
+ * so `addComponent` does not accept a value of this type; keep the
+ * component's own type for that.
+ */
+// `in H`: two ComponentFor types compare by their host types alone, never structurally, where the
+// branded parameters below would also match in the unsound direction.
+export interface ComponentFor<in H> extends Omit<Component, typeof componentHost | typeof componentHostSink> {
+  // The host is intersected with a ComponentHost no value carries, so even a bivariant parameter
+  // comparison with a component's carrier holds in one direction only: H must extend its host type.
+  readonly [componentHostSink]: { readonly accept: (host: H & ComponentHost<H>) => void };
+}
+
 /** Errors raised by teardown steps that must not stop the steps after them. */
 const rethrowFirst = (errors: readonly unknown[]): void => {
   if (errors.length > 0) {
@@ -90,6 +109,9 @@ const rethrowFirst = (errors: readonly unknown[]): void => {
 export abstract class Component<N extends SceneNode = SceneNode> {
   /** Type-only carrier of the accepted host type, read by {@link ComponentHostCheck}. Never present at runtime. */
   declare public readonly [componentHost]: N;
+  /** Type-only carrier of the accepted host type, read by {@link ComponentFor}. Never present at runtime. */
+  // A method, whose parameter compares bivariantly, so this carrier leaves Component covariant in N.
+  declare public readonly [componentHostSink]: { accept(host: N): void };
 
   private _node: N | null = null;
   private _enabled = true;
@@ -301,6 +323,9 @@ export abstract class Component<N extends SceneNode = SceneNode> {
  * object only satisfies a component type by actually being one.
  */
 declare const componentHost: unique symbol;
+
+/** Key of {@link Component}'s parameter-position host carrier; not exported for the same reason. */
+declare const componentHostSink: unique symbol;
 
 /** Key of {@link ComponentHost}; never carried by any value. */
 declare const componentHostRequirement: unique symbol;

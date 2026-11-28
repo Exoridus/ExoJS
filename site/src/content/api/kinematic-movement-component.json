@@ -6,11 +6,11 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs/physics",
   "tier": "stable",
-  "memberCount": 22,
+  "memberCount": 23,
   "counts": {
     "constructors": 1,
     "methods": 9,
-    "properties": 12,
+    "properties": 13,
     "events": 0
   },
   "sections": [
@@ -451,6 +451,43 @@
           "params": [],
           "returnType": null,
           "description": "Type-only carrier of the accepted host type, read by ComponentHostCheck. Never present at runtime."
+        },
+        {
+          "name": "[componentHostSink]",
+          "signature": "[componentHostSink]: { accept: unknown }",
+          "signatureTokens": [
+            {
+              "text": "[componentHostSink]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "accept",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Type-only carrier of the accepted host type, read by ComponentFor. Never present at runtime."
         },
         {
           "name": "physics",

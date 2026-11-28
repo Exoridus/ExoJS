@@ -6,11 +6,11 @@
   "subsystem": "pathfinding",
   "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
-  "memberCount": 30,
+  "memberCount": 31,
   "counts": {
     "constructors": 1,
     "methods": 13,
-    "properties": 15,
+    "properties": 16,
     "events": 1
   },
   "sections": [
@@ -613,6 +613,43 @@
           "params": [],
           "returnType": null,
           "description": "Type-only carrier of the accepted host type, read by ComponentHostCheck. Never present at runtime."
+        },
+        {
+          "name": "[componentHostSink]",
+          "signature": "[componentHostSink]: { accept: unknown }",
+          "signatureTokens": [
+            {
+              "text": "[componentHostSink]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "accept",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Type-only carrier of the accepted host type, read by ComponentFor. Never present at runtime."
         },
         {
           "name": "movement",

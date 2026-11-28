@@ -15,7 +15,8 @@
  *                   consumer
  *   engine-strict   the engine's own profile - `noUncheckedIndexedAccess`,
  *                   `exactOptionalPropertyTypes`, `noUnusedLocals` - scoped to
- *                   loader/catalog overloads and document version contracts
+ *                   loader/catalog overloads, document version contracts and
+ *                   the JSX `components` host check
  *
  * They live here rather than as one root tsconfig per profile because a profile
  * is a run mode, not a program the repository owns: three near-identical files
@@ -74,7 +75,7 @@ const PROFILES: readonly Profile[] = [
   },
   {
     name: 'engine-strict',
-    proves: 'loader/catalog overloads and document versions under the engine profile',
+    proves: 'loader/catalog overloads, document versions and the JSX components prop under the engine profile',
     config: {
       extends: './tsconfig.json',
       compilerOptions: {
@@ -83,7 +84,12 @@ const PROFILES: readonly Profile[] = [
         declaration: false,
         declarationMap: false,
         sourceMap: false,
-        paths: { '@codexo/exojs': ['./src/index.ts'] },
+        jsx: 'react-jsx',
+        paths: {
+          '@codexo/exojs': ['./src/index.ts'],
+          '@codexo/exojs/jsx': ['./src/jsx/index.ts'],
+          '@codexo/exojs/jsx-runtime': ['./src/jsx/runtime.ts'],
+        },
       },
       include: [
         'test/type-tests/asset-define-decode.type-test.ts',
@@ -94,6 +100,7 @@ const PROFILES: readonly Profile[] = [
         'test/type-tests/loader-catalog-input.type-test.ts',
         'test/type-tests/loader-catalog-leaf.type-test.ts',
         'test/type-tests/live-load-group.type-test.ts',
+        'test/type-tests/jsx-components.type-test.tsx',
         'src/typings.d.ts',
       ],
     },
@@ -114,7 +121,12 @@ const profileConfig = (profile: Profile, directory: string): string => {
   }
 
   if ('paths' in compilerOptions) {
-    compilerOptions.paths = { '@codexo/exojs': [resolve(REPO_ROOT, 'src/index.ts')] };
+    compilerOptions.paths = Object.fromEntries(
+      Object.entries(compilerOptions.paths as Record<string, string[]>).map(([name, targets]) => [
+        name,
+        targets.map(target => resolve(REPO_ROOT, target)),
+      ]),
+    );
   }
 
   const path = join(directory, `${profile.name}.json`);

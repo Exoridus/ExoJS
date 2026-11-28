@@ -1,4 +1,17 @@
-import { Button, Color, Container, Graphics, Label, Panel, ProgressBar, Scene, Stack } from '@codexo/exojs';
+import {
+  BehaviorComponent,
+  Button,
+  Color,
+  Component,
+  Container,
+  Graphics,
+  Label,
+  Panel,
+  ProgressBar,
+  Scene,
+  type Seconds,
+  Stack,
+} from '@codexo/exojs';
 import type { JSX, JsxAdapterProps, JsxChildren } from '@codexo/exojs/jsx';
 import { jsxConstruct } from '@codexo/exojs/jsx';
 
@@ -54,6 +67,29 @@ class Gem extends Container {
 }
 // #endregion guide:custom-class
 
+// #region guide:components
+/** Behaviour written for gems: TypeScript rejects it on any other kind of node. */
+class Pulse extends BehaviorComponent<Gem> {
+  private elapsed = 0;
+
+  public override update(delta: Seconds): void {
+    this.elapsed += delta;
+    const scale = 1 + Math.sin(this.elapsed * 4) * 0.1;
+    this.node.scale.set(scale, scale);
+  }
+}
+
+/** Plain data any node can carry. */
+class Loot extends Component {
+  public constructor(public readonly coins: number) {
+    super();
+  }
+}
+
+const treasure = <Gem color={Color.red} components={[new Pulse(), new Loot(5)]} />;
+// <Container components={[new Pulse()]} /> does not compile: a Container is not a Gem.
+// #endregion guide:components
+
 // #region guide:compose
 class CharacterScene extends Scene {
   override init(): void {
@@ -73,4 +109,4 @@ class CharacterScene extends Scene {
 }
 // #endregion guide:compose
 
-export { CharacterScene };
+export { CharacterScene, treasure };
