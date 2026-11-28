@@ -1,10 +1,12 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 
+import type { Application } from './Application';
 import type { FrameBudget } from './FrameBudget';
 import { logger } from './Logger';
+import type { Scene } from './scene/Scene';
 import { Signal } from './Signal';
 import { hookOwnerName, requireSynchronousHook } from './syncHooks';
-import type { System } from './System';
+import type { System, SystemContext } from './System';
 import type { Destroyable } from './types';
 import type { Seconds } from './units';
 
@@ -43,8 +45,32 @@ interface SystemRegistration {
   readonly order: number;
   readonly before: readonly System[];
   readonly after: readonly System[];
+  /** Registered and not removed. */
   active: boolean;
+  /** Between `onEnable` and `onDisable`. */
+  enabled: boolean;
+  /**
+   * Whether a phase calls it: registered, and not left behind by a failed
+   * `onEnable`. Independent of the owner being live - the owner gates whole
+   * passes on that itself.
+   */
+  runnable: boolean;
+  /** Between `onAttach` and `onDetach`. */
+  attached: boolean;
 }
+
+/** What a {@link SystemRegistry} knows of its owner. @internal */
+export interface SystemRegistryOwner {
+  readonly app: Application;
+  readonly scene: Scene | null;
+  reportError(error: unknown): void;
+}
+
+/** A system type to look up with {@link SystemRegistry.find}, abstract classes included. */
+// oxlint-disable-next-line typescript/no-explicit-any -- constructor parameters are irrelevant to an instanceof lookup
+export type SystemClass<T extends System = System> = abstract new (...args: any[]) => T;
+
+type LifecycleHook = 'onEnable' | 'onDisable' | 'onDetach';
 
 interface PendingAdd {
   readonly add: true;
@@ -73,6 +99,14 @@ const tieBreak = (a: SystemRegistration, b: SystemRegistration): number => a.ord
  * once a phase has actually returned something, so building the message here
  * costs nothing per frame.
  */
+const requireSynchronousLifecycleHook = (result: unknown, system: System, hook: string): void => {
+  requireSynchronousHook(
+    result,
+    `${hookOwnerName(system, 'System')}.${hook}()`,
+    'System lifecycle hooks run synchronously and are never awaited; start asynchronous work from them and keep its handle instead.',
+  );
+};
+
 const requireSynchronousPhase = (result: unknown, system: System, phase: string): void => {
   requireSynchronousHook(
     result,
@@ -208,6 +242,9 @@ const devLastRegistry: WeakMap<System, WeakRef<SystemRegistry>> | null = __DEV__
  * Outside a frame - before the first {@link SystemRegistry._beginFrame} or
  * after its matching {@link SystemRegistry._endFrame} - `add()`/`remove()`
  * apply immediately.
+ *
+ * Systems with {@link SystemLifecycle} hooks are told when they are attached,
+ * enabled, disabled and detached; see that interface for the exact points.
  */
 export class SystemRegistry implements Destroyable {
   private readonly _registrations = new Map<System, SystemRegistration>();
@@ -230,11 +267,36 @@ export class SystemRegistry implements Destroyable {
   private _updateDirty = false;
   private _drawDirty = false;
   private _postFrameDirty = false;
+  private _live: boolean;
+  private readonly _owner: SystemRegistryOwner | null;
+  private readonly _context: SystemContext;
 
   /** Dispatched when a system structurally enters the registry (immediately, or at the frame boundary for a buffered add). */
   public readonly onAdd = new Signal<[system: System]>();
   /** Dispatched when a system structurally leaves the registry (immediately, or at the frame boundary for a buffered remove). */
   public readonly onRemove = new Signal<[system: System]>();
+
+  /**
+   * Registries are created by {@link Application} and {@link Scene}; one
+   * constructed directly belongs to no application and is enabled from the
+   * start.
+   */
+  public constructor(owner?: SystemRegistryOwner) {
+    this._owner = owner ?? null;
+    this._live = owner?.scene === null || owner === undefined;
+
+    const unowned = (): never => {
+      throw new Error('SystemContext.app: this registry was constructed on its own and belongs to no application.');
+    };
+
+    this._context = Object.freeze({
+      get app(): Application {
+        return owner?.app ?? unowned();
+      },
+      scene: owner?.scene ?? null,
+      systems: this,
+    });
+  }
 
   /**
    * Register `system`, returning it unchanged for fluent capture
@@ -277,13 +339,54 @@ export class SystemRegistry implements Destroyable {
     }
 
     if (this._frameActive) {
+      // Attached now rather than at the boundary, so the system can reach its
+      // context straight after add() even though it first runs next frame.
+      this._attachHook(system);
       this._pendingAdds.add(system);
       this._pending.push({ add: true, system, options });
     } else {
-      this._insert(system, options);
+      this._insert(system, options, false);
     }
 
     return system;
+  }
+
+  /**
+   * The one registered system that is an instance of `type`, or `null` when
+   * there is none. Buffered adds count, removed systems do not.
+   *
+   * @throws When more than one system matches: pass the intended one
+   *   explicitly instead, or use {@link SystemRegistry.findAll}.
+   */
+  public find<T extends System>(type: SystemClass<T>): T | null {
+    let found: T | null = null;
+
+    for (const system of this._candidates()) {
+      if (system instanceof type) {
+        if (found !== null) {
+          throw new Error(
+            `SystemRegistry.find(): more than one registered system is a ${type.name || 'match'}. Pass the one you mean explicitly, or use findAll().`,
+          );
+        }
+
+        found = system;
+      }
+    }
+
+    return found;
+  }
+
+  /** Every registered system that is an instance of `type`, in registration order. Buffered adds count. */
+  public findAll<T extends System>(type: SystemClass<T>): T[] {
+    const found: T[] = [];
+
+    for (const system of this._candidates()) {
+      if (system instanceof type) {
+        found.push(system);
+      }
+    }
+
+    return found;
   }
 
   /**
@@ -311,6 +414,8 @@ export class SystemRegistry implements Destroyable {
         this._pending.splice(index, 1);
       }
 
+      this._runHook(system, 'onDetach');
+
       return false;
     }
 
@@ -321,7 +426,9 @@ export class SystemRegistry implements Destroyable {
     }
 
     registration.active = false;
+    registration.runnable = false;
     this._activeCount--;
+    this._disable(registration);
 
     if (this._frameActive) {
       this._pending.push({ add: false, registration });
@@ -366,7 +473,14 @@ export class SystemRegistry implements Destroyable {
       try {
         if (isPendingAdd(mutation)) {
           this._pendingAdds.delete(mutation.system);
-          this._insert(mutation.system, mutation.options);
+
+          try {
+            this._insert(mutation.system, mutation.options, true);
+          } catch (error) {
+            this._runHook(mutation.system, 'onDetach');
+
+            throw error;
+          }
         } else {
           this._finalizeRemoval(mutation.registration);
         }
@@ -380,6 +494,31 @@ export class SystemRegistry implements Destroyable {
 
     if (failed) {
       throw failure;
+    }
+  }
+
+  /**
+   * Whether the owner can run its systems: an application always, a scene
+   * while it is active. Enables or disables every registered system on change.
+   * @internal
+   */
+  public _setLive(live: boolean): void {
+    if (this._live === live) {
+      return;
+    }
+
+    this._live = live;
+
+    if (live) {
+      for (const registration of [...this._registrations.values()].sort((a, b) => a.sequence - b.sequence)) {
+        this._enable(registration);
+      }
+
+      return;
+    }
+
+    for (const registration of [...this._registrations.values()].sort((a, b) => b.sequence - a.sequence)) {
+      this._disable(registration);
     }
   }
 
@@ -431,7 +570,7 @@ export class SystemRegistry implements Destroyable {
         return;
       }
 
-      if (registration.active) {
+      if (registration.runnable) {
         const result = registration.system.preFrame!(delta) as unknown;
 
         if (result !== undefined) {
@@ -457,7 +596,7 @@ export class SystemRegistry implements Destroyable {
         return;
       }
 
-      if (registration.active) {
+      if (registration.runnable) {
         const result = registration.system.fixedUpdate!(step) as unknown;
 
         if (result !== undefined) {
@@ -483,7 +622,7 @@ export class SystemRegistry implements Destroyable {
         return;
       }
 
-      if (registration.active) {
+      if (registration.runnable) {
         const result = registration.system.update!(delta) as unknown;
 
         if (result !== undefined) {
@@ -509,7 +648,7 @@ export class SystemRegistry implements Destroyable {
         return;
       }
 
-      if (registration.active) {
+      if (registration.runnable) {
         const result = registration.system.draw!(context) as unknown;
 
         if (result !== undefined) {
@@ -535,7 +674,7 @@ export class SystemRegistry implements Destroyable {
         return;
       }
 
-      if (registration.active) {
+      if (registration.runnable) {
         const result = registration.system.postFrame!(delta, budget) as unknown;
 
         if (result !== undefined) {
@@ -582,17 +721,33 @@ export class SystemRegistry implements Destroyable {
     const remaining = [...this._registrations.values()].filter(registration => registration.active).sort((a, b) => b.sequence - a.sequence);
     const failures: unknown[] = [];
 
+    const report = (error: unknown): void => {
+      failures.push(error);
+    };
+
     for (const registration of remaining) {
       // An earlier destroy() may have removed this member.
       if (!registration.active) {
         continue;
       }
 
+      this._disable(registration, report);
+      this._detach(registration, report);
+
       try {
         registration.system.destroy?.();
       } catch (error) {
         failures.push(error);
       }
+    }
+
+    // Removed during an open frame, or added and still buffered: attached, never destroyed.
+    for (const registration of this._registrations.values()) {
+      this._detach(registration, report);
+    }
+
+    for (const system of this._pendingAdds) {
+      this._runHook(system, 'onDetach', report);
     }
 
     this._registrations.clear();
@@ -612,7 +767,7 @@ export class SystemRegistry implements Destroyable {
     }
   }
 
-  private _insert(system: System, options?: SystemRegistrationOptions): void {
+  private _insert(system: System, options: SystemRegistrationOptions | undefined, attached: boolean): void {
     const registration: SystemRegistration = {
       system,
       sequence: this._sequence++,
@@ -620,6 +775,9 @@ export class SystemRegistry implements Destroyable {
       before: options?.before ?? [],
       after: options?.after ?? [],
       active: true,
+      enabled: false,
+      runnable: true,
+      attached: true,
     };
 
     if (__DEV__) {
@@ -644,6 +802,10 @@ export class SystemRegistry implements Destroyable {
 
     try {
       this._assertAcyclic(registration, wants);
+
+      if (!attached) {
+        this._attachHook(system);
+      }
     } catch (error) {
       this._registrations.delete(system);
 
@@ -677,8 +839,98 @@ export class SystemRegistry implements Destroyable {
       this._postFrameDirty = true;
     }
 
+    this._enable(registration);
     this.onAdd.dispatch(system);
   }
+
+  /** Registered systems and buffered adds, in registration order. */
+  private *_candidates(): Generator<System> {
+    for (const registration of this._registrations.values()) {
+      if (registration.active) {
+        yield registration.system;
+      }
+    }
+
+    yield* this._pendingAdds;
+  }
+
+  /** Run `onAttach`; a throw propagates to the caller of `add()`, which has registered nothing yet. */
+  private _attachHook(system: System): void {
+    if (system.onAttach === undefined) {
+      return;
+    }
+
+    const result = system.onAttach(this._context) as unknown;
+
+    if (result !== undefined) {
+      requireSynchronousLifecycleHook(result, system, 'onAttach');
+    }
+  }
+
+  private _enable(registration: SystemRegistration): void {
+    if (!this._live || !registration.active || registration.enabled) {
+      return;
+    }
+
+    registration.enabled = true;
+    registration.runnable = true;
+
+    // A failed onEnable leaves the system registered and silent rather than
+    // running phases whose setup never happened.
+    if (!this._runHook(registration.system, 'onEnable')) {
+      registration.enabled = false;
+      registration.runnable = false;
+    }
+  }
+
+  private _disable(registration: SystemRegistration, report?: (error: unknown) => void): void {
+    if (!registration.enabled) {
+      return;
+    }
+
+    registration.enabled = false;
+    this._runHook(registration.system, 'onDisable', report);
+  }
+
+  private _detach(registration: SystemRegistration, report?: (error: unknown) => void): void {
+    if (!registration.attached) {
+      return;
+    }
+
+    registration.attached = false;
+    this._runHook(registration.system, 'onDetach', report);
+  }
+
+  /** Run a lifecycle hook other than `onAttach`, reporting a failure instead of throwing. Returns whether it succeeded. */
+  private _runHook(system: System, hook: LifecycleHook, report: (error: unknown) => void = this._report): boolean {
+    if (system[hook] === undefined) {
+      return true;
+    }
+
+    try {
+      const result = system[hook]?.() as unknown;
+
+      if (result !== undefined) {
+        requireSynchronousLifecycleHook(result, system, hook);
+      }
+
+      return true;
+    } catch (error) {
+      report(error);
+
+      return false;
+    }
+  }
+
+  private readonly _report = (error: unknown): void => {
+    if (this._owner !== null) {
+      this._owner.reportError(error);
+
+      return;
+    }
+
+    logger.error('A system lifecycle hook threw.', { source: 'SystemRegistry', ...(error instanceof Error && { error }) });
+  };
 
   private _assertAcyclic(registration: SystemRegistration, wants: (phase: SystemPhase) => boolean): void {
     const { system } = registration;
@@ -717,5 +969,6 @@ export class SystemRegistry implements Destroyable {
     removeRegistration(this._drawList, registration);
     removeRegistration(this._postFrameList, registration);
     this.onRemove.dispatch(registration.system);
+    this._detach(registration);
   }
 }

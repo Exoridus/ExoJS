@@ -1,6 +1,9 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 
+import type { Application } from './Application';
 import type { FrameBudget } from './FrameBudget';
+import type { Scene } from './scene/Scene';
+import type { SystemRegistry } from './SystemRegistry';
 import type { Destroyable, Synchronous } from './types';
 import type { Seconds } from './units';
 
@@ -54,6 +57,55 @@ export interface SystemMethods {
 }
 
 /**
+ * Where a {@link System} was registered, handed to {@link SystemLifecycle.onAttach}.
+ * The same object for every system of one registry, valid until
+ * {@link SystemLifecycle.onDetach}.
+ */
+export interface SystemContext {
+  /**
+   * The application the registry belongs to.
+   *
+   * @throws For a registry constructed on its own, outside any application.
+   */
+  readonly app: Application;
+  /** The scene whose `systems` the system was added to, or `null` for `app.systems`. */
+  readonly scene: Scene | null;
+  /** The registry the system was added to - the place to find the systems it works with. */
+  readonly systems: SystemRegistry;
+}
+
+/**
+ * Optional lifecycle hooks of a {@link System}, called by the registry that owns
+ * it. Each must be synchronous, like the phases.
+ *
+ * - {@link onAttach} inside {@link SystemRegistry.add}, before the system takes
+ *   part in any phase - also when the add is buffered until the frame boundary.
+ * - {@link onEnable} once the system is registered and its owner can run it:
+ *   at once for `app.systems`, and while the scene is active for
+ *   `scene.systems`. Pausing the scene does not disable its systems.
+ * - {@link onDisable} when that stops: the system is removed, the scene is
+ *   retained, or its teardown begins.
+ * - {@link onDetach} when the registry lets go of the system: at the frame
+ *   boundary after a removal during a frame, at once otherwise, and when the
+ *   registry is destroyed - in which case `destroy()` follows.
+ *
+ * A throwing `onAttach` cancels the registration and propagates out of
+ * `add()`. A throwing `onEnable` is reported and leaves the system
+ * registered but disabled, so its phases do not run. Failures of the other
+ * hooks are reported and never stop the teardown they belong to.
+ */
+export interface SystemLifecycle {
+  /** Called when the system is added, with the registry's context. */
+  onAttach?(context: SystemContext): Synchronous;
+  /** Called when the system starts taking part in the frame. Release in {@link onDisable} what this acquires. */
+  onEnable?(): Synchronous;
+  /** Called when the system stops taking part in the frame. */
+  onDisable?(): Synchronous;
+  /** Called when the registry lets go of the system. The context is no longer valid afterwards. */
+  onDetach?(): Synchronous;
+}
+
+/**
  * Rewrites `T` so that at least one of `Keys` is required while the others
  * stay optional - the rest of `T`'s properties are untouched. Used to require
  * at least one {@link SystemMethods} phase without forcing all three.
@@ -81,6 +133,22 @@ type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyo
  * });
  * ```
  *
+ * The {@link SystemLifecycle} hooks are optional too, and give a system its
+ * application, its scene and the registry it shares with other systems
+ * without any global lookup:
+ *
+ * ```ts
+ * class Steering {
+ *   private world: PhysicsWorld | null = null;
+ *
+ *   onAttach({ systems }: SystemContext) {
+ *     this.world = systems.find(PhysicsWorld);
+ *   }
+ *
+ *   fixedUpdate(step: Seconds) { ... }
+ * }
+ * ```
+ *
  * `destroy()` is optional: the registry calls it, if present, exactly once
  * when the system is still registered at registry destruction. During
  * `Application.destroy()` that happens after scene teardown, the extension
@@ -89,7 +157,8 @@ type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyo
  * loaded them.
  */
 export type System = RequireAtLeastOne<SystemMethods> &
-  Partial<Destroyable> & {
+  Partial<Destroyable> &
+  SystemLifecycle & {
     /**
      * Tick order within the registry (ascending; default `0`). Systems
      * sharing an order run in insertion order. Read when the registry next

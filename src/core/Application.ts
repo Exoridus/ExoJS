@@ -280,7 +280,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * `order` is available; see {@link SystemOrder} for common reference
    * points. Scene-scoped systems live on `scenes.systems`.
    */
-  public readonly systems = new SystemRegistry();
+  public readonly systems = new SystemRegistry({ app: this, scene: null, reportError: error => this._reportSystemError(error) });
   /**
    * App-scoped serializer registry, chained to the global
    * {@link defaultSerializationRegistry}. Extension serializers materialise here
@@ -2122,6 +2122,20 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._teardownFailures?.push(normalized);
     logger.error('Application.destroy() failed during teardown.', { source: 'Application', error: normalized });
+    this._dispatchErrorIsolated(normalized);
+  }
+
+  /** A system lifecycle hook failed: a teardown failure while destroying, otherwise logged and forwarded to {@link Application.onError}. */
+  private _reportSystemError(error: unknown): void {
+    if (this._teardownFailures !== null) {
+      this._reportTeardownError(error);
+
+      return;
+    }
+
+    const normalized = error instanceof Error ? error : new Error(String(error));
+
+    logger.error('A system lifecycle hook failed.', { source: 'Application', error: normalized });
     this._dispatchErrorIsolated(normalized);
   }
 
