@@ -864,3 +864,47 @@ describe('string representations', () => {
     expect(String(new Rectangle(10, 20, 200, 100))).toBe('10, 20, 200, 100');
   });
 });
+
+describe('derived values over sources without a version', () => {
+  test('a subscribed chain over a vector computes each step once per change', () => {
+    const vector = new ObservableVector(null, 0, 1, 2);
+    let first = 0;
+    let second = 0;
+    const doubled = vector.map(v => {
+      first++;
+
+      return v.x * 2;
+    });
+    const label = doubled.map(x => {
+      second++;
+
+      return `x=${x}`;
+    });
+    const seen: string[] = [];
+
+    label.subscribe(text => seen.push(text));
+    first = 0;
+    second = 0;
+
+    vector.x = 5;
+    expect(first).toBe(1);
+    expect(second).toBe(1);
+    expect(seen).toEqual(['x=10']);
+    expect(label.value).toBe('x=10');
+    expect(first).toBe(1);
+
+    vector.x = 6;
+    expect(first).toBe(2);
+    expect(label.value).toBe('x=12');
+  });
+
+  test('an unsubscribed derived value still recomputes on every read', () => {
+    const vector = new ObservableVector(null, 0, 1, 2);
+    const doubled = vector.map(v => v.x * 2);
+
+    vector.x = 3;
+    expect(doubled.value).toBe(6);
+    vector.x = 4;
+    expect(doubled.value).toBe(8);
+  });
+});
