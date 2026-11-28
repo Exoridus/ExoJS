@@ -1,5 +1,5 @@
 /** @jsxImportSource @codexo/exojs */
-import { Button, Container, Label, live, Observable, ObservableVector, Panel, Sprite, Stack } from '@codexo/exojs';
+import { Button, Container, Label, live, Observable, ObservableVector, Panel, type ReadonlyObservable, Sprite, Stack } from '@codexo/exojs';
 import type { JSX } from '@codexo/exojs/jsx';
 import { jsxTransaction } from '@codexo/exojs/jsx';
 
@@ -72,6 +72,62 @@ describe('JSX observable bindings', () => {
     expect(button.label).toBe('Resume');
 
     button.destroy();
+    expect(caption.subscriberCount).toBe(0);
+  });
+
+  test('passes observable construction arguments without a property setter to the constructor unchanged', () => {
+    class Meter extends Container {
+      public readonly source: ReadonlyObservable<number>;
+      public caption: ReadonlyObservable<string> | string;
+
+      public constructor(options: { readonly source: ReadonlyObservable<number>; readonly caption: ReadonlyObservable<string> | string }) {
+        super();
+        this.source = options.source;
+        this.caption = options.caption;
+      }
+    }
+
+    const health = new Observable(5);
+    const caption = new Observable('HP');
+    const meter = (<Meter source={health} caption={caption} />) as Meter;
+
+    expect(meter.source).toBe(health);
+    expect(meter.caption).toBe(caption);
+    expect(health.subscriberCount).toBe(0);
+    expect(caption.subscriberCount).toBe(0);
+
+    meter.destroy();
+  });
+
+  test('applies a change the constructor made to a bound source', () => {
+    const caption = new Observable('start');
+
+    class Echo extends Container {
+      private _label: string;
+
+      public constructor(options: { readonly label: string }) {
+        super();
+        this._label = options.label;
+        caption.value = options.label.toUpperCase();
+      }
+
+      public get label(): string {
+        return this._label;
+      }
+
+      public set label(value: string) {
+        this._label = value;
+      }
+    }
+
+    const echo = (<Echo label={caption} />) as Echo;
+
+    expect(echo.label).toBe('START');
+
+    caption.value = 'next';
+    expect(echo.label).toBe('next');
+
+    echo.destroy();
     expect(caption.subscriberCount).toBe(0);
   });
 

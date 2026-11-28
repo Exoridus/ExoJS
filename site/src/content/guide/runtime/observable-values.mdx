@@ -169,7 +169,7 @@ Vectors print as `120, 80`, sizes as `1920 × 1080` and rectangles as `10, 20, 2
 <ExamplePreview chapter="ui" slug="observable-counter" />
 
 - **Initial value**: applied immediately.
-- **Types**: TypeScript accepts only writable, non-function properties and a source of the property's type. For a `string` property it also accepts a number source, which the binding converts with `String`.
+- **Types**: TypeScript accepts only writable, non-function properties and a source of the property's type. For a property of type `string` it also accepts a number source, which the binding converts with `String`. Nullable strings and restricted string types such as `'left' | 'right'` accept sources of their own type only, so `null` stays `null`; convert numbers for them explicitly with `map`.
 - **Redundant writes**: a derived source notifies only when its result changes, so an unchanged result never reaches the setter. An observed object that changes in place, such as a vector, is written again on every change.
 - **Manual writes**: a value you assign directly stays until the source changes again. The binding does not watch the property.
 - **Lifetime**: `bindProperty` returns the function that removes the binding. A binding on a scene node also ends when the node is destroyed, including through its parent or its scene, so a destroyed node never keeps a subscription. A retained, inactive scene keeps its bindings and stays current while it is not shown. A binding on any other object lasts until you unbind it.

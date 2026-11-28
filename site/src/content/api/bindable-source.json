@@ -1,6 +1,6 @@
 {
   "title": "BindableSource",
-  "description": "The observables a property of type `V` can be bound to: observables of `V`, and for a property of type `string` also observables of numbers, which the binding converts with `String`.",
+  "description": "The observables a property of type `V` can be bound to: observables of `V`, and for a property of exactly type `string` also observables of numbers, which the binding converts with `String`. Nullable strings and restricted string types such as `'left' | 'right'` accept observables of `V` only; convert numbers for them explicitly with `map`.",
   "symbol": "BindableSource",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The observables a property of type `V` can be bound to: observables of `V`, and for a property of type `string` also observables of numbers, which the binding converts with `String`."
+        "The observables a property of type `V` can be bound to: observables of `V`, and for a property of exactly type `string` also observables of numbers, which the binding converts with `String`. Nullable strings and restricted string types such as `'left' | 'right'` accept observables of `V` only; convert numbers for them explicitly with `map`."
       ],
       "importLine": "import { BindableSource } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "BindableSource",
-          "signature": "ReadonlyObservable<V> | [V] extends [string] ? ReadonlyObservable<number> : never",
+          "signature": "ReadonlyObservable<V> | string extends V ? [V] extends [string] ? ReadonlyObservable<number> : never : never",
           "signatureTokens": [
             {
               "text": "ReadonlyObservable",
@@ -50,6 +50,30 @@
             },
             {
               "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "V",
+              "kind": "type"
+            },
+            {
+              "text": " ? ",
               "kind": "punctuation"
             },
             {
@@ -107,6 +131,14 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
             },
             {
               "text": " : ",

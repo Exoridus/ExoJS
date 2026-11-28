@@ -117,6 +117,57 @@ describe('bindProperty', () => {
     label.destroy();
   });
 
+  test('writes null to a nullable string unchanged', () => {
+    const target = { name: 'start' as string | null };
+    const name = new Observable<string | null>('a');
+
+    bindProperty(target, 'name', name);
+    name.value = null;
+    expect(target.name).toBeNull();
+
+    name.value = 'b';
+    expect(target.name).toBe('b');
+  });
+
+  test('applies a change the initial write made to the source before the subscription existed', () => {
+    const level = new Observable(150);
+    const clamped = {
+      current: 0,
+      get value(): number {
+        return this.current;
+      },
+      set value(value: number) {
+        this.current = value;
+        level.value = Math.min(value, 100);
+      },
+    };
+
+    bindProperty(clamped, 'value', level);
+    expect([clamped.value, level.value, level.subscriberCount]).toEqual([100, 100, 1]);
+
+    level.value = 120;
+    expect(clamped.value).toBe(100);
+
+    const base = new Observable(1);
+    const raised = {
+      writes: [] as number[],
+      set value(value: number) {
+        this.writes.push(value);
+
+        if (value < 10) {
+          base.value = 5;
+        }
+      },
+    };
+
+    bindProperty(
+      raised,
+      'value',
+      base.map(n => n * 2),
+    );
+    expect(raised.writes).toEqual([2, 10]);
+  });
+
   test('ends when the node, or an ancestor, is destroyed', () => {
     const health = new Observable(100);
     const parent = new Container();

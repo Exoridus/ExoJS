@@ -1,4 +1,4 @@
-import type { WritableKeys } from '#core/bindProperty';
+import type { BindableSource, WritableKeys } from '#core/bindProperty';
 import type { Color } from '#core/Color';
 import type { ReadonlyObservable } from '#core/Observable';
 import type { Signal } from '#core/Signal';
@@ -33,15 +33,22 @@ export type JsxBindable<T> = T | ReadonlyObservable<T>;
 
 /**
  * Construction props that name a writable property of the same type on the
- * instance. Such a prop also accepts an observable: the constructor receives
- * its current value, and the property is assigned after every change. A
- * `text` or `label` string property also accepts an observable number,
- * converted with `String`.
+ * instance, through a setter. Such a prop also accepts an observable: the
+ * constructor receives its current value, and the setter is called after every
+ * change. A `text` or `label` property of type `string` also accepts an
+ * observable number, converted with `String`.
+ *
+ * An option whose own type accepts observables is an observable argument, not
+ * a binding, and keeps its type. JSX tells the two apart at runtime by the
+ * setter: an observable for an option without a property setter of the same
+ * name, such as a plain field, reaches the constructor unchanged.
  */
 export type JsxBindableOptions<P, I> = {
   [K in keyof P]: K extends WritableKeys<I>
-    ? Exclude<P[K], undefined> extends I[K]
-      ? P[K] | ReadonlyObservable<I[K]> | (K extends JsxTextKey ? ([I[K]] extends [string] ? ReadonlyObservable<number> : never) : never)
+    ? [Extract<P[K], ReadonlyObservable<unknown>>] extends [never]
+      ? Exclude<P[K], undefined> extends I[K]
+        ? P[K] | (K extends JsxTextKey ? BindableSource<I[K]> : ReadonlyObservable<I[K]>)
+        : P[K]
       : P[K]
     : P[K];
 };

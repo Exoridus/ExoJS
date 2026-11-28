@@ -1,5 +1,17 @@
 /** @jsxImportSource @codexo/exojs */
-import { bindProperty, Button, Container, Label, live, Observable, Panel, type Sprite, Stack, type WritableKeys } from '@codexo/exojs';
+import {
+  bindProperty,
+  Button,
+  Container,
+  Label,
+  live,
+  Observable,
+  Panel,
+  type ReadonlyObservable,
+  type Sprite,
+  Stack,
+  type WritableKeys,
+} from '@codexo/exojs';
 
 declare const sprite: Sprite;
 declare const label: Label;
@@ -15,6 +27,12 @@ bindProperty(label, 'text', name);
 bindProperty(label, 'text', live`HP ${health}`);
 // Numbers convert only for string properties.
 bindProperty(label, 'text', health);
+// Nullable strings and restricted string types accept observables of their own type only.
+declare const aligned: { align: 'left' | 'right' };
+bindProperty(sprite, 'name', new Observable<string | null>(null));
+bindProperty(aligned, 'align', new Observable<'left' | 'right'>('left'));
+// @ts-expect-error '1' is not a valid alignment
+bindProperty(aligned, 'align', health);
 // @ts-expect-error visible is boolean, not string
 bindProperty(sprite, 'visible', name);
 // @ts-expect-error numbers do not convert to booleans
@@ -46,5 +64,13 @@ export const hud = (
 export const wrongVisible = <Container visible={health} />;
 // @ts-expect-error spacing is a construction option without a matching writable property type
 export const wrongSpacing = <Stack spacing={name} />;
+// An option that takes an observable is an argument, not a binding, and keeps its type.
+declare class Meter extends Container {
+  public source: ReadonlyObservable<number>;
+  public constructor(options: { readonly source: ReadonlyObservable<number> });
+}
+export const meter = <Meter source={health} />;
+// @ts-expect-error the option needs an observable
+export const wrongMeter = <Meter source={5} />;
 // @ts-expect-error handlers are functions, never observables
 export const observedHandler = <Button onClick={alive} />;

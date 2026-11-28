@@ -167,12 +167,31 @@ const textKeys: ReadonlySet<string> = new Set(['text', 'label']);
 
 const toOption = (key: string, value: unknown): unknown => (textKeys.has(key) && typeof value === 'number' ? String(value) : value);
 
+/**
+ * Whether instances of `type` have a property setter named `key`. Only such a
+ * construction prop is bound; an observable for any other option is an
+ * argument the constructor receives as it is.
+ */
+const hasSetter = (type: JsxNodeClass, key: string): boolean => {
+  let prototype = type.prototype as object | null;
+
+  for (; prototype !== null && prototype !== Object.prototype; prototype = Object.getPrototypeOf(prototype) as object | null) {
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, key);
+
+    if (descriptor !== undefined) {
+      return descriptor.set !== undefined;
+    }
+  }
+
+  return false;
+};
+
 const applyProp = (node: RenderNode, key: string, value: unknown, drawable: boolean, type: JsxNodeClass): void => {
   const setter = setterFor(key, drawable);
 
   if (setter !== undefined) {
     if (isObservable(value)) {
-      bindWith(node, value, true, current => setter(node, current as never));
+      bindWith(node, value, current => setter(node, current as never));
     } else {
       setter(node, value as never);
     }
@@ -221,7 +240,7 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
   const nodes: RenderNode[] = [];
   const drawable = type.prototype instanceof Drawable;
   const options: Record<string, unknown> = {};
-  const bound: Array<[key: string, source: ReadonlyObservable<unknown>]> = [];
+  const bound: Array<[key: string, source: ReadonlyObservable<unknown>, applied: { readonly value: unknown }]> = [];
   let assigns = false;
 
   // The compiler passes a literal key separately; one arriving in the props came through a spread and would reach the constructor.
@@ -240,9 +259,11 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
 
       if (setterFor(key, drawable) !== undefined || (typeof value === 'function' && isSignalKey(key))) {
         assigns = true;
-      } else if (isObservable(value)) {
-        options[key] = toOption(key, value.value);
-        bound.push([key, value]);
+      } else if (isObservable(value) && hasSetter(type, key)) {
+        const applied = { value: value.value };
+
+        options[key] = toOption(key, applied.value);
+        bound.push([key, value, applied]);
       } else {
         options[key] = value;
       }
@@ -253,12 +274,17 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
   const attached: RenderNode[] = [];
 
   try {
-    for (const [key, source] of bound) {
+    for (const [key, source, applied] of bound) {
       const record = node as unknown as Record<string, unknown>;
 
-      bindWith(node, source, false, current => {
-        record[key] = toOption(key, current);
-      });
+      bindWith(
+        node,
+        source,
+        current => {
+          record[key] = toOption(key, current);
+        },
+        applied,
+      );
     }
 
     if (assigns) {
@@ -298,9 +324,12 @@ const call = (fn: (props: Props) => unknown, props: Props): RenderNode => {
  *
  * A class element is constructed from its props (see {@link jsxConstruct}),
  * then receives its node properties, signal handlers and children in that
- * order, and finally its `ref`. A prop holding an observable is bound: the
- * property receives the current value and every later change until the node
- * is destroyed. An element owns only the instance it
+ * order, and finally its `ref`. A node property holding an observable is
+ * bound: the property receives the current value and every later change until
+ * the node is destroyed. A construction prop holding an observable is bound the
+ * same way when the class has a property setter of that name, and the
+ * constructor receives the current value; otherwise the constructor receives
+ * the observable itself. An element owns only the instance it
  * constructs. When a step after construction throws, the element detaches the
  * children it attached as JSX children and destroys its own instance; those
  * children are never destroyed, whether they were built with JSX or with

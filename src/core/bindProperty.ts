@@ -15,10 +15,14 @@ export type WritableKeys<T> = {
 
 /**
  * The observables a property of type `V` can be bound to: observables of `V`,
- * and for a property of type `string` also observables of numbers, which the
- * binding converts with `String`.
+ * and for a property of exactly type `string` also observables of numbers,
+ * which the binding converts with `String`. Nullable strings and restricted
+ * string types such as `'left' | 'right'` accept observables of `V` only;
+ * convert numbers for them explicitly with `map`.
  */
-export type BindableSource<V> = ReadonlyObservable<V> | ([V] extends [string] ? ReadonlyObservable<number> : never);
+export type BindableSource<V> =
+  | ReadonlyObservable<V>
+  | (string extends V ? ([V] extends [string] ? ReadonlyObservable<number> : never) : never);
 
 /**
  * Writes `source.value` to `target[key]` now and after every change of
@@ -31,8 +35,11 @@ export type BindableSource<V> = ReadonlyObservable<V> | ([V] extends [string] ? 
  * ```
  *
  * A value assigned to the property directly stays until the source changes
- * again; the binding does not watch the property. When the property currently
- * holds a string, numbers from the source are converted with `String`. A
+ * again; the binding does not watch the property. When the property holds a
+ * string at bind time, numbers from the source are converted with `String`;
+ * every other value, such as `null`, is written unchanged. When the initial
+ * write itself changes the source, for example through a setter that clamps
+ * the value back into it, the property receives the changed value too. A
  * binding on a {@link SceneNode} ends when the node is destroyed; a binding on
  * any other object lasts until it is unbound or the source is destroyed.
  * Unbinding more than once is safe.
@@ -48,25 +55,32 @@ export const bindProperty = <T extends object, K extends WritableKeys<T>>(
   const record = target as Record<PropertyKey, unknown>;
   const toText = typeof record[key] === 'string';
 
-  return bindWith(target, source, true, value => {
-    record[key] = toText && typeof value !== 'string' ? String(value) : value;
+  return bindWith(target, source, value => {
+    record[key] = toText && typeof value === 'number' ? String(value) : value;
   });
 };
 
 /**
- * Calls `write` with every change of `source`, and with its current value
- * first when `writeNow` is set, until the returned function is called or
- * `target` is destroyed when it is a {@link SceneNode}.
+ * Calls `write` with the current value of `source` and with every change,
+ * until the returned function is called or `target` is destroyed when it is a
+ * {@link SceneNode}. Pass `applied` when the target already received
+ * `applied.value`, for example through its constructor; it is then written
+ * again only if the source changed meanwhile.
  * @internal
  */
 export const bindWith = (
   target: object,
   source: ReadonlyObservable<unknown>,
-  writeNow: boolean,
   write: (value: unknown) => void,
+  applied?: { readonly value: unknown },
 ): (() => void) => {
-  if (writeNow) {
-    write(source.value);
+  let written: unknown;
+
+  if (applied === undefined) {
+    written = source.value;
+    write(written);
+  } else {
+    written = applied.value;
   }
 
   const node = target instanceof SceneNode ? target : null;
@@ -92,8 +106,23 @@ export const bindWith = (
   if (node !== null) {
     if (node.destroyed) {
       unsubscribe();
-    } else {
-      addNodeTeardown(node, unbind);
+
+      return unbind;
+    }
+
+    addNodeTeardown(node, unbind);
+  }
+
+  // A write or constructor that changed the source before the subscription existed produced no notification.
+  const latest = source.value;
+
+  if (!Object.is(latest, written)) {
+    try {
+      write(latest);
+    } catch (error) {
+      unbind();
+
+      throw error;
     }
   }
 
