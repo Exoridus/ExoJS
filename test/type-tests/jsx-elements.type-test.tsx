@@ -228,3 +228,32 @@ export const untitled = <MainMenu onStart={onAny} />;
 const Caption = (): string => 'caption';
 // @ts-expect-error element functions must return a node
 export const stringFunction = <Caption />;
+
+// Option shapes whose keys `keyof` alone would not show cannot hide a reserved name.
+class IndexOptions extends Container {
+  public constructor(_options: Record<string, number> = {}) {
+    super();
+  }
+}
+
+type KindOptions = { readonly kind: 'a'; readonly x: number } | { readonly kind: 'b'; readonly depth: number };
+
+class UnionOptions extends Container {
+  public constructor(_options: KindOptions) {
+    super();
+  }
+}
+
+type SafeKindOptions = { readonly kind: 'a'; readonly width: number } | { readonly kind: 'b'; readonly depth: number };
+
+class SafeUnionOptions extends Container {
+  public constructor(_options: SafeKindOptions) {
+    super();
+  }
+}
+
+// @ts-expect-error an index signature collides with every node property
+export const indexOptions = <IndexOptions foo={1} />;
+// @ts-expect-error one member of the union uses the node property x
+export const unionOptions = <UnionOptions kind="a" x={1} />;
+export const safeUnionOptions = <SafeUnionOptions kind="b" depth={2} />;

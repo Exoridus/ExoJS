@@ -112,15 +112,22 @@ type OptionsProps<C> = C extends new (...args: infer A) => unknown
  */
 export type JsxConstructionProps<C> = typeof jsxConstruct extends keyof C ? AdapterProps<C> : OptionsProps<C>;
 
-type ReservedName<C extends JsxNodeClass> = Extract<
-  keyof JsxConstructionProps<C>,
+type ReservedLiteral<C extends JsxNodeClass> =
   | keyof JsxNodeProps
   | (InstanceType<C> extends Drawable ? keyof JsxDrawableProps : never)
   | `on${Capitalize<string>}`
   | 'children'
   | 'ref'
-  | 'key'
->;
+  | 'key';
+
+/** Every key of every member, so a union of option shapes cannot hide a reserved name behind `keyof`. */
+type OptionKeys<P> = P extends unknown ? keyof P : never;
+
+// An index signature accepts every reserved name, so such options collide with all node properties.
+type ReservedName<C extends JsxNodeClass> =
+  string extends OptionKeys<JsxConstructionProps<C>>
+    ? Exclude<ReservedLiteral<C>, `on${Capitalize<string>}`>
+    : Extract<OptionKeys<JsxConstructionProps<C>>, ReservedLiteral<C>>;
 
 /**
  * Reported in place of the construction props when a class's options use a

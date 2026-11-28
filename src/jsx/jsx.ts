@@ -212,6 +212,13 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
   const options: Record<string, unknown> = {};
   let assigns = false;
 
+  // The compiler passes a literal key separately; one arriving in the props came through a spread and would reach the constructor.
+  if (Object.hasOwn(props, 'key')) {
+    throw new TypeError(
+      `JSX: ${tagOf(type)} received a "key" prop. ExoJS does not reconcile, so key is reserved and never passed to a constructor.`,
+    );
+  }
+
   // Children are attached only after construction, so a failure up to here leaves every child untouched.
   collect(children, nodes);
 

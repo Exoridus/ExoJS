@@ -618,4 +618,9 @@ describe('jsxTransaction', () => {
     expect(Probe.created).toHaveLength(2);
     expect(Probe.created.every(probe => probe.destroyed)).toBe(true);
   });
+  test('rejects a key that arrives through a spread instead of passing it to the constructor', () => {
+    const extra = { key: 'a', label: 'x' } as unknown as { label: string };
+
+    expect(() => <Button {...extra} />).toThrow(/reserved/);
+  });
 });
