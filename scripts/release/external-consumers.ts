@@ -32,7 +32,7 @@
  * resolves with no registry access.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -594,6 +594,97 @@ export const jsxConsumerChecks = (consumerDir: string): ConsumerCheck[] => {
   return checks;
 };
 
+const REACT_COEXISTENCE_EXO = `import { Container, live, Observable } from '@codexo/exojs';
+
+export const health = new Observable(100);
+export const buildHud = (): Container => (<Container name={live\`HP \${health}\`} x={health} />) as Container;
+// @ts-expect-error ExoJS has no intrinsic elements; React's are not visible in this file
+export const intrinsic = <div />;
+`;
+
+const REACT_COEXISTENCE_REACT = `/** @jsxImportSource react */
+import type { ReactElement } from 'react';
+
+export const Badge = (props: { readonly label: string }): ReactElement => <span className="badge">{props.label}</span>;
+export const panel = (): ReactElement => (
+  <section>
+    <Badge label="ExoJS" />
+  </section>
+);
+`;
+
+const REACT_COEXISTENCE_MAIN = `import { buildHud, health } from './react-coexistence-exo.js';
+import { panel } from './react-coexistence-react.js';
+
+const element = panel();
+const hud = buildHud();
+health.value = 75;
+
+const problems = [
+  element.type === 'section' || 'react element',
+  hud.x === 75 || 'exojs binding',
+  hud.name === 'HP 75' || 'exojs live text',
+].filter(result => result !== true);
+
+console.log(problems.length === 0 ? 'REACT_COEXISTENCE_OK' : 'REACT_COEXISTENCE_BAD ' + problems.join(','));
+`;
+
+/**
+ * Copies the workspace's own React and its type packages into the consumer
+ * project, since the offline install cannot fetch them.
+ */
+const installWorkspaceReact = (consumerDir: string): void => {
+  const reactAdapter = join(repoRoot, 'packages', 'exojs-react');
+  const resolveFrom = createRequire(join(reactAdapter, 'package.json'));
+  const reactTypes = dirname(resolveFrom.resolve('@types/react/package.json'));
+  const packages: Array<[name: string, dir: string]> = [
+    ['react', dirname(resolveFrom.resolve('react/package.json'))],
+    ['@types/react', reactTypes],
+    ['csstype', dirname(createRequire(join(realpathSync(reactTypes), 'package.json')).resolve('csstype/package.json'))],
+  ];
+
+  for (const [name, dir] of packages) {
+    cpSync(realpathSync(dir), join(consumerDir, 'node_modules', name), { recursive: true, dereference: true });
+  }
+};
+
+/**
+ * A project that mixes React and ExoJS JSX: the tsconfig points the automatic
+ * transform at ExoJS, a React file opts out with a per-file
+ * `@jsxImportSource react` pragma, both type-check in one program, and the
+ * compiled output builds a React element and a bound ExoJS node side by side.
+ */
+export const reactCoexistenceChecks = (consumerDir: string): ConsumerCheck[] => {
+  const name = 'React and ExoJS JSX coexist in one program';
+
+  try {
+    installWorkspaceReact(consumerDir);
+  } catch (error) {
+    return [{ name, ok: false, detail: `React from the workspace could not be installed: ${String(error)}` }];
+  }
+
+  writeFileSync(join(consumerDir, 'react-coexistence-exo.tsx'), REACT_COEXISTENCE_EXO);
+  writeFileSync(join(consumerDir, 'react-coexistence-react.tsx'), REACT_COEXISTENCE_REACT);
+  writeFileSync(join(consumerDir, 'react-coexistence.ts'), REACT_COEXISTENCE_MAIN);
+
+  const outDir = 'react-coexistence-out';
+  const config = JSON.parse(jsxTsconfig('bundler', 'react-jsx', 'react-coexistence.ts', outDir)) as { include: string[] };
+  config.include = ['react-coexistence.ts', 'react-coexistence-exo.tsx', 'react-coexistence-react.tsx'];
+  writeFileSync(join(consumerDir, 'tsconfig.react-coexistence.json'), JSON.stringify(config, null, 2));
+
+  const tsc = run('node', [consumerTscBin, '-p', 'tsconfig.react-coexistence.json'], consumerDir);
+
+  if (tsc.code !== 0) {
+    return [{ name, ok: false, detail: lastLines(tsc.output, 5) }];
+  }
+
+  writeFileSync(join(consumerDir, outDir, 'package.json'), JSON.stringify({ type: 'module' }));
+  const node = run('node', [join(outDir, 'react-coexistence.js')], consumerDir);
+  const ok = node.code === 0 && node.output.includes('REACT_COEXISTENCE_OK');
+
+  return [{ name, ok, ...(ok ? {} : { detail: lastLines(node.output, 5) }) }];
+};
+
 /** The legacy shims among the installed packages of a consumer project. */
 const installedShims = (consumerDir: string): LegacyShim[] =>
   LEGACY_SHIMS.filter(shim => existsSync(join(consumerDir, 'node_modules', ...shim.name.split('/'), 'package.json')));
@@ -669,6 +760,7 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
     }
 
     checks.push(...jsxConsumerChecks(consumerDir));
+    checks.push(...reactCoexistenceChecks(consumerDir));
     checks.push(...legacyShimChecks(consumerDir));
 
     return { ok: checks.every(c => c.ok), consumerDir, checks };
