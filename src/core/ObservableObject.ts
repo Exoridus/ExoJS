@@ -1,4 +1,4 @@
-import { derive, ObservableBase, type ObservableListener, type ReadonlyObservable } from './Observable';
+import { derive, ObservableBase, observableData, type ObservableListener, type ReadonlyObservable } from './Observable';
 
 /** Change notifications of one {@link ObservableObject}, kept outside the instance so no data property name is reserved. */
 class ObjectObservation<T extends object> extends ObservableBase<T> {
@@ -45,7 +45,8 @@ export interface ObservableObjectConstructor {
   /**
    * Copies the own enumerable properties of `initial` into a new, sealed
    * object whose properties notify on change. `initial` itself is not
-   * modified or observed afterwards.
+   * modified or observed afterwards. To copy another observable object, spread
+   * it first: `new ObservableObject({ ...stats })`.
    *
    * @throws {TypeError} If `initial` is not a plain object.
    */
@@ -128,6 +129,7 @@ class ObservableObjectImpl {
 
     Object.seal(this);
     observations.set(this, observation);
+    observableData.add(this);
   }
 
   public static map<T extends object, U>(source: T, project: (value: Readonly<T>) => U): ReadonlyObservable<U> {

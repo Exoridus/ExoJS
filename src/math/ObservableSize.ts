@@ -40,6 +40,9 @@ class SizeObservation extends ObservableBase<ObservableSize> {
 
 const observations = new WeakMap<ObservableSize, SizeObservation>();
 
+/** Callback slot of a destroyed size: it does nothing and marks later subscriptions as ignored. */
+const destroyedCallback = (): void => undefined;
+
 /**
  * A {@link Size} subclass that fires a callback whenever `width` or `height`
  * changes. Used internally by layout-aware types to invalidate cached geometry
@@ -136,6 +139,10 @@ export class ObservableSize extends Size {
    * function is called. See {@link ReadonlyObservable.subscribe}.
    */
   public subscribe(listener: ObservableListener<this>): () => void {
+    if (this._callback === destroyedCallback) {
+      return () => undefined;
+    }
+
     const observation =
       observations.get(this) ??
       new SizeObservation(this, this._callback, (callback, current) => {
@@ -158,6 +165,6 @@ export class ObservableSize extends Size {
 
   public override destroy(): void {
     observations.get(this)?.end();
-    this._callback = null;
+    this._callback = destroyedCallback;
   }
 }

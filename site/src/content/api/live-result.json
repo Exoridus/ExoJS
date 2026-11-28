@@ -1,6 +1,6 @@
 {
   "title": "LiveResult",
-  "description": "The result of live: a plain `string` when no substitution is observable, otherwise a derived observable string.",
+  "description": "The result of live: a derived observable string when a substitution is always observable, a plain `string` when none can be, and the union of both when a substitution is only sometimes observable (`any`, `unknown` or a union with an observable).",
   "symbol": "LiveResult",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The result of live: a plain `string` when no substitution is observable, otherwise a derived observable string."
+        "The result of live: a derived observable string when a substitution is always observable, a plain `string` when none can be, and the union of both when a substitution is only sometimes observable (`any`, `unknown` or a union with an observable)."
       ],
       "importLine": "import { LiveResult } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,23 +30,27 @@
       "members": [
         {
           "name": "LiveResult",
-          "signature": "[Extract<Values[number], ReadonlyObservable<unknown>>] extends [never] ? unknown extends Values[number] ? ReadonlyObservable<string> | string : string : ReadonlyObservable<string>",
+          "signature": "\"live\" extends mapped[number] ? ReadonlyObservable<string> : \"maybe\" extends mapped[number] ? ReadonlyObservable<string> | string : string",
           "signatureTokens": [
             {
-              "text": "[",
+              "text": "\"live\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
               "kind": "punctuation"
             },
             {
-              "text": "Extract",
-              "kind": "type"
+              "text": "extends",
+              "kind": "keyword"
             },
             {
-              "text": "<",
+              "text": " ",
               "kind": "punctuation"
             },
             {
-              "text": "Values",
-              "kind": "type"
+              "text": "mapped",
+              "kind": "keyword"
             },
             {
               "text": "[",
@@ -61,7 +65,7 @@
               "kind": "punctuation"
             },
             {
-              "text": ", ",
+              "text": " ? ",
               "kind": "punctuation"
             },
             {
@@ -73,7 +77,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "unknown",
+              "text": "string",
               "kind": "keyword"
             },
             {
@@ -81,43 +85,11 @@
               "kind": "punctuation"
             },
             {
-              "text": ">",
+              "text": " : ",
               "kind": "punctuation"
             },
             {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
-              "kind": "keyword"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "unknown",
+              "text": "\"maybe\"",
               "kind": "keyword"
             },
             {
@@ -133,8 +105,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Values",
-              "kind": "type"
+              "text": "mapped",
+              "kind": "keyword"
             },
             {
               "text": "[",
@@ -183,26 +155,6 @@
             {
               "text": "string",
               "kind": "keyword"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ReadonlyObservable",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [],

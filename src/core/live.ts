@@ -1,14 +1,26 @@
 import { derive, isObservable, type ReadonlyObservable } from './Observable';
 
+type LiveKind<V> = 0 extends 1 & V
+  ? 'maybe'
+  : [V] extends [ReadonlyObservable<unknown>]
+    ? 'live'
+    : unknown extends V
+      ? 'maybe'
+      : [Extract<V, ReadonlyObservable<unknown>>] extends [never]
+        ? 'static'
+        : 'maybe';
+
 /**
- * The result of {@link live}: a plain `string` when no substitution is
- * observable, otherwise a derived observable string.
+ * The result of {@link live}: a derived observable string when a substitution
+ * is always observable, a plain `string` when none can be, and the union of
+ * both when a substitution is only sometimes observable (`any`, `unknown` or a
+ * union with an observable).
  */
-export type LiveResult<Values extends readonly unknown[]> = [Extract<Values[number], ReadonlyObservable<unknown>>] extends [never]
-  ? unknown extends Values[number]
+export type LiveResult<Values extends readonly unknown[]> = 'live' extends { [I in keyof Values]: LiveKind<Values[I]> }[number]
+  ? ReadonlyObservable<string>
+  : 'maybe' extends { [I in keyof Values]: LiveKind<Values[I]> }[number]
     ? string | ReadonlyObservable<string>
-    : string
-  : ReadonlyObservable<string>;
+    : string;
 
 const isThenable = (value: unknown): boolean =>
   typeof value === 'object' && value !== null && typeof (value as { then?: unknown }).then === 'function';

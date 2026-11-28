@@ -202,6 +202,30 @@ describe('derived values', () => {
     expect(value.subscriberCount).toBe(0);
   });
 
+  test('stay usable after a projection threw while connecting', () => {
+    const value = new Observable(1);
+    let fail = true;
+    const doubled = value.map(n => {
+      if (fail) {
+        throw new Error('projection failed');
+      }
+
+      return n * 2;
+    });
+
+    expect(() => doubled.subscribe(() => undefined)).toThrow('projection failed');
+    expect(doubled.subscriberCount).toBe(0);
+    expect(value.subscriberCount).toBe(0);
+
+    fail = false;
+    const listener = vi.fn();
+
+    doubled.subscribe(listener);
+    value.value = 5;
+
+    expect(listener).toHaveBeenCalledWith(10);
+  });
+
   test('keep their own subscribers when a source is destroyed', () => {
     const value = new Observable(1);
     const mapped = value.map(n => n + 1);
@@ -258,6 +282,11 @@ describe('ObservableObject', () => {
     expect({ ...settings }).toEqual({ value: 1, map: 'world', subscribe: true, markChanged: 0 });
     expect(JSON.stringify(settings)).toBe('{"value":1,"map":"world","subscribe":true,"markChanged":0}');
     expect(isObservable(settings)).toBe(false);
+
+    const lookalike = new ObservableObject({ value: 1, subscribe: () => () => undefined, map: () => undefined });
+
+    expect(isObservable(lookalike)).toBe(false);
+    expect(typeof live`${lookalike}`).toBe('string');
   });
 
   test('keeps a fixed shape', () => {
@@ -415,6 +444,21 @@ describe('vector and size observation', () => {
 
     expect(vectorListener).not.toHaveBeenCalled();
     expect(sizeListener).not.toHaveBeenCalled();
+  });
+
+  test('ignores subscriptions to a destroyed vector or size', () => {
+    const vector = new ObservableVector(null, 0);
+    const size = new ObservableSize(() => undefined);
+    const listener = vi.fn();
+
+    vector.destroy();
+    size.destroy();
+    vector.subscribe(listener)();
+    size.subscribe(listener);
+    vector.x = 1;
+    size.width = 1;
+
+    expect(listener).not.toHaveBeenCalled();
   });
 
   test('runs the size callback before subscribers and restores it afterwards', () => {

@@ -2258,7 +2258,7 @@
             }
           ],
           "returnType": "value",
-          "description": "Whether value implements the ReadonlyObservable contract. Functions, promises and plain objects without subscribe and map methods are not observable."
+          "description": "Whether value implements the ReadonlyObservable contract. Functions, promises, plain objects without subscribe and map methods, and ObservableObject instances are not observable."
         },
         {
           "name": "isPowerOfTwo",

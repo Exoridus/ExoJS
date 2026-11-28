@@ -14,6 +14,9 @@ export interface ObservableVectorOwner {
   _onObservableChange(channel: number): void;
 }
 
+/** Owner slot of a destroyed vector: it receives nothing and marks later subscriptions as ignored. */
+const destroyedOwner: ObservableVectorOwner = { _onObservableChange: () => undefined };
+
 /**
  * Subscribers of one vector. It takes the vector's owner slot only while it has
  * subscribers and forwards every change to the original owner first, so an
@@ -186,6 +189,11 @@ export class ObservableVector extends AbstractVector {
    */
   public subscribe(listener: ObservableListener<this>): () => void {
     const owner = this._owner;
+
+    if (owner === destroyedOwner) {
+      return () => undefined;
+    }
+
     const observation =
       owner instanceof VectorObservation
         ? owner
@@ -208,6 +216,6 @@ export class ObservableVector extends AbstractVector {
 
     // Drop the owner reference to prevent leaks if this vector is retained by
     // an external scope after the owning object is destroyed.
-    this._owner = null;
+    this._owner = destroyedOwner;
   }
 }

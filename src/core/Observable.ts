@@ -37,13 +37,22 @@ export interface ReadonlyObservable<T> {
 export type ObservedValue<O> = O extends ReadonlyObservable<infer T> ? T : never;
 
 /**
+ * Objects whose own properties are data, such as {@link ObservableObject}
+ * instances, which {@link isObservable} must not mistake for the contract even
+ * when their data has `value`, `subscribe` and `map` keys.
+ * @internal
+ */
+export const observableData = new WeakSet();
+
+/**
  * Whether `value` implements the {@link ReadonlyObservable} contract. Functions,
- * promises and plain objects without `subscribe` and `map` methods are not
- * observable.
+ * promises, plain objects without `subscribe` and `map` methods, and
+ * {@link ObservableObject} instances are not observable.
  */
 export const isObservable = (value: unknown): value is ReadonlyObservable<unknown> =>
   typeof value === 'object' &&
   value !== null &&
+  !observableData.has(value) &&
   'value' in value &&
   typeof (value as Partial<ReadonlyObservable<unknown>>).subscribe === 'function' &&
   typeof (value as Partial<ReadonlyObservable<unknown>>).map === 'function';
@@ -83,7 +92,16 @@ export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
 
     if (!this._connected) {
       this._connected = true;
-      this._connect();
+
+      try {
+        this._connect();
+      } catch (error) {
+        // A failed connection must not leave a listener the caller has no handle for, or a state that never reconnects.
+        listeners.remove(listener);
+        this._connected = false;
+
+        throw error;
+      }
     }
 
     return (): void => {

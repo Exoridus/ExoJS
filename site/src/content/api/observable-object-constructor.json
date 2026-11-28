@@ -73,7 +73,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Copies the own enumerable properties of initial into a new, sealed object whose properties notify on change. initial itself is not modified or observed afterwards."
+          "description": "Copies the own enumerable properties of initial into a new, sealed object whose properties notify on change. initial itself is not modified or observed afterwards. To copy another observable object, spread it first: new ObservableObject({ ...stats })."
         }
       ],
       "paragraphs": [],
