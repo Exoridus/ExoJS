@@ -69,8 +69,8 @@ const noop = (): void => undefined;
  * notification: the current round finishes delivering, then a new round
  * delivers the latest value to every listener. Listeners therefore never
  * receive values out of order, and the last value each one receives is the
- * current one.
- * @internal
+ * current one. Not exported from the package; public subclasses expose its
+ * members.
  */
 export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
   private _listeners: Signal<[T]> | null = null;
