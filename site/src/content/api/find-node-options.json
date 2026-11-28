@@ -1,0 +1,120 @@
+{
+  "title": "FindNodeOptions",
+  "description": "Narrows Container.find and Container.findAll beyond the node type.",
+  "symbol": "FindNodeOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Narrows Container.find and Container.findAll beyond the node type."
+      ],
+      "importLine": "import { FindNodeOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "name",
+          "signature": "name?: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Matches only nodes whose SceneNode.name equals this exactly."
+        },
+        {
+          "name": "where",
+          "signature": "where?: (node: T) => boolean",
+          "signatureTokens": [
+            {
+              "text": "where",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Matches only nodes for which this returns true; called after the type and name checks passed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/Container.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Container.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/Container.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/Container.ts"
+}
