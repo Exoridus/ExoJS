@@ -6,9 +6,9 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 9,
   "counts": {
-    "constructors": 1,
+    "constructors": 0,
     "methods": 6,
     "properties": 1,
     "events": 2
@@ -25,66 +25,6 @@
         "Systems with SystemLifecycle hooks are told when they are attached, enabled, disabled and detached; see that interface for the exact points."
       ],
       "importLine": "import { SystemRegistry } from '@codexo/exojs'",
-      "sourceLink": null
-    },
-    {
-      "id": "constructors",
-      "title": "Constructors",
-      "members": [
-        {
-          "name": "new",
-          "signature": "new(owner?: SystemRegistryOwner): SystemRegistry",
-          "signatureTokens": [
-            {
-              "text": "new",
-              "kind": "keyword"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "owner",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SystemRegistryOwner",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SystemRegistry",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "owner",
-              "type": "SystemRegistryOwner",
-              "optional": true
-            }
-          ],
-          "returnType": "SystemRegistry",
-          "description": "Registries are created by Application and Scene; one constructed directly belongs to no application and is enabled from the start."
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
       "sourceLink": null
     },
     {

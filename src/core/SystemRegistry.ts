@@ -280,6 +280,7 @@ export class SystemRegistry implements Destroyable {
    * Registries are created by {@link Application} and {@link Scene}; one
    * constructed directly belongs to no application and is enabled from the
    * start.
+   * @internal
    */
   public constructor(owner?: SystemRegistryOwner) {
     this._owner = owner ?? null;
