@@ -50,7 +50,8 @@ export const isObservable = (value: unknown): value is ReadonlyObservable<unknow
   typeof (value as Partial<ReadonlyObservable<unknown>>).subscribe === 'function' &&
   typeof (value as Partial<ReadonlyObservable<unknown>>).map === 'function';
 
-declare const structTag: unique symbol;
+// Enumerable so a spread copy of a struct, whose static type keeps the tag, is preserved like the struct itself.
+const structTag: unique symbol = Symbol('ObservableStruct');
 
 /** Type-only marker that tells an {@link ObservableStruct} apart from an ordinary object value. */
 export interface ObservableStructTag {
@@ -72,7 +73,10 @@ export type ObservableStructMember<V> = [V] extends [Preserved]
  */
 export type ObservableStruct<T extends object> = { readonly [K in keyof T]: ObservableStructMember<T[K]> } & ObservableStructTag;
 
-const structs = new WeakSet();
+const isStruct = (value: unknown): boolean => typeof value === 'object' && value !== null && structTag in value;
+
+const isThenable = (value: unknown): value is PromiseLike<unknown> =>
+  typeof value === 'object' && value !== null && typeof (value as { then?: unknown }).then === 'function';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -90,6 +94,7 @@ const noop = (): void => undefined;
 
 let batchDepth = 0;
 let flushing = false;
+let flushIndex = 0;
 const queue: Array<ObservableBase<unknown>> = [];
 
 /**
@@ -129,9 +134,10 @@ export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
       try {
         this._connect();
       } catch (error) {
-        // A failed connection must not leave a listener the caller has no handle for, or a state that never reconnects.
+        // A failed connection must not leave a listener the caller has no handle for, upstream subscriptions, or a state that never reconnects.
         listeners.remove(listener);
         this._connected = false;
+        this._disconnect();
 
         throw error;
       }
@@ -166,6 +172,11 @@ export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
     return this.value;
   }
 
+  /** @internal Distance from the writable sources: queued deliveries run in ascending rank, so a derived value follows everything it depends on. */
+  public _rank(): number {
+    return 0;
+  }
+
   /** Recomputes before a queued delivery; returns `false` when there is nothing to deliver. */
   protected _refresh(): boolean {
     return true;
@@ -187,10 +198,21 @@ export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
   }
 
   protected _enqueue(): void {
-    if (!this._queued) {
-      this._queued = true;
-      queue.push(this as ObservableBase<unknown>);
+    if (this._queued) {
+      return;
     }
+
+    this._queued = true;
+
+    const rank = this._rank();
+    let index = queue.length;
+
+    // Behind the delivery in progress, keep pending entries in ascending rank, stable for equal ranks.
+    while (index > flushIndex + 1 && queue[index - 1]!._rank() > rank) {
+      index--;
+    }
+
+    queue.splice(index, 0, this as ObservableBase<unknown>);
   }
 
   /** @internal Forgets a queued delivery that will not run. */
@@ -257,10 +279,11 @@ export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
 }
 
 /**
- * Delivers every queued notification in the order the values first changed.
- * Changes made by listeners are queued behind the current ones and delivered in
- * the same pass. Every queued value is delivered even when a listener throws;
- * the first error is rethrown afterwards.
+ * Delivers every queued notification: writable values in the order they first
+ * changed, each derived value after everything it depends on. Changes made by
+ * listeners are queued behind the current delivery and delivered in the same
+ * pass. Every queued value is delivered even when a listener of another value
+ * throws; the first error is rethrown afterwards.
  */
 const flush = (): void => {
   flushing = true;
@@ -269,8 +292,8 @@ const flush = (): void => {
   let failure: { readonly error: unknown } | null = null;
 
   try {
-    for (let i = 0; i < queue.length; i++) {
-      const observable = queue[i]!;
+    for (flushIndex = 0; flushIndex < queue.length; flushIndex++) {
+      const observable = queue[flushIndex]!;
       const count = (deliveries.get(observable) ?? 0) + 1;
 
       deliveries.set(observable, count);
@@ -295,6 +318,7 @@ const flush = (): void => {
     }
 
     queue.length = 0;
+    flushIndex = 0;
     flushing = false;
   }
 
@@ -311,6 +335,7 @@ class DerivedObservable<T> extends ObservableBase<T> {
   private readonly _sources: ReadonlyArray<ReadonlyObservable<unknown>>;
   private readonly _compute: () => T;
   private readonly _unsubscribers: Array<() => void> = [];
+  private readonly _depth: number;
   private _last: T | undefined = undefined;
 
   public constructor(sources: ReadonlyArray<ReadonlyObservable<unknown>>, compute: () => T) {
@@ -318,6 +343,20 @@ class DerivedObservable<T> extends ObservableBase<T> {
 
     this._sources = sources;
     this._compute = compute;
+
+    let depth = 0;
+
+    for (const source of sources) {
+      if (source instanceof ObservableBase) {
+        depth = Math.max(depth, source._rank());
+      }
+    }
+
+    this._depth = depth + 1;
+  }
+
+  public override _rank(): number {
+    return this._depth;
   }
 
   public get value(): T {
@@ -471,10 +510,10 @@ export class Observable<T> extends ObservableBase<T> {
     for (const key of Object.keys(members)) {
       const member = members[key];
 
-      struct[key] = isObservable(member) || structs.has(member as object) ? member : new Observable(member);
+      struct[key] = isObservable(member) || isStruct(member) ? member : new Observable(member);
     }
 
-    structs.add(struct);
+    (struct as Record<PropertyKey, unknown>)[structTag] = true;
 
     return Object.freeze(struct) as ObservableStruct<T>;
   }
@@ -494,16 +533,17 @@ export class Observable<T> extends ObservableBase<T> {
    *
    * - Reads inside the batch see the written values; derived values compute
    *   from the current sources.
-   * - Values are delivered in the order they first changed. A derived value
-   *   recomputes once after all of its changed sources and notifies only if
-   *   its result changed, so a text built from several changed values is
-   *   applied once.
+   * - Values are delivered in the order they first changed, and each derived
+   *   value after everything it depends on. A derived value recomputes once
+   *   and notifies only if its result changed, so a text built from several
+   *   changed values is computed and applied once.
    * - Batches nest; only the outermost one delivers. Changes made by
    *   listeners during the delivery are delivered in the same pass.
    * - There is no rollback. When `update` throws, the writes made so far stay,
-   *   their notifications are delivered, and the error is rethrown. When
-   *   listeners throw, every queued notification is still delivered and the
-   *   first listener error is rethrown.
+   *   their notifications are delivered, and the error is rethrown. A
+   *   throwing listener stops the remaining listeners of that value, as
+   *   outside a batch, but every other queued value is still delivered; the
+   *   first error is rethrown afterwards.
    * - Owner notifications of vectors and sizes, such as transform
    *   invalidation, are never deferred; only their subscribers are.
    *
@@ -533,6 +573,11 @@ export class Observable<T> extends ObservableBase<T> {
     }
 
     if (failure !== null) {
+      if (isThenable(result)) {
+        // The batch already failed; the abandoned promise must not also surface as an unhandled rejection.
+        Promise.resolve(result).catch(noop);
+      }
+
       throw failure.error;
     }
 

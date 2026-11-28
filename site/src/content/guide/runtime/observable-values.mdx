@@ -105,11 +105,11 @@ Observable.batch(() => {
 }); // logs "HP: 100 | Ammo: 30" once
 ```
 
-Writes take effect immediately, so code inside the batch reads the new values, and derived values compute from them. Subscribers are notified once the outermost batch completes, in the order the values first changed. A derived value recomputes once after all of its changed sources, and notifies only if its result changed. The text above is therefore computed and applied once, and no subscriber ever sees a mix of old and new values.
+Writes take effect immediately, so code inside the batch reads the new values, and derived values compute from them. Subscribers are notified once the outermost batch completes: values in the order they first changed, and each derived value after everything it depends on. A derived value recomputes once and notifies only if its result changed. The text above is therefore computed and applied once, and no subscriber ever sees a mix of old and new values.
 
 - **Nesting**: inner batches only add to the outer one.
 - **Listener changes**: changes made by listeners while the batch is delivered are delivered in the same pass, after the current ones.
-- **No rollback**: when the callback throws, the writes made so far stay, their notifications are delivered, and the error is rethrown. When a listener throws, every queued notification is still delivered and the first error is rethrown.
+- **No rollback**: when the callback throws, the writes made so far stay, their notifications are delivered, and the error is rethrown. A listener that throws stops the remaining listeners of that value, as outside a batch, but every other queued value is still delivered and the first error is rethrown.
 - **Synchronous only**: a callback that returns a promise is rejected, because writes after an `await` would not be batched.
 - **Vectors and sizes**: their owners, such as a node's transform, are still invalidated at once; only subscribers wait for the batch.
 

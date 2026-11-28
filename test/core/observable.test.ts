@@ -399,6 +399,51 @@ describe('Observable.batch', () => {
     expect(seen).toEqual(['6 9 7']);
   });
 
+  test('computes a derived value once when it also depends on another derived value', () => {
+    const source = new Observable(1);
+    let computes = 0;
+    const doubled = source.map(n => n * 2);
+    const both = live`${source}|${doubled}`.map(text => {
+      computes++;
+
+      return text;
+    });
+    const seen: string[] = [];
+
+    both.subscribe(next => seen.push(next));
+    doubled.subscribe(() => undefined);
+    computes = 0;
+
+    Observable.batch(() => {
+      source.value = 2;
+    });
+
+    expect(seen).toEqual(['2|4']);
+    expect(computes).toBe(1);
+  });
+
+  test('preserves a spread copy of a struct like the struct itself', () => {
+    const stats = Observable.struct({ ammo: 30 });
+    const player = Observable.struct({ stats: { ...stats } });
+
+    expect(player.stats.ammo).toBe(stats.ammo);
+  });
+
+  test('does not leak upstream subscriptions when connecting fails partway', () => {
+    const a = new Observable(1);
+    const flaky = {
+      value: 2,
+      subscribe: () => {
+        throw new Error('subscribe failed');
+      },
+      map: () => flaky,
+    } as unknown as Observable<number>;
+    const text = live`${a}${flaky}`;
+
+    expect(() => text.subscribe(() => undefined)).toThrow('subscribe failed');
+    expect(a.subscriberCount).toBe(0);
+  });
+
   test('nests, delivering only when the outermost batch completes', () => {
     const value = new Observable(0);
     const listener = vi.fn();
