@@ -3,6 +3,9 @@ title: 'Observable values'
 description: 'Hold state in values that report their own changes, derive read-only values from them, and observe vectors and sizes without polling every frame.'
 ---
 
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+
 # Observable values
 
 Game state changes at specific moments: a hit lowers health, a pickup adds ammo, a node moves. An observable value reports those moments to whoever subscribed, so nothing has to poll every frame.
@@ -156,6 +159,32 @@ health.value = 75; // logs "Health: 75"
 Observable substitutions are read each time the text is computed. Every other substitution is converted once, like in an ordinary template literal, and a template without observable substitutions returns a plain `string`. Functions and promises are rejected, because they would never be read again. An ordinary template literal, or a plain property read such as `player.x`, is always a snapshot.
 
 Vectors print as `120, 80`, sizes as `1920 × 1080` and rectangles as `10, 20, 200, 100`, without rounding. Format numbers yourself in `map`, as in the readout above.
+
+## Binding properties
+
+`bindProperty(target, key, source)` writes an observable's value to an ordinary property, now and after every change, through the property's own setter. The property keeps its ordinary type: `label.text` stays a string and `button.visible` a boolean. Nothing polls, and no scene-wide binding system exists.
+
+<SourceSnippet source="examples/ui/observable-counter.ts" region="imperative-bindings" title="examples/ui/observable-counter.ts" />
+
+<ExamplePreview chapter="ui" slug="observable-counter" />
+
+- **Initial value**: applied immediately.
+- **Types**: TypeScript accepts only writable, non-function properties and a source of the property's type. For a property of type `string` it also accepts a number source, which the binding converts with `String`. Nullable strings and restricted string types such as `'left' | 'right'` accept sources of their own type only, so `null` stays `null`; convert numbers for them explicitly with `map`.
+- **Redundant writes**: a derived source notifies only when its result changes, so an unchanged result never reaches the setter. An observed object that changes in place, such as a vector, is written again on every change.
+- **Manual writes**: a value you assign directly stays until the source changes again. The binding does not watch the property.
+- **Lifetime**: `bindProperty` returns the function that removes the binding. A binding on a scene node also ends when the node is destroyed, including through its parent or its scene, so a destroyed node never keeps a subscription. A retained, inactive scene keeps its bindings and stays current while it is not shown. A binding on any other object lasts until you unbind it.
+
+The same works with a struct, where a batch updates every bound label once, and with a node's own vectors:
+
+<SourceSnippet source="examples/ui/player-stats.ts" region="player-stats" title="examples/ui/player-stats.ts" />
+
+<ExamplePreview chapter="ui" slug="player-stats" />
+
+<SourceSnippet source="examples/ui/debug-inspector.ts" region="debug-inspector" title="examples/ui/debug-inspector.ts" />
+
+<ExamplePreview chapter="ui" slug="debug-inspector" />
+
+With JSX, the same bindings are written as props; see [JSX construction](/ExoJS/en/guide/runtime/jsx-construction/).
 
 ## Order and reentrancy
 

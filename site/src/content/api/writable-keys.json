@@ -1,0 +1,83 @@
+{
+  "title": "WritableKeys",
+  "description": "The keys of `T` that name writable, non-function properties: fields and accessors with a setter. Read-only fields, getter-only accessors and methods are excluded.",
+  "symbol": "WritableKeys",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The keys of `T` that name writable, non-function properties: fields and accessors with a setter. Read-only fields, getter-only accessors and methods are excluded."
+      ],
+      "importLine": "import { WritableKeys } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "WritableKeys",
+          "signature": "mapped[keyof T]",
+          "signatureTokens": [
+            {
+              "text": "mapped",
+              "kind": "keyword"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "keyof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/bindProperty.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/bindProperty.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/bindProperty.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/bindProperty.ts"
+}

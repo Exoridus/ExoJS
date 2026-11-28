@@ -35,9 +35,26 @@ Each tag maps to one constructor call:
 - **Node properties.** `name`, `x`, `y`, `rotation`, `scale`, `origin`, `skewX`, `skewY`, `visible`, `zIndex`, `interactive`, `draggable`, `cursor`, `focusable`, `tabIndex`, `hitArea`, `filters`, `mask` and `cullable` are assigned through the node's own setters after construction. Drawables also accept `tint`, `blendMode` and `anchor`. `scale`, `origin` and `anchor` take one number for both axes or an `{ x, y }` pair.
 - **Signal handlers.** An `on*` prop adds the function to the signal of that name, so `onClick` goes to `button.onClick` and `onPointerDown` to `node.onPointerDown`. The handler is typed with that signal's arguments.
 - **Children.** Children are added with `addChild` in the order written. Only containers take children: `<Sprite>` with children is a compile error, because a sprite is not a container. A container that restricts its children, such as `Graphics`, which takes only meshes, rejects the rest when the element is built.
+- **`components`.** An optional list of [components](/ExoJS/en/guide/runtime/components/) attached with `addComponent`. See [Components](#components) below.
 - **`ref`.** An optional callback that receives the finished instance, with its concrete type. Use it for calls that are not properties, such as `anchorIn` above.
 
 Destroying the menu destroys its buttons, exactly as with `new`.
+
+## Observable props
+
+A prop can take an [observable value](/ExoJS/en/guide/runtime/observable-values/) instead of a plain one. JSX assigns its current value while it builds the node, then assigns every later change through the same setter until the node is destroyed. JSX still runs once: an observable change updates the existing node and never rebuilds or reconciles the tree.
+
+<SourceSnippet source="examples/guides/jsx/game-hud.tsx" region="game-hud" language="tsx" title="examples/guides/jsx/game-hud.tsx" />
+
+<SourceSnippet source="examples/guides/jsx/counter.tsx" region="counter" language="tsx" title="examples/guides/jsx/counter.tsx" />
+
+- **Node properties**: all of them accept observables of their type, for example `visible={health.map(n => n <= 0)}`, `x={offset}` or `scale={other.scale}`.
+- **Constructor options**: an option accepts an observable only when the instance has a writable property of the same name and type, such as `<Label text>` or `<Button label>`. The constructor receives the current value, and the property's setter receives later changes. An option that can only be set at construction does not accept an observable. TypeScript reports it.
+- **Observable arguments**: an option whose own type accepts an observable is passed to the constructor as it is, not bound. JSX binds a constructor option only when the class has a property setter of that name; for a plain field it passes the observable unchanged.
+- **Text**: `text` and `label` properties of type `string` also accept an observable number, converted with `String`, so `<Label text={health} />` works. Other properties get no conversion: `visible={health}` is a type error. `live`, the tagged template, builds text from several values.
+- **Handlers**: `on*` props stay functions.
+
+When an element fails, the failing node is destroyed and its bindings with it. In a `jsxTransaction`, every node of the failed tree is destroyed, so no binding survives.
 
 ## Existing instances
 
@@ -67,19 +84,27 @@ TypeScript gives all JSX expressions one common type, `JSX.Element`, which ExoJS
 
 ## Components
 
-Attach components in a `ref`: `ref={sprite => sprite.addComponent(new Health(100))}`. This keeps `addComponent`'s compile-time check that the component accepts this kind of node. JSX has no separate `components` prop for a type-level reason: a JSX attribute cannot run that check for each element of an array.
+The `components` prop attaches each component of the list to the instance with `addComponent`, in list order:
+
+<SourceSnippet source="examples/guides/jsx/reusable-widgets.tsx" region="components" language="tsx" title="examples/guides/jsx/reusable-widgets.tsx" />
+
+TypeScript checks every component of the list the way `addComponent` does: a component written for one kind of node, such as `Pulse`, a `BehaviorComponent<Gem>`, is rejected on any other kind, even with `strict` off. To prepare a list elsewhere, type it `ComponentFor<Gem>[]`.
+
+JSX attaches the components after the node properties, handlers and children, and before the `ref`. A component's `onAttach` therefore sees the node with its properties set and its children in place, and the `ref` can already read the components with `getComponent`. The components remain yours: a failed construction detaches them and never destroys them (see below). Attaching components in a `ref`, `ref={gem => gem.addComponent(new Loot(gem.size))}`, still works, for example for a component that needs the instance to be built.
 
 ## When construction fails
 
 An element owns exactly one node: the instance it constructs. When a handler, a child attachment or the `ref` throws after construction, the element detaches the children it attached and destroys its own instance. It never destroys a JSX child, because JSX cannot tell whether a child is still yours: the compiler evaluates child expressions before their parent, so `<Button />` written inline and a button you built earlier, with JSX or with `new`, reach the parent the same way. When a constructor throws or a child is invalid, nothing has been attached yet and every child stays as it was.
 
+Components from the `components` prop are treated like JSX children. The failing element detaches every component it attached, which runs the component's `onDetach`, and never destroys one, so you can attach it again. A component whose `onAttach` throws is not attached, and the components after it in the list are never attached. A component already attached to another node makes the element fail and stays where it was.
+
 Children left behind by a failure are detached but alive. Garbage collection reclaims unreachable objects, but it does not call `destroy()`, so it releases no asset claims, signal handlers or other resources a node holds. Where a failed tree must not leave such nodes behind, build it inside `jsxTransaction`:
 
 <SourceSnippet source="examples/guides/jsx/scene-composition.tsx" region="failed-tree" language="tsx" title="examples/guides/jsx/scene-composition.tsx" />
 
-When the callback throws, every node JSX constructed during the call is destroyed, including siblings built before the failing one. A node passed as a JSX child that JSX did not construct in the transaction is detached first and never destroyed.
+When the callback throws, every node JSX constructed during the call is destroyed, including siblings built before the failing one. A node passed as a JSX child that JSX did not construct in the transaction is detached first and never destroyed, and so is every component JSX attached from a `components` prop.
 
-The transaction only knows what JSX attached. A node you attach yourself with `addChild`, in a `ref`, an element function or a `jsxConstruct` adapter, is part of the constructed node's subtree and is destroyed with it, like any child of a destroyed container. Attach nodes you keep after the transaction returns, or detach them in your own `catch` before rethrowing. Nodes created with `new` and never attached to a constructed node are left alone. Transactions nest, and construction inside them must be synchronous. A teardown that throws during cleanup is logged, and the original error is the one that reaches you.
+The transaction only knows what JSX attached. A node you attach yourself with `addChild`, in a `ref`, an element function or a `jsxConstruct` adapter, is part of the constructed node's subtree and is destroyed with it, like any child of a destroyed container. The same holds for a component you attach yourself with `addComponent`: destroying a node destroys its components. Attach nodes you keep after the transaction returns, or detach them in your own `catch` before rethrowing. Nodes created with `new` and never attached to a constructed node are left alone. Transactions nest, and construction inside them must be synchronous. A teardown that throws during cleanup is logged, and the original error is the one that reaches you.
 
 ## Serialization
 

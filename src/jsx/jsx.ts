@@ -1,5 +1,8 @@
+import { bindWith } from '#core/bindProperty';
 import type { Color } from '#core/Color';
+import { Component } from '#core/Component';
 import { logger } from '#core/Logger';
+import { isObservable, type ReadonlyObservable, versionOf } from '#core/Observable';
 import { Signal } from '#core/Signal';
 import type { ObservableVector } from '#math/ObservableVector';
 import { Container } from '#rendering/Container';
@@ -18,12 +21,14 @@ interface AdaptedClass {
 }
 
 /**
- * The open {@link jsxTransaction}: every node JSX constructed inside it and every
- * caller-owned child JSX attached inside it, so a failure can tell the two apart.
+ * The open {@link jsxTransaction}: every node JSX constructed inside it, every
+ * caller-owned child JSX attached inside it, so a failure can tell the two
+ * apart, and every component JSX attached, with its node.
  */
 interface Transaction {
   readonly constructed: RenderNode[];
   readonly attached: RenderNode[];
+  readonly components: Array<readonly [node: RenderNode, component: Component]>;
 }
 
 let transaction: Transaction | null = null;
@@ -92,8 +97,20 @@ const logTeardownError = (what: string, error: unknown): void => {
   logger.error(`JSX: destroying ${what} threw: ${String(error)}`);
 };
 
-/** Detaches the children an element attached, then destroys the node the element constructed. */
-const release = (node: RenderNode, attached: readonly RenderNode[]): void => {
+const detachComponent = (node: RenderNode, component: Component, what: string): void => {
+  try {
+    node.removeComponent(component);
+  } catch (error) {
+    logTeardownError(what, error);
+  }
+};
+
+/** Detaches the components and children an element attached, then destroys the node the element constructed. */
+const release = (node: RenderNode, attached: readonly RenderNode[], components: readonly Component[]): void => {
+  for (const component of [...components].reverse()) {
+    detachComponent(node, component, 'a failed element');
+  }
+
   for (const child of attached) {
     if (child.parent === node) {
       try {
@@ -160,11 +177,39 @@ const setVector = (vector: ObservableVector, value: JsxVectorInput): void => {
   }
 };
 
+/** Text properties whose observable numbers JSX converts with `String`; see {@link JsxTextKey}. */
+const textKeys: ReadonlySet<string> = new Set(['text', 'label']);
+
+const toOption = (key: string, value: unknown): unknown => (textKeys.has(key) && typeof value === 'number' ? String(value) : value);
+
+/**
+ * Whether instances of `type` have a property setter named `key`. Only such a
+ * construction prop is bound; an observable for any other option is an
+ * argument the constructor receives as it is.
+ */
+const hasSetter = (type: JsxNodeClass, key: string): boolean => {
+  let prototype = type.prototype as object | null;
+
+  for (; prototype !== null && prototype !== Object.prototype; prototype = Object.getPrototypeOf(prototype) as object | null) {
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, key);
+
+    if (descriptor !== undefined) {
+      return descriptor.set !== undefined;
+    }
+  }
+
+  return false;
+};
+
 const applyProp = (node: RenderNode, key: string, value: unknown, drawable: boolean, type: JsxNodeClass): void => {
   const setter = setterFor(key, drawable);
 
   if (setter !== undefined) {
-    setter(node, value as never);
+    if (isObservable(value)) {
+      bindWith(node, value, current => setter(node, current as never));
+    } else {
+      setter(node, value as never);
+    }
   } else if (typeof value === 'function' && isSignalKey(key)) {
     const signal = (node as unknown as Readonly<Record<string, unknown>>)[key];
 
@@ -205,11 +250,39 @@ const attachChildren = (node: RenderNode, children: readonly RenderNode[], attac
   }
 };
 
+const componentsOf = (value: unknown, type: JsxNodeClass): readonly Component[] => {
+  if (value === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throw new TypeError(`JSX: the components prop of ${tagOf(type)} must be an array of components, not ${describe(value)}.`);
+  }
+
+  for (const component of value) {
+    if (!(component instanceof Component)) {
+      throw new TypeError(`JSX: ${describe(component)} in the components prop of ${tagOf(type)} is not a component.`);
+    }
+  }
+
+  return value as readonly Component[];
+};
+
+const attachComponents = (node: RenderNode, components: readonly Component[], added: Component[]): void => {
+  for (const component of components) {
+    node.addComponent(component);
+    added.push(component);
+    transaction?.components.push([node, component]);
+  }
+};
+
 const construct = (type: JsxNodeClass, props: Props): RenderNode => {
   const { children, ref } = props;
   const nodes: RenderNode[] = [];
   const drawable = type.prototype instanceof Drawable;
   const options: Record<string, unknown> = {};
+  const bound: Array<[key: string, source: ReadonlyObservable<unknown>, applied: { readonly value: unknown; readonly version: number }]> =
+    [];
   let assigns = false;
 
   // The compiler passes a literal key separately; one arriving in the props came through a spread and would reach the constructor.
@@ -219,15 +292,21 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
     );
   }
 
-  // Children are attached only after construction, so a failure up to here leaves every child untouched.
+  // Children and components are attached only after construction, so a failure up to here leaves them untouched.
+  const components = componentsOf(props.components, type);
   collect(children, nodes);
 
   for (const key in props) {
-    if (Object.hasOwn(props, key) && key !== 'children' && key !== 'ref') {
+    if (Object.hasOwn(props, key) && key !== 'children' && key !== 'components' && key !== 'ref') {
       const value = props[key];
 
       if (setterFor(key, drawable) !== undefined || (typeof value === 'function' && isSignalKey(key))) {
         assigns = true;
+      } else if (isObservable(value) && hasSetter(type, key)) {
+        const applied = { value: value.value, version: versionOf(value) };
+
+        options[key] = toOption(key, applied.value);
+        bound.push([key, value, applied]);
       } else {
         options[key] = value;
       }
@@ -236,19 +315,34 @@ const construct = (type: JsxNodeClass, props: Props): RenderNode => {
 
   const node = jsxConstruct in type ? (type as unknown as AdaptedClass)[jsxConstruct](options) : new type(options as never);
   const attached: RenderNode[] = [];
+  const added: Component[] = [];
 
   try {
+    for (const [key, source, applied] of bound) {
+      const record = node as unknown as Record<string, unknown>;
+
+      bindWith(
+        node,
+        source,
+        current => {
+          record[key] = toOption(key, current);
+        },
+        applied,
+      );
+    }
+
     if (assigns) {
       applyProps(node, props, drawable, type);
     }
 
     attachChildren(node, nodes, attached, type);
+    attachComponents(node, components, added);
 
     if (ref !== undefined) {
       (ref as (instance: RenderNode) => void)(node);
     }
   } catch (error) {
-    release(node, attached);
+    release(node, attached, added);
 
     throw error;
   }
@@ -274,14 +368,21 @@ const call = (fn: (props: Props) => unknown, props: Props): RenderNode => {
  * JSX transform; application code writes JSX instead of calling this.
  *
  * A class element is constructed from its props (see {@link jsxConstruct}),
- * then receives its node properties, signal handlers and children in that
- * order, and finally its `ref`. An element owns only the instance it
+ * then receives its node properties, signal handlers, children and the
+ * components of its `components` prop in that order, and finally its `ref`.
+ * A node property holding an observable is bound: the property receives the
+ * current value and every later change until the node is destroyed. A construction prop holding an observable is bound the
+ * same way when the class has a property setter of that name, and the
+ * constructor receives the current value; otherwise the constructor receives
+ * the observable itself. An element owns only the instance it
  * constructs. When a step after construction throws, the element detaches the
- * children it attached as JSX children and destroys its own instance; those
- * children are never destroyed, whether they were built with JSX or with
- * `new`. Destroying the instance destroys whatever else is attached to it at
- * that moment, such as a node a `ref` or a {@link jsxConstruct} adapter added
- * with `addChild`. Use {@link jsxTransaction} to destroy every node of a
+ * components it attached from its `components` prop and the children it
+ * attached as JSX children, then destroys its own instance; those components
+ * and children are never destroyed, whether the children were built with JSX
+ * or with `new`. Destroying the instance destroys whatever else is attached
+ * to it at that moment, such as a node a `ref` or a {@link jsxConstruct}
+ * adapter added with `addChild`, or a component a `ref` added with
+ * `addComponent`. Use {@link jsxTransaction} to destroy every node of a
  * failed tree.
  */
 export const jsx = (type: unknown, props: Props): RenderNode => {
@@ -305,9 +406,13 @@ export const jsxs = jsx;
  */
 export const Fragment = (props: { readonly children?: JsxChildren }): RenderNode => construct(JsxFragment, props);
 
-/** Destroys a failed transaction's nodes after detaching every caller-owned child JSX attached to them. */
-const abort = ({ constructed, attached }: Transaction): void => {
+/** Destroys a failed transaction's nodes after detaching every component and caller-owned child JSX attached to them. */
+const abort = ({ constructed, attached, components }: Transaction): void => {
   const owned = new Set(constructed);
+
+  for (const [node, component] of [...components].reverse()) {
+    detachComponent(node, component, 'a failed tree');
+  }
 
   for (const child of attached) {
     const parent = child.parent;
@@ -341,7 +446,8 @@ const abort = ({ constructed, attached }: Transaction): void => {
  *
  * The transaction knows only what JSX did. A node passed as a JSX child that
  * JSX did not construct in this transaction is detached first and never
- * destroyed. Everything else attached to a constructed node when `build`
+ * destroyed, and so is every component JSX attached from a `components`
+ * prop. Everything else attached to a constructed node when `build`
  * throws is destroyed with it, as destroying a container destroys its
  * subtree, whoever created it: a node a `ref`, an element function or a
  * {@link jsxConstruct} adapter attached with `addChild` is not detached.
@@ -356,7 +462,7 @@ const abort = ({ constructed, attached }: Transaction): void => {
  */
 export const jsxTransaction = <T>(build: () => T): T => {
   const outer = transaction;
-  const current: Transaction = { constructed: [], attached: [] };
+  const current: Transaction = { constructed: [], attached: [], components: [] };
 
   transaction = current;
 
@@ -370,6 +476,10 @@ export const jsxTransaction = <T>(build: () => T): T => {
 
       for (const node of current.attached) {
         outer.attached.push(node);
+      }
+
+      for (const entry of current.components) {
+        outer.components.push(entry);
       }
     }
 

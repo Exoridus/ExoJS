@@ -30,6 +30,7 @@ import type { Component, ComponentClass, ComponentHostCheck } from './Component'
 import type { ComponentAnchor, ComponentRuntime } from './ComponentRuntime';
 import { detachedNodeDirtyIndex, DirtyChannel, type NodeDirtyIndex } from './nodeDirtyIndex';
 import { nextNodeRevision, NodeRevision } from './NodeRevision';
+import { runNodeTeardowns } from './nodeTeardown';
 import type { Stage } from './Stage';
 
 // Internal: dirty-flag bits used by SceneNode's transform cache.
@@ -903,6 +904,10 @@ export class SceneNode implements Collidable {
     }
 
     this._isDestroyed = true;
+
+    // Before the unlink, so a property binding cannot write to the node while it is torn down.
+    const teardownErrors = runNodeTeardowns(this);
+
     this._parentNode?.removeChild(this as unknown as RenderNode);
 
     // After the unlink, which disabled them, and before the node's own state
@@ -930,8 +935,10 @@ export class SceneNode implements Collidable {
     // would otherwise stay reachable through it forever.
     this._dirtyIndex().release(this);
 
-    if (componentErrors.length > 0) {
-      throw componentErrors[0];
+    const errors = teardownErrors.length > 0 ? teardownErrors : componentErrors;
+
+    if (errors.length > 0) {
+      throw errors[0];
     }
   }
 

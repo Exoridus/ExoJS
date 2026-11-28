@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 93,
+  "memberCount": 94,
   "counts": {
     "constructors": 0,
-    "methods": 55,
+    "methods": 56,
     "properties": 38,
     "events": 0
   },
@@ -271,6 +271,127 @@
           ],
           "returnType": "number[]",
           "description": "Sample a cubic Bézier curve at len evenly-spaced t values and append the resulting (x, y) pairs to path. The starting point (fromX, fromY) is always pushed first. Returns path for chaining."
+        },
+        {
+          "name": "bindProperty",
+          "signature": "bindProperty(target: T, key: K, source: BindableSource<T[K]>): () => void",
+          "signatureTokens": [
+            {
+              "text": "bindProperty",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "key",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BindableSource",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "T",
+              "optional": false
+            },
+            {
+              "name": "key",
+              "type": "K",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "BindableSource<T[K]>",
+              "optional": false
+            }
+          ],
+          "returnType": "() => void",
+          "description": "Writes source.value to target[key] now and after every change of source, through the property's own setter, until the returned function is called. The property keeps its ordinary type and value; nothing about it becomes observable. ts const unbind = bindProperty(label, 'text', liveHealth: ${health});  A value assigned to the property directly stays until the source changes again; the binding does not watch the property. When the property holds a string at bind time, numbers from the source are converted with String; every other value, such as null, is written unchanged. When the initial write itself changes the source, for example through a setter that clamps the value back into it, the property receives the changed value too. A binding on a SceneNode ends when the node is destroyed; a binding on any other object lasts until it is unbound or the source is destroyed. Unbinding more than once is safe."
         },
         {
           "name": "browserNetworkHints",

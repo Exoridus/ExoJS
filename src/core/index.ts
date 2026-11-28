@@ -1,5 +1,6 @@
 export { Application, type ApplicationDestroyOutcome, type ApplicationDestroyStatus, ApplicationState } from './Application';
 export { BehaviorComponent } from './BehaviorComponent';
+export { type BindableSource, bindProperty, type WritableKeys } from './bindProperty';
 export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';
 export { Capabilities, type HostRealm } from './Capabilities';
@@ -8,7 +9,7 @@ export type { DecompressFormat } from './Codec';
 export { Codec } from './Codec';
 export type { ColorInput } from './Color';
 export { Color } from './Color';
-export type { ComponentClass, ComponentHost, ComponentHostCheck } from './Component';
+export type { ComponentClass, ComponentFor, ComponentHost, ComponentHostCheck } from './Component';
 export { Component } from './Component';
 export type { ComponentQueryComponents, ComponentQueryRow } from './ComponentQuery';
 export { ComponentQuery } from './ComponentQuery';

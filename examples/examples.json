@@ -332,6 +332,36 @@
       "level": "intermediate"
     },
     {
+      "slug": "observable-counter",
+      "path": "ui/observable-counter.js",
+      "language": "typescript",
+      "title": "Observable Counter",
+      "description": "Count with native buttons while bound labels and a reset button follow an observable value. No code updates the UI by hand.",
+      "backend": "core",
+      "tags": ["ui", "observable", "binding", "button"],
+      "level": "intro"
+    },
+    {
+      "slug": "player-stats",
+      "path": "ui/player-stats.js",
+      "language": "typescript",
+      "title": "Observable Player Stats",
+      "description": "Fire, reload, take hits and level up: writes to an observable player struct update a bound HUD, and a batched level-up updates it once.",
+      "backend": "core",
+      "tags": ["ui", "hud", "observable", "binding"],
+      "level": "intro"
+    },
+    {
+      "slug": "debug-inspector",
+      "path": "ui/debug-inspector.js",
+      "language": "typescript",
+      "title": "Live Debug Inspector",
+      "description": "Watch a moving ship's position and scale in an inspector panel bound to the node's own vectors, without per-frame UI code.",
+      "backend": "core",
+      "tags": ["ui", "debug", "observable", "binding", "vector"],
+      "level": "intermediate"
+    },
+    {
       "slug": "dialog-system",
       "path": "showcase/dialog-system.js",
       "language": "typescript",

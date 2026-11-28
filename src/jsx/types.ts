@@ -1,4 +1,7 @@
+import type { BindableSource, WritableKeys } from '#core/bindProperty';
 import type { Color } from '#core/Color';
+import type { ComponentFor } from '#core/Component';
+import type { ReadonlyObservable } from '#core/Observable';
 import type { Signal } from '#core/Signal';
 import type { Container } from '#rendering/Container';
 import type { Drawable } from '#rendering/Drawable';
@@ -24,37 +27,68 @@ export type JsxFunction<P = never> = (props: P) => RenderNode;
 export type JsxVectorInput = number | { readonly x: number; readonly y: number };
 
 /**
+ * A prop value, or an observable whose value JSX assigns to the property now
+ * and after every change, until the node is destroyed.
+ */
+export type JsxBindable<T> = T | ReadonlyObservable<T>;
+
+/**
+ * Construction props that name a writable property of the same type on the
+ * instance, through a setter. Such a prop also accepts an observable: the
+ * constructor receives its current value, and the setter is called after every
+ * change. A `text` or `label` property of type `string` also accepts an
+ * observable number, converted with `String`.
+ *
+ * An option whose own type accepts observables is an observable argument, not
+ * a binding, and keeps its type. JSX tells the two apart at runtime by the
+ * setter: an observable for an option without a property setter of the same
+ * name, such as a plain field, reaches the constructor unchanged.
+ */
+export type JsxBindableOptions<P, I> = {
+  [K in keyof P]: K extends WritableKeys<I>
+    ? [Extract<P[K], ReadonlyObservable<unknown>>] extends [never]
+      ? Exclude<P[K], undefined> extends I[K]
+        ? P[K] | (K extends JsxTextKey ? BindableSource<I[K]> : ReadonlyObservable<I[K]>)
+        : P[K]
+      : P[K]
+    : P[K];
+};
+
+/** Text properties that accept observable numbers, converted with `String`. */
+export type JsxTextKey = 'text' | 'label';
+
+/**
  * Scene-graph properties every element accepts. JSX assigns each one through
  * the node's own property or setter after the constructor ran.
  */
 export interface JsxNodeProps {
-  readonly name?: string | null;
-  readonly x?: number;
-  readonly y?: number;
+  readonly name?: JsxBindable<string | null>;
+  readonly x?: JsxBindable<number>;
+  readonly y?: JsxBindable<number>;
   /** In degrees, like {@link SceneNode.rotation}. */
-  readonly rotation?: number;
-  readonly scale?: JsxVectorInput;
-  readonly origin?: JsxVectorInput;
-  readonly skewX?: number;
-  readonly skewY?: number;
-  readonly visible?: boolean;
-  readonly zIndex?: number;
-  readonly interactive?: boolean;
-  readonly draggable?: boolean;
-  readonly cursor?: string | null;
-  readonly focusable?: boolean;
-  readonly tabIndex?: number;
-  readonly hitArea?: RenderNode['hitArea'];
-  readonly filters?: RenderNode['filters'];
-  readonly mask?: RenderNode['mask'];
-  readonly cullable?: boolean;
+  readonly rotation?: JsxBindable<number>;
+  readonly scale?: JsxBindable<JsxVectorInput>;
+  readonly origin?: JsxBindable<JsxVectorInput>;
+  readonly skewX?: JsxBindable<number>;
+  readonly skewY?: JsxBindable<number>;
+  readonly visible?: JsxBindable<boolean>;
+  readonly zIndex?: JsxBindable<number>;
+  readonly interactive?: JsxBindable<boolean>;
+  readonly draggable?: JsxBindable<boolean>;
+  readonly cursor?: JsxBindable<string | null>;
+  readonly focusable?: JsxBindable<boolean>;
+  readonly tabIndex?: JsxBindable<number>;
+  readonly hitArea?: JsxBindable<RenderNode['hitArea']>;
+  readonly filters?: JsxBindable<RenderNode['filters']>;
+  readonly mask?: JsxBindable<RenderNode['mask']>;
+  readonly cullable?: JsxBindable<boolean>;
 }
 
 /** Properties a {@link Drawable} element accepts in addition to {@link JsxNodeProps}. */
 export interface JsxDrawableProps {
-  readonly tint?: Color;
-  readonly blendMode?: BlendModes;
-  readonly anchor?: JsxVectorInput;
+  readonly tint?: JsxBindable<Color>;
+  readonly blendMode?: JsxBindable<BlendModes>;
+  readonly anchor?: JsxBindable<JsxVectorInput>;
 }
 
 type SignalArgs<S> = S extends Signal<infer Args> ? Args : never;
@@ -117,6 +151,7 @@ type ReservedLiteral<C extends JsxNodeClass> =
   | (InstanceType<C> extends Drawable ? keyof JsxDrawableProps : never)
   | `on${Capitalize<string>}`
   | 'children'
+  | 'components'
   | 'ref'
   | 'key';
 
@@ -132,8 +167,8 @@ type ReservedName<C extends JsxNodeClass> =
 /**
  * Reported in place of the construction props when a class's options use a
  * name JSX reserves: a node property, which JSX assigns through its setter, an
- * `on*` name, which JSX treats as a signal handler, or `children`, `ref` or
- * `key`, which the compiler and JSX consume. Either way the constructor would
+ * `on*` name, which JSX treats as a signal handler, or `children`,
+ * `components`, `ref` or `key`, which the compiler and JSX consume. Either way the constructor would
  * never receive the value. Give the option another prop name
  * in a {@link jsxConstruct} adapter.
  */
@@ -148,15 +183,24 @@ export type JsxChildrenProp<I> = I extends Container ? { readonly children?: Jsx
 /**
  * Everything an element of class `C` accepts: its construction props, the
  * shared node properties, its signal handlers, children when it is a container,
- * and an optional `ref` called with the finished instance.
+ * components for its instance, and an optional `ref` called with the finished
+ * instance.
  */
 export type JsxElementProps<C extends JsxNodeClass> = ([ReservedName<C>] extends [never]
-  ? JsxConstructionProps<C>
+  ? JsxBindableOptions<JsxConstructionProps<C>, InstanceType<C>>
   : JsxReservedOptionName<ReservedName<C>>) &
   JsxNodeProps &
   (InstanceType<C> extends Drawable ? JsxDrawableProps : Record<never, never>) &
   Omit<JsxSignalProps<InstanceType<C>>, keyof JsxConstructionProps<C>> &
   JsxChildrenProp<InstanceType<C>> & {
+    /**
+     * Components attached to the instance with {@link SceneNode.addComponent},
+     * in list order, after its children and before its `ref`. Each must accept
+     * the instance as its host, as `addComponent` requires. The components
+     * stay the caller's: when the element or an enclosing
+     * {@link jsxTransaction} fails, they are detached, never destroyed.
+     */
+    readonly components?: ReadonlyArray<ComponentFor<InstanceType<C>>>;
     /**
      * Called once with the instance after it and its children were built and
      * attached. A later failure in an enclosing element detaches the instance
