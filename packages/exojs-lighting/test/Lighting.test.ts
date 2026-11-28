@@ -543,7 +543,7 @@ describe('Lighting', () => {
     const lighting = new ForwardLighting({ post });
     const app = fakeApp();
 
-    expect(() => lighting.backend).toThrow(/added to app\.systems/);
+    expect(() => lighting.backend).toThrow(/not registered with app\.systems/);
 
     new SystemRegistry({ app, scene: null, reportError: () => {} } as never).add(lighting);
 

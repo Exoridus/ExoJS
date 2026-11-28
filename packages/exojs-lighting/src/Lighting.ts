@@ -187,8 +187,11 @@ export abstract class Lighting {
   /** In the frame between `onEnable` and `onDisable` rather than by host or scene signals. */
   private _followsRegistry = false;
   private _context: SystemContext | null = null;
-  /** Components registered through scene membership, with the source each registered. */
-  private readonly _occluderComponents = new Map<OccluderComponent, OccluderSource>();
+  /**
+   * Components registered through scene membership, with the source each
+   * registered, or `null` when that source was registered explicitly already.
+   */
+  private readonly _occluderComponents = new Map<OccluderComponent, OccluderSource | null>();
   private readonly _post: readonly Filter[];
   private readonly _lights: Light[] = [];
   private readonly _occluders: OccluderSource[] = [];
@@ -226,7 +229,7 @@ export abstract class Lighting {
   /** The renderer; throws for a system built from options alone that has not been added to a registry yet. */
   protected get _backend(): LightingBackend {
     if (this._renderer === null) {
-      throw new Error(`${this.constructor.name} has no renderer before it is added to app.systems or a scene's systems.`);
+      throw new Error(`${this.constructor.name} has no renderer while it is not registered with app.systems or a scene's systems.`);
     }
 
     return this._renderer;
@@ -375,7 +378,8 @@ export abstract class Lighting {
   public _adoptOccluder(component: OccluderComponent): void {
     const source = component.source;
 
-    this._occluderComponents.set(component, source);
+    // An explicit registration of the same source must outlive the component's.
+    this._occluderComponents.set(component, this._occluders.includes(source) ? null : source);
     this.occludeFrom(source);
   }
 
@@ -383,13 +387,19 @@ export abstract class Lighting {
   public _releaseOccluder(component: OccluderComponent): void {
     const source = this._occluderComponents.get(component);
 
-    if (source !== undefined) {
-      this._occluderComponents.delete(component);
+    if (this._occluderComponents.delete(component) && source !== null && source !== undefined) {
       this.stopOccluding(source);
     }
   }
 
-  /** Unregister a light. Returns `false` when it was not registered here. */
+  /**
+   * Unregister a light. Returns `false` when it was not registered here.
+   *
+   * A light in an active scene joins a lighting system again on its own when
+   * scene membership is re-resolved - after its scene activates or a lighting
+   * system is added or removed. Register it with another system to keep it
+   * elsewhere.
+   */
   public remove(light: Light): boolean {
     const index = this._lights.indexOf(light);
 
@@ -560,7 +570,7 @@ export abstract class Lighting {
   /** `System` hook: enter the frame when following the registry, and re-resolve which members join on their own. */
   public onEnable(): void {
     if (this._followsRegistry) {
-      this._backend.attach();
+      this._renderer?.attach();
     }
 
     this._reconcileMembers(null);
@@ -568,8 +578,9 @@ export abstract class Lighting {
 
   /** `System` hook: leave the frame when following the registry. */
   public onDisable(): void {
+    // A system destroyed by hand while registered has no renderer left to detach.
     if (this._followsRegistry) {
-      this._backend.detach();
+      this._renderer?.detach();
     }
   }
 

@@ -91,7 +91,7 @@ describe('options-only lighting in scene.systems', () => {
   });
 
   test('reading the renderer before the system is added says how to fix it', () => {
-    expect(() => new LightmapLighting().quality).toThrow(/added to app\.systems or a scene's systems/);
+    expect(() => new LightmapLighting().quality).toThrow(/not registered with app\.systems or a scene's systems/);
   });
 });
 
@@ -241,7 +241,7 @@ describe('options-only lighting in app.systems', () => {
 
     appSystems(app).remove(lighting);
     expect(app.framePasses.size).toBe(0);
-    expect(() => lighting.quality).toThrow(/added to app\.systems/);
+    expect(() => lighting.quality).toThrow(/not registered with app\.systems/);
 
     const other = createApp();
 
@@ -265,7 +265,7 @@ describe('options-only lighting in app.systems', () => {
     systems._endFrame();
 
     expect(app.framePasses.size).toBe(0);
-    expect(() => lighting.quality).toThrow(/added to app\.systems/);
+    expect(() => lighting.quality).toThrow(/not registered with app\.systems/);
   });
 });
 
@@ -430,5 +430,36 @@ describe('OccluderComponent bounds of nodes without an extent of their own', () 
       addDrawable: () => false,
     });
     expect(segments).toEqual([[5, 2, 15, 2, 15, 6, 5, 6, 1]]);
+  });
+});
+
+describe('lighting registrations that outlive scene membership', () => {
+  test('a registered system destroyed by hand can still be removed and torn down', async () => {
+    const app = createApp();
+    const lighting = appSystems(app).add(new LightmapLighting());
+
+    lighting.destroy();
+    expect(() => appSystems(app).remove(lighting)).not.toThrow();
+    expect(app.framePasses.size).toBe(0);
+  });
+
+  test('a source registered explicitly stays registered when a component using it leaves', async () => {
+    const source = { collect: vi.fn() };
+    const wall = new Container();
+    let lighting: LightmapLighting | null = null;
+
+    wall.addComponent(new OccluderComponent(source));
+
+    const { scope } = await prepared(scene => {
+      lighting = scene.systems.add(new LightmapLighting());
+      lighting.occludeFrom(source);
+      scene.root.addChild(wall);
+    });
+
+    scope.activate();
+    expect(lighting!.occluders).toEqual([source]);
+
+    scope.scene.root.removeChild(wall);
+    expect(lighting!.occluders).toEqual([source]);
   });
 });

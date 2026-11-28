@@ -631,7 +631,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Unregister a light. Returns false when it was not registered here."
+          "description": "Unregister a light. Returns false when it was not registered here. A light in an active scene joins a lighting system again on its own when scene membership is re-resolved - after its scene activates or a lighting system is added or removed. Register it with another system to keep it elsewhere."
         },
         {
           "name": "stopNormals",
