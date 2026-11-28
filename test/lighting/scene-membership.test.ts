@@ -410,3 +410,25 @@ describe('OccluderComponent reattachment', () => {
     expect(occluder.source).toBe(source);
   });
 });
+
+describe('OccluderComponent bounds of nodes without an extent of their own', () => {
+  test('a container uses the world box around its content', () => {
+    const group = new Container();
+    const child = new Container();
+
+    child.getLocalBounds = (): Rectangle => new Rectangle(0, 0, 10, 4);
+    child.x = 5;
+    group.addChild(child);
+    group.y = 2;
+
+    const occluder = group.addComponent(new OccluderComponent());
+    const segments: number[][] = [];
+
+    occluder.source.collect(new Rectangle(0, 0, 64, 64), {
+      addSegment: () => {},
+      addPolyline: (points, closed) => segments.push([...Array.from(points), closed ? 1 : 0]),
+      addDrawable: () => false,
+    });
+    expect(segments).toEqual([[5, 2, 15, 2, 15, 6, 5, 6, 1]]);
+  });
+});

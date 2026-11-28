@@ -16,7 +16,9 @@ export interface OccluderBody {
 /**
  * Where an {@link OccluderComponent} takes its outline from:
  *
- * - `'bounds'`: the node's local bounds, re-read every frame.
+ * - `'bounds'`: the node's local bounds placed by its transform, re-read every
+ *   frame. A node without an extent of its own - a container or a `Graphics` -
+ *   uses the world-space box around its content instead.
  * - `'alpha'`: the node's own texture alpha, as {@link AlphaOccluder} traces it.
  *   The node must be a drawable with a texture, such as a `Sprite`.
  * - `{ points, closed? }`: an outline of your own in the node's local space,
@@ -195,13 +197,30 @@ class BoundsOccluder implements OccluderSource {
 
   public collect(_bounds: ReadonlyRectangle, out: OccluderSink): void {
     const local = this._node.getLocalBounds();
+    const corners = this._corners;
 
     if (local.width <= 0 || local.height <= 0) {
+      // A container, a Graphics among them, has no extent of its own: the world box around its content stands in.
+      const world = this._node.getBounds();
+
+      if (world.width <= 0 || world.height <= 0) {
+        return;
+      }
+
+      corners[0] = world.left;
+      corners[1] = world.top;
+      corners[2] = world.right;
+      corners[3] = world.top;
+      corners[4] = world.right;
+      corners[5] = world.bottom;
+      corners[6] = world.left;
+      corners[7] = world.bottom;
+      out.addPolyline(corners, true);
+
       return;
     }
 
     const { a, b, c, d, x, y } = this._node.getWorldTransform();
-    const corners = this._corners;
     const { left, top, right, bottom } = local;
 
     corners[0] = a * left + b * top + x;
