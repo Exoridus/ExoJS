@@ -6,22 +6,20 @@ import {
   FixedResolutionCanvasSizing,
   Graphics,
   InputScope,
-  isSequenceCancellation,
   Keyboard,
   type RenderingContext,
   Scene,
   SceneAvailability,
   type Seconds,
-  Sequence,
   type SequenceContext,
+  type SequenceGenerator,
   type SequenceHandle,
-  type SequenceStep,
+  Sequencer,
   type Sound,
   Sprite,
   Text,
   Time,
-  type Tween,
-  TweenState,
+  tweenOperation,
   VectorAction,
   View,
 } from '@codexo/exojs';
@@ -31,24 +29,16 @@ import { startExample } from '@examples/runtime';
 const bossLine = 'VOID EMPEROR: You came all this way to be erased?';
 const worldWidth = 2600;
 
-/** Tween `target` on the scene's own clock; stopping the step stops the tween where it is. */
-const tweenTo =
-  <T extends object>(target: T, properties: Parameters<Tween<T>['to']>[0], duration: number): SequenceStep =>
-  async context => {
-    const tween = context.scene.tweens.create(target, { when: SceneAvailability.Active }).to(properties, duration).start();
+/** A camera shake that lasts `duration`; a step that stops early settles the camera at once. */
+const shake = function* (context: SequenceContext, view: View, intensity: number, duration: number): SequenceGenerator {
+  view.shake(intensity, Time.seconds(duration), { frequency: 22, decay: true });
 
-    context.defer(() => tween.stop());
-    await context.waitUntil(() => tween.state === TweenState.Complete);
-  };
-
-/** A camera shake that lasts `duration`; cancelling it settles the camera at once. */
-const shake =
-  (view: View, intensity: number, duration: number): SequenceStep =>
-  async context => {
-    view.shake(intensity, Time.seconds(duration), { frequency: 22, decay: true });
-    context.defer(() => view.clearShake());
-    await context.wait(duration);
-  };
+  try {
+    yield* context.wait(duration);
+  } finally {
+    view.clearShake();
+  }
+};
 
 class BossIntroSequenceScene extends Scene {
   private readonly view = new View(0, 0, 1280, 720);
@@ -86,47 +76,54 @@ class BossIntroSequenceScene extends Scene {
     ]),
   });
   private readonly cutscene = new InputScope(this.cutsceneControls);
+  private readonly sequencer = new Sequencer();
   private run: SequenceHandle | null = null;
   private runs = 0;
   private triggered = false;
   private time = 0;
 
   // #region guide:boss-intro-sequence
-  private readonly intro = new Sequence(async context => {
+  private *intro(context: SequenceContext): SequenceGenerator {
     const { view, player, boss } = this;
 
-    // 1. Take control of input and camera; cleanup gives both back, however the run ends.
+    // 1. Take control of input and camera; `finally` gives both back however the run ends.
     this.inputs.pushScope(this.cutscene);
     view.clearFollow();
-    context.defer(() => {
+
+    try {
+      // 2. Pan to the boss. The step owns the tween: skipping stops it where it is.
+      yield* context.waitFor(
+        tweenOperation(this.tweens.create(view.center, { when: SceneAvailability.Active }).to({ x: boss.x - 140, y: boss.y }, 1.4)),
+      );
+
+      // 3 + 4. A finite spatial roar and a shake together; the roar counts as done when it
+      // ends, or after a bound in case audio is still locked and it never starts.
+      const voice = this.audio.play(this.roar, { position: { x: boss.x, y: boss.y }, when: SceneAvailability.Active });
+
+      try {
+        yield* context.all([c => c.race([r => r.waitFor(voice.onEnd), r => r.wait(2.5)]), c => shake(c, view, 16, 0.9)]);
+      } finally {
+        voice.stop();
+      }
+
+      // 5 + 6. Screen-space dialogue, then a fresh press of the semantic confirm action:
+      // a key already held when the dialogue appears does not count.
+      this.dialogue.text = bossLine;
+      yield* context.wait(0.25);
+      yield* context.waitFor(() => this.cutsceneControls.confirm.pressed);
+      this.dialogue.text = '';
+
+      // 7. Back to the player.
+      yield* context.waitFor(
+        tweenOperation(this.tweens.create(view.center, { when: SceneAvailability.Active }).to({ x: player.x, y: player.y }, 0.8)),
+      );
+    } finally {
       this.inputs.popScope(this.cutscene);
       this.dialogue.text = '';
       view.center.set(player.x, player.y);
       view.follow(player);
-    });
-
-    // 2. Pan to the boss.
-    await context.run(tweenTo(view.center, { x: boss.x - 140, y: boss.y }, 1.4));
-
-    // 3 + 4. A finite spatial roar and a shake together; the roar counts as done when it
-    // ends, or after a bound in case audio is still locked and it never starts.
-    const voice = this.audio.play(this.roar, { position: { x: boss.x, y: boss.y }, when: SceneAvailability.Active });
-
-    context.defer(() => voice.stop());
-    await context.all([
-      (c: SequenceContext) => c.race([(r: SequenceContext) => r.waitFor(voice.onEnd), (r: SequenceContext) => r.wait(2.5)]),
-      shake(view, 16, 0.9),
-    ]);
-
-    // 5 + 6. Screen-space dialogue, then a fresh confirmation press.
-    this.dialogue.text = bossLine;
-    await context.wait(0.25);
-    await context.waitUntil(() => this.cutsceneControls.confirm.pressed);
-    this.dialogue.text = '';
-
-    // 7. Back to the player; the deferred cleanup restores control.
-    await context.run(tweenTo(view.center, { x: player.x, y: player.y }, 0.8));
-  });
+    }
+  }
   // #endregion guide:boss-intro-sequence
 
   override async load(): Promise<void> {
@@ -163,6 +160,7 @@ class BossIntroSequenceScene extends Scene {
     this.view.follow(this.player);
     this.app.audio.listener.target = this.player;
     this.inputs.attach(this.controls);
+    this.systems.add(this.sequencer);
 
     // Skip, pause, replay and scene replacement stay available whatever the intro holds.
     this.inputs.onTrigger(Keyboard.Escape, () => this.run?.cancel());
@@ -176,13 +174,7 @@ class BossIntroSequenceScene extends Scene {
   private startIntro(): void {
     this.run?.cancel();
     this.runs++;
-    this.run = this.intro.start(this);
-    // A skip is a cancellation, not a failure; anything else still surfaces.
-    this.run.then(undefined, (error: unknown) => {
-      if (!isSequenceCancellation(error)) {
-        throw error;
-      }
-    });
+    this.run = this.sequencer.play(context => this.intro(context));
   }
 
   override update(delta: Seconds): void {

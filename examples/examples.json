@@ -545,7 +545,7 @@
       "path": "showcase/boss-intro-sequence.js",
       "language": "typescript",
       "title": "Boss Intro Sequence",
-      "description": "An in-game boss introduction written as one async Sequence: it takes over input and camera, pans to the boss, plays a spatial roar with a shake, waits for a confirming press and hands control back while the world keeps moving. Fly right to trigger it. B replays, Esc skips, P pauses, N replaces the scene.",
+      "description": "An in-game boss introduction written as one generator sequence on a Sequencer: it takes over input and camera, pans to the boss, plays a spatial roar with a shake, waits for a confirming press and hands control back while the world keeps moving. Fly right to trigger it. B replays, Esc skips, P pauses, N replaces the scene.",
       "backend": "core",
       "featured": false,
       "tags": ["animation", "audio", "input", "scene"],
