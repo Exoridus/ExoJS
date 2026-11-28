@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Downward acceleration along -up in world units per second squared. Defaults to the world's gravity projected onto -up when the component is constructed, or 0 when that points up."
+          "description": "Downward acceleration along -up in world units per second squared. Defaults to the selected world's gravity projected onto -up, clamped to zero when gravity points up or no world has been selected."
         },
         {
           "name": "maxFallSpeed",

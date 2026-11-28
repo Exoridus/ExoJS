@@ -6,10 +6,10 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs/physics",
   "tier": "stable",
-  "memberCount": 22,
+  "memberCount": 24,
   "counts": {
-    "constructors": 1,
-    "methods": 9,
+    "constructors": 2,
+    "methods": 10,
     "properties": 12,
     "events": 0
   },
@@ -33,6 +33,53 @@
       "id": "constructors",
       "title": "Constructors",
       "members": [
+        {
+          "name": "new",
+          "signature": "new(options: KinematicMovementOptions): KinematicMovementComponent",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KinematicMovementOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KinematicMovementComponent",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "KinematicMovementOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "KinematicMovementComponent",
+          "description": ""
+        },
         {
           "name": "new",
           "signature": "new(physics: PhysicsBodyComponent, options: KinematicMovementOptions): KinematicMovementComponent",
@@ -249,6 +296,86 @@
           "description": "Moves the body along direction during the world's next advance, at maxSpeed times the direction's length. A direction longer than 1 is shortened to 1, so analog input below full deflection moves slower and a raw difference vector moves at full speed. The last call before the world advances wins. distance caps how far the command travels in total. A PhysicsWorld.step call that runs several fixed steps applies the same command to each of them, so a command meant to end on a point - the last stretch to a destination - passes the distance to it and stops there instead of overshooting by the extra steps. Defaults to no cap."
         },
         {
+          "name": "moveVelocity",
+          "signature": "moveVelocity(velocity: Readonly<PointLike>, distance: number): void",
+          "signatureTokens": [
+            {
+              "text": "moveVelocity",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "velocity",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "distance",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "velocity",
+              "type": "Readonly<PointLike>",
+              "optional": false
+            },
+            {
+              "name": "distance",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Requests a velocity in world units per second for the next advance. The requested speed is independent of maxSpeed. Collisions and the optional distance cap constrain the result just as with move."
+        },
+        {
           "name": "onAttach",
           "signature": "onAttach(): Synchronous",
           "signatureTokens": [
@@ -453,27 +580,6 @@
           "description": "Type-only carrier of the accepted host type, read by ComponentHostCheck. Never present at runtime."
         },
         {
-          "name": "physics",
-          "signature": "physics: PhysicsBodyComponent",
-          "signatureTokens": [
-            {
-              "text": "physics",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PhysicsBodyComponent",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The physics component whose body this component moves."
-        },
-        {
           "name": "active",
           "signature": "active: boolean",
           "signatureTokens": [
@@ -673,6 +779,27 @@
           "params": [],
           "returnType": null,
           "description": "The node this component is attached to."
+        },
+        {
+          "name": "physics",
+          "signature": "physics: PhysicsBodyComponent",
+          "signatureTokens": [
+            {
+              "text": "physics",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBodyComponent",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The explicit or active same-node physics dependency. Throws if it has yet to resolve."
         },
         {
           "name": "scene",

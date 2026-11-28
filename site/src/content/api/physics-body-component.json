@@ -1,16 +1,16 @@
 {
   "title": "PhysicsBodyComponent",
-  "description": "Gives a scene node a PhysicsBody whose world membership follows the component's lifecycle. While the component is active the body is in world and drives the node. Whenever the component is disabled - switched off, its node removed from its scene, its scene retained or ended - the body leaves the world with its state kept, and the next activation puts the same body back. Moving the node to another parent of the same scene is not a disable: the body stays in the world, keeps its contacts and state, and keeps driving the node. Destroying the component, or its node, destroys the body. Pausing the scene changes nothing here: a world registered as that scene's system stops stepping with it, a world owned elsewhere keeps going. The body exists from construction, so body can be configured before the node enters a scene. Unless `options.position` or `options.angle` is given, the first activation places the body at the node's current world position pivot or rotation, including its anchor/pixel origin. The node must be world-space-rooted, as for PhysicsWorld.bind; the body keeps writing world coordinates to the node, so moving it under a transformed parent is not corrected. The world is never inferred: a node moved into a scene that steps another world keeps this component's body in the world it was given. A component-managed body cannot be constrained by a joint, and PhysicsWorld.addJoint rejects it; use a manually managed PhysicsBody for jointed bodies.",
+  "description": "Gives a scene node a PhysicsBody whose world membership follows the component's lifecycle. While the component is active the body is in world and drives the node. Whenever the component is disabled - switched off, its node removed from its scene, its scene retained or ended - the body leaves the world with its state kept, and the next activation puts the same body back. Moving the node to another parent of the same scene is not a disable: the body stays in the world, keeps its contacts and state, and keeps driving the node. Destroying the component, or its node, destroys the body. Pausing the scene changes nothing here: a world registered as that scene's system stops stepping with it, a world owned elsewhere keeps going. The body exists from construction, so body can be configured before the node enters a scene. Unless `options.position` or `options.angle` is given, the first activation places the body at the node's current world pivot or rotation, including its anchor or pixel origin. The body drives the pose through translated and rotated parents; see PhysicsWorld.bind. With only body options, activation requires one live PhysicsWorld registered in the scene. It keeps that world across activations. Removing that system disables automatically resolved components. To use a different world, replace this component with one authored for the destination. Pass a world explicitly for scenes with several worlds or for a manually stepped world. A component-managed body cannot be constrained by a joint, and PhysicsWorld.addJoint rejects it; use a manually managed PhysicsBody for jointed bodies.",
   "symbol": "PhysicsBodyComponent",
   "kind": "class",
   "subsystem": "physics",
   "importPath": "@codexo/exojs/physics",
   "tier": "stable",
-  "memberCount": 17,
+  "memberCount": 19,
   "counts": {
-    "constructors": 1,
+    "constructors": 2,
     "methods": 7,
-    "properties": 9,
+    "properties": 10,
     "events": 0
   },
   "sections": [
@@ -20,8 +20,8 @@
       "members": [],
       "paragraphs": [
         "Gives a scene node a PhysicsBody whose world membership follows the component's lifecycle. While the component is active the body is in world and drives the node. Whenever the component is disabled - switched off, its node removed from its scene, its scene retained or ended - the body leaves the world with its state kept, and the next activation puts the same body back. Moving the node to another parent of the same scene is not a disable: the body stays in the world, keeps its contacts and state, and keeps driving the node. Destroying the component, or its node, destroys the body. Pausing the scene changes nothing here: a world registered as that scene's system stops stepping with it, a world owned elsewhere keeps going.",
-        "The body exists from construction, so body can be configured before the node enters a scene. Unless `options.position` or `options.angle` is given, the first activation places the body at the node's current world position pivot or rotation, including its anchor/pixel origin. The node must be world-space-rooted, as for PhysicsWorld.bind; the body keeps writing world coordinates to the node, so moving it under a transformed parent is not corrected.",
-        "The world is never inferred: a node moved into a scene that steps another world keeps this component's body in the world it was given. A component-managed body cannot be constrained by a joint, and PhysicsWorld.addJoint rejects it; use a manually managed PhysicsBody for jointed bodies."
+        "The body exists from construction, so body can be configured before the node enters a scene. Unless `options.position` or `options.angle` is given, the first activation places the body at the node's current world pivot or rotation, including its anchor or pixel origin. The body drives the pose through translated and rotated parents; see PhysicsWorld.bind.",
+        "With only body options, activation requires one live PhysicsWorld registered in the scene. It keeps that world across activations. Removing that system disables automatically resolved components. To use a different world, replace this component with one authored for the destination. Pass a world explicitly for scenes with several worlds or for a manually stepped world. A component-managed body cannot be constrained by a joint, and PhysicsWorld.addJoint rejects it; use a manually managed PhysicsBody for jointed bodies."
       ],
       "importLine": "import { PhysicsBodyComponent } from '@codexo/exojs/physics'",
       "sourceLink": null
@@ -32,7 +32,58 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(world: PhysicsWorld, options: BodyOptions): PhysicsBodyComponent",
+          "signature": "new(options?: BodyOptions): PhysicsBodyComponent",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BodyOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBodyComponent",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "BodyOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "PhysicsBodyComponent",
+          "description": ""
+        },
+        {
+          "name": "new",
+          "signature": "new(world: PhysicsWorld, options?: BodyOptions): PhysicsBodyComponent",
           "signatureTokens": [
             {
               "text": "new",
@@ -61,6 +112,10 @@
             {
               "text": "options",
               "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -92,7 +147,7 @@
             {
               "name": "options",
               "type": "BodyOptions",
-              "optional": false
+              "optional": true
             }
           ],
           "returnType": "PhysicsBodyComponent",
@@ -167,7 +222,7 @@
         },
         {
           "name": "onAttach",
-          "signature": "onAttach(): Synchronous",
+          "signature": "onAttach(): void",
           "signatureTokens": [
             {
               "text": "onAttach",
@@ -186,12 +241,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "Synchronous",
-              "kind": "type"
+              "text": "void",
+              "kind": "keyword"
             }
           ],
           "params": [],
-          "returnType": "Synchronous",
+          "returnType": "void",
           "description": "Called after the component was attached to node. The node may not be in any scene yet."
         },
         {
@@ -362,27 +417,6 @@
           "description": "The body this component owns. Leave its world membership to the component."
         },
         {
-          "name": "world",
-          "signature": "world: PhysicsWorld",
-          "signatureTokens": [
-            {
-              "text": "world",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PhysicsWorld",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The world the body joins while the component is active."
-        },
-        {
           "name": "active",
           "signature": "active: boolean",
           "signatureTokens": [
@@ -402,6 +436,35 @@
           "params": [],
           "returnType": null,
           "description": "Whether the component is enabled in an active scene right now: between its onEnable and onDisable. Stays true while the scene is paused."
+        },
+        {
+          "name": "activeWorld",
+          "signature": "activeWorld: PhysicsWorld | null",
+          "signatureTokens": [
+            {
+              "text": "activeWorld",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsWorld",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The world currently hosting this component's body, or null while inactive."
         },
         {
           "name": "attached",
@@ -547,6 +610,27 @@
           "params": [],
           "returnType": null,
           "description": "The scene whose root or UI layer the component's node belongs to, or null while it belongs to none. A retained scene still counts."
+        },
+        {
+          "name": "world",
+          "signature": "world: PhysicsWorld",
+          "signatureTokens": [
+            {
+              "text": "world",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsWorld",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The explicit or first successfully resolved world. Throws before automatic resolution."
         }
       ],
       "paragraphs": [],
