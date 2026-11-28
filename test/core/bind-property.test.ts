@@ -1,5 +1,21 @@
 import { bindProperty, Container, Label, live, Observable, ObservableVector, Sprite } from '@codexo/exojs';
 
+const textWrites = (label: Label): { readonly count: () => number; readonly restore: () => void } => {
+  const descriptor = Object.getOwnPropertyDescriptor(Label.prototype, 'text')!;
+  let count = 0;
+
+  Object.defineProperty(label, 'text', {
+    configurable: true,
+    get: () => descriptor.get!.call(label) as string,
+    set: (value: string) => {
+      count++;
+      descriptor.set!.call(label, value);
+    },
+  });
+
+  return { count: () => count, restore: () => delete (label as Partial<Label>).text };
+};
+
 import { useMockGlyphAtlas } from '../support/mock-glyph-atlas';
 
 useMockGlyphAtlas();
@@ -130,6 +146,37 @@ describe('bindProperty', () => {
 
     expect(() => bindProperty(new Gauge() as unknown as { readOnly: number }, 'readOnly', level)).toThrow(TypeError);
     expect(level.subscriberCount).toBe(0);
+  });
+
+  test('writes a HUD label once per batch and never for unchanged text', () => {
+    const player = Observable.struct({ health: 100, stats: Observable.struct({ ammo: 30, level: 1 }) });
+    const label = new Label('');
+    const writes = textWrites(label);
+
+    bindProperty(label, 'text', live`HP: ${player.health} | Ammo: ${player.stats.ammo}`);
+    expect(writes.count()).toBe(1);
+
+    for (let i = 0; i < 10; i++) {
+      Observable.batch(() => {
+        player.health.value = 50 + i;
+        player.stats.ammo.value = 20 + i;
+        player.stats.level.value++;
+      });
+    }
+
+    expect(writes.count()).toBe(11);
+    expect(label.text).toBe('HP: 59 | Ammo: 29');
+
+    player.stats.level.value++;
+    Observable.batch(() => {
+      player.health.value = 0;
+      player.health.value = 59;
+    });
+
+    expect(writes.count()).toBe(11);
+
+    writes.restore();
+    label.destroy();
   });
 
   test('keeps independent bindings to a shared source apart across repeated construction', () => {

@@ -40,6 +40,9 @@ describe('curated curriculum preservation', () => {
         'examples/getting-started/lazy-sprite.ts',
         'examples/scene-graph/prefab-format-3.ts',
         'examples/sprites-textures/shared-texture-ownership.ts',
+        'examples/ui/debug-inspector.ts',
+        'examples/ui/observable-counter.ts',
+        'examples/ui/player-stats.ts',
       ].sort(),
     );
 

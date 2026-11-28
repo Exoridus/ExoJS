@@ -157,7 +157,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'Observe vectors and sizes and build live text without per-frame polling',
         ],
         prerequisites: ['runtime/scene-graph'],
-        examples: [],
+        examples: ['ui/observable-counter', 'ui/player-stats', 'ui/debug-inspector'],
         apiLinks: ['observable', 'observable-struct', 'readonly-observable', 'observable-vector', 'observable-size'],
       },
       {

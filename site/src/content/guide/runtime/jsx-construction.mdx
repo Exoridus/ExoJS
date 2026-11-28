@@ -39,6 +39,21 @@ Each tag maps to one constructor call:
 
 Destroying the menu destroys its buttons, exactly as with `new`.
 
+## Observable props
+
+A prop can take an [observable value](/ExoJS/en/guide/runtime/observable-values/) instead of a plain one. JSX assigns its current value while it builds the node, then assigns every later change through the same setter until the node is destroyed. JSX still runs once: an observable change updates the existing node and never rebuilds or reconciles the tree.
+
+<SourceSnippet source="examples/guides/jsx/game-hud.tsx" region="game-hud" language="tsx" title="examples/guides/jsx/game-hud.tsx" />
+
+<SourceSnippet source="examples/guides/jsx/counter.tsx" region="counter" language="tsx" title="examples/guides/jsx/counter.tsx" />
+
+- **Node properties**: all of them accept observables of their type, for example `visible={health.map(n => n <= 0)}`, `x={offset}` or `scale={other.scale}`.
+- **Constructor options**: an option accepts an observable only when the instance has a writable property of the same name and type, such as `<Label text>` or `<Button label>`. The constructor receives the current value, and the property receives later changes. An option that can only be set at construction does not accept an observable. TypeScript reports it.
+- **Text**: `text` and `label` also accept an observable number, converted with `String`, so `<Label text={health} />` works. Other properties get no conversion: `visible={health}` is a type error. `live`, the tagged template, builds text from several values.
+- **Handlers**: `on*` props stay functions.
+
+When an element fails, the failing node is destroyed and its bindings with it. In a `jsxTransaction`, every node of the failed tree is destroyed, so no binding survives.
+
 ## Existing instances
 
 Put a node you already hold into the tree with braces. JSX adopts that instance: it is not cloned and not constructed a second time, and it keeps the handlers and state it already had.
