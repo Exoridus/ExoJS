@@ -744,3 +744,26 @@ describe('tweenOperation', () => {
     expect(observer.result).toBe(true);
   });
 });
+
+describe('Sequencer cancelAll', () => {
+  test('a sequence played from a finally block while everything is cancelled is cancelled too', () => {
+    const sequencer = new Sequencer();
+    let late: SequenceHandle<void> | null = null;
+
+    sequencer.play(function* (context: SequenceContext): SequenceGenerator<void> {
+      try {
+        yield* context.wait(seconds(10));
+      } finally {
+        late = sequencer.play(function* (inner: SequenceContext): SequenceGenerator<void> {
+          yield* inner.wait(seconds(10));
+        });
+      }
+    });
+    tick(sequencer);
+    sequencer.cancelAll();
+    tick(sequencer);
+
+    expect(late).not.toBeNull();
+    expect(late!.status).toBe('cancelled');
+  });
+});

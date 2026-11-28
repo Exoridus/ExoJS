@@ -272,8 +272,11 @@ class Executor {
   }
 
   public cancelAll(): void {
-    for (const task of [...this.roots]) {
-      this.end(task, 'cancelled');
+    // A finally block of a cancelled sequence may play() another one; it is cancelled too, a bounded number of times.
+    for (let round = 0; this.roots.size > 0 && round < immediateResumeLimit; round++) {
+      for (const task of [...this.roots]) {
+        this.end(task, 'cancelled');
+      }
     }
 
     this._starting.length = 0;
@@ -584,7 +587,7 @@ class Executor {
         'failed',
         undefined,
         new Error(
-          `A sequence step resumed ${immediateResumeLimit} times within one tick without time passing. Wait with nextFrame() or a positive duration inside the loop.`,
+          `A sequence step resumed ${immediateResumeLimit} times within one tick. Wait with nextFrame(), or with durations long enough that a tick does not cover them all, inside the loop.`,
         ),
       );
 
