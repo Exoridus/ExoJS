@@ -767,6 +767,18 @@
       "level": "advanced"
     },
     {
+      "slug": "zz-scene-owned-lighting",
+      "path": "lighting/zz-scene-owned-lighting.js",
+      "language": "typescript",
+      "title": "Scene-owned lighting evidence",
+      "description": "Temporary evidence scene.",
+      "backend": "core",
+      "featured": false,
+      "tags": ["lighting"],
+      "capabilities": [],
+      "level": "advanced"
+    },
+    {
       "slug": "shadow-casters",
       "path": "lighting/shadow-casters.js",
       "language": "typescript",

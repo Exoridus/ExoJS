@@ -472,22 +472,21 @@ describe('a world with two drivers', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it('warns once when one world is registered with both the application and its scene', async () => {
-    const warn = vi.spyOn(logger, 'warn');
-    const rig = await host(60, (scene, app) => {
+  it('rejects registering one world with both the application and its scene', async () => {
+    let rejection: unknown = null;
+
+    await host(60, (scene, app) => {
       sceneWorld()(scene, app);
-      app.systems.add(scene.world, { order: SystemOrder.Physics });
+
+      try {
+        app.systems.add(scene.world, { order: SystemOrder.Physics });
+      } catch (error) {
+        rejection = error;
+      }
     });
 
-    for (let i = 0; i < 5; i++) {
-      rig.frame(STEP_60);
-    }
-
-    const calls = warn.mock.calls.filter(([message]) => /more than one|two registries|registered with/i.test(String(message)));
-
-    expect(calls).toHaveLength(1);
-
-    rig.app.systems.remove(rig.scene.world);
+    expect(rejection).toBeInstanceOf(Error);
+    expect(String(rejection)).toMatch(/already belongs to another system registry/);
   });
 });
 
