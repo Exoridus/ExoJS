@@ -16,9 +16,6 @@ export class BindingRegistry {
   public bind(body: PhysicsBody, node: SceneNode): PhysicsBinding {
     this._assertBindable(body, node);
     const binding = new PhysicsBinding(body, node);
-
-    binding.sync();
-    // An overridden transform setter can publish another binding during sync.
     this._assertBindable(body, node);
     const previous = this._bindings.get(body);
 
@@ -26,10 +23,33 @@ export class BindingRegistry {
       this._boundNodes.delete(previous.node);
     }
 
-    this._bindings.set(body, binding);
-    this._boundNodes.set(node, binding);
+    // Publish before calling node setters so reentrant unbind or teardown can cancel it.
+    this._setBinding(binding);
+
+    try {
+      binding.sync();
+    } catch (error) {
+      if (this._bindings.get(body) === binding) {
+        this.unbind(body);
+
+        if (previous !== undefined && !previous.node.destroyed && !this._boundNodes.has(previous.node)) {
+          this._setBinding(previous);
+        }
+      }
+
+      throw error;
+    }
+
+    if (node.destroyed && this._bindings.get(body) === binding) {
+      this.unbind(body);
+    }
 
     return binding;
+  }
+
+  private _setBinding(binding: PhysicsBinding): void {
+    this._bindings.set(binding.body, binding);
+    this._boundNodes.set(binding.node, binding);
   }
 
   private _assertBindable(body: PhysicsBody, node: SceneNode): void {

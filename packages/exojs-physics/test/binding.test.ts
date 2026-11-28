@@ -198,7 +198,7 @@ describe('SceneNode binding: parent transforms', () => {
     parent.destroy();
   });
 
-  it('preserves the binding published by a reentrant setter', () => {
+  it('reserves the node before a reentrant setter tries to bind another body', () => {
     const registry = new BindingRegistry();
     const node = new Drawable();
     const outer = makeBody();
@@ -206,17 +206,52 @@ describe('SceneNode binding: parent transforms', () => {
     const setPosition = node.setPosition.bind(node);
     vi.spyOn(node, 'setPosition').mockImplementationOnce((x, y) => {
       setPosition(x, y);
-      registry.bind(inner, node);
+      expect(() => registry.bind(inner, node)).toThrow(/already bound/);
 
       return node;
     });
 
-    expect(() => registry.bind(outer, node)).toThrow(/already bound/);
+    registry.bind(outer, node);
     expect(registry.size).toBe(1);
-    inner.setTransform({ x: 25, y: 30 });
+    outer.setTransform({ x: 25, y: 30 });
     registry.sync();
     expect([node.x, node.y]).toEqual([25, 30]);
     node.destroy();
+  });
+
+  it('lets reentrant teardown clear a binding during its first sync', () => {
+    const registry = new BindingRegistry();
+    const node = new Drawable();
+    const setPosition = node.setPosition.bind(node);
+    vi.spyOn(node, 'setPosition').mockImplementationOnce((x, y) => {
+      setPosition(x, y);
+      registry.clear();
+
+      return node;
+    });
+
+    registry.bind(makeBody(), node);
+    expect(registry.size).toBe(0);
+    node.destroy();
+  });
+
+  it('keeps the previous link when writing the new node pose throws', () => {
+    const registry = new BindingRegistry();
+    const body = makeBody();
+    const previous = new Drawable();
+    const replacement = new Drawable();
+    registry.bind(body, previous);
+    vi.spyOn(replacement, 'setPosition').mockImplementationOnce(() => {
+      throw new Error('pose write failed');
+    });
+
+    expect(() => registry.bind(body, replacement)).toThrow('pose write failed');
+    expect(registry.size).toBe(1);
+    body.setTransform({ x: 25, y: 30 });
+    registry.sync();
+    expect([previous.x, previous.y]).toEqual([25, 30]);
+    previous.destroy();
+    replacement.destroy();
   });
 });
 
