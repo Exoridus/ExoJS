@@ -352,6 +352,11 @@ export class Rectangle extends ShapeRevision implements ShapeLike, ReadonlyRecta
     }
   }
 
+  /** The rectangle as `"x, y, width, height"`, for example `"10, 20, 200, 100"`, without rounding. */
+  public override toString(): string {
+    return `${this.x}, ${this.y}, ${this.width}, ${this.height}`;
+  }
+
   public destroy(): void {
     this._position.destroy();
     this._size.destroy();
