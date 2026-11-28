@@ -1,15 +1,15 @@
 {
   "title": "LightmapLighting",
-  "description": "Lighting accumulated into a target of its own and multiplied onto the frame. ```ts // In Scene.init(): const lighting = new LightmapLighting(this.app, { lightResolution: 0.5, shadowResolution: 256, scene: this }); this.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ``` Light no longer costs a loop iteration per fragment per light, so there is no cap on how many there may be, and the accumulated field is a texture a shadow term folds into: each light gets one polar row built from the registered occluder sources. Normals come from a prepass over the surfaces registered with Lighting.normalsFrom rather than from a material. The host is required and is the first argument: this renderer lights the frame that host drew, installs its passes in that host's frame slot, and follows its surface when it resizes. It is read, never owned. Pass the scene the system belongs to as LightingOptions.scene, so its passes are in that frame slot only while the scene is the one on screen.",
+  "description": "Lighting accumulated into a target of its own and multiplied onto the frame. ```ts // In Scene.init(): const lighting = this.systems.add(new LightmapLighting({ lightResolution: 0.5, shadowResolution: 256 })); lighting.occludeFrom(new PhysicsOccluder(world)); ``` Light no longer costs a loop iteration per fragment per light, so there is no cap on how many there may be, and the accumulated field is a texture a shadow term folds into: each light gets one polar row built from the registered occluder sources. Normals come from a prepass over the surfaces registered with Lighting.normalsFrom rather than from a material. This renderer lights the frame an application drew, installs its passes in that application's frame slot, and follows its surface when it resizes. Built from options alone, it takes that application from the registry it is added to (see Lighting). Given a host as the first argument, it is built at once against that host, which is read and never owned; pass the scene the system belongs to as LightingOptions.scene then, so its passes are in that frame slot only while the scene is the one on screen.",
   "symbol": "LightmapLighting",
   "kind": "class",
   "subsystem": "lighting",
   "importPath": "@codexo/exojs/lighting",
   "tier": "stable",
-  "memberCount": 23,
+  "memberCount": 28,
   "counts": {
-    "constructors": 1,
-    "methods": 11,
+    "constructors": 2,
+    "methods": 15,
     "properties": 11,
     "events": 0
   },
@@ -20,10 +20,10 @@
       "members": [],
       "paragraphs": [
         "Lighting accumulated into a target of its own and multiplied onto the frame.",
-        "```ts // In Scene.init(): const lighting = new LightmapLighting(this.app, { lightResolution: 0.5, shadowResolution: 256, scene: this });",
-        "this.systems.add(lighting); lighting.occludeFrom(new PhysicsOccluder(world)); ```",
+        "```ts // In Scene.init(): const lighting = this.systems.add(new LightmapLighting({ lightResolution: 0.5, shadowResolution: 256 }));",
+        "lighting.occludeFrom(new PhysicsOccluder(world)); ```",
         "Light no longer costs a loop iteration per fragment per light, so there is no cap on how many there may be, and the accumulated field is a texture a shadow term folds into: each light gets one polar row built from the registered occluder sources. Normals come from a prepass over the surfaces registered with Lighting.normalsFrom rather than from a material.",
-        "The host is required and is the first argument: this renderer lights the frame that host drew, installs its passes in that host's frame slot, and follows its surface when it resizes. It is read, never owned. Pass the scene the system belongs to as LightingOptions.scene, so its passes are in that frame slot only while the scene is the one on screen."
+        "This renderer lights the frame an application drew, installs its passes in that application's frame slot, and follows its surface when it resizes. Built from options alone, it takes that application from the registry it is added to (see Lighting). Given a host as the first argument, it is built at once against that host, which is read and never owned; pass the scene the system belongs to as LightingOptions.scene then, so its passes are in that frame slot only while the scene is the one on screen."
       ],
       "importLine": "import { LightmapLighting } from '@codexo/exojs/lighting'",
       "sourceLink": null
@@ -34,7 +34,58 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(host: LightingHost, options: FrameLightingOptions): LightmapLighting",
+          "signature": "new(options?: FrameLightingOptions): LightmapLighting",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FrameLightingOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightmapLighting",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "FrameLightingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "LightmapLighting",
+          "description": ""
+        },
+        {
+          "name": "new",
+          "signature": "new(host: LightingHost, options?: FrameLightingOptions): LightmapLighting",
           "signatureTokens": [
             {
               "text": "new",
@@ -63,6 +114,10 @@
             {
               "text": "options",
               "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -94,7 +149,7 @@
             {
               "name": "options",
               "type": "FrameLightingOptions",
-              "optional": false
+              "optional": true
             }
           ],
           "returnType": "LightmapLighting",
@@ -386,6 +441,140 @@
           ],
           "returnType": "T",
           "description": "Register something that blocks light, and return it so it can be built and registered in one expression. Only a renderer with shadows reads them - forward has no light field to darken, and skips collecting entirely. ts lighting.occludeFrom(new PhysicsOccluder(world));  The source is asked, once per frame, for the edges in the region the visible lights jointly reach. It is the caller's; the system only reads it. Registering the same source twice would collect it twice, so the second registration is ignored instead."
+        },
+        {
+          "name": "onAttach",
+          "signature": "onAttach(context: SystemContext): void",
+          "signatureTokens": [
+            {
+              "text": "onAttach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "SystemContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "System hook: a system built from options alone creates its renderer here, with the registry's application, and lights the registry's scene - or the whole application for app.systems."
+        },
+        {
+          "name": "onDetach",
+          "signature": "onDetach(): void",
+          "signatureTokens": [
+            {
+              "text": "onDetach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "System hook: let go of what scene membership registered; explicit registrations stay."
+        },
+        {
+          "name": "onDisable",
+          "signature": "onDisable(): void",
+          "signatureTokens": [
+            {
+              "text": "onDisable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "System hook: leave the frame when following the registry."
+        },
+        {
+          "name": "onEnable",
+          "signature": "onEnable(): void",
+          "signatureTokens": [
+            {
+              "text": "onEnable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "System hook: enter the frame when following the registry, and take in the scene's members that wait for a lighting system."
         },
         {
           "name": "remove",

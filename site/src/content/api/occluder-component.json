@@ -1,0 +1,549 @@
+{
+  "title": "OccluderComponent",
+  "description": "Makes a node block light for as long as it is in an active scene. ```ts wall.addComponent(new OccluderComponent()); // its bounds tree.addComponent(new OccluderComponent('alpha')); // its silhouette hut.addComponent(new OccluderComponent({ points: hutOutline })); // an outline of your own crate.addComponent(new OccluderComponent({ body: physics.body })); // its colliders ``` The outline follows the node's transform. While the component is active it is registered with the scene's lighting system, exactly as if its source had been passed to Lighting.occludeFrom; when it is disabled, its node leaves the scene, or the scene is retained or ends, it is unregistered again.",
+  "symbol": "OccluderComponent",
+  "kind": "class",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs/lighting",
+  "tier": "stable",
+  "memberCount": 16,
+  "counts": {
+    "constructors": 1,
+    "methods": 7,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Makes a node block light for as long as it is in an active scene.",
+        "```ts wall.addComponent(new OccluderComponent()); // its bounds tree.addComponent(new OccluderComponent('alpha')); // its silhouette hut.addComponent(new OccluderComponent({ points: hutOutline })); // an outline of your own crate.addComponent(new OccluderComponent({ body: physics.body })); // its colliders ```",
+        "The outline follows the node's transform. While the component is active it is registered with the scene's lighting system, exactly as if its source had been passed to Lighting.occludeFrom; when it is disabled, its node leaves the scene, or the scene is retained or ends, it is unregistered again."
+      ],
+      "importLine": "import { OccluderComponent } from '@codexo/exojs/lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(shape: OccluderShape, options: OccluderComponentOptions): OccluderComponent",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "shape",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderShape",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderComponentOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderComponent",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "shape",
+              "type": "OccluderShape",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "OccluderComponentOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "OccluderComponent",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "End the component for good: disable it if active, detach it from its node if attached, then run onDestroy. Idempotent. Destroying a node destroys every component still attached to it. Every step runs even when a hook throws; the first error is rethrown afterwards."
+        },
+        {
+          "name": "markChanged",
+          "signature": "markChanged(): void",
+          "signatureTokens": [
+            {
+              "text": "markChanged",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Report that this component's state changed, so every change observer (ComponentQuery.changed) over a query that matches it lists its node once in its next pass. Nothing is tracked automatically: call it after the writes other code should react to. Cheap and idempotent within a pass: it stores one number, whatever the number of observers. A component outside any scene has nothing to report to; joining a scene counts as a change on its own."
+        },
+        {
+          "name": "onAttach",
+          "signature": "onAttach(): void",
+          "signatureTokens": [
+            {
+              "text": "onAttach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called after the component was attached to node. The node may not be in any scene yet."
+        },
+        {
+          "name": "onDestroy",
+          "signature": "onDestroy(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onDestroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called once, at the end of destroy."
+        },
+        {
+          "name": "onDetach",
+          "signature": "onDetach(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onDetach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called after the component was removed from its node; node is no longer readable."
+        },
+        {
+          "name": "onDisable",
+          "signature": "onDisable(): void",
+          "signatureTokens": [
+            {
+              "text": "onDisable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called when the component stops being active."
+        },
+        {
+          "name": "onEnable",
+          "signature": "onEnable(): void",
+          "signatureTokens": [
+            {
+              "text": "onEnable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called when the component becomes active. Release in onDisable what this acquires."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "[componentHost]",
+          "signature": "[componentHost]: SceneNode",
+          "signatureTokens": [
+            {
+              "text": "[componentHost]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Type-only carrier of the accepted host type, read by ComponentHostCheck. Never present at runtime."
+        },
+        {
+          "name": "active",
+          "signature": "active: boolean",
+          "signatureTokens": [
+            {
+              "text": "active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the component is enabled in an active scene right now: between its onEnable and onDisable. Stays true while the scene is paused."
+        },
+        {
+          "name": "attached",
+          "signature": "attached: boolean",
+          "signatureTokens": [
+            {
+              "text": "attached",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the component is attached to a node."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether destroy has run. A destroyed component cannot be attached again."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The component's own switch. true by default. Turning it off disables an active component (and stops a BehaviorComponent's frame hooks) without detaching it: it stays on its node and in Scene.query results. Turning it back on enables it again once its node is in an active scene - during a frame, from the next frame on."
+        },
+        {
+          "name": "node",
+          "signature": "node: N",
+          "signatureTokens": [
+            {
+              "text": "node",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "N",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node this component is attached to."
+        },
+        {
+          "name": "scene",
+          "signature": "scene: Scene<void, Application<object>> | null",
+          "signatureTokens": [
+            {
+              "text": "scene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The scene whose root or UI layer the component's node belongs to, or null while it belongs to none. A retained scene still counts."
+        },
+        {
+          "name": "source",
+          "signature": "source: OccluderSource",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OccluderSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The occluder source this component registers, built from its shape when the component is attached."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/occluders/OccluderComponent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/OccluderComponent.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/occluders/OccluderComponent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/occluders/OccluderComponent.ts"
+}

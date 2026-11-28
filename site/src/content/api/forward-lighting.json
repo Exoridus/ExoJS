@@ -1,15 +1,15 @@
 {
   "title": "ForwardLighting",
-  "description": "Lighting shaded inside the sprite fragment stage, against one packed light texture. ```ts // In Scene.init(): const lighting = new ForwardLighting(this.app, { maxLights: 16, ambient: new Color(20, 20, 24), scene: this }); this.systems.add(lighting); ``` Without a `post` chain it adds no draw of its own and no extra render targets, which is what makes it the floor renderer; a chain adds a filter pass over the finished frame. It is the only renderer that takes its normals from a material (LitMaterial) rather than from registered surfaces, which `lightmap` reads through its normal prepass. The price is the cap: every lit fragment walks every light, so ForwardLightingOptions.maxLights bounds how many there may be, and it casts no shadows at all. It is the one system that can be built without a host, because its light data is a texture a material samples rather than anything the frame slot runs: ```ts const lighting = new ForwardLighting({ maxLights: 16 }); ``` A filter chain is a frame pass, so `post` needs the host - and, for a system built for one scene, LightingOptions.scene, which keeps the chain out of the frame while that scene is not the one on screen.",
+  "description": "Lighting shaded inside the sprite fragment stage, against one packed light texture. ```ts // In Scene.init(): const lighting = this.systems.add(new ForwardLighting({ maxLights: 16, ambient: new Color(20, 20, 24) })); ``` Without a `post` chain it adds no draw of its own and no extra render targets, which is what makes it the floor renderer; a chain adds a filter pass over the finished frame. It is the only renderer that takes its normals from a material (LitMaterial) rather than from registered surfaces, which `lightmap` reads through its normal prepass. The price is the cap: every lit fragment walks every light, so ForwardLightingOptions.maxLights bounds how many there may be, and it casts no shadows at all. It is the one system that can be built without a host, because its light data is a texture a material samples rather than anything the frame slot runs: ```ts const lighting = new ForwardLighting({ maxLights: 16 }); ``` Without a `post` chain its renderer exists from construction, so a LitMaterial can bind to it before the system is registered. A filter chain is a frame pass and needs an application: built from options alone, the renderer is then created when the system is added to a registry.",
   "symbol": "ForwardLighting",
   "kind": "class",
   "subsystem": "lighting",
   "importPath": "@codexo/exojs/lighting",
   "tier": "stable",
-  "memberCount": 24,
+  "memberCount": 28,
   "counts": {
     "constructors": 2,
-    "methods": 11,
+    "methods": 15,
     "properties": 11,
     "events": 0
   },
@@ -20,12 +20,11 @@
       "members": [],
       "paragraphs": [
         "Lighting shaded inside the sprite fragment stage, against one packed light texture.",
-        "```ts // In Scene.init(): const lighting = new ForwardLighting(this.app, { maxLights: 16, ambient: new Color(20, 20, 24), scene: this });",
-        "this.systems.add(lighting); ```",
+        "```ts // In Scene.init(): const lighting = this.systems.add(new ForwardLighting({ maxLights: 16, ambient: new Color(20, 20, 24) })); ```",
         "Without a `post` chain it adds no draw of its own and no extra render targets, which is what makes it the floor renderer; a chain adds a filter pass over the finished frame. It is the only renderer that takes its normals from a material (LitMaterial) rather than from registered surfaces, which `lightmap` reads through its normal prepass. The price is the cap: every lit fragment walks every light, so ForwardLightingOptions.maxLights bounds how many there may be, and it casts no shadows at all.",
         "It is the one system that can be built without a host, because its light data is a texture a material samples rather than anything the frame slot runs:",
         "```ts const lighting = new ForwardLighting({ maxLights: 16 }); ```",
-        "A filter chain is a frame pass, so `post` needs the host - and, for a system built for one scene, LightingOptions.scene, which keeps the chain out of the frame while that scene is not the one on screen."
+        "Without a `post` chain its renderer exists from construction, so a LitMaterial can bind to it before the system is registered. A filter chain is a frame pass and needs an application: built from options alone, the renderer is then created when the system is added to a registry."
       ],
       "importLine": "import { ForwardLighting } from '@codexo/exojs/lighting'",
       "sourceLink": null
@@ -443,6 +442,140 @@
           ],
           "returnType": "T",
           "description": "Register something that blocks light, and return it so it can be built and registered in one expression. Only a renderer with shadows reads them - forward has no light field to darken, and skips collecting entirely. ts lighting.occludeFrom(new PhysicsOccluder(world));  The source is asked, once per frame, for the edges in the region the visible lights jointly reach. It is the caller's; the system only reads it. Registering the same source twice would collect it twice, so the second registration is ignored instead."
+        },
+        {
+          "name": "onAttach",
+          "signature": "onAttach(context: SystemContext): void",
+          "signatureTokens": [
+            {
+              "text": "onAttach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "SystemContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "System hook: a system built from options alone creates its renderer here, with the registry's application, and lights the registry's scene - or the whole application for app.systems."
+        },
+        {
+          "name": "onDetach",
+          "signature": "onDetach(): void",
+          "signatureTokens": [
+            {
+              "text": "onDetach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "System hook: let go of what scene membership registered; explicit registrations stay."
+        },
+        {
+          "name": "onDisable",
+          "signature": "onDisable(): void",
+          "signatureTokens": [
+            {
+              "text": "onDisable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "System hook: leave the frame when following the registry."
+        },
+        {
+          "name": "onEnable",
+          "signature": "onEnable(): void",
+          "signatureTokens": [
+            {
+              "text": "onEnable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "System hook: enter the frame when following the registry, and take in the scene's members that wait for a lighting system."
         },
         {
           "name": "remove",
