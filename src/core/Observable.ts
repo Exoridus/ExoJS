@@ -1,4 +1,6 @@
 import { Signal } from './Signal';
+import { requireSynchronousHook } from './syncHooks';
+import type { Synchronous } from './types';
 
 /** Receives the current value each time an observed value changes. */
 export type ObservableListener<T> = (value: T) => void;
@@ -37,40 +39,70 @@ export interface ReadonlyObservable<T> {
 export type ObservedValue<O> = O extends ReadonlyObservable<infer T> ? T : never;
 
 /**
- * Objects whose own properties are data, such as {@link ObservableObject}
- * instances, which {@link isObservable} must not mistake for the contract even
- * when their data has `value`, `subscribe` and `map` keys.
- * @internal
- */
-export const observableData = new WeakSet();
-
-/**
  * Whether `value` implements the {@link ReadonlyObservable} contract. Functions,
- * promises, plain objects without `subscribe` and `map` methods, and
- * {@link ObservableObject} instances are not observable.
+ * promises, structs and plain objects without `subscribe` and `map` methods
+ * are not observable.
  */
 export const isObservable = (value: unknown): value is ReadonlyObservable<unknown> =>
   typeof value === 'object' &&
   value !== null &&
-  !observableData.has(value) &&
   'value' in value &&
   typeof (value as Partial<ReadonlyObservable<unknown>>).subscribe === 'function' &&
   typeof (value as Partial<ReadonlyObservable<unknown>>).map === 'function';
+
+declare const structTag: unique symbol;
+
+/** Type-only marker that tells an {@link ObservableStruct} apart from an ordinary object value. */
+export interface ObservableStructTag {
+  readonly [structTag]: true;
+}
+
+type Preserved = ReadonlyObservable<unknown> | ObservableStructTag;
+
+/** What {@link Observable.struct} makes of a member of type `V`. */
+export type ObservableStructMember<V> = [V] extends [Preserved]
+  ? V
+  : [Extract<V, Preserved>] extends [never]
+    ? Observable<V>
+    : Observable<Exclude<V, Preserved>> | Extract<V, Preserved>;
+
+/**
+ * A frozen record of observables built by {@link Observable.struct}: one
+ * observable per member of `T`.
+ */
+export type ObservableStruct<T extends object> = { readonly [K in keyof T]: ObservableStructMember<T[K]> } & ObservableStructTag;
+
+const structs = new WeakSet();
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype: unknown = Object.getPrototypeOf(value);
+
+  return prototype === Object.prototype || prototype === null;
+};
 
 const maxNotificationRounds = 100;
 
 const noop = (): void => undefined;
 
+let batchDepth = 0;
+let flushing = false;
+const queue: Array<ObservableBase<unknown>> = [];
+
 /**
- * Listener storage, notification ordering and derivation shared by every
- * observable the engine implements.
+ * Listener storage, notification ordering, batching and derivation shared by
+ * every observable the engine implements. Not exported from the package; public
+ * subclasses expose its members.
  *
- * A change made while listeners are being notified does not start a nested
- * notification: the current round finishes delivering, then a new round
- * delivers the latest value to every listener. Listeners therefore never
- * receive values out of order, and the last value each one receives is the
- * current one. Not exported from the package; public subclasses expose its
- * members.
+ * Outside a batch, a change made while listeners are being notified does not
+ * start a nested notification: the current round finishes delivering, then a
+ * new round delivers the latest value to every listener. Listeners therefore
+ * never receive values out of order, and the last value each one receives is
+ * the current one. Inside {@link Observable.batch}, notifications are queued
+ * and delivered once the outermost batch completes.
  */
 export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
   private _listeners: Signal<[T]> | null = null;
@@ -78,6 +110,7 @@ export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
   private _stale = false;
   private _connected = false;
   private _ended = false;
+  private _queued = false;
 
   public abstract get value(): T;
 
@@ -133,7 +166,56 @@ export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
     return this.value;
   }
 
+  /** Recomputes before a queued delivery; returns `false` when there is nothing to deliver. */
+  protected _refresh(): boolean {
+    return true;
+  }
+
+  /** Delivers now, or queues the delivery while a batch is open or being delivered. */
   protected _notify(): void {
+    if (this._listeners === null) {
+      return;
+    }
+
+    if (batchDepth > 0 || flushing) {
+      this._enqueue();
+
+      return;
+    }
+
+    this._deliver();
+  }
+
+  protected _enqueue(): void {
+    if (!this._queued) {
+      this._queued = true;
+      queue.push(this as ObservableBase<unknown>);
+    }
+  }
+
+  /** @internal Forgets a queued delivery that will not run. */
+  public _dequeue(): void {
+    this._queued = false;
+  }
+
+  /** @internal Runs one queued delivery. */
+  public _flushQueued(): void {
+    this._queued = false;
+
+    if (this._refresh()) {
+      this._deliver();
+    }
+  }
+
+  /** Removes every listener and stops observing upstream sources. Later subscriptions are ignored. */
+  protected _end(): void {
+    this._ended = true;
+    this._listeners?.destroy();
+    this._listeners = null;
+    this._disconnectIfIdle();
+  }
+
+  private _deliver(): void {
     const listeners = this._listeners;
 
     if (listeners === null) {
@@ -166,14 +248,6 @@ export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
     }
   }
 
-  /** Removes every listener and stops observing upstream sources. Later subscriptions are ignored. */
-  protected _end(): void {
-    this._ended = true;
-    this._listeners?.destroy();
-    this._listeners = null;
-    this._disconnectIfIdle();
-  }
-
   private _disconnectIfIdle(): void {
     if (this._connected && (this._listeners === null || this._listeners.count === 0)) {
       this._connected = false;
@@ -181,6 +255,53 @@ export abstract class ObservableBase<T> implements ReadonlyObservable<T> {
     }
   }
 }
+
+/**
+ * Delivers every queued notification in the order the values first changed.
+ * Changes made by listeners are queued behind the current ones and delivered in
+ * the same pass. Every queued value is delivered even when a listener throws;
+ * the first error is rethrown afterwards.
+ */
+const flush = (): void => {
+  flushing = true;
+
+  const deliveries = new Map<ObservableBase<unknown>, number>();
+  let failure: { readonly error: unknown } | null = null;
+
+  try {
+    for (let i = 0; i < queue.length; i++) {
+      const observable = queue[i]!;
+      const count = (deliveries.get(observable) ?? 0) + 1;
+
+      deliveries.set(observable, count);
+
+      try {
+        if (count > maxNotificationRounds) {
+          throw new RangeError(`Observable.batch: listeners kept changing a value for ${maxNotificationRounds} rounds without settling.`);
+        }
+
+        observable._flushQueued();
+      } catch (error) {
+        failure ??= { error };
+
+        if (error instanceof RangeError && count > maxNotificationRounds) {
+          break;
+        }
+      }
+    }
+  } finally {
+    for (const observable of queue) {
+      observable._dequeue();
+    }
+
+    queue.length = 0;
+    flushing = false;
+  }
+
+  if (failure !== null) {
+    throw failure.error;
+  }
+};
 
 const isSettled = (previous: unknown, next: unknown): boolean =>
   Object.is(previous, next) && (typeof next !== 'object' || next === null) && typeof next !== 'function';
@@ -224,15 +345,26 @@ class DerivedObservable<T> extends ObservableBase<T> {
     return this._last as T;
   }
 
-  private readonly _onSourceChange = (): void => {
+  protected override _refresh(): boolean {
     const next = this._compute();
 
     if (isSettled(this._last, next)) {
-      return;
+      return false;
     }
 
     this._last = next;
-    this._notify();
+
+    return true;
+  }
+
+  private readonly _onSourceChange = (): void => {
+    // While notifications are being batched, a derived value recomputes once
+    // after all of its changed sources delivered, never once per source.
+    if (batchDepth > 0 || flushing) {
+      this._enqueue();
+    } else if (this._refresh()) {
+      this._notify();
+    }
   };
 }
 
@@ -258,8 +390,8 @@ export const derive = <T>(sources: ReadonlyArray<ReadonlyObservable<unknown>>, c
  * `Object.is`, so repeated equal assignments cost a comparison and nothing else.
  * An object mutated in place keeps its identity and therefore needs
  * {@link markChanged} or {@link mutate} to notify. Primitive assignments
- * allocate nothing; a listener throwing aborts the remaining listeners of that
- * notification and propagates to the assignment.
+ * allocate nothing; outside a batch, a listener throwing aborts the remaining
+ * listeners of that notification and propagates to the assignment.
  */
 export class Observable<T> extends ObservableBase<T> {
   private _value: T;
@@ -299,5 +431,115 @@ export class Observable<T> extends ObservableBase<T> {
    */
   public destroy(): void {
     this._end();
+  }
+
+  /**
+   * Builds a frozen record with one observable per member of `members`:
+   *
+   * ```ts
+   * const player = Observable.struct({
+   *   name: 'Hero',
+   *   health: 100,
+   *   stats: Observable.struct({ ammo: 30, level: 1 }),
+   * });
+   *
+   * player.health.value -= 10;
+   * player.stats.ammo.value--;
+   * ```
+   *
+   * Each own enumerable member becomes an {@link Observable} holding that
+   * value. Members that already are observables (including derived values,
+   * vectors and sizes) or structs are kept as they are, by identity, so several
+   * structs can share them. Nothing is traversed: a nested object or array is
+   * stored as the value of one observable; nest structs explicitly instead.
+   * `members` itself is not modified.
+   *
+   * A struct owns nothing and has no teardown. The observables it created
+   * belong to whoever holds the struct and need no cleanup beyond dropping it;
+   * shared observables stay owned by their creator, and destroying one affects
+   * every struct that holds it.
+   *
+   * @throws {TypeError} If `members` is not a plain object.
+   */
+  public static struct<T extends object>(members: T): ObservableStruct<T> {
+    if (!isPlainObject(members)) {
+      throw new TypeError('Observable.struct(): the members must be a plain object.');
+    }
+
+    const struct: Record<string, unknown> = {};
+
+    for (const key of Object.keys(members)) {
+      const member = members[key];
+
+      struct[key] = isObservable(member) || structs.has(member as object) ? member : new Observable(member);
+    }
+
+    structs.add(struct);
+
+    return Object.freeze(struct) as ObservableStruct<T>;
+  }
+
+  /**
+   * Runs `update` with notifications deferred: every write takes effect
+   * immediately, and subscribers are notified once, after the outermost batch
+   * completes, with the final values.
+   *
+   * ```ts
+   * Observable.batch(() => {
+   *   player.health.value = 100;
+   *   player.stats.ammo.value = 30;
+   *   player.stats.level.value++;
+   * });
+   * ```
+   *
+   * - Reads inside the batch see the written values; derived values compute
+   *   from the current sources.
+   * - Values are delivered in the order they first changed. A derived value
+   *   recomputes once after all of its changed sources and notifies only if
+   *   its result changed, so a text built from several changed values is
+   *   applied once.
+   * - Batches nest; only the outermost one delivers. Changes made by
+   *   listeners during the delivery are delivered in the same pass.
+   * - There is no rollback. When `update` throws, the writes made so far stay,
+   *   their notifications are delivered, and the error is rethrown. When
+   *   listeners throw, every queued notification is still delivered and the
+   *   first listener error is rethrown.
+   * - Owner notifications of vectors and sizes, such as transform
+   *   invalidation, are never deferred; only their subscribers are.
+   *
+   * @throws If `update` returns a promise: a batch is synchronous, and writes
+   * after an `await` would not be batched.
+   */
+  public static batch(update: () => Synchronous): void {
+    batchDepth++;
+
+    let result: unknown;
+    let failure: { readonly error: unknown } | null = null;
+
+    try {
+      result = update();
+    } catch (error) {
+      failure = { error };
+    } finally {
+      batchDepth--;
+    }
+
+    if (batchDepth === 0 && !flushing && queue.length > 0) {
+      try {
+        flush();
+      } catch (error) {
+        failure ??= { error };
+      }
+    }
+
+    if (failure !== null) {
+      throw failure.error;
+    }
+
+    requireSynchronousHook(
+      result,
+      'Observable.batch() callback',
+      'Run asynchronous work outside the batch and batch each synchronous step.',
+    );
   }
 }

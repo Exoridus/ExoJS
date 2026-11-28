@@ -2,8 +2,8 @@ import {
   live,
   type LiveResult,
   Observable,
-  ObservableObject,
   type ObservableSize,
+  type ObservableStruct,
   type ObservableVector,
   type ObservedValue,
   type ReadonlyObservable,
@@ -40,27 +40,48 @@ export const formatted: ReadonlyObservable<string> = position.map(p => `${p.x.to
 position.x += 10;
 position.set(100, 200);
 
-// Observable objects expose the data type directly, without casts.
-interface PlayerStats {
-  health: number;
-  ammo: number;
-  readonly level: number;
-}
-const stats = new ObservableObject<PlayerStats>({ health: 100, ammo: 30, level: 1 });
-stats.health -= 10;
-stats.ammo--;
-// @ts-expect-error readonly properties stay readonly
-stats.level++;
-// @ts-expect-error the shape is fixed
-stats.mana = 3;
-const inferred = new ObservableObject({ health: 100, label: 'Hero' });
-assertType<Equal<typeof inferred.label, string>>();
-const summary = ObservableObject.map(stats, s => `${s.health} HP | ${s.ammo} Ammo`);
-assertType<Equal<typeof summary, ReadonlyObservable<string>>>();
-// @ts-expect-error a projection receives a read-only view
-ObservableObject.map(stats, s => (s.health = 0));
-// @ts-expect-error the initial value must be an object
-export const primitive = new ObservableObject(5);
+// Structs keep exact member types and preserve existing observables.
+const shared = new Observable(5);
+const player = Observable.struct({
+  name: 'Hero',
+  health: 100,
+  alive: true,
+  inventory: ['sword'],
+  position,
+  status,
+  shared,
+  stats: Observable.struct({ ammo: 30, level: 1 }),
+});
+assertType<Equal<typeof player.name, Observable<string>>>();
+assertType<Equal<typeof player.health, Observable<number>>>();
+assertType<Equal<typeof player.alive, Observable<boolean>>>();
+assertType<Equal<typeof player.inventory, Observable<string[]>>>();
+assertType<Equal<typeof player.position, ObservableVector>>();
+assertType<Equal<typeof player.status, ReadonlyObservable<'Healthy' | 'Wounded'>>>();
+assertType<Equal<typeof player.shared, Observable<number>>>();
+assertType<Equal<typeof player.stats.ammo, Observable<number>>>();
+export const nested: ObservableStruct<{ ammo: number; level: number }> = player.stats;
+player.health.value -= 10;
+player.stats.ammo.value--;
+// @ts-expect-error members are read-only; write through .value
+player.health = new Observable(1);
+// @ts-expect-error a member keeps its value type
+player.name.value = 3;
+declare const sometimes: number | Observable<number>;
+const mixedStruct = Observable.struct({ sometimes });
+export const mixedMember: Observable<number> = mixedStruct.sometimes;
+// @ts-expect-error the members must be an object
+export const primitiveStruct = Observable.struct(5);
+
+// Batches take synchronous callbacks only.
+Observable.batch(() => {
+  player.health.value = 100;
+  player.stats.level.value++;
+});
+// @ts-expect-error a batch callback must not return a promise
+Observable.batch(async () => {
+  player.health.value = 1;
+});
 
 // live returns a string without observable substitutions, a derived string otherwise.
 const plain = live`Hello ${'Hero'} ${3}`;

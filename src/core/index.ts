@@ -23,8 +23,16 @@ export { live, type LiveResult } from './live';
 export type { LoadStateValue } from './LoadState';
 export type { LogEntry, LogOptions, LogSink } from './Logger';
 export { Logger, logger, LogSeverity } from './Logger';
-export { isObservable, Observable, type ObservableListener, type ObservedValue, type ReadonlyObservable } from './Observable';
-export { ObservableObject, type ObservableObjectConstructor } from './ObservableObject';
+export {
+  isObservable,
+  Observable,
+  type ObservableListener,
+  type ObservableStruct,
+  type ObservableStructMember,
+  type ObservableStructTag,
+  type ObservedValue,
+  type ReadonlyObservable,
+} from './Observable';
 export { Perf } from './Perf';
 export { SceneNode } from './SceneNode';
 export { Signal } from './Signal';

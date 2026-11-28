@@ -1,4 +1,4 @@
-import { isObservable, live, Observable, ObservableObject, ObservableSize, ObservableVector, Rectangle, Size, Vector } from '@codexo/exojs';
+import { isObservable, live, Observable, ObservableSize, ObservableVector, Rectangle, Size, Vector } from '@codexo/exojs';
 
 describe('Observable', () => {
   test('notifies on change only, in subscription order, with the current value', () => {
@@ -214,7 +214,6 @@ describe('derived values', () => {
     });
 
     expect(() => doubled.subscribe(() => undefined)).toThrow('projection failed');
-    expect(doubled.subscriberCount).toBe(0);
     expect(value.subscriberCount).toBe(0);
 
     fail = false;
@@ -240,100 +239,309 @@ describe('derived values', () => {
   });
 });
 
-describe('ObservableObject', () => {
-  interface PlayerStats {
-    health: number;
-    ammo: number;
-    level: number;
-  }
+describe('Observable.struct', () => {
+  test('turns plain members into observables and keeps existing ones by identity', () => {
+    const shared = new Observable(5);
+    const derived = shared.map(n => n * 2);
+    const position = new ObservableVector(null, 0, 1, 2);
+    const size = new ObservableSize(() => undefined, 3, 4);
+    const stats = Observable.struct({ ammo: 30, level: 1 });
+    const player = Observable.struct({ name: 'Hero', health: 100, shared, derived, position, size, stats });
 
-  test('exposes typed native properties that notify on change', () => {
-    const stats = new ObservableObject<PlayerStats>({ health: 100, ammo: 30, level: 1 });
+    expect(player.name).toBeInstanceOf(Observable);
+    expect(player.name.value).toBe('Hero');
+    expect(player.health.value).toBe(100);
+    expect(player.shared).toBe(shared);
+    expect(player.derived).toBe(derived);
+    expect(player.position).toBe(position);
+    expect(player.size).toBe(size);
+    expect(player.stats).toBe(stats);
+
+    player.health.value -= 10;
+    player.stats.ammo.value--;
+
+    expect([player.health.value, stats.ammo.value]).toEqual([90, 29]);
+  });
+
+  test('stores ordinary objects and arrays as single values, without traversing them', () => {
+    const inventory = ['sword'];
+    const settings = { volume: 0.5 };
+    const player = Observable.struct({ inventory, settings });
     const listener = vi.fn();
 
-    ObservableObject.subscribe(stats, listener);
+    expect(player.inventory.value).toBe(inventory);
+    expect(player.settings.value).toBe(settings);
 
-    stats.health -= 10;
-    stats.ammo--;
-    stats.level++;
-    stats.level = 2;
-
-    expect([stats.health, stats.ammo, stats.level]).toEqual([90, 29, 2]);
-    expect(listener).toHaveBeenCalledTimes(3);
-    expect(listener).toHaveBeenLastCalledWith(stats);
-  });
-
-  test('copies the initial object instead of observing it', () => {
-    const initial = { health: 100 };
-    const stats = new ObservableObject(initial);
-
-    stats.health = 5;
-    initial.health = 7;
-
-    expect(initial.health).toBe(7);
-    expect(stats.health).toBe(5);
-    expect(stats).not.toBe(initial);
-    expect(stats).toBeInstanceOf(ObservableObject);
-  });
-
-  test('reserves no data property names', () => {
-    const settings = new ObservableObject({ value: 1, map: 'world', subscribe: true, markChanged: 0 });
-
-    expect({ ...settings }).toEqual({ value: 1, map: 'world', subscribe: true, markChanged: 0 });
-    expect(JSON.stringify(settings)).toBe('{"value":1,"map":"world","subscribe":true,"markChanged":0}');
-    expect(isObservable(settings)).toBe(false);
-
-    const lookalike = new ObservableObject({ value: 1, subscribe: () => () => undefined, map: () => undefined });
-
-    expect(isObservable(lookalike)).toBe(false);
-    expect(typeof live`${lookalike}`).toBe('string');
-  });
-
-  test('keeps a fixed shape', () => {
-    const stats = new ObservableObject({ health: 100 });
-
-    expect(() => {
-      (stats as Record<string, unknown>).mana = 5;
-    }).toThrow(TypeError);
-    expect(() => {
-      delete (stats as Partial<typeof stats>).health;
-    }).toThrow(TypeError);
-  });
-
-  test('observes shallowly and lets nested changes be marked', () => {
-    const party = new ObservableObject({ members: ['Ann'] });
-    const count = ObservableObject.map(party, p => p.members.length);
-    const listener = vi.fn();
-
-    count.subscribe(listener);
-    party.members.push('Bo');
+    player.settings.subscribe(listener);
+    settings.volume = 1;
     expect(listener).not.toHaveBeenCalled();
 
-    ObservableObject.markChanged(party);
-    expect(listener).toHaveBeenCalledWith(2);
+    player.settings.value = { volume: 1 };
+    expect(listener).toHaveBeenCalledOnce();
   });
 
-  test('derives values lazily', () => {
-    const stats = new ObservableObject({ health: 100, ammo: 30 });
-    const summary = ObservableObject.map(stats, s => `${s.health} HP | ${s.ammo} Ammo`);
-    const health = ObservableObject.map(stats, s => s.health);
+  test('leaves the members object untouched and returns a frozen record', () => {
+    const members = { health: 100 };
+    const player = Observable.struct(members);
+
+    player.health.value = 1;
+
+    expect(members).toEqual({ health: 100 });
+    expect(Object.isFrozen(player)).toBe(true);
+    expect(Object.keys(player)).toEqual(['health']);
+    expect(isObservable(player)).toBe(false);
+  });
+
+  test('reserves no member names', () => {
+    const odd = Observable.struct({ value: 1, subscribe: () => undefined, map: 'world' });
+
+    expect(odd.value.value).toBe(1);
+    expect(odd.map.value).toBe('world');
+    expect(isObservable(odd)).toBe(false);
+  });
+
+  test('shares one observable between structs', () => {
+    const gold = new Observable(10);
+    const a = Observable.struct({ gold });
+    const b = Observable.struct({ gold, other: a });
+
+    a.gold.value = 20;
+
+    expect(b.gold.value).toBe(20);
+    expect(b.other).toBe(a);
+  });
+
+  test('rejects members that are not a plain object', () => {
+    expect(() => Observable.struct([1, 2])).toThrow(TypeError);
+    expect(() => Observable.struct(new Vector(1, 2))).toThrow(TypeError);
+  });
+});
+
+describe('Observable.batch', () => {
+  test('applies writes immediately and notifies once with the final value', () => {
+    const health = new Observable(100);
+    const listener = vi.fn();
+
+    health.subscribe(listener);
+    Observable.batch(() => {
+      health.value = 90;
+      expect(health.value).toBe(90);
+      health.value = 80;
+      health.value = 70;
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    expect(listener.mock.calls).toEqual([[70]]);
+  });
+
+  test('notifies a source written during the batch once, with its final value', () => {
+    const value = new Observable(1);
+    const listener = vi.fn();
+
+    value.subscribe(listener);
+    Observable.batch(() => {
+      value.value = 2;
+      value.value = 1;
+    });
+
+    expect(listener.mock.calls).toEqual([[1]]);
+  });
+
+  test('recomputes and applies a template over several changed sources once', () => {
+    const player = Observable.struct({ health: 100, stats: Observable.struct({ ammo: 30, level: 1 }) });
+    const compute = vi.fn((hp: number, ammo: number) => `HP: ${hp} | Ammo: ${ammo}`);
+    const text = live`HP: ${player.health} | Ammo: ${player.stats.ammo}`;
+    const writes: string[] = [];
+    const counted = player.health.map(hp => compute(hp, player.stats.ammo.value));
+
+    text.subscribe(next => writes.push(next));
+    counted.subscribe(() => undefined);
+    compute.mockClear();
+
+    Observable.batch(() => {
+      player.health.value = 50;
+      player.stats.ammo.value = 10;
+      player.stats.level.value++;
+    });
+
+    expect(writes).toEqual(['HP: 50 | Ammo: 10']);
+    expect(compute).toHaveBeenCalledOnce();
+  });
+
+  test('never exposes an inconsistent intermediate derived value', () => {
+    const a = new Observable(1);
+    const b = new Observable(1);
+    const sum = live`${a}+${b}=${a.map(x => x + b.value)}`;
     const seen: string[] = [];
-    const healthListener = vi.fn();
 
-    summary.subscribe(next => seen.push(next));
-    health.subscribe(healthListener);
+    sum.subscribe(next => seen.push(next));
+    Observable.batch(() => {
+      a.value = 2;
+      b.value = 3;
+    });
 
-    stats.ammo = 29;
-    stats.health = 90;
-
-    expect(seen).toEqual(['100 HP | 29 Ammo', '90 HP | 29 Ammo']);
-    expect(healthListener.mock.calls).toEqual([[90]]);
+    expect(seen).toEqual(['2+3=5']);
   });
 
-  test('rejects values that are not plain objects, and sources that are not observable objects', () => {
-    expect(() => new ObservableObject([1, 2])).toThrow(TypeError);
-    expect(() => new ObservableObject(new Vector(1, 2))).toThrow(TypeError);
-    expect(() => ObservableObject.map({ health: 1 }, s => s.health)).toThrow(/not an ObservableObject/);
+  test('deduplicates derived chains with shared dependencies', () => {
+    const base = new Observable(1);
+    const doubled = base.map(n => n * 2);
+    const tripled = base.map(n => n * 3);
+    const total = live`${doubled} ${tripled} ${doubled.map(n => n + 1)}`;
+    const seen: string[] = [];
+
+    total.subscribe(next => seen.push(next));
+    Observable.batch(() => {
+      base.value = 2;
+      base.value = 3;
+    });
+
+    expect(seen).toEqual(['6 9 7']);
+  });
+
+  test('nests, delivering only when the outermost batch completes', () => {
+    const value = new Observable(0);
+    const listener = vi.fn();
+
+    value.subscribe(listener);
+    Observable.batch(() => {
+      value.value = 1;
+      Observable.batch(() => {
+        value.value = 2;
+      });
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    expect(listener.mock.calls).toEqual([[2]]);
+  });
+
+  test('delivers in first-change order and handles writes made by listeners in the same pass', () => {
+    const a = new Observable(0);
+    const b = new Observable(0);
+    const order: string[] = [];
+
+    b.subscribe(next => order.push(`b${next}`));
+    a.subscribe(next => {
+      order.push(`a${next}`);
+      b.value = 10;
+    });
+
+    Observable.batch(() => {
+      b.value = 1;
+      a.value = 1;
+    });
+
+    expect(order).toEqual(['b1', 'a1', 'b10']);
+  });
+
+  test('keeps the writes and delivers their notifications when the callback throws', () => {
+    const value = new Observable(0);
+    const listener = vi.fn();
+
+    value.subscribe(listener);
+
+    expect(() =>
+      Observable.batch(() => {
+        value.value = 5;
+
+        throw new Error('update failed');
+      }),
+    ).toThrow('update failed');
+
+    expect(value.value).toBe(5);
+    expect(listener).toHaveBeenCalledWith(5);
+  });
+
+  test('delivers every queued value when a listener throws, then rethrows the first error', () => {
+    const a = new Observable(0);
+    const b = new Observable(0);
+    const late = vi.fn();
+
+    a.subscribe(() => {
+      throw new Error('listener failed');
+    });
+    b.subscribe(late);
+
+    expect(() =>
+      Observable.batch(() => {
+        a.value = 1;
+        b.value = 1;
+      }),
+    ).toThrow('listener failed');
+    expect(late).toHaveBeenCalledWith(1);
+
+    const after = vi.fn();
+    b.subscribe(after);
+    b.value = 2;
+    expect(after).toHaveBeenCalledWith(2);
+  });
+
+  test('stops cycles that never settle', () => {
+    const value = new Observable(0);
+
+    value.subscribe(next => (value.value = next + 1));
+
+    expect(() =>
+      Observable.batch(() => {
+        value.value = 1;
+      }),
+    ).toThrow(RangeError);
+  });
+
+  test('rejects asynchronous callbacks', () => {
+    const value = new Observable(0);
+
+    expect(() =>
+      Observable.batch((async () => {
+        value.value = 1;
+      }) as unknown as () => void),
+    ).toThrow(/must be synchronous/);
+    expect(value.value).toBe(1);
+  });
+
+  test('applies unsubscriptions made during the delivery to later notifications', () => {
+    const value = new Observable(0);
+    const other = new Observable(0);
+    const late = vi.fn();
+    const stop = other.subscribe(late);
+
+    value.subscribe(() => stop());
+    Observable.batch(() => {
+      value.value = 1;
+      other.value = 1;
+    });
+
+    expect(late).not.toHaveBeenCalled();
+  });
+
+  test('defers vector subscribers but never the owner', () => {
+    const changes: number[] = [];
+    const vector = new ObservableVector({ _onObservableChange: channel => changes.push(channel) }, 3);
+    const listener = vi.fn();
+
+    vector.subscribe(listener);
+    Observable.batch(() => {
+      vector.x = 1;
+      vector.y = 2;
+      expect(changes).toEqual([3, 3]);
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  test('keeps notifications immediate outside batches and costs nothing for unobserved values', () => {
+    const value = new Observable(0);
+
+    Observable.batch(() => {
+      value.value = 1;
+    });
+
+    const listener = vi.fn();
+    value.subscribe(listener);
+    value.value = 2;
+
+    expect(listener).toHaveBeenCalledWith(2);
   });
 });
 

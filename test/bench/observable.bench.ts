@@ -2,7 +2,6 @@ import { describe, test } from 'vitest';
 
 import { live } from '../../src/core/live';
 import { Observable } from '../../src/core/Observable';
-import { ObservableObject } from '../../src/core/ObservableObject';
 import { ObservableVector, type ObservableVectorOwner } from '../../src/math/ObservableVector';
 import { Container } from '../../src/rendering/Container';
 import { benchRunOptions, benchTimeoutMs } from './runOptions';
@@ -28,13 +27,10 @@ describe('observable values', { timeout: benchTimeoutMs }, () => {
     const plain = { health: 0 };
     const unobserved = new Observable(0);
     const observed = new Observable(0);
-    const object = new ObservableObject({ health: 0, ammo: 0 });
-    const observedObject = new ObservableObject({ health: 0, ammo: 0 });
     const vector = new ObservableVector(new CountingOwner(), 0);
     const observedVector = new ObservableVector(new CountingOwner(), 0);
 
     observed.subscribe(count);
-    ObservableObject.subscribe(observedObject, count);
     observedVector.subscribe(count);
 
     await bench('plain property', () => {
@@ -55,16 +51,6 @@ describe('observable values', { timeout: benchTimeoutMs }, () => {
     await bench('Observable, equal assignment', () => {
       for (let i = 0; i < writes; i++) {
         observed.value = 7;
-      }
-    }).run(benchRunOptions);
-    await bench('ObservableObject property, unobserved', () => {
-      for (let i = 0; i < writes; i++) {
-        object.health = i;
-      }
-    }).run(benchRunOptions);
-    await bench('ObservableObject property, 1 listener', () => {
-      for (let i = 0; i < writes; i++) {
-        observedObject.health = i;
       }
     }).run(benchRunOptions);
     await bench('ObservableVector.x, owner only', () => {
@@ -90,9 +76,9 @@ describe('observable values', { timeout: benchTimeoutMs }, () => {
         sink += new Observable(i).value;
       }
     }).run(benchRunOptions);
-    await bench('ObservableObject, 3 properties', () => {
+    await bench('Observable.struct, 3 members', () => {
       for (let i = 0; i < instances; i++) {
-        sink += new ObservableObject({ health: i, ammo: 30, level: 1 }).health;
+        sink += Observable.struct({ health: i, ammo: 30, level: 1 }).health.value;
       }
     }).run(benchRunOptions);
     await bench('Container (4 observable vectors each)', () => {
@@ -130,6 +116,49 @@ describe('observable values', { timeout: benchTimeoutMs }, () => {
     await bench('map with unchanged result', () => {
       for (let i = 0; i < 10_000; i++) {
         health.value = 100 + (i % 50);
+      }
+    }).run(benchRunOptions);
+  });
+
+  test('batching (10k rounds)', async ({ bench }) => {
+    const player = Observable.struct({ health: 100, stats: Observable.struct({ ammo: 30, level: 1 }) });
+    const text = live`HP: ${player.health} | Ammo: ${player.stats.ammo} | Lv ${player.stats.level}`;
+    const vector = new ObservableVector(new CountingOwner(), 0);
+
+    text.subscribe(count);
+    vector.subscribe(count);
+
+    await bench('3 writes, individual', () => {
+      for (let i = 0; i < 10_000; i++) {
+        player.health.value = i;
+        player.stats.ammo.value = i;
+        player.stats.level.value = i;
+      }
+    }).run(benchRunOptions);
+    await bench('3 writes, batched', () => {
+      for (let i = 0; i < 10_000; i++) {
+        Observable.batch(() => {
+          player.health.value = i + 1;
+          player.stats.ammo.value = i + 1;
+          player.stats.level.value = i + 1;
+        });
+      }
+    }).run(benchRunOptions);
+    await bench('10 writes to one value, batched', () => {
+      for (let i = 0; i < 10_000; i++) {
+        Observable.batch(() => {
+          for (let j = 0; j < 10; j++) {
+            player.health.value = i * 10 + j;
+          }
+        });
+      }
+    }).run(benchRunOptions);
+    await bench('observed vector, batched set(x) + set(y)', () => {
+      for (let i = 0; i < 10_000; i++) {
+        Observable.batch(() => {
+          vector.x = i;
+          vector.y = i;
+        });
       }
     }).run(benchRunOptions);
   });

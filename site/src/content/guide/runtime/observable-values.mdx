@@ -5,10 +5,9 @@ description: 'Hold state in values that report their own changes, derive read-on
 
 # Observable values
 
-Game state changes at specific moments: a hit lowers health, a pickup adds ammo, a node moves. An observable value reports those moments to whoever subscribed, so nothing has to poll every frame. ExoJS has three kinds:
+Game state changes at specific moments: a hit lowers health, a pickup adds ammo, a node moves. An observable value reports those moments to whoever subscribed, so nothing has to poll every frame.
 
-- `Observable<T>` holds one value of any type.
-- `ObservableObject<T>` turns a fixed plain object into one whose properties report their changes.
+- `Observable<T>` holds one value of any type. `Observable.struct()` groups several of them, and `Observable.batch()` delivers several changes as one.
 - `ObservableVector` and `ObservableSize`, which nodes already use for `position`, `scale` and similar properties, can be observed too.
 
 All of them share one small contract, `ReadonlyObservable<T>`: a `value`, a `subscribe` method, and `map` for derived values. There is no proxy, no hidden dependency tracking and no per-frame work.
@@ -64,32 +63,57 @@ health.value = 40; // logs 'Wounded'
 
 A derived value is lazy. It subscribes to its source only while it has subscribers itself, so a derived value nobody observes costs nothing and is garbage-collected normally. Reading its `value` always computes the current result. It notifies only when the result changes, except for objects, which may have changed in place and therefore always notify.
 
-## Observable objects
+## Structs
 
-`ObservableObject` gives a fixed set of properties native getters and setters:
+`Observable.struct()` turns each member of a plain object into its own observable:
 
 ```ts
-import { ObservableObject } from '@codexo/exojs';
+import { Observable } from '@codexo/exojs';
 
-interface PlayerStats {
-  health: number;
-  ammo: number;
-  level: number;
-}
+const player = Observable.struct({
+  name: 'Hero',
+  health: 100,
+  stats: Observable.struct({ ammo: 30, level: 1 }),
+});
 
-const stats = new ObservableObject<PlayerStats>({ health: 100, ammo: 30, level: 1 });
+player.health.value -= 10;
+player.stats.ammo.value--;
 
-stats.health -= 10;
-stats.ammo--;
-stats.level++;
-
-const summary = ObservableObject.map(stats, s => `${s.health} HP | ${s.ammo} Ammo`);
-const stop = ObservableObject.subscribe(stats, s => console.log(s.level));
-
-stop();
+const summary = player.health.map(hp => `${hp} HP`);
 ```
 
-The constructor copies the properties of the object you pass in; your object is left alone. Every property name is free for your data, which is why `map`, `subscribe` and `markChanged` are static methods rather than methods of the instance. The shape is fixed: the object is sealed, so adding or deleting a property is an error. Observation is shallow. A nested object or array can be a property value, but changes inside it are not reported; assign a new value or call `ObservableObject.markChanged(stats)`. Spreading, `Object.keys` and `JSON.stringify` see the current values.
+Member types are inferred exactly: `player.health` is an `Observable<number>` and `player.stats.ammo` too. A member that already is an observable, a derived value, a vector, a size or another struct is kept as it is, so several structs can share it. Nothing is traversed: an ordinary nested object or array becomes the value of one observable, and changes inside it are not reported. Nest structs explicitly where you want observable members further down. The object you pass in is not modified, and the struct is frozen.
+
+A struct owns nothing and needs no teardown. The observables it created belong to whoever holds the struct and are collected with it. A shared observable stays owned by its creator; destroying it affects every struct that holds it.
+
+## Batches
+
+`Observable.batch()` groups several changes into one notification:
+
+```ts
+import { live, Observable } from '@codexo/exojs';
+
+const player = Observable.struct({ health: 40, stats: Observable.struct({ ammo: 3, level: 1 }) });
+const hud = live`HP: ${player.health} | Ammo: ${player.stats.ammo}`;
+
+hud.subscribe(text => console.log(text));
+
+Observable.batch(() => {
+  player.health.value = 100;
+  player.stats.ammo.value = 30;
+  player.stats.level.value++;
+}); // logs "HP: 100 | Ammo: 30" once
+```
+
+Writes take effect immediately, so code inside the batch reads the new values, and derived values compute from them. Subscribers are notified once the outermost batch completes, in the order the values first changed. A derived value recomputes once after all of its changed sources, and notifies only if its result changed. The text above is therefore computed and applied once, and no subscriber ever sees a mix of old and new values.
+
+- **Nesting**: inner batches only add to the outer one.
+- **Listener changes**: changes made by listeners while the batch is delivered are delivered in the same pass, after the current ones.
+- **No rollback**: when the callback throws, the writes made so far stay, their notifications are delivered, and the error is rethrown. When a listener throws, every queued notification is still delivered and the first error is rethrown.
+- **Synchronous only**: a callback that returns a promise is rejected, because writes after an `await` would not be batched.
+- **Vectors and sizes**: their owners, such as a node's transform, are still invalidated at once; only subscribers wait for the batch.
+
+Outside a batch, every change notifies immediately.
 
 ## Observing vectors and sizes
 
